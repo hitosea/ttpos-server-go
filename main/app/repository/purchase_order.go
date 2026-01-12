@@ -66,6 +66,10 @@ type IPurchaseOrderRepo interface {
 
 	// 判断供应商是否存在
 	IsSupplierExists(supplierErpCode string) (bool, error)
+
+	// 品牌采购限购相关
+	// CountBrandPurchaseByTimeRange 统计指定时间范围内的品牌采购申请次数
+	CountBrandPurchaseByTimeRange(startTime, endTime int64) (int64, error)
 }
 
 // PurchaseOrderRepoImpl 采购订单Repository实现
@@ -556,4 +560,29 @@ func (r *PurchaseOrderRepoImpl) IsSupplierExists(supplierErpCode string) (bool, 
 		return false, err
 	}
 	return count > 0, nil
+}
+
+// CountBrandPurchaseByTimeRange 统计指定时间范围内的品牌采购申请次数
+//
+// 参数:
+//   - companyUuid: 公司UUID
+//   - startTime: 开始时间（Unix 时间戳）
+//   - endTime: 结束时间（Unix 时间戳）
+//
+// 返回:
+//   - int64: 申请次数（排除草稿状态，按 order_time 统计）
+//   - error: 错误信息
+func (r *PurchaseOrderRepoImpl) CountBrandPurchaseByTimeRange(
+	startTime, endTime int64,
+) (int64, error) {
+	var count int64
+	err := r.db.Model(&model.PurchaseOrder{}).
+		Where("purchase_type = ?", constant.PurchaseTypeBrand).  // 品牌采购
+		Where("status != ?", constant.PurchaseOrderStatusDraft). // 排除草稿
+		Where("order_time > 0").                                 // order_time 必须有值
+		Where("order_time >= ? AND order_time <= ?", startTime, endTime).
+		Where("delete_time = 0").
+		Count(&count).Error
+
+	return count, err
 }

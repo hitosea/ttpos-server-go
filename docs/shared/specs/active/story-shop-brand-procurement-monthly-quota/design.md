@@ -176,7 +176,7 @@ graph TD
 
 ### 数据表设计
 
-#### 表: ttpos_purchase_quota_config
+#### 表1: ttpos_purchase_quota_config（主表）
 
 ```sql
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_quota_config` (
@@ -188,9 +188,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_quota_config` (
     `unit_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '限购单位名称（冗余）',
     `quota_limit` DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '限购数量',
     
-    -- 🔥 新增：门店范围控制
+    -- 门店范围控制
     `apply_to_all_shops` TINYINT(4) NOT NULL DEFAULT 1 COMMENT '是否应用到全部店铺: 1=是 0=否',
-    `shop_uuids` TEXT COMMENT '应用的门店UUID列表（JSON数组），apply_to_all_shops=0时有效',
     
     -- 扩展字段（预留）
     `period_type` TINYINT(4) NOT NULL DEFAULT 0 COMMENT '周期类型: 0=按天(默认) 1=月度',
@@ -222,7 +221,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_quota_config` (
 | unit_name | varchar(50) | 限购单位名称（冗余） | DEFAULT '' |
 | quota_limit | decimal(10,2) | 限购数量 | DEFAULT 0.00 |
 | apply_to_all_shops | tinyint(4) | 是否应用到全部店铺: 1=是 0=否 | DEFAULT 1 |
-| shop_uuids | text | 应用的门店UUID列表（JSON数组） | NULL |
 | period_type | tinyint(4) | 周期类型: 0=按天(默认) 1=月度 | DEFAULT 0 |
 | strict_mode | tinyint(4) | 超限策略: 1=严格拒绝 | DEFAULT 1 |
 | config_source | tinyint(4) | 配置来源: 1=门店 2=总部 | DEFAULT 1 |
@@ -238,17 +236,56 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_quota_config` (
 - 普通索引: `KEY idx_status (status)` - 查询启用的配置
 - 普通索引: `KEY idx_delete_time (delete_time)` - 软删除查询优化
 
-**设计说明**:
-- 移除了 `uk_material` 唯一索引，因为同一物品可以有多条配置（针对不同门店）
-- 新增 `apply_to_all_shops` 标识是否应用到全部店铺
-- 新增 `shop_uuids` 存储JSON格式的门店UUID列表，例如：`[123456789, 987654321]`
-- 查询时：如果 `apply_to_all_shops=1`，则所有门店都适用；否则检查当前门店UUID是否在 `shop_uuids` 中
-
 **迁移文件**: `admin/database/migrations/{YYYYMMDDHHMMSS}_create_ttpos_purchase_quota_config_table.php`
+
+#### 表2: ttpos_purchase_quota_config_shop（关联表）
+
+```sql
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_quota_config_shop` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `config_uuid` BIGINT(20) UNSIGNED NOT NULL COMMENT '限购配置UUID',
+    `shop_uuid` BIGINT(20) UNSIGNED NOT NULL COMMENT '门店UUID',
+    
+    -- 状态字段
+    `create_time` INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `delete_time` INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_config_shop` (`config_uuid`, `shop_uuid`),
+    KEY `idx_config` (`config_uuid`),
+    KEY `idx_shop` (`shop_uuid`),
+    KEY `idx_delete_time` (`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='品牌采购限购配置门店关联';
+```
+
+**字段说明**:
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | int unsigned | 主键 ID | AUTO_INCREMENT |
+| config_uuid | bigint unsigned | 限购配置UUID | NOT NULL |
+| shop_uuid | bigint unsigned | 门店UUID | NOT NULL |
+| create_time | int | 创建时间 | DEFAULT 0 |
+| delete_time | int | 删除时间 | DEFAULT 0 |
+
+**索引设计**:
+- 主键索引: `PRIMARY KEY (id)`
+- 唯一索引: `UNIQUE KEY uk_config_shop (config_uuid, shop_uuid)` - 防止重复关联
+- 普通索引: `KEY idx_config (config_uuid)` - 按配置查询门店
+- 普通索引: `KEY idx_shop (shop_uuid)` - 按门店查询配置
+- 普通索引: `KEY idx_delete_time (delete_time)` - 软删除查询优化
+
+**设计说明**:
+- 移除了 `shop_uuids` JSON 字段，改用关联表存储多对多关系
+- `apply_to_all_shops=1` 时，关联表无记录（表示全部门店）
+- `apply_to_all_shops=0` 时，关联表存储选中的门店列表
+- 查询逻辑：先查主表判断 `apply_to_all_shops`，若为 0 则 JOIN 关联表过滤
+- 数据一致性：删除配置时需同步软删除关联表记录
+
+**迁移文件**: `admin/database/migrations/{YYYYMMDDHHMMSS}_create_ttpos_purchase_quota_config_shop_table.php`
 
 #### 表: ttpos_shop_config (扩展现有表)
 
-门店级配置存储每日采购申请次数限制，扩展现有的门店配置表或使用专门的配置表：
+门店级配置存储每日品类申请数限制，扩展现有的门店配置表或使用专门的配置表：
 
 **方案1：使用现有 ttpos_config 表 + shop_uuid**
 
@@ -267,7 +304,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_shop_purchase_config` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增ID',
     `shop_uuid` BIGINT(20) UNSIGNED NOT NULL COMMENT '门店UUID',
     `daily_limit` INT(11) NOT NULL DEFAULT 2 COMMENT '每日采购申请次数上限',
-    `single_qty_limit` INT(11) NOT NULL DEFAULT 100 COMMENT '单次采购数量上限',
     
     -- 状态字段
     `create_time` INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
@@ -335,49 +371,70 @@ php think migrate:run
 // main/app/model/purchase_quota_config.go
 package model
 
+// PurchaseQuotaConfig 品牌采购限购配置主表
 type PurchaseQuotaConfig struct {
-	Id               uint64  `gorm:"column:id;primaryKey" json:"id"`
-	Uuid             uint64  `gorm:"column:uuid;uniqueIndex" json:"uuid"`
-	MaterialUuid     uint64  `gorm:"column:material_uuid;not null" json:"material_uuid"`
-	MaterialCode     string  `gorm:"column:material_code;type:varchar(100);default:''" json:"material_code"`
-	UnitUuid         uint64  `gorm:"column:unit_uuid;not null" json:"unit_uuid"`
-	UnitName         string  `gorm:"column:unit_name;type:varchar(50);default:''" json:"unit_name"`
-	QuotaLimit       float64 `gorm:"column:quota_limit;type:decimal(10,2);default:0.00" json:"quota_limit"`
-	ApplyToAllShops  uint8   `gorm:"column:apply_to_all_shops;default:1" json:"apply_to_all_shops"` // 🔥 新增
-	ShopUuids        string  `gorm:"column:shop_uuids;type:text" json:"shop_uuids"` // 🔥 新增：JSON数组
-	PeriodType       uint8   `gorm:"column:period_type;default:0" json:"period_type"`
-	StrictMode       uint8   `gorm:"column:strict_mode;default:1" json:"strict_mode"`
-	ConfigSource     uint8   `gorm:"column:config_source;default:1" json:"config_source"`
-	Status           uint8   `gorm:"column:status;default:1" json:"status"`
-	CreateTime       int64   `gorm:"column:create_time;default:0" json:"create_time"`
-	UpdateTime       int64   `gorm:"column:update_time;default:0" json:"update_time"`
-	DeleteTime       int64   `gorm:"column:delete_time;index;default:0" json:"delete_time"`
+	Id              uint64  `gorm:"column:id;primaryKey" json:"id"`
+	Uuid            uint64  `gorm:"column:uuid;uniqueIndex" json:"uuid"`
+	MaterialUuid    uint64  `gorm:"column:material_uuid;not null" json:"material_uuid"`
+	MaterialCode    string  `gorm:"column:material_code;type:varchar(100);default:''" json:"material_code"`
+	UnitUuid        uint64  `gorm:"column:unit_uuid;not null" json:"unit_uuid"`
+	UnitName        string  `gorm:"column:unit_name;type:varchar(50);default:''" json:"unit_name"`
+	QuotaLimit      float64 `gorm:"column:quota_limit;type:decimal(10,2);default:0.00" json:"quota_limit"`
+	ApplyToAllShops uint8   `gorm:"column:apply_to_all_shops;default:1" json:"apply_to_all_shops"`
+	PeriodType      uint8   `gorm:"column:period_type;default:0" json:"period_type"`
+	StrictMode      uint8   `gorm:"column:strict_mode;default:1" json:"strict_mode"`
+	ConfigSource    uint8   `gorm:"column:config_source;default:1" json:"config_source"`
+	Status          uint8   `gorm:"column:status;default:1" json:"status"`
+	CreateTime      int64   `gorm:"column:create_time;default:0" json:"create_time"`
+	UpdateTime      int64   `gorm:"column:update_time;default:0" json:"update_time"`
+	DeleteTime      int64   `gorm:"column:delete_time;index;default:0" json:"delete_time"`
+	
+	// 关联关系（不会序列化到 JSON）
+	Shops []PurchaseQuotaConfigShop `gorm:"foreignKey:ConfigUuid;references:Uuid" json:"-"`
 }
 
 func (*PurchaseQuotaConfig) TableName() string {
 	return "ttpos_purchase_quota_config"
 }
 
-// GetShopUuidList 解析 shop_uuids JSON 数组
-func (p *PurchaseQuotaConfig) GetShopUuidList() ([]uint64, error) {
-	if p.ShopUuids == "" {
-		return []uint64{}, nil
-	}
-	var uuids []uint64
-	if err := json.Unmarshal([]byte(p.ShopUuids), &uuids); err != nil {
-		return nil, err
-	}
-	return uuids, nil
+// PurchaseQuotaConfigShop 品牌采购限购配置门店关联表
+type PurchaseQuotaConfigShop struct {
+	Id         uint64 `gorm:"column:id;primaryKey" json:"id"`
+	ConfigUuid uint64 `gorm:"column:config_uuid;not null" json:"config_uuid"`
+	ShopUuid   uint64 `gorm:"column:shop_uuid;not null" json:"shop_uuid"`
+	CreateTime int64  `gorm:"column:create_time;default:0" json:"create_time"`
+	DeleteTime int64  `gorm:"column:delete_time;index;default:0" json:"delete_time"`
 }
 
-// SetShopUuidList 设置 shop_uuids JSON 数组
-func (p *PurchaseQuotaConfig) SetShopUuidList(uuids []uint64) error {
-	data, err := json.Marshal(uuids)
-	if err != nil {
-		return err
+func (*PurchaseQuotaConfigShop) TableName() string {
+	return "ttpos_purchase_quota_config_shop"
+}
+
+// GetShopUuidList 获取配置关联的门店UUID列表
+func (p *PurchaseQuotaConfig) GetShopUuidList() []uint64 {
+	uuids := make([]uint64, 0, len(p.Shops))
+	for _, shop := range p.Shops {
+		if shop.DeleteTime == 0 {
+			uuids = append(uuids, shop.ShopUuid)
+		}
 	}
-	p.ShopUuids = string(data)
-	return nil
+	return uuids
+}
+
+// AppliesTo 检查配置是否应用到指定门店
+func (p *PurchaseQuotaConfig) AppliesTo(shopUuid uint64) bool {
+	// 应用到全部店铺
+	if p.ApplyToAllShops == 1 {
+		return true
+	}
+	
+	// 检查是否在关联门店列表中
+	for _, shop := range p.Shops {
+		if shop.ShopUuid == shopUuid && shop.DeleteTime == 0 {
+			return true
+		}
+	}
+	return false
 }
 ```
 
@@ -625,7 +682,7 @@ Content-Type: application/json
   "quota_limit": 100.00,
   "period_type": 1,
   "apply_to_all_shops": true,
-  "shop_uuids": []  // apply_to_all_shops=false时必填
+  "shop_uuids": []  // apply_to_all_shops=false时必填，存储到关联表
 }
 ```
 
@@ -646,8 +703,12 @@ Content-Type: application/json
 
 **业务规则**:
 - 如果物品已有配置，执行更新操作
-- `apply_to_all_shops=true` 时，忽略 `shop_uuids`
+- `apply_to_all_shops=true` 时，忽略 `shop_uuids`，并软删除所有关联表记录
 - `apply_to_all_shops=false` 时，`shop_uuids` 不能为空
+- 保存配置时需使用事务：
+  1. 更新/创建主表记录
+  2. 如果 `apply_to_all_shops=false`，先软删除旧关联，再批量插入新关联
+  3. 如果 `apply_to_all_shops=true`，软删除所有关联表记录
 
 ---
 
@@ -704,7 +765,8 @@ DELETE /api/v1/shop/purchase/quota/config/111222333444
 ```
 
 **业务规则**:
-- 软删除（设置 `delete_time`）
+- 软删除主表（设置 `delete_time`）
+- 同时软删除关联表的所有记录（事务保证一致性）
 - 删除后该物品不再有限购限制
 
 ---
@@ -790,14 +852,20 @@ type IPurchaseQuotaConfigRepo interface {
 	// GetList 查询限购配置列表
 	GetList(options ...DBOption) ([]*model.PurchaseQuotaConfig, int64, error)
 	
-	// Create 创建限购配置
+	// Create 创建限购配置（主表）
 	Create(config *model.PurchaseQuotaConfig) error
 	
-	// Update 更新限购配置
+	// Update 更新限购配置（主表）
 	Update(config *model.PurchaseQuotaConfig) error
 	
-	// Delete 软删除限购配置
+	// Delete 软删除限购配置（主表）
 	Delete(uuid uint64) error
+	
+	// BatchCreateShops 批量创建门店关联
+	BatchCreateShops(configUuid uint64, shopUuids []uint64) error
+	
+	// DeleteShops 删除门店关联（软删除）
+	DeleteShops(configUuid uint64) error
 	
 	// 选项方法
 	WhereStatus(status uint8) DBOption
@@ -830,20 +898,27 @@ func NewPurchaseQuotaConfigRepo(db *gorm.DB) IPurchaseQuotaConfigRepo {
 }
 
 // GetByMaterialUuidAndShop 根据物品UUID和门店UUID查询限购配置
-// 查询逻辑：apply_to_all_shops=1 OR shopUuid IN shop_uuids
+// 查询逻辑：apply_to_all_shops=1 OR 存在关联表记录
 func (r *purchaseQuotaConfigRepoImpl) GetByMaterialUuidAndShop(
 	materialUuid uint64,
 	shopUuid uint64,
 	options ...DBOption,
 ) (*model.PurchaseQuotaConfig, error) {
 	var config model.PurchaseQuotaConfig
-	db := r.db.Where("delete_time = ?", 0).
-		Where("status = ?", constant.PurchaseQuotaConfigStatusEnabled).
-		Where("material_uuid = ?", materialUuid)
+	db := r.db.Where("ttpos_purchase_quota_config.delete_time = ?", 0).
+		Where("ttpos_purchase_quota_config.status = ?", constant.PurchaseQuotaConfigStatusEnabled).
+		Where("ttpos_purchase_quota_config.material_uuid = ?", materialUuid)
 	
-	// 🔥 门店范围过滤：应用到全部店铺 OR 门店UUID在列表中
-	db = db.Where("apply_to_all_shops = ? OR JSON_CONTAINS(shop_uuids, ?)", 
-		1, fmt.Sprintf(`"%d"`, shopUuid))
+	// 门店范围过滤：应用到全部店铺 OR 在关联表中存在记录
+	db = db.Where(`
+		ttpos_purchase_quota_config.apply_to_all_shops = 1 
+		OR EXISTS (
+			SELECT 1 FROM ttpos_purchase_quota_config_shop 
+			WHERE ttpos_purchase_quota_config_shop.config_uuid = ttpos_purchase_quota_config.uuid
+			AND ttpos_purchase_quota_config_shop.shop_uuid = ?
+			AND ttpos_purchase_quota_config_shop.delete_time = 0
+		)
+	`, shopUuid)
 	
 	for _, option := range options {
 		db = option(db)
@@ -852,6 +927,13 @@ func (r *purchaseQuotaConfigRepoImpl) GetByMaterialUuidAndShop(
 	if err := db.First(&config).Error; err != nil {
 		return nil, err
 	}
+	
+	// 预加载关联的门店列表（可选）
+	if err := r.db.Where("delete_time = ?", 0).
+		Model(&config).Association("Shops").Find(&config.Shops); err != nil {
+		return nil, err
+	}
+	
 	return &config, nil
 }
 
@@ -865,10 +947,51 @@ func (r *purchaseQuotaConfigRepoImpl) Update(config *model.PurchaseQuotaConfig) 
 	return r.db.Save(config).Error
 }
 
-// Delete 软删除限购配置
+// Delete 软删除限购配置（同时软删除关联表记录）
 func (r *purchaseQuotaConfigRepoImpl) Delete(uuid uint64) error {
-	return r.db.Model(&model.PurchaseQuotaConfig{}).
-		Where("uuid = ?", uuid).
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 1. 软删除主表
+		if err := tx.Model(&model.PurchaseQuotaConfig{}).
+			Where("uuid = ?", uuid).
+			Update("delete_time", time.Now().Unix()).Error; err != nil {
+			return err
+		}
+		
+		// 2. 软删除关联表
+		if err := tx.Model(&model.PurchaseQuotaConfigShop{}).
+			Where("config_uuid = ?", uuid).
+			Update("delete_time", time.Now().Unix()).Error; err != nil {
+			return err
+		}
+		
+		return nil
+	})
+}
+
+// BatchCreateShops 批量创建门店关联
+func (r *purchaseQuotaConfigRepoImpl) BatchCreateShops(configUuid uint64, shopUuids []uint64) error {
+	if len(shopUuids) == 0 {
+		return nil
+	}
+	
+	shops := make([]model.PurchaseQuotaConfigShop, 0, len(shopUuids))
+	now := time.Now().Unix()
+	
+	for _, shopUuid := range shopUuids {
+		shops = append(shops, model.PurchaseQuotaConfigShop{
+			ConfigUuid: configUuid,
+			ShopUuid:   shopUuid,
+			CreateTime: now,
+		})
+	}
+	
+	return r.db.Create(&shops).Error
+}
+
+// DeleteShops 删除指定配置的所有门店关联（软删除）
+func (r *purchaseQuotaConfigRepoImpl) DeleteShops(configUuid uint64) error {
+	return r.db.Model(&model.PurchaseQuotaConfigShop{}).
+		Where("config_uuid = ?", configUuid).
 		Update("delete_time", time.Now().Unix()).Error
 }
 
