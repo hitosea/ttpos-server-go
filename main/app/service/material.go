@@ -1254,14 +1254,15 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 
 			// 获取采购单位
 			var purchaseUom string
-			purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.PurchaseUnitUuid)
-			if err != nil {
-				return errors.WithMessage(err, "获取采购单位失败")
+			if request.PurchaseUnitUuid != 0 { // 如果采购单位不为空，则获取采购单位Uom
+				purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.PurchaseUnitUuid)
+				if err != nil {
+					return errors.WithMessage(err, "获取采购单位失败")
+				}
+				if purchaseUnit.Unit != nil {
+					purchaseUom = purchaseUnit.Unit.ErpnextUom
+				}
 			}
-			if purchaseUnit.Unit != nil {
-				purchaseUom = purchaseUnit.Unit.ErpnextUom
-			}
-
 			allowNegativeStock := request.AllowNegativeStock
 			_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
 				ItemCode:     existingMaterial.Code,
