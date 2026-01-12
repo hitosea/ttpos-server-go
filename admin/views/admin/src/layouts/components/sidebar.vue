@@ -15,7 +15,7 @@
           :key="item.path"
           v-permission="item.permission"
           class="cursor-pointer flex items-center gap-2 p-4 text-sm hover:bg-[#fffaeb] relative after"
-          :class="{ 'menu-active': route.path?.includes(item.path) }"
+          :class="{ 'menu-active': isMenuActive(item) }"
           @click="handleToPath(item)"
         >
           <ti-icon :name="item.icon" size="18" />
@@ -197,7 +197,24 @@
       permission: ['admin_setting.service_index'],
     },
   ];
-  const menuChildList = computed(() => menuList.find((item) => route.path?.includes(item.path))?.children || []);
+  // 判断一级菜单是否激活
+  const isMenuActive = (item: any) => {
+    const currentPath = route.path || '';
+    const menuPath = item.path || '';
+
+    // 如果没有子菜单，精确匹配
+    if (!item.children || item.children.length === 0) {
+      return currentPath === menuPath;
+    }
+
+    // 如果有子菜单，检查当前路由是否精确匹配一级菜单路径，或者匹配任何子菜单路径
+    return currentPath === menuPath || item.children.some((child: any) => currentPath === child.path);
+  };
+
+  const menuChildList = computed(() => {
+    const activeMenu = menuList.find((item) => isMenuActive(item));
+    return activeMenu?.children || [];
+  });
 
   const handleToPath = (item: any) => {
     if (!item.children || item.children.length == 0) {
