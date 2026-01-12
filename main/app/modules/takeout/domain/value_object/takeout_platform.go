@@ -12,11 +12,21 @@ var TakeoutPlatformNames = map[string]string{
 	TakeoutPlatformLineman: "LINE MAN",
 }
 
+<<<<<<< HEAD
 // 外卖类型
 const (
 	TakeoutTypeGrab    = 1 // Grab
 	TakeoutTypeLineman = 2 // LINE MAN
 )
+=======
+// GetPlatformName 根据平台代码获取平台显示名称
+func GetPlatformName(platform string) string {
+	if name, ok := TakeoutPlatformNames[platform]; ok {
+		return name
+	}
+	return ""
+}
+>>>>>>> dev
 
 // 外卖订单状态
 const (

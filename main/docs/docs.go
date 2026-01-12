@@ -19013,6 +19013,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/kiosk/setting": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "保存设置，目前仅支持修改机器备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.设置"
+                ],
+                "summary": "保存设置",
+                "parameters": [
+                    {
+                        "description": "修改设置参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.EditDeviceRemarkReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/kiosk/store_switch": {
             "post": {
                 "security": [
@@ -19059,6 +19098,45 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kiosk/verify_advanced_password": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "验证高级密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.基础信息"
+                ],
+                "summary": "验证高级密码",
+                "parameters": [
+                    {
+                        "description": "验证密码参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.VerifyPasswordReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -28393,6 +28471,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.ProductUnitSortReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/update_headquarters_product": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改总部商品的上下架状态和打印档口，支持单独或同时修改",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品"
+                ],
+                "summary": "修改总部商品",
+                "parameters": [
+                    {
+                        "description": "修改总部商品请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateHeadquartersProductReq"
                         }
                     }
                 ],
@@ -41251,6 +41368,10 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                },
+                "update_time": {
+                    "description": "更新时间戳,用于判断缓存是否过期. 在缓存层通过反射维护这个字段的值",
+                    "type": "integer"
                 }
             }
         },
@@ -50562,6 +50683,34 @@ const docTemplate = `{
                 }
             }
         },
+        "req.UpdateHeadquartersProductReq": {
+            "type": "object",
+            "required": [
+                "status",
+                "uuid"
+            ],
+            "properties": {
+                "product_printer_uuids": {
+                    "description": "商品打印档口UUID列表（可选）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "description": "商品状态 0-下架 1-上架（可选）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.UpdatePrintSettingReq": {
             "type": "object",
             "required": [
@@ -55174,6 +55323,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "client_version": {
+                    "description": "客户端版本",
+                    "type": "string"
+                },
                 "company": {
                     "description": "商家信息",
                     "allOf": [
@@ -55212,6 +55365,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.KioskResp"
                         }
                     ]
+                },
+                "system_version": {
+                    "description": "服务端版本",
+                    "type": "string"
                 },
                 "update_time": {
                     "description": "更新时间",

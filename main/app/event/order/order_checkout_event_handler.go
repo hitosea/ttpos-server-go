@@ -752,7 +752,6 @@ func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.D
 			utils.Go(func() {
 				err := service.NewSMSSrv(dbm).SendMemberCouponSMS(payload.Ctx, member.Phone, &sms.MemberCouponRequest{CouponNum: uint64(rewardCountToGive)})
 				if err != nil {
-					fmt.Println("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 					logger.Logger.Info("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 				}
 			})
@@ -816,7 +815,6 @@ func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.D
 			utils.Go(func() {
 				err := service.NewSMSSrv(dbm).SendMemberPointsSMS(payload.Ctx, member.Phone, &sms.MemberPointsRequest{Points: points})
 				if err != nil {
-					fmt.Println("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 					logger.Logger.Info("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 				}
 			})

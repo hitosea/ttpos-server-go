@@ -7123,6 +7123,10 @@
   "默认语言不能为空": "Varsayılan dil boş olamaz",
   "默认语言必须在常用语言列表中": "Varsayılan dil, sık kullanılan diller listesinde olmalıdır",
   "默认选中字段必须为0（不默认选中）或1（默认选中）": "Varsayılan seçili alan 0 (varsayılan seçili değil) veya 1 (varsayılan seçili) olmalıdır",
+  "今日申请次数已达上限（%s次），请明天再试": "Günlük başvuru limiti doldu (%s kez), lütfen yarın tekrar deneyin",
+  "物品 %s 只能使用 %s 单位进行采购": "Ürün %s yalnızca %s birimi ile satın alınabilir",
+  "本次申请 %s 数量已超限（已用 %s + 本次 %s > 限额 %s），请减少物品数量后重试": "%s miktarı limiti aşıyor (kullanılan %s + mevcut %s > limit %s), lütfen miktarı azaltın ve tekrar deneyin",
+  "本次申请 %s 数量已超限（最多 %v），请减少物品数量后重试": "Bu talepte %s miktarı limiti aşıyor (maksimum: %v). Lütfen miktarı azaltın ve tekrar deneyin",
   "點餐-店內": "주문 - 매장 내",
   "龘": "龘",
   "龙": "Ejderha"

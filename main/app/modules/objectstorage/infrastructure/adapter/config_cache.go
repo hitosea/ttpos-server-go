@@ -5,7 +5,9 @@ import (
 	"slices"
 	"time"
 
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/modules/objectstorage/domain/repository"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/logger"
 
@@ -140,7 +142,10 @@ func queryConfigFromDB() (ObjectStorageCacheConfig, error) {
 // 返回：
 //   - true: 启用缓存，false: 禁用缓存
 func IsObjectStorageCacheEnabled(companyUuid uint64) bool {
-	// return false // 暂时禁用缓存
+	// 如果当前是 debug 模式，则启用缓存
+	if config.Server.Mode == constant.ServerModeDebug {
+		return true
+	}
 
 	if companyUuid == 0 {
 		return false

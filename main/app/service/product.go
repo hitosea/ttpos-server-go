@@ -148,6 +148,7 @@ type IProductSrv interface {
 	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                                 // 排序商品列表
 	GetProductDetail(ctx context.Context, req req.ProductDetailReq) (*product_resp.ProductDetailResp, error)                       // 获取商品详情
 	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                                     // 修改商品状态
+	UpdateHeadquartersProduct(ctx context.Context, req req.UpdateHeadquartersProductReq) error                                     // 修改总部商品（状态和打印档口）
 	ProductTaxList(ctx context.Context) product_resp.ProductTaxListResp                                                            // 获取商品税类列表
 	AddProductShop(ctx context.Context, req req.ProductShopAddReq) (*product_resp.ProductDetailResp, error)                        // 添加商品，返回商品uuid
 	EditProductShop(ctx context.Context, req req.ProductShopEditReq) (*product_resp.ProductEditResp, []string, error)              // 编辑商品
@@ -5843,52 +5844,13 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
-		err = tx.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", req.Uuid).Updates(map[string]any{
-			"status": req.Status,
-		}).Error
-		if err != nil {
-			return errors.WithMessage(err, "修改商品状态失败")
+		if err := s.updateProductStatus(tx, &productPackage, req.Status); err != nil {
+			return err
 		}
-		err = tx.Model(&model.ProductBom{}).Select("status").Where("product_package_uuid = ?", productPackage.Uuid).Updates(map[string]any{
-			"status": req.Status,
-		}).Error
-		if err != nil {
-			return errors.WithMessage(err, "修改商品规格状态失败")
-		}
-		if productPackage.ProductType == constant.ProductTypeProduct && *req.Status == 0 {
-			productPackageGroupItems, err := productPackageGroupRepo.GetProductPackageGroupItems(
-				commonRepo.WhereBySoftDelete(),
-				commonRepo.WhereByRelatedUuid(productPackage.Uuid),
-				productPackageGroupRepo.WithProductPackageGroup(
-					commonRepo.WhereBySoftDelete(),
-				),
-				productPackageGroupRepo.WithProductPackageGroupProduct(
-					commonRepo.WhereBySoftDelete(),
-				),
-			)
-			if err != nil {
-				return errors.WithMessage(err, "获取商品套餐组商品失败")
-			}
-			for _, item := range productPackageGroupItems {
-				if item.ProductPackageGroup != nil && item.ProductPackageGroup.ProductPackage != nil {
-					err = tx.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
-						"status": 0,
-					}).Error
-					if err != nil {
-						return errors.WithMessage(err, "修改商品套餐状态失败")
-					}
-					err = tx.Model(&model.ProductBom{}).Select("status").Where("product_package_uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
-						"status": 0,
-					}).Error
-					if err != nil {
-						return errors.WithMessage(err, "修改商品套餐组商品状态失败")
-					}
-				}
-			}
-		}
+
 		company := ctx.GetCompany()
-		if company.IsOpenErp() {
+		// 门店只能同步修改自己erp的商品状态
+		if company.IsOpenErp() && isEditable(ctx, productPackage.HeadquarterUuid) {
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			if productPackage.IsProduct() {
 				// 禁用商品模板
@@ -5923,6 +5885,115 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 		return errors.WithMessage(err, "修改商品状态失败")
 	}
 
+	return nil
+}
+
+// UpdateHeadquartersProduct 修改总部商品（状态和打印档口）
+func (s *productSrv) UpdateHeadquartersProduct(ctx context.Context, req req.UpdateHeadquartersProductReq) error {
+	// 1. 参数验证
+	if req.Status == nil {
+		return errors.New("商品状态不能为空")
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	// 2. 查询商品是否存在
+	product, err := productRepo.GetProduct(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereUuid(req.Uuid),
+		productRepo.WithProductBoms(commonRepo.WhereBySoftDelete()),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取商品失败")
+	}
+	if product.ID == 0 {
+		return errors.New("商品不存在")
+	}
+
+	// 3. 验证打印档口
+	if req.ProductPrinterUuids != nil {
+		productCheckSrv := NewProductCheckSrv(s.dbm, s.localeSrv, s.settingSrv)
+		err = productCheckSrv.CheckProductPrinter(ctx, db, req.Uuid, req.ProductPrinterUuids)
+		if err != nil {
+			return errors.WithMessage(err, "验证打印档口失败")
+		}
+	}
+
+	// 4. 开启事务执行更新
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// 4.1 更新商品状态
+		if err := s.updateProductStatus(tx, &product, req.Status); err != nil {
+			return err
+		}
+
+		// 4.2 更新打印档口
+		if req.ProductPrinterUuids != nil {
+			productPrinterRepo := repository.NewProductPrinterRepo(tx)
+			err = productPrinterRepo.CreateProductPackagePrinter(product.Uuid, req.ProductPrinterUuids)
+			if err != nil {
+				return errors.WithMessage(err, "更新打印档口关联失败")
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return errors.WithMessage(err, "修改总部商品失败")
+	}
+
+	return nil
+}
+
+// updateProductStatus 更新商品状态（内部方法）
+func (s *productSrv) updateProductStatus(tx *gorm.DB, productPackage *model.ProductPackage, status *int) error {
+	commonRepo := repository.NewCommonRepo()
+	productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
+	err := tx.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", productPackage.Uuid).Updates(map[string]any{
+		"status": status,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err, "修改商品状态失败")
+	}
+	err = tx.Model(&model.ProductBom{}).Select("status").Where("product_package_uuid = ?", productPackage.Uuid).Updates(map[string]any{
+		"status": status,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err, "修改商品规格状态失败")
+	}
+	if productPackage.ProductType == constant.ProductTypeProduct && *status == 0 {
+		productPackageGroupItems, err := productPackageGroupRepo.GetProductPackageGroupItems(
+			commonRepo.WhereBySoftDelete(),
+			commonRepo.WhereByRelatedUuid(productPackage.Uuid),
+			productPackageGroupRepo.WithProductPackageGroup(
+				commonRepo.WhereBySoftDelete(),
+			),
+			productPackageGroupRepo.WithProductPackageGroupProduct(
+				commonRepo.WhereBySoftDelete(),
+			),
+		)
+		if err != nil {
+			return errors.WithMessage(err, "获取商品套餐组商品失败")
+		}
+		for _, item := range productPackageGroupItems {
+			if item.ProductPackageGroup != nil && item.ProductPackageGroup.ProductPackage != nil {
+				err = tx.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
+					"status": 0,
+				}).Error
+				if err != nil {
+					return errors.WithMessage(err, "修改商品套餐状态失败")
+				}
+				err = tx.Model(&model.ProductBom{}).Select("status").Where("product_package_uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
+					"status": 0,
+				}).Error
+				if err != nil {
+					return errors.WithMessage(err, "修改商品套餐组商品状态失败")
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -6228,7 +6299,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 
 	// 如果是总部来源数据，只能修改外卖的价格、上下架
 	if !isEditable(ctx, existingProduct.HeadquarterUuid) {
-		// TODO: 只能修改外卖的价格、上下架
+		// 只能修改外卖的价格、上下架
 		return nil, nil, errors.New("商品不可编辑")
 	}
 
@@ -8186,6 +8257,11 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 			} else if productPackage.CreateTime <= 1760516651 && companySetting.CompanyUuid == 7171274190848000 {
 				actualSaleNum = productPackage.ActualSaleNum
 			}
+
+			status := productPackage.Status
+			if existsProductPackage != nil {
+				status = existsProductPackage.Status
+			}
 			// 创建商品包
 			newProductPackageList = append(newProductPackageList, model.ProductPackage{
 				BaseModel: model.BaseModel{
@@ -8208,7 +8284,7 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 				SpecialCategoryUuid:           productPackage.SpecialCategoryUuid,
 				PrinterTagUuid:                productPackage.PrinterTagUuid,
 				SupplierUuid:                  productPackage.SupplierUuid,
-				Status:                        productPackage.Status,
+				Status:                        status,
 				IsShowCashier:                 productPackage.IsShowCashier,
 				IsShowTablet:                  productPackage.IsShowTablet,
 				IsShowKitchen:                 productPackage.IsShowKitchen,
@@ -8250,6 +8326,10 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 					bomIsSoldOut = existsProductBom.IsSoldOut
 					bomIsOpenStock = existsProductBom.IsOpenStock
 				}
+				status := productBom.Status
+				if existsProductBom != nil {
+					status = existsProductBom.Status
+				}
 				newProductBomList = append(newProductBomList, model.ProductBom{
 					BaseModel: model.BaseModel{
 						Uuid:       productBom.Uuid,
@@ -8266,7 +8346,7 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 					BarcodeValue:       productBom.BarcodeValue,
 					InternalCode:       productBom.InternalCode,
 					IsDefaultSelect:    productBom.IsDefaultSelect,
-					Status:             productBom.Status,
+					Status:             status,
 					IsSoldOut:          bomIsSoldOut,
 					ActualSaleNum:      bomActualSaleNum,
 					ProductFlavorUuid:  productBom.ProductFlavorUuid,

@@ -540,9 +540,7 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 	// 如果会员有密码的话，验证会员密码
 	if member.HasPassword() {
 		md5Password := cryptor.Md5String(discountReq.Password)
-		ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
 		if member.Password != md5Password {
-			ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
 			return errors.New("密码错误")
 		}
 	}

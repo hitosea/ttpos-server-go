@@ -58,7 +58,7 @@ func (r *purchaseQuotaConfigRepoImpl) GetByMaterialCodeAndShop(
 	db := r.db.Where("ttpos_purchase_quota_config.delete_time = ?", 0).
 		Where("ttpos_purchase_quota_config.status = ?", constant.PurchaseQuotaConfigStatusEnabled).
 		Where("ttpos_purchase_quota_config.material_code = ?", materialCode).
-		Where(`
+		Where(`(
 			ttpos_purchase_quota_config.apply_to_all_shops = 1 
 			OR EXISTS (
 				SELECT 1 FROM ttpos_purchase_quota_config_shop 
@@ -66,7 +66,7 @@ func (r *purchaseQuotaConfigRepoImpl) GetByMaterialCodeAndShop(
 				AND ttpos_purchase_quota_config_shop.company_uuid = ?
 				AND ttpos_purchase_quota_config_shop.delete_time = 0
 			)
-		`, companyUuid)
+		)`, companyUuid)
 
 	for _, option := range options {
 		db = option(db)

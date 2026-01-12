@@ -7123,6 +7123,10 @@
   "默认语言不能为空": "Standardspråket får inte vara tomt",
   "默认语言必须在常用语言列表中": "Standardspråket måste finnas i listan över vanliga språk",
   "默认选中字段必须为0（不默认选中）或1（默认选中）": "Fältet som är förvalt måste vara 0 (ej förvalt) eller 1 (förvalt)",
+  "今日申请次数已达上限（%s次），请明天再试": "Daglig ansökningsgräns nådd (%s gånger), försök igen imorgon",
+  "物品 %s 只能使用 %s 单位进行采购": "Artikel %s kan endast köpas i enheten %s",
+  "本次申请 %s 数量已超限（已用 %s + 本次 %s > 限额 %s），请减少物品数量后重试": "Mängden %s överskrider gränsen (använd %s + aktuell %s > gräns %s), minska mängden och försök igen",
+  "本次申请 %s 数量已超限（最多 %v），请减少物品数量后重试": "Mängden för %s i denna ansökan överskrider gränsen (max: %v). Minska mängden och försök igen",
   "點餐-店內": "Beställning - På plats",
   "龘": "龘",
   "龙": "Drake"

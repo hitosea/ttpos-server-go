@@ -140,15 +140,17 @@ type CustomGormLogger struct {
 	SlowThreshold             time.Duration
 	IgnoreRecordNotFoundError bool
 	LogLevel                  logger.LogLevel // 添加日志级别字段
+	DBName                    string          // 数据库名
 }
 
 // NewCustomGormLogger 创建自定义GORM日志记录器
-func NewCustomGormLogger(zapLogger *zap.Logger, slowThreshold time.Duration, ignoreRecordNotFoundError bool) *CustomGormLogger {
+func NewCustomGormLogger(zapLogger *zap.Logger, slowThreshold time.Duration, ignoreRecordNotFoundError bool, dbName string) *CustomGormLogger {
 	return &CustomGormLogger{
 		ZapLogger:                 zapLogger,
 		SlowThreshold:             slowThreshold,
 		IgnoreRecordNotFoundError: ignoreRecordNotFoundError,
 		LogLevel:                  logger.Silent, // 默认为Silent模式
+		DBName:                    dbName,
 	}
 }
 
@@ -188,6 +190,7 @@ func (l *CustomGormLogger) Trace(ctx context.Context, begin time.Time, fc func()
 
 	// 构建日志字段
 	fields := []zap.Field{
+		zap.String("database", l.DBName),
 		zap.String("sql", formattedSQL),
 		zap.Duration("elapsed", elapsed),
 		zap.Int64("rows", rows),

@@ -111,6 +111,9 @@ type KioskBase struct {
 	Kiosk        setting.KioskResp `json:"kiosk"`         // 自助点餐机设置（包含语言列表、轮播广告）
 	UpdateTime   int64             `json:"update_time"`   // 更新时间
 
+	ServerVersion string `json:"system_version"` // 服务端版本
+	ClientVersion string `json:"client_version"` // 客户端版本
+
 	// 关联的门店列表
 	CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
 }
