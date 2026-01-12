@@ -1510,6 +1510,14 @@ func (s *Srv) VerifyPassword(ctx context.Context, source string, typ string, pas
 		passwordMap = map[string]string{
 			constant.PasswordTypeAdvanced: kitchenSetting.AdvancedPassword,
 		}
+	case constant.SourceKiosk:
+		kioskSetting, err := s.GetKioskSetting(ctx)
+		if err != nil {
+			return false
+		}
+		passwordMap = map[string]string{
+			constant.PasswordTypeAdvanced: kioskSetting.AdvancedPassword,
+		}
 	}
 	if truePassword, exits := passwordMap[typ]; exits {
 		return password == truePassword
