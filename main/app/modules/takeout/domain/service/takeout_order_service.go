@@ -52,6 +52,9 @@ type ITakeoutOrderSrv interface {
 	// CalculateTakeoutOrderSalesVolume 计算外卖订单销量
 	// 返回: productBoms (BOM UUID -> 销量), productPackages (Package UUID -> 销量), error
 	CalculateTakeoutOrderSalesVolume(order *takeoutModel.TakeoutOrder) (map[uint64]float64, map[uint64]float64, error)
+	// BatchAssignShiftLogToPendingOrders 批量将待分配班次的订单分配给指定班次
+	// 对于已接单的订单，会同步生成 ERP 发票
+	BatchAssignShiftLogToPendingOrders(ctx context.Context, shiftLogUuid, staffUuid uint64) error
 }
 
 // takeoutOrderSrv 外卖订单服务实现
@@ -293,9 +296,8 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 		return err
 	}
 
-	// 如果不是自动接单，则通知平台接受订单
+	// 调用 BMP RPC 通知平台接受订单
 	if !order.IsAutoAcceptOrder() {
-		// 调用 BMP RPC 通知平台接受订单
 		rpcClient, err := rpc.NewBMPTakeoutClient()
 		if err != nil {
 			logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
@@ -312,15 +314,15 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 		}
 	}
 
-	// 设置员工班次信息
-	if err := orderRepo.SetStaffShiftLogUuid(order, userUuid); err != nil {
-		logger.Logger.Error("设置员工班次日志UUID失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+	// 设置员工班次信息】
+	if !order.IsExistShiftLog() {
+		if err := orderRepo.SetStaffShiftLogUuid(order); err != nil {
+			logger.Logger.Error("设置员工班次日志UUID失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+		}
 	}
 
+	// 更新订单状态
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		ctxCopy := ctx.Copy()
-		ctxCopy.SetDB(tx)
-		// 更新订单状态
 		updateData := map[string]interface{}{
 			"order_state":          valueobject.TakeoutOrderStateAccepted,
 			"accepted_time":        currentTime,
@@ -332,16 +334,17 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 			logger.Logger.Error("更新订单状态失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 			return errors.WithMessage(errors.New("更新订单状态失败"), err.Error())
 		}
-		// 同步到 ERP
-		if !order.IsAutoAcceptOrder() {
-			if err := s.erpSyncService.SyncOrderToERP(ctxCopy, order.Uuid); err != nil {
-				logger.Logger.Error("同步 Grab 订单到 ERP 失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-				return errors.WithMessage(errors.New("同步 Grab 订单到 ERP 失败"), err.Error())
-			}
-		}
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err)
+	}
+
+	// 同步到 ERP
+	if order.IsExistShiftLog() {
+		if err := s.erpSyncService.SyncOrderToERP(ctx, order.Uuid); err != nil {
+			logger.Logger.Error("同步 Grab 订单到 ERP 失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return errors.WithMessage(errors.New("同步 Grab 订单到 ERP 失败"), err.Error())
+		}
 	}
 
 	// 发布订单接受事件
@@ -446,13 +449,6 @@ func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrd
 	// 检查订单状态 - 只有已接单配餐中的订单才能呼叫骑手
 	if order.OrderState != valueobject.TakeoutOrderStateAccepted {
 		return errors.New("订单状态不正确，只有已接单配餐中的订单才能呼叫骑手")
-	}
-
-	// 自动接单的订单在呼叫骑手时设置班次
-	if order.IsAutoAcceptOrder() && order.StaffShiftLogUuid == 0 {
-		if err := orderRepo.SetStaffShiftLogUuid(order, userUuid); err != nil {
-			logger.Logger.Error("自动接单订单呼叫骑手时设置班次失败", zap.Error(err), zap.Uint64("order_uuid", order.Uuid))
-		}
 	}
 
 	// 调用 BMP RPC 标记订单准备完成
@@ -628,17 +624,18 @@ func (s *takeoutOrderSrv) CancelOrder(ctx context.Context, req *request.TakeoutO
 	}
 
 	// 调用 BMP RPC 取消订单
-	rpcClient, err := rpc.NewBMPTakeoutClient()
-	if err != nil {
-		logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		return err
-	}
-	defer rpcClient.Close()
-
-	// 调用 CancelOrder 接口（通知平台取消订单）
-	if err := rpcClient.CancelOrder(ctx.GetContext(), order.TakeoutOrderUuid, req.ReasonCode); err != nil {
-		logger.Logger.Error("调用 BMP CancelOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		return err
+	if order.IsErpInvoiceSynced() {
+		rpcClient, err := rpc.NewBMPTakeoutClient()
+		if err != nil {
+			logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return err
+		}
+		defer rpcClient.Close()
+		// 调用 CancelOrder 接口（通知平台取消订单）
+		if err := rpcClient.CancelOrder(ctx.GetContext(), order.TakeoutOrderUuid, req.ReasonCode); err != nil {
+			logger.Logger.Error("调用 BMP CancelOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return err
+		}
 	}
 
 	// 更新订单状态为已取消
@@ -658,6 +655,7 @@ func (s *takeoutOrderSrv) CancelOrder(ctx context.Context, req *request.TakeoutO
 		"update_time":        currentTime,
 	}
 
+	// 如果订单的 staff_shift_log_uuid 不存在，尝试自动分配班次
 	if err := orderRepo.UpdateByMap(order.Uuid, updateData); err != nil {
 		logger.Logger.Error("更新订单状态失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 		return errors.WithMessage(errors.New("更新订单状态失败"), err.Error())
@@ -757,6 +755,13 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 	// 验证商品数据
 	if len(order.TakeoutOrderItems) == 0 {
 		return errors.New("订单商品数据不能为空")
+	}
+
+	// 设置员工班次信息】
+	if !order.IsExistShiftLog() {
+		if err := orderRepo.SetStaffShiftLogUuid(order); err != nil {
+			logger.Logger.Error("设置员工班次日志UUID失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+		}
 	}
 
 	// 开启事务
@@ -1591,4 +1596,90 @@ func (s *takeoutOrderSrv) GetOrderForPrint(ctx context.Context, orderUuid uint64
 	}
 
 	return order, nil
+}
+
+// BatchAssignShiftLogToPendingOrders 批量将待分配班次的订单分配给指定班次
+// 对于已接单的订单，会同步生成 ERP 发票
+func (s *takeoutOrderSrv) BatchAssignShiftLogToPendingOrders(ctx context.Context, shiftLogUuid, staffUuid uint64) error {
+	db := ctx.GetDB()
+	orderRepo := persistence.NewTakeoutOrderRepo(db)
+
+	// 1. 通过 repository 查询所有待分配班次的订单
+	pendingOrders, err := orderRepo.GetPendingShiftLogOrders()
+	if err != nil {
+		return errors.WithMessage(err, "查询待分配班次的订单失败")
+	}
+
+	if len(pendingOrders) == 0 {
+		logger.Logger.Info("没有待分配班次的订单")
+		return nil
+	}
+
+	// 2. 将订单分为两类：需要生成 ERP 发票的订单和不需要的订单
+	var ordersNeedErpInvoice []*takeoutModel.TakeoutOrder
+	var ordersNoErpInvoice []*takeoutModel.TakeoutOrder
+
+	for _, order := range pendingOrders {
+		// 需要生成 ERP 发票的条件：已接单且未同步 ERP 发票
+		if order.OrderState != valueobject.TakeoutOrderStatePending && !order.IsErpInvoiceSynced() {
+			ordersNeedErpInvoice = append(ordersNeedErpInvoice, order)
+		} else {
+			ordersNoErpInvoice = append(ordersNoErpInvoice, order)
+		}
+	}
+
+	// 3. 对于需要生成 ERP 发票的订单，在事务中同时完成班次分配和 ERP 发票生成
+	successCount := 0
+	for _, order := range ordersNeedErpInvoice {
+		err := db.Transaction(func(tx *gorm.DB) error {
+			ctxTx := ctx.Copy()
+			ctxTx.SetDB(tx)
+
+			// 3.1 在事务中分配班次
+			updatedCount, err := persistence.NewTakeoutOrderRepo(tx).BatchAssignShiftLog(
+				shiftLogUuid,
+				staffUuid,
+				[]uint64{order.Uuid},
+			)
+			if err != nil {
+				return errors.WithMessage(err, "分配班次失败")
+			}
+			if updatedCount == 0 {
+				return errors.New("订单班次分配失败，可能已被其他进程处理")
+			}
+
+			// 3.2 在事务中同步到 ERP（生成发票）
+			if err := s.erpSyncService.SyncOrderToERP(ctxTx, order.Uuid); err != nil {
+				return errors.WithMessage(err, "同步订单到 ERP 失败")
+			}
+
+			return nil
+		})
+
+		// 继续处理其他订单，不返回错误
+		if err != nil {
+			logger.Logger.Warn("处理订单失败（事务回滚）", zap.Error(err), zap.Uint64("orderUuid", order.Uuid), zap.Uint64("shiftLogUuid", shiftLogUuid))
+		} else {
+			successCount++
+			logger.Logger.Info("订单班次分配和 ERP 发票生成成功", zap.Uint64("orderUuid", order.Uuid), zap.Uint64("shiftLogUuid", shiftLogUuid))
+		}
+	}
+
+	// 4. 对于不需要生成 ERP 发票的订单，批量分配班次
+	if len(ordersNoErpInvoice) > 0 {
+		orderUuids := make([]uint64, 0, len(ordersNoErpInvoice))
+		for _, order := range ordersNoErpInvoice {
+			orderUuids = append(orderUuids, order.Uuid)
+		}
+		_, err := orderRepo.BatchAssignShiftLog(shiftLogUuid, staffUuid, orderUuids)
+		if err != nil {
+			logger.Logger.Warn("批量分配订单班次失败", zap.Error(err), zap.Uint64("shiftLogUuid", shiftLogUuid), zap.Uint64("staffUuid", staffUuid))
+		}
+	}
+
+	logger.Logger.Debug("批量分配班次完成", zap.Int("erpInvoiceSuccessCount", successCount),
+		zap.Int("erpInvoiceTotalCount", len(ordersNeedErpInvoice)),
+		zap.Int("noErpInvoiceCount", len(ordersNoErpInvoice)))
+
+	return nil
 }

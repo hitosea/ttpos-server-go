@@ -3172,6 +3172,11 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in":          "สั่งอาหารในร้าน",
 			"takeout_shop":     "สั่งอาหารกลับบ้าน",
 			"takeout_delivery": "จัดส่ง",
+			"dine_in_store":    "สั่งอาหารในร้าน",
+			"takeaway":         "นำอาหารกลับบ้าน",
+			"grab":             "Grab",
+			"lineman":          "LINE MAN",
+			"takeout":          "สั่งอาหารกลับบ้าน",
 		},
 		"zhtw": {
 			"summary":          "合計",
@@ -3179,6 +3184,11 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in":          "點餐-店內",
 			"takeout_shop":     "點餐-外賣",
 			"takeout_delivery": "外送",
+			"dine_in_store":    "店內點餐",
+			"takeaway":         "外帶",
+			"grab":             "Grab",
+			"lineman":          "LINE MAN",
+			"takeout":          "外送",
 		},
 		"ja": {
 			"summary":          "合計",
@@ -3186,6 +3196,11 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in":          "店内注文",
 			"takeout_shop":     "テイクアウト注文",
 			"takeout_delivery": "配達",
+			"dine_in_store":    "店内点餐",
+			"takeaway":         "外帶",
+			"grab":             "Grab",
+			"lineman":          "LINE MAN",
+			"takeout":          "外送",
 		},
 		"ko": {
 			"summary":          "합계",
@@ -3193,6 +3208,11 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in":          "매장 주문",
 			"takeout_shop":     "테이크아웃 주문",
 			"takeout_delivery": "배달",
+			"dine_in_store":    "店内点餐",
+			"takeaway":         "外帶",
+			"grab":             "Grab",
+			"lineman":          "LINE MAN",
+			"takeout":          "外送",
 		},
 		"my": {
 			"summary":          "စုစုပေါင်း",
@@ -3200,6 +3220,11 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in":          "ဆိုင်တွင်မှာယူ",
 			"takeout_shop":     "အိမ်သို့ယူ",
 			"takeout_delivery": "ပို့ဆောင်မှု",
+			"dine_in_store":    "ဆိုင်တွင်မှာယူ",
+			"takeaway":         "အိမ်သို့ယူ",
+			"grab":             "Grab",
+			"lineman":          "LINE MAN",
+			"takeout":          "အိမ်သို့ယူ",
 		},
 		"tr": {
 			"summary":          "Toplam",
@@ -3207,6 +3232,11 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in":          "Restoranda Sipariş",
 			"takeout_shop":     "Paket Sipariş",
 			"takeout_delivery": "Teslimat",
+			"dine_in_store":    "Restoranda Sipariş",
+			"takeaway":         "Paket Sipariş",
+			"grab":             "Grab",
+			"lineman":          "LINE MAN",
+			"takeout":          "Teslimat",
 		},
 		"sv": {
 			"summary":          "Totalt",
@@ -3214,6 +3244,11 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in":          "Beställning på restaurang",
 			"takeout_shop":     "Takeaway-beställning",
 			"takeout_delivery": "Leverans",
+			"dine_in_store":    "Restoranda Sipariş",
+			"takeaway":         "Paket Sipariş",
+			"grab":             "Grab",
+			"lineman":          "LINE MAN",
+			"takeout":          "Teslimat",
 		},
 	}
 	channelNames := channelNameMap[lang]
@@ -4463,11 +4498,13 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 					QueryEndDate:      queryEndDate,
 					Cycle:             request.Cycle, // 使用请求参数中的周期设置
 					ExcludeDataManage: excludeDataManage,
+					OrderDelivery:     1,
 				}
 
 				// 处理支付方式筛选：使用支付方式名称（因为不同商家的同一支付方式UUID可能不同）
 				if len(request.PaymentMethodNames) > 0 {
 					statisticsReq.PaymentMethodNames = request.PaymentMethodNames
+					statisticsReq.OrderDelivery = 0
 				}
 
 				statisticsData := s.statisticsSrv.CountBusinessPaymentMethod(shopCtx, statisticsReq)
@@ -4825,8 +4862,9 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 
 	// 使用 channel 收集结果，避免竞态条件
 	type resultItem struct {
-		items []resp.CompanyRefundSummaryItem
-		err   error
+		items     []resp.CompanyRefundSummaryItem
+		orderNums map[string]int64 // 日期 -> 订单数，用于汇总时计算退款率
+		err       error
 	}
 	resultChan := make(chan resultItem, len(companyList))
 
@@ -4894,8 +4932,9 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 
 				statisticsData := s.statisticsSrv.CountRefundSummary(shopCtx, statisticsReq)
 
-				// 转换为响应格式
+				// 转换为响应格式，同时保存订单数信息
 				items := make([]resp.CompanyRefundSummaryItem, 0, len(statisticsData.StatisticsRefundSummaryList))
+				orderNums := make(map[string]int64) // 日期 -> 订单数
 				for _, statItem := range statisticsData.StatisticsRefundSummaryList {
 					items = append(items, resp.CompanyRefundSummaryItem{
 						Date:                statItem.Date,
@@ -4908,9 +4947,11 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 						FullRefundAmount:    statItem.FullRefundAmount,
 						FullRefundNum:       statItem.FullRefundNum,
 					})
+					// 保存订单数（按日期累加，因为同一日期可能有多个商家）
+					orderNums[statItem.Date] += statItem.OrderNum
 				}
 
-				resultChan <- resultItem{items: items, err: nil}
+				resultChan <- resultItem{items: items, orderNums: orderNums, err: nil}
 			}(companyItem)
 		})
 	}
@@ -4921,14 +4962,19 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 		close(resultChan)
 	}()
 
-	// 收集所有门店的统计数据
+	// 收集所有门店的统计数据，同时收集订单数信息
 	allItems := make([]resp.CompanyRefundSummaryItem, 0)
+	dateOrderNumMap := make(map[string]int64) // 日期 -> 订单数总和（所有商家累加）
 	for result := range resultChan {
 		if result.err != nil {
 			// 记录错误但继续处理其他门店
 			continue
 		}
 		allItems = append(allItems, result.items...)
+		// 累加订单数
+		for date, orderNum := range result.orderNums {
+			dateOrderNumMap[date] += orderNum
+		}
 	}
 
 	// 根据 report 参数决定返回明细表还是汇总表
@@ -4977,7 +5023,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 					PartialRefundNum:    item.PartialRefundNum,
 					FullRefundAmount:    decimal.NewFromFloat(item.FullRefundAmount),
 					FullRefundNum:       item.FullRefundNum,
-					OrderNum:            0, // 订单数量需要从原始数据中获取
+					OrderNum:            dateOrderNumMap[item.Date], // 从订单数 map 中获取
 				}
 				// 初始化商家名称集合
 				if dateCompanyNamesMap[item.Date] == nil {
@@ -5026,6 +5072,11 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 		// 计算总汇总行（使用 decimal）
 		var totalRefundAmount, totalPartialRefundAmount, totalFullRefundAmount decimal.Decimal
 		var totalRefundNum, totalPartialRefundNum, totalFullRefundNum, totalOrderNum int64
+
+		// 累加所有日期的订单数
+		for _, orderNum := range dateOrderNumMap {
+			totalOrderNum += orderNum
+		}
 
 		for _, item := range finalList {
 			totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))

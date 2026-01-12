@@ -3,11 +3,12 @@ package grab
 
 import (
 	"context"
-
-	"ttpos-bmp/app/ttpos-takeout/api/grab"
-	grabclient "ttpos-bmp/app/ttpos-takeout/internal/client/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
+
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gctx"
 )
 
 var (
@@ -21,12 +22,18 @@ func init() {
 	service.RegisterGrab(Grab)
 }
 
-// MustConf 获取 Grab 配置
-func (s *sGrab) MustConf() *conf.Grab {
-	return grabclient.MustConf()
-}
+// MustConfig 获取 Grab 配置 (平台维度)
+// 读取 app.provider.grab.platform 节点
+func MustConfig(ctx context.Context) *conf.Grab {
+	if ctx == nil {
+		ctx = gctx.New()
+	}
 
-// GetShopProviderCfg 查询门店第三方配置
-func (s *sGrab) GetShopProviderCfg(ctx context.Context, req *grab.GetShopProviderCfgReq) (*grab.GetShopProviderCfgResp, error) {
-	return service.ShopProviderCfg().GetShopProviderCfgResp(ctx, req)
+	var grabCfg conf.Grab
+	if err := g.Cfg().MustGet(ctx, "app.provider.grab.platform").Scan(&grabCfg); err != nil {
+		g.Log().Fatal(ctx, err)
+		panic(gerror.Newf("获取 Grab 平台配置失败: %v", err))
+	}
+
+	return &grabCfg
 }

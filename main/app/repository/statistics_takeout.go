@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	// 有效状态：10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 60=已取消
+	// 有效状态：10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 60=已取消，接单时间>0
 	validOrderStates = []int{
 		valueobject.TakeoutOrderStateAccepted,        // 10
 		valueobject.TakeoutOrderStateRiderPending,    // 20
@@ -21,7 +21,7 @@ var (
 		valueobject.TakeoutOrderStateCompleted,       // 40
 		valueobject.TakeoutOrderStateCanceled,        // 60
 	}
-	// 营业收入状态：10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成（不包括60已取消）
+	// 营业收入状态：10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成（不包括60已取消），接单时间>0
 	businessOrderStates = []int{
 		valueobject.TakeoutOrderStateAccepted,        // 10
 		valueobject.TakeoutOrderStateRiderPending,    // 20
@@ -31,7 +31,7 @@ var (
 	// 拒单状态
 	rejectedOrderState = valueobject.TakeoutOrderStateRejected // 50
 	// 取消状态
-	canceledOrderState = valueobject.TakeoutOrderStateCanceled // 60
+	canceledOrderState = valueobject.TakeoutOrderStateCanceled // 60，接单时间>0
 )
 
 // buildStateInCondition 构建状态 IN 条件字符串
@@ -107,6 +107,8 @@ type takeoutChannelSaleRawData struct {
 	OrderUuid    uint64  // 订单UUID
 	OrderAmount  float64 // 订单金额（subtotal）
 	PayAmount    float64 // 实付金额（状态为60时=0，其他状态=eater_payment）
+	OrderNum     int64   // 订单数
+	RefundNum    int64   // 退款笔数
 }
 
 // takeoutPaymentMethodRawData 外卖订单支付方式统计原始数据
@@ -141,6 +143,10 @@ func NewStatisticsTakeoutRepoImpl(db *gorm.DB) *StatisticsTakeoutRepo {
 //   - StaffShiftLogUuid: 按员工班次日志UUID筛选（>0时生效）
 //   - Platform: 按平台筛选（非空时生效）
 //
+// 统计规则：
+//   - 仅统计有效状态的订单（10,20,30,40,60），且 accepted_time > 0（接单后才能统计）
+//   - 取消状态（60）的订单需要 accepted_time > 0 才会被统计
+//
 // 字段说明：
 //   - TotalSaleAmount: 总销售额（使用顾客实付 eater_payment，与堂食统计统一）
 //   - MinOrderAmount/MaxOrderAmount: 最小/最大订单金额（使用顾客实付 eater_payment）
@@ -157,6 +163,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
 		baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time >= ? AND ttpos_takeout_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
 	}
+
+	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
+	baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time > 0")
 
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
@@ -185,9 +194,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 		// 4. 总退款金额：当 order_state = 60 时统计（已取消订单的顾客实付）
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.eater_payment, 0)), 0) AS total_refund_amount", canceledOrderState),
 		// 5. 最小订单金额：当 order_state 为有效状态时统计（使用顾客实付）
-		fmt.Sprintf("COALESCE(MIN(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS min_order_amount", validStatesStr),
+		fmt.Sprintf("COALESCE(MIN(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS min_order_amount", businessStatesStr),
 		// 6. 最大订单金额：当 order_state 为有效状态时统计（使用顾客实付）
-		fmt.Sprintf("COALESCE(MAX(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS max_order_amount", validStatesStr),
+		fmt.Sprintf("COALESCE(MAX(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS max_order_amount", businessStatesStr),
 		// 7. 总优惠折扣：当 order_state 为有效状态时统计 platform_discount + merchant_discount + basket_promo
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.platform_discount + t.merchant_discount + t.basket_promo, 0)), 0) AS total_discount", validStatesStr),
 		// 8. 总税费：当 order_state 为营业收入状态时统计 tax
@@ -201,7 +210,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 		// 12. 总商品数量：当 order_state 为有效状态时统计，关联商品表的 quantity 字段
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, IFNULL(t.total_quantity, 0), 0)), 0) AS total_product_num", validStatesStr),
 		// 13. 总订单金额：当 order_state 为有效状态时统计（使用顾客实付，用于计算平均值）
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment, 0)), 0) AS total_order_amount", validStatesStr),
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment, 0)), 0) AS total_order_amount", businessStatesStr),
 		// 14. 原商品金额：当 order_state 为有效状态时统计（使用小计金额，兼容前端）
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.subtotal, 0)), 0) AS total_product_origin_price", validStatesStr),
 	}
@@ -233,9 +242,12 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 //   - platform = "grab" → payment_name = "Grab"
 //   - platform = "lineman" → payment_name = "LINE MAN"
 //
-// 仅统计 validOrderStates 状态的订单（10, 20, 30, 40, 60）
+// 统计规则：
+//   - 仅统计 validOrderStates 状态的订单（10, 20, 30, 40, 60），且 accepted_time > 0（接单后才能统计）
+//   - 取消状态（60）的订单需要 accepted_time > 0 才会被统计
+//
 // TotalPaymentAmount = eater_payment[10,20,30,40]（营业收入状态，优化后直接统计，避免先求和再相减）
-// TotalRefundAmount = eater_payment[60]（已取消订单）
+// TotalRefundAmount = eater_payment[60]（已取消订单，且 accepted_time > 0）
 func (r *StatisticsTakeoutRepo) CountTakeoutPayment(req CountTakeoutReq) []model.StatisticsTakeoutPaymentData {
 	var result []model.StatisticsTakeoutPaymentData
 
@@ -252,6 +264,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPayment(req CountTakeoutReq) []model
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
 		baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time >= ? AND ttpos_takeout_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
 	}
+
+	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
+	baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time > 0")
 
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
@@ -319,7 +334,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPayment(req CountTakeoutReq) []model
 }
 
 // CountTakeoutReceivedAmount 统计外卖订单实收金额
-// 查询 validOrderStates 状态下的订单
+// 查询 validOrderStates 状态下的订单，且 accepted_time > 0（接单后才能统计）
 // 使用 IF 判断：如果状态是营业收入状态(10,20,30,40)，则取 eater_payment；如果状态是取消状态(60)，则取 0
 // 返回每个订单的接单时间、订单UUID和实收金额
 func (r *StatisticsTakeoutRepo) CountTakeoutReceivedAmount(req CountTakeoutReq) []model.StatisticsTakeoutReceivedAmountData {
@@ -338,6 +353,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutReceivedAmount(req CountTakeoutReq) 
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
 		baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time >= ? AND ttpos_takeout_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
 	}
+
+	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
+	baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time > 0")
 
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
@@ -368,8 +386,10 @@ func (r *StatisticsTakeoutRepo) CountTakeoutReceivedAmount(req CountTakeoutReq) 
 }
 
 // RankTakeoutProduct 统计外卖订单商品排行
-// 只统计营业收入状态的订单（10,20,30,40）
+// 统计有效状态的订单（10,20,30,40,60），且 accepted_time > 0（接单后才能统计）
 // 按 product_package_uuid 分组统计销售数量和金额
+// 销量：所有 validOrderStates 都统计（包括取消订单60）
+// 销售金额：只统计 businessOrderStates（不包括取消订单60）
 func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.StatisticsProductData {
 	var result []model.StatisticsProductData
 
@@ -377,20 +397,24 @@ func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.
 	takeoutOrderTable := prefix + "takeout_order"
 	takeoutOrderItemTable := prefix + "takeout_order_item"
 
-	// 只统计营业收入状态的订单（10,20,30,40）
+	// 统计有效状态的订单（10,20,30,40,60），包括取消订单（60）
+	validStatesStr := buildStateInCondition(validOrderStates)
+	// 营业收入状态（10,20,30,40），不包括取消订单（60），用于计算销售金额
 	businessStatesStr := buildStateInCondition(businessOrderStates)
 
 	query := r.db.Table(takeoutOrderItemTable+" AS toi").
 		Select(
 			"toi.price AS sale_price",
 			"toi.ttpos_product_package_uuid AS product_package_uuid",
+			// 销量：所有 validOrderStates 都统计（包括取消订单60）
 			"SUM(CAST(toi.quantity AS DECIMAL(14,2))) AS sale_num",
-			"SUM(toi.price * toi.quantity) AS sale_amount",
+			// 销售金额：只统计 businessOrderStates（不包括取消订单60）
+			fmt.Sprintf("SUM(IF(to_order.order_state IN %s, toi.price * toi.quantity, 0)) AS sale_amount", businessStatesStr),
 		).
 		Joins(fmt.Sprintf("INNER JOIN %s AS to_order ON toi.takeout_order_uuid = to_order.uuid", takeoutOrderTable)).
 		Where("toi.delete_time = ?", constant.NotDeleted).
 		Where("to_order.delete_time = ?", constant.NotDeleted).
-		Where(fmt.Sprintf("to_order.order_state IN %s", businessStatesStr)).
+		Where(fmt.Sprintf("to_order.order_state IN %s", validStatesStr)).
 		Where("toi.ttpos_product_package_uuid > 0"). // 只统计已映射的商品
 		Group("toi.ttpos_product_package_uuid")
 
@@ -398,6 +422,9 @@ func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
 		query = query.Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
 	}
+
+	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
+	query = query.Where("to_order.accepted_time > 0")
 
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
@@ -416,6 +443,10 @@ func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.
 
 // CountTakeoutBusinessTimePeriod 统计外卖订单营业时段
 // 使用 accepted_time（接单时间）进行时段分组
+// 统计规则：
+//   - 仅统计有效状态的订单（10,20,30,40,60），且 accepted_time > 0（接单后才能统计）
+//   - 取消状态（60）的订单需要 accepted_time > 0 才会被统计
+//
 // 订单金额：所有有效状态的 subtotal
 // 实付金额：状态为60（已取消）时=0，其他有效状态=eater_payment
 // 订单数量：按 uuid 去重统计
@@ -446,6 +477,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessTimePeriod(req CountTakeoutB
 			FROM ttpos_takeout_order
 			WHERE delete_time = ?
 				AND order_state IN %s
+				AND accepted_time > 0
 				AND accepted_time >= ?
 				AND accepted_time <= ?
 		) AS subquery
@@ -461,6 +493,10 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessTimePeriod(req CountTakeoutB
 
 // CountTakeoutBusinessSummary 统计外卖订单综合运营（返回原始数据，不分组）
 // 使用 accepted_time（接单时间）作为时间字段
+// 统计规则：
+//   - 仅统计有效状态的订单（10,20,30,40,60），且 accepted_time > 0（接单后才能统计）
+//   - 取消状态（60）的订单需要 accepted_time > 0 才会被统计
+//
 // 订单金额：所有有效状态的 subtotal
 // 实付金额：状态为60（已取消）时=0，其他有效状态=eater_payment
 func (r *StatisticsTakeoutRepo) CountTakeoutBusinessSummary(req CountTakeoutBusinessSummaryReq) []takeoutBusinessSummaryRawData {
@@ -475,11 +511,12 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessSummary(req CountTakeoutBusi
 		SELECT 
 			accepted_time,
 			uuid AS order_uuid,
-			IF(order_state IN %s, subtotal, 0) AS order_amount,
+			IF(order_state IN %s, eater_payment, 0) AS order_amount,
 			IF(order_state = %d, 0, IF(order_state IN %s, eater_payment, 0)) AS pay_amount
 		FROM ttpos_takeout_order
 		WHERE delete_time = ?
 			AND order_state IN %s
+			AND accepted_time > 0
 			AND accepted_time >= ?
 			AND accepted_time <= ?
 		ORDER BY accepted_time ASC
@@ -512,6 +549,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSale(req CountTakeoutChannelS
 		FROM ttpos_takeout_order
 		WHERE delete_time = ?
 			AND order_state IN %s
+			AND accepted_time > 0
 			AND accepted_time >= ?
 			AND accepted_time <= ?
 		ORDER BY accepted_time ASC
@@ -545,6 +583,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeo
 		WHERE delete_time = ?
 			AND order_state IN %s
 			AND platform = ?
+			AND accepted_time > 0
 			AND accepted_time >= ?
 			AND accepted_time <= ?
 		ORDER BY accepted_time ASC
@@ -557,7 +596,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeo
 }
 
 // CountTakeoutPaymentMethodRawData 查询外卖订单支付方式原始数据（用于合并统计）
-// 查询 validOrderStates 状态下的订单
+// 查询 validOrderStates 状态下的订单，且 accepted_time > 0（接单后才能统计）
 // 使用 IF 判断：如果状态是营业收入状态(10,20,30,40)，则取 eater_payment；如果状态是取消状态(60)，则取 0
 // 返回每个订单的接单时间、支付方式UUID、支付方式排序、支付方式创建时间、支付方式名称和支付金额
 func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeoutReq) []takeoutPaymentMethodRawData {
@@ -576,6 +615,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
 		baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time >= ? AND ttpos_takeout_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
 	}
+
+	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
+	baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time > 0")
 
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
@@ -630,8 +672,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 }
 
 // CountTakeoutCategory 统计外卖订单商品分类
-// 统计 validOrderStates 状态下的订单商品，按分类分组
-// 销售量：所有 validOrderStates 都统计（包括取消订单）
+// 统计 validOrderStates 状态下的订单商品，按分类分组，且 accepted_time > 0（接单后才能统计）
+// 销售量：所有 validOrderStates 都统计（包括取消订单，但需 accepted_time > 0）
 // 销售额：只统计 businessOrderStates（不包括取消订单），使用商品实收*售卖数量
 func (r *StatisticsTakeoutRepo) CountTakeoutCategory(req CountTakeoutReq, categoryType int, language string) []model.StatisticsCategoryData {
 	var result []model.StatisticsCategoryData
@@ -666,6 +708,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutCategory(req CountTakeoutReq, catego
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
 		baseQuery = baseQuery.Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
 	}
+
+	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
+	baseQuery = baseQuery.Where("to_order.accepted_time > 0")
 
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
@@ -719,9 +764,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutCategory(req CountTakeoutReq, catego
 }
 
 // CountTakeoutProduct 统计外卖订单商品
-// 统计 validOrderStates 状态下的订单商品，按 product_package_uuid 分组
+// 统计 validOrderStates 状态下的订单商品，按 product_package_uuid 分组，且 accepted_time > 0（接单后才能统计）
 // 商品名称：使用店内名称（从 ttpos_item_name JSON 字段提取）
-// 销量：所有 validOrderStates 都统计（包括取消订单）
+// 销量：所有 validOrderStates 都统计（包括取消订单，但需 accepted_time > 0）
 // 单价：外卖的单价
 // 合计：只统计 businessOrderStates（不包括取消订单），使用商品实收=单价*数量
 func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, language string) []model.StatisticsProductData {
@@ -756,6 +801,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 		baseQuery = baseQuery.Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
 	}
 
+	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
+	baseQuery = baseQuery.Where("to_order.accepted_time > 0")
+
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
 		baseQuery = baseQuery.Where("to_order.staff_shift_log_uuid = ?", req.StaffShiftLogUuid)
@@ -779,7 +827,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 		// 规格名称：如果是套餐商品（ttpos_product_type = 1），则为空；否则从修饰符表获取（JSON格式需要提取）
 		// 注意：在 GROUP BY 中需要使用原始表达式，不能使用聚合函数
 		fmt.Sprintf("IF(MAX(toi.ttpos_product_type) = 1, '', COALESCE(MAX(JSON_UNQUOTE(JSON_EXTRACT(toim.ttpos_modifier_name, '$.%s'))), '')) AS flavor_name", language),
-		"AVG(toi.price) AS sale_price", // 使用 AVG 因为同一个商品可能有不同的单价
+		"toi.ttpos_price AS sale_price", // 使用 ttpos_price 店内商品价格
 		// 销量：所有 validOrderStates 都统计（包括取消订单）
 		"SUM(CAST(toi.quantity AS DECIMAL(14,2))) AS sale_num",
 		// 合计：只统计 businessOrderStates（不包括取消订单），使用商品实收=单价*数量
@@ -796,7 +844,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 }
 
 // CountTakeoutRefundAmount 统计外卖订单退款金额
-// 统计 canceledOrderState（60）状态下的订单，退款金额为 eater_payment
+// 统计 canceledOrderState（60）状态下的订单，且 accepted_time > 0（接单后才能统计），退款金额为 eater_payment
 func (r *StatisticsTakeoutRepo) CountTakeoutRefundAmount(req CountTakeoutReq) float64 {
 	var amount sql.NullFloat64
 
@@ -812,6 +860,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutRefundAmount(req CountTakeoutReq) fl
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
 		query = query.Where("accepted_time >= ? AND accepted_time <= ?", req.TimeStart, req.TimeEnd)
 	}
+
+	// 仅统计接单时间>0的订单（取消状态需要接单后才能统计）
+	query = query.Where("accepted_time > 0")
 
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {

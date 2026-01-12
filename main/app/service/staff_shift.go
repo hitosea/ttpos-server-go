@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer"
 	printerService "ttpos-server-go/app/modules/printer/service"
+	takeoutOrderService "ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
@@ -74,8 +75,9 @@ func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICas
 
 // CreateWorkingLog 创建当班记录
 func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff) (model.StaffShiftLog, error) {
-	shiftLogRepo := repository.NewShiftLogRepo(s.dbm.GetDB(staff.CompanyUuid))
-	cashBox := repository.NewCashBoxRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+	db := s.dbm.GetDB(staff.CompanyUuid)
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+	cashBox := repository.NewCashBoxRepo(db).Get()
 	previousShiftCash := cashBox.GetBalance()
 	startTime := staff.CashierLoginTime
 	if startTime == 0 {
@@ -88,7 +90,6 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 	companySetting := ctx.GetCompanySetting()
 	company := ctx.GetCompany()
 	if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" {
-		db := s.dbm.GetDB(staff.CompanyUuid)
 		commonRepo := repository.NewCommonRepo()
 		paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 		// 查询所有已开启的支付方式（status = 1）
@@ -153,7 +154,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 		erpnextOpenPosEntryName = openPosEntryName
 	}
 
-	shiftLog, _ := shiftLogRepo.Create(model.StaffShiftLog{
+	shiftLog, err := shiftLogRepo.Create(model.StaffShiftLog{
 		StaffUuid:         staff.Uuid,
 		ShiftNo:           s.generateNumber(),
 		PreviousShiftCash: previousShiftCash,
@@ -165,6 +166,22 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 		ErpnextOpenPosEntryName: erpnextOpenPosEntryName,
 		OpeningPaymentMethods:   openingPaymentMethodsStr,
 	})
+	if err != nil {
+		return model.StaffShiftLog{}, errors.WithMessage(err, "创建交班记录失败")
+	}
+
+	// 第三优先级：将 staff_shift_log_uuid 为 0 的订单批量分配给新创建的班次
+	// 当收银员登录并创建新班次时，将那些没有找到可用班次的订单分配给当前新创建的班次
+	// 对于已接单的订单，会同步生成 ERP 发票
+	utils.Go(func() {
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetDB(db)
+		takeoutOrderSrv := takeoutOrderService.NewTakeoutOrderSrv(s.dbm)
+		if err := takeoutOrderSrv.BatchAssignShiftLogToPendingOrders(ctxCopy, shiftLog.Uuid, staff.Uuid); err != nil {
+			logger.Logger.Warn("批量分配外卖订单班次失败", zap.Error(err), zap.Uint64("shiftLogUuid", shiftLog.Uuid), zap.Uint64("staffUuid", staff.Uuid))
+		}
+	})
+
 	return shiftLog, nil
 }
 

@@ -15,7 +15,6 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
-	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
@@ -79,15 +78,13 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	if takeoutOrder == nil {
 		return errors.WithMessage(errors.New("外卖订单不存在"), fmt.Sprintf("外卖订单不存在: %d", orderUuid))
 	}
-	if takeoutOrder.OrderState == valueobject.TakeoutOrderStateRejected || takeoutOrder.OrderState == valueobject.TakeoutOrderStateCanceled {
-		return errors.WithMessage(errors.New("外卖订单状态不正确"), fmt.Sprintf("外卖订单状态不正确: %d", takeoutOrder.OrderState))
-	}
+
 	// 检查订单是否已同步到 ERP
-	if len(takeoutOrder.ErpPosInvoiceResp) > 0 {
+	if takeoutOrder.IsErpInvoiceSynced() {
 		return nil // 如果订单已同步到 ERP，则不重复同步
 	}
 	// 如果订单没有班次，则不同步 ERP
-	if takeoutOrder.StaffShiftLogUuid == 0 {
+	if !takeoutOrder.IsExistShiftLog() {
 		return nil
 	}
 
@@ -117,7 +114,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	// 9. 构建 POS Invoice 请求参数
 	savePosInvoiceReq := buildPosInvoiceRequest(
 		takeoutOrder,
-		company.CompanySetting,
+		&companySetting,
 		erpOpenPosEntryName,
 		&existPayment,
 	)
@@ -127,7 +124,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 		appContext.WithContext(ctx.GetContext()),
 		appContext.WithCompanyUuid(ctx.GetCompanyUuid()),
 		appContext.WithCompany(*company),
-		appContext.WithCompanySetting(*company.CompanySetting),
+		appContext.WithCompanySetting(companySetting),
 		appContext.WithStaff(ctx.GetStaff()),
 		appContext.WithStaffUuid(ctx.GetStaffUuid()),
 		appContext.WithLogger(logger.Logger),
@@ -147,17 +144,13 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	// 12. 保存 ERP 响应数据到订单
 	respJson, err := json.Marshal(savePosInvoiceResp)
 	if err != nil {
-		logger.Logger.Error("序列化 ERP 响应数据失败",
-			zap.Uint64("orderUuid", orderUuid),
-			zap.Error(err))
+		logger.Logger.Error("序列化 ERP 响应数据失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
 	} else {
 		// 更新订单的 ERP 响应字段
 		if err := takeoutOrderRepo.UpdateByMap(takeoutOrder.Uuid, map[string]interface{}{
 			"erp_pos_invoice_resp": string(respJson),
 		}); err != nil {
-			logger.Logger.Error("保存 ERP 响应数据到订单失败",
-				zap.Uint64("orderUuid", orderUuid),
-				zap.Error(err))
+			logger.Logger.Error("保存 ERP 响应数据到订单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
 		}
 	}
 
@@ -226,11 +219,11 @@ func buildPosInvoiceItems(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 		if item.IsPackage() {
 			// 套餐使用固定虚拟商品编码
 			items = append(items, &selling.PosInvoiceItem{
-				ItemCode:    "TC001",                // 套餐虚拟商品编码
-				Qty:         float64(item.Quantity), // 套餐数量
-				Rate:        item.Price,             // 套餐单价
-				Amount:      item.GetTotalPrice(),   // 套餐总价
-				Description: packageName.EN,         // 套餐名称
+				ItemCode:    "TC001",                          // 套餐虚拟商品编码
+				Qty:         float64(item.Quantity),           // 套餐数量
+				Rate:        item.GetPriceNoneTax(),           // 套餐单价
+				Amount:      item.GetTotalPriceNoneTaxTotal(), // 套餐总价
+				Description: packageName.EN,                   // 套餐名称
 				IsFreeItem: func() bool {
 					if item.Price == 0 {
 						return true
@@ -255,11 +248,11 @@ func buildPosInvoiceItems(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 		} else {
 			// 普通商品
 			items = append(items, &selling.PosInvoiceItem{
-				ItemCode:    item.TtposItemErpCode,  // 使用 ERP Code
-				Qty:         float64(item.Quantity), // 数量
-				Rate:        item.Price,             // 单价
-				Amount:      item.GetTotalPrice(),   // 小计
-				Description: packageName.EN,         // 商品名称
+				ItemCode:    item.TtposItemErpCode,            // 使用 ERP Code
+				Qty:         float64(item.Quantity),           // 数量
+				Rate:        item.GetPriceNoneTax(),           // 单价
+				Amount:      item.GetTotalPriceNoneTaxTotal(), // 小计
+				Description: packageName.EN,                   // 商品名称
 				IsFreeItem: func() bool {
 					if item.Price == 0 {
 						return true

@@ -2153,11 +2153,14 @@ func (r *orderRepo) querySaleBillAllInfoUsingDbQuery(saleBillUuid uint64, option
 				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
 			},
 		),
-		CommonRepo.WhereBySoftDelete(),
+		//CommonRepo.WhereBySoftDelete(), // 不过滤已删除的订单，在后面在单独判断
 		uuidFilter,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
+	}
+	if info.IsDelete() {
+		return nil, fmt.Errorf("订单已失效") // 修复并发合并桌台的错误提示，优化提示让更友好
 	}
 	return &info, nil
 }

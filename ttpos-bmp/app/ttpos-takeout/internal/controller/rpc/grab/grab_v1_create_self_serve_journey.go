@@ -28,13 +28,25 @@ func (c *Controller) CreateSelfServeJourney(ctx context.Context, req *api.Create
 	}
 
 	// 调用 Logic 层
-	resp, err := service.Grab().CreateSelfServeJourneyWithReq(ctx, req)
+	activationURL, requestID, err := service.Grab().CreateSelfServeJourney(ctx, req.ShopUuid)
 	if err != nil {
 		g.Log().Errorf(ctx, "[Grab] CreateSelfServeJourney failed: %v", err)
 		return &takeout.ApiResponse{
 			Code:    "5001",
 			Message: "创建自助激活链接失败: " + err.Error(),
 		}, nil
+	}
+
+	// 构造响应对象
+	resp := &api.CreateSelfServeJourneyResp{
+		ProviderName: req.ProviderName,
+		SelfServeUrl: activationURL,
+		RequestId:    requestID,
+	}
+
+	// 如果请求中有 request_id，使用请求的 request_id
+	if req.RequestId != "" {
+		resp.RequestId = req.RequestId
 	}
 
 	// 将 resp 转换为 anypb.Any
