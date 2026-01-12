@@ -28478,6 +28478,45 @@
                 }
             }
         },
+        "/shop/product/update_headquarters_product": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改总部商品的上下架状态和打印档口，支持单独或同时修改",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品"
+                ],
+                "summary": "修改总部商品",
+                "parameters": [
+                    {
+                        "description": "修改总部商品请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateHeadquartersProductReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product/upload_image": {
             "post": {
                 "security": [
@@ -41323,6 +41362,10 @@
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                },
+                "update_time": {
+                    "description": "更新时间戳,用于判断缓存是否过期. 在缓存层通过反射维护这个字段的值",
+                    "type": "integer"
                 }
             }
         },
@@ -50631,6 +50674,34 @@
                 "supplier_name": {
                     "description": "总部供应商名称",
                     "type": "string"
+                }
+            }
+        },
+        "req.UpdateHeadquartersProductReq": {
+            "type": "object",
+            "required": [
+                "status",
+                "uuid"
+            ],
+            "properties": {
+                "product_printer_uuids": {
+                    "description": "商品打印档口UUID列表（可选）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "description": "商品状态 0-下架 1-上架（可选）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
                 }
             }
         },

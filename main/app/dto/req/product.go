@@ -388,6 +388,13 @@ type ProductShopStatusReq struct {
 	Status *int   `json:"status" binding:"required,oneof=0 1"` // 商品状态 0-下架 1-上架
 }
 
+// UpdateHeadquartersProductReq 修改总部商品请求
+type UpdateHeadquartersProductReq struct {
+	Uuid                uint64   `json:"uuid" binding:"required"`             // 商品UUID
+	Status              *int     `json:"status" binding:"required,oneof=0 1"` // 商品状态 0-下架 1-上架（可选）
+	ProductPrinterUuids []uint64 `json:"product_printer_uuids"`               // 商品打印档口UUID列表（可选）
+}
+
 // ProductShopAddReq 商品添加请求
 type ProductShopAddReq struct {
 	Type                int                               `json:"type"`                  // 商品类型 0-商品 1-套餐

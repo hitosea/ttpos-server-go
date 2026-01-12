@@ -1144,6 +1144,32 @@ func (h *ProductHandler) ProductShopStatus(c *gin.Context) {
 	helper.Success(c, nil, "设置成功")
 }
 
+// UpdateHeadquartersProduct 修改总部商品
+// @Summary 修改总部商品
+// @Description 修改总部商品的上下架状态和打印档口，支持单独或同时修改
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.UpdateHeadquartersProductReq true "修改总部商品请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/update_headquarters_product [post]
+func (h *ProductHandler) UpdateHeadquartersProduct(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	updateReq := req.UpdateHeadquartersProductReq{}
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.HandleValidationError(c, err, updateReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.UpdateHeadquartersProduct(ctx, updateReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil, "修改成功")
+}
+
 // ProductShopAdd 添加商品
 // @Summary 添加商品
 // @Description 添加商品
@@ -1648,5 +1674,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/takeout/products/batch_online", wrapper.TakeoutBatchOnline)   // 批量上架外卖商品
 		privateApi.POST("/takeout/products/batch_offline", wrapper.TakeoutBatchOffline) // 批量下架外卖商品
 		privateApi.POST("/takeout/products/batch_delete", wrapper.TakeoutBatchDelete)   // 批量删除外卖商品
+
+		privateApi.POST("/product/update_headquarters_product", wrapper.UpdateHeadquartersProduct) // 修改总部商品上下架和打印档口
 	}
 }
