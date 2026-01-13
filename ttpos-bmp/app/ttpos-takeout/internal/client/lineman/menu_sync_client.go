@@ -65,8 +65,9 @@ func (c *MenuSyncClient) SyncMenu(
 	respBytes := resp.ReadAll()
 	g.Log().Debugf(ctx, "[LinemanClient] 响应: status=%d", resp.StatusCode)
 
-	if resp.StatusCode != 200 {
-		return nil, gerror.Newf("[LinemanClient] API 返回错误: status=%d", resp.StatusCode)
+	// 200 和 201 都表示成功
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		return nil, gerror.Newf("[LinemanClient] API 返回错误: status=%d, body=%s", resp.StatusCode, string(respBytes))
 	}
 
 	var syncResp dto.MenuSyncResponse
