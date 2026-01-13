@@ -250,7 +250,7 @@ class BaseModel extends Model
 
         try {
             // 调用 Go Main 项目的缓存失效接口（内部接口）
-            $url = 'http://192.168.100.1:8080/api/v1/internal/shop/product/cache/invalidate';
+            $url = 'http://nginx/api/v1/internal/shop/product/cache/invalidate';
             // 使用 HttpHelp 发送 POST 请求
             HttpHelp::postRequest($url,  json_encode([
                 'company_uuid' => $appId,
