@@ -1313,6 +1313,34 @@ func (h *ProductHandler) ProductShopDelete(c *gin.Context) {
 	helper.Success(c, nil, "删除成功")
 }
 
+// InvalidateProductListCacheForPHP 失效商品列表缓存（供PHP服务调用）
+// @Summary 失效商品列表缓存（内部接口）
+// @Description 供PHP后端服务调用，用于在修改商品数据时失效相关缓存
+// @Tags 商家端.商品（内部接口）
+// @Accept json
+// @Produce json
+// @Security InternalToken
+// @Param data body req.InvalidateProductListCacheReq true "失效缓存请求"
+// @Success 200 {object} dto.Response "成功"
+// @Failure 400 {object} dto.Response "错误请求"
+// @Router /internal/shop/product/cache/invalidate [post]
+func (h *ProductHandler) InvalidateProductListCacheForPHP(c *gin.Context) {
+	var invalidateReq req.InvalidateProductListCacheReq
+	if err := c.ShouldBindJSON(&invalidateReq); err != nil {
+		helper.HandleValidationError(c, err, invalidateReq, nil)
+		return
+	}
+
+	// 创建上下文并设置 companyUuid
+	ctx := helper.GetContext(c)
+	ctx.SetCompanyUuid(invalidateReq.CompanyUuid)
+
+	// 失效商品列表缓存
+	h.InvalidateProductListCache(ctx)
+
+	helper.Success(c, nil, "缓存失效成功")
+}
+
 // ProductTakeoutShopAdd 添加外卖商品
 // @Summary 添加外卖商品
 // @Description 添加外卖商品配置
@@ -1714,4 +1742,29 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 
 		privateApi.POST("/product/update_headquarters_product", wrapper.UpdateHeadquartersProduct) // 修改总部商品上下架和打印档口
 	}
+}
+
+// RegisterProductInternalHandlers 注册商品内部接口（供PHP服务调用）
+func RegisterProductInternalHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+	// 初始化服务
+	settingSrv := setting.NewSrv(dbm, cache)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
+
+	// 创建商品处理程序
+	localeSrv := service.NewLocaleSrv()
+	wrapper := ProductHandler{
+		productSrv: service.NewProductSrv(
+			dbm,        // 数据库管理器
+			localeSrv,  // 多语言服务
+			settingSrv, // 设置服务
+			cache,
+			translateSrv,
+		),
+		productTakeoutSrv: service.NewProductTakeoutSrv(dbm, localeSrv, settingSrv, cache, translateSrv),
+		uploadFileSrv:     service.NewUploadFileSrv(dbm),
+		pinterSrv:         printerService.NewPrinterSrv(dbm, cache),
+	}
+
+	// 内部接口，使用 Internal 中间件保护
+	router.POST("/shop/product/cache/invalidate", middleware.Internal(), wrapper.InvalidateProductListCacheForPHP)
 }
