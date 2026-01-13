@@ -1190,12 +1190,6 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 			})
 		}
 
-		memberData := s.statisticsSrv.CountMember(ctx, CountReq{
-			QueryStartTime: req.QueryStartTime,
-			QueryEndTime:   req.QueryEndTime,
-			Timezone:       ctx.GetCompany().CompanySetting.Timezone,
-		})
-
 		exportDataList = append(exportDataList, business_data_resp.BusinessDataExportItem{
 			Day:                        export.Day,
 			TotalSaleAmount:            export.TotalSaleAmount,
@@ -1237,7 +1231,7 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 			AvgTakeoutOrderAmount:      export.AvgTakeoutOrderAmount,
 			AreaList:                   areaList,
 			PaymentList:                paymentList,
-			TotalRechargeAmount:        memberData.TotalRechargeAmount,
+			TotalRechargeAmount:        export.TotalRechargeAmount,
 		})
 	}
 
