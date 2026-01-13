@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nacos-group/nacos-sdk-go/v2/common/logger"
@@ -1336,7 +1337,9 @@ func (h *ProductHandler) InvalidateProductListCacheForPHP(c *gin.Context) {
 	ctx.SetCompanyUuid(invalidateReq.CompanyUuid)
 
 	// 失效商品列表缓存
-	h.InvalidateProductListCache(ctx)
+	utils.Go(func() {
+		h.InvalidateProductListCache(ctx)
+	})
 
 	helper.Success(c, nil, "缓存失效成功")
 }
