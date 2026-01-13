@@ -6359,11 +6359,10 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 			if flavor.IsDelete {
 				productFlavor, _ := productRepo.GetProductFlavor(
 					productRepo.WhereUuid(flavor.Uuid),
-					commonRepo.WhereBySoftDelete(),
 					productRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 				)
-				if productFlavor.Uuid == 0 {
-					return nil, nil, errors.New("商品规格不存在")
+				if productFlavor.Uuid == 0 || productFlavor.DeleteTime != 0 {
+					continue
 				}
 				productPackageGroupItems, _ := productPackageGroupRepo.GetProductPackageGroupItems(
 					commonRepo.WhereBySoftDelete(),

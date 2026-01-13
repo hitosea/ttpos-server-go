@@ -16,16 +16,16 @@ import (
 
 type IStatisticsRepo interface {
 	CountSale(opts ...DBOption) model.StatisticsSaleData                                                                       // 统计销售
-	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                                             // 统计销售天数
+	CountSaleDays(timezone string, opts ...DBOption) []model.StatisticsSaleDaysData                                            // 统计销售天数
 	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                                               // 统计支付
-	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                       // 统计支付天数
+	CountPaymentDays(timezone string, opts ...DBOption) []model.StatisticsPaymentDaysData                                      // 统计支付天数
 	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                                       // 统计税类
 	CountBuffetTax(opts ...DBOption) []model.StatisticsTaxData                                                                 // 统计自助餐税类
 	CountBuffetDelayTax(opts ...DBOption) []model.StatisticsTaxData                                                            // 统计自助餐加钟税类
 	CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData) // 统计分类
 	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                                              // 统计商品
 	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                                     // 统计区域
-	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                                             // 统计区域
+	CountAreaDays(timezone string, opts ...DBOption) []model.StatisticsAreaDaysData                                            // 统计区域
 	Count7Days(opts ...DBOption) []struct {
 		CompleteTime        int64   `gorm:"column:complete_time"`
 		SaleOrderUuid       uint64  `gorm:"column:sale_order_uuid"`
@@ -33,11 +33,11 @@ type IStatisticsRepo interface {
 	} // 统计销售天数（返回原始数据，不进行日期分组）
 	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                                                                                                                                    // 统计未结订单
 	CountMemberNum(opts ...DBOption) int64                                                                                                                                                                                // 统计会员数量
-	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                                                                                                                                   // 统计会员数量天数
+	CountMemberNumDays(timezone string, opts ...DBOption) []model.CountMemberNumDaysResp                                                                                                                                  // 统计会员数量天数
 	CountMember(opts ...DBOption) model.StatisticsMemberData                                                                                                                                                              // 统计会员
-	CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData                                                                                                                                                    // 统计会员天数
+	CountMemberDays(timezone string, opts ...DBOption) []model.StatisticsMemberDaysData                                                                                                                                   // 统计会员天数
 	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                                                                                                                                    // 统计会员支付
-	CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                                                                                                            // 统计会员支付天数
+	CountMemberPaymentDays(timezone string, opts ...DBOption) []model.StatisticsPaymentDaysData                                                                                                                           // 统计会员支付天数
 	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64)                                                                                                            // 统计商品销售
 	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                                                                                                                                    // 统计免单支付
 	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                                                                                                                                          // 统计免单支付天数
@@ -190,9 +190,52 @@ func (r *StatisticsRepo) CountSale(opts ...DBOption) model.StatisticsSaleData {
 	return result
 }
 
+// saleDaysRawData 销售天数统计原始数据（子查询结果）
+type saleDaysRawData struct {
+	SaleBillUuid                  uint64  `gorm:"column:sale_bill_uuid"`
+	DeskUuid                      uint64  `gorm:"column:desk_uuid"`
+	OrderSourceUuid               uint64  `gorm:"column:order_source_uuid"`
+	IsMeger                       int     `gorm:"column:is_meger"`
+	IsSpecial                     int     `gorm:"column:is_special"`
+	IsTakeout                     int     `gorm:"column:is_takeout"`
+	CompleteTime                  int64   `gorm:"column:complete_time"`
+	SaleAmount                    float64 `gorm:"column:sale_amount"`
+	ReceivedAmount                float64 `gorm:"column:received_amount"`
+	ProductPrice                  float64 `gorm:"column:product_price"`
+	ProductOriginPrice            float64 `gorm:"column:product_origin_price"`
+	ProductNum                    float64 `gorm:"column:product_num"`
+	DiscountMember                float64 `gorm:"column:discount_member"`
+	BusinessAmount                float64 `gorm:"column:business_amount"`
+	PaymentFee                    float64 `gorm:"column:payment_fee"`
+	ServiceFee                    float64 `gorm:"column:service_fee"`
+	Tax                           float64 `gorm:"column:tax"`
+	RefundAmount                  float64 `gorm:"column:refund_amount"`
+	Discount                      float64 `gorm:"column:discount"`
+	GiftAmount                    float64 `gorm:"column:gift_amount"`
+	GiftNum                       float64 `gorm:"column:gift_num"`
+	FreeAmount                    float64 `gorm:"column:free_amount"`
+	FreeNum                       float64 `gorm:"column:free_num"`
+	TakeoutSaleAmount             float64 `gorm:"column:takeout_sale_amount"`
+	TakeoutBusinessAmount         float64 `gorm:"column:takeout_business_amount"`
+	TakeoutRefundAmount           float64 `gorm:"column:takeout_refund_amount"`
+	TakeoutDeliveryFee            float64 `gorm:"column:takeout_delivery_fee"`
+	MealNum                       uint    `gorm:"column:meal_num"`
+	OrderAmount                   float64 `gorm:"column:order_amount"`
+	AvgOrderAmount                float64 `gorm:"column:avg_order_amount"`
+	DeskOrderAmount               float64 `gorm:"column:desk_order_amount"`
+	AvgDeskOrderAmount            float64 `gorm:"column:avg_desk_order_amount"`
+	InstantOrderAmount            float64 `gorm:"column:instant_order_amount"`
+	AvgInstantOrderAmount         float64 `gorm:"column:avg_instant_order_amount"`
+	InstantOrderTakeawayAmount    float64 `gorm:"column:instant_order_takeaway_amount"`
+	AvgInstantOrderTakeawayAmount float64 `gorm:"column:avg_instant_order_takeaway_amount"`
+	TakeoutOrderAmount            float64 `gorm:"column:takeout_order_amount"`
+	AvgTakeoutOrderAmount         float64 `gorm:"column:avg_takeout_order_amount"`
+}
+
 // CountSaleDays 统计销售天数
-func (r *StatisticsRepo) CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData {
-	var result []model.StatisticsSaleDaysData
+func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []model.StatisticsSaleDaysData {
+	// 1. 查询原始数据（按 sale_bill_uuid 分组，不按日期分组）
+	var rawData []saleDaysRawData
 	db := r.db
 	for _, opt := range opts {
 		db = opt(db)
@@ -200,14 +243,348 @@ func (r *StatisticsRepo) CountSaleDays(opts ...DBOption) []model.StatisticsSaleD
 
 	subQuery := db.Model(&model.StatisticsSale{}).
 		Select(countSaleSubQuerySelect).
-		Group("sale_bill_uuid").
-		Group("FROM_UNIXTIME(complete_time, '%Y-%m-%d')")
+		Group("sale_bill_uuid")
 
 	r.db.Table("(?) AS t", subQuery).
-		Select(countSaleSelect, "FROM_UNIXTIME(complete_time, '%Y-%m-%d') AS day").
-		Group("DAY").
-		Order("DAY ASC").
-		Find(&result)
+		Find(&rawData)
+
+	// 2. 在应用层按业务时区分组、统计
+	timeUtil := utils.SetTimezone(timezone)
+
+	// 按日期分组统计
+	type groupData struct {
+		TotalSaleAmount                 decimal.Decimal
+		TotalReceivedAmount             decimal.Decimal
+		TotalProductPrice               decimal.Decimal
+		TotalProductOriginPrice         decimal.Decimal
+		TotalProductNum                 decimal.Decimal
+		TotalDiscountMember             decimal.Decimal
+		TotalBusinessAmount             decimal.Decimal
+		TotalPaymentFee                 decimal.Decimal
+		TotalServiceFee                 decimal.Decimal
+		TotalTax                        decimal.Decimal
+		TotalRefundAmount               decimal.Decimal
+		TotalDiscount                   decimal.Decimal
+		TotalGiftAmount                 decimal.Decimal
+		TotalGiftNum                    decimal.Decimal
+		TotalFreeAmount                 decimal.Decimal
+		TotalFreeNum                    decimal.Decimal
+		TotalOrderAmount                decimal.Decimal
+		TotalOrderNum                   int64
+		TotalTakeoutSaleAmount          decimal.Decimal
+		TotalTakeoutBusinessAmount      decimal.Decimal
+		TotalTakeoutRefundAmount        decimal.Decimal
+		TotalTakeoutDeliveryFee         decimal.Decimal
+		TotalDeskNum                    int64
+		TotalDeskOrderAmount            decimal.Decimal
+		TotalMealNum                    int64
+		TotalInstantOrderAmount         decimal.Decimal
+		TotalInstantOrderNum            int64
+		TotalInstantOrderTakeawayAmount decimal.Decimal
+		TotalInstantOrderTakeawayNum    int64
+		TotalTakeoutOrderAmount         decimal.Decimal
+		TotalTakeoutOrderNum            int64
+		MinOrderAmount                  decimal.Decimal
+		MaxOrderAmount                  decimal.Decimal
+		AvgOrderAmount                  decimal.Decimal
+		MinDeskOrderAmount              decimal.Decimal
+		MaxDeskOrderAmount              decimal.Decimal
+		AvgDeskOrderAmount              decimal.Decimal
+		MinInstantOrderAmount           decimal.Decimal
+		MaxInstantOrderAmount           decimal.Decimal
+		AvgInstantOrderAmount           decimal.Decimal
+		MinInstantOrderTakeawayAmount   decimal.Decimal
+		MaxInstantOrderTakeawayAmount   decimal.Decimal
+		AvgInstantOrderTakeawayAmount   decimal.Decimal
+		MinTakeoutOrderAmount           decimal.Decimal
+		MaxTakeoutOrderAmount           decimal.Decimal
+		AvgTakeoutOrderAmount           decimal.Decimal
+		// 用于计算最小/最大值的临时字段
+		OrderAmounts                     []decimal.Decimal
+		DeskOrderAmounts                 []decimal.Decimal
+		InstantOrderAmounts              []decimal.Decimal
+		InstantOrderTakeawayAmounts      []decimal.Decimal
+		TakeoutOrderAmounts              []decimal.Decimal
+		AvgOrderAmountSum                decimal.Decimal
+		AvgDeskOrderAmountSum            decimal.Decimal
+		AvgInstantOrderAmountSum         decimal.Decimal
+		AvgInstantOrderTakeawayAmountSum decimal.Decimal
+		AvgTakeoutOrderAmountSum         decimal.Decimal
+		OrderNumForAvg                   int64
+		DeskOrderNumForAvg               int64
+		InstantOrderNumForAvg            int64
+		InstantOrderTakeawayNumForAvg    int64
+		TakeoutOrderNumForAvg            int64
+	}
+
+	groupedData := make(map[string]*groupData)
+	for _, item := range rawData {
+		// 将时间戳转换为业务时区的日期
+		dateKey := timeUtil.FormatUnixTime(item.CompleteTime, "2006-01-02")
+
+		// 初始化分组数据
+		if groupedData[dateKey] == nil {
+			groupedData[dateKey] = &groupData{
+				OrderAmounts:                make([]decimal.Decimal, 0),
+				DeskOrderAmounts:            make([]decimal.Decimal, 0),
+				InstantOrderAmounts:         make([]decimal.Decimal, 0),
+				InstantOrderTakeawayAmounts: make([]decimal.Decimal, 0),
+				TakeoutOrderAmounts:         make([]decimal.Decimal, 0),
+			}
+		}
+
+		group := groupedData[dateKey]
+
+		// 累加统计数据
+		group.TotalSaleAmount = group.TotalSaleAmount.Add(decimal.NewFromFloat(item.SaleAmount))
+		group.TotalReceivedAmount = group.TotalReceivedAmount.Add(decimal.NewFromFloat(item.ReceivedAmount))
+		group.TotalProductPrice = group.TotalProductPrice.Add(decimal.NewFromFloat(item.ProductPrice))
+		group.TotalProductOriginPrice = group.TotalProductOriginPrice.Add(decimal.NewFromFloat(item.ProductOriginPrice))
+		group.TotalProductNum = group.TotalProductNum.Add(decimal.NewFromFloat(item.ProductNum))
+		group.TotalDiscountMember = group.TotalDiscountMember.Add(decimal.NewFromFloat(item.DiscountMember))
+		group.TotalBusinessAmount = group.TotalBusinessAmount.Add(decimal.NewFromFloat(item.BusinessAmount))
+		group.TotalPaymentFee = group.TotalPaymentFee.Add(decimal.NewFromFloat(item.PaymentFee))
+		group.TotalServiceFee = group.TotalServiceFee.Add(decimal.NewFromFloat(item.ServiceFee))
+		group.TotalTax = group.TotalTax.Add(decimal.NewFromFloat(item.Tax))
+		group.TotalRefundAmount = group.TotalRefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
+		group.TotalDiscount = group.TotalDiscount.Add(decimal.NewFromFloat(item.Discount))
+		group.TotalGiftAmount = group.TotalGiftAmount.Add(decimal.NewFromFloat(item.GiftAmount))
+		group.TotalGiftNum = group.TotalGiftNum.Add(decimal.NewFromFloat(item.GiftNum))
+		group.TotalFreeAmount = group.TotalFreeAmount.Add(decimal.NewFromFloat(item.FreeAmount))
+		group.TotalFreeNum = group.TotalFreeNum.Add(decimal.NewFromFloat(item.FreeNum))
+		group.TotalOrderAmount = group.TotalOrderAmount.Add(decimal.NewFromFloat(item.OrderAmount))
+		if item.IsMeger == 0 {
+			group.TotalOrderNum++
+		}
+		group.TotalTakeoutSaleAmount = group.TotalTakeoutSaleAmount.Add(decimal.NewFromFloat(item.TakeoutSaleAmount))
+		group.TotalTakeoutBusinessAmount = group.TotalTakeoutBusinessAmount.Add(decimal.NewFromFloat(item.TakeoutBusinessAmount))
+		group.TotalTakeoutRefundAmount = group.TotalTakeoutRefundAmount.Add(decimal.NewFromFloat(item.TakeoutRefundAmount))
+		group.TotalTakeoutDeliveryFee = group.TotalTakeoutDeliveryFee.Add(decimal.NewFromFloat(item.TakeoutDeliveryFee))
+		if item.DeskUuid > 0 && item.IsMeger == 0 {
+			group.TotalDeskNum++
+		}
+		group.TotalDeskOrderAmount = group.TotalDeskOrderAmount.Add(decimal.NewFromFloat(item.DeskOrderAmount))
+		group.TotalMealNum += int64(item.MealNum)
+		group.TotalInstantOrderAmount = group.TotalInstantOrderAmount.Add(decimal.NewFromFloat(item.InstantOrderAmount))
+		if item.DeskUuid == 0 && item.OrderSourceUuid == 0 && item.IsMeger == 0 {
+			group.TotalInstantOrderNum++
+		}
+		group.TotalInstantOrderTakeawayAmount = group.TotalInstantOrderTakeawayAmount.Add(decimal.NewFromFloat(item.InstantOrderTakeawayAmount))
+		if item.DeskUuid == 0 && item.OrderSourceUuid > 0 && item.IsMeger == 0 {
+			group.TotalInstantOrderTakeawayNum++
+		}
+		group.TotalTakeoutOrderAmount = group.TotalTakeoutOrderAmount.Add(decimal.NewFromFloat(item.TakeoutOrderAmount))
+		if item.DeskUuid == 0 && item.IsTakeout == 1 && item.IsMeger == 0 {
+			group.TotalTakeoutOrderNum++
+		}
+
+		// 收集用于计算最小/最大值的订单金额
+		orderAmount := decimal.NewFromFloat(item.OrderAmount)
+		if item.IsMeger == 0 && item.IsSpecial == 0 && orderAmount.GreaterThanOrEqual(decimal.Zero) {
+			group.OrderAmounts = append(group.OrderAmounts, orderAmount)
+		}
+		if item.DeskUuid > 0 && item.IsTakeout == 0 && item.IsMeger == 0 && item.IsSpecial == 0 {
+			deskOrderAmount := decimal.NewFromFloat(item.DeskOrderAmount)
+			if deskOrderAmount.GreaterThanOrEqual(decimal.Zero) {
+				group.DeskOrderAmounts = append(group.DeskOrderAmounts, deskOrderAmount)
+			}
+		}
+		if item.DeskUuid == 0 && item.OrderSourceUuid == 0 && item.IsTakeout == 0 && item.IsMeger == 0 && item.IsSpecial == 0 {
+			instantOrderAmount := decimal.NewFromFloat(item.InstantOrderAmount)
+			if instantOrderAmount.GreaterThanOrEqual(decimal.Zero) {
+				group.InstantOrderAmounts = append(group.InstantOrderAmounts, instantOrderAmount)
+			}
+		}
+		if item.DeskUuid == 0 && item.OrderSourceUuid > 0 && item.IsTakeout == 0 && item.IsMeger == 0 && item.IsSpecial == 0 {
+			instantOrderTakeawayAmount := decimal.NewFromFloat(item.InstantOrderTakeawayAmount)
+			if instantOrderTakeawayAmount.GreaterThanOrEqual(decimal.Zero) {
+				group.InstantOrderTakeawayAmounts = append(group.InstantOrderTakeawayAmounts, instantOrderTakeawayAmount)
+			}
+		}
+		if item.IsTakeout == 1 && item.IsMeger == 0 && item.IsSpecial == 0 {
+			takeoutOrderAmount := decimal.NewFromFloat(item.TakeoutOrderAmount)
+			if takeoutOrderAmount.GreaterThanOrEqual(decimal.Zero) {
+				group.TakeoutOrderAmounts = append(group.TakeoutOrderAmounts, takeoutOrderAmount)
+			}
+		}
+
+		// 累加用于计算平均值的字段
+		group.AvgOrderAmountSum = group.AvgOrderAmountSum.Add(decimal.NewFromFloat(item.AvgOrderAmount))
+		if item.DeskUuid > 0 && item.IsTakeout == 0 {
+			group.AvgDeskOrderAmountSum = group.AvgDeskOrderAmountSum.Add(decimal.NewFromFloat(item.AvgDeskOrderAmount))
+			if item.IsMeger == 0 {
+				group.DeskOrderNumForAvg++
+			}
+		}
+		if item.DeskUuid == 0 && item.OrderSourceUuid == 0 && item.IsMeger == 0 && decimal.NewFromFloat(item.InstantOrderAmount).GreaterThan(decimal.Zero) {
+			group.AvgInstantOrderAmountSum = group.AvgInstantOrderAmountSum.Add(decimal.NewFromFloat(item.AvgInstantOrderAmount))
+			group.InstantOrderNumForAvg++
+		}
+		if item.DeskUuid == 0 && item.OrderSourceUuid > 0 && item.IsMeger == 0 && decimal.NewFromFloat(item.InstantOrderTakeawayAmount).GreaterThan(decimal.Zero) {
+			group.AvgInstantOrderTakeawayAmountSum = group.AvgInstantOrderTakeawayAmountSum.Add(decimal.NewFromFloat(item.AvgInstantOrderTakeawayAmount))
+			group.InstantOrderTakeawayNumForAvg++
+		}
+		if item.IsTakeout == 1 && item.IsMeger == 0 {
+			group.AvgTakeoutOrderAmountSum = group.AvgTakeoutOrderAmountSum.Add(decimal.NewFromFloat(item.AvgTakeoutOrderAmount))
+			group.TakeoutOrderNumForAvg++
+		}
+		if item.IsMeger == 0 {
+			group.OrderNumForAvg++
+		}
+	}
+
+	// 3. 计算最小/最大/平均值，并转换为结果格式
+	result := make([]model.StatisticsSaleDaysData, 0, len(groupedData))
+	for dateKey, group := range groupedData {
+		// 计算最小值
+		if len(group.OrderAmounts) > 0 {
+			group.MinOrderAmount = group.OrderAmounts[0]
+			for _, amt := range group.OrderAmounts {
+				if amt.LessThan(group.MinOrderAmount) {
+					group.MinOrderAmount = amt
+				}
+			}
+		}
+		if len(group.DeskOrderAmounts) > 0 {
+			group.MinDeskOrderAmount = group.DeskOrderAmounts[0]
+			for _, amt := range group.DeskOrderAmounts {
+				if amt.LessThan(group.MinDeskOrderAmount) {
+					group.MinDeskOrderAmount = amt
+				}
+			}
+		}
+		if len(group.InstantOrderAmounts) > 0 {
+			group.MinInstantOrderAmount = group.InstantOrderAmounts[0]
+			for _, amt := range group.InstantOrderAmounts {
+				if amt.LessThan(group.MinInstantOrderAmount) {
+					group.MinInstantOrderAmount = amt
+				}
+			}
+		}
+		if len(group.InstantOrderTakeawayAmounts) > 0 {
+			group.MinInstantOrderTakeawayAmount = group.InstantOrderTakeawayAmounts[0]
+			for _, amt := range group.InstantOrderTakeawayAmounts {
+				if amt.LessThan(group.MinInstantOrderTakeawayAmount) {
+					group.MinInstantOrderTakeawayAmount = amt
+				}
+			}
+		}
+		if len(group.TakeoutOrderAmounts) > 0 {
+			group.MinTakeoutOrderAmount = group.TakeoutOrderAmounts[0]
+			for _, amt := range group.TakeoutOrderAmounts {
+				if amt.LessThan(group.MinTakeoutOrderAmount) {
+					group.MinTakeoutOrderAmount = amt
+				}
+			}
+		}
+
+		// 计算最大值
+		for _, amt := range group.OrderAmounts {
+			if amt.GreaterThan(decimal.Zero) && amt.GreaterThan(group.MaxOrderAmount) {
+				group.MaxOrderAmount = amt
+			}
+		}
+		for _, amt := range group.DeskOrderAmounts {
+			if amt.GreaterThan(decimal.Zero) && amt.GreaterThan(group.MaxDeskOrderAmount) {
+				group.MaxDeskOrderAmount = amt
+			}
+		}
+		for _, amt := range group.InstantOrderAmounts {
+			if amt.GreaterThan(group.MaxInstantOrderAmount) {
+				group.MaxInstantOrderAmount = amt
+			}
+		}
+		for _, amt := range group.InstantOrderTakeawayAmounts {
+			if amt.GreaterThan(group.MaxInstantOrderTakeawayAmount) {
+				group.MaxInstantOrderTakeawayAmount = amt
+			}
+		}
+		for _, amt := range group.TakeoutOrderAmounts {
+			if amt.GreaterThan(decimal.Zero) && amt.GreaterThan(group.MaxTakeoutOrderAmount) {
+				group.MaxTakeoutOrderAmount = amt
+			}
+		}
+
+		// 计算平均值
+		if group.OrderNumForAvg > 0 {
+			group.AvgOrderAmount = group.AvgOrderAmountSum.Div(decimal.NewFromInt(group.OrderNumForAvg)).Round(2)
+		}
+		if group.DeskOrderNumForAvg > 0 {
+			group.AvgDeskOrderAmount = group.AvgDeskOrderAmountSum.Div(decimal.NewFromInt(group.DeskOrderNumForAvg)).Round(2)
+		}
+		if group.InstantOrderNumForAvg > 0 {
+			group.AvgInstantOrderAmount = group.AvgInstantOrderAmountSum.Div(decimal.NewFromInt(group.InstantOrderNumForAvg)).Round(2)
+		}
+		if group.InstantOrderTakeawayNumForAvg > 0 {
+			group.AvgInstantOrderTakeawayAmount = group.AvgInstantOrderTakeawayAmountSum.Div(decimal.NewFromInt(group.InstantOrderTakeawayNumForAvg)).Round(2)
+		}
+		if group.TakeoutOrderNumForAvg > 0 {
+			group.AvgTakeoutOrderAmount = group.AvgTakeoutOrderAmountSum.Div(decimal.NewFromInt(group.TakeoutOrderNumForAvg)).Round(2)
+		}
+
+		// 转换为结果格式
+		result = append(result, model.StatisticsSaleDaysData{
+			StatisticsSaleData: model.StatisticsSaleData{
+				TotalSaleAmount:                 sql.NullFloat64{Float64: group.TotalSaleAmount.InexactFloat64(), Valid: true},
+				TotalReceivedAmount:             sql.NullFloat64{Float64: group.TotalReceivedAmount.InexactFloat64(), Valid: true},
+				TotalProductPrice:               sql.NullFloat64{Float64: group.TotalProductPrice.InexactFloat64(), Valid: true},
+				TotalProductOriginPrice:         sql.NullFloat64{Float64: group.TotalProductOriginPrice.InexactFloat64(), Valid: true},
+				TotalProductNum:                 sql.NullFloat64{Float64: group.TotalProductNum.InexactFloat64(), Valid: true},
+				TotalDiscountMember:             sql.NullFloat64{Float64: group.TotalDiscountMember.InexactFloat64(), Valid: true},
+				TotalBusinessAmount:             sql.NullFloat64{Float64: group.TotalBusinessAmount.InexactFloat64(), Valid: true},
+				TotalPaymentFee:                 sql.NullFloat64{Float64: group.TotalPaymentFee.InexactFloat64(), Valid: true},
+				TotalServiceFee:                 sql.NullFloat64{Float64: group.TotalServiceFee.InexactFloat64(), Valid: true},
+				TotalTax:                        sql.NullFloat64{Float64: group.TotalTax.InexactFloat64(), Valid: true},
+				TotalRefundAmount:               sql.NullFloat64{Float64: group.TotalRefundAmount.InexactFloat64(), Valid: true},
+				TotalDiscount:                   sql.NullFloat64{Float64: group.TotalDiscount.InexactFloat64(), Valid: true},
+				TotalGiftAmount:                 sql.NullFloat64{Float64: group.TotalGiftAmount.InexactFloat64(), Valid: true},
+				TotalGiftNum:                    sql.NullFloat64{Float64: group.TotalGiftNum.InexactFloat64(), Valid: true},
+				TotalFreeAmount:                 sql.NullFloat64{Float64: group.TotalFreeAmount.InexactFloat64(), Valid: true},
+				TotalFreeNum:                    sql.NullFloat64{Float64: group.TotalFreeNum.InexactFloat64(), Valid: true},
+				TotalOrderAmount:                sql.NullFloat64{Float64: group.TotalOrderAmount.InexactFloat64(), Valid: true},
+				TotalOrderNum:                   sql.NullInt64{Int64: group.TotalOrderNum, Valid: true},
+				TotalTakeoutSaleAmount:          sql.NullFloat64{Float64: group.TotalTakeoutSaleAmount.InexactFloat64(), Valid: true},
+				TotalTakeoutBusinessAmount:      sql.NullFloat64{Float64: group.TotalTakeoutBusinessAmount.InexactFloat64(), Valid: true},
+				TotalTakeoutRefundAmount:        sql.NullFloat64{Float64: group.TotalTakeoutRefundAmount.InexactFloat64(), Valid: true},
+				TotalTakeoutDeliveryFee:         sql.NullFloat64{Float64: group.TotalTakeoutDeliveryFee.InexactFloat64(), Valid: true},
+				TotalDeskNum:                    sql.NullInt64{Int64: group.TotalDeskNum, Valid: true},
+				TotalDeskOrderAmount:            sql.NullFloat64{Float64: group.TotalDeskOrderAmount.InexactFloat64(), Valid: true},
+				TotalMealNum:                    sql.NullInt64{Int64: group.TotalMealNum, Valid: true},
+				TotalInstantOrderAmount:         sql.NullFloat64{Float64: group.TotalInstantOrderAmount.InexactFloat64(), Valid: true},
+				TotalInstantOrderNum:            sql.NullInt64{Int64: group.TotalInstantOrderNum, Valid: true},
+				TotalInstantOrderTakeawayAmount: sql.NullFloat64{Float64: group.TotalInstantOrderTakeawayAmount.InexactFloat64(), Valid: true},
+				TotalInstantOrderTakeawayNum:    sql.NullInt64{Int64: group.TotalInstantOrderTakeawayNum, Valid: true},
+				TotalTakeoutOrderAmount:         sql.NullFloat64{Float64: group.TotalTakeoutOrderAmount.InexactFloat64(), Valid: true},
+				TotalTakeoutOrderNum:            sql.NullInt64{Int64: group.TotalTakeoutOrderNum, Valid: true},
+				MinOrderAmount:                  sql.NullFloat64{Float64: group.MinOrderAmount.InexactFloat64(), Valid: len(group.OrderAmounts) > 0},
+				MaxOrderAmount:                  sql.NullFloat64{Float64: group.MaxOrderAmount.InexactFloat64(), Valid: len(group.OrderAmounts) > 0 && group.MaxOrderAmount.GreaterThan(decimal.Zero)},
+				AvgOrderAmount:                  sql.NullFloat64{Float64: group.AvgOrderAmount.InexactFloat64(), Valid: group.OrderNumForAvg > 0},
+				MinDeskOrderAmount:              sql.NullFloat64{Float64: group.MinDeskOrderAmount.InexactFloat64(), Valid: len(group.DeskOrderAmounts) > 0},
+				MaxDeskOrderAmount:              sql.NullFloat64{Float64: group.MaxDeskOrderAmount.InexactFloat64(), Valid: len(group.DeskOrderAmounts) > 0 && group.MaxDeskOrderAmount.GreaterThan(decimal.Zero)},
+				AvgDeskOrderAmount:              sql.NullFloat64{Float64: group.AvgDeskOrderAmount.InexactFloat64(), Valid: group.DeskOrderNumForAvg > 0},
+				MinInstantOrderAmount:           sql.NullFloat64{Float64: group.MinInstantOrderAmount.InexactFloat64(), Valid: len(group.InstantOrderAmounts) > 0},
+				MaxInstantOrderAmount:           sql.NullFloat64{Float64: group.MaxInstantOrderAmount.InexactFloat64(), Valid: len(group.InstantOrderAmounts) > 0},
+				AvgInstantOrderAmount:           sql.NullFloat64{Float64: group.AvgInstantOrderAmount.InexactFloat64(), Valid: group.InstantOrderNumForAvg > 0},
+				MinInstantOrderTakeawayAmount:   sql.NullFloat64{Float64: group.MinInstantOrderTakeawayAmount.InexactFloat64(), Valid: len(group.InstantOrderTakeawayAmounts) > 0},
+				MaxInstantOrderTakeawayAmount:   sql.NullFloat64{Float64: group.MaxInstantOrderTakeawayAmount.InexactFloat64(), Valid: len(group.InstantOrderTakeawayAmounts) > 0},
+				AvgInstantOrderTakeawayAmount:   sql.NullFloat64{Float64: group.AvgInstantOrderTakeawayAmount.InexactFloat64(), Valid: group.InstantOrderTakeawayNumForAvg > 0},
+				MinTakeoutOrderAmount:           sql.NullFloat64{Float64: group.MinTakeoutOrderAmount.InexactFloat64(), Valid: len(group.TakeoutOrderAmounts) > 0},
+				MaxTakeoutOrderAmount:           sql.NullFloat64{Float64: group.MaxTakeoutOrderAmount.InexactFloat64(), Valid: len(group.TakeoutOrderAmounts) > 0 && group.MaxTakeoutOrderAmount.GreaterThan(decimal.Zero)},
+				AvgTakeoutOrderAmount:           sql.NullFloat64{Float64: group.AvgTakeoutOrderAmount.InexactFloat64(), Valid: group.TakeoutOrderNumForAvg > 0},
+			},
+			Day: sql.NullString{String: dateKey, Valid: true},
+		})
+	}
+
+	// 4. 按日期排序
+	slices.SortFunc(result, func(a, b model.StatisticsSaleDaysData) int {
+		if a.Day.String < b.Day.String {
+			return -1
+		} else if a.Day.String > b.Day.String {
+			return 1
+		}
+		return 0
+	})
 
 	return result
 }
@@ -253,10 +630,26 @@ func (r *StatisticsRepo) CountPayment(opts ...DBOption) []model.StatisticsPaymen
 	return result
 }
 
-// CountPaymentDays 统计支付天数
-func (r *StatisticsRepo) CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData {
-	var result []model.StatisticsPaymentDaysData
+// paymentDaysRawData 支付天数统计原始数据
+type paymentDaysRawData struct {
+	ID                uint64  `gorm:"column:id"`
+	Sort              int     `gorm:"column:sort"`
+	CreateTime        int64   `gorm:"column:create_time"`
+	PaymentMethodUuid uint64  `gorm:"column:payment_method_uuid"`
+	PaymentName       string  `gorm:"column:payment_name"`
+	PaymentCode       int     `gorm:"column:payment_code"`
+	ErpnextPayment    string  `gorm:"column:erpnext_payment"`
+	ErpnextPaymentId  string  `gorm:"column:erpnext_payment_id"`
+	Source            int     `gorm:"column:source"`
+	CompleteTime      int64   `gorm:"column:complete_time"`
+	PaymentAmount     float64 `gorm:"column:payment_amount"`
+	RefundAmount      float64 `gorm:"column:refund_amount"`
+}
 
+// CountPaymentDays 统计支付天数
+func (r *StatisticsRepo) CountPaymentDays(timezone string, opts ...DBOption) []model.StatisticsPaymentDaysData {
+	// 1. 查询原始数据（不按日期分组）
+	var rawData []paymentDaysRawData
 	db := r.db
 	for _, opt := range opts {
 		db = opt(db)
@@ -267,12 +660,119 @@ func (r *StatisticsRepo) CountPaymentDays(opts ...DBOption) []model.StatisticsPa
 	paymentMethodTable := prefix + "payment_method pm"
 
 	db.Table(statisticsPaymentTable).
-		Select(countPaymentSelect, "FROM_UNIXTIME(sp.complete_time, '%Y-%m-%d') AS day").
+		Select(
+			"pm.id",
+			"pm.sort",
+			"pm.create_time",
+			"sp.payment_method_uuid",
+			"pm.payment_name AS payment_name",
+			"pm.code AS payment_code",
+			"pm.erpnext_payment AS erpnext_payment",
+			"pm.erpnext_payment_id AS erpnext_payment_id",
+			"pm.source AS source",
+			"sp.complete_time",
+			"sp.payment_amount",
+			"sp.refund_amount",
+		).
 		Joins("LEFT JOIN " + paymentMethodTable + " ON sp.payment_method_uuid = pm.uuid").
-		Group("sp.payment_method_uuid").
-		Group("day").
-		Order("day ASC").
-		Find(&result)
+		Find(&rawData)
+
+	// 2. 在应用层按业务时区分组、统计
+	timeUtil := utils.SetTimezone(timezone)
+
+	// 按支付方式和日期分组统计
+	type groupKey struct {
+		PaymentMethodUuid uint64
+		Date              string
+	}
+	type groupData struct {
+		ID                 uint64
+		Sort               int
+		CreateTime         int64
+		PaymentName        string
+		PaymentCode        int
+		ErpnextPayment     string
+		ErpnextPaymentId   string
+		Source             int
+		TotalOrderNum      int64
+		TotalPaymentAmount decimal.Decimal
+		TotalRefundAmount  decimal.Decimal
+	}
+
+	groupedData := make(map[groupKey]*groupData)
+	for _, item := range rawData {
+		// 将时间戳转换为业务时区的日期
+		dateKey := timeUtil.FormatUnixTime(item.CompleteTime, "2006-01-02")
+
+		key := groupKey{
+			PaymentMethodUuid: item.PaymentMethodUuid,
+			Date:              dateKey,
+		}
+
+		// 初始化分组数据
+		if groupedData[key] == nil {
+			groupedData[key] = &groupData{
+				ID:               item.ID,
+				Sort:             item.Sort,
+				CreateTime:       item.CreateTime,
+				PaymentName:      item.PaymentName,
+				PaymentCode:      item.PaymentCode,
+				ErpnextPayment:   item.ErpnextPayment,
+				ErpnextPaymentId: item.ErpnextPaymentId,
+				Source:           item.Source,
+			}
+		}
+
+		// 累加统计数据
+		group := groupedData[key]
+		group.TotalOrderNum++
+		group.TotalPaymentAmount = group.TotalPaymentAmount.Add(decimal.NewFromFloat(item.PaymentAmount - item.RefundAmount))
+		group.TotalRefundAmount = group.TotalRefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
+	}
+
+	// 3. 转换为结果格式
+	result := make([]model.StatisticsPaymentDaysData, 0, len(groupedData))
+	for key, group := range groupedData {
+		result = append(result, model.StatisticsPaymentDaysData{
+			StatisticsPaymentData: model.StatisticsPaymentData{
+				ID:                 group.ID,
+				Sort:               group.Sort,
+				CreateTime:         group.CreateTime,
+				PaymentName:        group.PaymentName,
+				PaymentCode:        group.PaymentCode,
+				ErpnextPayment:     group.ErpnextPayment,
+				ErpnextPaymentId:   group.ErpnextPaymentId,
+				Source:             group.Source,
+				TotalOrderNum:      sql.NullInt64{Int64: group.TotalOrderNum, Valid: true},
+				TotalPaymentAmount: sql.NullFloat64{Float64: group.TotalPaymentAmount.InexactFloat64(), Valid: true},
+				TotalRefundAmount:  sql.NullFloat64{Float64: group.TotalRefundAmount.InexactFloat64(), Valid: true},
+			},
+			Day: sql.NullString{String: key.Date, Valid: true},
+		})
+	}
+
+	// 4. 按日期和支付方式排序
+	slices.SortFunc(result, func(a, b model.StatisticsPaymentDaysData) int {
+		// 先按日期排序
+		if a.Day.String < b.Day.String {
+			return -1
+		} else if a.Day.String > b.Day.String {
+			return 1
+		}
+		// 日期相同，按支付方式排序
+		if a.Sort < b.Sort {
+			return -1
+		} else if a.Sort > b.Sort {
+			return 1
+		}
+		// 排序相同，按创建时间倒序
+		if a.CreateTime > b.CreateTime {
+			return -1
+		} else if a.CreateTime < b.CreateTime {
+			return 1
+		}
+		return 0
+	})
 
 	return result
 }
@@ -485,9 +985,29 @@ func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData 
 	return result
 }
 
+// areaDaysRawData 区域天数统计原始数据
+type areaDaysRawData struct {
+	AreaID               uint64  `gorm:"column:area_id"`
+	AreaName             string  `gorm:"column:area_name"`
+	AreaIDForSort        uint64  `gorm:"column:area_id_for_sort"`
+	CompleteTime         int64   `gorm:"column:complete_time"`
+	ProductPrice         float64 `gorm:"column:product_price"`
+	ProductTax           float64 `gorm:"column:product_tax"`
+	ServiceFee           float64 `gorm:"column:service_fee"`
+	ServiceTax           float64 `gorm:"column:service_tax"`
+	PaymentFee           float64 `gorm:"column:payment_fee"`
+	ExtendPrice          float64 `gorm:"column:extend_price"`
+	PaymentAmount        float64 `gorm:"column:payment_amount"`
+	RefundAmount         float64 `gorm:"column:refund_amount"`
+	RefundPaymentBalance float64 `gorm:"column:refund_payment_balance"`
+	RefundTax            float64 `gorm:"column:refund_tax"`
+	ProductNum           float64 `gorm:"column:product_num"`
+}
+
 // CountAreaDays 统计区域
-func (r *StatisticsRepo) CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData {
-	var result []model.StatisticsAreaDaysData
+func (r *StatisticsRepo) CountAreaDays(timezone string, opts ...DBOption) []model.StatisticsAreaDaysData {
+	// 1. 查询原始数据（不按日期分组）
+	var rawData []areaDaysRawData
 	db := r.db
 	for _, opt := range opts {
 		db = opt(db)
@@ -498,15 +1018,134 @@ func (r *StatisticsRepo) CountAreaDays(opts ...DBOption) []model.StatisticsAreaD
 	deskTable := prefix + "desk as d"
 	deskRegionTable := prefix + "desk_region as dr"
 	db.Table(statisticsSaleTable).
-		Select(countAreaSelect, "dr.uuid AS area_id", "FROM_UNIXTIME(ss.complete_time, '%Y-%m-%d') AS day").
+		Select(
+			"dr.uuid AS area_id",
+			"dr.name AS area_name",
+			"dr.id AS area_id_for_sort",
+			"ss.complete_time",
+			"ss.product_price",
+			"ss.product_tax",
+			"ss.service_fee",
+			"ss.service_tax",
+			"ss.payment_fee",
+			"ss.extend_price",
+			"ss.payment_amount",
+			"ss.refund_amount",
+			"ss.refund_payment_balance",
+			"ss.refund_tax",
+			"ss.product_num",
+		).
 		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
 		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
 		Where("ss.desk_uuid > 0").
-		Group("dr.uuid").
-		Group("day").
-		Order("day ASC").
-		Order("dr.id ASC").
-		Find(&result)
+		Find(&rawData)
+
+	// 2. 在应用层按业务时区分组、统计
+	timeUtil := utils.SetTimezone(timezone)
+
+	// 按区域和日期分组统计
+	type groupKey struct {
+		AreaID uint64
+		Date   string
+	}
+	type groupData struct {
+		AreaName           string
+		AreaIDForSort      uint64
+		AreaSaleAmount     decimal.Decimal
+		AreaBusinessAmount decimal.Decimal
+		AreaProductNum     decimal.Decimal
+	}
+
+	groupedData := make(map[groupKey]*groupData)
+	for _, item := range rawData {
+		// 跳过区域ID为0的数据（没有关联到区域）
+		if item.AreaID == 0 {
+			continue
+		}
+
+		// 将时间戳转换为业务时区的日期
+		dateKey := timeUtil.FormatUnixTime(item.CompleteTime, "2006-01-02")
+
+		key := groupKey{
+			AreaID: item.AreaID,
+			Date:   dateKey,
+		}
+
+		// 初始化分组数据
+		if groupedData[key] == nil {
+			groupedData[key] = &groupData{
+				AreaName:      item.AreaName,
+				AreaIDForSort: item.AreaIDForSort,
+			}
+		}
+
+		// 累加统计数据
+		group := groupedData[key]
+		// area_sale_amount = product_price + product_tax + service_fee + service_tax + payment_fee + extend_price
+		areaSaleAmount := decimal.NewFromFloat(item.ProductPrice).
+			Add(decimal.NewFromFloat(item.ProductTax)).
+			Add(decimal.NewFromFloat(item.ServiceFee)).
+			Add(decimal.NewFromFloat(item.ServiceTax)).
+			Add(decimal.NewFromFloat(item.PaymentFee)).
+			Add(decimal.NewFromFloat(item.ExtendPrice))
+		group.AreaSaleAmount = group.AreaSaleAmount.Add(areaSaleAmount)
+
+		// area_business_amount = payment_amount - refund_amount - refund_payment_balance - product_tax - service_tax + refund_tax
+		areaBusinessAmount := decimal.NewFromFloat(item.PaymentAmount).
+			Sub(decimal.NewFromFloat(item.RefundAmount)).
+			Sub(decimal.NewFromFloat(item.RefundPaymentBalance)).
+			Sub(decimal.NewFromFloat(item.ProductTax)).
+			Sub(decimal.NewFromFloat(item.ServiceTax)).
+			Add(decimal.NewFromFloat(item.RefundTax))
+		group.AreaBusinessAmount = group.AreaBusinessAmount.Add(areaBusinessAmount)
+
+		group.AreaProductNum = group.AreaProductNum.Add(decimal.NewFromFloat(item.ProductNum))
+	}
+
+	// 3. 转换为结果格式（同时保存排序信息）
+	type resultWithSort struct {
+		Data   model.StatisticsAreaDaysData
+		SortID uint64
+	}
+	resultWithSortList := make([]resultWithSort, 0, len(groupedData))
+	for key, group := range groupedData {
+		resultWithSortList = append(resultWithSortList, resultWithSort{
+			Data: model.StatisticsAreaDaysData{
+				StatisticsAreaData: model.StatisticsAreaData{
+					AreaName:           sql.NullString{String: group.AreaName, Valid: true},
+					AreaSaleAmount:     sql.NullFloat64{Float64: group.AreaSaleAmount.InexactFloat64(), Valid: true},
+					AreaBusinessAmount: sql.NullFloat64{Float64: group.AreaBusinessAmount.InexactFloat64(), Valid: true},
+					AreaProductNum:     sql.NullFloat64{Float64: group.AreaProductNum.InexactFloat64(), Valid: true},
+				},
+				AreaID: sql.NullInt64{Int64: int64(key.AreaID), Valid: true},
+				Day:    sql.NullString{String: key.Date, Valid: true},
+			},
+			SortID: group.AreaIDForSort,
+		})
+	}
+
+	// 4. 按日期和区域ID（dr.id）排序
+	slices.SortFunc(resultWithSortList, func(a, b resultWithSort) int {
+		// 先按日期排序
+		if a.Data.Day.String < b.Data.Day.String {
+			return -1
+		} else if a.Data.Day.String > b.Data.Day.String {
+			return 1
+		}
+		// 日期相同，按区域ID（dr.id）排序
+		if a.SortID < b.SortID {
+			return -1
+		} else if a.SortID > b.SortID {
+			return 1
+		}
+		return 0
+	})
+
+	// 提取最终结果
+	result := make([]model.StatisticsAreaDaysData, 0, len(resultWithSortList))
+	for _, item := range resultWithSortList {
+		result = append(result, item.Data)
+	}
 
 	return result
 }
@@ -710,19 +1349,64 @@ func (r *StatisticsRepo) CountMemberNum(opts ...DBOption) int64 {
 	return result
 }
 
+// memberNumDaysRawData 会员数量天数统计原始数据
+type memberNumDaysRawData struct {
+	CreateTime int64 `gorm:"column:create_time"`
+}
+
 // CountMemberNumDays 统计会员数量天数
-func (r *StatisticsRepo) CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp {
-	var result []model.CountMemberNumDaysResp
+func (r *StatisticsRepo) CountMemberNumDays(timezone string, opts ...DBOption) []model.CountMemberNumDaysResp {
+	// 1. 查询原始数据（不按日期分组）
+	var rawData []memberNumDaysRawData
 	db := r.db
 	for _, opt := range opts {
 		db = opt(db)
 	}
 
 	db.Model(&model.Member{}).
-		Select("COUNT(uuid) AS member_num", "FROM_UNIXTIME(create_time, '%Y-%m-%d') AS day").
-		Group("day").
-		Order("day ASC").
-		Find(&result)
+		Select("create_time").
+		Find(&rawData)
+
+	// 2. 在应用层按业务时区分组、统计
+	timeUtil := utils.SetTimezone(timezone)
+
+	// 按日期分组统计
+	type groupData struct {
+		MemberNum int64
+	}
+	groupedData := make(map[string]*groupData)
+
+	for _, item := range rawData {
+		// 将时间戳转换为业务时区的日期
+		dateKey := timeUtil.FormatUnixTime(item.CreateTime, "2006-01-02")
+
+		// 初始化分组数据
+		if groupedData[dateKey] == nil {
+			groupedData[dateKey] = &groupData{}
+		}
+
+		// 累加会员数量
+		groupedData[dateKey].MemberNum++
+	}
+
+	// 3. 转换为结果格式
+	result := make([]model.CountMemberNumDaysResp, 0, len(groupedData))
+	for dateKey, group := range groupedData {
+		result = append(result, model.CountMemberNumDaysResp{
+			Day:       sql.NullString{String: dateKey, Valid: true},
+			MemberNum: sql.NullInt64{Int64: group.MemberNum, Valid: true},
+		})
+	}
+
+	// 4. 按日期排序
+	slices.SortFunc(result, func(a, b model.CountMemberNumDaysResp) int {
+		if a.Day.String < b.Day.String {
+			return -1
+		} else if a.Day.String > b.Day.String {
+			return 1
+		}
+		return 0
+	})
 
 	return result
 }
@@ -847,18 +1531,126 @@ func (r *StatisticsRepo) CountMember(opts ...DBOption) model.StatisticsMemberDat
 	return result
 }
 
+// memberDaysRawData 会员天数统计原始数据
+type memberDaysRawData struct {
+	CompleteTime   int64   `gorm:"column:complete_time"`
+	PaymentFee     float64 `gorm:"column:payment_fee"`
+	PaymentAmount  float64 `gorm:"column:payment_amount"`
+	RefundAmount   float64 `gorm:"column:refund_amount"`
+	RefundFee      float64 `gorm:"column:refund_fee"`
+	RechargeAmount float64 `gorm:"column:recharge_amount"`
+	GiveAmount     float64 `gorm:"column:give_amount"`
+	GivePoint      float64 `gorm:"column:give_point"`
+}
+
 // CountMemberDays 统计会员天数
-func (r *StatisticsRepo) CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData {
-	var result []model.StatisticsMemberDaysData
+func (r *StatisticsRepo) CountMemberDays(timezone string, opts ...DBOption) []model.StatisticsMemberDaysData {
+	// 1. 查询原始数据（不按日期分组）
+	var rawData []memberDaysRawData
 	db := r.db
 	for _, opt := range opts {
 		db = opt(db)
 	}
 
 	db.Model(&model.StatisticsMember{}).
-		Select(countMemberSelect, "FROM_UNIXTIME(complete_time, '%Y-%m-%d') AS day").
-		Group("FROM_UNIXTIME(complete_time, '%Y-%m-%d')").
-		Find(&result)
+		Select(
+			"complete_time",
+			"payment_fee",
+			"payment_amount",
+			"refund_amount",
+			"refund_fee",
+			"recharge_amount",
+			"give_amount",
+			"give_point",
+		).
+		Find(&rawData)
+
+	// 2. 在应用层按业务时区分组、统计
+	timeUtil := utils.SetTimezone(timezone)
+
+	// 按日期分组统计
+	type groupData struct {
+		TotalSaleAmount     decimal.Decimal
+		TotalRechargeAmount decimal.Decimal
+		TotalGiveAmount     decimal.Decimal
+		TotalGivePoint      decimal.Decimal
+		TotalPaymentAmount  decimal.Decimal
+		TotalPaymentFee     decimal.Decimal
+		TotalRefundAmount   decimal.Decimal
+	}
+	groupedData := make(map[string]*groupData)
+
+	for _, item := range rawData {
+		// 将时间戳转换为业务时区的日期
+		dateKey := timeUtil.FormatUnixTime(item.CompleteTime, "2006-01-02")
+
+		// 初始化分组数据
+		if groupedData[dateKey] == nil {
+			groupedData[dateKey] = &groupData{}
+		}
+
+		// 累加统计数据
+		group := groupedData[dateKey]
+		// total_sale_amount = SUM(payment_fee)
+		group.TotalSaleAmount = group.TotalSaleAmount.Add(decimal.NewFromFloat(item.PaymentFee))
+
+		// total_recharge_amount = SUM(IF(payment_amount - refund_amount = 0, 0, recharge_amount - refund_amount))
+		var rechargeAmount decimal.Decimal
+		paymentMinusRefund := decimal.NewFromFloat(item.PaymentAmount).Sub(decimal.NewFromFloat(item.RefundAmount))
+		if paymentMinusRefund.IsZero() {
+			rechargeAmount = decimal.Zero
+		} else {
+			rechargeAmount = decimal.NewFromFloat(item.RechargeAmount).Sub(decimal.NewFromFloat(item.RefundAmount))
+		}
+		group.TotalRechargeAmount = group.TotalRechargeAmount.Add(rechargeAmount)
+
+		// total_give_amount = SUM(give_amount)
+		group.TotalGiveAmount = group.TotalGiveAmount.Add(decimal.NewFromFloat(item.GiveAmount))
+
+		// total_give_point = SUM(give_point)
+		group.TotalGivePoint = group.TotalGivePoint.Add(decimal.NewFromFloat(item.GivePoint))
+
+		// total_payment_amount = SUM(payment_amount - refund_amount - refund_fee)
+		paymentAmount := decimal.NewFromFloat(item.PaymentAmount).
+			Sub(decimal.NewFromFloat(item.RefundAmount)).
+			Sub(decimal.NewFromFloat(item.RefundFee))
+		group.TotalPaymentAmount = group.TotalPaymentAmount.Add(paymentAmount)
+
+		// total_payment_fee = SUM(payment_fee - refund_fee)
+		paymentFee := decimal.NewFromFloat(item.PaymentFee).Sub(decimal.NewFromFloat(item.RefundFee))
+		group.TotalPaymentFee = group.TotalPaymentFee.Add(paymentFee)
+
+		// total_refund_amount = SUM(refund_amount + refund_fee)
+		refundAmount := decimal.NewFromFloat(item.RefundAmount).Add(decimal.NewFromFloat(item.RefundFee))
+		group.TotalRefundAmount = group.TotalRefundAmount.Add(refundAmount)
+	}
+
+	// 3. 转换为结果格式
+	result := make([]model.StatisticsMemberDaysData, 0, len(groupedData))
+	for dateKey, group := range groupedData {
+		result = append(result, model.StatisticsMemberDaysData{
+			StatisticsMemberData: model.StatisticsMemberData{
+				TotalSaleAmount:     sql.NullFloat64{Float64: group.TotalSaleAmount.InexactFloat64(), Valid: true},
+				TotalRechargeAmount: sql.NullFloat64{Float64: group.TotalRechargeAmount.InexactFloat64(), Valid: true},
+				TotalGiveAmount:     sql.NullFloat64{Float64: group.TotalGiveAmount.InexactFloat64(), Valid: true},
+				TotalGivePoint:      sql.NullFloat64{Float64: group.TotalGivePoint.InexactFloat64(), Valid: true},
+				TotalPaymentAmount:  sql.NullFloat64{Float64: group.TotalPaymentAmount.InexactFloat64(), Valid: true},
+				TotalPaymentFee:     sql.NullFloat64{Float64: group.TotalPaymentFee.InexactFloat64(), Valid: true},
+				TotalRefundAmount:   sql.NullFloat64{Float64: group.TotalRefundAmount.InexactFloat64(), Valid: true},
+			},
+			Day: sql.NullString{String: dateKey, Valid: true},
+		})
+	}
+
+	// 4. 按日期排序
+	slices.SortFunc(result, func(a, b model.StatisticsMemberDaysData) int {
+		if a.Day.String < b.Day.String {
+			return -1
+		} else if a.Day.String > b.Day.String {
+			return 1
+		}
+		return 0
+	})
 
 	return result
 }
@@ -900,10 +1692,24 @@ func (r *StatisticsRepo) CountMemberPayment(opts ...DBOption) []model.Statistics
 	return result
 }
 
-// CountMemberPaymentDays 统计会员支付天数
-func (r *StatisticsRepo) CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData {
-	var result []model.StatisticsPaymentDaysData
+// memberPaymentDaysRawData 会员支付天数统计原始数据
+type memberPaymentDaysRawData struct {
+	ID                uint64  `gorm:"column:id"`
+	Sort              int     `gorm:"column:sort"`
+	CreateTime        int64   `gorm:"column:create_time"`
+	PaymentMethodUuid uint64  `gorm:"column:payment_method_uuid"`
+	PaymentName       string  `gorm:"column:payment_name"`
+	PaymentCode       int     `gorm:"column:payment_code"`
+	ErpnextPayment    string  `gorm:"column:erpnext_payment"`
+	CompleteTime      int64   `gorm:"column:complete_time"`
+	PaymentAmount     float64 `gorm:"column:payment_amount"`
+	RefundAmount      float64 `gorm:"column:refund_amount"`
+}
 
+// CountMemberPaymentDays 统计会员支付天数
+func (r *StatisticsRepo) CountMemberPaymentDays(timezone string, opts ...DBOption) []model.StatisticsPaymentDaysData {
+	// 1. 查询原始数据（不按日期分组）
+	var rawData []memberPaymentDaysRawData
 	db := r.db
 	for _, opt := range opts {
 		db = opt(db)
@@ -914,12 +1720,111 @@ func (r *StatisticsRepo) CountMemberPaymentDays(opts ...DBOption) []model.Statis
 	paymentMethodTable := prefix + "payment_method pm"
 
 	db.Table(statisticsMemberPaymentTable).
-		Select(countMemberPaymentSelect, "FROM_UNIXTIME(smp.complete_time, '%Y-%m-%d') AS day").
+		Select(
+			"pm.id",
+			"pm.sort",
+			"pm.create_time",
+			"smp.payment_method_uuid",
+			"pm.payment_name AS payment_name",
+			"pm.code AS payment_code",
+			"pm.erpnext_payment AS erpnext_payment",
+			"smp.complete_time",
+			"smp.payment_amount",
+			"smp.refund_amount",
+		).
 		Joins("LEFT JOIN " + paymentMethodTable + " ON smp.payment_method_uuid = pm.uuid").
-		Group("smp.payment_method_uuid").
-		Group("day").
-		Order("day ASC").
-		Find(&result)
+		Find(&rawData)
+
+	// 2. 在应用层按业务时区分组、统计
+	timeUtil := utils.SetTimezone(timezone)
+
+	// 按支付方式和日期分组统计
+	type groupKey struct {
+		PaymentMethodUuid uint64
+		Date              string
+	}
+	type groupData struct {
+		ID                 uint64
+		Sort               int
+		CreateTime         int64
+		PaymentName        string
+		PaymentCode        int
+		ErpnextPayment     string
+		TotalOrderNum      int64
+		TotalPaymentAmount decimal.Decimal
+		TotalRefundAmount  decimal.Decimal
+	}
+
+	groupedData := make(map[groupKey]*groupData)
+	for _, item := range rawData {
+		// 将时间戳转换为业务时区的日期
+		dateKey := timeUtil.FormatUnixTime(item.CompleteTime, "2006-01-02")
+
+		key := groupKey{
+			PaymentMethodUuid: item.PaymentMethodUuid,
+			Date:              dateKey,
+		}
+
+		// 初始化分组数据
+		if groupedData[key] == nil {
+			groupedData[key] = &groupData{
+				ID:             item.ID,
+				Sort:           item.Sort,
+				CreateTime:     item.CreateTime,
+				PaymentName:    item.PaymentName,
+				PaymentCode:    item.PaymentCode,
+				ErpnextPayment: item.ErpnextPayment,
+			}
+		}
+
+		// 累加统计数据
+		group := groupedData[key]
+		group.TotalOrderNum++
+		group.TotalPaymentAmount = group.TotalPaymentAmount.Add(decimal.NewFromFloat(item.PaymentAmount - item.RefundAmount))
+		group.TotalRefundAmount = group.TotalRefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
+	}
+
+	// 3. 转换为结果格式
+	result := make([]model.StatisticsPaymentDaysData, 0, len(groupedData))
+	for key, group := range groupedData {
+		result = append(result, model.StatisticsPaymentDaysData{
+			StatisticsPaymentData: model.StatisticsPaymentData{
+				ID:                 group.ID,
+				Sort:               group.Sort,
+				CreateTime:         group.CreateTime,
+				PaymentName:        group.PaymentName,
+				PaymentCode:        group.PaymentCode,
+				ErpnextPayment:     group.ErpnextPayment,
+				TotalOrderNum:      sql.NullInt64{Int64: group.TotalOrderNum, Valid: true},
+				TotalPaymentAmount: sql.NullFloat64{Float64: group.TotalPaymentAmount.InexactFloat64(), Valid: true},
+				TotalRefundAmount:  sql.NullFloat64{Float64: group.TotalRefundAmount.InexactFloat64(), Valid: true},
+			},
+			Day: sql.NullString{String: key.Date, Valid: true},
+		})
+	}
+
+	// 4. 按日期和支付方式排序
+	slices.SortFunc(result, func(a, b model.StatisticsPaymentDaysData) int {
+		// 先按日期排序
+		if a.Day.String < b.Day.String {
+			return -1
+		} else if a.Day.String > b.Day.String {
+			return 1
+		}
+		// 日期相同，按支付方式排序
+		if a.Sort < b.Sort {
+			return -1
+		} else if a.Sort > b.Sort {
+			return 1
+		}
+		// 排序相同，按创建时间倒序
+		if a.CreateTime > b.CreateTime {
+			return -1
+		} else if a.CreateTime < b.CreateTime {
+			return 1
+		}
+		return 0
+	})
 
 	return result
 }
@@ -2404,14 +3309,15 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 	).Scan(&rawData)
 
 	// 2. 查询订单总数（用于计算退款率）
+	// 返回原始数据（包含 finish_time 时间戳），在应用层进行时区转换和分组
 	var orderCountData []struct {
-		FinishTime int64
-		OrderNum   int64
+		FinishTime   int64
+		SaleBillUuid uint64
 	}
 	orderCountQuery := `
 		SELECT 
 			sb.finish_time,
-			COUNT(DISTINCT sb.uuid) AS order_num
+			sb.uuid AS sale_bill_uuid
 		FROM ttpos_sale_bill AS sb
 		WHERE sb.delete_time = ?
 			AND sb.status = ?
@@ -2423,15 +3329,12 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 		orderCountQuery += ` AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)`
 	}
 
-	orderCountQuery += `
-		GROUP BY FROM_UNIXTIME(sb.finish_time, IF(? = 1, '%Y-%m', '%Y-%m-%d'))
-	`
+	// 移除 GROUP BY FROM_UNIXTIME，返回原始数据，在应用层进行时区转换和分组
 
 	r.db.Raw(orderCountQuery,
 		constant.NotDeleted,
 		constant.SaleBillStatusComplete,
 		req.StartTime, req.EndTime,
-		req.Cycle,
 	).Scan(&orderCountData)
 
 	// 2.1. 查询外卖订单取消订单数据（order_state = 60，且 accepted_time > 0）
@@ -2460,29 +3363,29 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 	).Scan(&takeoutRefundData)
 
 	// 2.2. 查询外卖订单总数（用于计算退款率）
+	// 返回原始数据（包含 accepted_time 时间戳），在应用层进行时区转换和分组
 	type takeoutOrderCountData struct {
 		AcceptedTime int64
-		OrderNum     int64
+		OrderUuid    uint64
 	}
 	var takeoutOrderCount []takeoutOrderCountData
 	// 使用 statistics_takeout.go 中定义的 validOrderStates（包含所有有效状态：10, 20, 30, 40, 60）
 	validStatesStr := buildStateInCondition(validOrderStates)
 	takeoutOrderCountQuery := fmt.Sprintf(`
 		SELECT 
-			MIN(accepted_time) AS accepted_time,
-			COUNT(DISTINCT uuid) AS order_num
+			accepted_time,
+			uuid AS order_uuid
 		FROM ttpos_takeout_order
 		WHERE delete_time = ?
 			AND order_state IN %s
 			AND accepted_time > 0
 			AND accepted_time >= ?
 			AND accepted_time <= ?
-		GROUP BY FROM_UNIXTIME(accepted_time, IF(? = 1, '%%Y-%%m', '%%Y-%%m-%%d'))
 	`, validStatesStr)
+	// 移除 GROUP BY FROM_UNIXTIME，返回原始数据，在应用层进行时区转换和分组
 	r.db.Raw(takeoutOrderCountQuery,
 		constant.NotDeleted,
 		req.StartTime, req.EndTime,
-		req.Cycle,
 	).Scan(&takeoutOrderCount)
 
 	// 3. 在应用层按业务时区分组、统计
@@ -2490,6 +3393,8 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 
 	// 构建订单数量映射（按日期）- 包含销售订单和外卖订单
 	orderCountMap := make(map[string]int64)
+	// 统计销售订单数量（按日期分组，使用 map 去重）
+	saleBillUuidSetByDate := make(map[string]map[uint64]bool)
 	for _, item := range orderCountData {
 		var dateKey string
 		if req.Cycle == 1 {
@@ -2499,9 +3404,18 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 			// 按日
 			dateKey = timeUtil.FormatUnixTime(item.FinishTime, "2006-01-02")
 		}
-		orderCountMap[dateKey] += item.OrderNum
+		// 初始化该日期的 set
+		if saleBillUuidSetByDate[dateKey] == nil {
+			saleBillUuidSetByDate[dateKey] = make(map[uint64]bool)
+		}
+		// 使用 set 去重，每个订单只统计一次
+		if !saleBillUuidSetByDate[dateKey][item.SaleBillUuid] {
+			orderCountMap[dateKey]++
+			saleBillUuidSetByDate[dateKey][item.SaleBillUuid] = true
+		}
 	}
-	// 合并外卖订单总数
+	// 合并外卖订单总数（按日期分组，使用 map 去重）
+	orderUuidSetByDate := make(map[string]map[uint64]bool)
 	for _, item := range takeoutOrderCount {
 		var dateKey string
 		if req.Cycle == 1 {
@@ -2511,7 +3425,15 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 			// 按日
 			dateKey = timeUtil.FormatUnixTime(item.AcceptedTime, "2006-01-02")
 		}
-		orderCountMap[dateKey] += item.OrderNum
+		// 初始化该日期的 set
+		if orderUuidSetByDate[dateKey] == nil {
+			orderUuidSetByDate[dateKey] = make(map[uint64]bool)
+		}
+		// 使用 set 去重，每个订单只统计一次
+		if !orderUuidSetByDate[dateKey][item.OrderUuid] {
+			orderCountMap[dateKey]++
+			orderUuidSetByDate[dateKey][item.OrderUuid] = true
+		}
 	}
 
 	// 按日期分组统计
