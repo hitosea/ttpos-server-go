@@ -713,3 +713,8 @@ type BatchTagSortReq struct {
 type SaveBatchProductReq struct {
 	Uuids []uint64 `json:"uuids" binding:"required"` // 分批商品UUID列表, product_package_uuids
 }
+
+// InvalidateProductListCacheReq 失效商品列表缓存请求（供PHP服务调用）
+type InvalidateProductListCacheReq struct {
+	CompanyUuid uint64 `json:"company_uuid" binding:"required"` // 商户UUID
+}

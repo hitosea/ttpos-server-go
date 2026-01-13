@@ -226,8 +226,9 @@ type CountSaleDaysResp struct {
 func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []string) []CountSaleDaysResp {
 	repo := repository.NewStatisticsRepo(ctx.GetDB())
 	opts := s.buildCountOpts(ctx, req)
-	saleData := repo.CountSaleDays(opts...)
-	memberData := repo.CountMemberDays(opts...)
+	timezone := ctx.GetCompanySetting().Timezone
+	saleData := repo.CountSaleDays(timezone, opts...)
+	memberData := repo.CountMemberDays(timezone, opts...)
 
 	list := make([]CountSaleDaysResp, 0, len(days))
 	for _, day := range days {
@@ -589,7 +590,8 @@ type CountPaymentDaysResp struct {
 // CountPaymentDays 统计支付天数
 func (s *statisticsSrv) CountPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp {
 	opts := s.buildCountOpts(ctx, req)
-	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPaymentDays(opts...)
+	timezone := ctx.GetCompanySetting().Timezone
+	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPaymentDays(timezone, opts...)
 
 	list := make([]CountPaymentDaysResp, 0)
 	for _, day := range days {
@@ -662,7 +664,8 @@ func (s *statisticsSrv) CountMemberPayment(ctx context.Context, req CountReq) Co
 // CountMemberPaymentDays 统计会员支付天数
 func (s *statisticsSrv) CountMemberPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp {
 	opts := s.buildCountOpts(ctx, req)
-	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberPaymentDays(opts...)
+	timezone := ctx.GetCompanySetting().Timezone
+	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberPaymentDays(timezone, opts...)
 
 	list := make([]CountPaymentDaysResp, 0)
 	for _, day := range days {
@@ -1059,7 +1062,8 @@ type CountAreaDaysResp struct {
 // CountAreaDays 统计区域天数
 func (s *statisticsSrv) CountAreaDays(ctx context.Context, req CountReq, days []string) []CountAreaDaysResp {
 	opts := s.buildCountOpts(ctx, req)
-	areaData := repository.NewStatisticsRepo(ctx.GetDB()).CountAreaDays(opts...)
+	timezone := ctx.GetCompanySetting().Timezone
+	areaData := repository.NewStatisticsRepo(ctx.GetDB()).CountAreaDays(timezone, opts...)
 
 	var list []CountAreaDaysResp
 
@@ -1242,7 +1246,8 @@ func (s *statisticsSrv) CountMemberNumDays(ctx context.Context, req CountReq, da
 	opts := s.buildCountOpts(ctx, req)
 	opts = append(opts, commonRepo.WhereBySoftDelete())
 	opts = append(opts, commonRepo.WhereByIsVisitor(0))
-	memberNumData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNumDays(opts...)
+	timezone := ctx.GetCompanySetting().Timezone
+	memberNumData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNumDays(timezone, opts...)
 
 	var list []CountMemberNumDaysResp
 	for _, day := range days {
