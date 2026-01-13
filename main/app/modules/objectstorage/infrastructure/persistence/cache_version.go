@@ -31,16 +31,46 @@ func NewCacheVersionManager(cacheInstance cache.Cache) *CacheVersionManager {
 	}
 }
 
+// GetCacheVersionTimestampOption GetCacheVersionTimestamp 方法的选项
+type GetCacheVersionTimestampOption struct {
+	// CompanyWide 是否在公司范围内使对象失效
+	// 当为 true 时，无论 objectUuid 为什么值都赋值为 0（表示全局版本时间戳）
+	CompanyWide bool
+}
+
+// WithCompanyWide 设置是否在公司范围内使对象失效（用于 GetCacheVersionTimestamp）
+// 参数：
+//   - companyWide: 如果为 true，则无论 objectUuid 为什么值都赋值为 0
+func WithCompanyWide(companyWide bool) func(*GetCacheVersionTimestampOption) {
+	return func(opt *GetCacheVersionTimestampOption) {
+		opt.CompanyWide = companyWide
+	}
+}
+
 // GetCacheVersionTimestamp 获取缓存版本时间戳
 // 参数：
 //   - companyUuid: 门店 UUID
 //   - objectType: 对象类型
 //   - objectUuid: 对象 UUID（通常为 0，表示全局版本时间戳）
+//   - opts: 选项函数（可选），如 WithCompanyWide(true) 表示在公司范围内使对象失效
 //
 // 返回：
-//   - int64: 版本时间戳（Unix 时间戳，微秒）
+//   - int64: 版本时间戳（Unix 时间戳，秒）
 //   - bool: 是否存在版本时间戳
-func (cvm *CacheVersionManager) GetCacheVersionTimestamp(companyUuid uint64, objectType string, objectUuid uint64) (int64, bool) {
+func (cvm *CacheVersionManager) GetCacheVersionTimestamp(companyUuid uint64, objectType string, objectUuid uint64, opts ...func(*GetCacheVersionTimestampOption)) (int64, bool) {
+	// 解析选项
+	option := &GetCacheVersionTimestampOption{
+		CompanyWide: false, // 默认值
+	}
+	for _, opt := range opts {
+		opt(option)
+	}
+
+	// 如果 CompanyWide 为 true，无论 objectUuid 为什么值都赋值为 0
+	if option.CompanyWide {
+		objectUuid = 0
+	}
+
 	// 获取 Redis 客户端
 	var client redis.UniversalClient
 	if clusterClient := cvm.cacheInstance.GetClusterClient(); clusterClient != nil {

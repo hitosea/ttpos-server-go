@@ -16,6 +16,7 @@ const (
 	SystemPrefix       = "ttpos5"        // 系统前缀
 	CacheVersionPrefix = "cacheversion"  // 缓存版本时间戳前缀
 	CacheVersionTTL    = 5 * time.Minute // 缓存版本时间戳的过期时间
+	GlobalObjectUuid   = 0               // 全局对象 UUID
 )
 
 // BuildKey 构建 key 的辅助方法（自动从 context 提取 company UUID）

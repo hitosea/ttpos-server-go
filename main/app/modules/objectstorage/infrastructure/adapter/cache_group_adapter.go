@@ -281,6 +281,7 @@ func (a *CacheGroupAdapter[T]) DEL(keys ...string) error {
 }
 
 // BATCH_GET 批量获取缓存
+// 如果配置了 objectType，会检查对象的 UpdateTime 字段是否小于最新版本时间戳
 func (a *CacheGroupAdapter[T]) BATCH_GET(keys []string, query func([]string) (map[string]T, error), opts ...func(*repository.GetOption)) (map[string]T, error) {
 	if len(keys) == 0 {
 		return make(map[string]T), nil
@@ -299,18 +300,19 @@ func (a *CacheGroupAdapter[T]) BATCH_GET(keys []string, query func([]string) (ma
 	missCount := 0
 
 	for _, key := range keys {
+		querySingleKey := func() (T, error) {
+			// 从批量查询结果中提取单个 key 的值
+			batchResult, err := query([]string{key})
+			if err != nil {
+				var zero T
+				return zero, err
+			}
+			return batchResult[key], nil
+		}
 		task := &cacheTask[T]{
-			key: key,
-			query: func() (T, error) {
-				// 从批量查询结果中提取单个 key 的值
-				batchResult, err := query([]string{key})
-				if err != nil {
-					var zero T
-					return zero, err
-				}
-				return batchResult[key], nil
-			},
-			ttl: a.defaultTTL,
+			key:   key,
+			query: querySingleKey,
+			ttl:   a.defaultTTL,
 		}
 
 		// 根据选项决定是否跳过缓存
@@ -326,6 +328,12 @@ func (a *CacheGroupAdapter[T]) BATCH_GET(keys []string, query func([]string) (ma
 			missCount++
 			continue // 单个失败不影响其他
 		}
+
+		// 如果配置了 objectType，需要检查版本时间戳
+		if a.objectType != "" {
+			val = a.checkAndRefreshIfNeeded(key, val, querySingleKey)
+		}
+
 		result[key] = val
 	}
 
@@ -393,7 +401,7 @@ func (a *CacheGroupAdapter[T]) checkAndRefreshIfNeeded(key string, result T, que
 	objectUuid, _ := ck.GetObjectUuid() // 如果是product_list 对象，objectUuid 为 0. 这是特性,表示全局版本时间戳,要更新所有的product_list缓存. 其他对象的objectUuid不为0,表示具体对象的版本时间戳,要更新具体对象的缓存.
 
 	// 获取最新版本时间戳
-	versionTimestamp, versionExists := a.versionManager.GetCacheVersionTimestamp(companyUuid, objectType, objectUuid)
+	versionTimestamp, versionExists := a.versionManager.GetCacheVersionTimestamp(companyUuid, objectType, objectUuid, persistence.WithCompanyWide(true))
 
 	// 如果版本时间戳不存在（versionExists=false），说明版本时间戳已过期，
 	// 此时应该认为缓存也已过期，需要重新查询并设置新的版本时间戳
