@@ -4,25 +4,25 @@ import (
 	goCtx "context"
 	"fmt"
 	"sync"
-	"time"
 
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
-
-	"github.com/redis/go-redis/v9"
 )
 
 // ProductListCacheController 商品列表缓存控制器
 // 用于统一管理商品列表缓存的失效操作
 type ProductListCacheController struct {
-	cache cache.Cache
+	cache          cache.Cache
+	versionManager *persistence.CacheVersionManager
 }
 
 // NewProductListCacheController 创建商品列表缓存控制器
 func NewProductListCacheController() *ProductListCacheController {
+	cacheInstance := cache.Global
 	return &ProductListCacheController{
-		cache: cache.Global,
+		cache:          cacheInstance,
+		versionManager: persistence.NewCacheVersionManager(cacheInstance),
 	}
 }
 
@@ -36,39 +36,12 @@ func (c *ProductListCacheController) InvalidateProductListCache(ctx goCtx.Contex
 	cctx := ctx.(context.Context)
 	companyUuid := cctx.GetCompanyUuid()
 
-	// 获取 Redis 客户端
-	var client redis.UniversalClient
-	if clusterClient := c.cache.GetClusterClient(); clusterClient != nil {
-		client = clusterClient
-	} else if redisClient := c.cache.GetClient(); redisClient != nil {
-		client = redisClient
-	} else {
-		// 如果不是 Redis 缓存，无法使用模式匹配，直接返回
-		return nil
-	}
-
-	// 构建缓存键模式
-	// Key 格式：{system_prefix}:{company_uuid}:product_list:*
-	pattern := fmt.Sprintf("%s:%d:%s:*", persistence.SystemPrefix, companyUuid, persistence.ObjectTypeProductList)
-
-	// 扫描并删除所有匹配的键（L2 Redis 缓存）
-	backgroundCtx := goCtx.Background()
-	keys, err := cache.ScanRedisKeysDefault(backgroundCtx, client, pattern)
-	if err != nil {
-		return fmt.Errorf("扫描商品列表缓存键失败: %w", err)
-	}
-
-	if len(keys) > 0 {
-		// 删除 L2 Redis 缓存
-		c.cache.Del(keys...)
-	}
-
 	// 更新缓存版本时间戳（在二级缓存中记录对象的最新版本时间戳）
-	// Key 格式：{system_prefix}:{company_uuid}:cacheversion_{object_type}
+	// Key 格式：{cache_version_prefix}:{system_prefix}:{company_uuid}:{object_type}:{object_uuid} ,object_uuid 为 0 表示全局版本时间戳,要更新所有的product_list缓存. 其他对象的objectUuid不为0,表示具体对象的版本时间戳,要更新具体对象的缓存.
 	// 版本时间戳的过期时间设置为 L2TTL（5分钟），与最长有效的缓存时间一致
 	// 当版本时间戳过期时，GetCacheVersionTimestamp 会返回 (0, false)，
 	// 表示缓存已过期，需要重新查询并设置新的版本时间戳
-	if err := persistence.UpdateCacheVersionTimestamp(c.cache, companyUuid, persistence.ObjectTypeProductList, 5*time.Minute); err != nil {
+	if err := c.versionManager.UpdateCacheVersionTimestamp(companyUuid, persistence.ObjectTypeProductList, 0); err != nil {
 		return fmt.Errorf("更新缓存版本时间戳失败: %w", err)
 	}
 

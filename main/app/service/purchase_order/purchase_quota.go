@@ -37,7 +37,7 @@ func (s *purchaseOrderSrv) checkDailySubmitLimit(ctx context.Context, companyUui
 
 	// 通过 Repository 读取配置
 	headquarterDb := s.dbm.GetDB(headquarterUuid)
-	setting := repository.NewSettingRepo(headquarterDb).GetByKey(model.SettingKeyPurchaseBrandDailyLimit)
+	setting := repository.NewSettingRepo(headquarterDb).GetByKey(model.SettingKeyPurchaseBrandSetting)
 
 	// 获取限制值
 	dailyLimit := setting.GetPurchaseBrandDailyLimit()

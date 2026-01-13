@@ -8,13 +8,42 @@ import (
 	"sync"
 	"time"
 
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/objectstorage/domain/repository"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 
 	"gorm.io/gorm"
 )
+
+// ICacheObjectController Desk 对象缓存控制器接口（向后兼容）
+// 统一管理对象的缓存查询和更新，支持观察者模式更新缓存
+type ICacheObjectController interface {
+	// GetByUuid 根据 UUID 获取对象（带缓存）
+	GetByUuid(ctx goCtx.Context, db *gorm.DB, uuid uint64) (*model.Desk, error)
+
+	// BatchGetByUuids 批量根据 UUID 列表获取对象（带缓存）
+	BatchGetByUuids(ctx goCtx.Context, db *gorm.DB, uuids []uint64, opts ...func(*BatchGetByUuidsOption)) (map[uint64]*model.Desk, error)
+
+	// Update 更新对象的缓存（用于观察者模式）
+	// 参数：
+	//   - ctx: 上下文（用于提取 companyUuid）
+	//   - db: 数据库连接
+	//   - uuids: 对象 UUID 列表
+	//   - opts: 选项函数（可选），如 WithUpdateValue() 直接提供值更新缓存
+	Update(ctx goCtx.Context, db *gorm.DB, uuids []uint64, opts ...func(*UpdateOption)) error
+
+	// Invalidate 使对象缓存失效
+	// 参数：
+	//   - ctx: 上下文（用于提取 companyUuid）
+	//   - uuid: 对象的 UUID（如果为 0，则使所有该类型对象的缓存失效）
+	//
+	// 返回：
+	//   - error: 错误信息
+	Invalidate(ctx goCtx.Context, uuid uint64) error
+}
 
 // BatchGetByUuidsOption BatchGetByUuids 方法的选项
 type BatchGetByUuidsOption struct {
@@ -71,12 +100,13 @@ type GetUUIDFunc[T any] func(obj T) uint64
 // 统一管理对象的缓存查询和更新，支持观察者模式更新缓存
 // T: 对象类型，如 *model.Desk, *model.SaleBillSetting
 type CacheObjectController[T any] struct {
-	cacheLayer     repository.CacheLayer[T]
-	queryFunc      QueryFunc[T]
-	batchQueryFunc BatchQueryFunc[T]
-	getUUIDFunc    GetUUIDFunc[T] // 用于从对象中提取 UUID（用于批量查询结果转换）
-	objectType     string         // 对象类型（用于构建缓存 key）
-	ttl            time.Duration
+	cacheLayer      repository.CacheLayer[T]
+	queryFunc       QueryFunc[T]
+	batchQueryFunc  BatchQueryFunc[T]
+	getUUIDFunc     GetUUIDFunc[T] // 用于从对象中提取 UUID（用于批量查询结果转换）
+	objectType      string         // 对象类型（用于构建缓存 key）
+	ttl             time.Duration
+	underlyingCache cache.Cache // 底层缓存实例（用于版本时间戳管理）
 }
 
 // GetByUuid 根据 UUID 获取对象（带缓存）
@@ -270,6 +300,35 @@ func (c *CacheObjectController[T]) Update(ctx goCtx.Context, db *gorm.DB, uuids 
 	return nil
 }
 
+// Invalidate 使对象缓存失效
+// 参数：
+//   - ctx: 上下文（用于提取 companyUuid）
+//   - uuid: 对象的 UUID（如果为 0，则使所有该类型对象的缓存失效）
+//
+// 返回：
+//   - error: 错误信息
+func (c *CacheObjectController[T]) Invalidate(ctx goCtx.Context, uuid uint64) error {
+	// 从上下文提取 companyUuid
+	cctx := ctx.(context.Context)
+	companyUuid := cctx.GetCompanyUuid()
+
+	// 创建缓存版本时间戳管理器
+	versionManager := persistence.NewCacheVersionManager(c.underlyingCache)
+
+	// 更新缓存版本时间戳（在二级缓存中记录对象的最新版本时间戳）
+	// Key 格式：{cache_version_prefix}:{system_prefix}:{company_uuid}:{object_type}:{object_uuid}
+	// object_uuid 为 0 表示全局版本时间戳，要更新所有的该类型对象缓存
+	// object_uuid 不为 0 表示具体对象的版本时间戳，要更新具体对象的缓存
+	// 版本时间戳的过期时间设置为 L2TTL（5分钟），与最长有效的缓存时间一致
+	// 当版本时间戳过期时，GetCacheVersionTimestamp 会返回 (0, false)，
+	// 表示缓存已过期，需要重新查询并设置新的版本时间戳
+	if err := versionManager.UpdateCacheVersionTimestamp(companyUuid, c.objectType, uuid); err != nil {
+		return fmt.Errorf("更新缓存版本时间戳失败: %w", err)
+	}
+
+	return nil
+}
+
 // extractUUIDFromKey 从缓存 key 中提取 UUID
 // Key 格式：{system_prefix}:{company_uuid}:{object_type}:{object_uuid}
 func extractUUIDFromKey(key string) (uint64, error) {
@@ -318,12 +377,13 @@ func InitCacheObjectController[T any](
 		cacheLayer := adapter.GetOrderObjectCache[T](underlyingCache, ttl, opts...)
 
 		*instance = &CacheObjectController[T]{
-			cacheLayer:     cacheLayer,
-			queryFunc:      queryFunc,
-			batchQueryFunc: batchQueryFunc,
-			getUUIDFunc:    getUUIDFunc,
-			objectType:     objectType,
-			ttl:            ttl,
+			cacheLayer:      cacheLayer,
+			queryFunc:       queryFunc,
+			batchQueryFunc:  batchQueryFunc,
+			getUUIDFunc:     getUUIDFunc,
+			objectType:      objectType,
+			ttl:             ttl,
+			underlyingCache: underlyingCache,
 		}
 	})
 }

@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	printerService "ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -29,11 +30,17 @@ type ProductHandler struct {
 	pinterSrv         printerService.IPrinterSrv // 打印服务
 }
 
-// invalidateProductListCache 失效商品列表缓存（辅助函数）
+// invalidateProductListCache 失效商品列表缓存（辅助函数）,商品BOM缓存. 在shop端商品模块中所有的POST请求后都需要失效商品列表缓存和商品BOM缓存.
+// 参数：
+//   - ctx: 上下文, 用于提取 companyUuid
 func (h *ProductHandler) invalidateProductListCache(ctx context.Context) {
 	productListCacheController := objectStorageController.GetProductListCacheController()
 	if err := productListCacheController.InvalidateProductListCache(ctx); err != nil {
 		logger.Error("失效商品列表缓存失败", zap.Error(err))
+	}
+	// 失效商品BOM缓存
+	if err := objectStorageController.GetProductBomController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效商品BOM缓存失败", zap.Error(err))
 	}
 }
 
