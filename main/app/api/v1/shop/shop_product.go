@@ -8,7 +8,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
-	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	printerService "ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/service"
@@ -34,13 +34,24 @@ type ProductHandler struct {
 // 参数：
 //   - ctx: 上下文, 用于提取 companyUuid
 func (h *ProductHandler) invalidateProductListCache(ctx context.Context) {
-	productListCacheController := objectStorageController.GetProductListCacheController()
-	if err := productListCacheController.InvalidateProductListCache(ctx); err != nil {
+	if err := controller.GetProductListCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
 		logger.Error("失效商品列表缓存失败", zap.Error(err))
 	}
 	// 失效商品BOM缓存
-	if err := objectStorageController.GetProductBomController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+	if err := controller.GetProductBomController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
 		logger.Error("失效商品BOM缓存失败", zap.Error(err))
+	}
+	// 失效规格商品BOM缓存
+	if err := controller.GetProductBomFlavorCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效规格商品BOM缓存失败", zap.Error(err))
+	}
+	// 失效小料商品BOM缓存
+	if err := controller.GetProductBomSauceCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效小料商品BOM缓存失败", zap.Error(err))
+	}
+	// 失效商品BOM基础信息缓存
+	if err := controller.GetProductBomBaseInfoCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效商品BOM基础信息缓存失败", zap.Error(err))
 	}
 }
 
