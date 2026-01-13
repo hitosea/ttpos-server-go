@@ -262,6 +262,8 @@ type ProductAttributeValueList struct {
 type ProductListWithPaginationResp struct {
 	List []Product        `json:"list"`
 	Meta dto.PageResponse `json:"meta"`
+
+	UpdateTime int64 `json:"update_time"` // 更新时间戳,用于判断缓存是否过期. 在缓存层通过反射维护这个字段的值
 }
 
 // ProductRecommendListResp 商品推荐列表响应

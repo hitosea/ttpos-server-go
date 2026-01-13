@@ -362,6 +362,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 			SupplierErpCode:   utils.IfString(req.SupplierErpCode != "", req.SupplierErpCode, req.SupplierName),
 			Status:            constant.PurchaseOrderStatusDraft,
 			Num:               float64(len(req.Items)),
+			OrderTime:         time.Now().Unix(), // 单据日期，采购单提交的时间（时间戳）
 			ExpectArrivalTime: expectArrivalTime,
 			ApplicantUuid:     ctx.GetStaffUuid(),
 			ApplicantName:     ctx.GetStaff().RealName,

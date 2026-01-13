@@ -7123,6 +7123,10 @@
   "默认语言不能为空": "Standardsprache darf nicht leer sein",
   "默认语言必须在常用语言列表中": "Die Standardsprache muss in der Liste der gebräuchlichen Sprachen enthalten sein",
   "默认选中字段必须为0（不默认选中）或1（默认选中）": "Das standardmäßig ausgewählte Feld muss 0 (nicht standardmäßig ausgewählt) oder 1 (standardmäßig ausgewählt) sein",
+  "今日申请次数已达上限（%s次），请明天再试": "Tägliches Antragslimit erreicht (%s Mal), bitte versuchen Sie es morgen erneut",
+  "物品 %s 只能使用 %s 单位进行采购": "Artikel %s kann nur in der Einheit %s gekauft werden",
+  "本次申请 %s 数量已超限（已用 %s + 本次 %s > 限额 %s），请减少物品数量后重试": "Die Menge von %s überschreitet das Limit (verwendet %s + aktuell %s > Limit %s), bitte reduzieren Sie die Menge und versuchen Sie es erneut",
+  "本次申请 %s 数量已超限（最多 %v），请减少物品数量后重试": "Die Menge von %s in diesem Antrag überschreitet das Limit (max: %v). Bitte reduzieren Sie die Menge und versuchen Sie es erneut",
   "點餐-店內": "Bestellung - Vor Ort",
   "龘": "龘",
   "龙": "Drache"

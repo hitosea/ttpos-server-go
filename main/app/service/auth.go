@@ -1011,6 +1011,11 @@ func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
 		return kioskBase, errors.WithMessage(err)
 	}
 
+	clientVersion := ctx.GetGin().GetHeader("Version-Name")
+	if clientVersion == "" {
+		clientVersion = "0.0.0"
+	}
+
 	return resp.KioskBase{
 		Username:     staff.Username,
 		DeviceId:     deviceId,
@@ -1022,11 +1027,13 @@ func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
 			TimeZone:   companySetting.Timezone,
 			ExpireTime: company.ExpireTime,
 		},
-		Currency:    currencySetting,
-		Business:    businessSetting,
-		Kiosk:       kioskSetting.KioskResp,
-		UpdateTime:  time.Now().Unix(),
-		CompanyList: s.GetCompanyList(ctx),
+		Currency:      currencySetting,
+		Business:      businessSetting,
+		Kiosk:         kioskSetting.KioskResp,
+		UpdateTime:    time.Now().Unix(),
+		CompanyList:   s.GetCompanyList(ctx),
+		ServerVersion: utils.GetVersion(),
+		ClientVersion: clientVersion,
 	}, nil
 }
 
