@@ -13,7 +13,7 @@ type Setting struct {
 }
 
 const (
-	SettingKeyPurchaseBrandDailyLimit = "purchase_brand_daily_limit"
+	SettingKeyPurchaseBrandSetting = "purchase_brand_setting"
 )
 
 func (s *Setting) GetPurchaseBrandDailyLimit() int {
@@ -24,8 +24,8 @@ func (s *Setting) GetPurchaseBrandDailyLimit() int {
 	if err := json.Unmarshal([]byte(s.Values), &config); err != nil {
 		return -1
 	}
-	if limitVal, ok := config["limit"]; ok {
-		switch v := limitVal.(type) {
+	if dailyLimitVal, ok := config["daily_limit"]; ok {
+		switch v := dailyLimitVal.(type) {
 		case float64:
 			return int(v)
 		case int:

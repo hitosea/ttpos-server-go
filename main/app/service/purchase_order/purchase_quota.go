@@ -2,6 +2,7 @@ package purchase_order
 
 import (
 	"fmt"
+	"sort"
 
 	"gorm.io/gorm"
 
@@ -37,7 +38,7 @@ func (s *purchaseOrderSrv) checkDailySubmitLimit(ctx context.Context, companyUui
 
 	// 通过 Repository 读取配置
 	headquarterDb := s.dbm.GetDB(headquarterUuid)
-	setting := repository.NewSettingRepo(headquarterDb).GetByKey(model.SettingKeyPurchaseBrandDailyLimit)
+	setting := repository.NewSettingRepo(headquarterDb).GetByKey(model.SettingKeyPurchaseBrandSetting)
 
 	// 获取限制值
 	dailyLimit := setting.GetPurchaseBrandDailyLimit()
@@ -89,6 +90,7 @@ func (s *purchaseOrderSrv) checkPurchaseQuota(ctx context.Context, order *model.
 	// 遍历订单明细，逐个检查限购
 	// 步骤1: 先汇总相同物品的数量（按 MaterialCode + ErpnextUom 分组）
 	type MaterialUnitKey struct {
+		ID           uint
 		MaterialCode string
 		ErpnextUom   string
 	}
@@ -107,6 +109,7 @@ func (s *purchaseOrderSrv) checkPurchaseQuota(ctx context.Context, order *model.
 		if len(item.Units) > 0 {
 			for _, unit := range item.Units {
 				key := MaterialUnitKey{
+					ID:           item.ID,
 					MaterialCode: item.MaterialCode,
 					ErpnextUom:   unit.ErpnextUom,
 				}
@@ -118,6 +121,7 @@ func (s *purchaseOrderSrv) checkPurchaseQuota(ctx context.Context, order *model.
 		} else {
 			// 如果没有多单位，使用主单位
 			key := MaterialUnitKey{
+				ID:           item.ID,
 				MaterialCode: item.MaterialCode,
 				ErpnextUom:   item.ErpnextUom,
 			}
@@ -128,10 +132,30 @@ func (s *purchaseOrderSrv) checkPurchaseQuota(ctx context.Context, order *model.
 		}
 	}
 
-	// 步骤2: 对汇总后的物品进行限购验证
+	// 将 map 转换为切片并排序，确保处理顺序的稳定性
+	type materialSummaryItem struct {
+		Key          MaterialUnitKey
+		TotalQty     float64
+		MaterialName string
+	}
+	sortedSummary := make([]materialSummaryItem, 0, len(materialSummary))
 	for key, summary := range materialSummary {
+		sortedSummary = append(sortedSummary, materialSummaryItem{
+			Key:          key,
+			TotalQty:     summary.TotalQty,
+			MaterialName: summary.MaterialName,
+		})
+	}
+
+	// 按 ID 排序，确保处理顺序的稳定性
+	sort.Slice(sortedSummary, func(i, j int) bool {
+		return sortedSummary[i].Key.ID < sortedSummary[j].Key.ID
+	})
+
+	// 步骤2: 对汇总后的物品进行限购验证
+	for _, item := range sortedSummary {
 		// 查询该物品的限购配置
-		config, err := repo.GetByMaterialCodeAndShop(key.MaterialCode, companyUuid)
+		config, err := repo.GetByMaterialCodeAndShop(item.Key.MaterialCode, companyUuid)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				// 无限购配置，跳过整个物品
@@ -141,7 +165,7 @@ func (s *purchaseOrderSrv) checkPurchaseQuota(ctx context.Context, order *model.
 		}
 
 		// 使用汇总后的数量进行限购检查
-		if err := s.checkSingleUnitQuotaWithConfig(ctx, lang, config, key.MaterialCode, summary.MaterialName, key.ErpnextUom, summary.TotalQty, order); err != nil {
+		if err := s.checkSingleUnitQuotaWithConfig(ctx, lang, config, item.Key.MaterialCode, item.MaterialName, item.Key.ErpnextUom, item.TotalQty, order); err != nil {
 			return err
 		}
 	}
@@ -167,7 +191,24 @@ func (s *purchaseOrderSrv) checkSingleUnitQuotaWithConfig(
 
 	// 1. 强制性单位校验：配置了限购的物品，必须使用限购单位
 	if unitCode != config.UnitCode {
-		return errors.New(i18n.Translate(lang, "物品 %s 只能使用 %s 单位进行采购", materialName, config.UnitCode))
+		// 查询限购配置中要求的单位名称
+		companySetting := ctx.GetCompanySetting()
+		headquarterUuid := companySetting.HeadquarterUuid
+		if headquarterUuid == 0 {
+			return errors.New(i18n.Translate(lang, "物品 %s 只能使用 %s 单位进行采购", materialName, config.UnitCode))
+		}
+		headquarterDb := s.dbm.GetDB(headquarterUuid)
+		productUnitRepo := repository.NewProductUnitRepo(headquarterDb)
+
+		// 根据 ErpnextUom 查询单位名称
+		productUnit, err := productUnitRepo.GetProductUnitByErpnextUom(config.UnitCode)
+		unitName := config.UnitCode // 默认使用编码
+		if err == nil && productUnit != nil {
+			// 获取单位的多语言名称
+			unitName = language.JsonToLocaleResponse(productUnit.Name).GetLocale(lang)
+		}
+
+		return errors.New(i18n.Translate(lang, "物品 %s 只能使用 %s 单位进行采购", materialName, unitName))
 	}
 
 	// 2. 根据周期类型查询已使用额度

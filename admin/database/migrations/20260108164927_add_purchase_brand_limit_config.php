@@ -11,8 +11,7 @@ class AddPurchaseBrandLimitConfig extends Migrator
      * 添加品牌采购限额全局配置到 ttpos_setting 表
      * 
      * 说明：
-     * - purchase_brand_daily_limit: 品牌采购每日申请次数上限，-1 表示不限制
-     * - purchase_brand_single_qty_limit: 品牌采购单次物品数量上限，-1 表示不限制
+     * - purchase_brand_setting: 品牌采购设置，json格式，daily_limit: 每日申请次数上限，-1 表示不限制
      */
     public function change()
     {
@@ -20,16 +19,16 @@ class AddPurchaseBrandLimitConfig extends Migrator
 
         // 检查配置是否已存在
         $existingConfigs = $db->name('setting')
-            ->whereIn('key', ['purchase_brand_daily_limit'])
+            ->whereIn('key', ['purchase_brand_setting'])
             ->column('key');
 
         // 准备要插入的配置项
         $configs = [];
         
-        if (!in_array('purchase_brand_daily_limit', $existingConfigs)) {
+        if (!in_array('purchase_brand_setting', $existingConfigs)) {
             $configs[] = [
-                'key' => 'purchase_brand_daily_limit',
-                'values' => json_encode(['limit' => -1], JSON_UNESCAPED_UNICODE),
+                'key' => 'purchase_brand_setting',
+                'values' => json_encode(['daily_limit' => -1], JSON_UNESCAPED_UNICODE),
                 'describe' => '品牌采购每日申请次数上限（-1表示不限制）',
                 'create_time' => time(),
                 'update_time' => time(),

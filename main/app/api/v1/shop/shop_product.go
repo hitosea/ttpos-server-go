@@ -1,19 +1,20 @@
 package shop
 
 import (
-	"context"
-
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
-	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	printerService "ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -29,11 +30,47 @@ type ProductHandler struct {
 	pinterSrv         printerService.IPrinterSrv // 打印服务
 }
 
-// invalidateProductListCache 失效商品列表缓存（辅助函数）
-func (h *ProductHandler) invalidateProductListCache(ctx context.Context) {
-	productListCacheController := objectStorageController.GetProductListCacheController()
-	if err := productListCacheController.InvalidateProductListCache(ctx); err != nil {
+// InvalidateProductListCache 失效商品列表缓存（辅助函数）,商品BOM缓存. 在shop端商品模块中所有的POST请求后都需要失效商品列表缓存和商品BOM缓存.
+// 参数：
+//   - ctx: 上下文, 用于提取 companyUuid
+func (h *ProductHandler) InvalidateProductListCache(ctx context.Context) {
+	if !adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		return
+	}
+	if err := controller.GetProductListCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
 		logger.Error("失效商品列表缓存失败", zap.Error(err))
+	}
+	// 失效商品BOM缓存
+	if err := controller.GetProductBomController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效商品BOM缓存失败", zap.Error(err))
+	}
+	// 失效规格商品BOM缓存
+	if err := controller.GetProductBomFlavorCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效规格商品BOM缓存失败", zap.Error(err))
+	}
+	// 失效小料商品BOM缓存
+	if err := controller.GetProductBomSauceCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效小料商品BOM缓存失败", zap.Error(err))
+	}
+	// 失效商品BOM基础信息缓存
+	if err := controller.GetProductBomBaseInfoCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效商品BOM基础信息缓存失败", zap.Error(err))
+	}
+	// 失效商品包缓存
+	if err := controller.GetProductPackageController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效商品包缓存失败", zap.Error(err))
+	}
+	// 失效商品属性缓存
+	if err := controller.GetProductAttributeController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效商品属性缓存失败", zap.Error(err))
+	}
+	// 失效多语言名称缓存
+	if err := controller.GetMultiLanguageNameController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效多语言名称缓存失败", zap.Error(err))
+	}
+	// 失效商品包属性缓存
+	if err := controller.GetProductPackageAttributeCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效商品包属性缓存失败", zap.Error(err))
 	}
 }
 
@@ -119,7 +156,7 @@ func (h *ProductHandler) SortProductCategory(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, nil, "保存成功")
 }
 
@@ -147,7 +184,7 @@ func (h *ProductHandler) AddProductCategory(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, nil, "添加成功")
 }
 
@@ -175,7 +212,7 @@ func (h *ProductHandler) EditProductCategory(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, nil, "保存成功")
 }
 
@@ -203,7 +240,7 @@ func (h *ProductHandler) DeleteProductCategory(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, nil, "删除成功")
 }
 
@@ -295,7 +332,7 @@ func (h *ProductHandler) AddProductUnit(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	// 返回结果
 	helper.Success(c, gin.H{}, "保存成功")
 }
@@ -327,7 +364,7 @@ func (h *ProductHandler) EditProductUnit(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	// 返回结果
 	helper.Success(c, gin.H{}, "保存成功")
 }
@@ -359,7 +396,7 @@ func (h *ProductHandler) DeleteProductUnit(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	// 返回结果
 	helper.Success(c, gin.H{}, "删除成功")
 }
@@ -471,7 +508,7 @@ func (h *ProductHandler) AddProductSauce(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "保存成功")
 }
 
@@ -499,7 +536,7 @@ func (h *ProductHandler) EditProductSauce(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "保存成功")
 }
 
@@ -527,7 +564,7 @@ func (h *ProductHandler) DeleteProductSauce(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "删除成功")
 }
 
@@ -634,7 +671,7 @@ func (h *ProductHandler) AddProductAttributeGroup(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "保存成功")
 }
 
@@ -688,7 +725,7 @@ func (h *ProductHandler) AddProductFlavor(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "保存成功")
 }
 
@@ -743,7 +780,7 @@ func (h *ProductHandler) EditProductAttributeGroup(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "保存成功")
 }
 
@@ -771,7 +808,7 @@ func (h *ProductHandler) DeleteProductAttributeGroup(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "删除成功")
 }
 
@@ -799,7 +836,7 @@ func (h *ProductHandler) DeleteProductAttribute(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "删除成功")
 }
 
@@ -827,7 +864,7 @@ func (h *ProductHandler) DeleteProductFlavor(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "删除成功")
 }
 
@@ -855,7 +892,7 @@ func (h *ProductHandler) SortProductAttributeGroup(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "保存成功")
 }
 
@@ -883,7 +920,7 @@ func (h *ProductHandler) SortProductFlavor(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "保存成功")
 }
 
@@ -937,7 +974,7 @@ func (h *ProductHandler) EditProductFlavor(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, gin.H{}, "保存成功")
 }
 
@@ -1140,7 +1177,7 @@ func (h *ProductHandler) ProductShopStatus(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, nil, "设置成功")
 }
 
@@ -1194,7 +1231,7 @@ func (h *ProductHandler) ProductShopAdd(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, productDetailResp, "保存成功")
 }
 
@@ -1235,7 +1272,7 @@ func (h *ProductHandler) ProductShopEdit(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, nil, "保存成功")
 }
 
@@ -1272,8 +1309,36 @@ func (h *ProductHandler) ProductShopDelete(c *gin.Context) {
 		return
 	}
 	// 失效商品列表缓存
-	h.invalidateProductListCache(ctx)
+	h.InvalidateProductListCache(ctx)
 	helper.Success(c, nil, "删除成功")
+}
+
+// InvalidateProductListCacheForPHP 失效商品列表缓存（供PHP服务调用）
+// @Summary 失效商品列表缓存（内部接口）
+// @Description 供PHP后端服务调用，用于在修改商品数据时失效相关缓存
+// @Tags 商家端.商品（内部接口）
+// @Accept json
+// @Produce json
+// @Security InternalToken
+// @Param data body req.InvalidateProductListCacheReq true "失效缓存请求"
+// @Success 200 {object} dto.Response "成功"
+// @Failure 400 {object} dto.Response "错误请求"
+// @Router /internal/shop/product/cache/invalidate [post]
+func (h *ProductHandler) InvalidateProductListCacheForPHP(c *gin.Context) {
+	var invalidateReq req.InvalidateProductListCacheReq
+	if err := c.ShouldBindJSON(&invalidateReq); err != nil {
+		helper.HandleValidationError(c, err, invalidateReq, nil)
+		return
+	}
+
+	// 创建上下文并设置 companyUuid
+	ctx := helper.GetContext(c)
+	ctx.SetCompanyUuid(invalidateReq.CompanyUuid)
+
+	// 失效商品列表缓存
+	h.InvalidateProductListCache(ctx)
+
+	helper.Success(c, nil, "缓存失效成功")
 }
 
 // ProductTakeoutShopAdd 添加外卖商品
@@ -1677,4 +1742,29 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 
 		privateApi.POST("/product/update_headquarters_product", wrapper.UpdateHeadquartersProduct) // 修改总部商品上下架和打印档口
 	}
+}
+
+// RegisterProductInternalHandlers 注册商品内部接口（供PHP服务调用）
+func RegisterProductInternalHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+	// 初始化服务
+	settingSrv := setting.NewSrv(dbm, cache)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
+
+	// 创建商品处理程序
+	localeSrv := service.NewLocaleSrv()
+	wrapper := ProductHandler{
+		productSrv: service.NewProductSrv(
+			dbm,        // 数据库管理器
+			localeSrv,  // 多语言服务
+			settingSrv, // 设置服务
+			cache,
+			translateSrv,
+		),
+		productTakeoutSrv: service.NewProductTakeoutSrv(dbm, localeSrv, settingSrv, cache, translateSrv),
+		uploadFileSrv:     service.NewUploadFileSrv(dbm),
+		pinterSrv:         printerService.NewPrinterSrv(dbm, cache),
+	}
+
+	// 内部接口，使用 Internal 中间件保护
+	router.POST("/shop/product/cache/invalidate", middleware.Internal(), wrapper.InvalidateProductListCacheForPHP)
 }

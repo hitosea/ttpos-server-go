@@ -1837,11 +1837,14 @@ func (r *orderRepo) QuerySaleBillForObjectStorage(saleBillUuid uint64, uuidFilte
 				Query: "SaleOrders.SaleOrderProducts.ProductionOrderProduct",
 			},
 		),
-		CommonRepo.WhereBySoftDelete(),
+		//CommonRepo.WhereBySoftDelete(), // 不过滤已删除的订单，在后面在单独判断
 		uuidFilter,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
+	}
+	if saleBill.IsDelete() {
+		return nil, fmt.Errorf("订单已失效") // 修复并发合并桌台的错误提示，优化提示让更友好
 	}
 	return &saleBill, nil
 }
@@ -2498,12 +2501,6 @@ func convertBatchResultToUUIDMap[T any](batchResult map[string]T) map[uint64]int
 // getSaleBillAssociationsForOrderCart 获取 SaleBill 的关联配置（用于订单购物车场景）
 // 这个函数在 repository 层定义，避免循环依赖
 func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
-	// 获取控制器单例（保证非 nil）
-	deskController := objectStorageController.GetDeskController()
-	productPackageController := objectStorageController.GetProductPackageController()
-	productAttributeController := objectStorageController.GetProductAttributeController()
-	productBomController := objectStorageController.GetProductBomController()
-	multiLanguageNameController := objectStorageController.GetMultiLanguageNameController()
 	batchTagRepo := NewBatchTagRepo(db)
 
 	return []entity.Association{
@@ -2533,7 +2530,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用 Desk 控制器查询（统一管理缓存）
-				result, err := deskController.GetByUuid(ctx, db, uuid)
+				result, err := objectStorageController.GetDeskController().GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -2549,7 +2546,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用 ProductPackage 控制器查询（统一管理缓存）
-				result, err := productPackageController.GetByUuid(ctx, db, uuid)
+				result, err := objectStorageController.GetProductPackageController().GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -2557,7 +2554,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
 				// 使用 ProductPackage 控制器批量查询（统一管理缓存）
-				batchResult, err := productPackageController.BatchGetByUuids(ctx, db, uuids)
+				batchResult, err := objectStorageController.GetProductPackageController().BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
@@ -2578,7 +2575,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用 MultiLanguageName 控制器查询（统一管理缓存）
-				result, err := multiLanguageNameController.GetByUuid(ctx, db, uuid)
+				result, err := objectStorageController.GetMultiLanguageNameController().GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -2586,7 +2583,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
 				// 使用 MultiLanguageName 控制器批量查询（统一管理缓存）
-				batchResult, err := multiLanguageNameController.BatchGetByUuids(ctx, db, uuids)
+				batchResult, err := objectStorageController.GetMultiLanguageNameController().BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
@@ -2607,7 +2604,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用 ProductAttribute 控制器查询（统一管理缓存）
-				result, err := productAttributeController.GetByUuid(ctx, db, uuid)
+				result, err := objectStorageController.GetProductAttributeController().GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -2615,7 +2612,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
 				// 使用 ProductAttribute 控制器批量查询（统一管理缓存）
-				batchResult, err := productAttributeController.BatchGetByUuids(ctx, db, uuids)
+				batchResult, err := objectStorageController.GetProductAttributeController().BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
@@ -2636,7 +2633,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用 MultiLanguageName 控制器查询（统一管理缓存）
-				result, err := multiLanguageNameController.GetByUuid(ctx, db, uuid)
+				result, err := objectStorageController.GetMultiLanguageNameController().GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -2644,7 +2641,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
 				// 使用 MultiLanguageName 控制器批量查询（统一管理缓存）
-				batchResult, err := multiLanguageNameController.BatchGetByUuids(ctx, db, uuids)
+				batchResult, err := objectStorageController.GetMultiLanguageNameController().BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
@@ -2665,7 +2662,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用 ProductBom 控制器查询（统一管理缓存）
-				result, err := productBomController.GetByUuid(ctx, db, uuid)
+				result, err := objectStorageController.GetProductBomController().GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -2673,7 +2670,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
 				// 使用 ProductBom 控制器批量查询（统一管理缓存）
-				batchResult, err := productBomController.BatchGetByUuids(ctx, db, uuids)
+				batchResult, err := objectStorageController.GetProductBomController().BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
@@ -2748,7 +2745,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用 MultiLanguageName 控制器查询（统一管理缓存）
-				result, err := multiLanguageNameController.GetByUuid(ctx, db, uuid)
+				result, err := objectStorageController.GetMultiLanguageNameController().GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -2756,7 +2753,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
 				// 使用 MultiLanguageName 控制器批量查询（统一管理缓存）
-				batchResult, err := multiLanguageNameController.BatchGetByUuids(ctx, db, uuids)
+				batchResult, err := objectStorageController.GetMultiLanguageNameController().BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}

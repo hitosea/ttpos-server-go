@@ -1,7 +1,6 @@
 package controller
 
 import (
-	goCtx "context"
 	"sync"
 	"time"
 
@@ -66,24 +65,6 @@ func GetDeskController() *CacheObjectController[*model.Desk] {
 		&deskControllerMutex,
 		"Desk 缓存控制器未初始化，请先调用 InitDeskController",
 	)
-}
-
-// ICacheObjectController Desk 对象缓存控制器接口（向后兼容）
-// 统一管理对象的缓存查询和更新，支持观察者模式更新缓存
-type ICacheObjectController interface {
-	// GetByUuid 根据 UUID 获取对象（带缓存）
-	GetByUuid(ctx goCtx.Context, db *gorm.DB, uuid uint64) (*model.Desk, error)
-
-	// BatchGetByUuids 批量根据 UUID 列表获取对象（带缓存）
-	BatchGetByUuids(ctx goCtx.Context, db *gorm.DB, uuids []uint64, opts ...func(*BatchGetByUuidsOption)) (map[uint64]*model.Desk, error)
-
-	// Update 更新对象的缓存（用于观察者模式）
-	// 参数：
-	//   - ctx: 上下文（用于提取 companyUuid）
-	//   - db: 数据库连接
-	//   - uuids: 对象 UUID 列表
-	//   - opts: 选项函数（可选），如 WithUpdateValue() 直接提供值更新缓存
-	Update(ctx goCtx.Context, db *gorm.DB, uuids []uint64, opts ...func(*UpdateOption)) error
 }
 
 // 确保 CacheObjectController 实现了 ICacheObjectController 接口
