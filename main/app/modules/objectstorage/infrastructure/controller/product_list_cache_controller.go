@@ -13,23 +13,13 @@ var (
 	productListCacheControllerOnce     sync.Once
 )
 
-// InitProductListCacheController 初始化商品列表缓存控制器（单例模式）
-func InitProductListCacheController() {
-	InitCacheVersionController(
-		cache.Global,
-		persistence.ObjectTypeProductList,
-		&productListCacheControllerInstance,
-		&productListCacheControllerOnce,
-	)
-}
-
 // GetProductListCacheController 获取商品列表缓存控制器单例
 func GetProductListCacheController() *CacheVersionController {
 	productListCacheControllerOnce.Do(func() {
-		InitProductListCacheController()
+		productListCacheControllerInstance = InitCacheVersionController(
+			cache.Global,
+			persistence.ObjectTypeProductList,
+		)
 	})
-	return GetCacheVersionController(
-		&productListCacheControllerInstance,
-		"ProductList 缓存控制器未初始化，请先调用 InitProductListCacheController",
-	)
+	return productListCacheControllerInstance
 }

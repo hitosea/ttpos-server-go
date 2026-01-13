@@ -18068,6 +18068,51 @@
                 }
             }
         },
+        "/internal/shop/product/cache/invalidate": {
+            "post": {
+                "security": [
+                    {
+                        "InternalToken": []
+                    }
+                ],
+                "description": "供PHP后端服务调用，用于在修改商品数据时失效相关缓存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品（内部接口）"
+                ],
+                "summary": "失效商品列表缓存（内部接口）",
+                "parameters": [
+                    {
+                        "description": "失效缓存请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InvalidateProductListCacheReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/kiosk/base": {
             "get": {
                 "security": [
@@ -44277,6 +44322,18 @@
                 },
                 "to": {
                     "description": "目标销售订单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.InvalidateProductListCacheReq": {
+            "type": "object",
+            "required": [
+                "company_uuid"
+            ],
+            "properties": {
+                "company_uuid": {
+                    "description": "商户UUID",
                     "type": "integer"
                 }
             }

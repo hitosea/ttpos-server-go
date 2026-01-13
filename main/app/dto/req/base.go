@@ -1,6 +1,12 @@
 package req
 
-import "ttpos-server-go/app/dto"
+import (
+	"errors"
+	"strconv"
+	"strings"
+	"ttpos-server-go/app/dto"
+	"unicode/utf8"
+)
 
 type VerifyPasswordReq struct {
 	Password string `json:"password" binding:"required"` // 密码
@@ -104,6 +110,71 @@ type UpdateStoreSetting struct {
 	StoreCode   string             `json:"store_code" binding:"max=100"`      // 店铺编码，用于发票打印，最大100个字符
 	Language    []dto.LanguageItem `json:"language" binding:"required,min=1"` // 系统语言，必填，至少一个
 	Coordinates string             `json:"coordinates"`                       // 经纬度
+}
+
+// 给UpdateStoreSetting设置验证方法
+func (r *UpdateStoreSetting) Validate() error {
+	// Name 必填，且最多100个字符，不考虑字符集
+	if r.Name == "" || utf8.RuneCountInString(r.Name) > 100 {
+		return errors.New("店铺名称最多100个字符")
+	}
+	// LogoUrl 必填
+	if r.LogoUrl == "" {
+		return errors.New("店铺logo不能为空")
+	}
+	// TimeZone 必填
+	if r.TimeZone == "" {
+		return errors.New("时区不能为空")
+	}
+	// CompanyName 最多500个字符，不考虑字符集
+	if utf8.RuneCountInString(r.CompanyName) > 500 {
+		return errors.New("公司名称最多500个字符")
+	}
+	// Address 最多500个字符，不考虑字符集
+	if utf8.RuneCountInString(r.Address) > 500 {
+		return errors.New("地址最多500个字符")
+	}
+	// Phone 必填，最大20个字符
+	if r.Phone == "" || utf8.RuneCountInString(r.Phone) > 20 {
+		return errors.New("联系电话最多20个字符")
+	}
+	// StoreCode 最多100个字符，不考虑字符集
+	if utf8.RuneCountInString(r.StoreCode) > 100 {
+		return errors.New("店铺编码最多100个字符")
+	}
+	// Language 必填，至少一个
+	if len(r.Language) == 0 {
+		return errors.New("语言不能为空")
+	}
+
+	// 验证经纬度，使用英文逗号分隔，两个部分去掉前后空格后，必须是数字类型的字符串，且需要满足经纬度的限制
+	if r.Coordinates != "" {
+		coordinates := strings.Split(strings.TrimSpace(r.Coordinates), ",")
+		if len(coordinates) != 2 {
+			return errors.New("经纬度格式不正确")
+		}
+
+		// 去除每个部分的前后空格并转换为浮点数
+		latStr := strings.TrimSpace(coordinates[0])
+		lngStr := strings.TrimSpace(coordinates[1])
+
+		lng, err := strconv.ParseFloat(lngStr, 64)
+		if err != nil {
+			return errors.New("经纬度格式不正确")
+		}
+		lat, err := strconv.ParseFloat(latStr, 64)
+		if err != nil {
+			return errors.New("经纬度格式不正确")
+		}
+		// 验证经纬度范围：经度 -180 到 180，纬度 -90 到 90
+		if lng < -180 || lng > 180 {
+			return errors.New("经纬度格式不正确")
+		}
+		if lat < -90 || lat > 90 {
+			return errors.New("经纬度格式不正确")
+		}
+	}
+	return nil
 }
 
 type UpdateBusinessSetting struct {

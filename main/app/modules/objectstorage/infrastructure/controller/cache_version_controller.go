@@ -3,7 +3,6 @@ package controller
 import (
 	goCtx "context"
 	"fmt"
-	"sync"
 
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
@@ -69,25 +68,6 @@ func (c *CacheVersionController) Invalidate(ctx goCtx.Context, uuid uint64) erro
 func InitCacheVersionController(
 	cacheInstance cache.Cache,
 	objectType string,
-	instance **CacheVersionController,
-	once *sync.Once,
-) {
-	once.Do(func() {
-		*instance = NewCacheVersionController(cacheInstance, objectType)
-	})
-}
-
-// GetCacheVersionController 获取缓存版本控制器单例实例
-// 保证返回非 nil 值，如果未初始化会 panic
-// 参数：
-//   - instance: 单例实例指针
-//   - panicMsg: panic 消息
-//
-// 返回：
-//   - *CacheVersionController: 缓存版本控制器实例（保证非 nil）
-func GetCacheVersionController(
-	instance **CacheVersionController,
-	panicMsg string,
 ) *CacheVersionController {
-	return *instance
+	return NewCacheVersionController(cacheInstance, objectType)
 }

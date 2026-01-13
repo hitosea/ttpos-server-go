@@ -8726,7 +8726,7 @@ func (s *productSrv) deleteSubTakeoutProduct(db *gorm.DB) error {
 		now := time.Now().Unix()
 		// 如果商品删除了，相关的外卖商品以及外卖商品关联的表都标记删除
 		err := tx.Model(&model.ProductPackageTakeout{}).Where("product_package_uuid in (?)",
-			tx.Model(&model.ProductPackage{}).Where("delete_time > 0").Select("uuid")).
+			tx.Model(&model.ProductPackage{}).Where("delete_time > 0 OR num_type = 1").Select("uuid")). // 商品删除或者数量类型为小数时，相关的外卖商品以及外卖商品关联的表都标记删除
 			Update("delete_time", now).Error
 		if err != nil {
 			return err

@@ -1963,6 +1963,9 @@ func (s *Srv) UpdatePrintSetting(ctx context.Context, req *req.UpdatePrintSettin
 }
 
 func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateStoreSetting) error {
+	if err := storeSettingReq.Validate(); err != nil {
+		return errors.WithMessage(err)
+	}
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	companyUuid := ctx.GetCompanyUuid()
 	companyDB := s.dbm.GetDB(companyUuid)
