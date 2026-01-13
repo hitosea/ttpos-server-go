@@ -1,13 +1,12 @@
 package shop
 
 import (
-	"context"
-
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	printerService "ttpos-server-go/app/modules/printer/service"
@@ -15,6 +14,7 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +34,9 @@ type ProductHandler struct {
 // 参数：
 //   - ctx: 上下文, 用于提取 companyUuid
 func (h *ProductHandler) invalidateProductListCache(ctx context.Context) {
+	if !adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		return
+	}
 	if err := controller.GetProductListCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
 		logger.Error("失效商品列表缓存失败", zap.Error(err))
 	}
@@ -52,6 +55,22 @@ func (h *ProductHandler) invalidateProductListCache(ctx context.Context) {
 	// 失效商品BOM基础信息缓存
 	if err := controller.GetProductBomBaseInfoCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
 		logger.Error("失效商品BOM基础信息缓存失败", zap.Error(err))
+	}
+	// 失效商品包缓存
+	if err := controller.GetProductPackageController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效商品包缓存失败", zap.Error(err))
+	}
+	// 失效商品属性缓存
+	if err := controller.GetProductAttributeController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效商品属性缓存失败", zap.Error(err))
+	}
+	// 失效多语言名称缓存
+	if err := controller.GetMultiLanguageNameController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效多语言名称缓存失败", zap.Error(err))
+	}
+	// 失效商品包属性缓存
+	if err := controller.GetProductPackageAttributeCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效商品包属性缓存失败", zap.Error(err))
 	}
 }
 
