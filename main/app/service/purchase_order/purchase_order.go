@@ -681,7 +681,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 		}
 
 		// 🔥 新增：品牌采购三维度限额校验
-		if purchaseOrder.PurchaseType == constant.PurchaseTypeBrand {
+		if purchaseOrder.IsHeadquarterPurchase() {
 			// ① 检查申请次数限制
 			if err := s.checkDailySubmitLimit(ctx, companyUuid); err != nil {
 				return err
