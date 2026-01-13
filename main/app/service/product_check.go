@@ -176,7 +176,6 @@ type CheckProductFlavorItemResult struct {
 }
 
 func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProductFlavorParam) (*CheckProductFlavorResult, error) {
-	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
 	// 商品规格
 	if len(flavors) == 0 {
@@ -202,10 +201,12 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 			return nil, errors.New("规格不能为空")
 		}
 		flavor, err := productRepo.GetProductFlavor(
-			commonRepo.WhereBySoftDelete(),
 			productRepo.WhereUuid(flavorReq.Uuid),
 		)
 		if err != nil || flavor.ID == 0 {
+			return nil, errors.New("规格不存在")
+		}
+		if !isDelete && flavor.DeleteTime != 0 {
 			return nil, errors.New("规格不存在")
 		}
 		if !isDelete && !productRepo.CheckPrice(flavorReq.Price, 0, 100000000, 2) {
@@ -291,8 +292,11 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 	productPackageAttributeGroupRepo := repository.NewProductPackageAttributeGroupRepo(db)
 
 	attributeGroupCount := 0
-	for idx, attributeGroupReq := range attributes {
+	for idx, attributeGroupReq := range attributes { // 属性组
 		isDelete := attributeGroupReq.IsDelete
+		if isDelete {
+			continue
+		}
 		if attributeGroupReq.Uuid == 0 {
 			return nil, errors.New("属性组不能为空")
 		}
@@ -379,7 +383,10 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 			return nil, errors.New("属性值不能为空")
 		}
 		attributeDefaultCount := 0
-		for _, attributeReq := range attributeGroupReq.Attributes {
+		for _, attributeReq := range attributeGroupReq.Attributes { // 属性
+			if attributeReq.IsDelete {
+				continue
+			}
 			if attributeReq.Uuid == 0 {
 				return nil, errors.New("属性值不能为空")
 			}
@@ -534,11 +541,10 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 		if sauceReq.Uuid == 0 {
 			return nil, errors.New("加料不能为空")
 		}
-		sauce, _ := productRepo.GetProductSauce(
-			commonRepo.WhereBySoftDelete(),
+		sauce, _ := productRepo.GetProductSauceWithoutScope(
 			productRepo.WhereUuid(sauceReq.Uuid),
 		)
-		if sauce.ID == 0 {
+		if sauce.ID == 0 || (!sauceReq.IsDelete && sauce.DeleteTime != 0) {
 			return nil, errors.New("加料不存在")
 		}
 		price := sauce.Price
