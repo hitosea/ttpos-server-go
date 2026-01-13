@@ -1713,13 +1713,14 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 	materialCategory.Code = request.Code
 	materialCategory.MultiLanguageName.InitByLocaleResponse(request.LocaleName)
 
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, request.LocaleName)
-	for _, name := range names {
-		if !checkService.CheckNameLength(ctx, name.Text, 50) {
-			return errors.New("名称长度不能超过50")
-		}
-	}
+	// 暂时关闭，因为已经通过前端校验了. 后端取消校验,任务:38639（优化）新管理端-物品类别名称长度限制
+	// checkService := NewCheckNameSrv(s.dbm)
+	// names := checkService.MakeCheckNameList(ctx, request.LocaleName)
+	// for _, name := range names {
+	// 	if !checkService.CheckNameLength(ctx, name.Text, 50) {
+	// 		return errors.New("名称长度不能超过50")
+	// 	}
+	// }
 
 	// 检查物品类别编码是否已存在
 	if request.Code != "" {
