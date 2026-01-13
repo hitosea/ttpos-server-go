@@ -403,8 +403,10 @@ func (a *CacheGroupAdapter[T]) checkAndRefreshIfNeeded(key string, result T, que
 	objectType := ck.ObjectType
 	objectUuid, _ := ck.GetObjectUuid() // 如果是product_list 对象，objectUuid 为 0. 这是特性,表示全局版本时间戳,要更新所有的product_list缓存. 其他对象的objectUuid不为0,表示具体对象的版本时间戳,要更新具体对象的缓存.
 
+	a.versionManager.SetCompanyWide(true) // 设置为公司范围内使对象失效. 暂时没有实现针对性的缓存失效,只能实现某个对象在公司范围内失效.
+
 	// 获取最新版本时间戳
-	versionTimestamp, versionExists := a.versionManager.GetCacheVersionTimestamp(companyUuid, objectType, objectUuid, persistence.WithCompanyWide(true))
+	versionTimestamp, versionExists := a.versionManager.GetCacheVersionTimestamp(companyUuid, objectType, objectUuid)
 
 	// 如果版本时间戳不存在（versionExists=false），说明版本时间戳已过期，
 	// 此时应该认为缓存也已过期，需要重新查询并设置新的版本时间戳

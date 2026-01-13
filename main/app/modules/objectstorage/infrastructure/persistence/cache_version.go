@@ -17,6 +17,7 @@ import (
 // 用于管理缓存对象的版本时间戳，实现缓存失效机制
 type CacheVersionManager struct {
 	cacheInstance cache.Cache
+	companyWide   bool
 }
 
 // NewCacheVersionManager 创建缓存版本时间戳管理器
@@ -47,6 +48,10 @@ func WithCompanyWide(companyWide bool) func(*GetCacheVersionTimestampOption) {
 	}
 }
 
+func (cvm *CacheVersionManager) SetCompanyWide(companyWide bool) {
+	cvm.companyWide = companyWide
+}
+
 // GetCacheVersionTimestamp 获取缓存版本时间戳
 // 参数：
 //   - companyUuid: 门店 UUID
@@ -68,6 +73,11 @@ func (cvm *CacheVersionManager) GetCacheVersionTimestamp(companyUuid uint64, obj
 
 	// 如果 CompanyWide 为 true，无论 objectUuid 为什么值都赋值为 0
 	if option.CompanyWide {
+		objectUuid = 0
+	}
+
+	// 如果 companyWide 为 true，无论 objectUuid 为什么值都赋值为 0
+	if cvm.companyWide {
 		objectUuid = 0
 	}
 
@@ -116,6 +126,9 @@ func (cvm *CacheVersionManager) GetCacheVersionTimestamp(companyUuid uint64, obj
 // 返回：
 //   - error: 错误信息
 func (cvm *CacheVersionManager) UpdateCacheVersionTimestamp(companyUuid uint64, objectType string, objectUuid uint64) error {
+	if cvm.companyWide {
+		objectUuid = 0
+	}
 	// 获取 Redis 客户端
 	var client redis.UniversalClient
 	if clusterClient := cvm.cacheInstance.GetClusterClient(); clusterClient != nil {
