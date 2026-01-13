@@ -4,19 +4,20 @@ import (
 	"context"
 	"time"
 
-	api "ttpos-bmp/app/ttpos-takeout/api/order"
 	linemanv1 "ttpos-bmp/app/ttpos-takeout/api/lineman/v1"
+	api "ttpos-bmp/app/ttpos-takeout/api/order"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 	"ttpos-bmp/app/ttpos-takeout/utility"
 
+	"ttpos-api/ttpos-takeout/message"
+
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	grabsdk "github.com/grab/grabfood-api-sdk-go"
-	"ttpos-api/ttpos-takeout/message"
 )
 
 type sOrder struct{}
@@ -144,7 +145,7 @@ func (s *sOrder) PrepareOrder(ctx context.Context, req *api.PrepareOrderReq) (re
 
 	// 根据 provider_name 路由到不同平台的处理逻辑
 	switch orderEntity.ProviderName {
-	case "grab":
+	case string(consts.ProviderGrab):
 		// 调用 Grab 订单处理逻辑
 		err = service.Grab().PrepareOrder(ctx, orderEntity, req.ToState)
 		if err != nil {
@@ -191,7 +192,7 @@ func (s *sOrder) MarkOrderReady(ctx context.Context, takeoutOrderUuid string, re
 
 	// 根据 provider_name 路由到不同平台的处理逻辑
 	switch orderEntity.ProviderName {
-	case "grab":
+	case string(consts.ProviderGrab):
 		// 调用 Grab 订单处理逻辑
 		err = service.Grab().MarkOrderReadyEntity(ctx, orderEntity)
 		if err != nil {
@@ -238,7 +239,7 @@ func (s *sOrder) CancelOrder(ctx context.Context, req *api.CancelOrderReq) (res 
 
 	// 根据 provider_name 路由到不同平台的处理逻辑
 	switch orderEntity.ProviderName {
-	case "grab":
+	case string(consts.ProviderGrab):
 		// 调用 Grab 订单处理逻辑
 		res, err = service.Grab().CancelOrderEntity(ctx, orderEntity, req.CancelCode)
 		if err != nil {
@@ -285,7 +286,7 @@ func (s *sOrder) CheckOrderCancelable(ctx context.Context, req *api.CheckOrderCa
 
 	// 根据 provider_name 路由到不同平台的处理逻辑
 	switch orderEntity.ProviderName {
-	case "grab":
+	case string(consts.ProviderGrab):
 		// 调用 Grab 订单处理逻辑
 		res, err = service.Grab().CheckOrderCancelableEntity(ctx, orderEntity)
 		if err != nil {

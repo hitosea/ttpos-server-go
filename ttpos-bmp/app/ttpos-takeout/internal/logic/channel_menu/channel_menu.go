@@ -7,7 +7,6 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
-	"google.golang.org/protobuf/types/known/anypb"
 
 	api "ttpos-bmp/app/ttpos-takeout/api/menu"
 	"ttpos-bmp/app/ttpos-takeout/api/takeout"
@@ -156,7 +155,7 @@ func (s *sChannelMenu) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSn
 
 	// 5. 如果是 Grab 渠道，异步通知菜单更新
 	if req.ProviderName == string(consts.ProviderGrab) {
-		go s.notifyGrabMenuUpdate(context.Background(), shopUuidInt)
+		go s.asyncNotifyGrabMenuUpdate(context.Background(), shopUuidInt)
 	}
 	// 6. 如果是 Lineman 渠道， 实时同步调用lineman SyncMenu
 	if req.ProviderName == string(consts.ProviderLineman) {
@@ -212,27 +211,27 @@ func (s *sChannelMenu) LogMenuSync(ctx context.Context, merchantID, providerName
 	return nil
 }
 
-// notifyGrabMenuUpdate 异步通知 Grab 菜单更新
-func (s *sChannelMenu) notifyGrabMenuUpdate(ctx context.Context, shopUuid uint64) {
+// asyncNotifyGrabMenuUpdate 异步通知 Grab 菜单更新
+func (s *sChannelMenu) asyncNotifyGrabMenuUpdate(ctx context.Context, shopUuid uint64) {
 	// 1. 获取门店的 Grab 配置
 	cfg, err := service.ShopProviderCfg().GetShopProviderCfg(ctx, shopUuid, string(consts.ProviderGrab))
 	if err != nil {
-		g.Log().Errorf(ctx, "notifyGrabMenuUpdate: 获取门店第三方配置失败: shop_uuid=%d, err=%v", shopUuid, err)
+		g.Log().Errorf(ctx, "asyncNotifyGrabMenuUpdate: 获取门店第三方配置失败: shop_uuid=%d, err=%v", shopUuid, err)
 		return
 	}
 	if cfg == nil || cfg.ProviderMerchantId == "" {
-		g.Log().Warningf(ctx, "notifyGrabMenuUpdate: 未找到 merchant_id: shop_uuid=%d", shopUuid)
+		g.Log().Warningf(ctx, "asyncNotifyGrabMenuUpdate: 未找到 merchant_id: shop_uuid=%d", shopUuid)
 		return
 	}
 
 	// 2. 调用 Grab NotifyMenuUpdate
 	requestId, err := service.Grab().NotifyMenuUpdate(ctx, cfg.ProviderMerchantId)
 	if err != nil {
-		g.Log().Errorf(ctx, "notifyGrabMenuUpdate: 通知 Grab 失败: shop_uuid=%d, merchant_id=%s, err=%v", shopUuid, cfg.ProviderMerchantId, err)
+		g.Log().Errorf(ctx, "asyncNotifyGrabMenuUpdate: 通知 Grab 失败: shop_uuid=%d, merchant_id=%s, err=%v", shopUuid, cfg.ProviderMerchantId, err)
 		return
 	}
 
-	g.Log().Infof(ctx, "notifyGrabMenuUpdate: 成功, shop_uuid=%d, merchant_id=%s, request_id=%s", shopUuid, cfg.ProviderMerchantId, requestId)
+	g.Log().Infof(ctx, "asyncNotifyGrabMenuUpdate: 成功, shop_uuid=%d, merchant_id=%s, request_id=%s", shopUuid, cfg.ProviderMerchantId, requestId)
 }
 
 // NotifyMenuUpdate 通知菜单更新（统一路由入口）
@@ -295,12 +294,10 @@ func (s *sChannelMenu) NotifyMenuUpdate(ctx context.Context, req *api.NotifyMenu
 
 	// 4. 根据 provider_name 路由到对应服务
 	switch req.ProviderName {
-	case "grab":
-		return s.notifyGrabMenuUpdateWithResponse(ctx, cfg.ProviderMerchantId, req.RequestId)
-
-	case "lineman":
-		return s.notifyLinemanMenuUpdateWithResponse(ctx, shopUUID, req.RequestId)
-
+	case string(consts.ProviderGrab):
+		err = s.notifyGrabMenuUpdate(ctx, cfg.ProviderMerchantId)
+	case string(consts.ProviderLineman):
+		err = s.notifyLinemanMenuUpdate(ctx, shopUUID)
 	default:
 		errMsg := fmt.Sprintf("不支持的平台: %s，支持的平台: grab, lineman", req.ProviderName)
 		g.Log().Warningf(ctx, "[菜单服务] %s", errMsg)
@@ -309,71 +306,41 @@ func (s *sChannelMenu) NotifyMenuUpdate(ctx context.Context, req *api.NotifyMenu
 			Message: errMsg,
 		}, nil
 	}
-}
 
-// notifyGrabMenuUpdateWithResponse 通知 Grab 菜单更新（带响应）
-func (s *sChannelMenu) notifyGrabMenuUpdateWithResponse(ctx context.Context, merchantID string, requestID string) (*takeout.ApiResponse, error) {
-	// 调用 Grab Service
-	grabRequestID, err := service.Grab().NotifyMenuUpdate(ctx, merchantID)
 	if err != nil {
-		g.Log().Errorf(ctx, "[菜单服务] 通知 Grab 失败: merchant_id=%s, 错误: %v", merchantID, err)
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeServiceError),
-			Message: "通知 Grab 菜单更新失败: " + err.Error(),
+			Message: fmt.Sprintf("通知 %s 菜单更新失败: %v", req.ProviderName, err),
 		}, nil
 	}
 
-	// 构建响应数据
-	respData := g.Map{
-		"sync_status": "QUEUED",
-		"request_id":  grabRequestID,
-		"provider":    "grab",
-	}
-
-	// 转换为 anypb.Any
-	dataAny, err := anypb.New(&takeout.ApiResponse{})
-	if err == nil {
-		// 如果需要，可以使用更合适的消息类型
-		g.Log().Debugf(ctx, "[菜单服务] Grab 菜单更新响应: %+v", respData)
-	}
-
-	g.Log().Infof(ctx, "[菜单服务] Grab 菜单更新通知成功: merchant_id=%s, request_id=%s", merchantID, grabRequestID)
 	return &takeout.ApiResponse{
 		Code:    string(consts.CodeSuccess),
 		Message: consts.MsgSuccess,
-		Data:    dataAny,
+		Data:    nil,
 	}, nil
 }
 
-// notifyLinemanMenuUpdateWithResponse 通知 Lineman 菜单更新（带响应）
-func (s *sChannelMenu) notifyLinemanMenuUpdateWithResponse(ctx context.Context, shopUUID uint64, requestID string) (*takeout.ApiResponse, error) {
-	// 调用 Lineman Service
+// notifyGrabMenuUpdate 通知 Grab 菜单更新
+func (s *sChannelMenu) notifyGrabMenuUpdate(ctx context.Context, merchantID string) error {
+	requestID, err := service.Grab().NotifyMenuUpdate(ctx, merchantID)
+	if err != nil {
+		g.Log().Errorf(ctx, "[菜单服务] 通知 Grab 失败: merchant_id=%s, 错误: %v", merchantID, err)
+		return err
+	}
+
+	g.Log().Infof(ctx, "[菜单服务] Grab 菜单更新通知成功: merchant_id=%s, request_id=%s", merchantID, requestID)
+	return nil
+}
+
+// notifyLinemanMenuUpdate 通知 Lineman 菜单更新
+func (s *sChannelMenu) notifyLinemanMenuUpdate(ctx context.Context, shopUUID uint64) error {
 	err := service.Lineman().SyncMenu(ctx, shopUUID)
 	if err != nil {
 		g.Log().Errorf(ctx, "[菜单服务] 通知 Lineman 失败: shop_uuid=%d, 错误: %v", shopUUID, err)
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeServiceError),
-			Message: "通知 Lineman 菜单更新失败: " + err.Error(),
-		}, nil
-	}
-
-	// 构建响应数据
-	respData := g.Map{
-		"sync_status": "SUCCESS",
-		"request_id":  requestID,
-		"provider":    "lineman",
-	}
-
-	// 转换为 anypb.Any
-	dataAny, err := anypb.New(&takeout.ApiResponse{})
-	if err == nil {
-		g.Log().Debugf(ctx, "[菜单服务] Lineman 菜单更新响应: %+v", respData)
+		return err
 	}
 
 	g.Log().Infof(ctx, "[菜单服务] Lineman 菜单更新通知成功: shop_uuid=%d", shopUUID)
-	return &takeout.ApiResponse{
-		Code:    string(consts.CodeSuccess),
-		Message: consts.MsgSuccess,
-		Data:    dataAny,
-	}, nil
+	return nil
 }
