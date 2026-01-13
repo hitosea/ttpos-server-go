@@ -1,5 +1,7 @@
 package value_object
 
+import "strings"
+
 // 外卖平台代码
 const (
 	TakeoutPlatformGrab    = "grab"    // Grab
@@ -103,6 +105,14 @@ func GetTakeoutTypeByPlatform(platform string) int {
 func GetPlatformName(platform string) string {
 	if name, ok := TakeoutPlatformNames[platform]; ok {
 		return name
+	}
+	return ""
+}
+
+// GetPlatformName 根据平台代码获取平台显示名称
+func GetNoSpacePlatformName(platform string) string {
+	if name, ok := TakeoutPlatformNames[platform]; ok {
+		return strings.ReplaceAll(name, " ", "")
 	}
 	return ""
 }

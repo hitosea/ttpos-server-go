@@ -188,7 +188,7 @@ func buildPosInvoiceRequest(
 	// 会员 UUID（外卖平台订单通常无会员）
 	customerUuid := ""
 
-	takeoutProvider := takeoutOrder.GetCapitalPlatform()
+	takeoutProvider := takeoutOrder.GetNoSpacePlatformName()
 
 	return req.SavePosInvoiceReq{
 		SiteCode:         companySetting.ErpnextSiteCode,

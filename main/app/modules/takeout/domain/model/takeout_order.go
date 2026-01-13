@@ -180,6 +180,14 @@ func (o *TakeoutOrder) GetCapitalPlatform() string {
 	return strings.ToUpper(o.Platform[0:1]) + strings.ToLower(o.Platform[1:])
 }
 
+// 获取外卖平台 无空格名称
+func (o *TakeoutOrder) GetNoSpacePlatformName() string {
+	if o == nil {
+		return ""
+	}
+	return valueobject.GetNoSpacePlatformName(o.Platform)
+}
+
 // 是否店内就餐订单
 func (o *TakeoutOrder) IsDineInOrder() bool {
 	if o == nil {
