@@ -551,13 +551,14 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.Mater
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
 
-		checkService := NewCheckNameSrv(s.dbm)
-		names := checkService.MakeCheckNameList(ctx, request.LocaleName)
-		for _, name := range names {
-			if !checkService.CheckNameLength(ctx, name.Text, 50) {
-				return errors.New("名称长度不能超过50")
-			}
-		}
+		// 检查名称长度, 暂时关闭，因为已经通过前端校验了. 后端取消校验,任务:38639（优化）新管理端-物品类别名称长度限制
+		// checkService := NewCheckNameSrv(s.dbm)
+		// names := checkService.MakeCheckNameList(ctx, request.LocaleName)
+		// for _, name := range names {
+		// 	if !checkService.CheckNameLength(ctx, name.Text, 50) {
+		// 		return errors.New("名称长度不能超过50")
+		// 	}
+		// }
 
 		// 检查物品类别编码是否已存在
 		if request.Code != "" {
