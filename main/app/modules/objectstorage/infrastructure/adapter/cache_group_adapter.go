@@ -37,19 +37,21 @@ func (t *cacheTask[T]) TTL() time.Duration {
 // CacheGroupAdapter 使用 ICacheGroup 实现的缓存适配器（泛型版本）
 // 同时保留对底层 cache.Cache 的引用，用于 DEL 操作
 type CacheGroupAdapter[T any] struct {
-	group      cache.ICacheGroup[T]
-	underlying cache.Cache // 底层缓存，用于 DEL 操作
-	defaultTTL time.Duration
-	objectType string // 对象类型（用于版本时间戳检查，必选）
+	group          cache.ICacheGroup[T]
+	underlying     cache.Cache // 底层缓存，用于 DEL 操作
+	defaultTTL     time.Duration
+	objectType     string                           // 对象类型（用于版本时间戳检查，必选）
+	versionManager *persistence.CacheVersionManager // 缓存版本时间戳管理器
 }
 
 // NewCacheGroupAdapterWithGroup 使用已有的 cacheGroup 实例创建适配器
 // 用于单例模式，复用 cacheGroup 实例以共享 L1 缓存
 func NewCacheGroupAdapterWithGroup[T any](group cache.ICacheGroup[T], underlyingCache cache.Cache, defaultTTL time.Duration, objectType ...string) repository.CacheLayer[T] {
 	adapter := &CacheGroupAdapter[T]{
-		group:      group,
-		underlying: underlyingCache,
-		defaultTTL: defaultTTL,
+		group:          group,
+		underlying:     underlyingCache,
+		defaultTTL:     defaultTTL,
+		versionManager: persistence.NewCacheVersionManager(underlyingCache),
 	}
 	if len(objectType) > 0 {
 		adapter.objectType = objectType[0]
@@ -380,27 +382,31 @@ func ClearL1CacheByPattern(pattern string) int {
 //   - T: 更新后的结果（如果需要刷新则返回新查询的结果，否则返回原结果）
 func (a *CacheGroupAdapter[T]) checkAndRefreshIfNeeded(key string, result T, query func() (T, error)) T {
 	// 从 key 中提取 companyUuid
-	companyUuid, err := persistence.ExtractCompanyUuidFromCacheKey(key)
+	ck, err := persistence.NewCacheKey(key)
 	if err != nil {
+		logger.Logger.Error("解析缓存 key 失败", zap.Error(err), zap.String("key", key))
 		// 如果无法提取 companyUuid，直接返回原结果
 		return result
 	}
+	companyUuid := ck.CompanyUuid
+	objectType := ck.ObjectType
+	objectUuid, _ := ck.GetObjectUuid() // 如果是product_list 对象，objectUuid 为 0. 这是特性,表示全局版本时间戳,要更新所有的product_list缓存. 其他对象的objectUuid不为0,表示具体对象的版本时间戳,要更新具体对象的缓存.
 
 	// 获取最新版本时间戳
-	versionTimestamp, versionExists := persistence.GetCacheVersionTimestamp(a.underlying, companyUuid, a.objectType)
+	versionTimestamp, versionExists := a.versionManager.GetCacheVersionTimestamp(companyUuid, objectType, objectUuid)
 
 	// 如果版本时间戳不存在（versionExists=false），说明版本时间戳已过期，
 	// 此时应该认为缓存也已过期，需要重新查询并设置新的版本时间戳
 	needRefresh := false
 	if !versionExists {
 		needRefresh = true
-		if err := persistence.UpdateCacheVersionTimestamp(a.underlying, companyUuid, a.objectType, 5*time.Minute); err != nil {
+		if err := a.versionManager.UpdateCacheVersionTimestamp(companyUuid, objectType, objectUuid); err != nil {
 			logger.Logger.Error("更新缓存版本时间戳失败", zap.Error(err))
 		}
 	} else if versionExists && versionTimestamp == 0 {
 		// 如果版本时间戳存在但为0，说明版本时间戳已过期，
 		needRefresh = true
-		if err := persistence.UpdateCacheVersionTimestamp(a.underlying, companyUuid, a.objectType, 5*time.Minute); err != nil {
+		if err := a.versionManager.UpdateCacheVersionTimestamp(companyUuid, objectType, objectUuid); err != nil {
 			logger.Logger.Error("更新缓存版本时间戳失败", zap.Error(err))
 		}
 	} else {

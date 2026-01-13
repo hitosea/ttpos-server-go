@@ -4,7 +4,6 @@ import (
 	goCtx "context"
 	"fmt"
 	"sync"
-	"time"
 
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
@@ -14,13 +13,16 @@ import (
 // ProductListCacheController 商品列表缓存控制器
 // 用于统一管理商品列表缓存的失效操作
 type ProductListCacheController struct {
-	cache cache.Cache
+	cache          cache.Cache
+	versionManager *persistence.CacheVersionManager
 }
 
 // NewProductListCacheController 创建商品列表缓存控制器
 func NewProductListCacheController() *ProductListCacheController {
+	cacheInstance := cache.Global
 	return &ProductListCacheController{
-		cache: cache.Global,
+		cache:          cacheInstance,
+		versionManager: persistence.NewCacheVersionManager(cacheInstance),
 	}
 }
 
@@ -35,11 +37,11 @@ func (c *ProductListCacheController) InvalidateProductListCache(ctx goCtx.Contex
 	companyUuid := cctx.GetCompanyUuid()
 
 	// 更新缓存版本时间戳（在二级缓存中记录对象的最新版本时间戳）
-	// Key 格式：{system_prefix}:{company_uuid}:cacheversion_{object_type}
+	// Key 格式：{cache_version_prefix}:{system_prefix}:{company_uuid}:{object_type}:{object_uuid} ,object_uuid 为 0 表示全局版本时间戳,要更新所有的product_list缓存. 其他对象的objectUuid不为0,表示具体对象的版本时间戳,要更新具体对象的缓存.
 	// 版本时间戳的过期时间设置为 L2TTL（5分钟），与最长有效的缓存时间一致
 	// 当版本时间戳过期时，GetCacheVersionTimestamp 会返回 (0, false)，
 	// 表示缓存已过期，需要重新查询并设置新的版本时间戳
-	if err := persistence.UpdateCacheVersionTimestamp(c.cache, companyUuid, persistence.ObjectTypeProductList, 5*time.Minute); err != nil {
+	if err := c.versionManager.UpdateCacheVersionTimestamp(companyUuid, persistence.ObjectTypeProductList, 0); err != nil {
 		return fmt.Errorf("更新缓存版本时间戳失败: %w", err)
 	}
 
