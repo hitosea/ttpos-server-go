@@ -271,6 +271,15 @@ func (s *sChannelMenu) NotifyMenuUpdate(ctx context.Context, req *api.NotifyMenu
 		}, nil
 	}
 
+	// 检查配置是否存在
+	if cfg == nil {
+		g.Log().Warningf(ctx, "[菜单服务] 未找到店铺平台配置: shop=%s, provider=%s", req.ShopUuid, req.ProviderName)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: fmt.Sprintf("店铺 %s 未配置平台 %s", req.ShopUuid, req.ProviderName),
+		}, nil
+	}
+
 	// 检查平台状态（ProviderShopStatus 应该是 ACTIVE）
 	if cfg.ProviderShopStatus != string(consts.ProviderShopStatusActive) {
 		g.Log().Warningf(ctx, "[菜单服务] 平台未激活: shop=%s, provider=%s, status=%s", req.ShopUuid, req.ProviderName, cfg.ProviderShopStatus)

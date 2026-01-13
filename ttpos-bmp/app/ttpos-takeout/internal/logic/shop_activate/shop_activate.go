@@ -84,6 +84,12 @@ func (s *sShopActivate) activateLineman(ctx context.Context, shopUUID uint64, re
 		return nil, gerror.Wrap(err, "查询 LINE MAN 配置失败")
 	}
 
+	// 检查配置是否存在
+	if cfg == nil {
+		g.Log().Errorf(ctx, "[ShopActivate] LINE MAN 配置不存在: shop_uuid=%d", shopUUID)
+		return nil, gerror.NewCode(gcode.CodeNotFound, "LINE MAN 配置不存在")
+	}
+
 	return &shop.ActivateShopResp{
 		ShopUuid:     cfg.ShopUuid,
 		ProviderName: cfg.ProviderName,
