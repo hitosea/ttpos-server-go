@@ -83,6 +83,10 @@ class Store extends Controller
             if (count($coordinates) != 2) {
                 return $this->renderError('经纬度格式不正确');
             }
+            // 要求$lat和$lng需要是数字类型
+            if (!is_numeric($coordinates[0]) || !is_numeric($coordinates[1])) {
+                return $this->renderError('经纬度格式不正确');
+            }
             $lat = floatval($coordinates[0]);
             $lng = floatval($coordinates[1]);
             if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {

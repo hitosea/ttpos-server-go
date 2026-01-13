@@ -4645,6 +4645,14 @@ definitions:
         description: 目标销售订单UUID, 必填
         type: integer
     type: object
+  req.InvalidateProductListCacheReq:
+    properties:
+      company_uuid:
+        description: 商户UUID
+        type: integer
+    required:
+    - company_uuid
+    type: object
   req.KitchenBindReq:
     properties:
       brand:
@@ -29880,6 +29888,34 @@ paths:
       summary: 桌台订单商品备注
       tags:
       - 扫码点餐
+  /internal/shop/product/cache/invalidate:
+    post:
+      consumes:
+      - application/json
+      description: 供PHP后端服务调用，用于在修改商品数据时失效相关缓存
+      parameters:
+      - description: 失效缓存请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InvalidateProductListCacheReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - InternalToken: []
+      summary: 失效商品列表缓存（内部接口）
+      tags:
+      - 商家端.商品（内部接口）
   /kiosk/base:
     get:
       consumes:
