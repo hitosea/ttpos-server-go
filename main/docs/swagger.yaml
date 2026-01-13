@@ -2649,6 +2649,9 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+      update_time:
+        description: 更新时间戳,用于判断缓存是否过期. 在缓存层通过反射维护这个字段的值
+        type: integer
     type: object
   product_resp.ProductPackageGroup:
     properties:
@@ -9158,6 +9161,26 @@ definitions:
     - company_uuid
     - site_code
     - supplier_name
+    type: object
+  req.UpdateHeadquartersProductReq:
+    properties:
+      product_printer_uuids:
+        description: 商品打印档口UUID列表（可选）
+        items:
+          type: integer
+        type: array
+      status:
+        description: 商品状态 0-下架 1-上架（可选）
+        enum:
+        - 0
+        - 1
+        type: integer
+      uuid:
+        description: 商品UUID
+        type: integer
+    required:
+    - status
+    - uuid
     type: object
   req.UpdatePrintSettingReq:
     properties:
@@ -36135,6 +36158,30 @@ paths:
       summary: 排序商品单位
       tags:
       - 商家端.商品单位
+  /shop/product/update_headquarters_product:
+    post:
+      consumes:
+      - application/json
+      description: 修改总部商品的上下架状态和打印档口，支持单独或同时修改
+      parameters:
+      - description: 修改总部商品请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateHeadquartersProductReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 修改总部商品
+      tags:
+      - 商家端.商品
   /shop/product/upload_image:
     post:
       consumes:

@@ -517,7 +517,7 @@ func (s *takeoutAppService) GetImportLogs(ctx context.Context, req request.GetIm
 
 		logList = append(logList, response.ImportLogResponse{
 			UUID:            log.Uuid,
-			Platform:        log.Platform,
+			Platform:        log.GetPlatformName(),
 			ImportType:      log.ImportType,
 			ImportDirection: log.ImportDirection,
 			Status:          log.Status,

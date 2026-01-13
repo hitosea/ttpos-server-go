@@ -58,7 +58,7 @@ func (s *purchaseOrderSrv) checkDailySubmitLimit(ctx context.Context, companyUui
 
 	// 校验是否超限
 	if count >= int64(dailyLimit) {
-		return fmt.Errorf(i18n.Translate(ctx.GetLanguage(), fmt.Sprintf("今日申请次数已达上限（%d次），请明天再试", dailyLimit)))
+		return errors.New(i18n.Translate(ctx.GetLanguage(), "今日申请次数已达上限（%s次），请明天再试", fmt.Sprintf("%d", dailyLimit)))
 	}
 
 	return nil
@@ -87,11 +87,51 @@ func (s *purchaseOrderSrv) checkPurchaseQuota(ctx context.Context, order *model.
 	repo := repository.NewPurchaseQuotaConfigRepo(headquarterDb)
 
 	// 遍历订单明细，逐个检查限购
+	// 步骤1: 先汇总相同物品的数量（按 MaterialCode + ErpnextUom 分组）
+	type MaterialUnitKey struct {
+		MaterialCode string
+		ErpnextUom   string
+	}
+
+	// 用于汇总的 map
+	materialSummary := make(map[MaterialUnitKey]struct {
+		TotalQty     float64
+		MaterialName string
+	})
+
+	// 遍历所有物品，累加数量
 	for _, item := range order.Items {
 		materialName := language.JsonToLocaleResponse(item.MaterialName).GetLocale(lang)
 
-		// 先查询该物品的限购配置（每个物品只查询一次，避免重复查询）
-		config, err := repo.GetByMaterialCodeAndShop(item.MaterialCode, companyUuid)
+		// 如果有多单位，遍历每个单位进行累加
+		if len(item.Units) > 0 {
+			for _, unit := range item.Units {
+				key := MaterialUnitKey{
+					MaterialCode: item.MaterialCode,
+					ErpnextUom:   unit.ErpnextUom,
+				}
+				summary := materialSummary[key]
+				summary.TotalQty += unit.Num
+				summary.MaterialName = materialName
+				materialSummary[key] = summary
+			}
+		} else {
+			// 如果没有多单位，使用主单位
+			key := MaterialUnitKey{
+				MaterialCode: item.MaterialCode,
+				ErpnextUom:   item.ErpnextUom,
+			}
+			summary := materialSummary[key]
+			summary.TotalQty += item.Num
+			summary.MaterialName = materialName
+			materialSummary[key] = summary
+		}
+	}
+
+	// 步骤2: 对汇总后的物品进行限购验证
+	for key, summary := range materialSummary {
+		// 查询该物品的限购配置
+		config, err := repo.GetByMaterialCodeAndShop(key.MaterialCode, companyUuid)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				// 无限购配置，跳过整个物品
@@ -100,18 +140,9 @@ func (s *purchaseOrderSrv) checkPurchaseQuota(ctx context.Context, order *model.
 			return errors.WithMessage(errors.New("获取品牌采购限购配置失败"), err.Error())
 		}
 
-		// 如果有多单位，遍历每个单位进行检查
-		if len(item.Units) > 0 {
-			for _, unit := range item.Units {
-				if err := s.checkSingleUnitQuotaWithConfig(ctx, lang, config, item.MaterialCode, materialName, unit.ErpnextUom, unit.Num, order); err != nil {
-					return err
-				}
-			}
-		} else {
-			// 如果没有多单位，使用主单位
-			if err := s.checkSingleUnitQuotaWithConfig(ctx, lang, config, item.MaterialCode, materialName, item.ErpnextUom, item.Num, order); err != nil {
-				return err
-			}
+		// 使用汇总后的数量进行限购检查
+		if err := s.checkSingleUnitQuotaWithConfig(ctx, lang, config, key.MaterialCode, summary.MaterialName, key.ErpnextUom, summary.TotalQty, order); err != nil {
+			return err
 		}
 	}
 
@@ -136,10 +167,7 @@ func (s *purchaseOrderSrv) checkSingleUnitQuotaWithConfig(
 
 	// 1. 强制性单位校验：配置了限购的物品，必须使用限购单位
 	if unitCode != config.UnitCode {
-		return errors.New(fmt.Sprintf(
-			i18n.Translate(lang, "物品 %s 只能使用 (%s) 单位进行采购"),
-			materialName, config.UnitCode,
-		))
+		return errors.New(i18n.Translate(lang, "物品 %s 只能使用 %s 单位进行采购", materialName, config.UnitCode))
 	}
 
 	// 2. 根据周期类型查询已使用额度

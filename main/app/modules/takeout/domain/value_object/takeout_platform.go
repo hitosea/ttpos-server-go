@@ -14,6 +14,14 @@ var TakeoutPlatformNames = map[string]string{
 	TakeoutPlatformShopeefood: "ShopeeFood",
 }
 
+// GetPlatformName 根据平台代码获取平台显示名称
+func GetPlatformName(platform string) string {
+	if name, ok := TakeoutPlatformNames[platform]; ok {
+		return name
+	}
+	return ""
+}
+
 // 外卖订单状态
 const (
 	TakeoutOrderStatePending         = 0  // 待接单
