@@ -100,9 +100,10 @@ func (s *purchaseOrderSrv) checkPurchaseQuota(ctx context.Context, order *model.
 		MaterialName string
 	})
 
-	// 按 ID 排序，确保处理顺序的稳定性
+	// 按 MaterialUuid 和 MaterialCode 排序，确保处理顺序的稳定性
+	// 注意：不能按 ID 排序，因为更新订单时会先删后插，导致 ID 变化
 	sort.Slice(order.Items, func(i, j int) bool {
-		return order.Items[i].ID < order.Items[j].ID
+		return order.Items[i].MaterialCode < order.Items[j].MaterialCode
 	})
 
 	// 遍历所有物品，累加数量
