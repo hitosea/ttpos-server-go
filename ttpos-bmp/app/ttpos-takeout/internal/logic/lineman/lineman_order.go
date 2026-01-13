@@ -226,9 +226,9 @@ func (s *sLinemanOrder) HandleOrderUpdate(ctx context.Context, req *v1.OrderUpda
 		ShopUUID:     req.StoreId, // 使用 storeId 作为 shopUuid
 		OrderUUID:    orderUUID,
 		OrderID:      req.OrderId,
-		MerchantID:   req.StoreId,
-		Status:       string(consts.OrderStatusAccepted),
-		Timestamp:    gtime.Now().Unix(),
+		// MerchantID:   req.StoreId,  //lineman 的商户id 未知
+		Status:    string(consts.OrderStatusAccepted),
+		Timestamp: gtime.Now().Unix(),
 	}
 	if err := queue.PushWithContext(ctx, TopicLinemanOrder, event); err != nil {
 		// RocketMQ 发送失败只记录日志，不影响主流程（订单已入库）
@@ -257,7 +257,7 @@ func (s *sLinemanOrder) updateOrder(ctx context.Context, orderUUID string, req *
 			Subtotal:    req.RestaurantRevenue,
 			OrderTime:   orderTime,
 			RawData:     rawDataJSON,
-			UpdatedAt:   gtime.Now().Unix(),
+			// UpdatedAt:   gtime.Now().Unix(),
 		})
 		if err != nil {
 			return gerror.Wrap(err, "更新订单主表失败")
@@ -286,7 +286,7 @@ func (s *sLinemanOrder) updateOrder(ctx context.Context, orderUUID string, req *
 				TotalPrice:     item.UnitPrice * float64(item.Quantity),
 				Modifiers:      propertiesJSON,
 				Note:           item.Memo,
-				CreatedAt:      gtime.Now().Unix(),
+				// CreatedAt:      gtime.Now().Unix(),
 			}).Insert()
 			if err != nil {
 				return gerror.Wrapf(err, "插入订单明细失败: itemId=%s", item.Id)
