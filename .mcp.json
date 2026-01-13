@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "Graphiti": {
+      "type": "http",
+      "url": "http://10.180.10.1:8000/mcp"
+    },
+    "Serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "claude-code",
+        "--project",
+        "${PWD}"
+      ]
+    },
+    "Context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "Yctx7sk-941f99d6-0bd4-4dcb-8930-a7f33b95835c"
+      }
+    }
+  }
+}
