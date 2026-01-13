@@ -49,6 +49,9 @@ type (
 		// HandleOrderUpdate 处理 LINE MAN 订单更新 Webhook
 		// 参数验证已由 GoFrame 自动完成，此处只处理业务逻辑
 		HandleOrderUpdate(ctx context.Context, req *v1.OrderUpdateReq) error
+		// HandleOrderStatusUpdate 处理 LINE MAN 订单状态更新 Webhook
+		// 参数验证已由 GoFrame 自动完成，此处只处理业务逻辑
+		HandleOrderStatusUpdate(ctx context.Context, req *v1.OrderStatusUpdateReq) error
 	}
 )
 

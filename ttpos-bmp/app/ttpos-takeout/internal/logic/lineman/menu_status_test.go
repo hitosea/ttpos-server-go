@@ -11,46 +11,46 @@ import (
 // TestMapStatusToLineman 测试状态映射函数
 func TestMapStatusToLineman(t *testing.T) {
 	tests := []struct {
-		name       string
+		name        string
 		ttposStatus string
-		wantStatus string
-		wantErr    bool
+		wantStatus  string
+		wantErr     bool
 	}{
 		{
-			name:       "AVAILABLE 映射为 AVAILABLE",
+			name:        "AVAILABLE 映射为 AVAILABLE",
 			ttposStatus: "AVAILABLE",
-			wantStatus: "AVAILABLE",
-			wantErr:    false,
+			wantStatus:  "AVAILABLE",
+			wantErr:     false,
 		},
 		{
-			name:       "UNAVAILABLE 映射为 SUSPENDED",
+			name:        "UNAVAILABLE 映射为 SUSPENDED",
 			ttposStatus: "UNAVAILABLE",
-			wantStatus: "SUSPENDED",
-			wantErr:    false,
+			wantStatus:  "SUSPENDED",
+			wantErr:     false,
 		},
 		{
-			name:       "SOLD_OUT_TODAY 映射为 SOLD_OUT_TODAY",
+			name:        "SOLD_OUT_TODAY 映射为 SOLD_OUT_TODAY",
 			ttposStatus: "SOLD_OUT_TODAY",
-			wantStatus: "SOLD_OUT_TODAY",
-			wantErr:    false,
+			wantStatus:  "SOLD_OUT_TODAY",
+			wantErr:     false,
 		},
 		{
-			name:       "UNAVAILABLEHIDE 不支持，返回错误",
+			name:        "UNAVAILABLEHIDE 不支持，返回错误",
 			ttposStatus: "UNAVAILABLEHIDE",
-			wantStatus: "",
-			wantErr:    true,
+			wantStatus:  "",
+			wantErr:     true,
 		},
 		{
-			name:       "空状态返回错误",
+			name:        "空状态返回错误",
 			ttposStatus: "",
-			wantStatus: "",
-			wantErr:    true,
+			wantStatus:  "",
+			wantErr:     true,
 		},
 		{
-			name:       "未知状态返回错误",
+			name:        "未知状态返回错误",
 			ttposStatus: "UNKNOWN_STATUS",
-			wantStatus: "",
-			wantErr:    true,
+			wantStatus:  "",
+			wantErr:     true,
 		},
 	}
 

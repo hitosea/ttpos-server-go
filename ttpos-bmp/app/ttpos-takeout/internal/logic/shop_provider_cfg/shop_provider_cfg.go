@@ -3,6 +3,8 @@ package shop_provider_cfg
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -37,6 +39,49 @@ type sShopProviderCfg struct{}
 
 func init() {
 	service.RegisterShopProviderCfg(ShopProviderCfg)
+}
+
+// GetProviderMerchantID 从 shop_uuid 字符串获取平台商户 ID
+// 参数：
+//   - ctx: 上下文对象
+//   - shopUuidStr: 店铺 UUID 字符串
+//   - providerName: 第三方平台名称（如 grab、lineman）
+//
+// 返回：
+//   - merchantID: 平台商户 ID
+//   - err: 错误信息（shop_uuid 格式错误、配置不存在、merchant_id 为空等）
+func (s *sShopProviderCfg) GetProviderMerchantID(ctx context.Context, shopUuidStr string, providerName string) (string, error) {
+	// 1. 解析 shop_uuid 字符串为 uint64
+	shopUUID, err := strconv.ParseUint(shopUuidStr, 10, 64)
+	if err != nil {
+		g.Log().Warningf(ctx, "[ShopProviderCfg] shop_uuid 格式错误: shopUuid=%s, error=%v", shopUuidStr, err)
+		return "", gerror.NewCode(gcode.CodeInvalidParameter, "shop_uuid 格式错误")
+	}
+
+	// 2. 查询店铺配置
+	shopCfg, err := s.GetShopProviderCfg(ctx, shopUUID, providerName)
+	if err != nil {
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 获取配置失败: shopUUID=%s, provider=%s, error=%v",
+			shopUuidStr, providerName, err)
+		return "", gerror.Wrap(err, fmt.Sprintf("获取店铺 %s 配置失败", providerName))
+	}
+
+	// 3. 验证配置是否存在
+	if shopCfg == nil {
+		g.Log().Warningf(ctx, "[ShopProviderCfg] 配置不存在: shopUUID=%s, provider=%s", shopUuidStr, providerName)
+		return "", gerror.NewCodef(gcode.CodeNotFound, "店铺未配置 %s", providerName)
+	}
+
+	// 4. 验证 merchant_id 是否为空
+	if shopCfg.ProviderMerchantId == "" {
+		g.Log().Warningf(ctx, "[ShopProviderCfg] merchant_id 为空: shopUUID=%s, provider=%s", shopUuidStr, providerName)
+		return "", gerror.NewCodef(gcode.CodeInvalidParameter, "店铺未配置 %s merchant_id", providerName)
+	}
+
+	g.Log().Debugf(ctx, "[ShopProviderCfg] 获取 merchant_id 成功: shopUUID=%s, provider=%s, merchantID=%s",
+		shopUuidStr, providerName, shopCfg.ProviderMerchantId)
+
+	return shopCfg.ProviderMerchantId, nil
 }
 
 // UpsertShopProviderCfg 更新或插入门店第三方配置（幂等）

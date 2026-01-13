@@ -12,8 +12,5 @@ type MenuItemStatus struct {
 }
 
 // MenuStatusUpdateResp Lineman 菜单状态更新响应
-type MenuStatusUpdateResp struct {
-	Status  string `json:"status"`  // ok, fail
-	Code    string `json:"code"`    // SUCCESS, ERROR
-	Message string `json:"message"` // 响应消息
-}
+// 复用公用的 LinemanResponse
+type MenuStatusUpdateResp = LinemanResponse

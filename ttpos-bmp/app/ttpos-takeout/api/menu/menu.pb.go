@@ -356,7 +356,7 @@ func (x *Purchasability) GetPurchasable() bool {
 // 更新菜单项请求
 type UpdateMenuItemReq struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	MerchantId       string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" dc:"Grab MerchantID (必填)"`                                                                              // Grab MerchantID (必填)
+	ShopUuid         string                 `protobuf:"bytes,1,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"店铺 UUID (必填)"`                                                                                            // 店铺 UUID (必填)
 	ItemId           string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty" dc:"商品ID (partner item id, 必填)"`                                                                                    // 商品ID (partner item id, 必填)
 	Price            *int64                 `protobuf:"varint,3,opt,name=price,proto3,oneof" json:"price,omitempty" dc:"价格 (minor unit，单位：分)"`                                                                                                   // 价格 (minor unit，单位：分)
 	AvailableStatus  *string                `protobuf:"bytes,4,opt,name=available_status,json=availableStatus,proto3,oneof" json:"available_status,omitempty" dc:"可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE, SOLD_OUT_TODAY (仅 Lineman 支持)"` // 可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE, SOLD_OUT_TODAY (仅 Lineman 支持)
@@ -399,9 +399,9 @@ func (*UpdateMenuItemReq) Descriptor() ([]byte, []int) {
 	return file_menu_menu_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *UpdateMenuItemReq) GetMerchantId() string {
+func (x *UpdateMenuItemReq) GetShopUuid() string {
 	if x != nil {
-		return x.MerchantId
+		return x.ShopUuid
 	}
 	return ""
 }
@@ -465,7 +465,7 @@ func (x *UpdateMenuItemReq) GetProviderName() string {
 // 更新菜单项响应
 type UpdateMenuItemResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MerchantId    string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" dc:"商户ID"`       // 商户ID
+	ShopUuid      string                 `protobuf:"bytes,1,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"店铺 UUID"`          // 店铺 UUID
 	RecordId      string                 `protobuf:"bytes,2,opt,name=record_id,json=recordId,proto3" json:"record_id,omitempty" dc:"记录ID (ItemID)"`    // 记录ID (ItemID)
 	RecordType    string                 `protobuf:"bytes,3,opt,name=record_type,json=recordType,proto3" json:"record_type,omitempty" dc:"记录类型: ITEM"` // 记录类型: ITEM
 	unknownFields protoimpl.UnknownFields
@@ -502,9 +502,9 @@ func (*UpdateMenuItemResp) Descriptor() ([]byte, []int) {
 	return file_menu_menu_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *UpdateMenuItemResp) GetMerchantId() string {
+func (x *UpdateMenuItemResp) GetShopUuid() string {
 	if x != nil {
-		return x.MerchantId
+		return x.ShopUuid
 	}
 	return ""
 }
@@ -526,14 +526,15 @@ func (x *UpdateMenuItemResp) GetRecordType() string {
 // 更新菜单修饰符请求
 type UpdateMenuModifierReq struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	MerchantId       string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" dc:"Grab MerchantID (必填)"`                              // Grab MerchantID (必填)
-	ModifierId       string                 `protobuf:"bytes,2,opt,name=modifier_id,json=modifierId,proto3" json:"modifier_id,omitempty" dc:"修饰符ID (partner modifier id, 必填)"`                   // 修饰符ID (partner modifier id, 必填)
-	ModifierName     string                 `protobuf:"bytes,3,opt,name=modifier_name,json=modifierName,proto3" json:"modifier_name,omitempty" dc:"修饰符名称 (用于定位记录, 必填)"`                          // 修饰符名称 (用于定位记录, 必填)
-	Price            *int64                 `protobuf:"varint,4,opt,name=price,proto3,oneof" json:"price,omitempty" dc:"价格 (minor unit，单位：分)"`                                                   // 价格 (minor unit，单位：分)
-	AvailableStatus  *string                `protobuf:"bytes,5,opt,name=available_status,json=availableStatus,proto3,oneof" json:"available_status,omitempty" dc:"可用状态: AVAILABLE, UNAVAILABLE"` // 可用状态: AVAILABLE, UNAVAILABLE
-	IsFree           *bool                  `protobuf:"varint,6,opt,name=is_free,json=isFree,proto3,oneof" json:"is_free,omitempty" dc:"是否免费"`                                                   // 是否免费
-	AdvancedPricings []*AdvancedPricing     `protobuf:"bytes,7,rep,name=advanced_pricings,json=advancedPricings,proto3" json:"advanced_pricings,omitempty" dc:"高级定价配置"`                          // 高级定价配置
-	RequestId        string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求 ID (可选，用于追踪)"`                                      // 请求 ID (可选，用于追踪)
+	ShopUuid         string                 `protobuf:"bytes,1,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"店铺 UUID (必填)"`                                                            // 店铺 UUID (必填)
+	ModifierId       string                 `protobuf:"bytes,2,opt,name=modifier_id,json=modifierId,proto3" json:"modifier_id,omitempty" dc:"修饰符ID (partner modifier id, 必填)"`                                   // 修饰符ID (partner modifier id, 必填)
+	ModifierName     string                 `protobuf:"bytes,3,opt,name=modifier_name,json=modifierName,proto3" json:"modifier_name,omitempty" dc:"修饰符名称 (用于定位记录, 必填)"`                                          // 修饰符名称 (用于定位记录, 必填)
+	Price            *int64                 `protobuf:"varint,4,opt,name=price,proto3,oneof" json:"price,omitempty" dc:"价格 (minor unit，单位：分)"`                                                                   // 价格 (minor unit，单位：分)
+	AvailableStatus  *string                `protobuf:"bytes,5,opt,name=available_status,json=availableStatus,proto3,oneof" json:"available_status,omitempty" dc:"可用状态: AVAILABLE, UNAVAILABLE, SOLD_OUT_TODAY"` // 可用状态: AVAILABLE, UNAVAILABLE, SOLD_OUT_TODAY
+	IsFree           *bool                  `protobuf:"varint,6,opt,name=is_free,json=isFree,proto3,oneof" json:"is_free,omitempty" dc:"是否免费"`                                                                   // 是否免费
+	AdvancedPricings []*AdvancedPricing     `protobuf:"bytes,7,rep,name=advanced_pricings,json=advancedPricings,proto3" json:"advanced_pricings,omitempty" dc:"高级定价配置"`                                          // 高级定价配置
+	RequestId        string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求 ID (可选，用于追踪)"`                                                      // 请求 ID (可选，用于追踪)
+	ProviderName     *string                `protobuf:"bytes,9,opt,name=provider_name,json=providerName,proto3,oneof" json:"provider_name,omitempty" dc:"平台名称: grab (默认), lineman"`                              // 平台名称: grab (默认), lineman
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -568,9 +569,9 @@ func (*UpdateMenuModifierReq) Descriptor() ([]byte, []int) {
 	return file_menu_menu_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *UpdateMenuModifierReq) GetMerchantId() string {
+func (x *UpdateMenuModifierReq) GetShopUuid() string {
 	if x != nil {
-		return x.MerchantId
+		return x.ShopUuid
 	}
 	return ""
 }
@@ -624,10 +625,17 @@ func (x *UpdateMenuModifierReq) GetRequestId() string {
 	return ""
 }
 
+func (x *UpdateMenuModifierReq) GetProviderName() string {
+	if x != nil && x.ProviderName != nil {
+		return *x.ProviderName
+	}
+	return ""
+}
+
 // 更新菜单修饰符响应
 type UpdateMenuModifierResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MerchantId    string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" dc:"商户ID"`           // 商户ID
+	ShopUuid      string                 `protobuf:"bytes,1,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"店铺 UUID"`              // 店铺 UUID
 	RecordId      string                 `protobuf:"bytes,2,opt,name=record_id,json=recordId,proto3" json:"record_id,omitempty" dc:"记录ID (ModifierID)"`    // 记录ID (ModifierID)
 	RecordType    string                 `protobuf:"bytes,3,opt,name=record_type,json=recordType,proto3" json:"record_type,omitempty" dc:"记录类型: MODIFIER"` // 记录类型: MODIFIER
 	unknownFields protoimpl.UnknownFields
@@ -664,9 +672,9 @@ func (*UpdateMenuModifierResp) Descriptor() ([]byte, []int) {
 	return file_menu_menu_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *UpdateMenuModifierResp) GetMerchantId() string {
+func (x *UpdateMenuModifierResp) GetShopUuid() string {
 	if x != nil {
-		return x.MerchantId
+		return x.ShopUuid
 	}
 	return ""
 }
@@ -773,7 +781,7 @@ func (x *MenuEntity) GetPurchasabilities() []*Purchasability {
 // 批量更新菜单请求
 type BatchUpdateMenuReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MerchantId    string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" dc:"Grab MerchantID (必填)"`   // Grab MerchantID (必填)
+	ShopUuid      string                 `protobuf:"bytes,1,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"店铺 UUID (必填)"`                 // 店铺 UUID (必填)
 	Field         string                 `protobuf:"bytes,2,opt,name=field,proto3" json:"field,omitempty" dc:"字段类型: ITEM (商品) (必填)"`                               // 字段类型: ITEM (商品) (必填)
 	MenuEntities  []*MenuEntity          `protobuf:"bytes,3,rep,name=menu_entities,json=menuEntities,proto3" json:"menu_entities,omitempty" dc:"菜单实体列表 (1-200 个)"` // 菜单实体列表 (1-200 个)
 	RequestId     string                 `protobuf:"bytes,4,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求 ID (可选，用于追踪)"`           // 请求 ID (可选，用于追踪)
@@ -811,9 +819,9 @@ func (*BatchUpdateMenuReq) Descriptor() ([]byte, []int) {
 	return file_menu_menu_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *BatchUpdateMenuReq) GetMerchantId() string {
+func (x *BatchUpdateMenuReq) GetShopUuid() string {
 	if x != nil {
-		return x.MerchantId
+		return x.ShopUuid
 	}
 	return ""
 }
@@ -903,7 +911,7 @@ func (x *MenuEntityError) GetErrorMessage() string {
 // 批量更新菜单响应
 type BatchUpdateMenuResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MerchantId    string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" dc:"商户ID"`       // 商户ID
+	ShopUuid      string                 `protobuf:"bytes,1,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"店铺 UUID"`          // 店铺 UUID
 	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty" dc:"更新状态: success, partial_success, fail"` // 更新状态: success, partial_success, fail
 	Errors        []*MenuEntityError     `protobuf:"bytes,3,rep,name=errors,proto3" json:"errors,omitempty" dc:"错误列表 (仅在 partial_success 或 fail 时返回)"` // 错误列表 (仅在 partial_success 或 fail 时返回)
 	unknownFields protoimpl.UnknownFields
@@ -940,9 +948,9 @@ func (*BatchUpdateMenuResp) Descriptor() ([]byte, []int) {
 	return file_menu_menu_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *BatchUpdateMenuResp) GetMerchantId() string {
+func (x *BatchUpdateMenuResp) GetShopUuid() string {
 	if x != nil {
-		return x.MerchantId
+		return x.ShopUuid
 	}
 	return ""
 }
@@ -1050,10 +1058,9 @@ const file_menu_menu_proto_rawDesc = "" +
 	"\x05price\x18\x02 \x01(\x03R\x05price\"D\n" +
 	"\x0ePurchasability\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12 \n" +
-	"\vpurchasable\x18\x02 \x01(\bR\vpurchasable\"\xc8\x03\n" +
-	"\x11UpdateMenuItemReq\x12\x1f\n" +
-	"\vmerchant_id\x18\x01 \x01(\tR\n" +
-	"merchantId\x12\x17\n" +
+	"\vpurchasable\x18\x02 \x01(\bR\vpurchasable\"\xc4\x03\n" +
+	"\x11UpdateMenuItemReq\x12\x1b\n" +
+	"\tshop_uuid\x18\x01 \x01(\tR\bshopUuid\x12\x17\n" +
 	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x12\x19\n" +
 	"\x05price\x18\x03 \x01(\x03H\x00R\x05price\x88\x01\x01\x12.\n" +
 	"\x10available_status\x18\x04 \x01(\tH\x01R\x0favailableStatus\x88\x01\x01\x12 \n" +
@@ -1067,16 +1074,14 @@ const file_menu_menu_proto_rawDesc = "" +
 	"\x11_available_statusB\f\n" +
 	"\n" +
 	"_max_stockB\x10\n" +
-	"\x0e_provider_name\"s\n" +
-	"\x12UpdateMenuItemResp\x12\x1f\n" +
-	"\vmerchant_id\x18\x01 \x01(\tR\n" +
-	"merchantId\x12\x1b\n" +
+	"\x0e_provider_name\"o\n" +
+	"\x12UpdateMenuItemResp\x12\x1b\n" +
+	"\tshop_uuid\x18\x01 \x01(\tR\bshopUuid\x12\x1b\n" +
 	"\trecord_id\x18\x02 \x01(\tR\brecordId\x12\x1f\n" +
 	"\vrecord_type\x18\x03 \x01(\tR\n" +
-	"recordType\"\xf5\x02\n" +
-	"\x15UpdateMenuModifierReq\x12\x1f\n" +
-	"\vmerchant_id\x18\x01 \x01(\tR\n" +
-	"merchantId\x12\x1f\n" +
+	"recordType\"\xad\x03\n" +
+	"\x15UpdateMenuModifierReq\x12\x1b\n" +
+	"\tshop_uuid\x18\x01 \x01(\tR\bshopUuid\x12\x1f\n" +
 	"\vmodifier_id\x18\x02 \x01(\tR\n" +
 	"modifierId\x12#\n" +
 	"\rmodifier_name\x18\x03 \x01(\tR\fmodifierName\x12\x19\n" +
@@ -1085,14 +1090,15 @@ const file_menu_menu_proto_rawDesc = "" +
 	"\ais_free\x18\x06 \x01(\bH\x02R\x06isFree\x88\x01\x01\x12B\n" +
 	"\x11advanced_pricings\x18\a \x03(\v2\x15.menu.AdvancedPricingR\x10advancedPricings\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\b \x01(\tR\trequestIdB\b\n" +
+	"request_id\x18\b \x01(\tR\trequestId\x12(\n" +
+	"\rprovider_name\x18\t \x01(\tH\x03R\fproviderName\x88\x01\x01B\b\n" +
 	"\x06_priceB\x13\n" +
 	"\x11_available_statusB\n" +
 	"\n" +
-	"\b_is_free\"w\n" +
-	"\x16UpdateMenuModifierResp\x12\x1f\n" +
-	"\vmerchant_id\x18\x01 \x01(\tR\n" +
-	"merchantId\x12\x1b\n" +
+	"\b_is_freeB\x10\n" +
+	"\x0e_provider_name\"s\n" +
+	"\x16UpdateMenuModifierResp\x12\x1b\n" +
+	"\tshop_uuid\x18\x01 \x01(\tR\bshopUuid\x12\x1b\n" +
 	"\trecord_id\x18\x02 \x01(\tR\brecordId\x12\x1f\n" +
 	"\vrecord_type\x18\x03 \x01(\tR\n" +
 	"recordType\"\xbc\x02\n" +
@@ -1107,10 +1113,9 @@ const file_menu_menu_proto_rawDesc = "" +
 	"\x06_priceB\x13\n" +
 	"\x11_available_statusB\f\n" +
 	"\n" +
-	"_max_stock\"\xa1\x01\n" +
-	"\x12BatchUpdateMenuReq\x12\x1f\n" +
-	"\vmerchant_id\x18\x01 \x01(\tR\n" +
-	"merchantId\x12\x14\n" +
+	"_max_stock\"\x9d\x01\n" +
+	"\x12BatchUpdateMenuReq\x12\x1b\n" +
+	"\tshop_uuid\x18\x01 \x01(\tR\bshopUuid\x12\x14\n" +
 	"\x05field\x18\x02 \x01(\tR\x05field\x125\n" +
 	"\rmenu_entities\x18\x03 \x03(\v2\x10.menu.MenuEntityR\fmenuEntities\x12\x1d\n" +
 	"\n" +
@@ -1119,10 +1124,9 @@ const file_menu_menu_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
 	"error_code\x18\x02 \x01(\tR\terrorCode\x12#\n" +
-	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\"}\n" +
-	"\x13BatchUpdateMenuResp\x12\x1f\n" +
-	"\vmerchant_id\x18\x01 \x01(\tR\n" +
-	"merchantId\x12\x16\n" +
+	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\"y\n" +
+	"\x13BatchUpdateMenuResp\x12\x1b\n" +
+	"\tshop_uuid\x18\x01 \x01(\tR\bshopUuid\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12-\n" +
 	"\x06errors\x18\x03 \x03(\v2\x15.menu.MenuEntityErrorR\x06errors\"v\n" +
 	"\x13NotifyMenuUpdateReq\x12\x1b\n" +

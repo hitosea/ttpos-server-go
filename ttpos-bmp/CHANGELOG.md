@@ -4,6 +4,15 @@ All notable changes to the ttpos-bmp project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **LINE MAN 订单状态更新 Webhook**
+  - 端点: `POST /v1/partners/{partnerId}/stores/{storeId}/order/status`
+  - 接收 LINE MAN 订单完成/取消通知，更新订单状态到数据库
+  - 状态映射: `FINISH` → `COMPLETED`, `CANCELED` → `CANCELLED`
+  - 通过 RocketMQ 通知 Main 模块（Topic: `takeout_grab_order`）
+  - 幂等性处理: 重复请求不重复更新
+  - 关联 Spec: tech-takeout-lineman-order-status-update
+
 ### Enhanced
 - **OpenPosEntry 接口支持通过 PaymentID 指定支付方式**
   - Protobuf: OpenPosEntryDetail 新增 `payment_id` 字段（optional）

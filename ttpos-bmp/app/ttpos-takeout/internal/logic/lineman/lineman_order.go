@@ -296,3 +296,75 @@ func (s *sLinemanOrder) updateOrder(ctx context.Context, orderUUID string, req *
 		return nil
 	})
 }
+
+// LINE MAN 订单状态常量
+const (
+	LinemanStatusFinish   = "FINISH"
+	LinemanStatusCanceled = "CANCELED" // LINE MAN 使用一个 L
+)
+
+// mapLinemanStatusToTTPOS 将 LINE MAN 状态映射为 TTPOS 内部状态
+func mapLinemanStatusToTTPOS(linemanStatus string) string {
+	switch linemanStatus {
+	case LinemanStatusFinish:
+		return string(consts.OrderStatusCompleted) // "COMPLETED"
+	case LinemanStatusCanceled:
+		return string(consts.OrderStatusCancelled) // "CANCELLED" (TTPOS 使用两个 L)
+	default:
+		g.Log().Warningf(context.Background(), "未知的 LINE MAN 状态: %s", linemanStatus)
+		return linemanStatus // 未知状态保持原样
+	}
+}
+
+// HandleOrderStatusUpdate 处理 LINE MAN 订单状态更新 Webhook
+// 参数验证已由 GoFrame 自动完成，此处只处理业务逻辑
+func (s *sLinemanOrder) HandleOrderStatusUpdate(ctx context.Context, req *v1.OrderStatusUpdateReq) error {
+	// 1. 状态映射
+	ttposStatus := mapLinemanStatusToTTPOS(req.OrderStatus)
+
+	// 2. 查询现有订单
+	existingOrder, err := dao.Order.Ctx(ctx).
+		Where(dao.Order.Columns().ProviderName, ProviderNameLineman).
+		Where(dao.Order.Columns().ProviderOrderId, req.OrderId).
+		Where(dao.Order.Columns().DeletedAt, 0). // 使用正确的软删除字段
+		One()
+	if err != nil || existingOrder.IsEmpty() {
+		return gerror.New("订单不存在")
+	}
+
+	// 3. 幂等性检查
+	currentStatus := existingOrder[dao.Order.Columns().OrderStatus].String() // 使用正确的字段名
+	if currentStatus == ttposStatus {
+		g.Log().Infof(ctx, "订单状态未变化，跳过: orderId=%s, status=%s", req.OrderId, ttposStatus)
+		return nil
+	}
+
+	// 4. 更新订单状态
+	orderUUID := existingOrder[dao.Order.Columns().Uuid].String()
+	_, err = dao.Order.Ctx(ctx).Where("uuid", orderUUID).Update(&do.Order{
+		OrderStatus: ttposStatus,
+		UpdatedAt:   gtime.Now().Unix(),
+	})
+	if err != nil {
+		return gerror.Wrap(err, "更新订单状态失败")
+	}
+
+	// 5. 发送 RocketMQ 事件
+	event := &grab.OrderEvent{
+		Action:       string(consts.OrderActionStatusUpdate),
+		ProviderName: ProviderNameLineman,
+		ShopUUID:     existingOrder[dao.Order.Columns().ShopUuid].String(),
+		OrderUUID:    orderUUID,
+		OrderID:      req.OrderId,
+		Status:       ttposStatus,
+		Timestamp:    gtime.Now().Unix(),
+	}
+	if err := queue.PushWithContext(ctx, TopicLinemanOrder, event); err != nil {
+		// RocketMQ 发送失败只记录日志，不影响主流程（订单状态已更新）
+		g.Log().Warningf(ctx, "发送订单状态更新 MQ 事件失败 %s: %v", orderUUID, err)
+	}
+
+	g.Log().Infof(ctx, "成功更新 LINE MAN 订单状态: %s (UUID: %s) %s -> %s",
+		req.OrderId, orderUUID, currentStatus, ttposStatus)
+	return nil
+}

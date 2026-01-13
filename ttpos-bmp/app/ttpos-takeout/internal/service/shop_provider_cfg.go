@@ -18,6 +18,16 @@ import (
 
 type (
 	IShopProviderCfg interface {
+		// GetProviderMerchantID 从 shop_uuid 字符串获取平台商户 ID
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - shopUuidStr: 店铺 UUID 字符串
+		//   - providerName: 第三方平台名称（如 grab、lineman）
+		//
+		// 返回：
+		//   - merchantID: 平台商户 ID
+		//   - err: 错误信息（shop_uuid 格式错误、配置不存在、merchant_id 为空等）
+		GetProviderMerchantID(ctx context.Context, shopUuidStr string, providerName string) (string, error)
 		// UpsertShopProviderCfg 更新或插入门店第三方配置（幂等）
 		// shopUUID: 门店 UUID
 		// providerName: 第三方名称（如 grab）
