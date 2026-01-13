@@ -72,8 +72,8 @@ func (s *sShopProviderCfg) GetProviderMerchantID(ctx context.Context, shopUuidSt
 		return "", gerror.NewCodef(gcode.CodeNotFound, "店铺未配置 %s", providerName)
 	}
 
-	// 4. 验证 merchant_id 是否为空
-	if shopCfg.ProviderMerchantId == "" {
+	// 4. 验证 merchant_id 是否为空 Grab分支
+	if providerName == string(consts.ProviderGrab) && shopCfg.ProviderMerchantId == "" {
 		g.Log().Warningf(ctx, "[ShopProviderCfg] merchant_id 为空: shopUUID=%s, provider=%s", shopUuidStr, providerName)
 		return "", gerror.NewCodef(gcode.CodeInvalidParameter, "店铺未配置 %s merchant_id", providerName)
 	}

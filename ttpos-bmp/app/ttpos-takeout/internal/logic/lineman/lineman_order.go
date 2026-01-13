@@ -16,7 +16,6 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
-	"ttpos-bmp/app/ttpos-takeout/internal/service"
 	"ttpos-bmp/internal/pkg/queue"
 )
 
@@ -27,16 +26,9 @@ const (
 	ProviderNameLineman = string(consts.ProviderLineman) // "lineman"
 )
 
-// sLinemanOrder 订单服务
-type sLinemanOrder struct{}
-
-func init() {
-	service.RegisterLinemanOrder(&sLinemanOrder{})
-}
-
 // HandlePlaceOrder 处理 LINE MAN 提交订单 Webhook
 // 参数验证已由 GoFrame 自动完成，此处只处理业务逻辑
-func (s *sLinemanOrder) HandlePlaceOrder(ctx context.Context, req *v1.PlaceOrderReq) error {
+func (s *sLineman) HandlePlaceOrder(ctx context.Context, req *v1.PlaceOrderReq) error {
 	// 1. 检查订单是否已存在（防止重复推送 - HTTP 409）
 	existingOrder, _ := dao.Order.Ctx(ctx).
 		Where(dao.Order.Columns().ProviderName, ProviderNameLineman).
@@ -75,7 +67,7 @@ func (s *sLinemanOrder) HandlePlaceOrder(ctx context.Context, req *v1.PlaceOrder
 }
 
 // saveOrder 保存订单到数据库
-func (s *sLinemanOrder) saveOrder(ctx context.Context, req *v1.PlaceOrderReq) (string, error) {
+func (s *sLineman) saveOrder(ctx context.Context, req *v1.PlaceOrderReq) (string, error) {
 	orderUUID := guid.S()
 
 	// 查询 shop_uuid（通过 storeId 查询门店配置）
@@ -181,7 +173,7 @@ func (s *sLinemanOrder) saveOrder(ctx context.Context, req *v1.PlaceOrderReq) (s
 
 // HandleOrderUpdate 处理 LINE MAN 订单更新 Webhook
 // 参数验证已由 GoFrame 自动完成，此处只处理业务逻辑
-func (s *sLinemanOrder) HandleOrderUpdate(ctx context.Context, req *v1.OrderUpdateReq) error {
+func (s *sLineman) HandleOrderUpdate(ctx context.Context, req *v1.OrderUpdateReq) error {
 	// 1. 查询现有订单
 	existingOrder, err := dao.Order.Ctx(ctx).
 		Where(dao.Order.Columns().ProviderName, ProviderNameLineman).
@@ -240,7 +232,7 @@ func (s *sLinemanOrder) HandleOrderUpdate(ctx context.Context, req *v1.OrderUpda
 }
 
 // updateOrder 更新订单到数据库（事务）
-func (s *sLinemanOrder) updateOrder(ctx context.Context, orderUUID string, req *v1.OrderUpdateReq) error {
+func (s *sLineman) updateOrder(ctx context.Context, orderUUID string, req *v1.OrderUpdateReq) error {
 	return dao.Order.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		// 1. 更新订单主表（包括 raw_data）
 		orderTime, err := gtime.StrToTime(req.OrderAcceptedTime)
@@ -318,7 +310,7 @@ func mapLinemanStatusToTTPOS(linemanStatus string) string {
 
 // HandleOrderStatusUpdate 处理 LINE MAN 订单状态更新 Webhook
 // 参数验证已由 GoFrame 自动完成，此处只处理业务逻辑
-func (s *sLinemanOrder) HandleOrderStatusUpdate(ctx context.Context, req *v1.OrderStatusUpdateReq) error {
+func (s *sLineman) HandleOrderStatusUpdate(ctx context.Context, req *v1.OrderStatusUpdateReq) error {
 	// 1. 状态映射
 	ttposStatus := mapLinemanStatusToTTPOS(req.OrderStatus)
 

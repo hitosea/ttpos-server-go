@@ -6,9 +6,9 @@ import (
 	api "ttpos-bmp/app/ttpos-takeout/api/menu"
 	"ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
-	linemanLogic "ttpos-bmp/app/ttpos-takeout/internal/logic/lineman"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
+	"ttpos-bmp/app/ttpos-takeout/utility"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -202,13 +202,13 @@ func (c *Controller) handleGrabUpdate(ctx context.Context, req *api.UpdateMenuIt
 // handleLinemanUpdate Lineman 平台菜单更新处理（新增）
 func (c *Controller) handleLinemanUpdate(ctx context.Context, req *api.UpdateMenuItemReq) (*takeout.ApiResponse, error) {
 	// 1. 从 shop_provider_cfg 获取 Lineman merchant_id (storeId)
-	merchantID, err := service.ShopProviderCfg().GetProviderMerchantID(ctx, req.ShopUuid, "lineman")
-	if err != nil {
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeServiceError),
-			Message: err.Error(),
-		}, nil
-	}
+	// merchantID, err := service.ShopProviderCfg().GetProviderMerchantID(ctx, req.ShopUuid, "lineman")
+	// if err != nil {
+	// 	return &takeout.ApiResponse{
+	// 		Code:    string(consts.CodeServiceError),
+	// 		Message: err.Error(),
+	// 	}, nil
+	// }
 
 	// 2. Lineman 字段校验（仅允许 available_status）
 	if err := c.validateLinemanRequest(req); err != nil {
@@ -237,9 +237,9 @@ func (c *Controller) handleLinemanUpdate(ctx context.Context, req *api.UpdateMen
 	}
 
 	// 4. 调用 Lineman Service 层
-	if err := service.Lineman().UpdateMenuItemStatus(ctx, merchantID, req.ItemId, linemanStatus); err != nil {
-		g.Log().Errorf(ctx, "[Menu] Lineman UpdateMenuItem failed: shopUUID=%s, merchantID=%s, itemID=%s, error=%v",
-			req.ShopUuid, merchantID, req.ItemId, err)
+	if err := service.Lineman().UpdateMenuItemStatus(ctx, req.ShopUuid, req.ItemId, linemanStatus); err != nil {
+		g.Log().Errorf(ctx, "[Menu] Lineman UpdateMenuItem failed: shopUUID=%s, itemID=%s, error=%v",
+			req.ShopUuid, req.ItemId, err)
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeServiceError),
 			Message: "更新菜单项失败: " + err.Error(),
@@ -262,8 +262,8 @@ func (c *Controller) handleLinemanUpdate(ctx context.Context, req *api.UpdateMen
 		}, nil
 	}
 
-	g.Log().Infof(ctx, "[Menu] Lineman UpdateMenuItem success: shopUUID=%s, merchantID=%s, itemID=%s, status=%s",
-		req.ShopUuid, merchantID, req.ItemId, linemanStatus)
+	g.Log().Infof(ctx, "[Menu] Lineman UpdateMenuItem success: shopUUID=%s, itemID=%s, status=%s",
+		req.ShopUuid, req.ItemId, linemanStatus)
 	return &takeout.ApiResponse{
 		Code:    string(consts.CodeSuccess),
 		Message: consts.MsgSuccess,
@@ -429,16 +429,7 @@ func (c *Controller) handleGrabModifierUpdate(ctx context.Context, req *api.Upda
 
 // handleLinemanModifierUpdate 处理 Lineman 修饰符更新
 func (c *Controller) handleLinemanModifierUpdate(ctx context.Context, req *api.UpdateMenuModifierReq) (*takeout.ApiResponse, error) {
-	// 1. 从 shop_provider_cfg 获取 Lineman merchant_id (storeId)
-	merchantID, err := service.ShopProviderCfg().GetProviderMerchantID(ctx, req.ShopUuid, "lineman")
-	if err != nil {
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeServiceError),
-			Message: err.Error(),
-		}, nil
-	}
-
-	// 2. 字段校验
+	// 1. 字段校验
 	if err := c.validateLinemanModifierRequest(req); err != nil {
 		g.Log().Errorf(ctx, "[Menu] Lineman UpdateMenuModifier validation failed: %v", err)
 		return &takeout.ApiResponse{
@@ -447,12 +438,12 @@ func (c *Controller) handleLinemanModifierUpdate(ctx context.Context, req *api.U
 		}, nil
 	}
 
-	// 3. 状态映射（string → int）
+	// 2. 状态映射（string → int）
 	availableStatus := ""
 	if req.AvailableStatus != nil {
 		availableStatus = *req.AvailableStatus
 	}
-	linemanStatus, err := linemanLogic.MapStatusToLinemanModifier(availableStatus)
+	linemanStatus, err := utility.MapStatusToLinemanModifier(availableStatus)
 	if err != nil {
 		g.Log().Errorf(ctx, "[Menu] Lineman status mapping failed: %v", err)
 		return &takeout.ApiResponse{
@@ -461,31 +452,30 @@ func (c *Controller) handleLinemanModifierUpdate(ctx context.Context, req *api.U
 		}, nil
 	}
 
-	// 4. 调用 Lineman Logic
-	logic := linemanLogic.NewModifierStatusLogicDefault()
-	err = logic.UpdateModifierStatus(
+	// 3. 调用 Lineman Service
+	err = service.Lineman().UpdateModifierStatus(
 		ctx,
-		merchantID,     // storeId
+		req.ShopUuid,   // storeId (Lineman 场景下 shopUuid 就是 storeId)
 		req.ModifierId, // modifierId
 		linemanStatus,  // status (int)
 	)
 	if err != nil {
-		g.Log().Errorf(ctx, "[Menu] Lineman UpdateMenuModifier failed: shopUUID=%s, merchantID=%s, modifierID=%s, error=%v",
-			req.ShopUuid, merchantID, req.ModifierId, err)
+		g.Log().Errorf(ctx, "[Menu] Lineman UpdateMenuModifier failed: shopUUID=%s, modifierID=%s, error=%v",
+			req.ShopUuid, req.ModifierId, err)
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeServiceError),
 			Message: "更新 Lineman 修饰符状态失败: " + err.Error(),
 		}, nil
 	}
 
-	// 5. DTO → Proto 响应转换
+	// 4. DTO → Proto 响应转换
 	resp := &api.UpdateMenuModifierResp{
 		ShopUuid:   req.ShopUuid,
 		RecordId:   req.ModifierId,
 		RecordType: string(grabDto.MenuItemUpdateFieldModifier),
 	}
 
-	// 6. 包装为 ApiResponse
+	// 5. 包装为 ApiResponse
 	dataAny, err := anypb.New(resp)
 	if err != nil {
 		return &takeout.ApiResponse{
@@ -494,8 +484,8 @@ func (c *Controller) handleLinemanModifierUpdate(ctx context.Context, req *api.U
 		}, nil
 	}
 
-	g.Log().Infof(ctx, "[Menu] Lineman UpdateMenuModifier success: shopUUID=%s, merchantID=%s, modifierID=%s",
-		req.ShopUuid, merchantID, req.ModifierId)
+	g.Log().Infof(ctx, "[Menu] Lineman UpdateMenuModifier success: shopUUID=%s, modifierID=%s",
+		req.ShopUuid, req.ModifierId)
 	return &takeout.ApiResponse{
 		Code:    string(consts.CodeSuccess),
 		Message: consts.MsgSuccess,

@@ -8,8 +8,8 @@ import (
 )
 
 func (c *ControllerV1) PlaceOrder(ctx context.Context, req *v1.PlaceOrderReq) (res *v1.PlaceOrderRes, err error) {
-	// 调用 Logic 层处理订单
-	err = service.LinemanOrder().HandlePlaceOrder(ctx, req)
+	// 调用 Service 层处理订单
+	err = service.Lineman().HandlePlaceOrder(ctx, req)
 	if err != nil {
 		// 返回失败响应
 		return &v1.PlaceOrderRes{

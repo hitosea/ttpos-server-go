@@ -2,16 +2,14 @@
 package lineman
 
 import (
-	"context"
-
-	"github.com/gogf/gf/v2/errors/gerror"
-	lineman_dto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/lineman"
+	lineman_client "ttpos-bmp/app/ttpos-takeout/internal/client/lineman"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
-// sLineman LINE MAN 服务（统一管理 Token 和菜单同步）
+// sLineman LINE MAN 服务（统一管理菜单同步、订单处理、状态更新）
 type sLineman struct {
-	menuStatusLogic *MenuStatusLogic
+	menuStatusClient     IMenuStatusClient
+	modifierStatusClient IModifierStatusClient
 }
 
 func init() {
@@ -21,42 +19,7 @@ func init() {
 // New 创建 Lineman 服务实例
 func New() *sLineman {
 	return &sLineman{
-		menuStatusLogic: NewMenuStatusLogicDefault(),
+		menuStatusClient:     lineman_client.NewMenuStatusClient(),
+		modifierStatusClient: lineman_client.NewModifierStatusClient(),
 	}
-}
-
-// UpdateMenuItemStatus 更新菜单商品状态
-//
-// 参数:
-//   - ctx: 上下文
-//   - merchantId: 商户 ID (Grab MerchantID，对应 Lineman storeId)
-//   - itemId: 商品 ID (partner item id)
-//   - menuStatus: Lineman 状态 (AVAILABLE, SUSPENDED, SOLD_OUT_TODAY)
-//
-// 返回:
-//   - error: 错误信息
-func (s *sLineman) UpdateMenuItemStatus(ctx context.Context, merchantId string, itemId string, menuStatus string) error {
-	if merchantId == "" {
-		return gerror.New("merchantId 不能为空")
-	}
-	if itemId == "" {
-		return gerror.New("itemId 不能为空")
-	}
-	if menuStatus == "" {
-		return gerror.New("menuStatus 不能为空")
-	}
-
-	// 构造请求
-	req := &lineman_dto.MenuStatusUpdateReq{
-		MenuItems: []lineman_dto.MenuItemStatus{
-			{
-				ID:         itemId,
-				MenuStatus: menuStatus,
-			},
-		},
-	}
-
-	// 调用 Logic 层
-	// merchantId 在这里对应 Lineman 的 storeId
-	return s.menuStatusLogic.UpdateMenuStatus(ctx, merchantId, req)
 }

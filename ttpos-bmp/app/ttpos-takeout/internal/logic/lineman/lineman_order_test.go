@@ -13,7 +13,7 @@ import (
 func TestHandlePlaceOrder_DataConversion(t *testing.T) {
 	gtest.C(t, func(t *gtest.T) {
 		ctx := context.Background()
-		s := &sLinemanOrder{}
+		s := &sLineman{}
 
 		// 准备测试数据
 		req := &v1.PlaceOrderReq{
