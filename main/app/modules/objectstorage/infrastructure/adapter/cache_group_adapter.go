@@ -389,6 +389,9 @@ func ClearL1CacheByPattern(pattern string) int {
 // 返回：
 //   - T: 更新后的结果（如果需要刷新则返回新查询的结果，否则返回原结果）
 func (a *CacheGroupAdapter[T]) checkAndRefreshIfNeeded(key string, result T, query func() (T, error)) T {
+	if key == cache.ObjectStorageCacheConfigKey { // 特殊处理，不检查版本时间戳
+		return result
+	}
 	// 从 key 中提取 companyUuid
 	ck, err := persistence.NewCacheKey(key)
 	if err != nil {
