@@ -137,13 +137,14 @@ func (s *TakeoutRPCService) GetGrabMenu(ctx context.Context, companyUuid uint64)
 	return menuData, nil
 }
 
-// SaveMenuSnapshot 推送菜单到Grab
+// SaveMenuSnapshot 推送菜单到 外卖平台
 func (s *TakeoutRPCService) SaveMenuSnapshot(ctx context.Context, providerName string, companyUuid uint64, menu interface{}) (err error) {
 	// 创建客户端
 	client, err := NewBMPTakeoutClient()
 	if err != nil {
 		logger.Logger.Error("创建 RPC 客户端失败",
 			zap.Error(err),
+			zap.String("providerName", providerName),
 			zap.Uint64("companyUuid", companyUuid))
 		return errors.WithMessage(err, "创建 RPC 客户端失败")
 	}
@@ -156,8 +157,8 @@ func (s *TakeoutRPCService) SaveMenuSnapshot(ctx context.Context, providerName s
 	// 调用 RPC 接口
 	err = client.SaveMenuSnapshot(ctx, providerName, strconv.FormatUint(companyUuid, 10), uuid.New().String(), menu)
 	if err != nil {
-		logger.Logger.Error("保存 Grab 菜单失败", zap.Error(err), zap.Uint64("companyUuid", companyUuid))
-		return errors.WithMessage(err, "保存 Grab 菜单失败")
+		logger.Logger.Error("保存 外卖平台 菜单失败", zap.Error(err), zap.String("providerName", providerName), zap.Uint64("companyUuid", companyUuid))
+		return errors.WithMessage(err, "保存 外卖平台 菜单失败")
 	}
 
 	return nil

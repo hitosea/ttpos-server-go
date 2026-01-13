@@ -16,7 +16,7 @@
          ┌────────────────────────────────────────┐
          │  维度1：每日申请次数检查               │
          │  配置来源：ttpos_setting               │
-         │  purchase_brand_daily_limit            │
+         │  purchase_brand_setting            │
          │  ⚙️  值=-1 表示不限制，直接通过        │
          └───────────┬────────────────────────────┘
                      │
@@ -114,18 +114,18 @@
 -- 查看配置
 SELECT `key`, `values`, `describe`
 FROM ttpos_setting
-WHERE `key` IN ('purchase_brand_daily_limit', 'purchase_brand_single_qty_limit');
+WHERE `key` IN ('purchase_brand_setting');
 ```
 
 | 字段 | 类型 | 说明 | 示例值 |
 |------|------|------|--------|
-| `key` | varchar(255) | 配置键名 | `purchase_brand_daily_limit` |
-| `values` | text | JSON 配置值 | `{"limit": -1}` |
+| `key` | varchar(255) | 配置键名 | `purchase_brand_setting` |
+| `values` | text | JSON 配置值 | `{"daily_limit": -1}` |
 | `describe` | varchar(255) | 配置说明 | `每日申请次数上限` |
 
 **关键配置项：**
 
-- `purchase_brand_daily_limit`：每日申请次数上限，`-1` 表示不限制
+- `purchase_brand_setting`：每日申请次数上限，`-1` 表示不限制
 
 #### 2. purchase_quota_config - 物品限购配置主表
 
@@ -192,13 +192,13 @@ WHERE pqcs.delete_time = 0;
 -- 在总部数据库执行
 -- 设置每日申请次数上限为 5 次（根据业务需求调整）
 UPDATE ttpos_setting 
-SET `values` = '{"limit": 5}' 
-WHERE `key` = 'purchase_brand_daily_limit';
+SET `values` = '{"daily_limit": 5}' 
+WHERE `key` = 'purchase_brand_setting';
 
 -- 验证配置
 SELECT `key`, `values`, `describe`
 FROM ttpos_setting
-WHERE `key` = 'purchase_brand_daily_limit';
+WHERE `key` = 'purchase_brand_setting';
 ```
 
 **配置说明：**
@@ -215,8 +215,8 @@ WHERE `key` = 'purchase_brand_daily_limit';
 ```sql
 -- 恢复为不限制
 UPDATE ttpos_setting 
-SET `values` = '{"limit": -1}' 
-WHERE `key` = 'purchase_brand_daily_limit';
+SET `values` = '{"daily_limit": -1}' 
+WHERE `key` = 'purchase_brand_setting';
 ```
 
 ---
