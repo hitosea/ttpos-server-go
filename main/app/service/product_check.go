@@ -428,10 +428,11 @@ type CheckProductSauceParam struct {
 }
 
 type CheckProductSauceItemParam struct {
-	Uuid              uint64 `json:"uuid"`                // 商品加料项UUID
-	IsDefaultSelected int    `json:"is_default_selected"` // 商品加料项是否默认选中 0-否 1-是
-	BomUuid           uint64 `json:"bom_uuid"`            // 商品加料项bomUUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
-	IsDelete          bool   `json:"is_delete"`           // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid              uint64   `json:"uuid"`                // 商品加料项UUID
+	IsDefaultSelected int      `json:"is_default_selected"` // 商品加料项是否默认选中 0-否 1-是
+	BomUuid           uint64   `json:"bom_uuid"`            // 商品加料项bomUUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+	IsDelete          bool     `json:"is_delete"`           // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Price             *float64 `json:"price"`               // 商品加料价格，可不传递，兼容旧版客户端，v2.14后必传
 }
 
 type CheckProductSauceResult struct {
@@ -540,10 +541,14 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 		if sauce.ID == 0 {
 			return nil, errors.New("加料不存在")
 		}
+		price := sauce.Price
+		if sauceReq.Price != nil {
+			price = *sauceReq.Price
+		}
 		sauceResults = append(sauceResults, CheckProductSauceItemResult{
 			Uuid:              sauce.Uuid,
 			Name:              sauce.Name,
-			Price:             sauce.Price,
+			Price:             price,
 			IsDefaultSelected: sauceReq.IsDefaultSelected,
 			BomUuid:           sauceReq.BomUuid,
 			IsDelete:          sauceReq.IsDelete,

@@ -6093,6 +6093,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, reqs req.ProductShopAdd
 				sauceListParam = append(sauceListParam, CheckProductSauceItemParam{
 					Uuid:              sauceReq.Uuid,
 					IsDefaultSelected: sauceReq.IsDefaultSelected,
+					Price:             sauceReq.Price,
 				})
 			}
 			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{
@@ -6434,6 +6435,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 					IsDefaultSelected: sauceReq.IsDefaultSelected,
 					BomUuid:           sauceReq.BomUuid,
 					IsDelete:          sauceReq.IsDelete,
+					Price:             sauceReq.Price,
 				})
 			}
 			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{

@@ -444,8 +444,9 @@ type ProductShopAddSauceReq struct {
 
 // ProductShopAddSauceItemReq 商品加料项添加请求
 type ProductShopAddSauceItemReq struct {
-	Uuid              uint64 `json:"uuid"`                // 商品加料UUID
-	IsDefaultSelected int    `json:"is_default_selected"` // 是否默认选中 0-否 1-是
+	Uuid              uint64   `json:"uuid"`                // 商品加料UUID
+	IsDefaultSelected int      `json:"is_default_selected"` // 是否默认选中 0-否 1-是
+	Price             *float64 `json:"price"`               // 商品加料价格，可不传递，兼容旧版客户端
 }
 
 // ProductShopAddAttributeGroupReq 商品属性组添加请求
@@ -579,10 +580,11 @@ type ProductShopEditSauceReq struct {
 
 // ProductShopAddSauceItemReq 商品加料项添加请求
 type ProductShopEditSauceItemReq struct {
-	Uuid              uint64 `json:"uuid"`                // 商品加料UUID
-	IsDefaultSelected int    `json:"is_default_selected"` // 是否默认选中 0-否 1-是
-	BomUuid           uint64 `json:"bom_uuid"`            // 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
-	IsDelete          bool   `json:"is_delete"`           // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid              uint64   `json:"uuid"`                // 商品加料UUID
+	IsDefaultSelected int      `json:"is_default_selected"` // 是否默认选中 0-否 1-是
+	BomUuid           uint64   `json:"bom_uuid"`            // 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+	IsDelete          bool     `json:"is_delete"`           // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Price             *float64 `json:"price"`               // 商品加料价格，可不传递，兼容旧版客户端
 }
 
 // ProductShopAddAttributeGroupReq 商品属性组添加请求

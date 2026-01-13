@@ -47521,6 +47521,10 @@ const docTemplate = `{
                     "description": "是否默认选中 0-否 1-是",
                     "type": "integer"
                 },
+                "price": {
+                    "description": "商品加料价格，可不传递，兼容旧版客户端",
+                    "type": "number"
+                },
                 "uuid": {
                     "description": "商品加料UUID",
                     "type": "integer"
@@ -48098,6 +48102,10 @@ const docTemplate = `{
                 "is_delete": {
                     "description": "是否删除, 如果是新增/编辑，则传false，删除时传true",
                     "type": "boolean"
+                },
+                "price": {
+                    "description": "商品加料价格，可不传递，兼容旧版客户端",
+                    "type": "number"
                 },
                 "uuid": {
                     "description": "商品加料UUID",
