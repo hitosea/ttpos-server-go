@@ -2,6 +2,7 @@ package purchase_order
 
 import (
 	"fmt"
+	"sort"
 
 	"gorm.io/gorm"
 
@@ -97,6 +98,11 @@ func (s *purchaseOrderSrv) checkPurchaseQuota(ctx context.Context, order *model.
 	materialSummary := make(map[MaterialUnitKey]struct {
 		TotalQty     float64
 		MaterialName string
+	})
+
+	// 按 ID 排序，确保处理顺序的稳定性
+	sort.Slice(order.Items, func(i, j int) bool {
+		return order.Items[i].ID < order.Items[j].ID
 	})
 
 	// 遍历所有物品，累加数量
