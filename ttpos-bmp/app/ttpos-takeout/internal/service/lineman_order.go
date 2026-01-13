@@ -10,6 +10,8 @@ import (
 type ILinemanOrder interface {
 	// HandlePlaceOrder 处理 LINE MAN 订单创建 Webhook
 	HandlePlaceOrder(ctx context.Context, req *v1.PlaceOrderReq) error
+	// HandleOrderUpdate 处理 LINE MAN 订单更新 Webhook
+	HandleOrderUpdate(ctx context.Context, req *v1.OrderUpdateReq) error
 }
 
 var localLinemanOrder ILinemanOrder

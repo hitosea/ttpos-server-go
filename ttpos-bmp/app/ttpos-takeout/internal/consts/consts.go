@@ -106,6 +106,8 @@ type OrderAction string
 const (
 	// OrderActionCreate 创建订单
 	OrderActionCreate OrderAction = "create"
+	// OrderActionUpdate 订单内容更新
+	OrderActionUpdate OrderAction = "update"
 	// OrderActionStatusUpdate 订单状态更新
 	OrderActionStatusUpdate OrderAction = "status_update"
 	// OrderActionCancel 取消订单

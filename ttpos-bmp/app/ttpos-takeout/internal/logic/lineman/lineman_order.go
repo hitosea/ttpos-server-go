@@ -178,3 +178,121 @@ func (s *sLinemanOrder) saveOrder(ctx context.Context, req *v1.PlaceOrderReq) (s
 
 	return orderUUID, nil
 }
+
+// HandleOrderUpdate 处理 LINE MAN 订单更新 Webhook
+// 参数验证已由 GoFrame 自动完成，此处只处理业务逻辑
+func (s *sLinemanOrder) HandleOrderUpdate(ctx context.Context, req *v1.OrderUpdateReq) error {
+	// 1. 查询现有订单
+	existingOrder, err := dao.Order.Ctx(ctx).
+		Where(dao.Order.Columns().ProviderName, ProviderNameLineman).
+		Where(dao.Order.Columns().ProviderOrderId, req.OrderId).
+		One()
+	if err != nil {
+		g.Log().Errorf(ctx, "查询订单失败: orderId=%s, error=%v", req.OrderId, err)
+		return gerror.Wrap(err, "查询订单失败")
+	}
+	if existingOrder.IsEmpty() {
+		g.Log().Warningf(ctx, "订单不存在: orderId=%s", req.OrderId)
+		return gerror.New("订单不存在")
+	}
+
+	// 2. 幂等性检查（比较 LINE MAN 的 orderUpdatedTime 与数据库的 updated_at）
+	dbUpdatedAt := existingOrder[dao.Order.Columns().UpdatedAt].Int64()
+	if dbUpdatedAt > 0 {
+		// 解析 LINE MAN 的 orderUpdatedTime
+		newUpdatedTime, err := gtime.StrToTime(req.OrderUpdatedTime)
+		if err == nil && newUpdatedTime != nil {
+			// 如果 LINE MAN 的更新时间 <= 数据库记录时间，则跳过
+			if newUpdatedTime.Unix() <= dbUpdatedAt {
+				g.Log().Infof(ctx, "订单更新时间未变化，跳过: orderId=%s, db_updated_at=%d, lineman_updated_time=%s",
+					req.OrderId, dbUpdatedAt, req.OrderUpdatedTime)
+				return nil
+			}
+		}
+	}
+
+	// 3. 更新订单（事务）
+	orderUUID := existingOrder[dao.Order.Columns().Uuid].String()
+	err = s.updateOrder(ctx, orderUUID, req)
+	if err != nil {
+		g.Log().Errorf(ctx, "更新订单失败: orderId=%s, error=%v", req.OrderId, err)
+		return gerror.Wrap(err, "更新订单失败")
+	}
+
+	// 4. 发送 RocketMQ 事件
+	event := &grab.OrderEvent{
+		Action:       string(consts.OrderActionUpdate),
+		ProviderName: ProviderNameLineman,
+		ShopUUID:     req.StoreId, // 使用 storeId 作为 shopUuid
+		OrderUUID:    orderUUID,
+		OrderID:      req.OrderId,
+		MerchantID:   req.StoreId,
+		Status:       string(consts.OrderStatusAccepted),
+		Timestamp:    gtime.Now().Unix(),
+	}
+	if err := queue.PushWithContext(ctx, TopicLinemanOrder, event); err != nil {
+		// RocketMQ 发送失败只记录日志，不影响主流程（订单已入库）
+		g.Log().Warningf(ctx, "发送订单更新 RocketMQ 事件失败 %s: %v", orderUUID, err)
+	}
+
+	g.Log().Infof(ctx, "成功更新 LINE MAN 订单: %s (UUID: %s)", req.OrderId, orderUUID)
+	return nil
+}
+
+// updateOrder 更新订单到数据库（事务）
+func (s *sLinemanOrder) updateOrder(ctx context.Context, orderUUID string, req *v1.OrderUpdateReq) error {
+	return dao.Order.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+		// 1. 更新订单主表（包括 raw_data）
+		orderTime, err := gtime.StrToTime(req.OrderAcceptedTime)
+		if err != nil {
+			return gerror.Wrap(err, "解析订单时间失败")
+		}
+		rawDataJSON, err := gjson.EncodeString(req)
+		if err != nil {
+			return gerror.Wrap(err, "序列化 raw_data 失败")
+		}
+
+		_, err = dao.Order.Ctx(ctx).Where(dao.Order.Columns().Uuid, orderUUID).Update(&do.Order{
+			TotalAmount: req.RestaurantRevenue,
+			Subtotal:    req.RestaurantRevenue,
+			OrderTime:   orderTime,
+			RawData:     rawDataJSON,
+			UpdatedAt:   gtime.Now().Unix(),
+		})
+		if err != nil {
+			return gerror.Wrap(err, "更新订单主表失败")
+		}
+
+		// 2. 删除旧的订单明细
+		_, err = dao.OrderItem.Ctx(ctx).Where(dao.OrderItem.Columns().OrderUuid, orderUUID).Delete()
+		if err != nil {
+			return gerror.Wrap(err, "删除旧订单明细失败")
+		}
+
+		// 3. 插入新的订单明细
+		for _, item := range req.Items {
+			propertiesJSON, err := gjson.EncodeString(item.Properties)
+			if err != nil {
+				g.Log().Warningf(ctx, "序列化商品属性失败: itemId=%s, error=%v", item.Id, err)
+				propertiesJSON = "[]"
+			}
+
+			_, err = dao.OrderItem.Ctx(ctx).Data(&do.OrderItem{
+				OrderUuid:      orderUUID,
+				ProviderItemId: item.Id,
+				ItemName:       item.Id, // LINE MAN 只提供 ID，商品名称可能需要从菜单数据查询
+				Quantity:       item.Quantity,
+				Price:          item.UnitPrice,
+				TotalPrice:     item.UnitPrice * float64(item.Quantity),
+				Modifiers:      propertiesJSON,
+				Note:           item.Memo,
+				CreatedAt:      gtime.Now().Unix(),
+			}).Insert()
+			if err != nil {
+				return gerror.Wrapf(err, "插入订单明细失败: itemId=%s", item.Id)
+			}
+		}
+
+		return nil
+	})
+}
