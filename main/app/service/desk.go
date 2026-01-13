@@ -236,7 +236,7 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 	getSaleBillStartTime := time.Now()
 	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(desk.SaleBillUuid)
 	if err != nil {
-		return res, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
+		return res, errors.WithMessage(err)
 	}
 	logger.Logger.Info("cache_time_xie_log 获取销售账单所有信息完成", zap.Int64("duration", time.Since(getSaleBillStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid), zap.Uint64("saleBillUuid", desk.SaleBillUuid))
 
