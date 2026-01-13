@@ -10,6 +10,7 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -76,7 +77,7 @@ func (c *Controller) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSnap
 // 参数：merchant_id、item_id 必填，其他字段可选
 // 返回：takeout.ApiResponse 统一响应格式
 func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItemReq) (*takeout.ApiResponse, error) {
-	// 1. 参数校验
+	// 1. 基础参数校验
 	if req.MerchantId == "" {
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeInvalidParam),
@@ -90,7 +91,32 @@ func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItem
 		}, nil
 	}
 
-	// 2. Proto → DTO 转换
+	// 2. 获取 provider_name，默认为 grab
+	providerName := "grab"
+	if req.ProviderName != nil && *req.ProviderName != "" {
+		providerName = *req.ProviderName
+	}
+
+	g.Log().Infof(ctx, "[Menu] UpdateMenuItem: provider=%s, merchantID=%s, itemID=%s",
+		providerName, req.MerchantId, req.ItemId)
+
+	// 3. 根据平台路由到对应处理逻辑
+	switch providerName {
+	case "grab":
+		return c.handleGrabUpdate(ctx, req)
+	case "lineman":
+		return c.handleLinemanUpdate(ctx, req)
+	default:
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "不支持的平台: " + providerName,
+		}, nil
+	}
+}
+
+// handleGrabUpdate Grab 平台菜单更新处理（保持现有逻辑）
+func (c *Controller) handleGrabUpdate(ctx context.Context, req *api.UpdateMenuItemReq) (*takeout.ApiResponse, error) {
+	// 1. Proto → DTO 转换
 	updateReq := &grabDto.UpdateMenuItemReq{
 		MerchantID: req.MerchantId,
 		ItemID:     req.ItemId,
@@ -161,6 +187,105 @@ func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItem
 		Message: consts.MsgSuccess,
 		Data:    dataAny,
 	}, nil
+}
+
+// handleLinemanUpdate Lineman 平台菜单更新处理（新增）
+func (c *Controller) handleLinemanUpdate(ctx context.Context, req *api.UpdateMenuItemReq) (*takeout.ApiResponse, error) {
+	// 1. Lineman 字段校验（仅允许 available_status）
+	if err := c.validateLinemanRequest(req); err != nil {
+		g.Log().Warningf(ctx, "[Menu] Lineman 字段校验失败: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: err.Error(),
+		}, nil
+	}
+
+	// 2. 状态映射
+	if req.AvailableStatus == nil || *req.AvailableStatus == "" {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "available_status 不能为空",
+		}, nil
+	}
+
+	linemanStatus, err := c.mapToLinemanStatus(*req.AvailableStatus)
+	if err != nil {
+		g.Log().Warningf(ctx, "[Menu] 状态映射失败: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: err.Error(),
+		}, nil
+	}
+
+	// 3. 调用 Lineman Service 层
+	if err := service.Lineman().UpdateMenuItemStatus(ctx, req.MerchantId, req.ItemId, linemanStatus); err != nil {
+		g.Log().Errorf(ctx, "[Menu] Lineman UpdateMenuItem failed: merchantID=%s, itemID=%s, error=%v",
+			req.MerchantId, req.ItemId, err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeServiceError),
+			Message: "更新菜单项失败: " + err.Error(),
+		}, nil
+	}
+
+	// 4. 构造响应
+	resp := &api.UpdateMenuItemResp{
+		MerchantId: req.MerchantId,
+		RecordId:   req.ItemId,
+		RecordType: "ITEM",
+	}
+
+	// 5. 包装为 ApiResponse
+	dataAny, err := anypb.New(resp)
+	if err != nil {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeSerializeError),
+			Message: consts.MsgSerializeFailed,
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "[Menu] Lineman UpdateMenuItem success: merchantID=%s, itemID=%s, status=%s",
+		req.MerchantId, req.ItemId, linemanStatus)
+	return &takeout.ApiResponse{
+		Code:    string(consts.CodeSuccess),
+		Message: consts.MsgSuccess,
+		Data:    dataAny,
+	}, nil
+}
+
+// validateLinemanRequest 校验 Lineman 请求（仅允许 available_status）
+func (c *Controller) validateLinemanRequest(req *api.UpdateMenuItemReq) error {
+	if req.Price != nil {
+		return gerror.New("Lineman 平台仅支持更新 available_status 字段，不支持 price 字段")
+	}
+	if req.MaxStock != nil {
+		return gerror.New("Lineman 平台仅支持更新 available_status 字段，不支持 max_stock 字段")
+	}
+	if len(req.AdvancedPricings) > 0 {
+		return gerror.New("Lineman 平台仅支持更新 available_status 字段，不支持 advanced_pricings 字段")
+	}
+	if len(req.Purchasabilities) > 0 {
+		return gerror.New("Lineman 平台仅支持更新 available_status 字段，不支持 purchasabilities 字段")
+	}
+	if req.AvailableStatus == nil || *req.AvailableStatus == "" {
+		return gerror.New("available_status 字段为必填")
+	}
+	return nil
+}
+
+// mapToLinemanStatus 映射状态到 Lineman
+func (c *Controller) mapToLinemanStatus(status string) (string, error) {
+	switch status {
+	case "AVAILABLE":
+		return "AVAILABLE", nil
+	case "UNAVAILABLE":
+		return "SUSPENDED", nil
+	case "SOLD_OUT_TODAY":
+		return "SOLD_OUT_TODAY", nil
+	case "UNAVAILABLEHIDE":
+		return "", gerror.New("Lineman 平台不支持 UNAVAILABLEHIDE 状态")
+	default:
+		return "", gerror.New("不支持的状态: " + status)
+	}
 }
 
 // UpdateMenuModifier 更新菜单修饰符

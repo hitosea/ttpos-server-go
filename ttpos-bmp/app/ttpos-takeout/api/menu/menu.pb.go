@@ -356,14 +356,15 @@ func (x *Purchasability) GetPurchasable() bool {
 // 更新菜单项请求
 type UpdateMenuItemReq struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	MerchantId       string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" dc:"Grab MerchantID (必填)"`                                               // Grab MerchantID (必填)
-	ItemId           string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty" dc:"商品ID (partner item id, 必填)"`                                                     // 商品ID (partner item id, 必填)
-	Price            *int64                 `protobuf:"varint,3,opt,name=price,proto3,oneof" json:"price,omitempty" dc:"价格 (minor unit，单位：分)"`                                                                    // 价格 (minor unit，单位：分)
-	AvailableStatus  *string                `protobuf:"bytes,4,opt,name=available_status,json=availableStatus,proto3,oneof" json:"available_status,omitempty" dc:"可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE"` // 可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE
-	MaxStock         *int64                 `protobuf:"varint,5,opt,name=max_stock,json=maxStock,proto3,oneof" json:"max_stock,omitempty" dc:"库存数量"`                                                              // 库存数量
-	AdvancedPricings []*AdvancedPricing     `protobuf:"bytes,6,rep,name=advanced_pricings,json=advancedPricings,proto3" json:"advanced_pricings,omitempty" dc:"高级定价配置"`                                           // 高级定价配置
-	Purchasabilities []*Purchasability      `protobuf:"bytes,7,rep,name=purchasabilities,proto3" json:"purchasabilities,omitempty" dc:"购买能力配置"`                                                                   // 购买能力配置
-	RequestId        string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求 ID (可选，用于追踪)"`                                                       // 请求 ID (可选，用于追踪)
+	MerchantId       string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" dc:"Grab MerchantID (必填)"`                                                                              // Grab MerchantID (必填)
+	ItemId           string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty" dc:"商品ID (partner item id, 必填)"`                                                                                    // 商品ID (partner item id, 必填)
+	Price            *int64                 `protobuf:"varint,3,opt,name=price,proto3,oneof" json:"price,omitempty" dc:"价格 (minor unit，单位：分)"`                                                                                                   // 价格 (minor unit，单位：分)
+	AvailableStatus  *string                `protobuf:"bytes,4,opt,name=available_status,json=availableStatus,proto3,oneof" json:"available_status,omitempty" dc:"可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE, SOLD_OUT_TODAY (仅 Lineman 支持)"` // 可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE, SOLD_OUT_TODAY (仅 Lineman 支持)
+	MaxStock         *int64                 `protobuf:"varint,5,opt,name=max_stock,json=maxStock,proto3,oneof" json:"max_stock,omitempty" dc:"库存数量"`                                                                                             // 库存数量
+	AdvancedPricings []*AdvancedPricing     `protobuf:"bytes,6,rep,name=advanced_pricings,json=advancedPricings,proto3" json:"advanced_pricings,omitempty" dc:"高级定价配置"`                                                                          // 高级定价配置
+	Purchasabilities []*Purchasability      `protobuf:"bytes,7,rep,name=purchasabilities,proto3" json:"purchasabilities,omitempty" dc:"购买能力配置"`                                                                                                  // 购买能力配置
+	RequestId        string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求 ID (可选，用于追踪)"`                                                                                      // 请求 ID (可选，用于追踪)
+	ProviderName     *string                `protobuf:"bytes,9,opt,name=provider_name,json=providerName,proto3,oneof" json:"provider_name,omitempty" dc:"平台名称: grab (默认), lineman，为未来平台预留扩展"`                                                    // 平台名称: grab (默认), lineman，为未来平台预留扩展
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -450,6 +451,13 @@ func (x *UpdateMenuItemReq) GetPurchasabilities() []*Purchasability {
 func (x *UpdateMenuItemReq) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
+	}
+	return ""
+}
+
+func (x *UpdateMenuItemReq) GetProviderName() string {
+	if x != nil && x.ProviderName != nil {
+		return *x.ProviderName
 	}
 	return ""
 }
@@ -1042,7 +1050,7 @@ const file_menu_menu_proto_rawDesc = "" +
 	"\x05price\x18\x02 \x01(\x03R\x05price\"D\n" +
 	"\x0ePurchasability\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12 \n" +
-	"\vpurchasable\x18\x02 \x01(\bR\vpurchasable\"\x8c\x03\n" +
+	"\vpurchasable\x18\x02 \x01(\bR\vpurchasable\"\xc8\x03\n" +
 	"\x11UpdateMenuItemReq\x12\x1f\n" +
 	"\vmerchant_id\x18\x01 \x01(\tR\n" +
 	"merchantId\x12\x17\n" +
@@ -1053,11 +1061,13 @@ const file_menu_menu_proto_rawDesc = "" +
 	"\x11advanced_pricings\x18\x06 \x03(\v2\x15.menu.AdvancedPricingR\x10advancedPricings\x12@\n" +
 	"\x10purchasabilities\x18\a \x03(\v2\x14.menu.PurchasabilityR\x10purchasabilities\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\b \x01(\tR\trequestIdB\b\n" +
+	"request_id\x18\b \x01(\tR\trequestId\x12(\n" +
+	"\rprovider_name\x18\t \x01(\tH\x03R\fproviderName\x88\x01\x01B\b\n" +
 	"\x06_priceB\x13\n" +
 	"\x11_available_statusB\f\n" +
 	"\n" +
-	"_max_stock\"s\n" +
+	"_max_stockB\x10\n" +
+	"\x0e_provider_name\"s\n" +
 	"\x12UpdateMenuItemResp\x12\x1f\n" +
 	"\vmerchant_id\x18\x01 \x01(\tR\n" +
 	"merchantId\x12\x1b\n" +
