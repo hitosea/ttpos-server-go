@@ -3,6 +3,7 @@
 namespace app\common\model;
 
 use think\Model;
+use help\HttpHelp;
 use think\facade\Config;
 
 /**
@@ -148,6 +149,17 @@ class BaseModel extends Model
         }
     }
 
+    // 新增后
+    public static function onAfterInsert(Model $model)
+    {
+        $model->updateMainCache($model);
+    }
+
+    // 更新后
+    public static function onAfterUpdate(Model $model)
+    {
+        $model->updateMainCache($model);
+    }
 
     /**
      * 获取当前调用的模块名称
@@ -212,5 +224,46 @@ class BaseModel extends Model
     public function lists()
     {
         return $this->select();
+    }
+
+    /**
+     * 更新缓存
+     * 异步调用 Go Main 项目的缓存失效接口
+     * 
+     * @param Model $model 模型实例
+     * @return void
+     */
+    public function updateMainCache(Model $model)
+    {
+        $tableName = $model->getTable();
+        
+        // 跳过不需要更新缓存的表
+        if ($tableName == 'ttpos_staff_operation_log') {
+            return;
+        }
+
+        // 获取商户ID
+        $appId = request()->appId ?? 0;
+        if (empty($appId)) {
+            return;
+        }
+
+        try {
+            // 调用 Go Main 项目的缓存失效接口（内部接口）
+            $url = 'http://nginx/api/v1/internal/shop/product/cache/invalidate';
+            // 使用 HttpHelp 发送 POST 请求
+            HttpHelp::postRequest($url,  json_encode([
+                'company_uuid' => $appId,
+            ]), [
+                'Content-Type: application/json',
+                'X-API-KEY: ' . env('JWT_SECRET'),
+            ], 1);
+        } catch (\Exception $e) {
+            \think\facade\Log::error('缓存失效任务执行失败: ' . $e->getMessage(), [
+                'table_name' => $tableName,
+                'app_id' => $appId,
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
     }
 }

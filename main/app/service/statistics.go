@@ -101,6 +101,7 @@ type CountSaleResp struct {
 	TotalInstantOrderTakeawayAmount float64 `json:"total_instant_order_takeaway_amount"` // 即时订单金额（外卖）
 	TotalTakeoutOrderNum            int64   `json:"total_takeout_order_num"`             // 总外送订单数
 	TotalTakeoutOrderAmount         float64 `json:"total_takeout_order_amount"`          // 总外送订单金额
+	TotalRechargeAmount             float64 `json:"total_recharge_amount"`               // 总充值金额
 	MinOrderAmount                  float64 `json:"min_order_amount"`                    // 最小订单金额
 	MaxOrderAmount                  float64 `json:"max_order_amount"`                    // 最大订单金额
 	AvgOrderAmount                  float64 `json:"avg_order_amount"`                    // 平均订单金额
@@ -213,6 +214,7 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		MinTakeoutOrderAmount:           saleData.MinTakeoutOrderAmount.Float64,
 		MaxTakeoutOrderAmount:           saleData.MaxTakeoutOrderAmount.Float64,
 		AvgTakeoutOrderAmount:           saleData.AvgTakeoutOrderAmount.Float64,
+		TotalRechargeAmount:             memberData.TotalRechargeAmount,
 	}
 }
 
@@ -252,6 +254,7 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			totalTakeoutDeliveryFee         decimal.Decimal
 			totalInstantOrderAmount         decimal.Decimal
 			totalInstantOrderTakeawayAmount decimal.Decimal
+			totalRechargeAmount             decimal.Decimal
 			avgInstantOrderTakeawayAmount   decimal.Decimal
 			minOrderAmount                  decimal.Decimal
 			maxOrderAmount                  decimal.Decimal
@@ -335,6 +338,7 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			totalBusinessAmount = totalBusinessAmount.Add(decimal.NewFromFloat(memberResult.TotalPaymentAmount.Float64))
 			totalPaymentFee = totalPaymentFee.Add(decimal.NewFromFloat(memberResult.TotalPaymentFee.Float64))
 			totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(memberResult.TotalRefundAmount.Float64))
+			totalRechargeAmount = totalRechargeAmount.Add(decimal.NewFromFloat(memberResult.TotalRechargeAmount.Float64))
 		}
 		list = append(list, CountSaleDaysResp{
 			CountSaleResp: CountSaleResp{
@@ -360,6 +364,7 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 				TotalInstantOrderNum:            totalInstantOrderNum,
 				TotalInstantOrderAmount:         totalInstantOrderAmount.InexactFloat64(),
 				TotalInstantOrderTakeawayAmount: totalInstantOrderTakeawayAmount.InexactFloat64(),
+				TotalRechargeAmount:             totalRechargeAmount.InexactFloat64(),
 				AvgInstantOrderTakeawayAmount:   avgInstantOrderTakeawayAmount.InexactFloat64(),
 				TotalTakeoutOrderNum:            totalTakeoutOrderNum,
 				TotalTakeoutSaleAmount:          totalTakeoutSaleAmount.InexactFloat64(),
@@ -2291,6 +2296,7 @@ type CountExportData struct {
 	TotalTakeoutBusinessAmount float64                  `json:"total_takeout_business_amount"`
 	TotalTakeoutRefundAmount   float64                  `json:"total_takeout_refund_amount"`
 	TotalTakeoutDeliveryFee    float64                  `json:"total_takeout_delivery_fee"`
+	TotalRechargeAmount        float64                  `json:"total_recharge_amount"`
 	MinOrderAmount             float64                  `json:"min_order_amount"`
 	MaxOrderAmount             float64                  `json:"max_order_amount"`
 	AvgOrderAmount             float64                  `json:"avg_order_amount"`
@@ -2435,6 +2441,7 @@ func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExp
 			TotalTakeoutRefundAmount:   sale.TotalTakeoutRefundAmount,
 			TotalTakeoutDeliveryFee:    sale.TotalTakeoutDeliveryFee,
 			TotalReceivedAmount:        sale.TotalReceivedAmount,
+			TotalRechargeAmount:        sale.TotalRechargeAmount,
 			TotalOrderNum:              sale.TotalOrderNum,
 			MinOrderAmount:             sale.MinOrderAmount,
 			MaxOrderAmount:             sale.MaxOrderAmount,
