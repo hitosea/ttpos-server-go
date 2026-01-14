@@ -21,7 +21,6 @@ type ProductAttributeBatchQueryFunc func(db *gorm.DB, uuids []uint64) ([]*model.
 var (
 	productAttributeControllerInstance *CacheObjectController[*model.ProductAttribute]
 	productAttributeControllerOnce     sync.Once
-	productAttributeControllerMutex    sync.RWMutex
 )
 
 // InitProductAttributeController 初始化 ProductAttribute 对象的缓存控制器（单例模式）
@@ -36,23 +35,22 @@ func InitProductAttributeController(
 	queryFunc ProductAttributeQueryFunc,
 	batchQueryFunc ProductAttributeBatchQueryFunc,
 ) {
-	InitCacheObjectController[*model.ProductAttribute](
-		underlyingCache,
-		ttl,
-		func(db *gorm.DB, uuid uint64) (*model.ProductAttribute, error) {
-			return queryFunc(db, uuid)
-		},
-		func(db *gorm.DB, uuids []uint64) ([]*model.ProductAttribute, error) {
-			return batchQueryFunc(db, uuids)
-		},
-		func(obj *model.ProductAttribute) uint64 {
-			return obj.Uuid
-		},
-		persistence.ObjectTypeProductAttribute,
-		&productAttributeControllerInstance,
-		&productAttributeControllerOnce,
-		&productAttributeControllerMutex,
-	)
+	productAttributeControllerOnce.Do(func() {
+		productAttributeControllerInstance = InitCacheObjectController[*model.ProductAttribute](
+			underlyingCache,
+			ttl,
+			func(db *gorm.DB, uuid uint64) (*model.ProductAttribute, error) {
+				return queryFunc(db, uuid)
+			},
+			func(db *gorm.DB, uuids []uint64) ([]*model.ProductAttribute, error) {
+				return batchQueryFunc(db, uuids)
+			},
+			func(obj *model.ProductAttribute) uint64 {
+				return obj.Uuid
+			},
+			persistence.ObjectTypeProductAttribute,
+		)
+	})
 }
 
 // GetProductAttributeController 获取 ProductAttribute 对象的缓存控制器单例实例
@@ -60,10 +58,5 @@ func InitProductAttributeController(
 // 返回：
 //   - *CacheObjectController[*model.ProductAttribute]: ProductAttribute 缓存对象控制器实例（保证非 nil）
 func GetProductAttributeController() *CacheObjectController[*model.ProductAttribute] {
-	return GetCacheObjectController[*model.ProductAttribute](
-		&productAttributeControllerInstance,
-		&productAttributeControllerMutex,
-		"ProductAttribute 缓存控制器未初始化，请先调用 InitProductAttributeController",
-	)
+	return productAttributeControllerInstance
 }
-

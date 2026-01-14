@@ -21,7 +21,6 @@ type NationalityBatchQueryFunc func(db *gorm.DB, uuids []uint64) ([]*model.Natio
 var (
 	nationalityControllerInstance *CacheObjectController[*model.Nationality]
 	nationalityControllerOnce     sync.Once
-	nationalityControllerMutex    sync.RWMutex
 )
 
 // InitNationalityController 初始化 Nationality 对象的缓存控制器（单例模式）
@@ -36,23 +35,22 @@ func InitNationalityController(
 	queryFunc NationalityQueryFunc,
 	batchQueryFunc NationalityBatchQueryFunc,
 ) {
-	InitCacheObjectController[*model.Nationality](
-		underlyingCache,
-		ttl,
-		func(db *gorm.DB, uuid uint64) (*model.Nationality, error) {
-			return queryFunc(db, uuid)
-		},
-		func(db *gorm.DB, uuids []uint64) ([]*model.Nationality, error) {
-			return batchQueryFunc(db, uuids)
-		},
-		func(obj *model.Nationality) uint64 {
-			return obj.Uuid
-		},
-		persistence.ObjectTypeNationality,
-		&nationalityControllerInstance,
-		&nationalityControllerOnce,
-		&nationalityControllerMutex,
-	)
+	nationalityControllerOnce.Do(func() {
+		nationalityControllerInstance = InitCacheObjectController[*model.Nationality](
+			underlyingCache,
+			ttl,
+			func(db *gorm.DB, uuid uint64) (*model.Nationality, error) {
+				return queryFunc(db, uuid)
+			},
+			func(db *gorm.DB, uuids []uint64) ([]*model.Nationality, error) {
+				return batchQueryFunc(db, uuids)
+			},
+			func(obj *model.Nationality) uint64 {
+				return obj.Uuid
+			},
+			persistence.ObjectTypeNationality,
+		)
+	})
 }
 
 // GetNationalityController 获取 Nationality 对象的缓存控制器单例实例
@@ -60,9 +58,5 @@ func InitNationalityController(
 // 返回：
 //   - *CacheObjectController[*model.Nationality]: Nationality 缓存对象控制器实例（保证非 nil）
 func GetNationalityController() *CacheObjectController[*model.Nationality] {
-	return GetCacheObjectController[*model.Nationality](
-		&nationalityControllerInstance,
-		&nationalityControllerMutex,
-		"Nationality 缓存控制器未初始化，请先调用 InitNationalityController",
-	)
+	return nationalityControllerInstance
 }

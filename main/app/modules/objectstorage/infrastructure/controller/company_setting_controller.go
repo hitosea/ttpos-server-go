@@ -21,7 +21,6 @@ type CompanySettingBatchQueryFunc func(db *gorm.DB, uuids []uint64) ([]*model.Co
 var (
 	companySettingControllerInstance *CacheObjectController[*model.CompanySetting]
 	companySettingControllerOnce     sync.Once
-	companySettingControllerMutex    sync.RWMutex
 )
 
 // InitCompanySettingController 初始化 CompanySetting 对象的缓存控制器（单例模式）
@@ -36,23 +35,22 @@ func InitCompanySettingController(
 	queryFunc CompanySettingQueryFunc,
 	batchQueryFunc CompanySettingBatchQueryFunc,
 ) {
-	InitCacheObjectController[*model.CompanySetting](
-		underlyingCache,
-		ttl,
-		func(db *gorm.DB, uuid uint64) (*model.CompanySetting, error) {
-			return queryFunc(db, uuid)
-		},
-		func(db *gorm.DB, uuids []uint64) ([]*model.CompanySetting, error) {
-			return batchQueryFunc(db, uuids)
-		},
-		func(obj *model.CompanySetting) uint64 {
-			return obj.Uuid
-		},
-		persistence.ObjectTypeCompanySetting,
-		&companySettingControllerInstance,
-		&companySettingControllerOnce,
-		&companySettingControllerMutex,
-	)
+	companySettingControllerOnce.Do(func() {
+		companySettingControllerInstance = InitCacheObjectController[*model.CompanySetting](
+			underlyingCache,
+			ttl,
+			func(db *gorm.DB, uuid uint64) (*model.CompanySetting, error) {
+				return queryFunc(db, uuid)
+			},
+			func(db *gorm.DB, uuids []uint64) ([]*model.CompanySetting, error) {
+				return batchQueryFunc(db, uuids)
+			},
+			func(obj *model.CompanySetting) uint64 {
+				return obj.Uuid
+			},
+			persistence.ObjectTypeCompanySetting,
+		)
+	})
 }
 
 // GetCompanySettingController 获取 CompanySetting 对象的缓存控制器单例实例
@@ -60,9 +58,5 @@ func InitCompanySettingController(
 // 返回：
 //   - *CacheObjectController[*model.CompanySetting]: CompanySetting 缓存对象控制器实例（保证非 nil）
 func GetCompanySettingController() *CacheObjectController[*model.CompanySetting] {
-	return GetCacheObjectController[*model.CompanySetting](
-		&companySettingControllerInstance,
-		&companySettingControllerMutex,
-		"CompanySetting 缓存控制器未初始化，请先调用 InitCompanySettingController",
-	)
+	return companySettingControllerInstance
 }

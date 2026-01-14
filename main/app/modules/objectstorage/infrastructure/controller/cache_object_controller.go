@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"ttpos-server-go/app/model"
@@ -347,14 +346,13 @@ func extractUUIDFromKey(key string) (uint64, error) {
 // InitCacheObjectController[T] 初始化缓存对象控制器（泛型，单例模式）
 // 参数：
 //   - underlyingCache: 底层缓存实例
-//   - ttl: 缓存 TTL（默认 10 分钟）
+//   - ttl: 缓存 TTL（默认 5 分钟）
 //   - queryFunc: 单个对象查询函数
 //   - batchQueryFunc: 批量对象查询函数
 //   - getUUIDFunc: 从对象中提取 UUID 的函数
 //   - objectType: 对象类型（用于构建缓存 key）
 //   - instance: 单例实例指针（用于存储控制器实例）
 //   - once: sync.Once 实例（确保只初始化一次）
-//   - mutex: sync.RWMutex 实例（用于线程安全访问）
 //   - opts: 可选参数，如 adapter.WithEnableL1Cache(false) 禁用 L1 缓存
 func InitCacheObjectController[T any](
 	underlyingCache cache.Cache,
@@ -363,46 +361,22 @@ func InitCacheObjectController[T any](
 	batchQueryFunc BatchQueryFunc[T],
 	getUUIDFunc GetUUIDFunc[T],
 	objectType string,
-	instance **CacheObjectController[T],
-	once *sync.Once,
-	mutex *sync.RWMutex,
 	opts ...func(*adapter.CacheLayerOption),
-) {
+) *CacheObjectController[T] {
 	if ttl == 0 {
-		ttl = 10 * time.Minute
+		ttl = 5 * time.Minute
 	}
 
-	once.Do(func() {
-		// 创建缓存层
-		cacheLayer := adapter.GetOrderObjectCache[T](underlyingCache, ttl, opts...)
+	// 创建缓存层
+	cacheLayer := adapter.GetOrderObjectCache[T](underlyingCache, ttl, opts...)
 
-		*instance = &CacheObjectController[T]{
-			cacheLayer:      cacheLayer,
-			queryFunc:       queryFunc,
-			batchQueryFunc:  batchQueryFunc,
-			getUUIDFunc:     getUUIDFunc,
-			objectType:      objectType,
-			ttl:             ttl,
-			underlyingCache: underlyingCache,
-		}
-	})
-}
-
-// GetCacheObjectController[T] 获取缓存对象控制器单例实例（泛型）
-// 保证返回非 nil 值，如果未初始化会 panic
-// 参数：
-//   - instance: 单例实例指针
-//   - mutex: sync.RWMutex 实例（用于线程安全访问）
-//   - panicMsg: panic 消息
-//
-// 返回：
-//   - *CacheObjectController[T]: 缓存对象控制器实例（保证非 nil）
-func GetCacheObjectController[T any](
-	instance **CacheObjectController[T],
-	mutex *sync.RWMutex,
-	panicMsg string,
-) *CacheObjectController[T] {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	return *instance
+	return &CacheObjectController[T]{
+		cacheLayer:      cacheLayer,
+		queryFunc:       queryFunc,
+		batchQueryFunc:  batchQueryFunc,
+		getUUIDFunc:     getUUIDFunc,
+		objectType:      objectType,
+		ttl:             ttl,
+		underlyingCache: underlyingCache,
+	}
 }
