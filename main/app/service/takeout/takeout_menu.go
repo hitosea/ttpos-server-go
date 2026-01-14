@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/model"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	domainService "ttpos-server-go/app/modules/takeout/domain/service"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
@@ -47,12 +48,12 @@ type ITakeoutMenuSrv interface {
 
 // ToggleTakeoutStatus 切换指定平台外卖状态
 func (s *takeoutSrv) ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
-	if req.Platform == "grab" {
+	if strings.ToLower(req.Platform) == value_object.TakeoutPlatformGrab {
 		err := service.NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveGrabPaymentMethod(ctx, ctx.GetDB())
 		if err != nil {
 			return nil, errors.WithMessage(errors.New("保存Grab支付方式失败"), err.Error())
 		}
-	} else if req.Platform == "lineman" {
+	} else if strings.ToLower(req.Platform) == value_object.TakeoutPlatformLineman {
 		err := service.NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveLineManPaymentMethod(ctx, ctx.GetDB())
 		if err != nil {
 			return nil, errors.WithMessage(errors.New("保存LINE MAN支付方式失败"), err.Error())
@@ -236,7 +237,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 	}
 
 	// 将 Grab 格式转换为 TTPOS entity 格式
-	grabConverter := grab.NewGrabConverter(s.dbm, nil)
+	grabConverter := grab.NewGrabConverter(s.dbm)
 	result, err := grabConverter.ConvertToTTPOS(ctx, grabMenu)
 	if err != nil {
 		return nil, errors.WithMessage(errors.New("转换菜单格式失败"), err.Error())
