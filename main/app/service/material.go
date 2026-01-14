@@ -2355,7 +2355,7 @@ func (s *materialSrv) unlinkProductBomCard(ctx context.Context, req req.ProductB
 		}
 		// 解除成本卡关联
 		productBomCardRepo := repository.NewProductBomRepo(tx)
-		if err := productBomCardRepo.UpdateProductBomCard(req.RelatedUuid, 0, 999999999); err != nil {
+		if err := productBomCardRepo.UpdateProductBomCard(req.RelatedUuid, 0, constant.ProductBomInfiniteStock); err != nil {
 			return errors.WithMessage(err, "更新成本卡失败")
 		}
 		if err := repository.NewProductBomCardLogRepo(tx).CreateProductBomCardLog(*productBomCardLog); err != nil {
