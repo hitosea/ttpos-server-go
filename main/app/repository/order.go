@@ -1823,9 +1823,7 @@ func (r *orderRepo) QuerySaleBillForObjectStorage(saleBillUuid uint64, uuidFilte
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
+				Args:  []any{},
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
