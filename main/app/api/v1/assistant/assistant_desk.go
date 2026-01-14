@@ -12,13 +12,18 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -31,6 +36,18 @@ type DeskHandler struct {
 	orderSrv   service.IOrderSrv
 	memberSrv  service.IMemberSrv
 	otherSrv   service.IOtherSrv
+}
+
+// InvalidateSaleBillSettingCache 失效销售单设置缓存（辅助函数）
+// 参数：
+//   - ctx: 上下文, 用于提取 companyUuid
+func (h *DeskHandler) InvalidateSaleBillSettingCache(ctx context.Context) {
+	if !adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		return
+	}
+	if err := controller.GetSaleBillSettingController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Logger.Error("失效销售单设置缓存失败", zap.Error(err))
+	}
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -394,6 +411,10 @@ func (h *DeskHandler) OrderCheck(c *gin.Context) {
 		return
 	}
 	if checkRes != nil {
+
+		// 如果开启缓存,要失效sale_bill_setting的缓存
+		h.InvalidateSaleBillSettingCache(ctx)
+
 		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
 		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
@@ -902,6 +923,8 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 		return
 	}
 	if checkRes != nil {
+		// 如果开启缓存,要失效sale_bill_setting的缓存
+		h.InvalidateSaleBillSettingCache(ctx)
 		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
 		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
