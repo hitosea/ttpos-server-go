@@ -8,9 +8,11 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -925,8 +927,9 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 	productCategoryTable := prefix + "product_category as pc"
 	productParentCategoryTable := prefix + "product_category as ppc"
 
-	db.Table(statisticsProductTable).
+	err := db.Table(statisticsProductTable).
 		Select(
+			"sp.product_bom_uuid AS product_bom_uuid",
 			"CASE WHEN pp.name IS NOT NULL AND pp.name != '' THEN JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) ELSE '' END AS product_name",
 			"CASE WHEN pb.name IS NOT NULL AND pb.name != '' THEN JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) ELSE '' END AS flavor_name",
 			"pb.price AS sale_price",
@@ -935,6 +938,8 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 			"IF(pc.parent_uuid = 0, pc.sort, ppc.sort) AS ppc_sort",
 			"IF(pc.parent_uuid = 0, pc.create_time, ppc.create_time) AS ppc_create_time",
 			"IF(pc.parent_uuid = 0, 0, pc.sort) AS pc_sort",
+			"pc.create_time AS pc_create_time",
+			"pp.create_time AS pp_create_time",
 			"pp.product_type",
 		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
@@ -947,7 +952,11 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 		Order("pc_sort ASC").
 		Order("pc.create_time DESC").
 		Order("pp.create_time DESC").
-		Find(&result)
+		Find(&result).Error
+	if err != nil {
+		// 记录错误日志
+		logger.Logger.Error("查询商品统计失败", zap.Error(err))
+	}
 
 	return result
 }
