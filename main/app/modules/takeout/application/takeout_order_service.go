@@ -61,7 +61,7 @@ func NewTakeoutOrderAppService(
 
 	// 初始化平台转换器
 	converters := make(map[string]*grab.GrabConverter)
-	grabConverter := grab.NewGrabConverter(dbm, nil)
+	grabConverter := grab.NewGrabConverter(dbm)
 	converters["grab"] = grabConverter
 	// 后续可添加其他平台：converters["lineman"] = lineman.NewLinemanConverter(dbm)
 
