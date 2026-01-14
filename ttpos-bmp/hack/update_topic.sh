@@ -93,7 +93,7 @@ else
     while IFS= read -r topic; do
         if [ -n "$topic" ]; then
             echo "正在创建 topic: $topic"
-            timeout 5 docker run $NETWORK_OPTS --rm apache/rocketmq:5.3.4 ./mqadmin updateTopic \
+            timeout 15 docker run $NETWORK_OPTS --rm apache/rocketmq:5.3.4 ./mqadmin updateTopic \
                 -n "$ROCKETMQ_NAME_SRV_ADDR" \
                 -t "$topic" \
                 -p 6 \
