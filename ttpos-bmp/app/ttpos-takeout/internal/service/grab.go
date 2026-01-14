@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 	"time"
+	api "ttpos-bmp/app/ttpos-takeout/api/menu"
 	orderApi "ttpos-bmp/app/ttpos-takeout/api/order"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
@@ -88,10 +89,7 @@ type (
 		// 返回：
 		//   - resp: 批量更新响应，包含状态和错误列表
 		//   - err: 错误信息
-		BatchUpdateMenuItems(ctx context.Context, req *grabDto.BatchUpdateMenuReq) (*grabDto.BatchUpdateMenuResp, error)
-		// HandleGetMenuInternal 处理 Grab 获取菜单请求 (Partner Endpoint)
-		// 别名方法，用于满足接口定义
-		HandleGetMenuInternal(ctx context.Context, partnerMerchantID string) (*grabfood.GetMenuNewResponse, error)
+		BatchUpdateMenuItems(ctx context.Context, req *api.BatchUpdateMenuReq) (*api.BatchUpdateMenuResp, error)
 		// HandleSubmitOrder 处理 Grab 提交订单 Webhook
 		// 签名验证已由中间件完成，此处只处理业务逻辑
 		// 使用 SDK grabfood.SubmitOrderRequest 替换自定义 DTO

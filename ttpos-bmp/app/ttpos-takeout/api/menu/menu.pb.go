@@ -781,10 +781,11 @@ func (x *MenuEntity) GetPurchasabilities() []*Purchasability {
 // 批量更新菜单请求
 type BatchUpdateMenuReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ShopUuid      string                 `protobuf:"bytes,1,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"店铺 UUID (必填)"`                 // 店铺 UUID (必填)
-	Field         string                 `protobuf:"bytes,2,opt,name=field,proto3" json:"field,omitempty" dc:"字段类型: ITEM (商品) (必填)"`                               // 字段类型: ITEM (商品) (必填)
-	MenuEntities  []*MenuEntity          `protobuf:"bytes,3,rep,name=menu_entities,json=menuEntities,proto3" json:"menu_entities,omitempty" dc:"菜单实体列表 (1-200 个)"` // 菜单实体列表 (1-200 个)
-	RequestId     string                 `protobuf:"bytes,4,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求 ID (可选，用于追踪)"`           // 请求 ID (可选，用于追踪)
+	ShopUuid      string                 `protobuf:"bytes,1,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"店铺 UUID (必填)"`                               // 店铺 UUID (必填)
+	Field         string                 `protobuf:"bytes,2,opt,name=field,proto3" json:"field,omitempty" dc:"字段类型: ITEM (商品), MODIFIER (修饰符) (必填)"`                             // 字段类型: ITEM (商品), MODIFIER (修饰符) (必填)
+	MenuEntities  []*MenuEntity          `protobuf:"bytes,3,rep,name=menu_entities,json=menuEntities,proto3" json:"menu_entities,omitempty" dc:"菜单实体列表 (1-200 个)"`               // 菜单实体列表 (1-200 个)
+	RequestId     string                 `protobuf:"bytes,4,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求 ID (可选，用于追踪)"`                         // 请求 ID (可选，用于追踪)
+	ProviderName  *string                `protobuf:"bytes,5,opt,name=provider_name,json=providerName,proto3,oneof" json:"provider_name,omitempty" dc:"平台名称: grab (默认), lineman"` // 平台名称: grab (默认), lineman
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -843,6 +844,13 @@ func (x *BatchUpdateMenuReq) GetMenuEntities() []*MenuEntity {
 func (x *BatchUpdateMenuReq) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
+	}
+	return ""
+}
+
+func (x *BatchUpdateMenuReq) GetProviderName() string {
+	if x != nil && x.ProviderName != nil {
+		return *x.ProviderName
 	}
 	return ""
 }
@@ -1113,13 +1121,15 @@ const file_menu_menu_proto_rawDesc = "" +
 	"\x06_priceB\x13\n" +
 	"\x11_available_statusB\f\n" +
 	"\n" +
-	"_max_stock\"\x9d\x01\n" +
+	"_max_stock\"\xd9\x01\n" +
 	"\x12BatchUpdateMenuReq\x12\x1b\n" +
 	"\tshop_uuid\x18\x01 \x01(\tR\bshopUuid\x12\x14\n" +
 	"\x05field\x18\x02 \x01(\tR\x05field\x125\n" +
 	"\rmenu_entities\x18\x03 \x03(\v2\x10.menu.MenuEntityR\fmenuEntities\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x04 \x01(\tR\trequestId\"e\n" +
+	"request_id\x18\x04 \x01(\tR\trequestId\x12(\n" +
+	"\rprovider_name\x18\x05 \x01(\tH\x00R\fproviderName\x88\x01\x01B\x10\n" +
+	"\x0e_provider_name\"e\n" +
 	"\x0fMenuEntityError\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1208,6 +1218,7 @@ func file_menu_menu_proto_init() {
 	file_menu_menu_proto_msgTypes[6].OneofWrappers = []any{}
 	file_menu_menu_proto_msgTypes[8].OneofWrappers = []any{}
 	file_menu_menu_proto_msgTypes[10].OneofWrappers = []any{}
+	file_menu_menu_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

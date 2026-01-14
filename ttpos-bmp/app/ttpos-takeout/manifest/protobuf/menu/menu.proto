@@ -97,9 +97,10 @@ message MenuEntity {
 // 批量更新菜单请求
 message BatchUpdateMenuReq {
   string shop_uuid = 1;                 // 店铺 UUID (必填)
-  string field = 2;                     // 字段类型: ITEM (商品) (必填)
+  string field = 2;                     // 字段类型: ITEM (商品), MODIFIER (修饰符) (必填)
   repeated MenuEntity menu_entities = 3; // 菜单实体列表 (1-200 个)
   string request_id = 4;                // 请求 ID (可选，用于追踪)
+  optional string provider_name = 5;    // 平台名称: grab (默认), lineman
 }
 
 // 菜单实体错误信息

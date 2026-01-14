@@ -2,6 +2,7 @@ package menu
 
 import (
 	"context"
+	"fmt"
 
 	api "ttpos-bmp/app/ttpos-takeout/api/menu"
 	"ttpos-bmp/app/ttpos-takeout/api/takeout"
@@ -521,122 +522,43 @@ func (c *Controller) validateLinemanModifierRequest(req *api.UpdateMenuModifierR
 // 参数：shop_uuid、field、menu_entities 必填
 // 返回：takeout.ApiResponse 统一响应格式
 func (c *Controller) BatchUpdateMenu(ctx context.Context, req *api.BatchUpdateMenuReq) (*takeout.ApiResponse, error) {
-	// 1. 从 shop_provider_cfg 获取 Grab merchant_id (仅支持 Grab)
-	merchantID, err := service.ShopProviderCfg().GetProviderMerchantID(ctx, req.ShopUuid, "grab")
+	// 1. 获取 provider_name，默认为 grab
+	providerName := "grab"
+	if req.ProviderName != nil && *req.ProviderName != "" {
+		providerName = *req.ProviderName
+	}
+
+	g.Log().Infof(ctx, "[Menu] BatchUpdateMenu: provider=%s, shopUUID=%s, field=%s, count=%d",
+		providerName, req.ShopUuid, req.Field, len(req.MenuEntities))
+
+	// 2. 根据平台路由到对应处理逻辑
+	switch providerName {
+	case "grab":
+		return c.handleGrabBatchUpdate(ctx, req)
+	case "lineman":
+		return c.handleLinemanBatchUpdate(ctx, req)
+	default:
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: fmt.Sprintf("不支持的平台: %s", providerName),
+		}, nil
+	}
+}
+
+// handleGrabBatchUpdate Grab 平台批量更新处理
+func (c *Controller) handleGrabBatchUpdate(ctx context.Context, req *api.BatchUpdateMenuReq) (*takeout.ApiResponse, error) {
+	// 调用 Grab Service 层
+	protoResp, err := service.Grab().BatchUpdateMenuItems(ctx, req)
 	if err != nil {
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeServiceError),
-			Message: err.Error(),
-		}, nil
-	}
-
-	// 2. 参数校验
-	if req.Field == "" {
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeInvalidParam),
-			Message: "field 不能为空",
-		}, nil
-	}
-	if req.Field != grabDto.MenuItemUpdateFieldItem && req.Field != grabDto.MenuItemUpdateFieldModifier {
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeInvalidParam),
-			Message: "field 必须是 ITEM 或 MODIFIER",
-		}, nil
-	}
-	if len(req.MenuEntities) == 0 {
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeInvalidParam),
-			Message: "menu_entities 不能为空",
-		}, nil
-	}
-	if len(req.MenuEntities) > 100 {
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeInvalidParam),
-			Message: "menu_entities 数量不能超过 100 个",
-		}, nil
-	}
-
-	// 3. Proto → DTO 转换（使用查询到的 merchantID）
-	dtoReq := &grabDto.BatchUpdateMenuReq{
-		MerchantID:   merchantID,
-		Field:        req.Field,
-		MenuEntities: make([]grabDto.MenuEntity, 0, len(req.MenuEntities)),
-	}
-
-	// 转换 MenuEntities
-	for _, protoEntity := range req.MenuEntities {
-		dtoEntity := grabDto.MenuEntity{
-			ID: protoEntity.Id,
-		}
-
-		// 处理可选字段 - Price
-		if protoEntity.Price != nil {
-			price := *protoEntity.Price
-			dtoEntity.Price = &price
-		}
-
-		// 处理可选字段 - AvailableStatus
-		if protoEntity.AvailableStatus != nil {
-			dtoEntity.AvailableStatus = *protoEntity.AvailableStatus
-		}
-
-		// 处理可选字段 - MaxStock（仅商品支持）
-		if protoEntity.MaxStock != nil {
-			stock := *protoEntity.MaxStock
-			dtoEntity.MaxStock = &stock
-		}
-
-		// 转换高级定价配置
-		for _, ap := range protoEntity.AdvancedPricings {
-			dtoEntity.AdvancedPricings = append(dtoEntity.AdvancedPricings,
-				grabDto.UpdateAdvancedPricingReq{
-					Key:   ap.Key,
-					Price: ap.Price,
-				})
-		}
-
-		// 转换购买能力配置（仅商品支持）
-		for _, p := range protoEntity.Purchasabilities {
-			dtoEntity.Purchasabilities = append(dtoEntity.Purchasabilities,
-				grabDto.UpdatePurchasabilityReq{
-					Key:         p.Key,
-					Purchasable: p.Purchasable,
-				})
-		}
-
-		dtoReq.MenuEntities = append(dtoReq.MenuEntities, dtoEntity)
-	}
-
-	// 4. 调用 Service 层
-	dtoResp, err := service.Grab().BatchUpdateMenuItems(ctx, dtoReq)
-	if err != nil {
-		g.Log().Errorf(ctx, "[Menu] BatchUpdateMenu failed: shopUUID=%s, merchantID=%s, field=%s, count=%d, error=%v",
-			req.ShopUuid, merchantID, req.Field, len(req.MenuEntities), err)
+		g.Log().Errorf(ctx, "[Menu] Grab BatchUpdateMenu failed: shopUUID=%s, field=%s, count=%d, error=%v",
+			req.ShopUuid, req.Field, len(req.MenuEntities), err)
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeServiceError),
 			Message: "批量更新菜单失败: " + err.Error(),
 		}, nil
 	}
 
-	// 5. DTO → Proto 响应转换
-	protoResp := &api.BatchUpdateMenuResp{
-		ShopUuid: req.ShopUuid,
-		Status:   dtoResp.Status,
-	}
-
-	// 转换错误列表
-	if len(dtoResp.Errors) > 0 {
-		protoResp.Errors = make([]*api.MenuEntityError, 0, len(dtoResp.Errors))
-		for _, dtoErr := range dtoResp.Errors {
-			protoResp.Errors = append(protoResp.Errors, &api.MenuEntityError{
-				Id:           dtoErr.ID,
-				ErrorCode:    dtoErr.ErrorCode,
-				ErrorMessage: dtoErr.ErrorMessage,
-			})
-		}
-	}
-
-	// 6. 包装为 ApiResponse
+	// 包装为 ApiResponse
 	dataAny, err := anypb.New(protoResp)
 	if err != nil {
 		return &takeout.ApiResponse{
@@ -645,8 +567,39 @@ func (c *Controller) BatchUpdateMenu(ctx context.Context, req *api.BatchUpdateMe
 		}, nil
 	}
 
-	g.Log().Infof(ctx, "[Menu] BatchUpdateMenu success: shopUUID=%s, merchantID=%s, field=%s, status=%s, count=%d, errorCount=%d",
-		req.ShopUuid, merchantID, req.Field, dtoResp.Status, len(req.MenuEntities), len(dtoResp.Errors))
+	g.Log().Infof(ctx, "[Menu] Grab BatchUpdateMenu success: shopUUID=%s, field=%s, status=%s, count=%d, errorCount=%d",
+		req.ShopUuid, req.Field, protoResp.Status, len(req.MenuEntities), len(protoResp.Errors))
+	return &takeout.ApiResponse{
+		Code:    string(consts.CodeSuccess),
+		Message: consts.MsgSuccess,
+		Data:    dataAny,
+	}, nil
+}
+
+// handleLinemanBatchUpdate Lineman 平台批量更新处理
+func (c *Controller) handleLinemanBatchUpdate(ctx context.Context, req *api.BatchUpdateMenuReq) (*takeout.ApiResponse, error) {
+	// 调用 Lineman Service 层
+	protoResp, err := service.Lineman().BatchUpdateMenuItems(ctx, req)
+	if err != nil {
+		g.Log().Errorf(ctx, "[Menu] Lineman BatchUpdateMenu failed: shopUUID=%s, field=%s, count=%d, error=%v",
+			req.ShopUuid, req.Field, len(req.MenuEntities), err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeServiceError),
+			Message: "批量更新菜单失败: " + err.Error(),
+		}, nil
+	}
+
+	// 包装为 ApiResponse
+	dataAny, err := anypb.New(protoResp)
+	if err != nil {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeSerializeError),
+			Message: consts.MsgSerializeFailed,
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "[Menu] Lineman BatchUpdateMenu success: shopUUID=%s, field=%s, status=%s, count=%d, errorCount=%d",
+		req.ShopUuid, req.Field, protoResp.Status, len(req.MenuEntities), len(protoResp.Errors))
 	return &takeout.ApiResponse{
 		Code:    string(consts.CodeSuccess),
 		Message: consts.MsgSuccess,
