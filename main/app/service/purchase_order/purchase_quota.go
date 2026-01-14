@@ -257,7 +257,7 @@ func (s *purchaseOrderSrv) getDailyUsedQuota(
 	headquarterDb := s.dbm.GetDB(headquarterUuid)
 
 	// 使用系统时区计算今天的起止时间戳
-	todayStart, todayEnd := utils.SetTimezone("").TodayStartEndUnix()
+	todayStart, todayEnd := utils.SetTimezone(companySetting.GetTimezone()).TodayStartEndUnix()
 
 	// 通过 Repository 统计已使用额度
 	return repository.NewPurchaseOrderItemRepo(headquarterDb).SumBrandPurchaseByTimeRange(
@@ -290,7 +290,7 @@ func (s *purchaseOrderSrv) getMonthlyUsedQuota(
 	headquarterDb := s.dbm.GetDB(headquarterUuid)
 
 	// 使用系统时区计算当前月份（格式：2026-01）
-	currentMonth := utils.SetTimezone("").Now().Format("2006-01")
+	currentMonth := utils.SetTimezone(companySetting.GetTimezone()).Now().Format("2006-01")
 
 	// 通过 Repository 统计已使用额度
 	return repository.NewPurchaseOrderItemRepo(headquarterDb).SumBrandPurchaseByMonth(
