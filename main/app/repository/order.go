@@ -1916,6 +1916,9 @@ func (r *orderRepo) QuerySaleBillForObjectStorage(saleBillUuid uint64, uuidFilte
 		uuidFilter,
 	)
 	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, errors.WithMessage(errors.New("订单已失效"))
+		}
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
 	}
 	if saleBill.IsDelete() {
