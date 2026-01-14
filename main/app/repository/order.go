@@ -799,6 +799,78 @@ func WithCompanyUuid(companyUuid uint64) OrderCartInfoOptionFunc {
 	}
 }
 
+// filterSaleBillProducts 根据条件对saleBill对象中的商品进行内存过滤
+func filterSaleBillProducts(saleBill *model.SaleBill, option *OrderCartInfoOption) {
+	if saleBill == nil {
+		return
+	}
+
+	for _, saleOrder := range saleBill.SaleOrders {
+		if saleOrder == nil {
+			continue
+		}
+
+		filteredProducts := make([]*model.SaleOrderProduct, 0)
+		for _, product := range saleOrder.SaleOrderProducts {
+			if product == nil {
+				continue
+			}
+
+			// 根据不同的过滤条件进行过滤
+			shouldInclude := false
+
+			if option.UnorderedH5Product == UnorderedH5Product {
+				// 只查询H5未下单的商品: delete_time = 0 AND is_accept_order = 0 AND h5_order_uuid = 0
+				shouldInclude = !product.IsDelete() &&
+					product.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept &&
+					product.H5OrderUuid == constant.OptionalUuid
+			} else if option.UnorderedH5Product == OrderedH5Product {
+				// 只查询H5已下单的商品: (delete_time = 0 AND h5_order_uuid <> 0 AND is_accept_order = 0) OR (delete_time = 0 AND is_accept_order = 1 AND status > 0)
+				shouldInclude = (!product.IsDelete() &&
+					product.H5OrderUuid != constant.OptionalUuid &&
+					product.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept) ||
+					(!product.IsDelete() &&
+						product.IsAcceptOrder == constant.OrderProductIsAcceptOrderAccepted &&
+						product.Status > constant.SaleOrderProductStatusNormal)
+			} else if option.UnorderedH5Product == OrderedH5ProductWithReject {
+				// 只查询H5已下单的商品和被拒单的商品
+				// (delete_time = 0 AND h5_order_uuid <> 0 AND is_accept_order = 0) OR
+				// (delete_time <> 0 AND h5_order_uuid <> 0 AND is_accept_order = 0) OR
+				// (delete_time = 0 AND is_accept_order = 1 AND status > 0)
+				shouldInclude = (!product.IsDelete() &&
+					product.H5OrderUuid != constant.OptionalUuid &&
+					product.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept) ||
+					(product.IsDelete() &&
+						product.H5OrderUuid != constant.OptionalUuid &&
+						product.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept) ||
+					(!product.IsDelete() &&
+						product.IsAcceptOrder == constant.OrderProductIsAcceptOrderAccepted &&
+						product.Status > constant.SaleOrderProductStatusNormal)
+			} else if option.H5OrderUuid > constant.OptionalUuid {
+				// 查询常规的购物车商品、某个h5订单的商品
+				// (delete_time = 0 AND is_accept_order = 0 AND h5_order_uuid = ?) OR (delete_time = 0 AND is_accept_order = 1)
+				shouldInclude = (!product.IsDelete() &&
+					product.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept &&
+					product.H5OrderUuid == option.H5OrderUuid) ||
+					(!product.IsDelete() &&
+						product.IsAcceptOrder == constant.OrderProductIsAcceptOrderAccepted)
+			} else if option.NotDeleted {
+				// 查询未被删除的商品
+				shouldInclude = !product.IsDelete()
+			} else {
+				// 默认：只查询常规的购物车商品 (delete_time = 0 AND is_accept_order = 1)
+				shouldInclude = !product.IsDelete() &&
+					product.IsAcceptOrder == constant.OrderProductIsAcceptOrderAccepted
+			}
+
+			if shouldInclude {
+				filteredProducts = append(filteredProducts, product)
+			}
+		}
+		saleOrder.SaleOrderProducts = filteredProducts
+	}
+}
+
 func (r *orderRepo) querySaleBillInfo(saleBillUuid uint64, filterProduct func(*gorm.DB) *gorm.DB) (model.SaleBill, error) {
 	repo := NewSaleBillRepo(r.db)
 	saleBill, errDesk := repo.GetSaleBill(
@@ -1012,6 +1084,9 @@ func (r *orderRepo) GetOrderCartInfoInDeskSaleBill(saleBillUuid uint64, filterPr
 				return nil, errors.WithMessage(err)
 			}
 			saleBill = newSaleBill
+
+			// 根据条件对saleBill对象中的商品进行内存过滤
+			filterSaleBillProducts(saleBill, &option)
 
 			// 将新查询到的saleBill写到缓存中
 			if err := objectStorageController.GetSaleBillController().Update(ctx, r.db,
