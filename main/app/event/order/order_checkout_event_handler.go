@@ -7,6 +7,9 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/modules/printer"
 	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
@@ -232,6 +235,24 @@ func CheckoutSaleOrderEventHandler() {
 			if err != nil {
 				fmt.Println("SubscribeCheckoutSaleOrderEvent process, Record failed", payload, err)
 				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, Record failed", zap.Any("payload", payload), zap.Error(err))
+			}
+		})
+
+		// 失效桌台缓存（桌台订单完成后）
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			// 如果订单未完成，不处理
+			if !payload.SaleBill.IsFinish() {
+				return
+			}
+			if adapter.IsObjectStorageCacheEnabled(payload.CompanyUuid) {
+				// 如果是桌台订单，失效桌台缓存
+				if payload.SaleBill.IsDeskSaleBill() {
+					deskUuid := payload.SaleBill.DeskUuid
+					deskUuid = persistence.GlobalObjectUuid // 还没有失效单个桌台缓存,全局失效桌台缓存
+					if err := controller.GetDeskController().Invalidate(payload.Ctx, deskUuid); err != nil {
+						logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, Invalidate desk cache failed", zap.Uint64("deskUuid", payload.SaleBill.DeskUuid), zap.Error(err))
+					}
+				}
 			}
 		})
 
