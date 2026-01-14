@@ -206,10 +206,12 @@ type PurchaseOrderItemReq struct {
 }
 
 // buildPurchaseOrderItems 构建采购订单明细
+// skipValidation: 是否跳过物料存在性验证（用于同步到公司店铺时，允许物料不存在，收货时再验证）
 func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 	db *gorm.DB,
 	purchaseOrderUuid uint64,
 	itemReqs []PurchaseOrderItemReq,
+	skipValidation ...bool,
 ) ([]model.PurchaseOrderItem, []model.PurchaseOrderItemUnit, error) {
 	// 批量查询物料
 	materialUuids := make([]uint64, 0, len(itemReqs))
@@ -233,10 +235,15 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 		materials[material.Uuid] = material
 	}
 
-	// 验证所有物料存在
-	for _, itemReq := range itemReqs {
-		if _, exists := materials[itemReq.MaterialUuid]; !exists {
-			return nil, nil, errors.New(fmt.Sprintf("物品UUID %d 不存在", itemReq.MaterialUuid))
+	// 判断是否需要跳过验证
+	shouldSkipValidation := len(skipValidation) > 0 && skipValidation[0]
+
+	// 验证所有物料存在（如果不跳过验证）
+	if !shouldSkipValidation {
+		for _, itemReq := range itemReqs {
+			if _, exists := materials[itemReq.MaterialUuid]; !exists {
+				return nil, nil, errors.New(fmt.Sprintf("物品UUID %d 不存在", itemReq.MaterialUuid))
+			}
 		}
 	}
 
@@ -244,7 +251,16 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 	items := make([]model.PurchaseOrderItem, 0, len(itemReqs))
 	unitList := make([]model.PurchaseOrderItemUnit, 0, len(itemReqs))
 	for _, itemReq := range itemReqs {
-		material := materials[itemReq.MaterialUuid]
+		material, exists := materials[itemReq.MaterialUuid]
+		if !exists {
+			// 如果物料不存在且跳过验证，则跳过该明细项
+			if shouldSkipValidation {
+				continue
+			}
+			// 理论上不会走到这里，因为前面已经验证过
+			return nil, nil, errors.New(fmt.Sprintf("物品UUID %d 不存在", itemReq.MaterialUuid))
+		}
+
 		item := v.buildPurchaseOrderItem(purchaseOrderUuid, material, itemReq.UnitList)
 		items = append(items, item)
 		unitList = append(unitList, item.Units...)

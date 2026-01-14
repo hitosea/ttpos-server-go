@@ -15,6 +15,7 @@ type IPurchaseOrderItemRepo interface {
 	CreateBatch(items []model.PurchaseOrderItem) error
 	Update(item *model.PurchaseOrderItem) error
 	Delete(uuid uint64) error
+	DeleteByUuids(uuids []uint64) error
 	DeleteByPurchaseOrderUuid(purchaseOrderUuid uint64) error
 	GetNotReceivedQuantityByMaterialUuid(materialUuid uint64) (int64, error)
 	DeleteByPurchaseOrderUuidAndNumIsZero(purchaseOrderUuid uint64) error
@@ -88,6 +89,14 @@ func (r *PurchaseOrderItemRepoImpl) Update(item *model.PurchaseOrderItem) error 
 // Delete 删除采购订单明细
 func (r *PurchaseOrderItemRepoImpl) Delete(uuid uint64) error {
 	return r.db.Where("uuid = ?", uuid).Delete(&model.PurchaseOrderItem{}).Error
+}
+
+// DeleteByUuids 批量删除采购订单明细
+func (r *PurchaseOrderItemRepoImpl) DeleteByUuids(uuids []uint64) error {
+	if len(uuids) == 0 {
+		return nil
+	}
+	return r.db.Where("uuid IN ?", uuids).Delete(&model.PurchaseOrderItem{}).Error
 }
 
 // DeleteByPurchaseOrderUuid 根据采购订单UUID删除明细

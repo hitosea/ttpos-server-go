@@ -162,9 +162,11 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 
 	// WarehouseErpCode 根据仓库ERP编码过滤
 	if req.PurchaseType == 2 {
-		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-			return db.Where("headquarter_uuid > ?", 0)
-		}))
+		if !companySetting.IsHeadquarter() {
+			dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+				return db.Where("headquarter_uuid > ?", 0)
+			}))
+		}
 	} else if req.SupplierErpCode != "" {
 		dbOptions = append(dbOptions, commonRepo.WhereByMaterialSupplierErpCode(req.SupplierErpCode))
 	}
