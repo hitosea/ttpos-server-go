@@ -133,6 +133,27 @@ func FreeSaleOrderEventHandler() {
 			}
 		})
 
+		// 增加销量
+		// 增加产品销量
+		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			payload.Ctx.SetDB(db)
+			HandleAddSalesVolumeForFree(payload)
+		})
+		// 增加材料销量
+		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			payload.Ctx.SetDB(db)
+			HandleAddMaterialSalesVolumeForFree(payload)
+		})
+
+		// 结账订单后，统计订单原料用量。
+		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			payload.Ctx.SetDB(db)
+			HandleRecordOrderMaterialUsage(payload.Ctx, db, payload.SaleBill, payload.SaleBillUuid, payload.SaleOrderUuid)
+		})
+
 		// 创建操作记录
 		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
@@ -186,4 +207,33 @@ func FreeSaleOrderEventHandler() {
 
 		})
 	})
+}
+
+// 增加销量（免单）
+func HandleAddSalesVolumeForFree(payload event.FreeSaleOrderPayload) {
+	ProductBoms, ProductPackages := GetSalesVolume(payload.SaleBill)
+
+	for productBomUuid, saleNum := range ProductBoms {
+		if err := repository.NewProductBomRepo(payload.Ctx.GetDB()).AddActualSaleNum(productBomUuid, saleNum); err != nil {
+			logger.Logger.Error("HandleAddSalesVolumeForFree process, AddActualSaleNum failed", zap.Any("productBomUuid", productBomUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
+		}
+	}
+	for productPackageUuid, saleNum := range ProductPackages {
+		if err := repository.NewProductPackageRepo(payload.Ctx.GetDB()).AddActualSaleNum(productPackageUuid, saleNum); err != nil {
+			logger.Logger.Error("HandleAddSalesVolumeForFree process, AddActualSaleNum failed", zap.Any("productPackageUuid", productPackageUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
+		}
+	}
+}
+
+// 增加材料销量（免单）
+func HandleAddMaterialSalesVolumeForFree(payload event.FreeSaleOrderPayload) {
+	MaterialSalesVolume := GetMaterialSalesVolume(payload.CompanyUuid, payload.SaleOrderUuid)
+	for materialUuid, saleNum := range MaterialSalesVolume {
+		if err := repository.NewMaterialRepo(payload.Ctx.GetDB()).AddActualSaleNum(materialUuid, saleNum); err != nil {
+			logger.Logger.Error("HandleAddMaterialSalesVolumeForFree process, AddActualSaleNum failed", zap.Any("materialUuid", materialUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
+		}
+	}
 }
