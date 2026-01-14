@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -460,6 +461,7 @@ func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, sal
 		}
 	}
 
+	hhhh := time.Now()
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 			return errors.WithMessage(err)
@@ -467,6 +469,9 @@ func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, sal
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err)
+	}
+	if len(request.Products) > 3 {
+		fmt.Println("cache2_time_xie_log Transaction ms: ", time.Since(hhhh).Milliseconds())
 	}
 	return nil
 }
