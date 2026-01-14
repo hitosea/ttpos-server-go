@@ -1168,7 +1168,7 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 			"sp.product_sale_price AS sale_price",
 			"sp.product_package_uuid AS product_package_uuid",
 			"SUM(sp.product_num) AS sale_num",
-			"SUM(sp.flavor_price * sp.product_num) AS sale_amount",
+			"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, sp.product_final_price * (sp.product_num - sp.refund_num))) AS sale_amount",
 		).
 		Where("sp.refund_time = 0").
 		Group("sp.product_package_uuid")

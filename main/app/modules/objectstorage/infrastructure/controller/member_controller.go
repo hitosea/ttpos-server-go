@@ -21,7 +21,6 @@ type MemberBatchQueryFunc func(db *gorm.DB, uuids []uint64) ([]*model.Member, er
 var (
 	memberControllerInstance *CacheObjectController[*model.Member]
 	memberControllerOnce     sync.Once
-	memberControllerMutex    sync.RWMutex
 )
 
 // InitMemberController 初始化 Member 对象的缓存控制器（单例模式）
@@ -36,23 +35,22 @@ func InitMemberController(
 	queryFunc MemberQueryFunc,
 	batchQueryFunc MemberBatchQueryFunc,
 ) {
-	InitCacheObjectController[*model.Member](
-		underlyingCache,
-		ttl,
-		func(db *gorm.DB, uuid uint64) (*model.Member, error) {
-			return queryFunc(db, uuid)
-		},
-		func(db *gorm.DB, uuids []uint64) ([]*model.Member, error) {
-			return batchQueryFunc(db, uuids)
-		},
-		func(obj *model.Member) uint64 {
-			return obj.Uuid
-		},
-		persistence.ObjectTypeMember,
-		&memberControllerInstance,
-		&memberControllerOnce,
-		&memberControllerMutex,
-	)
+	memberControllerOnce.Do(func() {
+		memberControllerInstance = InitCacheObjectController[*model.Member](
+			underlyingCache,
+			ttl,
+			func(db *gorm.DB, uuid uint64) (*model.Member, error) {
+				return queryFunc(db, uuid)
+			},
+			func(db *gorm.DB, uuids []uint64) ([]*model.Member, error) {
+				return batchQueryFunc(db, uuids)
+			},
+			func(obj *model.Member) uint64 {
+				return obj.Uuid
+			},
+			persistence.ObjectTypeMember,
+		)
+	})
 }
 
 // GetMemberController 获取 Member 对象的缓存控制器单例实例
@@ -60,9 +58,5 @@ func InitMemberController(
 // 返回：
 //   - *CacheObjectController[*model.Member]: Member 缓存对象控制器实例（保证非 nil）
 func GetMemberController() *CacheObjectController[*model.Member] {
-	return GetCacheObjectController[*model.Member](
-		&memberControllerInstance,
-		&memberControllerMutex,
-		"Member 缓存控制器未初始化，请先调用 InitMemberController",
-	)
+	return memberControllerInstance
 }

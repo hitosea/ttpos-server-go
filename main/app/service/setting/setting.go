@@ -18,6 +18,9 @@ import (
 	"ttpos-server-go/app/errors"
 	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
@@ -2374,6 +2377,13 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 	tc.TagClear("common_get_settingLanguages")
 	s.cache.Del(fmt.Sprintf("{common_get_settingLanguages}_common_setting_languages%d", companyUuid))
 	tc.TagClear("cashier")
+
+	// 失效业务设置缓存（对象存储缓存）
+	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		if err := controller.GetBusinessSettingCacheController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+			logger.Logger.Error("EditBusinessSetting process, Invalidate business_setting cache failed", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
+	}
 
 	// 推送配置更新
 	utils.Go(func() {

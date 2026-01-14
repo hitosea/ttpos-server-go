@@ -217,9 +217,13 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	// 设置添加来源
 	saleBill.SetOperateSource(ctx.GetSource())
 
+	hhhh := time.Now()
 	// 加购
 	if err := s.ActionAdd(ctx, request, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
+	}
+	if len(request.Products) > 3 {
+		fmt.Println("cache2_time_xie_log ActionAdd22222 ms: ", time.Since(hhhh).Milliseconds())
 	}
 
 	// 更新缓存的salebill信息
@@ -239,12 +243,15 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	// 	}
 	// }
 
+	hhhhh := time.Now()
 	// 获取新的购物车商品数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-
+	if len(request.Products) > 3 {
+		fmt.Println("cache2_time_xie_log GetOrderCartInfo22222 ms: ", time.Since(hhhhh).Milliseconds())
+	}
 	return info, nil
 }
 
@@ -2288,6 +2295,7 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 	}
 	productParam.SetIsPackageProduct(subProducts) // 设置为套餐商品
 
+	hhh := time.Now()
 	shopCart, err := s.OrderCartProductAdd(ctx, req.ProductAddReq{
 		SaleBillUuid:  request.SaleBillUuid,
 		SaleOrderUuid: request.SaleOrderUuid,
@@ -2296,6 +2304,9 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 		},
 		IsH5Product: request.IsH5Product(),
 	})
+	if len(request.Products) > 3 {
+		fmt.Println("cache2_time_xie_log OrderCartProductPackageAdd22222 ms: ", time.Since(hhh).Milliseconds())
+	}
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
