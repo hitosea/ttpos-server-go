@@ -2013,6 +2013,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	storeSetting.Company = storeSettingReq.CompanyName
 	storeSetting.StoreCode = storeSettingReq.StoreCode
 	storeSetting.TaxNumber = storeSettingReq.TaxNumber
+	storeSetting.Coordinates = storeSettingReq.Coordinates
 
 	// ##### 处理 cashier tablet h5 kitchen assistant printer 各端的语言设置 #####
 	// ##### 1、处理 cashier 设置 #####
@@ -2204,10 +2205,10 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	err = companyDB.Transaction(func(tx *gorm.DB) error {
 		// 保存到saas.company_setting\saas.company\商家company_setting\商家company表
 		err := saasDB.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Model(&model.Company{}).Where("uuid = ?", companyUuid).Updates(updateCompany).Error; err != nil {
+			if err := tx.Model(&model.Company{}).Where("uuid = ?", companyUuid).Debug().Updates(updateCompany).Error; err != nil {
 				return errors.WithMessage(errors.New("保存saas.company设置失败"), err.Error())
 			}
-			if err := tx.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Updates(updateCompanySetting).Error; err != nil {
+			if err := tx.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Debug().Updates(updateCompanySetting).Error; err != nil {
 				return errors.WithMessage(errors.New("保存saas.company_setting设置失败"), err.Error())
 			}
 			return nil
@@ -2215,10 +2216,10 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		if err != nil {
 			return err
 		}
-		if err := tx.Model(&model.Company{}).Where("uuid = ?", companyUuid).Updates(updateCompany).Error; err != nil {
+		if err := tx.Model(&model.Company{}).Where("uuid = ?", companyUuid).Debug().Updates(updateCompany).Error; err != nil {
 			return errors.WithMessage(errors.New("保存商家company设置失败"), err.Error())
 		}
-		if err := tx.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Updates(updateCompanySetting).Error; err != nil {
+		if err := tx.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Debug().Updates(updateCompanySetting).Error; err != nil {
 			return errors.WithMessage(errors.New("保存store设置失败"), err.Error())
 		}
 
