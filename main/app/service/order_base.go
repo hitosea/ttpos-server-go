@@ -243,6 +243,16 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}
 
+	// 推送桌台更新
+	data := map[string]interface{}{
+		"desk_uuid":   desk.Uuid,
+		"update_time": time.Now().Unix(),
+	}
+	utils.Go(func() {
+		logger.Logger.Info("推送桌台更新-111111-data", zap.Any("data", data), zap.Any("companyUuid", ctx.GetCompanyUuid()))
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, data)
+	})
+
 	return resp.CreateDeskOrderResp{
 		SaleBillUuid:  saleBill.Uuid,
 		SaleOrderUuid: saleOrder.Uuid,
