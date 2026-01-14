@@ -1915,12 +1915,12 @@ func (r *orderRepo) QuerySaleBillForObjectStorage(saleBillUuid uint64, uuidFilte
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "record not found") {
-			return nil, errors.WithMessage(errors.New("订单已失效"))
+			return nil, errors.WithMessage(errors.New("订单已关闭"))
 		}
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
 	}
 	if saleBill.IsDelete() {
-		return nil, fmt.Errorf("订单已失效") // 修复并发合并桌台的错误提示，优化提示让更友好
+		return nil, fmt.Errorf("订单已关闭") // 修复并发合并桌台的错误提示，优化提示让更友好
 	}
 	return &saleBill, nil
 }
@@ -2239,7 +2239,7 @@ func (r *orderRepo) querySaleBillAllInfoUsingDbQuery(saleBillUuid uint64, option
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
 	}
 	if info.IsDelete() {
-		return nil, fmt.Errorf("订单已失效") // 修复并发合并桌台的错误提示，优化提示让更友好
+		return nil, fmt.Errorf("订单已关闭") // 修复并发合并桌台的错误提示，优化提示让更友好
 	}
 	return &info, nil
 }
