@@ -257,12 +257,19 @@ type StatisticsCategoryData struct {
 // StatisticsProductData 商品统计数据
 type StatisticsProductData struct {
 	ProductPackageUuid sql.NullInt64   `gorm:"column:product_package_uuid;comment:商品包uuid"` // 用于拿到排行榜数据后在查询商品名称
+	ProductBomUuid     sql.NullInt64   `gorm:"column:product_bom_uuid;comment:商品BOM uuid"`  // 用于合并店内和外卖商品数据
 	ProductName        sql.NullString  `gorm:"column:product_name;comment:商品名称"`
 	FlavorName         sql.NullString  `gorm:"column:flavor_name;comment:规格名称"`
 	SalePrice          sql.NullFloat64 `gorm:"column:sale_price;comment:销售单价"`
 	SaleNum            sql.NullFloat64 `gorm:"column:sale_num;comment:销售数量"`
 	SaleAmount         sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
 	ProductType        sql.NullInt64   `gorm:"column:product_type;comment:商品类型"`
+	// 排序字段（用于合并后排序）
+	PpcSort       sql.NullInt64 `gorm:"column:ppc_sort;comment:父分类排序"`
+	PpcCreateTime sql.NullInt64 `gorm:"column:ppc_create_time;comment:父分类创建时间"`
+	PcSort        sql.NullInt64 `gorm:"column:pc_sort;comment:子分类排序"`
+	PcCreateTime  sql.NullInt64 `gorm:"column:pc_create_time;comment:子分类创建时间"`
+	PpCreateTime  sql.NullInt64 `gorm:"column:pp_create_time;comment:商品创建时间"`
 }
 
 // StatisticsAreaData 区域统计数据

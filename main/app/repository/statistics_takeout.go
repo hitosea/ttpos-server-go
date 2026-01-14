@@ -8,7 +8,9 @@ import (
 	takeoutmodel "ttpos-server-go/app/modules/takeout/domain/model"
 	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/logger"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -764,11 +766,12 @@ func (r *StatisticsTakeoutRepo) CountTakeoutCategory(req CountTakeoutReq, catego
 }
 
 // CountTakeoutProduct 统计外卖订单商品
-// 统计 validOrderStates 状态下的订单商品，按 product_package_uuid 分组，且 accepted_time > 0（接单后才能统计）
+// 统计 validOrderStates 状态下的订单商品，按 product_bom_uuid 分组，且 accepted_time > 0（接单后才能统计）
 // 商品名称：使用店内名称（从 ttpos_item_name JSON 字段提取）
 // 销量：所有 validOrderStates 都统计（包括取消订单，但需 accepted_time > 0）
-// 单价：外卖的单价
+// 单价：从 product_bom 表获取（普通商品通过 takeout_order_item_modifier 关联，套餐商品直接关联 takeout_order_item）
 // 合计：只统计 businessOrderStates（不包括取消订单），使用商品实收=单价*数量
+// 分组：按 product_bom_uuid 分组，和 CountProduct 一致（普通商品使用 pb_flavor.uuid，套餐商品使用 pb_package.uuid）
 func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, language string) []model.StatisticsProductData {
 	var result []model.StatisticsProductData
 
@@ -781,6 +784,12 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 	takeoutOrderItemTable := prefix + "takeout_order_item"
 	takeoutOrderItemModifierTable := prefix + "takeout_order_item_modifier as toim"
 	productPackageTable := prefix + "product_package as pp"
+	productCategoryTable := prefix + "product_category as pc"
+	productParentCategoryTable := prefix + "product_category as ppc"
+	// 普通商品的 product_bom 关联（通过 modifier）
+	productBomFlavorTable := prefix + "product_bom as pb_flavor"
+	// 套餐商品的 product_bom 关联（直接关联 item）
+	productBomPackageTable := prefix + "product_bom as pb_package"
 
 	// 构建状态条件字符串
 	validStatesStr := buildStateInCondition(validOrderStates)
@@ -789,8 +798,14 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 	baseQuery := r.db.Table(takeoutOrderItemTable+" AS toi").
 		Joins(fmt.Sprintf("INNER JOIN %s AS to_order ON toi.takeout_order_uuid = to_order.uuid", takeoutOrderTable)).
 		Joins("LEFT JOIN "+productPackageTable+" ON toi.ttpos_product_package_uuid = pp.uuid").
+		Joins("LEFT JOIN "+productCategoryTable+" ON pp.category_uuid = pc.uuid").
+		Joins("LEFT JOIN "+productParentCategoryTable+" ON pc.parent_uuid = ppc.uuid").
 		// 关联修饰符表，获取规格名称（只关联 flavor 类型的修饰符）
 		Joins(fmt.Sprintf("LEFT JOIN %s ON toim.takeout_order_item_uuid = toi.uuid AND toim.ttpos_modifier_type = 'flavor' AND toim.delete_time = %d", takeoutOrderItemModifierTable, constant.NotDeleted)).
+		// 关联 product_bom 表（普通商品：通过 modifier 关联）
+		Joins(fmt.Sprintf("LEFT JOIN %s ON pb_flavor.uuid = toim.ttpos_modifier_uuid AND toim.ttpos_modifier_type = 'flavor'", productBomFlavorTable)).
+		// 关联 product_bom 表（套餐商品：直接关联 item，条件为 product_flavor_uuid = 0 AND product_sauce_uuid = 0）
+		Joins(fmt.Sprintf("LEFT JOIN %s ON pb_package.product_package_uuid = toi.ttpos_product_package_uuid AND pb_package.product_flavor_uuid = 0 AND pb_package.product_sauce_uuid = 0", productBomPackageTable)).
 		Where("toi.delete_time = ?", constant.NotDeleted).
 		Where("to_order.delete_time = ?", constant.NotDeleted).
 		Where(fmt.Sprintf("to_order.order_state IN %s", validStatesStr)).
@@ -818,27 +833,47 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 	// 规格名称：从 ttpos_takeout_order_item_modifier 表的 ttpos_modifier_name 获取（只取 flavor 类型）
 	// ttpos_modifier_name 是多语言 JSON 字符串，需要提取对应语言的值
 	// 如果是套餐商品（ttpos_product_type = 1），则没有规格名称
-	// 单价：外卖的单价（使用 AVG 因为同一个商品可能有不同的单价）
+	// 单价：从 product_bom 表获取（普通商品使用 pb_flavor.price，套餐商品使用 pb_package.price）
 	// 销量：所有 validOrderStates 都统计（包括取消订单）
 	// 合计：只统计 businessOrderStates（不包括取消订单），使用商品实收=单价*数量
-	baseQuery.Select(
+	err := baseQuery.Select(
 		"toi.ttpos_product_package_uuid AS product_package_uuid",
+		// product_bom_uuid：普通商品使用 pb_flavor.uuid，套餐商品使用 pb_package.uuid
+		// 使用 MAX 聚合函数，因为已经按相同的表达式分组
+		"MAX(IF(toi.ttpos_product_type = 1, pb_package.uuid, pb_flavor.uuid)) AS product_bom_uuid",
 		fmt.Sprintf("COALESCE(MAX(JSON_UNQUOTE(JSON_EXTRACT(toi.ttpos_item_name, '$.%s'))), JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$.%s')), '') AS product_name", language, language),
 		// 规格名称：如果是套餐商品（ttpos_product_type = 1），则为空；否则从修饰符表获取（JSON格式需要提取）
 		// 注意：在 GROUP BY 中需要使用原始表达式，不能使用聚合函数
 		fmt.Sprintf("IF(MAX(toi.ttpos_product_type) = 1, '', COALESCE(MAX(JSON_UNQUOTE(JSON_EXTRACT(toim.ttpos_modifier_name, '$.%s'))), '')) AS flavor_name", language),
-		"toi.ttpos_price AS sale_price", // 使用 ttpos_price 店内商品价格
+		// 单价：从 product_bom 表获取
+		// 普通商品使用 pb_flavor.price，套餐商品使用 pb_package.price
+		fmt.Sprintf("COALESCE(MAX(IF(toi.ttpos_product_type = 1, pb_package.price, pb_flavor.price)), 0) AS sale_price"),
 		// 销量：所有 validOrderStates 都统计（包括取消订单）
 		"SUM(CAST(toi.quantity AS DECIMAL(14,2))) AS sale_num",
 		// 合计：只统计 businessOrderStates（不包括取消订单），使用商品实收=单价*数量
 		fmt.Sprintf("SUM(IF(to_order.order_state IN %s, toi.price * toi.quantity, 0)) AS sale_amount", businessStatesStr),
 		"MAX(toi.ttpos_product_type) AS product_type",
+		// 排序字段：和 CountProduct 一致
+		"IF(MAX(pc.parent_uuid) = 0, MAX(pc.sort), MAX(ppc.sort)) AS ppc_sort",
+		"IF(MAX(pc.parent_uuid) = 0, MAX(pc.create_time), MAX(ppc.create_time)) AS ppc_create_time",
+		"IF(MAX(pc.parent_uuid) = 0, 0, MAX(pc.sort)) AS pc_sort",
+		"MAX(pc.create_time) AS pc_create_time",
+		"MAX(pp.create_time) AS pp_create_time",
 	).
-		// 按商品包UUID和规格名称分组（如果有规格的话）
-		// 注意：GROUP BY 中不能使用聚合函数，需要使用原始字段或表达式
-		// 对于规格名称，使用 COALESCE 处理 NULL 值，套餐商品时规格名称为空字符串
-		Group(fmt.Sprintf("toi.ttpos_product_package_uuid, IF(toi.ttpos_product_type = 1, '', COALESCE(JSON_UNQUOTE(JSON_EXTRACT(toim.ttpos_modifier_name, '$.%s')), ''))", language)).
-		Find(&result)
+		// 按 product_bom_uuid 分组，和 CountProduct 一致
+		// 普通商品使用 pb_flavor.uuid，套餐商品使用 pb_package.uuid
+		Group("IF(toi.ttpos_product_type = 1, pb_package.uuid, pb_flavor.uuid)").
+		// 排序：和 CountProduct 一致
+		Order("ppc_sort ASC").
+		Order("ppc_create_time DESC").
+		Order("pc_sort ASC").
+		Order("pc.create_time DESC").
+		Order("pp.create_time DESC").
+		Find(&result).Error
+	if err != nil {
+		// 记录错误日志
+		logger.Logger.Error("查询外卖订单商品失败", zap.Error(err))
+	}
 
 	return result
 }
@@ -874,7 +909,15 @@ func (r *StatisticsTakeoutRepo) CountTakeoutRefundAmount(req CountTakeoutReq) fl
 		query = query.Where("platform = ?", req.Platform)
 	}
 
-	query.Scan(&amount)
+	if err := query.Scan(&amount).Error; err != nil {
+		// 记录日志，但不中断统计流程
+		logger.Logger.Warn("查询外卖订单退款金额失败",
+			zap.Error(err),
+			zap.Int64("timeStart", req.TimeStart),
+			zap.Int64("timeEnd", req.TimeEnd),
+		)
+		return 0 // 返回默认值 0
+	}
 
 	return amount.Float64
 }
