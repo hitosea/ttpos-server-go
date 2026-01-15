@@ -166,12 +166,17 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 	order.Subtotal = decimal.NewFromInt(int64(price.GetSubtotal())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 	order.DeliveryFee = decimal.NewFromInt(int64(price.GetDeliveryFee())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 	order.SmallOrderFee = decimal.NewFromInt(int64(price.GetSmallOrderFee())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
-	order.EaterPayment = decimal.NewFromInt(int64(price.GetEaterPayment())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 	order.PlatformDiscount = decimal.NewFromInt(int64(price.GetGrabFundPromo())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 	order.MerchantDiscount = decimal.NewFromInt(int64(price.GetMerchantFundPromo())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 	order.BasketPromo = decimal.NewFromInt(int64(price.GetBasketPromo())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 	order.Tax = decimal.NewFromInt(int64(price.GetTax())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 	order.MerchantChargeFee = decimal.NewFromInt(int64(price.GetMerchantChargeFee())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.EaterPayment = func() float64 {
+		if price.GetEaterPayment() == 0 {
+			return order.Subtotal
+		}
+		return decimal.NewFromInt(int64(price.GetEaterPayment())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	}()
 
 	// 货币信息映射
 	currency := submitOrderReq.GetCurrency()
