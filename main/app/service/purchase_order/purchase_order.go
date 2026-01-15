@@ -448,7 +448,6 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 	return db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
-		purchaseOrderItemUnitRepo := repository.NewPurchaseOrderItemUnitRepo(tx)
 
 		// 查询现有采购申请
 		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid)
@@ -462,6 +461,16 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 		// 检查是否可编辑
 		if !purchaseOrder.IsEditable() && purchaseOrder.Status != constant.PurchaseOrderStatusPending {
 			return errors.New("当前状态不允许编辑")
+		}
+
+		// 检查是否需要更新（优化：避免不必要的数据库操作）
+		needUpdate, err := s.helper.checkPurchaseOrderNeedUpdate(purchaseOrder, &req, purchaseOrderItemRepo)
+		if err != nil {
+			return err
+		}
+		// 如果没有任何变动，直接返回
+		if !needUpdate {
+			return nil
 		}
 
 		// 更新采购申请基本信息
@@ -494,88 +503,35 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 			purchaseOrder.WarehouseErpCode = req.WarehouseErpCode
 			purchaseOrder.WarehouseName = warehouseName
 		}
-
 		purchaseOrder.Num = float64(len(req.Items))
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(errors.New("更新采购申请失败"), err.Error())
 		}
 
-		// 获取现有的明细项
-		existingItems, err := purchaseOrderItemRepo.GetByPurchaseOrderUuid(req.Uuid)
+		// 先删除所有现有明细项
+		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuid(req.Uuid)
 		if err != nil {
-			return errors.WithMessage(errors.New("查询现有明细失败"), err.Error())
+			return errors.WithMessage(errors.New("删除采购申请明细失败"), err.Error())
 		}
 
-		// 构建现有物品的映射：MaterialUuid -> PurchaseOrderItem
-		existingItemMap := make(map[uint64]*model.PurchaseOrderItem)
-		for i := range existingItems {
-			existingItemMap[existingItems[i].MaterialUuid] = &existingItems[i]
-		}
-
-		// 构建请求中的物品映射：MaterialUuid -> PurchaseOrderItemReq
-		reqItemMap := make(map[uint64]PurchaseOrderItemReq)
+		// 构建并批量创建采购申请明细
+		itemReqs := make([]PurchaseOrderItemReq, 0, len(req.Items))
 		for _, item := range req.Items {
-			reqItemMap[item.MaterialUuid] = PurchaseOrderItemReq{
+			itemReqs = append(itemReqs, PurchaseOrderItemReq{
 				MaterialUuid: item.MaterialUuid,
 				UnitList:     item.UnitList,
-			}
+			})
+		}
+		items, _, err := s.validator.buildPurchaseOrderItems(tx, purchaseOrder.Uuid, itemReqs)
+		if err != nil {
+			return err
 		}
 
-		// 1. 找出需要删除的明细（数据库中存在，但请求中不存在）
-		itemUuidsToDelete := make([]uint64, 0)
-		for materialUuid, existingItem := range existingItemMap {
-			if _, exists := reqItemMap[materialUuid]; !exists {
-				itemUuidsToDelete = append(itemUuidsToDelete, existingItem.Uuid)
-			}
-		}
-
-		// 2. 找出需要新增的明细（请求中存在，但数据库中不存在）
-		itemReqsToCreate := make([]PurchaseOrderItemReq, 0)
-		for materialUuid, reqItem := range reqItemMap {
-			if _, exists := existingItemMap[materialUuid]; !exists {
-				itemReqsToCreate = append(itemReqsToCreate, reqItem)
-			}
-		}
-
-		// 3. 找出需要更新的明细（请求和数据库中都存在）
-		// 对于已存在的物品，删除旧的明细和单位，重新创建
-		for materialUuid := range reqItemMap {
-			if existingItem, exists := existingItemMap[materialUuid]; exists {
-				// 将已存在的物品加入删除列表
-				itemUuidsToDelete = append(itemUuidsToDelete, existingItem.Uuid)
-				// 将该物品加入创建列表
-				itemReqsToCreate = append(itemReqsToCreate, reqItemMap[materialUuid])
-			}
-		}
-
-		// 执行删除操作
-		if len(itemUuidsToDelete) > 0 {
-			// 先删除关联的单位
-			err = purchaseOrderItemUnitRepo.DeleteByItemUuids(itemUuidsToDelete)
-			if err != nil {
-				return errors.WithMessage(errors.New("删除采购申请明细单位失败"), err.Error())
-			}
-			// 再删除明细项
-			err = purchaseOrderItemRepo.DeleteByUuids(itemUuidsToDelete)
-			if err != nil {
-				return errors.WithMessage(errors.New("删除采购申请明细失败"), err.Error())
-			}
-		}
-
-		// 执行新增操作
-		if len(itemReqsToCreate) > 0 {
-			// 构建新的明细项
-			itemsToCreate, _, err := s.validator.buildPurchaseOrderItems(tx, purchaseOrder.Uuid, itemReqsToCreate)
-			if err != nil {
-				return err
-			}
-
-			// 批量创建明细
-			err = purchaseOrderItemRepo.CreateBatch(itemsToCreate)
-			if err != nil {
-				return errors.WithMessage(errors.New("创建采购申请明细失败"), err.Error())
-			}
+		// 创建采购申请明细
+		err = purchaseOrderItemRepo.CreateBatch(items)
+		if err != nil {
+			return errors.WithMessage(errors.New("创建采购申请明细失败"), err.Error())
 		}
 
 		// 如果当前操作店铺不是采购单归属店铺，需要同步更新归属店铺的数据
@@ -1296,6 +1252,12 @@ func (s *purchaseOrderSrv) syncItemsToCompanyShop(
 				return nil
 			}
 			return errors.WithMessage(errors.New("查询归属店铺采购申请失败"), err.Error())
+		}
+
+		// 检查是否需要同步（优化：避免不必要的数据库操作）
+		needSync := s.helper.checkCompanyShopNeedSync(companyOrder, currentItems, reqItems)
+		if !needSync {
+			return nil
 		}
 
 		// 获取归属店铺现有的明细项

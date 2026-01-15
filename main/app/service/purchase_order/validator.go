@@ -69,24 +69,64 @@ func (v *purchaseOrderValidator) validateReceiptMaterialStatus(
 ) error {
 	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(db)
 	materialRepo := repository.NewMaterialRepo(db)
+	materialUnitRepo := repository.NewMaterialUnitRepo(db)
 	var disabledMaterials []string
+	var errorMessages []string
+	var unitErrorMessages []string
 
 	for _, itemUuid := range itemUuids {
-		purchaseOrderItem, err := purchaseOrderItemRepo.GetByUuid(itemUuid)
+		purchaseOrderItem, err := purchaseOrderItemRepo.GetByUuid(
+			itemUuid,
+			purchaseOrderItemRepo.WithPreloadUnits(),
+		)
 		if err != nil {
 			return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
 		}
 
+		// 获取物品名称
+		materialName := language.JsonToLocaleResponse(purchaseOrderItem.MaterialName).GetLocale(ctx.GetLanguage())
+
+		// 判断物品是否存在
 		material, err := materialRepo.GetMaterialByUuid(purchaseOrderItem.MaterialUuid)
 		if err != nil {
-			return errors.WithMessage(errors.New("查询物品明细失败"), err.Error())
-		}
-
-		// 判断物品是否停用
-		if !material.Status {
-			materialName := language.JsonToLocaleResponse(purchaseOrderItem.MaterialName).GetLocale(ctx.GetLanguage())
+			errorMessages = append(errorMessages, materialName)
+		} else if !material.Status {
+			// 判断物品是否停用
 			disabledMaterials = append(disabledMaterials, materialName)
 		}
+
+		// 验证 Units 中的单位是否存在
+		if len(purchaseOrderItem.Units) > 0 {
+			for _, unit := range purchaseOrderItem.Units {
+				if unit.UnitUuid > 0 {
+					_, err := materialUnitRepo.GetMaterialUnitByUuid(unit.UnitUuid)
+					if err != nil {
+						if err == gorm.ErrRecordNotFound {
+							unitName := language.JsonToLocaleResponse(unit.UnitName).GetLocale(ctx.GetLanguage())
+							unitErrorMessages = append(unitErrorMessages, fmt.Sprintf("%s(%s)", materialName, unitName))
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 物品未找到
+	if len(errorMessages) > 0 {
+		return errors.NewWithCodeAndData(
+			constant.CodeErrorConfirmClose,
+			errorMessages,
+			fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 未找到。"), v.joinMaterialNames(errorMessages)),
+		)
+	}
+
+	// 单位不存在
+	if len(unitErrorMessages) > 0 {
+		return errors.NewWithCodeAndData(
+			constant.CodeErrorConfirmClose,
+			unitErrorMessages,
+			fmt.Sprintf("物品单位不存在: %s，请检查物品配置", v.joinMaterialNames(unitErrorMessages)),
+		)
 	}
 
 	// 如果有停用的物品，返回相应的错误消息

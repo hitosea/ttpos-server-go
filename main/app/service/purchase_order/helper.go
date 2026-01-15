@@ -677,3 +677,192 @@ func (h *purchaseOrderHelper) AddToTransitWarehouse(
 
 	return nil
 }
+
+// checkPurchaseOrderNeedUpdate 检查采购申请是否需要更新
+// 通过对比现有数据和请求数据，判断是否有变动，避免不必要的数据库操作
+func (h *purchaseOrderHelper) checkPurchaseOrderNeedUpdate(
+	purchaseOrder *model.PurchaseOrder,
+	req *req.PurchaseOrderUpdateReq,
+	itemRepo repository.IPurchaseOrderItemRepo,
+) (bool, error) {
+	needUpdate := false
+
+	// 1. 检查基本信息是否变动
+	if purchaseOrder.Status != constant.PurchaseOrderStatusPending &&
+		purchaseOrder.Status != constant.PurchaseOrderStatusHeadquarterPending {
+		// 设置期望到货时间，如果为空则默认为2035-12-31
+		expectArrivalTime := req.ExpectedDeliveryTime
+		if expectArrivalTime == 0 {
+			expectArrivalTime = 2082672000 // 2035-12-31的时间戳
+		}
+
+		if purchaseOrder.SupplierName != req.SupplierName ||
+			purchaseOrder.SupplierErpCode != req.SupplierErpCode ||
+			purchaseOrder.ExpectArrivalTime != expectArrivalTime ||
+			purchaseOrder.WarehouseErpCode != req.WarehouseErpCode {
+			needUpdate = true
+		}
+	}
+
+	// 2. 检查明细是否变动（物料数量或明细列表）
+	if purchaseOrder.Num != float64(len(req.Items)) {
+		needUpdate = true
+	} else {
+		// 查询现有明细
+		existingItems, err := itemRepo.GetByPurchaseOrderUuid(
+			req.Uuid,
+			itemRepo.WithPreloadUnits(),
+		)
+		if err != nil {
+			return false, errors.WithMessage(errors.New("查询现有明细失败"), err.Error())
+		}
+
+		// 构建现有明细映射：MaterialUuid -> Item
+		existingItemMap := make(map[uint64]*model.PurchaseOrderItem)
+		for i := range existingItems {
+			existingItemMap[existingItems[i].MaterialUuid] = &existingItems[i]
+		}
+
+		// 构建请求明细映射：MaterialUuid -> Units
+		type unitInfo struct {
+			Uuid uint64
+			Num  float64
+		}
+		reqItemMap := make(map[uint64][]unitInfo)
+		for _, item := range req.Items {
+			units := make([]unitInfo, len(item.UnitList))
+			for i, unit := range item.UnitList {
+				units[i] = unitInfo{
+					Uuid: unit.Uuid,
+					Num:  unit.Num,
+				}
+			}
+			reqItemMap[item.MaterialUuid] = units
+		}
+
+		// 检查物料列表是否一致
+		if len(existingItemMap) != len(reqItemMap) {
+			needUpdate = true
+		} else {
+			// 逐个对比物料和单位
+			for materialUuid, reqUnits := range reqItemMap {
+				existingItem, exists := existingItemMap[materialUuid]
+				if !exists {
+					needUpdate = true
+					break
+				}
+
+				// 对比单位列表
+				if len(existingItem.Units) != len(reqUnits) {
+					needUpdate = true
+					break
+				}
+
+				// 构建现有单位映射：UnitUuid -> Num
+				existingUnitMap := make(map[uint64]float64)
+				for _, unit := range existingItem.Units {
+					existingUnitMap[unit.UnitUuid] = unit.Num
+				}
+
+				// 检查每个单位的数量是否一致
+				for _, reqUnit := range reqUnits {
+					if existingNum, ok := existingUnitMap[reqUnit.Uuid]; !ok || existingNum != reqUnit.Num {
+						needUpdate = true
+						break
+					}
+				}
+
+				if needUpdate {
+					break
+				}
+			}
+		}
+	}
+
+	return needUpdate, nil
+}
+
+// checkCompanyShopNeedSync 检查子店铺采购申请是否需要同步
+// 通过对比子店铺现有数据和总部当前数据，判断是否有变动，避免不必要的同步操作
+func (h *purchaseOrderHelper) checkCompanyShopNeedSync(
+	companyOrder *model.PurchaseOrder,
+	currentItems []model.PurchaseOrderItem,
+	reqItems []req.PurchaseOrderItemUpdateReq,
+) bool {
+	// 构建现有明细的映射：MaterialCode -> Item
+	existingItemMap := make(map[string]*model.PurchaseOrderItem)
+	for i := range companyOrder.Items {
+		existingItemMap[companyOrder.Items[i].MaterialCode] = &companyOrder.Items[i]
+	}
+
+	// 构建当前明细的映射：MaterialUuid -> MaterialCode 和 MaterialCode -> Item
+	materialCodeMap := make(map[uint64]string)
+	currentItemMap := make(map[string]*model.PurchaseOrderItem)
+	for i := range currentItems {
+		materialCodeMap[currentItems[i].MaterialUuid] = currentItems[i].MaterialCode
+		currentItemMap[currentItems[i].MaterialCode] = &currentItems[i]
+	}
+
+	// 构建请求中的物品映射：MaterialCode -> MaterialUuid
+	reqMaterialCodes := make(map[string]uint64)
+	for _, item := range reqItems {
+		if materialCode, ok := materialCodeMap[item.MaterialUuid]; ok {
+			reqMaterialCodes[materialCode] = item.MaterialUuid
+		}
+	}
+
+	// 1. 检查物料数量是否一致
+	if len(existingItemMap) != len(reqMaterialCodes) {
+		return true
+	}
+
+	// 2. 检查每个物料是否存在且数量、单位一致
+	for materialCode, materialUuid := range reqMaterialCodes {
+		existingItem, existsInCompany := existingItemMap[materialCode]
+		currentItem, existsInCurrent := currentItemMap[materialCode]
+
+		// 子店铺没有这个物料，需要同步
+		if !existsInCompany {
+			return true
+		}
+
+		// 总部没有这个物料（理论上不应该发生），需要同步
+		if !existsInCurrent {
+			return true
+		}
+
+		// 检查数量是否一致
+		if existingItem.Num != currentItem.Num {
+			return true
+		}
+
+		// 检查单位列表是否一致
+		if len(existingItem.Units) != len(currentItem.Units) {
+			return true
+		}
+
+		// 构建单位映射：ErpnextUom -> Num
+		existingUnitMap := make(map[string]float64)
+		for _, unit := range existingItem.Units {
+			existingUnitMap[unit.ErpnextUom] = unit.Num
+		}
+
+		currentUnitMap := make(map[string]float64)
+		for _, unit := range currentItem.Units {
+			currentUnitMap[unit.ErpnextUom] = unit.Num
+		}
+
+		// 检查每个单位的数量是否一致
+		for erpnextUom, existingNum := range existingUnitMap {
+			if currentNum, ok := currentUnitMap[erpnextUom]; !ok || currentNum != existingNum {
+				return true
+			}
+		}
+
+		// 避免未使用变量警告
+		_ = materialUuid
+	}
+
+	// 没有变动
+	return false
+}
