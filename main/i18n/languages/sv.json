@@ -7176,6 +7176,7 @@
   "马里": "Mali",
   "驳回": "Avvisa",
   "驳回原因不能为空": "Avslagsorsak får inte vara tom",
+  "驳回原因最多100个字符": "Avvisningsorsak upp till 100 tecken",
   "驳回原因：": "Orsak till avslag:",
   "驳回成功": "Avslag lyckades",
   "驳回盘点单失败": "Misslyckades med att avvisa inventeringsbladet",

@@ -7176,6 +7176,7 @@
   "马里": "Mali",
   "驳回": "Turn down",
   "驳回原因不能为空": "Rejection reason cannot be empty",
+  "驳回原因最多100个字符": "Rejection reason up to 100 characters",
   "驳回原因：": "Reason for rejection:",
   "驳回成功": "Rejection successful",
   "驳回盘点单失败": "Failed to reject inventory sheet",
