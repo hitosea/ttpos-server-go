@@ -142,7 +142,7 @@ func (model *PaymentMethod) IsQrPromptPay() bool {
 
 // IsDisabledCancel 判断是否不允许取消支付
 func (model *PaymentMethod) IsDisabledCancel() bool {
-	return model.IsLianLianPay() || model.IsKbankPay()
+	return model.IsLianLianPay()
 }
 
 // IsDraft 判断是否草稿状态

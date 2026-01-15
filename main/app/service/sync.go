@@ -1,11 +1,13 @@
 package service
 
 import (
+	stdcontext "context"
 	"encoding/json"
 	"fmt"
 	"runtime/debug"
 	"slices"
-	"sync"
+	"strconv"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -16,6 +18,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -56,36 +59,126 @@ type SyncSrv struct {
 
 // 全局同步任务管理器
 var (
-	syncTaskManager = &SyncTaskManager{
-		runningTasks: sync.Map{},
-	}
+	syncTaskManager = &SyncTaskManager{}
 )
 
-// SyncTaskManager 同步任务管理器
-type SyncTaskManager struct {
-	runningTasks sync.Map // key: companyUuid, value: bool
-}
+const (
+	// syncTaskTTL 同步任务锁的 TTL，10分钟
+	syncTaskTTL = 10 * time.Minute
+)
+
+// SyncTaskManager 同步任务管理器（使用 Redis 实现分布式锁）
+type SyncTaskManager struct{}
 
 // tryStartTask 尝试启动任务，如果已有任务在运行则返回false
+// 使用 Redis SetNX 实现分布式锁，TTL 为 10 分钟
 func (m *SyncTaskManager) tryStartTask(companyUuid uint64) bool {
-	_, loaded := m.runningTasks.LoadOrStore(companyUuid, true)
-	return !loaded // 如果之前没有值则返回true，表示成功启动任务
+	if cache.Global == nil {
+		logger.Logger.Warn("Redis 客户端未初始化，无法启动同步任务",
+			zap.Uint64("companyUuid", companyUuid),
+		)
+		return false
+	}
+
+	key := constant.GetRedisKeySyncTask(companyUuid)
+	ctx := stdcontext.Background()
+
+	var success bool
+	var err error
+
+	// 尝试在单机和集群模式下执行 SetNX
+	if clusterClient := cache.Global.GetClusterClient(); clusterClient != nil {
+		// 集群模式
+		success, err = clusterClient.SetNX(ctx, key, "1", syncTaskTTL).Result()
+	} else if client := cache.Global.GetClient(); client != nil {
+		// 单机模式
+		success, err = client.SetNX(ctx, key, "1", syncTaskTTL).Result()
+	} else {
+		logger.Logger.Warn("无法获取 Redis 客户端",
+			zap.Uint64("companyUuid", companyUuid),
+		)
+		return false
+	}
+
+	if err != nil {
+		logger.Logger.Error("启动同步任务失败",
+			zap.Uint64("companyUuid", companyUuid),
+			zap.Error(err),
+		)
+		return false
+	}
+
+	if success {
+		logger.Logger.Debug("成功启动同步任务",
+			zap.Uint64("companyUuid", companyUuid),
+			zap.Duration("ttl", syncTaskTTL),
+		)
+	} else {
+		logger.Logger.Debug("同步任务已在运行中",
+			zap.Uint64("companyUuid", companyUuid),
+		)
+	}
+
+	return success
 }
 
-// finishTask 完成任务
+// finishTask 完成任务，删除 Redis 中的锁
 func (m *SyncTaskManager) finishTask(companyUuid uint64) {
-	m.runningTasks.Delete(companyUuid)
+	if cache.Global == nil {
+		return
+	}
+
+	key := constant.GetRedisKeySyncTask(companyUuid)
+	cache.Global.Del(key)
+
+	logger.Logger.Debug("同步任务已完成",
+		zap.Uint64("companyUuid", companyUuid),
+	)
 }
 
 // getRunningCompanyUuids 获取当前正在执行同步任务的所有companyUuid
+// 使用 Scan 命令扫描所有 sync:task:* 的 key
 func (m *SyncTaskManager) getRunningCompanyUuids() []uint64 {
+	if cache.Global == nil {
+		return []uint64{}
+	}
+
+	ctx := stdcontext.Background()
+	pattern := "sync:task:*"
+	var keys []string
+	var err error
+
+	// 使用辅助函数扫描 Redis keys（支持集群和单机）
+	if clusterClient := cache.Global.GetClusterClient(); clusterClient != nil {
+		keys, err = cache.ScanRedisKeysDefault(ctx, clusterClient, pattern)
+	} else if client := cache.Global.GetClient(); client != nil {
+		keys, err = cache.ScanRedisKeysDefault(ctx, client, pattern)
+	}
+
+	if err != nil {
+		logger.Logger.Error("获取运行中的同步任务失败",
+			zap.Error(err),
+		)
+		return []uint64{}
+	}
+
+	// 从 key 中提取 companyUuid
 	var companyUuids []uint64
-	m.runningTasks.Range(func(key, value any) bool {
-		if companyUuid, ok := key.(uint64); ok {
-			companyUuids = append(companyUuids, companyUuid)
+	prefix := "sync:task:"
+	for _, key := range keys {
+		if strings.HasPrefix(key, prefix) {
+			companyUuidStr := strings.TrimPrefix(key, prefix)
+			if companyUuid, err := strconv.ParseUint(companyUuidStr, 10, 64); err == nil {
+				companyUuids = append(companyUuids, companyUuid)
+			}
 		}
-		return true
-	})
+	}
+
+	logger.Logger.Debug("获取运行中的同步任务",
+		zap.Int("count", len(companyUuids)),
+		zap.Uint64s("companyUuids", companyUuids),
+	)
+
 	return companyUuids
 }
 
