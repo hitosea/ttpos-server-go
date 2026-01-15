@@ -2654,7 +2654,7 @@ func (s *statisticsSrv) CountBusinessTimePeriod(ctx context.Context, req req.Bus
 	if req.ExcludeDataManage {
 		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
 			ctx.GetDB(),
-			"sale_bill_uuid",
+			"sb.uuid",
 			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
 			repository.CommonRepo.WhereBySoftDelete(),
 		))
