@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
 
@@ -49,6 +50,8 @@ func InitMemberController(
 				return obj.Uuid
 			},
 			persistence.ObjectTypeMember,
+			adapter.WithEnableL1Cache(false),
+			adapter.WithEnableL2Cache(false),
 		)
 	})
 }
