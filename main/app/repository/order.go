@@ -871,6 +871,47 @@ func filterSaleBillProducts(saleBill *model.SaleBill, option *OrderCartInfoOptio
 	}
 }
 
+// filterDeletedProducts 过滤掉所有SaleOrder中已删除的SaleOrderProduct商品
+// 但被拒单且删除的商品不删除
+func filterDeletedProducts(saleOrders []*model.SaleOrder) []*model.SaleOrder {
+	if saleOrders == nil {
+		return nil
+	}
+
+	for _, saleOrder := range saleOrders {
+		if saleOrder == nil || saleOrder.SaleOrderProducts == nil {
+			continue
+		}
+
+		// 过滤商品：删除所有 deleteTime 不为 0 的 saleOrderProduct 商品，但被拒单且删除的商品不删
+		filteredProducts := make([]*model.SaleOrderProduct, 0, len(saleOrder.SaleOrderProducts))
+		for _, product := range saleOrder.SaleOrderProducts {
+			if product == nil {
+				continue
+			}
+
+			// 如果商品未删除（deleteTime == 0），直接保留
+			if product.DeleteTime == 0 {
+				filteredProducts = append(filteredProducts, product)
+				continue
+			}
+
+			// 如果商品已删除（deleteTime != 0），检查是否是被拒单的H5订单商品
+			// 条件：属于H5订单 && H5订单状态为已拒单
+			if product.H5OrderUuid != 0 &&
+				product.H5Order != nil &&
+				product.H5Order.Status == constant.H5OrderStatusRejected {
+				// 被拒单且删除的商品，保留（不删除）
+				filteredProducts = append(filteredProducts, product)
+			}
+			// 其他已删除的商品，不保留（被过滤掉）
+		}
+		saleOrder.SaleOrderProducts = filteredProducts
+	}
+
+	return saleOrders
+}
+
 func (r *orderRepo) querySaleBillInfo(saleBillUuid uint64, filterProduct func(*gorm.DB) *gorm.DB) (model.SaleBill, error) {
 	repo := NewSaleBillRepo(r.db)
 	saleBill, errDesk := repo.GetSaleBill(
@@ -2001,6 +2042,9 @@ func (r *orderRepo) QuerySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 			return nil, errors.WithMessage(errors.New("对象存储层注入失败: " + err.Error()))
 		}
 	}
+
+	// 过滤掉已经删除掉的商品. 避免已经删除的商品与新加购的商品签名相同导致合并,导致加购不进购物车
+	saleBill.SaleOrders = filterDeletedProducts(saleBill.SaleOrders)
 
 	return saleBill, nil
 }
