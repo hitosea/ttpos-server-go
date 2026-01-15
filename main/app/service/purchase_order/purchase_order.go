@@ -1326,7 +1326,7 @@ func (s *purchaseOrderSrv) syncItemsToCompanyShop(
 		// 执行新增操作
 		if len(itemReqsToCreate) > 0 {
 			// 1. 尝试使用子店铺的物料配置构建明细（优先使用子店铺配置）
-			itemsFromCompany, _, err := s.validator.buildPurchaseOrderItems(tx, companyOrder.Uuid, itemReqsToCreate, true)
+			itemsFromCompany, unitsFromCompany, err := s.validator.buildPurchaseOrderItems(tx, companyOrder.Uuid, itemReqsToCreate, true)
 			if err != nil {
 				return err
 			}
@@ -1354,7 +1354,60 @@ func (s *purchaseOrderSrv) syncItemsToCompanyShop(
 				}
 			}
 
-			// 5. 合并子店铺和总部的明细
+			// 5. 检查子店铺物料是否缺少采购单位，补充缺失的单位
+			// 从总部数据库查询完整的单位信息
+			hqItemsWithUnits, _, err := s.validator.buildPurchaseOrderItems(ctx.GetDB(), companyOrder.Uuid, itemReqsToCreate)
+			if err != nil {
+				return errors.WithMessage(errors.New("从总部查询完整单位信息失败"), err.Error())
+			}
+
+			// 构建总部单位映射：MaterialUuid -> Units
+			hqUnitsMap := make(map[uint64][]model.PurchaseOrderItemUnit)
+			for _, item := range hqItemsWithUnits {
+				hqUnitsMap[item.MaterialUuid] = item.Units
+			}
+
+			// 构建子店已有单位映射：MaterialUuid -> map[UnitUuid]bool
+			companyUnitsMap := make(map[uint64]map[uint64]bool)
+			for _, unit := range unitsFromCompany {
+				if _, exists := companyUnitsMap[unit.ItemUuid]; !exists {
+					companyUnitsMap[unit.ItemUuid] = make(map[uint64]bool)
+				}
+				companyUnitsMap[unit.ItemUuid][unit.UnitUuid] = true
+			}
+
+			// 为子店铺的明细补充缺失的单位
+			for i := range itemsFromCompany {
+				item := &itemsFromCompany[i]
+				hqUnits, hasHqUnits := hqUnitsMap[item.MaterialUuid]
+				if !hasHqUnits {
+					continue
+				}
+
+				companyUnits, hasCompanyUnits := companyUnitsMap[item.Uuid]
+
+				// 找出子店铺缺失的单位
+				for _, hqUnit := range hqUnits {
+					// 如果子店铺没有这个单位，则从总部复制
+					if !hasCompanyUnits || !companyUnits[hqUnit.UnitUuid] {
+						// 复制总部单位信息，但使用子店铺的ItemUuid
+						newUnit := model.PurchaseOrderItemUnit{
+							ItemUuid:           item.Uuid,
+							PurchaseOrderUuid:  companyOrder.Uuid,
+							UnitUuid:           hqUnit.UnitUuid,
+							Num:                hqUnit.Num,
+							UnitName:           hqUnit.UnitName,
+							UnitConversionRate: hqUnit.UnitConversionRate,
+							ErpnextUom:         hqUnit.ErpnextUom,
+							BaseUnitUuid:       hqUnit.BaseUnitUuid,
+							BaseUnitName:       hqUnit.BaseUnitName,
+						}
+						item.Units = append(item.Units, newUnit)
+					}
+				}
+			}
+
+			// 6. 合并子店铺和总部的明细
 			allItems := append(itemsFromCompany, itemsFromHeadquarter...)
 
 			// 批量创建明细
