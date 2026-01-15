@@ -194,26 +194,144 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | **认证** | Bearer Token |
 | **Content-Type** | application/json |
 
-#### 请求参数
+#### 路径参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `orderId` | string | ✅ | 订单唯一 ID |
-| `orderShortCode` | string | ✅ | 短订单 ID（4位） |
-| `restaurantRevenue` | number | ✅ | 商户收入总额 |
-| `orderAcceptedTime` | string | ✅ | 订单接受时间（ISO 8601） |
-| `cutleryRequested` | boolean | ✅ | 是否需要餐具 |
-| `customerType` | string | ✅ | 订单类型（`DELIVERY` / `PICKUP`） |
-| `items` | array | ✅ | 订单商品列表 |
-| `additionalItems` | array | ❌ | 附加信息 |
+| `partnerId` | string | ✅ | 合作伙伴唯一 ID |
+| `storeId` | string | ✅ | 门店唯一 ID（LINE MAN 门店 ID） |
 
-**详细参数说明**：参见 `api/lineman/v1/order.go` 中的 `PlaceOrderReq` 定义。
+#### 请求参数
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| `orderId` | string | ✅ | 订单唯一 ID（格式：LMF-yyMMdd-{number}，1-20字符） | `"LMF-260113-338798091"` |
+| `orderShortCode` | string | ✅ | 短订单 ID（orderId 后4位） | `"8091"` |
+| `restaurantRevenue` | number | ✅ | 商户收入总额（THB，已扣除合作伙伴补贴） | `350.00` |
+| `orderAcceptedTime` | string | ✅ | 订单接受时间（ISO 8601 格式） | `"2022-11-01T13:08:06+07:00"` |
+| `customerType` | string | ✅ | 订单类型（`DELIVERY` / `PICKUP`） | `"DELIVERY"` |
+| `memberId` | string | ❌ | 绑定 LINE MAN 账号的会员 ID（最大255字符） | `"member-123"` |
+| `items` | array | ✅ | 订单商品列表（至少1项） | 见下方结构 |
+| `additionalItems` | array | ✅ | 订单附加项列表 | 见下方结构 |
+
+#### items 商品项结构
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| `id` | string | ✅ | 菜单项 ID（最大255字符） | `"menu-item-001"` |
+| `quantity` | int | ✅ | 商品数量（≥1） | `2` |
+| `unitPrice` | number | ✅ | 商品单价（THB，含选项费用，已折扣） | `89.00` |
+| `memo` | string | ❌ | 顾客备注 | `"不要辣"` |
+| `promotionId` | string | ❌ | 促销活动 ID（最大255字符） | `"promo-001"` |
+| `discount` | number | ❌ | 促销折扣金额（商户补贴） | `10.00` |
+| `properties` | array | ❌ | 商品选项列表 | 见下方结构 |
+
+#### items.properties 商品选项结构
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| `id` | string | ✅ | 选项 ID（最大255字符） | `"size"` |
+| `values` | array | ✅ | 已选择的选项值列表（至少1项） | 见下方结构 |
+
+#### items.properties.values 选项值结构
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| `id` | string | ✅ | 选项值 ID（最大255字符） | `"large"` |
+| `price` | number | ✅ | 选项值价格（THB，≥0） | `20.00` |
+
+#### additionalItems 附加项结构
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| `name` | string | ✅ | 附加信息（最大1024字符） | `"ไม่รับช้อนส้อมพลาสติก"` |
+
+#### 请求示例
+
+```http
+POST /v1/partners/partner-123/stores/store-456/orders HTTP/1.1
+Host: api.ttpos.example.com
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+{
+  "orderId": "LMF-260113-338798091",
+  "orderShortCode": "8091",
+  "restaurantRevenue": 350.00,
+  "orderAcceptedTime": "2026-01-13T14:30:00+07:00",
+  "customerType": "DELIVERY",
+  "memberId": "member-123",
+  "items": [
+    {
+      "id": "menu-item-001",
+      "quantity": 2,
+      "unitPrice": 109.00,
+      "memo": "不要辣",
+      "promotionId": "promo-winter",
+      "discount": 10.00,
+      "properties": [
+        {
+          "id": "size",
+          "values": [
+            {
+              "id": "large",
+              "price": 20.00
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "values": [
+            {
+              "id": "cheese",
+              "price": 15.00
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "menu-item-002",
+      "quantity": 1,
+      "unitPrice": 132.00,
+      "properties": []
+    }
+  ],
+  "additionalItems": [
+    {
+      "name": "ไม่รับช้อนส้อมพลาสติก"
+    }
+  ]
+}
+```
+
+#### 响应格式
+
+##### 成功响应（200 OK）
+
+```json
+{
+  "status": "ok",
+  "code": "200",
+  "message": "Order created successfully"
+}
+```
+
+##### 失败响应
+
+```json
+{
+  "status": "fail",
+  "code": "500",
+  "message": "Failed to create order: {error details}"
+}
+```
 
 ---
 
 ### 3. 订单内容更新 Webhook
 
-接收 LINE MAN 订单内容变更通知（商品/金额调整）。
+接收 LINE MAN 订单内容变更通知（商品/金额调整）。当顾客修改订单或平台调整订单时，LINE MAN 会推送此通知。
 
 #### 基本信息
 
@@ -224,16 +342,93 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | **认证** | Bearer Token |
 | **Content-Type** | application/json |
 
-#### 请求参数
+#### 路径参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `orderId` | string | ✅ | 订单唯一 ID |
-| `restaurantRevenue` | number | ✅ | 更新后的商户收入 |
-| `orderUpdatedTime` | string | ✅ | 订单更新时间（ISO 8601） |
-| `items` | array | ✅ | 更新后的订单商品列表 |
+| `partnerId` | string | ✅ | 合作伙伴唯一 ID |
+| `storeId` | string | ✅ | 门店唯一 ID（LINE MAN 门店 ID） |
 
-**详细参数说明**：参见 `api/lineman/v1/order.go` 中的 `OrderUpdateReq` 定义。
+#### 请求参数
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| `orderId` | string | ✅ | 订单唯一 ID（格式：LMF-yyMMdd-{number}，1-20字符） | `"LMF-260113-338798091"` |
+| `orderShortCode` | string | ✅ | 短订单 ID（orderId 后4位） | `"8091"` |
+| `restaurantRevenue` | number | ✅ | 更新后的商户收入总额（THB） | `280.00` |
+| `orderAcceptedTime` | string | ✅ | 订单接受时间（ISO 8601 格式） | `"2026-01-13T14:30:00+07:00"` |
+| `orderUpdatedTime` | string | ✅ | 订单更新时间（ISO 8601 格式） | `"2026-01-13T14:45:00+07:00"` |
+| `customerType` | string | ✅ | 订单类型（`DELIVERY` / `PICKUP`） | `"DELIVERY"` |
+| `memberId` | string | ❌ | 绑定 LINE MAN 账号的会员 ID | `"member-123"` |
+| `items` | array | ✅ | 更新后的订单商品列表（至少1项） | 结构同订单创建 |
+| `additionalItems` | array | ✅ | 订单附加项列表 | 结构同订单创建 |
+
+**items / additionalItems 结构**：与订单创建接口相同，参见上方 [订单创建 Webhook](#2-订单创建-webhook) 的详细说明。
+
+#### 请求示例
+
+```http
+PUT /v1/partners/partner-123/stores/store-456/orders HTTP/1.1
+Host: api.ttpos.example.com
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+{
+  "orderId": "LMF-260113-338798091",
+  "orderShortCode": "8091",
+  "restaurantRevenue": 280.00,
+  "orderAcceptedTime": "2026-01-13T14:30:00+07:00",
+  "orderUpdatedTime": "2026-01-13T14:45:00+07:00",
+  "customerType": "DELIVERY",
+  "items": [
+    {
+      "id": "menu-item-001",
+      "quantity": 1,
+      "unitPrice": 109.00,
+      "properties": []
+    },
+    {
+      "id": "menu-item-002",
+      "quantity": 1,
+      "unitPrice": 132.00,
+      "properties": []
+    }
+  ],
+  "additionalItems": []
+}
+```
+
+#### 响应格式
+
+##### 成功响应（200 OK）
+
+```json
+{
+  "status": "ok",
+  "code": "200",
+  "message": "Order updated successfully"
+}
+```
+
+##### 失败响应
+
+```json
+{
+  "status": "fail",
+  "code": "500",
+  "message": "Order not found"
+}
+```
+
+#### 业务逻辑
+
+1. **订单查询**：根据 `orderId` 查找已存在的订单
+2. **订单验证**：确认订单状态允许更新（未完成/未取消）
+3. **数据更新**：
+   - 更新商品列表（全量替换）
+   - 更新商户收入金额
+   - 记录更新时间
+4. **事件推送**：发送 RocketMQ 消息通知 Main 模块
 
 ---
 
@@ -443,9 +638,10 @@ WHERE provider_name = 'lineman'
 
 | 版本 | 日期 | 作者 | 变更内容 |
 |------|------|------|----------|
+| v1.1.0 | 2026-01-14 | Claude | 补充订单创建和订单更新接口的详细参数说明，包括嵌套结构和请求示例 |
 | v1.0.0 | 2026-01-13 | rikugun | 初始版本，添加订单状态更新 Webhook 文档 |
 
 ---
 
-**维护者**: TTPOS 后端开发组  
-**最后更新**: 2026-01-13
+**维护者**: TTPOS 后端开发组
+**最后更新**: 2026-01-14
