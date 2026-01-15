@@ -176,7 +176,6 @@ type CheckProductFlavorItemResult struct {
 }
 
 func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProductFlavorParam) (*CheckProductFlavorResult, error) {
-	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
 	// 商品规格
 	if len(flavors) == 0 {
@@ -202,10 +201,12 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 			return nil, errors.New("规格不能为空")
 		}
 		flavor, err := productRepo.GetProductFlavor(
-			commonRepo.WhereBySoftDelete(),
 			productRepo.WhereUuid(flavorReq.Uuid),
 		)
 		if err != nil || flavor.ID == 0 {
+			return nil, errors.New("规格不存在")
+		}
+		if !isDelete && flavor.DeleteTime != 0 {
 			return nil, errors.New("规格不存在")
 		}
 		if !isDelete && !productRepo.CheckPrice(flavorReq.Price, 0, 100000000, 2) {
@@ -291,8 +292,11 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 	productPackageAttributeGroupRepo := repository.NewProductPackageAttributeGroupRepo(db)
 
 	attributeGroupCount := 0
-	for idx, attributeGroupReq := range attributes {
+	for idx, attributeGroupReq := range attributes { // 属性组
 		isDelete := attributeGroupReq.IsDelete
+		if isDelete {
+			continue
+		}
 		if attributeGroupReq.Uuid == 0 {
 			return nil, errors.New("属性组不能为空")
 		}
@@ -379,7 +383,10 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 			return nil, errors.New("属性值不能为空")
 		}
 		attributeDefaultCount := 0
-		for _, attributeReq := range attributeGroupReq.Attributes {
+		for _, attributeReq := range attributeGroupReq.Attributes { // 属性
+			if attributeReq.IsDelete {
+				continue
+			}
 			if attributeReq.Uuid == 0 {
 				return nil, errors.New("属性值不能为空")
 			}
@@ -428,10 +435,11 @@ type CheckProductSauceParam struct {
 }
 
 type CheckProductSauceItemParam struct {
-	Uuid              uint64 `json:"uuid"`                // 商品加料项UUID
-	IsDefaultSelected int    `json:"is_default_selected"` // 商品加料项是否默认选中 0-否 1-是
-	BomUuid           uint64 `json:"bom_uuid"`            // 商品加料项bomUUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
-	IsDelete          bool   `json:"is_delete"`           // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid              uint64   `json:"uuid"`                // 商品加料项UUID
+	IsDefaultSelected int      `json:"is_default_selected"` // 商品加料项是否默认选中 0-否 1-是
+	BomUuid           uint64   `json:"bom_uuid"`            // 商品加料项bomUUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+	IsDelete          bool     `json:"is_delete"`           // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Price             *float64 `json:"price"`               // 商品加料价格，可不传递，兼容旧版客户端，v2.14后必传
 }
 
 type CheckProductSauceResult struct {
@@ -533,17 +541,20 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 		if sauceReq.Uuid == 0 {
 			return nil, errors.New("加料不能为空")
 		}
-		sauce, _ := productRepo.GetProductSauce(
-			commonRepo.WhereBySoftDelete(),
+		sauce, _ := productRepo.GetProductSauceWithoutScope(
 			productRepo.WhereUuid(sauceReq.Uuid),
 		)
-		if sauce.ID == 0 {
+		if sauce.ID == 0 || (!sauceReq.IsDelete && sauce.DeleteTime != 0) {
 			return nil, errors.New("加料不存在")
+		}
+		price := sauce.Price
+		if sauceReq.Price != nil {
+			price = *sauceReq.Price
 		}
 		sauceResults = append(sauceResults, CheckProductSauceItemResult{
 			Uuid:              sauce.Uuid,
 			Name:              sauce.Name,
-			Price:             sauce.Price,
+			Price:             price,
 			IsDefaultSelected: sauceReq.IsDefaultSelected,
 			BomUuid:           sauceReq.BomUuid,
 			IsDelete:          sauceReq.IsDelete,

@@ -18068,6 +18068,51 @@
                 }
             }
         },
+        "/internal/shop/product/cache/invalidate": {
+            "post": {
+                "security": [
+                    {
+                        "InternalToken": []
+                    }
+                ],
+                "description": "供PHP后端服务调用，用于在修改商品数据时失效相关缓存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品（内部接口）"
+                ],
+                "summary": "失效商品列表缓存（内部接口）",
+                "parameters": [
+                    {
+                        "description": "失效缓存请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InvalidateProductListCacheReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/kiosk/base": {
             "get": {
                 "security": [
@@ -18552,8 +18597,8 @@
                 }
             }
         },
-        "/kiosk/order/pay/info": {
-            "get": {
+        "/kiosk/order/pay": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
@@ -19007,6 +19052,45 @@
                 }
             }
         },
+        "/kiosk/setting": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "保存设置，目前仅支持修改机器备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.设置"
+                ],
+                "summary": "保存设置",
+                "parameters": [
+                    {
+                        "description": "修改设置参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.EditDeviceRemarkReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/kiosk/store_switch": {
             "post": {
                 "security": [
@@ -19053,6 +19137,45 @@
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kiosk/verify_advanced_password": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "验证高级密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.基础信息"
+                ],
+                "summary": "验证高级密码",
+                "parameters": [
+                    {
+                        "description": "验证密码参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.VerifyPasswordReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -28387,6 +28510,45 @@
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.ProductUnitSortReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/update_headquarters_product": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改总部商品的上下架状态和打印档口，支持单独或同时修改",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品"
+                ],
+                "summary": "修改总部商品",
+                "parameters": [
+                    {
+                        "description": "修改总部商品请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateHeadquartersProductReq"
                         }
                     }
                 ],
@@ -39007,6 +39169,10 @@
                 "uuid": {
                     "description": "物品UUID",
                     "type": "integer"
+                },
+                "valuation": {
+                    "description": "兼容旧版本客户端\n估值率,字段名称为 valuation, 兼容旧版本客户端, 2.12.0 版本后不再使用 valuation_rate 字段",
+                    "type": "number"
                 }
             }
         },
@@ -41241,6 +41407,10 @@
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                },
+                "update_time": {
+                    "description": "更新时间戳,用于判断缓存是否过期. 在缓存层通过反射维护这个字段的值",
+                    "type": "integer"
                 }
             }
         },
@@ -44152,6 +44322,18 @@
                 },
                 "to": {
                     "description": "目标销售订单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.InvalidateProductListCacheReq": {
+            "type": "object",
+            "required": [
+                "company_uuid"
+            ],
+            "properties": {
+                "company_uuid": {
+                    "description": "商户UUID",
                     "type": "integer"
                 }
             }
@@ -47390,6 +47572,10 @@
                     "description": "是否默认选中 0-否 1-是",
                     "type": "integer"
                 },
+                "price": {
+                    "description": "商品加料价格，可不传递，兼容旧版客户端",
+                    "type": "number"
+                },
                 "uuid": {
                     "description": "商品加料UUID",
                     "type": "integer"
@@ -47968,6 +48154,10 @@
                     "description": "是否删除, 如果是新增/编辑，则传false，删除时传true",
                     "type": "boolean"
                 },
+                "price": {
+                    "description": "商品加料价格，可不传递，兼容旧版客户端",
+                    "type": "number"
+                },
                 "uuid": {
                     "description": "商品加料UUID",
                     "type": "integer"
@@ -48476,6 +48666,10 @@
                         "approve",
                         "reject"
                     ]
+                },
+                "reject_reason": {
+                    "description": "驳回备注，可以为空最大100个字符",
+                    "type": "string"
                 },
                 "uuid": {
                     "description": "采购订单ID",
@@ -50549,6 +50743,34 @@
                 "supplier_name": {
                     "description": "总部供应商名称",
                     "type": "string"
+                }
+            }
+        },
+        "req.UpdateHeadquartersProductReq": {
+            "type": "object",
+            "required": [
+                "status",
+                "uuid"
+            ],
+            "properties": {
+                "product_printer_uuids": {
+                    "description": "商品打印档口UUID列表（可选）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "description": "商品状态 0-下架 1-上架（可选）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -55160,6 +55382,10 @@
                         }
                     ]
                 },
+                "client_version": {
+                    "description": "客户端版本",
+                    "type": "string"
+                },
                 "company": {
                     "description": "商家信息",
                     "allOf": [
@@ -55198,6 +55424,10 @@
                             "$ref": "#/definitions/setting.KioskResp"
                         }
                     ]
+                },
+                "system_version": {
+                    "description": "服务端版本",
+                    "type": "string"
                 },
                 "update_time": {
                     "description": "更新时间",
@@ -59002,6 +59232,10 @@
                     "description": "收货进度（百分比0.00%）前端直接显示",
                     "type": "string"
                 },
+                "reject_reason": {
+                    "description": "驳回原因",
+                    "type": "string"
+                },
                 "status": {
                     "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核",
                     "type": "integer"
@@ -59081,6 +59315,10 @@
                 },
                 "receipt_progress": {
                     "description": "收货进度（百分比0.00%）前端直接显示",
+                    "type": "string"
+                },
+                "reject_reason": {
+                    "description": "驳回原因",
                     "type": "string"
                 },
                 "status": {

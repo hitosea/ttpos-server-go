@@ -71,6 +71,7 @@ type PaymentOrder struct {
 	PaymentCommissionFee float64 `json:"payment_commission_fee"` // 手续费
 	Amount               float64 `json:"amount"`                 // 实收金额（含手续费）
 	DisabledCancel       bool    `json:"disabled_cancel"`        // 禁止撤销，false-不禁止；true-禁止
+	PaymentInfo          string  `json:"payment_info"`           // 支付信息.json格式,存储第三方支付返回的详细信息,kbank的信息
 }
 
 // ConfirmRechargeOrder 确认充值订单响应

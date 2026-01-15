@@ -1571,6 +1571,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			PaymentCommissionFee: paymentOrder.PaymentCommissionFee,
 			Amount:               paymentOrder.Amount,
 			DisabledCancel:       paymentOrder.PaymentMethod.IsDisabledCancel(),
+			PaymentInfo:          paymentOrder.PaymentInfo,
 		}
 		paymentOrders = append(paymentOrders, order)
 	}

@@ -162,9 +162,11 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 
 	// WarehouseErpCode 根据仓库ERP编码过滤
 	if req.PurchaseType == 2 {
-		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-			return db.Where("headquarter_uuid > ?", 0)
-		}))
+		if !companySetting.IsHeadquarter() {
+			dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+				return db.Where("headquarter_uuid > ?", 0)
+			}))
+		}
 	} else if req.SupplierErpCode != "" {
 		dbOptions = append(dbOptions, commonRepo.WhereByMaterialSupplierErpCode(req.SupplierErpCode))
 	}
@@ -551,13 +553,14 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.Mater
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
 
-		checkService := NewCheckNameSrv(s.dbm)
-		names := checkService.MakeCheckNameList(ctx, request.LocaleName)
-		for _, name := range names {
-			if !checkService.CheckNameLength(ctx, name.Text, 50) {
-				return errors.New("名称长度不能超过50")
-			}
-		}
+		// 检查名称长度, 暂时关闭，因为已经通过前端校验了. 后端取消校验,任务:38639（优化）新管理端-物品类别名称长度限制
+		// checkService := NewCheckNameSrv(s.dbm)
+		// names := checkService.MakeCheckNameList(ctx, request.LocaleName)
+		// for _, name := range names {
+		// 	if !checkService.CheckNameLength(ctx, name.Text, 50) {
+		// 		return errors.New("名称长度不能超过50")
+		// 	}
+		// }
 
 		// 检查物品类别编码是否已存在
 		if request.Code != "" {
@@ -696,13 +699,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 			InternalCode:       request.InternalCode,
 			AllowNegativeStock: request.AllowNegativeStock,
 		}
-		// 获取总部ID
-		companySetting := ctx.GetCompanySetting()
-		var headquarterUuid uint64
-		if companySetting.IsSubShop() {
-			headquarterUuid = companySetting.HeadquarterUuid
-		}
-		params.SetHeadquarterUuid(headquarterUuid)
+		params.SetHeadquarterUuid(0)
 		// 获取默认仓库ID
 		warehouseUuid, err := repository.NewWarehouseRepo(tx).GetDefaultWarehouse()
 		if err != nil {
@@ -1254,14 +1251,15 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 
 			// 获取采购单位
 			var purchaseUom string
-			purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.PurchaseUnitUuid)
-			if err != nil {
-				return errors.WithMessage(err, "获取采购单位失败")
+			if request.PurchaseUnitUuid != 0 { // 如果采购单位不为空，则获取采购单位Uom
+				purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.PurchaseUnitUuid)
+				if err != nil {
+					return errors.WithMessage(err, "获取采购单位失败")
+				}
+				if purchaseUnit.Unit != nil {
+					purchaseUom = purchaseUnit.Unit.ErpnextUom
+				}
 			}
-			if purchaseUnit.Unit != nil {
-				purchaseUom = purchaseUnit.Unit.ErpnextUom
-			}
-
 			allowNegativeStock := request.AllowNegativeStock
 			_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
 				ItemCode:     existingMaterial.Code,
@@ -1711,13 +1709,14 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 	materialCategory.Code = request.Code
 	materialCategory.MultiLanguageName.InitByLocaleResponse(request.LocaleName)
 
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, request.LocaleName)
-	for _, name := range names {
-		if !checkService.CheckNameLength(ctx, name.Text, 50) {
-			return errors.New("名称长度不能超过50")
-		}
-	}
+	// 暂时关闭，因为已经通过前端校验了. 后端取消校验,任务:38639（优化）新管理端-物品类别名称长度限制
+	// checkService := NewCheckNameSrv(s.dbm)
+	// names := checkService.MakeCheckNameList(ctx, request.LocaleName)
+	// for _, name := range names {
+	// 	if !checkService.CheckNameLength(ctx, name.Text, 50) {
+	// 		return errors.New("名称长度不能超过50")
+	// 	}
+	// }
 
 	// 检查物品类别编码是否已存在
 	if request.Code != "" {
@@ -2352,7 +2351,7 @@ func (s *materialSrv) unlinkProductBomCard(ctx context.Context, req req.ProductB
 		}
 		// 解除成本卡关联
 		productBomCardRepo := repository.NewProductBomRepo(tx)
-		if err := productBomCardRepo.UpdateProductBomCard(req.RelatedUuid, 0, 999999999); err != nil {
+		if err := productBomCardRepo.UpdateProductBomCard(req.RelatedUuid, 0, constant.ProductBomInfiniteStock); err != nil {
 			return errors.WithMessage(err, "更新成本卡失败")
 		}
 		if err := repository.NewProductBomCardLogRepo(tx).CreateProductBomCardLog(*productBomCardLog); err != nil {
@@ -3202,19 +3201,19 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 				itemCode := bom.ItemCode                                              // 商品、小料的erpnext编码
 				objectByItemCodeResp, err := s.getObjectByItemCode(ctx, itemCode, tx) // 获取物品或加料
 				if err != nil {
-					logger.Logger.Error("同步成本卡时，获取物品或加料失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard), zap.Any("itemCode", itemCode))
+					logger.Logger.Info("同步成本卡时，获取物品或加料失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard), zap.Any("itemCode", itemCode))
 					continue
 				}
 				if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeFlavor { // 规格商品
 					// 更新product_bom表的成本卡uuid
 					if err := tx.Model(&model.ProductBom{}).Where("uuid = ?", objectByItemCodeResp.ProductBom.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
-						logger.Logger.Error("同步成本卡时，更新product_bom表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
+						logger.Logger.Info("同步成本卡时，更新product_bom表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
 						continue
 					}
 				} else if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeSauce { // 小料
 					// 更新product_sauce表的成本卡uuid
 					if err := tx.Model(&model.ProductSauce{}).Where("uuid = ?", objectByItemCodeResp.ProductSauce.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
-						logger.Logger.Error("同步成本卡时，更新product_sauce表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
+						logger.Logger.Info("同步成本卡时，更新product_sauce表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
 						continue
 					}
 				}
@@ -3223,7 +3222,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 		for _, bom := range needCreate {
 			if err := s.createProductBomCardByErpBom(ctx, tx, bom); err != nil {
 				if strings.Contains(err.Error(), "物品或加料不存在") || strings.Contains(err.Error(), "单位不存在") {
-					logger.Logger.Error("同步成本卡时，创建成本卡失败，物品或加料或物料单位不存在", zap.String("bom_name", bom.BomName), zap.Any("bom", bom))
+					logger.Logger.Info("同步成本卡时，创建成本卡失败，物品或加料或物料单位不存在", zap.String("bom_name", bom.BomName), zap.Any("bom", bom))
 					continue
 				} else {
 					return errors.WithMessage(err, "创建成本卡失败")
@@ -3233,7 +3232,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 		for _, bomCard := range needDisable {
 			if err := s.disableProductBomCard(ctx, tx, bomCard); err != nil {
 				if strings.Contains(err.Error(), "获取商品或加料失败") {
-					logger.Logger.Error("同步成本卡时，失效成本卡失败，商品或加料不存在", zap.String("bom_name", bomCard.Name), zap.Any("bom_card", bomCard))
+					logger.Logger.Info("同步成本卡时，失效成本卡失败，商品或加料不存在", zap.String("bom_name", bomCard.Name), zap.Any("bom_card", bomCard))
 					continue
 				} else {
 					return errors.WithMessage(err, "失效成本卡失败")

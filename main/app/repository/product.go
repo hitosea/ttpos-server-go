@@ -123,6 +123,7 @@ type IProductQueryRepo interface {
 	PaginateGetProductSauceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) // 分页获取商品加料列表
 	GetProductSauceList(opts ...DBOption) ([]model.ProductSauce, error)                                          // 获取商品加料列表
 	GetProductSauce(opts ...DBOption) (model.ProductSauce, error)                                                // 获取商品加料详情
+	GetProductSauceWithoutScope(opts ...DBOption) (model.ProductSauce, error)                                    // 获取商品加料详情（不使用软删除）
 	GetProductSauceCount(opts ...DBOption) (int64, error)                                                        // 获取商品加料数量
 
 	PaginateGetProductAttributeGroupList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductAttributeGroup, int64, error) // 分页获取商品属性分组列表
@@ -1084,6 +1085,17 @@ func (r *productRepo) GetProductSauceList(opts ...DBOption) ([]model.ProductSauc
 func (r *productRepo) GetProductSauce(opts ...DBOption) (model.ProductSauce, error) {
 	var sauce model.ProductSauce
 	db := r.db.Model(&model.ProductSauce{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.First(&sauce).Error
+	return sauce, errors.WithMessage(err)
+}
+
+// GetProductSauce 获取商品加料详情
+func (r *productRepo) GetProductSauceWithoutScope(opts ...DBOption) (model.ProductSauce, error) {
+	var sauce model.ProductSauce
+	db := r.db.Model(&model.ProductSauce{})
 	for _, opt := range opts {
 		db = opt(db)
 	}

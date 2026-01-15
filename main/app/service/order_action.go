@@ -1344,8 +1344,7 @@ func (s *orderSrv) getProductBomsWithCache(ctx context.Context, uuids []uint64, 
 	}
 
 	// 使用 ProductBom 控制器批量查询（统一管理缓存）
-	productBomController := objectStorageController.GetProductBomController()
-	batchResult, err := productBomController.BatchGetByUuids(ctx, db, validUuids)
+	batchResult, err := objectStorageController.GetProductBomController().BatchGetByUuids(ctx, db, validUuids)
 
 	if err != nil {
 		// 缓存查询失败，降级到直接查询数据库

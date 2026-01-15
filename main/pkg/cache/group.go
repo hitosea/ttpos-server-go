@@ -221,3 +221,10 @@ func (g *cacheGroup[T]) ClearL1() {
 		g.l1.flush()
 	}
 }
+
+// DeleteL1 删除 L1 本地缓存中指定的 key
+func (g *cacheGroup[T]) DeleteL1(key string) {
+	if g.config.EnableLocalCache && g.l1 != nil {
+		g.l1.delete(key)
+	}
+}

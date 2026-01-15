@@ -244,7 +244,6 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-
 	return info, nil
 }
 
@@ -1903,10 +1902,6 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 
 // GetOrderCartInfo 获取点餐购物车信息
 func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
-	xxx := time.Now()
-	defer func() {
-		fmt.Println("cache_time_xie_log GetOrderCartInfo ms: ", time.Since(xxx).Milliseconds())
-	}()
 	// 追加请求头参数，从http的header中获取h5_order_uuid
 	h5OrderUuid := context.GetH5OrderUuid(ctx)
 	if h5OrderUuid != 0 {
@@ -1930,7 +1925,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	if !option.FilterEndStatus && shopCart.SaleBill.IsEndStatus() {
 		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
 	}
-	yyyyy := time.Now()
 	// 重新计算金额
 	if option.H5OrderUuid == 0 {
 		shopCart.SaleBill.CalcAll()
@@ -1938,10 +1932,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		// 如果从待接单进入桌台时，要把h5订单商品计算在内
 		shopCart.SaleBill.CalcAll(model.WithAllAndOneH5Order(option.H5OrderUuid))
 	}
-	fmt.Println("cache_time_xie_log GetOrderCartInfo22222 ms: ", time.Since(yyyyy).Milliseconds())
 
 	// 获取门店业务设置（使用对象存储模块缓存）
-	getBusinessSettingStartTime := time.Now()
 	var businessSetting *setting.Business
 
 	// 检查是否启用对象存储缓存
@@ -1953,7 +1945,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			return nil, errors.WithMessage(err)
 		}
 		businessSetting = &bs
-		fmt.Printf("cache_time_xie_log 获取门店业务设置完成 duration=%dms\n", time.Since(getBusinessSettingStartTime).Milliseconds())
 	} else {
 		// 使用对象存储模块缓存查询（复用订单对象缓存层）
 		cacheLayer := adapter.GetOrderObjectCache[setting.Business](cache.Global, 5*time.Minute)
@@ -1967,46 +1958,32 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			return nil, errors.WithMessage(err)
 		}
 		businessSetting = &bs
-		fmt.Printf("cache_time_xie_log 获取门店业务设置完成 duration=%dms\n", time.Since(getBusinessSettingStartTime).Milliseconds())
 	}
 
 	// 给订单列表添加订单
 	saleOrderList := make([]resp.SaleOrder, 0)
 	for _, saleOrder := range shopCart.SaleBill.SaleOrders {
-		orderStartTime := time.Now()
-
 		productList := make([]resp.Product, 0)
 		// 给商品列表条件顾客类型
 		// 如不是桌台订单、不是自助餐，这个Buffets列表是空的，故不会往productList里加入商品
-		getCustomerListStartTime := time.Now()
 		{
 			customerList := saleOrder.GetCustomerList()
 			productList = append(productList, customerList...)
 		}
-		fmt.Printf("cache_time_xie_log 获取顾客类型商品列表完成 duration=%dms saleOrderUuid=%d\n", time.Since(getCustomerListStartTime).Milliseconds(), saleOrder.Uuid)
 
 		// 添加加钟商品
-		getDelayProductStartTime := time.Now()
 		{
 			delayProductList := saleOrder.GetDelayProductList()
 			productList = append(productList, delayProductList...)
 		}
-		fmt.Printf("cache_time_xie_log 获取加钟商品列表完成 duration=%dms saleOrderUuid=%d\n", time.Since(getDelayProductStartTime).Milliseconds(), saleOrder.Uuid)
 
 		// 添加正常商品
-		getNormalProductStartTime := time.Now()
 		{
-
-			getProductListStartTime := time.Now()
 			products := saleOrder.GetProductList(ctx.GetVersion(), option.UnorderedH5Product == repository.OrderedH5ProductWithReject, businessSetting.OpenIsBatch())
-			fmt.Printf("cache_time_xie_log 获取正常商品列表完成 duration=%dms saleOrderUuid=%d productCount=%d\n", time.Since(getProductListStartTime).Milliseconds(), saleOrder.Uuid, len(products))
-
 			productList = append(productList, products...)
 		}
-		fmt.Printf("cache_time_xie_log 添加正常商品完成 duration=%dms saleOrderUuid=%d\n", time.Since(getNormalProductStartTime).Milliseconds(), saleOrder.Uuid)
 
 		// 商品计数
-		calcProductNumStartTime := time.Now()
 		productNum := 0.0
 		for _, product := range productList {
 			// 退菜的商品不计入
@@ -2015,10 +1992,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			}
 			productNum += product.Num
 		}
-		fmt.Printf("cache_time_xie2_log 商品计数完成 duration=%dms saleOrderUuid=%d productNum=%.2f\n", time.Since(calcProductNumStartTime).Milliseconds(), saleOrder.Uuid, productNum)
 
 		// 填写订单信息
-		buildOrderStartTime := time.Now()
 		order := resp.SaleOrder{
 			Uuid:                saleOrder.Uuid,
 			OrderNo:             saleOrder.OrderNo,
@@ -2042,9 +2017,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			},
 		}
 		saleOrderList = append(saleOrderList, order)
-		fmt.Printf("cache_time_xie_log 构建订单信息完成 duration=%dms saleOrderUuid=%d\n", time.Since(buildOrderStartTime).Milliseconds(), saleOrder.Uuid)
-		fmt.Printf("cache_time_xie_log 处理单个订单完成 duration=%dms saleOrderUuid=%d totalProductCount=%d\n", time.Since(orderStartTime).Milliseconds(), saleOrder.Uuid, len(productList))
-
 	}
 
 	takeout := shopCart.SaleBill.IsTakeout()
@@ -2091,7 +2063,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			}
 		}
 	}
-	hhh := time.Now()
 	// 先判断商户是否有生效的必点方案（仅在对象存储缓存开启时执行）
 	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
 		hasActiveMustPlan, err := repository.NewProductMustPlanRepo(db).HasActiveProductMustPlan(ctx)
@@ -2165,22 +2136,20 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		if productMustPlanList != nil {
 			shopCartInfo.MustPlans = productMustPlanList
 		}
-
-		// 判断是否需要弹出分批送厨弹窗。只有收银机和助手端需要判断
-		if ctx.GetSource() == constant.SourceAssistant || ctx.GetSource() == constant.SourceCashier {
-			// 获取门店业务设置
-			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-			if err != nil {
-				return nil, errors.WithMessage(err)
-			}
-			if businessSetting.OpenIsBatch() {
-				if shopCart.SaleBill.IsNeedBatchSendCooking() {
-					shopCartInfo.SetCode(constant.CodeOrderCheckProductBatch)
-				}
+	}
+	// 判断是否需要弹出分批送厨弹窗。只有收银机和助手端需要判断
+	if ctx.GetSource() == constant.SourceAssistant || ctx.GetSource() == constant.SourceCashier {
+		// 获取门店业务设置
+		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if businessSetting.OpenIsBatch() {
+			if shopCart.SaleBill.IsNeedBatchSendCooking() {
+				shopCartInfo.SetCode(constant.CodeOrderCheckProductBatch)
 			}
 		}
 	}
-	fmt.Println("cache_time_xie_log sGetOrderCartInfo11111 ms: ", time.Since(hhh).Milliseconds())
 	return shopCartInfo, nil
 }
 

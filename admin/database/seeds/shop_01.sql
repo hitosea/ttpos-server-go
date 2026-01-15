@@ -679,7 +679,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_attribute` (
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `product_attribute_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品属性ID',
     `product_package_attribute_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包属性ID',
-    `price` DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '商品属性价格',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -785,7 +784,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_material` (
     `production_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单商品ID',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `takeout_order_item_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单商品UUID（关联 ttpos_takeout_order_item.uuid）',
-    `takeout_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单UUID（关联 ttpos_takeout_order.uuid）',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1131,7 +1129,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `order_type` INT(10) NOT NULL DEFAULT 0 COMMENT '申请类型, 0-仓库调拨',
     `supplier_name` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '供应商名称',
     `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商编码',
-    `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货',
+    `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态: 0-草稿(待提交) 1-待审核 2-已审核(采购中/待收货) 3-已驳回 4-已完成(全部收货/已收货) 5-待总部审核',
     `num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '物资数量，每种物品算一个',
     `order_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '单据日期，采购单提交的时间（时间戳）',
     `applicant_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '申请人ID',
@@ -1641,7 +1639,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_group` (
     `group_type` INT(10) NOT NULL DEFAULT 0 COMMENT '分组类型 0-固定 1-可选',
     `optional_min_count` INT(11) NOT NULL DEFAULT 0 COMMENT '最小可选数量',
     `optional_count` INT(11) NOT NULL DEFAULT 0 COMMENT '最大可选数量，表示本组商品中最多可以选择多少个商品',
-    `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
+    `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序字段，数值越小越靠前',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2572,8 +2570,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `is_open_advanced_ticket_print` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启高级票据打印模板: 0不开启, 1开启',
     `is_open_coupon` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启优惠券: 0不开启, 1开启',
     `is_open_marketing` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启营销活动: 0不开启, 1开启',
-    `enable_order_source` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用外卖来源：0-否；1-是',
-    `enable_nationality` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用国籍记录：0-否；1-是',
     `enable_sms` INT(11) NOT NULL DEFAULT 0 COMMENT '是否启用短信功能：0-否；1-是',
     `sms_quota` INT(11) NOT NULL DEFAULT 0 COMMENT '短信配额',
     `cash_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '收银机上限',
@@ -4170,5 +4166,45 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_settings` (
     UNIQUE KEY `uk_platform` (`platform`, `delete_time`),
     KEY `idx_platform` (`platform`, `delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖平台配置表(多平台)';
+
+-- ----------------------------
+-- Table structure for ttpos_purchase_quota_config
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_quota_config` (
+    `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint(20) unsigned NOT NULL COMMENT '配置UUID',
+    `material_code` varchar(100) NOT NULL COMMENT '物品编码',
+    `unit_code` varchar(50) NOT NULL COMMENT '限购单位编码',
+    `quota_limit` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '限购数量',
+    `apply_to_all_shops` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '是否应用到全部店铺: 1=是 0=否',
+    `period_type` tinyint(1) unsigned NOT NULL DEFAULT 0 COMMENT '周期类型: 0=按天(默认) 1=月度',
+    `strict_mode` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '超限策略: 1=严格拒绝',
+    `config_source` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '配置来源: 1=门店 2=总部',
+    `status` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '状态: 1=启用 0=禁用',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    KEY `idx_material` (`material_code`, `delete_time`),
+    KEY `idx_status` (`status`, `delete_time`),
+    KEY `idx_delete_time` (`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='品牌采购限购配置主表';
+
+-- ----------------------------
+-- Table structure for ttpos_purchase_quota_config_shop
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_quota_config_shop` (
+    `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `config_uuid` bigint(20) unsigned NOT NULL COMMENT '限购配置UUID',
+    `company_uuid` bigint(20) unsigned NOT NULL COMMENT '公司UUID（门店UUID）',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_config_company` (`config_uuid`, `company_uuid`),
+    KEY `idx_config` (`config_uuid`),
+    KEY `idx_company` (`company_uuid`),
+    KEY `idx_delete_time` (`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='品牌采购限购配置门店关联表';
 
 SET FOREIGN_KEY_CHECKS = 1;

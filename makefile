@@ -164,10 +164,10 @@ rmi-docker-images:
 
 # 授权所有文件
 chown-all:
-	sudo chown -R coder:coder /home/coder/workspaces/ttpos-server-go
-	sudo chown -R www-data:www-data /home/coder/workspaces/ttpos-server-go/admin/runtime
-	sudo chmod -R 755 /home/coder/workspaces/ttpos-server-go/admin/runtime
-	sudo rm -rf /home/coder/workspaces/ttpos-server-go/admin/runtime/logs/*
+	sudo chown -R $(shell whoami):$(shell id -gn) $(CURDIR)
+	sudo chown -R www-data:www-data $(CURDIR)/admin/runtime
+	sudo chmod -R 755 $(CURDIR)/admin/runtime
+	sudo rm -rf $(CURDIR)/admin/runtime/logs/*
 
 # 更新 MCP Token
 update-mcp-token:

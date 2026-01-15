@@ -45,6 +45,9 @@ type ICacheGroup[T any] interface {
 
 	// ClearL1 清空 L1 本地缓存
 	ClearL1()
+
+	// DeleteL1 删除 L1 本地缓存中指定的 key
+	DeleteL1(key string)
 }
 
 // L1CacheClearable 非泛型接口，用于清空 L1 缓存
@@ -52,6 +55,9 @@ type ICacheGroup[T any] interface {
 type L1CacheClearable interface {
 	// ClearL1 清空 L1 本地缓存
 	ClearL1()
+
+	// DeleteL1 删除 L1 本地缓存中指定的 key
+	DeleteL1(key string)
 }
 
 // HitStatsCallback 缓存命中率统计回调函数

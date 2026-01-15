@@ -388,6 +388,13 @@ type ProductShopStatusReq struct {
 	Status *int   `json:"status" binding:"required,oneof=0 1"` // 商品状态 0-下架 1-上架
 }
 
+// UpdateHeadquartersProductReq 修改总部商品请求
+type UpdateHeadquartersProductReq struct {
+	Uuid                uint64   `json:"uuid" binding:"required"`             // 商品UUID
+	Status              *int     `json:"status" binding:"required,oneof=0 1"` // 商品状态 0-下架 1-上架（可选）
+	ProductPrinterUuids []uint64 `json:"product_printer_uuids"`               // 商品打印档口UUID列表（可选）
+}
+
 // ProductShopAddReq 商品添加请求
 type ProductShopAddReq struct {
 	Type                int                               `json:"type"`                  // 商品类型 0-商品 1-套餐
@@ -437,8 +444,9 @@ type ProductShopAddSauceReq struct {
 
 // ProductShopAddSauceItemReq 商品加料项添加请求
 type ProductShopAddSauceItemReq struct {
-	Uuid              uint64 `json:"uuid"`                // 商品加料UUID
-	IsDefaultSelected int    `json:"is_default_selected"` // 是否默认选中 0-否 1-是
+	Uuid              uint64   `json:"uuid"`                // 商品加料UUID
+	IsDefaultSelected int      `json:"is_default_selected"` // 是否默认选中 0-否 1-是
+	Price             *float64 `json:"price"`               // 商品加料价格，可不传递，兼容旧版客户端
 }
 
 // ProductShopAddAttributeGroupReq 商品属性组添加请求
@@ -572,10 +580,11 @@ type ProductShopEditSauceReq struct {
 
 // ProductShopAddSauceItemReq 商品加料项添加请求
 type ProductShopEditSauceItemReq struct {
-	Uuid              uint64 `json:"uuid"`                // 商品加料UUID
-	IsDefaultSelected int    `json:"is_default_selected"` // 是否默认选中 0-否 1-是
-	BomUuid           uint64 `json:"bom_uuid"`            // 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
-	IsDelete          bool   `json:"is_delete"`           // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid              uint64   `json:"uuid"`                // 商品加料UUID
+	IsDefaultSelected int      `json:"is_default_selected"` // 是否默认选中 0-否 1-是
+	BomUuid           uint64   `json:"bom_uuid"`            // 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+	IsDelete          bool     `json:"is_delete"`           // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Price             *float64 `json:"price"`               // 商品加料价格，可不传递，兼容旧版客户端
 }
 
 // ProductShopAddAttributeGroupReq 商品属性组添加请求
@@ -703,4 +712,9 @@ type BatchTagSortReq struct {
 // ProductBatchTypeSaveReq 分批商品保存请求
 type SaveBatchProductReq struct {
 	Uuids []uint64 `json:"uuids" binding:"required"` // 分批商品UUID列表, product_package_uuids
+}
+
+// InvalidateProductListCacheReq 失效商品列表缓存请求（供PHP服务调用）
+type InvalidateProductListCacheReq struct {
+	CompanyUuid uint64 `json:"company_uuid" binding:"required"` // 商户UUID
 }

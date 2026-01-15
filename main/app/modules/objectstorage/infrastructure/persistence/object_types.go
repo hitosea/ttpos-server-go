@@ -1,5 +1,7 @@
 package persistence
 
+import "strings"
+
 // ObjectType 对象类型常量定义
 // 用于统一管理缓存 key 中的对象类型字符串，避免硬编码
 const (
@@ -24,6 +26,12 @@ const (
 	// ProductAttribute 商品属性
 	ObjectTypeProductAttribute = "product_attribute"
 
+	// MultiLanguageName 多语言名称
+	ObjectTypeMultiLanguageName = "multi_language_name"
+
+	// ProductPackageAttribute 商品包属性
+	ObjectTypeProductPackageAttribute = "product_package_attribute"
+
 	// SaleBillSetting 销售单设置
 	ObjectTypeSaleBillSetting = "sale_bill_setting"
 
@@ -41,12 +49,6 @@ const (
 
 	// ApiPermission API权限
 	ObjectTypeApiPermission = "api_permission"
-
-	// MultiLanguageName 多语言名称
-	ObjectTypeMultiLanguageName = "multi_language_name"
-
-	// ProductPackageAttribute 商品包属性
-	ObjectTypeProductPackageAttribute = "product_package_attribute"
 
 	// ProductMustPlanActive 商户是否有生效的必点方案（bool值）
 	ObjectTypeProductMustPlanActive = "product_must_plan_active"
@@ -84,3 +86,21 @@ const (
 	// BusinessSetting 门店业务设置
 	ObjectTypeBusinessSetting = "business_setting"
 )
+
+// ExtractObjectTypeFromCacheKey 从缓存 key 中提取对象类型
+// Key 格式：{system_prefix}:{company_uuid}:{object_type}:...
+// 例如：ttpos5:123456:product_list:cashier:1:20:false
+// 参数：
+//   - cacheKey: 缓存 key 字符串
+//
+// 返回：
+//   - string: 对象类型，如果无法提取则返回空字符串
+func ExtractObjectTypeFromCacheKey(cacheKey string) string {
+	// Key 格式：{system_prefix}:{company_uuid}:{object_type}:...
+	// 对象类型是 key 的第三个部分（索引为 2）
+	parts := strings.Split(cacheKey, ":")
+	if len(parts) >= 3 {
+		return parts[2]
+	}
+	return ""
+}

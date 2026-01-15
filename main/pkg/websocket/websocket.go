@@ -1,9 +1,9 @@
 package websocket
 
 import (
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
-	"github.com/nacos-group/nacos-sdk-go/v2/common/logger"
 	"go.uber.org/zap"
 )
 
@@ -67,7 +67,7 @@ func PushClient(companyUuid uint64, sourceClient, deviceId, messageType string, 
 	utils.Go(func() {
 		err := PushClients(companyUuid, sourceClient, deviceId, messageType, data)
 		if err != nil {
-			logger.Error("推送消息失败", zap.Error(err))
+			logger.Logger.Error("推送消息失败", zap.Error(err))
 		}
 	})
 	return nil

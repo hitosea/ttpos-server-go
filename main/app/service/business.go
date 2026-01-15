@@ -98,21 +98,19 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	storeSetting, err := setting.GetStoreSetting(ctx)
 	if err != nil {
 		logger.Logger.Error("获取门店设置失败", zap.Error(err))
-		fmt.Println("获取门店设置失败", zap.Error(err))
+		// 业务逻辑错误后继续执行（可能导致 nil 指针）-- 不会导致，storeSetting是结构体，不会为 nil, printerSetting \ businessSetting 同理
 	}
 
 	// 获取打印机设置
 	printerSetting, err := setting.GetPrinterSetting(ctx, nil)
 	if err != nil {
 		logger.Logger.Error("获取打印机设置失败", zap.Error(err))
-		fmt.Println("获取打印机设置失败", zap.Error(err))
 	}
 
 	// 获取门店业务设置
 	businessSetting, err := setting.GetBusinessSetting(ctx)
 	if err != nil {
 		logger.Logger.Error("获取门店业务设置失败", zap.Error(err))
-		fmt.Println("获取门店业务设置失败", zap.Error(err))
 	}
 
 	// 获取数据管理设置
@@ -1192,12 +1190,6 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 			})
 		}
 
-		memberData := s.statisticsSrv.CountMember(ctx, CountReq{
-			QueryStartTime: req.QueryStartTime,
-			QueryEndTime:   req.QueryEndTime,
-			Timezone:       ctx.GetCompany().CompanySetting.Timezone,
-		})
-
 		exportDataList = append(exportDataList, business_data_resp.BusinessDataExportItem{
 			Day:                        export.Day,
 			TotalSaleAmount:            export.TotalSaleAmount,
@@ -1239,7 +1231,7 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 			AvgTakeoutOrderAmount:      export.AvgTakeoutOrderAmount,
 			AreaList:                   areaList,
 			PaymentList:                paymentList,
-			TotalRechargeAmount:        memberData.TotalRechargeAmount,
+			TotalRechargeAmount:        export.TotalRechargeAmount,
 		})
 	}
 

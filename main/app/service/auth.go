@@ -1011,6 +1011,11 @@ func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
 		return kioskBase, errors.WithMessage(err)
 	}
 
+	clientVersion := ctx.GetGin().GetHeader("Version-Name")
+	if clientVersion == "" {
+		clientVersion = "0.0.0"
+	}
+
 	return resp.KioskBase{
 		Username:     staff.Username,
 		DeviceId:     deviceId,
@@ -1022,11 +1027,13 @@ func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
 			TimeZone:   companySetting.Timezone,
 			ExpireTime: company.ExpireTime,
 		},
-		Currency:    currencySetting,
-		Business:    businessSetting,
-		Kiosk:       kioskSetting.KioskResp,
-		UpdateTime:  time.Now().Unix(),
-		CompanyList: s.GetCompanyList(ctx),
+		Currency:      currencySetting,
+		Business:      businessSetting,
+		Kiosk:         kioskSetting.KioskResp,
+		UpdateTime:    time.Now().Unix(),
+		CompanyList:   s.GetCompanyList(ctx),
+		ServerVersion: utils.GetVersion(),
+		ClientVersion: clientVersion,
 	}, nil
 }
 
@@ -1045,7 +1052,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	}
 	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
 	enableCache := objectStorageAdapter.IsObjectStorageCacheEnabled(auth.CompanyUuid)
-
+	enableCache = false // 暂时关闭缓存
 	staffRepo := repository.NewStaffRepo(db)
 
 	// 查询函数（从数据库获取员工信息）
@@ -1820,6 +1827,7 @@ func (s *authSrv) GetCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 		// 从 saas 数据库查询 company
 		targetCompany, err := companyRepo.GetCompanyInfoByUuid(cs.CompanyUuid)
 		if err != nil || targetCompany == nil {
+			logger.Logger.Error("从 saas 数据库查询 company 信息失败", zap.Error(err))
 			continue
 		}
 		companySettingRepo := repository.NewCompanySettingRepo(shopDb)

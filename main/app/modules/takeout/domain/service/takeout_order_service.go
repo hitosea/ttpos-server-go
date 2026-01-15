@@ -254,6 +254,7 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 			MerchantDiscount:  order.MerchantDiscount,
 			BasketPromo:       order.BasketPromo,
 			Tax:               order.Tax,
+			SmallOrderFee:     order.SmallOrderFee,
 			MerchantChargeFee: order.MerchantChargeFee,
 		},
 		Currencies: response.TakeoutOrderCurrencyResp{

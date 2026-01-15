@@ -1,6 +1,7 @@
 package purchase_order
 
 import (
+	"fmt"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-server-go/app/constant"
@@ -168,7 +169,10 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			)
 			if err != nil {
 				logger.Logger.Error("CreatePurchaseReceiptOrder-GetByUuid", zap.Any("purchaseOrderItemUuid", itemReq.PurchaseOrderItemUuid), zap.Any("err", err))
-				return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
+				if err == gorm.ErrRecordNotFound {
+					return errors.New(fmt.Sprintf("采购申请明细不存在，物品UUID: %d", itemReq.PurchaseOrderItemUuid))
+				}
+				return errors.New(fmt.Sprintf("查询采购申请明细失败: %s", err.Error()))
 			}
 
 			// 计算收货数量
@@ -414,13 +418,19 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 			// 查询收货单明细
 			receiptOrderItem, err := receiptOrderItemRepo.GetByUuid(itemReq.Uuid)
 			if err != nil {
-				return errors.WithMessage(errors.New("查询收货单明细失败"), err.Error())
+				if err == gorm.ErrRecordNotFound {
+					return errors.New(fmt.Sprintf("收货单明细不存在，明细UUID: %d", itemReq.Uuid))
+				}
+				return errors.New(fmt.Sprintf("查询收货单明细失败: %s", err.Error()))
 			}
 
 			// 查询采购申请明细
 			purchaseOrderItem, err := purchaseOrderItemRepo.GetByUuid(receiptOrderItem.PurchaseOrderItemUuid, purchaseOrderItemRepo.WithPreloadUnits())
 			if err != nil {
-				return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
+				if err == gorm.ErrRecordNotFound {
+					return errors.New(fmt.Sprintf("采购申请明细不存在，明细UUID: %d", receiptOrderItem.PurchaseOrderItemUuid))
+				}
+				return errors.New(fmt.Sprintf("查询采购申请明细失败: %s", err.Error()))
 			}
 
 			// 验证收货数量
@@ -638,7 +648,7 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderList(
 	// 查询数据
 	receipts, total, err := receiptOrderRepo.GetListWithPagination(reqs.PageNo, reqs.PageSize, opts...)
 	if err != nil {
-		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询收货单列表失败"), err.Error())
+		return resp.PurchaseReceiptOrderListResp{}, errors.New(fmt.Sprintf("查询收货单列表失败: %s", err.Error()))
 	}
 
 	// 转换响应数据
@@ -673,9 +683,9 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 	receipt, err := receiptOrderRepo.GetByUuid(req.Uuid, receiptOrderRepo.WithItems())
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return resp.PurchaseReceiptOrderDetailResp{}, errors.New("收货单不存在")
+			return resp.PurchaseReceiptOrderDetailResp{}, errors.New(fmt.Sprintf("收货单不存在，收货单UUID: %d", req.Uuid))
 		}
-		return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(errors.New("查询收货单详情失败"), err.Error())
+		return resp.PurchaseReceiptOrderDetailResp{}, errors.New(fmt.Sprintf("查询收货单详情失败: %s", err.Error()))
 	}
 
 	// 转换响应数据
