@@ -172,10 +172,10 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 	order.Tax = decimal.NewFromInt(int64(price.GetTax())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 	order.MerchantChargeFee = decimal.NewFromInt(int64(price.GetMerchantChargeFee())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 	order.EaterPayment = func() float64 {
-		if price.GetEaterPayment() == 0 {
-			return order.Subtotal
+		if order.PaymentType == "CASH" || featureFlags.OrderType == "DeliveredByRestaurant" {
+			return decimal.NewFromInt(int64(price.GetEaterPayment())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 		}
-		return decimal.NewFromInt(int64(price.GetEaterPayment())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+		return order.Subtotal
 	}()
 
 	// 货币信息映射
