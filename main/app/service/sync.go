@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -1180,7 +1181,7 @@ func (s *SyncSrv) GranularSync(ctx context.Context, syncReq req.GranularSyncReq)
 
 	return resp.GranularSyncResp{
 		TaskUuid: syncTask.Uuid,
-		Message:  "新数据同步完成后将会通知",
+		Message:  i18n.Translate(ctx.GetLanguage(), "新数据同步完成后将会通知"),
 	}, nil
 }
 
