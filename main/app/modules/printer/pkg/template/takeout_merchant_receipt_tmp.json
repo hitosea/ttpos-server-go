@@ -1265,6 +1265,54 @@
         [
             {
                 "group_block_id": "amount_information",
+                "block_id": "order.small_order_fee",
+                "block_type": "label:auto:value",
+                "block_label": {
+                    "de": "Mindestbestellgebühr",
+                    "en": "Small Order Fee",
+                    "ja": "小額注文手数料",
+                    "ko": "소액 주문 수수료",
+                    "my": "အငယ်စားအမှာစာခ",
+                    "sv": "Småorderavgift",
+                    "th": "ค่าธรรมเนียมออเดอร์น้อย",
+                    "tr": "Minimum Sipariş Ücreti",
+                    "zh": "小额订单费",
+                    "zhtw": "小額訂單費"
+                },
+                "block_name": {
+                    "de": "Mindestbestellgebühr",
+                    "en": "Small Order Fee",
+                    "ja": "小額注文手数料",
+                    "ko": "소액 주문 수수료",
+                    "my": "အငယ်စားအမှာစာခ",
+                    "sv": "Småorderavgift",
+                    "th": "ค่าธรรมเนียมออเดอร์น้อย",
+                    "tr": "Minimum Sipariş Ücreti",
+                    "zh": "小额订单费",
+                    "zhtw": "小額訂單費"
+                },
+                "block_attr": {
+                    "font_size": 18,
+                    "align": "right",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 60,
+                    "show_currency_unit": true
+                },
+                "conditions": [
+                    {
+                        "field": "order.small_order_fee",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "group_block_id": "amount_information",
                 "block_id": "order.delivery_fee",
                 "block_type": "label:auto:value",
                 "block_label": {
