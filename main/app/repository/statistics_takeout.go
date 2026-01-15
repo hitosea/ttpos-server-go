@@ -323,11 +323,12 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPayment(req CountTakeoutReq) []model
 
 	// 关联 payment_method 表，根据 payment_name 匹配
 	// 使用子查询结果关联 payment_method 表
-	// 添加 source = 0（系统默认）的过滤条件
+	// 添加 source = 0（系统默认）和 code 的过滤条件
 	r.db.Table("(?) AS t", subQuery).
 		Select(selectFields).
-		Joins("LEFT JOIN ttpos_payment_method AS pm ON t.mapped_payment_name = pm.payment_name AND pm.delete_time = ? AND pm.source = ?", constant.NotDeleted, constant.PaymentMethodSourceSystem).
+		Joins("LEFT JOIN ttpos_payment_method AS pm ON t.mapped_payment_name = pm.payment_name AND pm.delete_time = ? AND pm.source = ? AND pm.code IN (?, ?)", constant.NotDeleted, constant.PaymentMethodSourceSystem, constant.PaymentMethodCodeGrab, constant.PaymentMethodCodeLineMan).
 		Where("t.mapped_payment_name IS NOT NULL"). // 只统计有映射的支付方式
+		Where("pm.uuid IS NOT NULL").               // 只统计关联到支付方式的记录
 		Group("pm.uuid").
 		Order(orderByPaymentName). // Grab 在 LINE MAN 前
 		Scan(&result)
@@ -662,11 +663,12 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 
 	// 关联 payment_method 表，根据 payment_name 匹配
 	// 使用子查询结果关联 payment_method 表
-	// 添加 source = 0（系统默认）的过滤条件
+	// 添加 source = 0（系统默认）和 code 的过滤条件
 	r.db.Table("(?) AS t", subQuery).
 		Select(selectFields).
-		Joins("LEFT JOIN ttpos_payment_method AS pm ON t.mapped_payment_name = pm.payment_name AND pm.delete_time = ? AND pm.source = ?", constant.NotDeleted, constant.PaymentMethodSourceSystem).
+		Joins("LEFT JOIN ttpos_payment_method AS pm ON t.mapped_payment_name = pm.payment_name AND pm.delete_time = ? AND pm.source = ? AND pm.code IN (?, ?)", constant.NotDeleted, constant.PaymentMethodSourceSystem, constant.PaymentMethodCodeGrab, constant.PaymentMethodCodeLineMan).
 		Where("t.mapped_payment_name IS NOT NULL"). // 只统计有映射的支付方式
+		Where("pm.uuid IS NOT NULL").               // 只统计关联到支付方式的记录
 		Order("t.accepted_time ASC").
 		Scan(&result)
 
