@@ -125,7 +125,7 @@ func (v *purchaseOrderValidator) validateReceiptMaterialStatus(
 		return errors.NewWithCodeAndData(
 			constant.CodeErrorConfirmClose,
 			unitErrorMessages,
-			fmt.Sprintf("物品单位不存在: %s，请检查物品配置", v.joinMaterialNames(unitErrorMessages)),
+			fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品单位不存在: %s，请检查物品配置"), v.joinMaterialNames(unitErrorMessages)),
 		)
 	}
 
