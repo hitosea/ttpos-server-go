@@ -101,10 +101,8 @@ func (v *purchaseOrderValidator) validateReceiptMaterialStatus(
 				if unit.UnitUuid > 0 {
 					_, err := materialUnitRepo.GetMaterialUnitByUuid(unit.UnitUuid)
 					if err != nil {
-						if err == gorm.ErrRecordNotFound {
-							unitName := language.JsonToLocaleResponse(unit.UnitName).GetLocale(ctx.GetLanguage())
-							unitErrorMessages = append(unitErrorMessages, fmt.Sprintf("%s(%s)", materialName, unitName))
-						}
+						unitName := language.JsonToLocaleResponse(unit.UnitName).GetLocale(ctx.GetLanguage())
+						unitErrorMessages = append(unitErrorMessages, fmt.Sprintf("%s(%s)", materialName, unitName))
 					}
 				}
 			}
