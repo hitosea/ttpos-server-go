@@ -697,13 +697,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 			InternalCode:       request.InternalCode,
 			AllowNegativeStock: request.AllowNegativeStock,
 		}
-		// 获取总部ID
-		companySetting := ctx.GetCompanySetting()
-		var headquarterUuid uint64
-		if companySetting.IsSubShop() {
-			headquarterUuid = companySetting.HeadquarterUuid
-		}
-		params.SetHeadquarterUuid(headquarterUuid)
+		params.SetHeadquarterUuid(0)
 		// 获取默认仓库ID
 		warehouseUuid, err := repository.NewWarehouseRepo(tx).GetDefaultWarehouse()
 		if err != nil {
