@@ -13,9 +13,9 @@ import (
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/repository"
 	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
-	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/utils"
 
 	grabfood "github.com/grab/grabfood-api-sdk-go"
@@ -26,17 +26,17 @@ import (
 type GrabConverter struct {
 	dbm                    *database.DBManager
 	menuRepo               menuRepo.IMenuDataRepository
-	cache                  cache.Cache
 	amountConversionFactor int64 // 金额转换因子(分转元)
+	defaultLanguage        string
 }
 
 // NewGrabConverter 创建 Grab 转换器
-func NewGrabConverter(dbm *database.DBManager, cache cache.Cache) *GrabConverter {
+func NewGrabConverter(dbm *database.DBManager) *GrabConverter {
 	return &GrabConverter{
 		dbm:                    dbm,
 		menuRepo:               persistence.NewMenuDataRepository(dbm),
-		cache:                  cache,
 		amountConversionFactor: 100,
+		defaultLanguage:        "th",
 	}
 }
 
@@ -208,7 +208,7 @@ func (c *GrabConverter) convertTTPOSCategory(ctx context.Context, cat any, seque
 	// 获取分类名称（英文）
 	categoryName := category.Name
 	if category.MultiLanguageName.Uuid != 0 {
-		categoryName = category.MultiLanguageName.GetNameByLangWithFallback("en")
+		categoryName = category.MultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage)
 	}
 
 	// 判断分类状态：
@@ -255,9 +255,9 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 	// 获取商品名称（优先使用外卖商品的多语言名称，否则使用店内商品名称）
 	itemName := takeoutProduct.Name
 	if takeoutProduct.MultiLanguageName.Uuid != 0 {
-		itemName = takeoutProduct.MultiLanguageName.GetNameByLangWithFallback("en")
+		itemName = takeoutProduct.MultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage)
 	} else if takeoutProduct.ProductPackage.MultiLanguageName.Uuid != 0 {
-		itemName = takeoutProduct.ProductPackage.MultiLanguageName.GetNameByLangWithFallback("en")
+		itemName = takeoutProduct.ProductPackage.MultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage)
 	}
 
 	// 先处理规格，以便计算商品价格（如果有规格，使用最小规格金额）
@@ -322,12 +322,12 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 		// 使用多语言描述
 		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.DescribeMultiLanguageName.ToMap(), 300))
 		// 设置默认描述（使用英文，如果没有则回退）
-		menuItem.SetDescription(c.truncateName(takeoutProduct.DescribeMultiLanguageName.GetNameByLangWithFallback("en"), 300))
+		menuItem.SetDescription(c.truncateName(takeoutProduct.DescribeMultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage), 300))
 	} else if takeoutProduct.ProductPackage.DescribeMultiLanguageName.Uuid != 0 {
 		// 使用多语言描述
 		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.ProductPackage.DescribeMultiLanguageName.ToMap(), 300))
 		// 设置默认描述（使用英文，如果没有则回退）
-		menuItem.SetDescription(c.truncateName(takeoutProduct.ProductPackage.DescribeMultiLanguageName.GetNameByLangWithFallback("en"), 300))
+		menuItem.SetDescription(c.truncateName(takeoutProduct.ProductPackage.DescribeMultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage), 300))
 	}
 
 	// 设置商品图片（使用 GetUrl 方法，如果没有本地图片则使用外部URL）
@@ -391,15 +391,23 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 func (c *GrabConverter) filterSupportedLanguages(translations map[string]string, maxLength ...int) map[string]string {
 	supportedLangs := map[string]bool{
 		"en": true, // 英文 - 所有国家
-		"zh": true, // 中文 - Thailand, Singapore, Indonesia
-		"th": true, // 泰语 - Thailand
-		"my": true, // 缅甸语 - Myanmar
-		"ms": true, // 马来语 - Malaysia
-		"vi": true, // 越南语 - Vietnam
-		"id": true, // 印尼语 - Indonesia
-		"km": true, // 高棉语 - Cambodia
+		// "zh": true, // 中文 - Thailand, Singapore, Indonesia
+		// "th": true, // 泰语 - Thailand
+		// "my": true, // 缅甸语 - Myanmar
+		// "ms": true, // 马来语 - Malaysia
+		// "vi": true, // 越南语 - Vietnam
+		// "id": true, // 印尼语 - Indonesia
+		// "km": true, // 高棉语 - Cambodia
 	}
 
+	// 过滤掉主语言（默认语言）
+	if c.defaultLanguage != "" {
+		if _, ok := supportedLangs[c.defaultLanguage]; ok {
+			delete(supportedLangs, c.defaultLanguage)
+		}
+	}
+
+	// 过滤掉不支持的语言
 	filtered := make(map[string]string)
 	for lang, value := range translations {
 		if supportedLangs[lang] && value != "" {
@@ -551,11 +559,7 @@ func (c *GrabConverter) convertProductFlavors(
 	} else if allSoldOut {
 		modifierGroupStatus = value_object.AvailableStatusUnavailable
 	}
-
-	modifierGroup := grabfood.NewModifierGroupWithDefaults()
-	modifierGroup.SetId(value_object.PrefixFlavorGroup + strconv.FormatUint(takeoutProduct.ProductPackageUuid, 10))
-	modifierGroup.SetName(c.truncateName("Specifications"))
-	modifierGroup.SetNameTranslation(map[string]string{
+	translations := map[string]string{
 		"en": "Specifications",
 		"zh": "规格",
 		"th": "ข้อมูลจำเพาะ",
@@ -564,7 +568,14 @@ func (c *GrabConverter) convertProductFlavors(
 		"id": "Ukuran",
 		"km": "ទិចនាករ",
 		"my": "သတ်မှတ်ချက်များ",
-	})
+	}
+	translationLangs := language.MapToLocaleResponse(translations)
+
+	// 创建修饰符组
+	modifierGroup := grabfood.NewModifierGroupWithDefaults()
+	modifierGroup.SetId(value_object.PrefixFlavorGroup + strconv.FormatUint(takeoutProduct.ProductPackageUuid, 10))
+	modifierGroup.SetName(c.truncateName(translationLangs.GetLocale(c.defaultLanguage)))
+	modifierGroup.SetNameTranslation(c.filterSupportedLanguages(translations))
 	modifierGroup.SetSequence(1)
 	modifierGroup.SetAvailableStatus(string(modifierGroupStatus))
 	modifierGroup.SetSelectionRangeMin(int32(minSelection))
@@ -575,7 +586,7 @@ func (c *GrabConverter) convertProductFlavors(
 		// 获取规格名称
 		flavorName := bom.ProductFlavor.Name
 		if bom.ProductFlavor.MultiLanguageName.Uuid != 0 {
-			flavorName = bom.ProductFlavor.MultiLanguageName.GetNameByLangWithFallback("en")
+			flavorName = bom.ProductFlavor.MultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage)
 		}
 		if flavorName == "" {
 			flavorName = "delete"
@@ -675,10 +686,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 		modifierGroupStatus = value_object.AvailableStatusUnavailable
 	}
 
-	modifierGroup := grabfood.NewModifierGroupWithDefaults()
-	modifierGroup.SetId(fmt.Sprintf("TTPOS-SAUCE-GROUP-%d", takeoutProduct.ProductPackage.Uuid))
-	modifierGroup.SetName(c.truncateName("Add Toppings"))
-	modifierGroup.SetNameTranslation(map[string]string{
+	translations := map[string]string{
 		"en": "Add Toppings",
 		"zh": "加料",
 		"th": "เพิ่มเครื่อง",
@@ -687,7 +695,14 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 		"id": "Tambahkan Topping",
 		"km": "ការបង្ហាញ",
 		"my": "အပိုထည့်ခြင်း",
-	})
+	}
+	translationLangs := language.MapToLocaleResponse(translations)
+
+	// 创建修饰符组
+	modifierGroup := grabfood.NewModifierGroupWithDefaults()
+	modifierGroup.SetId(fmt.Sprintf("TTPOS-SAUCE-GROUP-%d", takeoutProduct.ProductPackage.Uuid))
+	modifierGroup.SetName(c.truncateName(translationLangs.GetLocale(c.defaultLanguage)))
+	modifierGroup.SetNameTranslation(c.filterSupportedLanguages(translations))
 	modifierGroup.SetSequence(2)
 	modifierGroup.SetAvailableStatus(string(modifierGroupStatus))
 	modifierGroup.SetSelectionRangeMin(int32(takeoutProduct.ProductPackage.SauceMinSelection))
@@ -697,7 +712,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 		// 获取小料名称
 		sauceName := bom.ProductSauce.Name
 		if bom.ProductSauce.MultiLanguageName.Uuid != 0 {
-			sauceName = bom.ProductSauce.MultiLanguageName.GetNameByLangWithFallback("en")
+			sauceName = bom.ProductSauce.MultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage)
 		}
 
 		// 获取小料价格：优先从外卖价格映射表中取，如果没有则使用店内价格
@@ -764,7 +779,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 		// 获取属性组名称
 		groupName := packageAttrGroup.ProductAttributeGroup.Name
 		if packageAttrGroup.ProductAttributeGroup.MultiLanguageName.Uuid != 0 {
-			groupName = packageAttrGroup.ProductAttributeGroup.MultiLanguageName.GetNameByLangWithFallback("en")
+			groupName = packageAttrGroup.ProductAttributeGroup.MultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage)
 		}
 
 		// 计算最大选择数量，确保至少为 1
@@ -801,7 +816,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 			// 获取属性名称
 			attrName := packageAttr.Attribute.Name
 			if packageAttr.Attribute.MultiLanguageName.Uuid != 0 {
-				attrName = packageAttr.Attribute.MultiLanguageName.GetNameByLangWithFallback("en")
+				attrName = packageAttr.Attribute.MultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage)
 			}
 
 			// 获取属性价格：优先从外卖价格映射表中取，如果没有则使用店内价格（默认为0）
@@ -918,7 +933,7 @@ func (c *GrabConverter) convertPackageGroups(_ context.Context, menuItem *grabfo
 		// 获取分组名称
 		groupName := packageGroup.Name
 		if packageGroup.MultiLanguageName.Uuid != 0 {
-			groupName = packageGroup.MultiLanguageName.GetNameByLangWithFallback("en")
+			groupName = packageGroup.MultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage)
 		}
 
 		// 根据 GroupType 设置选择范围
@@ -968,7 +983,7 @@ func (c *GrabConverter) convertPackageGroups(_ context.Context, menuItem *grabfo
 			// 获取子商品名称
 			itemName := groupItem.ProductPackage.Name
 			if groupItem.ProductPackage.MultiLanguageName.Uuid != 0 {
-				itemName = groupItem.ProductPackage.MultiLanguageName.GetNameByLangWithFallback("en")
+				itemName = groupItem.ProductPackage.MultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage)
 			}
 
 			// 在商品名称后面加上数量

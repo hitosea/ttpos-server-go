@@ -115,7 +115,7 @@ func NewTakeoutAppService(
 
 	// 初始化平台转换器（用于菜单转换）
 	converters := make(map[string]service.IPlatformConverter)
-	grabConverter := grab.NewGrabConverter(dbm, nil)
+	grabConverter := grab.NewGrabConverter(dbm)
 	converters["grab"] = grabConverter
 	// 后续可添加其他平台：converters["lineman"] = lineman.NewLinemanConverter(dbm)
 

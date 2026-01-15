@@ -353,7 +353,7 @@ func extractUUIDFromKey(key string) (uint64, error) {
 //   - objectType: 对象类型（用于构建缓存 key）
 //   - instance: 单例实例指针（用于存储控制器实例）
 //   - once: sync.Once 实例（确保只初始化一次）
-//   - opts: 可选参数，如 adapter.WithEnableL1Cache(false) 禁用 L1 缓存
+//   - opts: 可选参数，如 adapter.WithEnableL1Cache(false) 禁用 L1 缓存，adapter.WithEnableL2Cache(false) 禁用 L2 缓存
 func InitCacheObjectController[T any](
 	underlyingCache cache.Cache,
 	ttl time.Duration,

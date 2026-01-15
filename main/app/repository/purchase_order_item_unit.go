@@ -10,6 +10,7 @@ import (
 type IPurchaseOrderItemUnitRepo interface {
 	CreateBatch(items []model.PurchaseOrderItemUnit) error
 	Update(item model.PurchaseOrderItemUnit) error
+	DeleteByItemUuids(itemUuids []uint64) error
 	GetByUuid(uuid uint64) (*model.PurchaseOrderItemUnit, error)
 	GetList(opts ...DBOption) ([]model.PurchaseOrderItemUnit, error)
 	WhereUuid(uuid uint64) DBOption
@@ -33,6 +34,14 @@ func (r *PurchaseOrderItemUnitRepoImpl) CreateBatch(items []model.PurchaseOrderI
 // Update 更新采购订单明细单位
 func (r *PurchaseOrderItemUnitRepoImpl) Update(item model.PurchaseOrderItemUnit) error {
 	return r.db.Where("uuid = ?", item.Uuid).Updates(item).Error
+}
+
+// DeleteByItemUuids 根据明细UUID批量删除单位
+func (r *PurchaseOrderItemUnitRepoImpl) DeleteByItemUuids(itemUuids []uint64) error {
+	if len(itemUuids) == 0 {
+		return nil
+	}
+	return r.db.Where("item_uuid IN ?", itemUuids).Delete(&model.PurchaseOrderItemUnit{}).Error
 }
 
 // GetByUuid 根据UUID获取采购订单明细单位

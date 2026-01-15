@@ -8,12 +8,11 @@ package service
 import (
 	"context"
 	"time"
-
-	grabfood "github.com/grab/grabfood-api-sdk-go"
-
 	api "ttpos-bmp/app/ttpos-takeout/api/order"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
+
+	grabfood "github.com/grab/grabfood-api-sdk-go"
 )
 
 type (
@@ -63,7 +62,7 @@ type (
 		//   - err: 错误信息
 		BatchUpdateMenu(ctx context.Context, merchantID string, req *grabfood.BatchUpdateMenuItem) (*grabfood.BatchUpdateMenuResponse, error)
 		// CreateSelfServeJourney 创建自助激活链接
-		// merchantID: Grab Merchant ID
+		// merchantID: Grab Merchant ID (shop_uuid)
 		// 返回: activation_url, request_id
 		CreateSelfServeJourney(ctx context.Context, merchantID string) (string, string, error)
 		// HandleMenuSyncState 处理菜单同步状态回调
@@ -137,7 +136,6 @@ type (
 		//   - res: 取消订单响应
 		//   - err: 错误信息
 		CancelOrderEntity(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *api.CancelOrderResp, err error)
-
 		// GeneratePartnerToken 根据 client_id / client_secret 生成访问 Token
 		// 采用 JWT（HS256）实现
 		// 参数：
@@ -151,7 +149,6 @@ type (
 		//   - expiresIn: Token 有效期（秒）
 		//   - err: 错误信息
 		GetPartnerToken(ctx context.Context, clientID string, clientSecret string, scope string) (token string, expiresIn int, err error)
-
 		// HandleGetMenu 处理 Grab 获取菜单请求 (Partner Endpoint)
 		// 签名验证已由中间件完成
 		HandleGetMenu(ctx context.Context, merchantID string) (*grabfood.GetMenuNewResponse, error)
