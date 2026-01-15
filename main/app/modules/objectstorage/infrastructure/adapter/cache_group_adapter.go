@@ -82,6 +82,9 @@ type CacheLayerOption struct {
 
 	// EnableL1Cache 是否开启 L1 本地缓存，默认为 true
 	EnableL1Cache bool
+
+	// EnableL2Cache 是否开启 L2 Redis 缓存，默认为 true
+	EnableL2Cache bool
 }
 
 // WithSingletonKey 设置单例 key
@@ -117,6 +120,17 @@ func WithL2TTL(ttl time.Duration) func(*CacheLayerOption) {
 func WithEnableL1Cache(enable bool) func(*CacheLayerOption) {
 	return func(opt *CacheLayerOption) {
 		opt.EnableL1Cache = enable
+	}
+}
+
+// WithEnableL2Cache 设置是否开启 L2 Redis 缓存
+// 参数：
+//   - enable: true 开启 L2 缓存（默认），false 禁用 L2 缓存
+//
+// 示例：WithEnableL2Cache(false) // 禁用 L2 缓存，只使用 L1 本地缓存
+func WithEnableL2Cache(enable bool) func(*CacheLayerOption) {
+	return func(opt *CacheLayerOption) {
+		opt.EnableL2Cache = enable
 	}
 }
 
@@ -196,6 +210,8 @@ func GetOrCreateCacheLayer[T any](groupConfig cache.GroupConfig, underlyingCache
 			if option.L2TTL > 0 {
 				groupConfig.L2TTL = option.L2TTL
 			}
+			// 注意：EnableL1Cache 和 EnableL2Cache 选项由调用方在创建 groupConfig 时应用
+			// 例如 GetOrderObjectCache 函数中会使用 option.EnableL1Cache 和 option.EnableL2Cache
 			// 设置统计回调函数（使用全局统计管理器）
 			globalStats := GetGlobalStatsManager()
 			groupConfig.HitStatsCallback = func(key string, hit bool, level string) {
