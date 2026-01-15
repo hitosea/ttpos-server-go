@@ -23,6 +23,7 @@ import (
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+	"unicode/utf8"
 
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
@@ -754,6 +755,9 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 	db := ctx.GetDB()
 	companySetting := ctx.GetCompanySetting()
 
+	if req.Action == "reject" && utf8.RuneCountInString(req.RejectReason) > 100 {
+		return errors.New("驳回原因最多100个字符")
+	}
 	return db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 
@@ -797,6 +801,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 			newStatus = constant.PurchaseOrderStatusRejected
 			actionDesc = "审核驳回"
 			purchaseOrder.RejectTime = time.Now().Unix()
+			purchaseOrder.RejectReason = req.RejectReason
 		} else {
 			return errors.New("无效的审核动作")
 		}
@@ -863,6 +868,7 @@ func (s *purchaseOrderSrv) handleHeadquarterReject(purchaseOrder *model.Purchase
 	subPurchaseOrder.Status = constant.PurchaseOrderStatusRejected
 	subPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusRejected
 	subPurchaseOrder.RejectTime = purchaseOrder.RejectTime
+	subPurchaseOrder.RejectReason = purchaseOrder.RejectReason
 
 	err = repository.NewPurchaseOrderRepo(subDb).Update(subPurchaseOrder)
 	if err != nil {

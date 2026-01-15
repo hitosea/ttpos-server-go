@@ -7176,6 +7176,7 @@
   "马里": "Mali",
   "驳回": "kısmak",
   "驳回原因不能为空": "Reddetme nedeni boş olamaz",
+  "驳回原因最多100个字符": "Reddetme nedeni en fazla 100 karakter olabilir",
   "驳回原因：": "Reddedilme nedeni:",
   "驳回成功": "Reddetme başarılı",
   "驳回盘点单失败": "Sayım fişi reddedilemedi",
