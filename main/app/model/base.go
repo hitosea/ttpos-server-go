@@ -236,15 +236,14 @@ func (model *H5Order) AfterUpdate(tx *gorm.DB) (err error) {
 
 // Desk - AfterUpdate 更新桌台后的逻辑 - 推送桌台更新
 func (model *Desk) AfterUpdate(tx *gorm.DB) (err error) {
-	logger.Logger.Info("推送桌台更新-111111-companyUuid", zap.Any("companyUuid", model.getCompanyUuid(tx)))
 	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
-		// data := map[string]interface{}{
-		// 	"desk_uuid":   model.BaseModel.Uuid,
-		// 	"update_time": model.BaseModel.UpdateTime,
-		// }
-		// utils.Go(func() {
-		// 	websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, data)
-		// })
+		data := map[string]interface{}{
+			"desk_uuid":   model.BaseModel.Uuid,
+			"update_time": model.BaseModel.UpdateTime,
+		}
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, data)
+		})
 	}
 	return nil
 }
