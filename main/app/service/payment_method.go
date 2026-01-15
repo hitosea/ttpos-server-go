@@ -1184,8 +1184,6 @@ func (s *paymentMethodSrv) SaveGrabPaymentMethod(ctx context.Context, tx *gorm.D
 	// 如果通过 code、payment_name、source 查询到支付方式，则跳过
 	existPayment := paymentMethodRepo.GetPaymentMethod(
 		paymentMethodRepo.WhereCode(constant.PaymentMethodCodeGrab),
-		paymentMethodRepo.WherePaymentName(constant.PaymentMethodNameGrab),
-		paymentMethodRepo.WhereSource(constant.PaymentMethodSourceSystem),
 	)
 	if existPayment.Uuid > 0 {
 		// 已存在，跳过
@@ -1265,8 +1263,6 @@ func (s *paymentMethodSrv) SaveLineManPaymentMethod(ctx context.Context, tx *gor
 	// 如果通过 code、payment_name、source 查询到支付方式，则跳过
 	existPayment := paymentMethodRepo.GetPaymentMethod(
 		paymentMethodRepo.WhereCode(constant.PaymentMethodCodeLineMan),
-		paymentMethodRepo.WherePaymentName(constant.PaymentMethodNameLineMan),
-		paymentMethodRepo.WhereSource(constant.PaymentMethodSourceSystem),
 	)
 	if existPayment.Uuid > 0 {
 		// 已存在，跳过
