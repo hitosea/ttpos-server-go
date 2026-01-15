@@ -47,6 +47,7 @@ type StatementOrderInfoData struct {
 	Products               []StatementProductData    `json:"products"`                  // 商品列表
 	ProductNum             float64                   `json:"product_num"`               // 商品数量
 	ProductAmount          string                    `json:"product_amount"`            // 商品金额
+	SmallOrderFee          string                    `json:"small_order_fee"`           // 小单费用
 	ServiceFee             string                    `json:"service_fee"`               // 服务费
 	TaxRate                float64                   `json:"tax_rate"`                  // 税费率
 	TaxFeeType             uint                      `json:"tax_fee_type"`              // 税费类型	0-关闭消费税 1-商品未含税 2-商品已含税

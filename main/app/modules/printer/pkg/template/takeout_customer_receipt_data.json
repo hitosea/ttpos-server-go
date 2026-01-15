@@ -95,6 +95,7 @@
         ],
         "product_num": 9,
         "product_amount": "73.98",
+        "small_order_fee": "0.01",
         "delivery_fee": "4",
         "discount_fee": "0.00",
         "actual_receive_price": "73.98",
