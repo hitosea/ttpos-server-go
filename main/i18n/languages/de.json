@@ -7176,6 +7176,7 @@
   "马里": "Mali",
   "驳回": "Ablehnen",
   "驳回原因不能为空": "Ablehnungsgrund darf nicht leer sein",
+  "驳回原因最多100个字符": "Ablehnungsgrund bis zu 100 Zeichen",
   "驳回原因：": "Ablehnungsgrund:",
   "驳回成功": "Ablehnung erfolgreich",
   "驳回盘点单失败": "Inventurbeleg konnte nicht abgelehnt werden",
