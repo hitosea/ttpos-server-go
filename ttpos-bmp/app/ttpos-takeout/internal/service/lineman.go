@@ -10,7 +10,6 @@ import (
 	v1 "ttpos-bmp/app/ttpos-takeout/api/lineman/v1"
 	api "ttpos-bmp/app/ttpos-takeout/api/menu"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/lineman"
-	lineman_dto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/lineman"
 )
 
 type (
@@ -35,16 +34,6 @@ type (
 		// 返回:
 		//   - error: 错误信息
 		UpdateMenuItemStatus(ctx context.Context, shopUuid string, itemId string, menuStatus string) error
-		// UpdateMenuStatus 批量更新菜单商品状态
-		//
-		// 参数:
-		//   - ctx: 上下文
-		//   - storeId: 店铺 ID（Lineman storeId）
-		//   - req: 菜单状态更新请求
-		//
-		// 返回:
-		//   - error: 错误信息
-		UpdateMenuStatus(ctx context.Context, storeId string, req *lineman_dto.MenuStatusUpdateReq) error
 		// BatchUpdateMenuItems 批量更新 Lineman 菜单项
 		//
 		// 参数:
@@ -72,6 +61,14 @@ type (
 		//   - *lineman.MenuSyncRequest: 菜单同步请求数据
 		//   - error: 错误信息
 		BuildMenuPayload(ctx context.Context, ttposMenuJSON string) (*lineman.MenuSyncRequest, error)
+		// HandleMenuSyncNotification 处理 LINE MAN 菜单同步通知并写入日志
+		// 参数:
+		//   - ctx: 上下文
+		//   - req: 菜单同步通知请求
+		//
+		// 返回:
+		//   - error: 错误信息
+		HandleMenuSyncNotification(ctx context.Context, req *v1.MenuSyncNotificationReq) error
 		// UpdateModifierStatus 更新修饰符状态
 		//
 		// 参数:
@@ -83,6 +80,14 @@ type (
 		// 返回:
 		//   - error: 错误信息
 		UpdateModifierStatus(ctx context.Context, storeId string, modifierId string, status int) error
+		// HandleTriggerSyncMenu 处理 LINE MAN 触发菜单同步请求
+		// 参数:
+		//   - ctx: 上下文
+		//   - req: 触发同步请求
+		//
+		// 返回:
+		//   - error: 错误信息
+		HandleTriggerSyncMenu(ctx context.Context, req *v1.TriggerSyncMenuReq) error
 	}
 )
 

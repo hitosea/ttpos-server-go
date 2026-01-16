@@ -84,6 +84,16 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 ---
 
+## 🗂️ 提案索引
+
+## 2026-01
+
+| Proposal | 说明 | 状态 |
+| --- | --- | --- |
+| [v2.14-shop-lineman-trigger-sync-menu](2026-01/v2.14-shop-lineman-trigger-sync-menu.md) | Lineman TriggerSyncMenu 落库与触发 | 待评审 |
+
+---
+
 ## 🔗 相关资源
 
 ### 工作流
@@ -98,5 +108,5 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 ---
 
-**最后更新**: 2025-11-25
+**最后更新**: 2026-01-15
 

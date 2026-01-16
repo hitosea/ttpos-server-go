@@ -72,47 +72,8 @@ func (s *sLineman) UpdateMenuItemStatus(ctx context.Context, shopUuid string, it
 		},
 	}
 
-	// 3. 调用通用方法（shopUuid 对应 Lineman 的 storeId）
-	return s.doUpdateMenuStatus(ctx, shopUuid, req)
-}
-
-// UpdateMenuStatus 批量更新菜单商品状态
-//
-// 参数:
-//   - ctx: 上下文
-//   - storeId: 店铺 ID（Lineman storeId）
-//   - req: 菜单状态更新请求
-//
-// 返回:
-//   - error: 错误信息
-func (s *sLineman) UpdateMenuStatus(ctx context.Context, storeId string, req *lineman_dto.MenuStatusUpdateReq) error {
-	// 1. 参数校验
-	if storeId == "" {
-		return gerror.New("storeId 不能为空")
-	}
-	if len(req.MenuItems) == 0 {
-		return gerror.New("menuItems 不能为空")
-	}
-	if len(req.MenuItems) > 100 {
-		return gerror.New("menuItems 最多支持 100 个商品")
-	}
-
-	// 2. 调用通用方法
-	return s.doUpdateMenuStatus(ctx, storeId, req)
-}
-
-// doUpdateMenuStatus 执行菜单状态更新（通用方法）
-//
-// 参数:
-//   - ctx: 上下文
-//   - storeId: 店铺 ID
-//   - req: 菜单状态更新请求
-//
-// 返回:
-//   - error: 错误信息
-func (s *sLineman) doUpdateMenuStatus(ctx context.Context, storeId string, req *lineman_dto.MenuStatusUpdateReq) error {
-	// 调用 Lineman Client
-	resp, err := s.menuStatusClient.UpdateMenuStatusWithRetry(ctx, storeId, req)
+	// 3. 调用 Lineman Client（shopUuid 对应 Lineman 的 storeId）
+	resp, err := s.menuStatusClient.UpdateMenuStatusWithRetry(ctx, shopUuid, req)
 	if err != nil {
 		return gerror.Wrap(err, "调用 Lineman API 失败")
 	}

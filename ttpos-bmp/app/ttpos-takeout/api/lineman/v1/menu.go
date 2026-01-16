@@ -5,13 +5,15 @@ import "github.com/gogf/gf/v2/frame/g"
 // ========== 菜单同步通知 API ==========
 
 // MenuSyncNotificationReq 菜单同步通知请求
-// LINE MAN 通知 TTPOS 需要同步菜单数据
+// LINE MAN 通知 TTPOS 菜单同步任务结果
 type MenuSyncNotificationReq struct {
 	g.Meta           `path:"/partners/:partnerId/stores/:storeId/menus/notification" method:"post" tags:"LINE MAN Menu" summary:"接收菜单同步通知"`
 	PartnerId        string `json:"partnerId" v:"required#合作伙伴ID不能为空" dc:"合作伙伴唯一 ID（路径参数）"`
 	StoreId          string `json:"storeId" v:"required#门店ID不能为空" dc:"门店唯一 ID（路径参数）"`
-	NotificationType string `json:"notificationType" v:"required|in:ENABLE,DISABLE,UPDATE#通知类型不能为空|通知类型必须为ENABLE、DISABLE或UPDATE" dc:"通知类型：ENABLE（启用）、DISABLE（禁用）或 UPDATE（更新）"`
-	Details          string `json:"details" dc:"通知详情描述"`
+	MenuSyncRequestId string `json:"menuSyncRequestId" v:"required#菜单同步请求ID不能为空" dc:"菜单同步请求唯一 ID"`
+	UpdatedAt         string `json:"updatedAt" v:"required#更新时间不能为空" dc:"同步任务更新时间，ISO 8601 格式"`
+	Status            string `json:"status" v:"required|in:SUCCESS,FAILED#状态不能为空|状态必须为SUCCESS或FAILED" dc:"同步状态：SUCCESS 或 FAILED"`
+	ErrorMsg          string `json:"error" dc:"同步失败时的错误信息（SUCCESS 时为空）"`
 }
 
 // MenuSyncNotificationRes 菜单同步通知响应
