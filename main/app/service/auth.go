@@ -1054,7 +1054,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	}
 	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
 	enableCache := objectStorageAdapter.IsObjectStorageCacheEnabled(auth.CompanyUuid)
-
+	enableCache = false // 暂时关闭缓存
 	staffRepo := repository.NewStaffRepo(db)
 
 	// 查询函数（从数据库获取员工信息）

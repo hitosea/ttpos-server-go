@@ -6,7 +6,6 @@ import (
 
 	"gorm.io/gorm"
 
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -49,7 +48,7 @@ func (s *purchaseOrderSrv) checkDailySubmitLimit(ctx context.Context, companyUui
 	}
 
 	// 使用系统时区计算当天的起止时间戳
-	todayStart, todayEnd := utils.SetTimezone("").TodayStartEndUnix()
+	todayStart, todayEnd := utils.SetTimezone(companySetting.GetTimezone()).TodayStartEndUnix()
 
 	// 通过 Repository 统计当天已提交的申请次数
 	count, err := repository.NewPurchaseOrderRepo(ctx.GetDB()).CountBrandPurchaseByTimeRange(todayStart, todayEnd)
@@ -212,21 +211,21 @@ func (s *purchaseOrderSrv) checkSingleUnitQuotaWithConfig(
 	}
 
 	// 2. 根据周期类型查询已使用额度
-	var usedQty float64
-	var err error
-	if config.PeriodType == constant.PurchaseQuotaPeriodTypeDaily {
-		// 按天限购：统计今天已使用额度
-		usedQty, err = s.getDailyUsedQuota(ctx, materialCode, unitCode, order.Uuid)
-	} else {
-		// 按月限购：统计本月已使用额度
-		usedQty, err = s.getMonthlyUsedQuota(ctx, materialCode, unitCode, order.Uuid)
-	}
-	if err != nil {
-		return errors.WithMessage(errors.New("查询品牌采购已使用额度失败"), err.Error())
-	}
+	// var usedQty float64
+	// var err error
+	// if config.PeriodType == constant.PurchaseQuotaPeriodTypeDaily {
+	// 	// 按天限购：统计今天已使用额度
+	// 	usedQty, err = s.getDailyUsedQuota(ctx, materialCode, unitCode, order.Uuid)
+	// } else {
+	// 	// 按月限购：统计本月已使用额度
+	// 	usedQty, err = s.getMonthlyUsedQuota(ctx, materialCode, unitCode, order.Uuid)
+	// }
+	// if err != nil {
+	// 	return errors.WithMessage(errors.New("查询品牌采购已使用额度失败"), err.Error())
+	// }
 
 	// 3. 校验是否超限
-	if usedQty+quantity > config.QuotaLimit {
+	if quantity > config.QuotaLimit {
 		return errors.New(fmt.Sprintf(
 			i18n.Translate(lang, "本次申请 %s 数量已超限（最多 %v），请减少物品数量后重试"),
 			materialName, config.QuotaLimit,
@@ -258,7 +257,7 @@ func (s *purchaseOrderSrv) getDailyUsedQuota(
 	headquarterDb := s.dbm.GetDB(headquarterUuid)
 
 	// 使用系统时区计算今天的起止时间戳
-	todayStart, todayEnd := utils.SetTimezone("").TodayStartEndUnix()
+	todayStart, todayEnd := utils.SetTimezone(companySetting.GetTimezone()).TodayStartEndUnix()
 
 	// 通过 Repository 统计已使用额度
 	return repository.NewPurchaseOrderItemRepo(headquarterDb).SumBrandPurchaseByTimeRange(
@@ -291,7 +290,7 @@ func (s *purchaseOrderSrv) getMonthlyUsedQuota(
 	headquarterDb := s.dbm.GetDB(headquarterUuid)
 
 	// 使用系统时区计算当前月份（格式：2026-01）
-	currentMonth := utils.SetTimezone("").Now().Format("2006-01")
+	currentMonth := utils.SetTimezone(companySetting.GetTimezone()).Now().Format("2006-01")
 
 	// 通过 Repository 统计已使用额度
 	return repository.NewPurchaseOrderItemRepo(headquarterDb).SumBrandPurchaseByMonth(

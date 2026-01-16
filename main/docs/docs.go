@@ -48673,6 +48673,10 @@ const docTemplate = `{
                         "reject"
                     ]
                 },
+                "reject_reason": {
+                    "description": "驳回备注，可以为空最大100个字符",
+                    "type": "string"
+                },
                 "uuid": {
                     "description": "采购订单ID",
                     "type": "integer",
@@ -59238,6 +59242,10 @@ const docTemplate = `{
                     "description": "收货进度（百分比0.00%）前端直接显示",
                     "type": "string"
                 },
+                "reject_reason": {
+                    "description": "驳回原因",
+                    "type": "string"
+                },
                 "status": {
                     "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核",
                     "type": "integer"
@@ -59317,6 +59325,10 @@ const docTemplate = `{
                 },
                 "receipt_progress": {
                     "description": "收货进度（百分比0.00%）前端直接显示",
+                    "type": "string"
+                },
+                "reject_reason": {
+                    "description": "驳回原因",
                     "type": "string"
                 },
                 "status": {

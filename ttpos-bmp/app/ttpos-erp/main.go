@@ -37,6 +37,12 @@ func main() {
 			os.Args = append([]string{os.Args[0]}, args[1:]...)
 			cmd.ErpAllMigrate.Run(ctx)
 			return
+		case "sync-print-format":
+			// 同步打印格式到本地
+			// 重新构造命令行参数，移除命令名称，保留选项参数
+			os.Args = append([]string{os.Args[0]}, args[1:]...)
+			cmd.ErpSyncPrintFormat.Run(ctx)
+			return
 		}
 	}
 

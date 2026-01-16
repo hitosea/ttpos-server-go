@@ -5,6 +5,9 @@ import (
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/modules/printer"
 	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
@@ -133,6 +136,45 @@ func FreeSaleOrderEventHandler() {
 			}
 		})
 
+		// 失效桌台缓存（桌台订单完成后）
+		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
+			// 如果订单未完成，不处理
+			if !payload.SaleBill.IsFinish() {
+				return
+			}
+			if adapter.IsObjectStorageCacheEnabled(payload.CompanyUuid) {
+				// 如果是桌台订单，失效桌台缓存
+				if payload.SaleBill.IsDeskSaleBill() {
+					deskUuid := payload.SaleBill.DeskUuid
+					deskUuid = persistence.GlobalObjectUuid // 还没有失效单个桌台缓存,全局失效桌台缓存
+					if err := controller.GetDeskController().Invalidate(payload.Ctx, deskUuid); err != nil {
+						logger.Logger.Error("SubscribeFreeSaleOrderEvent process, Invalidate desk cache failed", zap.Uint64("deskUuid", deskUuid), zap.Error(err))
+					}
+				}
+			}
+		})
+
+		// 增加销量
+		// 增加产品销量
+		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			payload.Ctx.SetDB(db)
+			HandleAddSalesVolumeForFree(payload)
+		})
+		// 增加材料销量
+		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			payload.Ctx.SetDB(db)
+			HandleAddMaterialSalesVolumeForFree(payload)
+		})
+
+		// 结账订单后，统计订单原料用量。
+		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			payload.Ctx.SetDB(db)
+			HandleRecordOrderMaterialUsage(payload.Ctx, db, payload.SaleBill, payload.SaleBillUuid, payload.SaleOrderUuid)
+		})
+
 		// 创建操作记录
 		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
@@ -186,4 +228,33 @@ func FreeSaleOrderEventHandler() {
 
 		})
 	})
+}
+
+// 增加销量（免单）
+func HandleAddSalesVolumeForFree(payload event.FreeSaleOrderPayload) {
+	ProductBoms, ProductPackages := GetSalesVolume(payload.SaleBill)
+
+	for productBomUuid, saleNum := range ProductBoms {
+		if err := repository.NewProductBomRepo(payload.Ctx.GetDB()).AddActualSaleNum(productBomUuid, saleNum); err != nil {
+			logger.Logger.Error("HandleAddSalesVolumeForFree process, AddActualSaleNum failed", zap.Any("productBomUuid", productBomUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
+		}
+	}
+	for productPackageUuid, saleNum := range ProductPackages {
+		if err := repository.NewProductPackageRepo(payload.Ctx.GetDB()).AddActualSaleNum(productPackageUuid, saleNum); err != nil {
+			logger.Logger.Error("HandleAddSalesVolumeForFree process, AddActualSaleNum failed", zap.Any("productPackageUuid", productPackageUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
+		}
+	}
+}
+
+// 增加材料销量（免单）
+func HandleAddMaterialSalesVolumeForFree(payload event.FreeSaleOrderPayload) {
+	MaterialSalesVolume := GetMaterialSalesVolume(payload.CompanyUuid, payload.SaleOrderUuid)
+	for materialUuid, saleNum := range MaterialSalesVolume {
+		if err := repository.NewMaterialRepo(payload.Ctx.GetDB()).AddActualSaleNum(materialUuid, saleNum); err != nil {
+			logger.Logger.Error("HandleAddMaterialSalesVolumeForFree process, AddActualSaleNum failed", zap.Any("materialUuid", materialUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
+		}
+	}
 }

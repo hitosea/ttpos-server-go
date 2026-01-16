@@ -1181,17 +1181,8 @@ func (s *paymentMethodSrv) createPaymentFromERP(
 func (s *paymentMethodSrv) SaveGrabPaymentMethod(ctx context.Context, tx *gorm.DB) error {
 	paymentMethodRepo := repository.NewPaymentMethodRepo(tx)
 
-	// 检查支付方式是否已存在（通过 payment_name 或 code）
+	// 如果通过 code、payment_name、source 查询到支付方式，则跳过
 	existPayment := paymentMethodRepo.GetPaymentMethod(
-		paymentMethodRepo.WherePaymentName(constant.PaymentMethodNameGrab),
-	)
-	if existPayment.Uuid > 0 {
-		// 已存在，跳过
-		return nil
-	}
-
-	// 如果通过 payment_name 没找到，再通过 code 查询
-	existPayment = paymentMethodRepo.GetPaymentMethod(
 		paymentMethodRepo.WhereCode(constant.PaymentMethodCodeGrab),
 	)
 	if existPayment.Uuid > 0 {
@@ -1269,17 +1260,8 @@ func (s *paymentMethodSrv) SaveGrabPaymentMethod(ctx context.Context, tx *gorm.D
 func (s *paymentMethodSrv) SaveLineManPaymentMethod(ctx context.Context, tx *gorm.DB) error {
 	paymentMethodRepo := repository.NewPaymentMethodRepo(tx)
 
-	// 检查支付方式是否已存在（通过 payment_name 或 code）
+	// 如果通过 code、payment_name、source 查询到支付方式，则跳过
 	existPayment := paymentMethodRepo.GetPaymentMethod(
-		paymentMethodRepo.WherePaymentName(constant.PaymentMethodNameLineMan),
-	)
-	if existPayment.Uuid > 0 {
-		// 已存在，跳过
-		return nil
-	}
-
-	// 如果通过 payment_name 没找到，再通过 code 查询
-	existPayment = paymentMethodRepo.GetPaymentMethod(
 		paymentMethodRepo.WhereCode(constant.PaymentMethodCodeLineMan),
 	)
 	if existPayment.Uuid > 0 {

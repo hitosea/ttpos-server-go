@@ -26,7 +26,6 @@ import (
 	"github.com/google/uuid"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // 全局锁管理器（确保所有 takeoutAppService 实例共享同一套锁）
@@ -116,9 +115,10 @@ func NewTakeoutAppService(
 
 	// 初始化平台转换器（用于菜单转换）
 	converters := make(map[string]service.IPlatformConverter)
-	grabConverter := grab.NewGrabConverter(dbm, nil)
-	converters[value_object.TakeoutPlatformGrab] = grabConverter
-	converters[value_object.TakeoutPlatformLineman] = grabConverter
+	grabConverter := grab.NewGrabConverter(dbm)
+	converters["grab"] = grabConverter
+	// 后续可添加其他平台：converters["lineman"] = lineman.NewLinemanConverter(dbm)
+
 	// 初始化订单服务
 	orderService := service.NewTakeoutOrderSrv(dbm)
 
@@ -142,7 +142,7 @@ func NewTakeoutAppService(
 // HandleIntegrationStatus 处理门店集成状态变更
 func (s *takeoutAppService) HandleIntegrationStatus(ctx context.Context, takeoutIntegrationEvent request.TakeoutIntegrationEvent) error {
 	// 更新门店集成状态
-	_, err := s.CheckBindingStatus(ctx, value_object.TakeoutPlatformGrab)
+	_, err := s.CheckBindingStatus(ctx, "grab")
 	if err != nil {
 		return fmt.Errorf("检查绑定状态失败: %w", err)
 	}
@@ -170,52 +170,11 @@ func (s *takeoutAppService) GetTakeoutStatus(ctx context.Context, platform strin
 
 // ToggleTakeoutStatus 切换指定平台外卖状态
 func (s *takeoutAppService) ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
-	// 获取公司 UUID
-	companyUuid := ctx.GetCompanyUuid()
-
-	// 如果平台需要在启用时激活门店外卖渠道，先调用 ActivateShop（RPC 调用不能在事务中）
-	if value_object.ShouldActivateShopOnEnable(req.Platform) && req.Enabled {
-		err := s.rpcService.ActivateShop(ctx.GetContext(), req.Platform, companyUuid)
-		if err != nil {
-			logger.Logger.Error("激活 Lineman 门店外卖渠道失败", zap.Error(err), zap.String("platform", req.Platform), zap.Uint64("companyUuid", companyUuid))
-			return nil, errors.WithMessage(errors.New("激活 Lineman 门店外卖渠道失败"), err.Error())
-		}
-	}
-
-	// 使用事务执行数据库操作
-	db := ctx.GetDB()
-	err := db.Transaction(func(tx *gorm.DB) error {
-		// 创建事务上下文
-		ctxTx := ctx.Copy()
-		ctxTx.SetDB(tx)
-
-		// 1. 更新平台状态
-		if err := s.takeoutService.UpdatePlatformStatusByPlatform(ctxTx, req.Platform, req.Enabled); err != nil {
-			logger.Logger.Error("更新平台状态失败", zap.Error(err), zap.String("platform", req.Platform), zap.Uint64("companyUuid", companyUuid))
-			return errors.WithMessage(errors.New("更新平台状态失败"), err.Error())
-		}
-
-		// 2. 如果平台需要激活且已成功调用 ActivateShop，更新绑定状态
-		if value_object.ShouldActivateShopOnEnable(req.Platform) && req.Enabled {
-			takeout, err := s.takeoutService.GetByPlatform(ctxTx, req.Platform)
-			if err != nil {
-				logger.Logger.Error("获取平台状态失败", zap.Error(err), zap.String("platform", req.Platform), zap.Uint64("companyUuid", companyUuid))
-				return errors.WithMessage(errors.New("获取平台状态失败"), err.Error())
-			}
-
-			if err := s.takeoutService.UpdatePlatformBoundStatus(ctxTx, takeout.Uuid, true); err != nil {
-				logger.Logger.Error("更新平台绑定状态失败", zap.Error(err), zap.String("platform", req.Platform), zap.Uint64("companyUuid", companyUuid))
-				return errors.WithMessage(errors.New("更新平台绑定状态失败"), err.Error())
-			}
-		}
-
-		return nil
-	})
-
+	// 更新状态
+	err := s.takeoutService.UpdatePlatformStatusByPlatform(ctx, req.Platform, req.Enabled)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("更新平台状态失败: %w", err)
 	}
-
 	// 返回最新状态
 	return s.GetTakeoutStatus(ctx, req.Platform)
 }
@@ -356,7 +315,7 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	var platformData interface{}
 	if grabConverter, ok := converter.(*grab.GrabConverter); ok {
 		// Grab 平台使用专用的加载方法（直接返回 Grab 格式）
-		platformData, err = grabConverter.LoadMenuFromDatabase(ctx, req.Platform, companyUuid, req.CurrencyUnit, []uint64{})
+		platformData, err = grabConverter.LoadMenuFromDatabase(ctx, companyUuid, req.CurrencyUnit, []uint64{})
 		if err != nil {
 			return nil, errors.New("加载菜单数据失败")
 		}
@@ -387,13 +346,13 @@ func (s *takeoutAppService) GetGrabMenu(ctx context.Context) (*response.GrabMenu
 	}
 
 	// 更新 ttpos_takeout 表的 menu 字段
-	err = s.takeoutService.UpdatePlatformMenuByPlatform(ctx, value_object.TakeoutPlatformGrab, menu)
+	err = s.takeoutService.UpdatePlatformMenuByPlatform(ctx, "grab", menu)
 	if err != nil {
 		return nil, fmt.Errorf("更新 TTPOS 菜单失败: %w", err)
 	}
 
 	return &response.GrabMenuResponse{
-		Platform: value_object.TakeoutPlatformGrab,
+		Platform: "grab",
 		Menu:     menu,
 	}, nil
 }
@@ -421,7 +380,7 @@ func (s *takeoutAppService) ConvertMenuData(ctx context.Context, req request.Imp
 	}
 
 	// 保存菜单数据到数据库
-	err = s.UpdateTakeoutMenu(ctx, value_object.TakeoutPlatformGrab, grabMenu)
+	err = s.UpdateTakeoutMenu(ctx, "grab", grabMenu)
 	if err != nil {
 		return nil, fmt.Errorf("保存菜单数据失败: %w", err)
 	}
@@ -554,7 +513,7 @@ func (s *takeoutAppService) GetImportLogs(ctx context.Context, req request.GetIm
 		canReimport := log.IsFailed() &&
 			i == 0 &&
 			log.ImportType == model.ImportTypePlatformToTTPOS &&
-			log.Platform == value_object.TakeoutPlatformGrab
+			log.Platform == "grab"
 
 		logList = append(logList, response.ImportLogResponse{
 			UUID:            log.Uuid,

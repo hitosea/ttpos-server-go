@@ -22,7 +22,6 @@ type SaleBillBatchQueryFunc func(db *gorm.DB, uuids []uint64) ([]*model.SaleBill
 var (
 	saleBillControllerInstance *CacheObjectController[*model.SaleBill]
 	saleBillControllerOnce     sync.Once
-	saleBillControllerMutex    sync.RWMutex
 )
 
 // InitSaleBillController 初始化 SaleBill 对象的缓存控制器（单例模式）
@@ -39,35 +38,26 @@ func InitSaleBillController(
 ) {
 	// 构建缓存层选项,禁用 L1 本地缓存
 	cacheOpts := []func(*adapter.CacheLayerOption){adapter.WithEnableL1Cache(false)}
-
-	InitCacheObjectController[*model.SaleBill](
-		underlyingCache,
-		ttl,
-		func(db *gorm.DB, uuid uint64) (*model.SaleBill, error) {
-			return queryFunc(db, uuid)
-		},
-		func(db *gorm.DB, uuids []uint64) ([]*model.SaleBill, error) {
-			return batchQueryFunc(db, uuids)
-		},
-		func(obj *model.SaleBill) uint64 {
-			return obj.Uuid
-		},
-		persistence.ObjectTypeSaleBill,
-		&saleBillControllerInstance,
-		&saleBillControllerOnce,
-		&saleBillControllerMutex,
-		cacheOpts...,
-	)
+	saleBillControllerOnce.Do(func() {
+		saleBillControllerInstance = InitCacheObjectController[*model.SaleBill](
+			underlyingCache,
+			ttl,
+			func(db *gorm.DB, uuid uint64) (*model.SaleBill, error) {
+				return queryFunc(db, uuid)
+			},
+			func(db *gorm.DB, uuids []uint64) ([]*model.SaleBill, error) {
+				return batchQueryFunc(db, uuids)
+			},
+			func(obj *model.SaleBill) uint64 {
+				return obj.Uuid
+			},
+			persistence.ObjectTypeSaleBill,
+			cacheOpts...,
+		)
+	})
 }
 
 // GetSaleBillController 获取 SaleBill 对象的缓存控制器单例实例
-// 保证返回非 nil 值，如果未初始化会 panic
-// 返回：
-//   - *CacheObjectController[*model.SaleBill]: SaleBill 缓存对象控制器实例（保证非 nil）
 func GetSaleBillController() *CacheObjectController[*model.SaleBill] {
-	return GetCacheObjectController[*model.SaleBill](
-		&saleBillControllerInstance,
-		&saleBillControllerMutex,
-		"SaleBill 缓存控制器未初始化，请先调用 InitSaleBillController",
-	)
+	return saleBillControllerInstance
 }

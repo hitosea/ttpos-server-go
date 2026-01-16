@@ -14,6 +14,7 @@ type PurchaseOrderInfo struct {
 	OrderNo           string             `json:"order_no"`            // 申请单编号（单据编号）
 	ErpOrderNo        string             `json:"erp_order_no"`        // ERP申请单编号（采购单号）
 	Status            int                `json:"status"`              // 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核
+	RejectReason      string             `json:"reject_reason"`       // 驳回原因
 	HeadquarterStatus int                `json:"headquarter_status"`  // V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
 	OrderTime         int64              `json:"order_time"`          // 单据日期
 	Num               int                `json:"num"`                 // 物品数量

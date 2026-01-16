@@ -15,10 +15,8 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
-	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -196,11 +194,8 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error) {
 
 // GetDeskPing 获取桌台详情-用于定时轮询
 func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.DeskPing, error) {
-	funcStartTime := time.Now()
-	logger.Logger.Info("cache_time_xie_log GetDeskPing 开始执行", zap.Uint64("deskUuid", deskUuid))
 
 	// 初始化响应对象
-	initStartTime := time.Now()
 	res := resp.DeskPing{
 		SentKitchen: resp.SentKitchen{
 			Groups: resp.GroupList{
@@ -222,40 +217,31 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 			return nil
 		}(),
 	}
-	logger.Logger.Info("cache_time_xie_log 初始化响应对象完成", zap.Int64("duration", time.Since(initStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid))
 
 	// 获取桌台详情
-	getDeskStartTime := time.Now()
 	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskRecord(deskUuid)
 	if err != nil {
 		return res, errors.WithMessage(errors.New("桌台不存在"), "获取桌台详情失败")
 	}
-	logger.Logger.Info("cache_time_xie_log 获取桌台详情完成", zap.Int64("duration", time.Since(getDeskStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid))
 
 	// 获取销售账单信息并计算未送厨商品总金额
-	getSaleBillStartTime := time.Now()
 	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(desk.SaleBillUuid)
 	if err != nil {
 		return res, errors.WithMessage(err)
 	}
-	logger.Logger.Info("cache_time_xie_log 获取销售账单所有信息完成", zap.Int64("duration", time.Since(getSaleBillStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid), zap.Uint64("saleBillUuid", desk.SaleBillUuid))
 
 	// 设置桌台信息
-	setDeskInfoStartTime := time.Now()
 	desk.SaleBill = saleBill
 	res.DeskInfo = desk.GetDeskResp()
-	logger.Logger.Info("cache_time_xie_log 设置桌台信息完成", zap.Int64("duration", time.Since(setDeskInfoStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid))
 
 	// 如果没有销售账单,直接返回
 	if desk.SaleBill == nil {
-		logger.Logger.Info("cache_time_xie_log GetDeskPing 完成(无销售账单)", zap.Int64("duration", time.Since(funcStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid))
 		return res, nil
 	}
 	// 设置国籍UUID
 	res.NationalityUuid = desk.SaleBill.NationalityUuid
 	// 获取账单信息，合计未送厨商品数量、合计已送厨商品列表
 	if shopCart == nil {
-		getCartStartTime := time.Now()
 		var opts []repository.OrderCartInfoOptionFunc
 		if ctx.GetSource() == constant.SourceTablet { // 平板端查询购物车必点信息时，不自动加购
 			opts = append(opts, repository.WithNoAutoAdd())
@@ -268,38 +254,28 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 		if err != nil {
 			return res, errors.WithMessage(errors.New("订单不存在"), fmt.Sprintf("获取销售账单信息失败,SaleBillUuid: %d", desk.SaleBillUuid))
 		}
-		logger.Logger.Info("cache_time_xie_log 获取购物车信息完成", zap.Int64("duration", time.Since(getCartStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid), zap.Uint64("saleBillUuid", desk.SaleBillUuid))
 	}
 
 	// 未送厨商品信息
-	getUnsentKitchenStartTime := time.Now()
 	res.UnsentKitchen, _ = s.orderSrv.GetUnsentKitchen(ctx, desk.SaleBillUuid, shopCart, saleBill)
-	logger.Logger.Info("cache_time_xie_log 获取未送厨商品信息完成", zap.Int64("duration", time.Since(getUnsentKitchenStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid))
 
 	// 已送厨商品信息
-	getSentKitchenStartTime := time.Now()
 	res.SentKitchen, _ = s.orderSrv.GetSentKitchen(ctx, desk.SaleBill.Uuid, shopCart, saleBill)
-	logger.Logger.Info("cache_time_xie_log 获取已送厨商品信息完成", zap.Int64("duration", time.Since(getSentKitchenStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid))
 
 	// 自助餐信息
-	processBuffetStartTime := time.Now()
 	if shopCart.Buffet != nil {
 		res.Buffet = *shopCart.Buffet
 	}
-	logger.Logger.Info("cache_time_xie_log 处理自助餐信息完成", zap.Int64("duration", time.Since(processBuffetStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid))
 
 	// 必点方案列表
-	processMustPlansStartTime := time.Now()
 	if shopCart.MustPlans != nil {
 		res.MustPlans = *shopCart.MustPlans
 	}
-	logger.Logger.Info("cache_time_xie_log 处理必点方案列表完成", zap.Int64("duration", time.Since(processMustPlansStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid))
 
 	// 订单列表，拆单时，会有多个
 	res.SaleOrderList = shopCart.SaleOrderList
 
 	// 合计送厨商品数量和完成数量，退菜的商品不计算
-	calcSentKitchenStartTime := time.Now()
 	productPackageUuidMap := make(map[uint64]resp.SentKitchenProduct)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
@@ -321,10 +297,8 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 			}
 		}
 	}
-	logger.Logger.Info("cache_time_xie_log 合计送厨商品数量和完成数量完成", zap.Int64("duration", time.Since(calcSentKitchenStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid), zap.Int("productCount", len(productPackageUuidMap)))
 
 	// 转换成切片
-	convertSliceStartTime := time.Now()
 	sentKitchenProducts := make([]resp.SentKitchenProduct, 0, len(productPackageUuidMap))
 	for _, product := range productPackageUuidMap {
 		sentKitchenProducts = append(sentKitchenProducts, product)
@@ -332,11 +306,9 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 	res.SentKitchenProducts = resp.SentKitchenProductList{
 		List: sentKitchenProducts,
 	}
-	logger.Logger.Info("cache_time_xie_log 转换成切片完成", zap.Int64("duration", time.Since(convertSliceStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid))
 
 	res.OrderRemark = shopCart.OrderRemark
 
-	logger.Logger.Info("cache_time_xie_log GetDeskPing 完成", zap.Int64("duration", time.Since(funcStartTime).Milliseconds()), zap.Uint64("deskUuid", deskUuid))
 	return res, nil
 }
 

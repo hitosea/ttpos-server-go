@@ -21,7 +21,6 @@ type MultiLanguageNameBatchQueryFunc func(db *gorm.DB, uuids []uint64) ([]*model
 var (
 	multiLanguageNameControllerInstance *CacheObjectController[*model.MultiLanguageName]
 	multiLanguageNameControllerOnce     sync.Once
-	multiLanguageNameControllerMutex    sync.RWMutex
 )
 
 // InitMultiLanguageNameController 初始化 MultiLanguageName 对象的缓存控制器（单例模式）
@@ -36,23 +35,22 @@ func InitMultiLanguageNameController(
 	queryFunc MultiLanguageNameQueryFunc,
 	batchQueryFunc MultiLanguageNameBatchQueryFunc,
 ) {
-	InitCacheObjectController[*model.MultiLanguageName](
-		underlyingCache,
-		ttl,
-		func(db *gorm.DB, uuid uint64) (*model.MultiLanguageName, error) {
-			return queryFunc(db, uuid)
-		},
-		func(db *gorm.DB, uuids []uint64) ([]*model.MultiLanguageName, error) {
-			return batchQueryFunc(db, uuids)
-		},
-		func(obj *model.MultiLanguageName) uint64 {
-			return obj.Uuid
-		},
-		persistence.ObjectTypeMultiLanguageName,
-		&multiLanguageNameControllerInstance,
-		&multiLanguageNameControllerOnce,
-		&multiLanguageNameControllerMutex,
-	)
+	multiLanguageNameControllerOnce.Do(func() {
+		multiLanguageNameControllerInstance = InitCacheObjectController[*model.MultiLanguageName](
+			underlyingCache,
+			ttl,
+			func(db *gorm.DB, uuid uint64) (*model.MultiLanguageName, error) {
+				return queryFunc(db, uuid)
+			},
+			func(db *gorm.DB, uuids []uint64) ([]*model.MultiLanguageName, error) {
+				return batchQueryFunc(db, uuids)
+			},
+			func(obj *model.MultiLanguageName) uint64 {
+				return obj.Uuid
+			},
+			persistence.ObjectTypeMultiLanguageName,
+		)
+	})
 }
 
 // GetMultiLanguageNameController 获取 MultiLanguageName 对象的缓存控制器单例实例
@@ -60,9 +58,5 @@ func InitMultiLanguageNameController(
 // 返回：
 //   - *CacheObjectController[*model.MultiLanguageName]: MultiLanguageName 缓存对象控制器实例（保证非 nil）
 func GetMultiLanguageNameController() *CacheObjectController[*model.MultiLanguageName] {
-	return GetCacheObjectController[*model.MultiLanguageName](
-		&multiLanguageNameControllerInstance,
-		&multiLanguageNameControllerMutex,
-		"MultiLanguageName 缓存控制器未初始化，请先调用 InitMultiLanguageNameController",
-	)
+	return multiLanguageNameControllerInstance
 }
