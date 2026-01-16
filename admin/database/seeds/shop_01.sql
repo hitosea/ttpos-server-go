@@ -791,7 +791,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_material` (
     INDEX `idx_production_order_product_uuid` (`production_order_product_uuid`),
     INDEX `idx_sale_order_product_uuid` (`sale_order_product_uuid`),
     INDEX `idx_takeout_order_item_uuid` (`takeout_order_item_uuid`),
-    INDEX `idx_takeout_order_uuid` (`takeout_order_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单原料表';
 
@@ -1139,6 +1138,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `expect_arrival_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '期望到货日期（时间戳）',
     `pass_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '通过时间（时间戳）',
     `reject_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '驳回时间（时间戳）',
+    `reject_reason` TEXT NULL COMMENT '驳回原因',
     `first_receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '第一次收货时间（时间戳），从“已通过”状态变成“部分收货”状态的时间',
     `final_receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '最终收货时间（时间戳），从“部分收货”状态变成“全部收货”状态的时间',
     `purchase_type` INT(10) NOT NULL DEFAULT 1 COMMENT '采购类型 1-外部采购 2-内部采购',
