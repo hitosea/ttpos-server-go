@@ -208,6 +208,7 @@ build-web:
 			echo "🚀 正在构建前端项目..."; \
 			cd admin && ./build && echo "✅ 前端构建完成" || (echo "❌ 前端构建失败" && exit 1); \
 			cd ..; \
+			mkdir -p $$(dirname $$BUILD_MARKER); \
 			git rev-parse HEAD > $$BUILD_MARKER 2>/dev/null || echo "unknown" > $$BUILD_MARKER; \
 		fi; \
 	else \
