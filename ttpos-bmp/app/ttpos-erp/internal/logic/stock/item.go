@@ -197,6 +197,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			StockUom:           data.Get("stock_uom").String(),
 			Disabled:           data.Get("disabled").Bool(),
 			PurchaseUom:        itemInfo.PurchaseUom,
+			SalesUom:           proto.String(itemInfo.SalesUom),
 			Uoms:               uomDetails,
 			Classification:     itemInfo.CustomClassification,
 			ClassificationCode: itemInfo.CustomClassificationCode,
@@ -321,6 +322,11 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 	//更新默认采购单位
 	if len(req.PurchaseUom) > 0 {
 		itemForUpdate["purchase_uom"] = req.PurchaseUom
+	}
+
+	//更新销售单位
+	if req.SalesUom != nil {
+		itemForUpdate["sales_uom"] = req.GetSalesUom()
 	}
 
 	// 条形码更新
@@ -556,6 +562,11 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 
 	if req.AllowNegativeStock != nil {
 		newItem["allow_negative_stock"] = boolToInt(req.GetAllowNegativeStock())
+	}
+
+	// 销售单位
+	if req.SalesUom != nil {
+		newItem["sales_uom"] = req.GetSalesUom()
 	}
 
 	// 根据物品分组添加特定字段
