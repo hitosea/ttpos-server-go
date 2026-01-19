@@ -64,7 +64,7 @@ func NewTakeoutOrderAppService(
 	converters := make(map[string]*grab.GrabConverter)
 	grabConverter := grab.NewGrabConverter(dbm)
 	converters["grab"] = grabConverter
-	// 后续可添加其他平台：converters["lineman"] = lineman.NewLinemanConverter(dbm)
+	converters["lineman"] = grabConverter
 
 	return &takeoutOrderAppService{
 		rpcService:   rpcService,

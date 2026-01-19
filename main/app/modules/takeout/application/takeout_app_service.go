@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	"ttpos-server-go/app/modules/takeout/interfaces/response"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -118,7 +119,7 @@ func NewTakeoutAppService(
 	converters := make(map[string]service.IPlatformConverter)
 	grabConverter := grab.NewGrabConverter(dbm)
 	converters["grab"] = grabConverter
-	// 后续可添加其他平台：converters["lineman"] = lineman.NewLinemanConverter(dbm)
+	converters["lineman"] = grabConverter
 
 	// 初始化订单服务
 	orderService := service.NewTakeoutOrderSrv(dbm)
@@ -393,6 +394,13 @@ func (s *takeoutAppService) ConvertMenuData(ctx context.Context, req request.Imp
 func (s *takeoutAppService) PushMenu(ctx context.Context, platform string, currencyUnit string) error {
 	platform = strings.ToLower(platform)
 	companyUuid := ctx.GetCompanyUuid()
+
+	// 判断是否开发模式，如果是开发模式，则使用 6293997752320000
+	if config.Server.Mode == "debug" && platform == value_object.TakeoutPlatformLineman {
+		if companyUuid == 8609817471094784 {
+			companyUuid = 6293997752320000
+		}
+	}
 
 	menu, err := s.ExportMenu(ctx, request.ExportMenuRequest{
 		Platform:     platform,

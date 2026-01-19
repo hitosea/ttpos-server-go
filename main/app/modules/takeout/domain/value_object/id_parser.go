@@ -6,29 +6,52 @@ import (
 	"strings"
 )
 
+// IDType ID类型枚举
+type IDTypeEnum string
+
 // TTPOS ID 前缀常量定义
 const (
 	// 分类前缀
-	PrefixCategory = "TTPOS-CAT-" // 分类
-
-	// 商品前缀
-	PrefixItem    = "TTPOS-ITEM-"    // 商品
-	PrefixPackage = "TTPOS-PACKAGE-" // 套餐
+	PrefixCategory IDTypeEnum = "TTPOS-CAT-" // 分类
 
 	// 套餐前缀
-	PrefixPackageGroup = "TTPOS-PACKAGE-GROUP-" // 套餐组
-	PrefixPackageItem  = "TTPOS-PACKAGE-ITEM-"  // 套餐项
+	PrefixPackageGroup IDTypeEnum = "TTPOS-PACKAGE-GROUP-" // 套餐组
+	PrefixPackageItem  IDTypeEnum = "TTPOS-PACKAGE-ITEM-"  // 套餐项
+
+	// 商品前缀
+	PrefixItem    IDTypeEnum = "TTPOS-ITEM-"    // 商品
+	PrefixPackage IDTypeEnum = "TTPOS-PACKAGE-" // 套餐
 
 	// 修饰符组前缀
-	PrefixFlavorGroup = "TTPOS-FLAVOR-GROUP-" // 口味组
-	PrefixSauceGroup  = "TTPOS-SAUCE-GROUP-"  // 酱料组
-	PrefixAttrGroup   = "TTPOS-ATTR-GROUP-"   // 属性组
+	PrefixFlavorGroup IDTypeEnum = "TTPOS-FLAVOR-GROUP-" // 口味组
+	PrefixSauceGroup  IDTypeEnum = "TTPOS-SAUCE-GROUP-"  // 酱料组
+	PrefixAttrGroup   IDTypeEnum = "TTPOS-ATTR-GROUP-"   // 属性组
 
 	// 修饰符前缀
-	PrefixFlavor = "TTPOS-FLAVOR-" // 口味
-	PrefixSauce  = "TTPOS-SAUCE-"  // 酱料
-	PrefixAttr   = "TTPOS-ATTR-"   // 属性
+	PrefixFlavor IDTypeEnum = "TTPOS-FLAVOR-" // 口味
+	PrefixSauce  IDTypeEnum = "TTPOS-SAUCE-"  // 酱料
+	PrefixAttr   IDTypeEnum = "TTPOS-ATTR-"   // 属性
 )
+
+// GetPrefixCategoryID 获取分类ID
+func (s IDTypeEnum) GetPrefix(platform string) string {
+	switch platform {
+	case TakeoutPlatformGrab:
+		return string(s) // PrefixCategory
+	case TakeoutPlatformLineman:
+		// Lineman 平台使用简写：TTPOS- 简写为 ''
+		prefix := strings.Replace(string(s), "TTPOS-", "", 1)
+		prefix = strings.Replace(prefix, "PACKAGE-GROUP-", "PACKAGE-S-", 1)
+		prefix = strings.Replace(prefix, "PACKAGE-ITEM-", "PACKAGE-I-", 1)
+		prefix = strings.Replace(prefix, "FLAVOR-GROUP-", "FLAVOR-S-", 1)
+		prefix = strings.Replace(prefix, "ATTR-GROUP-", "ATTR-S-", 1)
+		prefix = strings.Replace(prefix, "SAUCE-GROUP-", "SAUCE-S-", 1)
+		//
+		return prefix
+	default:
+		return ""
+	}
+}
 
 // IDType ID类型枚举
 type IDType string
@@ -57,20 +80,7 @@ type ParseResult struct {
 }
 
 // ParsePlatformID 解析平台ID（统一入口）
-//
 // 支持的前缀：
-//   - TTPOS-CAT-            → 分类
-//   - TTPOS-ITEM-           → 商品
-//   - TTPOS-PACKAGE-        → 套餐
-//   - TTPOS-PACKAGE-GROUP-  → 套餐组
-//   - TTPOS-PACKAGE-ITEM-   → 套餐项
-//   - TTPOS-FLAVOR-GROUP-   → 口味组
-//   - TTPOS-FLAVOR-         → 口味
-//   - TTPOS-SAUCE-GROUP-    → 酱料组
-//   - TTPOS-SAUCE-          → 酱料
-//   - TTPOS-ATTR-GROUP-     → 属性组
-//   - TTPOS-ATTR-           → 属性
-//
 // 参数：
 //   - platform: 平台标识 (grab, foodpanda, lineman)
 //   - platformID: 平台ID
@@ -81,33 +91,33 @@ type ParseResult struct {
 func ParsePlatformID(platform, platformID string) (*ParseResult, error) {
 	switch platform {
 	case TakeoutPlatformGrab:
-		return parseGrabID(platformID)
+		return parseID(platform, platformID)
 
 	case TakeoutPlatformLineman:
-		// TODO: 其他平台的解析规则
-		return nil, errors.New("暂不支持该平台")
+		return parseID(platform, platformID)
 
 	default:
 		return nil, errors.New("未知平台")
 	}
 }
 
-// parseGrabID 解析 Grab 平台的 ID
-func parseGrabID(platformID string) (*ParseResult, error) {
+// parseID 解析 Grab 平台的 ID
+func parseID(platform string, platformID string) (*ParseResult, error) {
 	// 按前缀长度从长到短匹配，避免误匹配
 	// 例如：TTPOS-PACKAGE-GROUP- 必须在 TTPOS-PACKAGE- 之前匹配
 
 	// 套餐相关（最长前缀优先）
-	if strings.HasPrefix(platformID, PrefixPackageGroup) {
-		uuid, err := extractUUID(platformID, PrefixPackageGroup)
+	if strings.HasPrefix(platformID, PrefixPackageGroup.GetPrefix(platform)) {
+		uuid, err := extractUUID(platformID, PrefixPackageGroup.GetPrefix(platform))
 		if err != nil {
 			return nil, err
 		}
 		return &ParseResult{UUID: uuid, IDType: IDTypePackageGroup, IsMapped: true}, nil
 	}
 
-	if strings.HasPrefix(platformID, PrefixPackageItem) {
-		uuid, err := extractUUID(platformID, PrefixPackageItem)
+	// 套餐项（最长前缀优先）
+	if strings.HasPrefix(platformID, PrefixPackageItem.GetPrefix(platform)) {
+		uuid, err := extractUUID(platformID, PrefixPackageItem.GetPrefix(platform))
 		if err != nil {
 			return nil, err
 		}
@@ -115,24 +125,26 @@ func parseGrabID(platformID string) (*ParseResult, error) {
 	}
 
 	// 修饰符组（长前缀优先）
-	if strings.HasPrefix(platformID, PrefixFlavorGroup) {
-		uuid, err := extractUUID(platformID, PrefixFlavorGroup)
+	if strings.HasPrefix(platformID, PrefixFlavorGroup.GetPrefix(platform)) {
+		uuid, err := extractUUID(platformID, PrefixFlavorGroup.GetPrefix(platform))
 		if err != nil {
 			return nil, err
 		}
 		return &ParseResult{UUID: uuid, IDType: IDTypeFlavorGroup, IsMapped: true}, nil
 	}
 
-	if strings.HasPrefix(platformID, PrefixSauceGroup) {
-		uuid, err := extractUUID(platformID, PrefixSauceGroup)
+	// 酱料组（长前缀优先）
+	if strings.HasPrefix(platformID, PrefixSauceGroup.GetPrefix(platform)) {
+		uuid, err := extractUUID(platformID, PrefixSauceGroup.GetPrefix(platform))
 		if err != nil {
 			return nil, err
 		}
 		return &ParseResult{UUID: uuid, IDType: IDTypeSauceGroup, IsMapped: true}, nil
 	}
 
-	if strings.HasPrefix(platformID, PrefixAttrGroup) {
-		uuid, err := extractUUID(platformID, PrefixAttrGroup)
+	// 属性组（长前缀优先）
+	if strings.HasPrefix(platformID, PrefixAttrGroup.GetPrefix(platform)) {
+		uuid, err := extractUUID(platformID, PrefixAttrGroup.GetPrefix(platform))
 		if err != nil {
 			return nil, err
 		}
@@ -140,24 +152,27 @@ func parseGrabID(platformID string) (*ParseResult, error) {
 	}
 
 	// 修饰符（短前缀）
-	if strings.HasPrefix(platformID, PrefixFlavor) {
-		uuid, err := extractUUID(platformID, PrefixFlavor)
+	// 口味
+	if strings.HasPrefix(platformID, PrefixFlavor.GetPrefix(platform)) {
+		uuid, err := extractUUID(platformID, PrefixFlavor.GetPrefix(platform))
 		if err != nil {
 			return nil, err
 		}
 		return &ParseResult{UUID: uuid, IDType: IDTypeFlavor, IsMapped: true}, nil
 	}
 
-	if strings.HasPrefix(platformID, PrefixSauce) {
-		uuid, err := extractUUID(platformID, PrefixSauce)
+	// 酱料
+	if strings.HasPrefix(platformID, PrefixSauce.GetPrefix(platform)) {
+		uuid, err := extractUUID(platformID, PrefixSauce.GetPrefix(platform))
 		if err != nil {
 			return nil, err
 		}
 		return &ParseResult{UUID: uuid, IDType: IDTypeSauce, IsMapped: true}, nil
 	}
 
-	if strings.HasPrefix(platformID, PrefixAttr) {
-		uuid, err := extractUUID(platformID, PrefixAttr)
+	// 属性
+	if strings.HasPrefix(platformID, PrefixAttr.GetPrefix(platform)) {
+		uuid, err := extractUUID(platformID, PrefixAttr.GetPrefix(platform))
 		if err != nil {
 			return nil, err
 		}
@@ -165,8 +180,8 @@ func parseGrabID(platformID string) (*ParseResult, error) {
 	}
 
 	// 分类
-	if strings.HasPrefix(platformID, PrefixCategory) {
-		uuid, err := extractUUID(platformID, PrefixCategory)
+	if strings.HasPrefix(platformID, PrefixCategory.GetPrefix(platform)) {
+		uuid, err := extractUUID(platformID, PrefixCategory.GetPrefix(platform))
 		if err != nil {
 			return nil, err
 		}
@@ -174,16 +189,17 @@ func parseGrabID(platformID string) (*ParseResult, error) {
 	}
 
 	// 商品
-	if strings.HasPrefix(platformID, PrefixItem) {
-		uuid, err := extractUUID(platformID, PrefixItem)
+	if strings.HasPrefix(platformID, PrefixItem.GetPrefix(platform)) {
+		uuid, err := extractUUID(platformID, PrefixItem.GetPrefix(platform))
 		if err != nil {
 			return nil, err
 		}
 		return &ParseResult{UUID: uuid, IDType: IDTypeItem, IsMapped: true}, nil
 	}
 
-	if strings.HasPrefix(platformID, PrefixPackage) {
-		uuid, err := extractUUID(platformID, PrefixPackage)
+	// 套餐
+	if strings.HasPrefix(platformID, PrefixPackage.GetPrefix(platform)) {
+		uuid, err := extractUUID(platformID, PrefixPackage.GetPrefix(platform))
 		if err != nil {
 			return nil, err
 		}
@@ -207,22 +223,4 @@ func extractUUID(platformID, prefix string) (uint64, error) {
 	}
 
 	return uuid, nil
-}
-
-// ParseModifierId 解析平台修饰符ID（向后兼容）
-//
-// Deprecated: 请使用 ParsePlatformID 替代
-func ParseModifierId(platform, modifierId string) (ttposAttributeUuid uint64, isMapped bool, err error) {
-	result, err := ParsePlatformID(platform, modifierId)
-	if err != nil {
-		return 0, false, err
-	}
-
-	// 接受所有修饰符类型
-	switch result.IDType {
-	case IDTypeFlavor, IDTypeSauce, IDTypeAttr:
-		return result.UUID, result.IsMapped, nil
-	default:
-		return 0, false, errors.New("ID类型错误：期望修饰符类型")
-	}
 }

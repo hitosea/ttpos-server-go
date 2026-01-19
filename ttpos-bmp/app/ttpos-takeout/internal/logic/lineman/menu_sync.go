@@ -333,17 +333,13 @@ func (s *sLineman) convertGrabModifierGroupToLinemanProperty(ctx context.Context
 	// 构建属性名称（多语言）
 	nameTrans := s.buildNameTranslationFromGrab(ctx, grabModGroup.GetName(), grabModGroup.GetNameTranslation())
 
-	// 确定类型：单选(1) 或 多选(2)
-	propType := "2" // 默认多选
-	if grabModGroup.GetSelectionRangeMax() == 1 {
-		propType = "1" // 单选
-	}
-
 	// 转换属性值（modifiers 下的选项）
 	propValues := make([]*lineman.PropValue, 0, len(grabModGroup.GetModifiers()))
 	for _, grabMod := range grabModGroup.GetModifiers() {
 		valueName := s.buildNameTranslationFromGrab(ctx, grabMod.GetName(), grabMod.GetNameTranslation())
-		valuePrice := float64(grabMod.GetPrice())
+
+		// 价格转换：Grab SDK 的 GetPrice() 返回 int64（单位：分），转换为元
+		valuePrice := float64(grabMod.GetPrice()) / 100
 
 		propValues = append(propValues, &lineman.PropValue{
 			ID:     grabMod.GetId(),
@@ -353,12 +349,27 @@ func (s *sLineman) convertGrabModifierGroupToLinemanProperty(ctx context.Context
 		})
 	}
 
+	// 如果没有选项，返回错误，跳过该属性组
+	if len(propValues) == 0 {
+		return nil, gerror.Newf("属性组 %s 没有有效的选项", grabModGroup.GetId())
+	}
+
+	// 获取原始的 min/max 值
+	originalMin := int(grabModGroup.GetSelectionRangeMin())
+	originalMax := int(grabModGroup.GetSelectionRangeMax())
+
+	// 确定类型：单选(1) 或 多选(2)
+	propType := "2" // 默认多选
+	if originalMax == 1 && originalMin == 1 {
+		propType = "1" // 单选
+	}
+
 	return &lineman.Property{
 		ID:     grabModGroup.GetId(),
 		Name:   nameTrans,
 		Type:   propType,
-		Min:    int(grabModGroup.GetSelectionRangeMin()),
-		Max:    int(grabModGroup.GetSelectionRangeMax()),
+		Min:    originalMin,
+		Max:    originalMax,
 		Values: propValues,
 	}, nil
 }

@@ -22,7 +22,7 @@ type MenuSyncResponse struct {
 
 // MenuGroup 菜单分类
 type MenuGroup struct {
-	ID             string      `json:"id"`             // 分类ID（TTPOS-CAT-{id}）
+	ID             string      `json:"id"`             // 分类ID（value_object.PrefixCategory{id}）
 	Name           NameTrans   `json:"name"`           // 分类名称（多语言）
 	UseSellingTime bool        `json:"useSellingTime"` // 是否使用时段销售（固定false）
 	MenuItems      []*MenuItem `json:"menuItems"`      // 商品列表
