@@ -271,6 +271,7 @@ type ItemInfo struct {
 	ItemGroupName      string                 `protobuf:"bytes,23,opt,name=item_group_name,json=itemGroupName,proto3" json:"item_group_name,omitempty" dc:"物品分组名称，可选,  PosAttribute 属性/PosAddon 加料 时必填"`                                                              // 物品分组名称，可选,  PosAttribute 属性/PosAddon 加料 时必填
 	VariantOf          string                 `protobuf:"bytes,24,opt,name=variant_of,json=variantOf,proto3" json:"variant_of,omitempty" dc:"变体物品编码，可选。 多规格商品时填。"`                                                                                                    // 变体物品编码，可选。 多规格商品时填。
 	AllowNegativeStock *bool                  `protobuf:"varint,25,opt,name=allow_negative_stock,json=allowNegativeStock,proto3,oneof" json:"allow_negative_stock,omitempty" dc:"是否允许负库存，未传则保持原值"`                                                                    // 是否允许负库存，未传则保持原值
+	SalesUom           *string                `protobuf:"bytes,26,opt,name=sales_uom,json=salesUom,proto3,oneof" json:"sales_uom,omitempty" dc:"销售单位，可选"`                                                                                                             // 销售单位，可选
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -478,6 +479,13 @@ func (x *ItemInfo) GetAllowNegativeStock() bool {
 		return *x.AllowNegativeStock
 	}
 	return false
+}
+
+func (x *ItemInfo) GetSalesUom() string {
+	if x != nil && x.SalesUom != nil {
+		return *x.SalesUom
+	}
+	return ""
 }
 
 type ItemAttribute struct {
@@ -2225,7 +2233,7 @@ const file_item_item_proto_rawDesc = "" +
 	"variant_of\x18\n" +
 	" \x01(\tR\tvariantOf\">\n" +
 	"\x0fGetItemListResp\x12+\n" +
-	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xc0\a\n" +
+	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xf0\a\n" +
 	"\bItemInfo\x12\x1b\n" +
 	"\titem_name\x18\x01 \x01(\tR\bitemName\x12.\n" +
 	"\n" +
@@ -2257,8 +2265,11 @@ const file_item_item_proto_rawDesc = "" +
 	"\x0fitem_group_name\x18\x17 \x01(\tR\ritemGroupName\x12\x1d\n" +
 	"\n" +
 	"variant_of\x18\x18 \x01(\tR\tvariantOf\x125\n" +
-	"\x14allow_negative_stock\x18\x19 \x01(\bH\x00R\x12allowNegativeStock\x88\x01\x01B\x17\n" +
-	"\x15_allow_negative_stock\"\xaa\x01\n" +
+	"\x14allow_negative_stock\x18\x19 \x01(\bH\x00R\x12allowNegativeStock\x88\x01\x01\x12 \n" +
+	"\tsales_uom\x18\x1a \x01(\tH\x01R\bsalesUom\x88\x01\x01B\x17\n" +
+	"\x15_allow_negative_stockB\f\n" +
+	"\n" +
+	"_sales_uom\"\xaa\x01\n" +
 	"\rItemAttribute\x12%\n" +
 	"\x0eattribute_name\x18\x01 \x01(\tR\rattributeName\x12'\n" +
 	"\x0fattribute_value\x18\x02 \x01(\tR\x0eattributeValue\x12,\n" +
