@@ -1039,6 +1039,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
     `purchase_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购单位ID',
     `cost_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '成本单位ID',
+    `default_sales_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '默认销售单位ID（MaterialUnit UUID）',
     `price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '采购单价',
     `stock_num`  DECIMAL(22, 4) UNSIGNED NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
     `safety_stock` DECIMAL(14, 4) DEFAULT NULL COMMENT '安全库存数量',
