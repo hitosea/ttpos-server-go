@@ -8,15 +8,16 @@ import (
 // MultiLanguageName 结构体表示多语言名称 ttpos_multi_language_name
 type MultiLanguageName struct {
 	BaseModel
-	EnName   string `gorm:"default:'';column:en_name;comment:'英文名称'"`
-	ZhName   string `gorm:"default:'';column:zh_name;comment:'中文名称'"`
-	ZhTwName string `gorm:"default:'';column:zh_tw_name;comment:'繁体中文名称'"`
-	ThName   string `gorm:"default:'';column:th_name;comment:'泰语名称'"`
-	MyName   string `gorm:"default:'';column:my_name;comment:'缅甸语名称'"`
-	JaName   string `gorm:"default:'';column:ja_name;comment:'日语名称'"`
-	KoName   string `gorm:"default:'';column:ko_name;comment:'韩语名称'"`
-	TrName   string `gorm:"default:'';column:tr_name;comment:'土耳其语名称'"`
-	SvName   string `gorm:"default:'';column:sv_name;comment:'瑞典语名称'"`
+	EnName       string `gorm:"default:'';column:en_name;comment:'英文名称'"`
+	ZhName       string `gorm:"default:'';column:zh_name;comment:'中文名称'"`
+	ZhTwName     string `gorm:"default:'';column:zh_tw_name;comment:'繁体中文名称'"`
+	ThName       string `gorm:"default:'';column:th_name;comment:'泰语名称'"`
+	MyName       string `gorm:"default:'';column:my_name;comment:'缅甸语名称'"`
+	JaName       string `gorm:"default:'';column:ja_name;comment:'日语名称'"`
+	KoName       string `gorm:"default:'';column:ko_name;comment:'韩语名称'"`
+	TrName       string `gorm:"default:'';column:tr_name;comment:'土耳其语名称'"`
+	SvName       string `gorm:"default:'';column:sv_name;comment:'瑞典语名称'"`
+	NotOverwrite int    `gorm:"default:0;column:not_overwrite;comment:'不要覆盖 0-否 1-是'"`
 }
 
 func (m *MultiLanguageName) IsNullName() bool {
@@ -76,6 +77,20 @@ func (m *MultiLanguageName) ToJson() string {
 	return string(json)
 }
 
+func (m *MultiLanguageName) ToMap() map[string]string {
+	return map[string]string{
+		"zh":   m.ZhName,
+		"en":   m.EnName,
+		"th":   m.ThName,
+		"zhtw": m.ZhTwName,
+		"ja":   m.JaName,
+		"ko":   m.KoName,
+		"my":   m.MyName,
+		"tr":   m.TrName,
+		"sv":   m.SvName,
+	}
+}
+
 // GetNameByLang 获取指定语言名称
 func (m *MultiLanguageName) GetNameByLang(lang string) string {
 	switch lang {
@@ -102,4 +117,35 @@ func (m *MultiLanguageName) GetNameByLang(lang string) string {
 	default:
 		return ""
 	}
+}
+
+// GetNameByLangWithFallback 获取指定语言名称，如果不存在则按优先级顺序尝试其他语言
+// 优先级顺序：1. 指定语言 2. 英语(en) 3. 其他语言（中文、泰语、繁体中文、日语、韩语、缅甸语、土耳其语、瑞典语）
+func (m *MultiLanguageName) GetNameByLangWithFallback(lang string) string {
+	// 1. 先尝试获取指定语言的名称
+	if name := m.GetNameByLang(lang); name != "" {
+		return name
+	}
+
+	// 2. 如果指定语言不存在，尝试英语
+	if lang != "en" {
+		if name := m.GetNameByLang("en"); name != "" {
+			return name
+		}
+	}
+
+	// 3. 如果英语也不存在，按顺序尝试其他语言
+	fallbackLangs := []string{"zh", "th", "zhtw", "ja", "ko", "my", "tr", "sv"}
+	for _, fallbackLang := range fallbackLangs {
+		// 跳过已经尝试过的语言
+		if fallbackLang == lang || fallbackLang == "en" {
+			continue
+		}
+		if name := m.GetNameByLang(fallbackLang); name != "" {
+			return name
+		}
+	}
+
+	// 如果所有语言都没有名称，返回空字符串
+	return ""
 }

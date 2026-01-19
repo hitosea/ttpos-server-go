@@ -13,6 +13,7 @@ const Member = "member"                           // 会员信息
 const Staff = "staff"                             // 员工信息
 const AssistantStaffUuid = "assistant_staff_uuid" // 点餐助手员工ID
 const AssistantDeviceId = "assistant_device_id"   // 点餐助手设备ID
+const Brand = "brand"                             // 品牌名称
 
 const RequestUuid = "request_uuid" // http请求的唯一uuid
 const DB = "db"                    // 数据库连接
@@ -24,4 +25,5 @@ const (
 	SourceAssistant = "assistant"
 	SourceH5        = "h5"
 	SourceMember    = "member"
+	SourceKiosk     = "kiosk"
 )

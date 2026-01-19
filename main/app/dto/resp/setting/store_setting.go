@@ -16,6 +16,7 @@ type Store struct {
 	Address       string             `json:"address"`        // 地址
 	Phone         string             `json:"phone"`          // 联系电话
 	TaxNumber     string             `json:"tax_number"`     // 税号
+	StoreCode     string             `json:"store_code"`     // 店铺编码，用于发票打印
 	ChainNumber   string             `json:"chain_number"`   // 连锁编号
 	Language      []dto.LanguageItem `json:"language"`       // 系统语言
 	AuthLanguage  string             `json:"auth_language"`  // 授权语言

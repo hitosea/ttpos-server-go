@@ -1,9 +1,6 @@
 package service
 
 import (
-	"bytes"
-	"mime/multipart"
-	"os"
 	"testing"
 
 	"github.com/xuri/excelize/v2"
@@ -64,60 +61,6 @@ func createTestExcelFile() (*excelize.File, error) {
 	}
 
 	return f, nil
-}
-
-// createTestMultipartFile 创建测试用的 multipart.FileHeader
-func createTestMultipartFile(t *testing.T) *multipart.FileHeader {
-	// 创建 Excel 文件
-	excelFile, err := createTestExcelFile()
-	if err != nil {
-		t.Fatalf("创建测试 Excel 文件失败: %v", err)
-	}
-
-	// 将 Excel 文件写入临时文件
-	tmpFile, err := os.CreateTemp("", "test_order_import_*.xlsx")
-	if err != nil {
-		t.Fatalf("创建临时文件失败: %v", err)
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-
-	// 保存 Excel 文件
-	if err := excelFile.SaveAs(tmpFile.Name()); err != nil {
-		t.Fatalf("保存 Excel 文件失败: %v", err)
-	}
-
-	// 读取文件内容
-	fileContent, err := os.ReadFile(tmpFile.Name())
-	if err != nil {
-		t.Fatalf("读取文件失败: %v", err)
-	}
-
-	// 创建 multipart.FileHeader
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", "test.xlsx")
-	if err != nil {
-		t.Fatalf("创建表单文件失败: %v", err)
-	}
-	if _, err := part.Write(fileContent); err != nil {
-		t.Fatalf("写入文件内容失败: %v", err)
-	}
-	writer.Close()
-
-	// 解析 multipart form
-	reader := multipart.NewReader(body, writer.Boundary())
-	form, err := reader.ReadForm(10 << 20) // 10MB
-	if err != nil {
-		t.Fatalf("解析表单失败: %v", err)
-	}
-	defer form.RemoveAll()
-
-	if len(form.File["file"]) == 0 {
-		t.Fatalf("未找到文件")
-	}
-
-	return form.File["file"][0]
 }
 
 // TestParseOrderBasicSheet 测试解析订单基本信息

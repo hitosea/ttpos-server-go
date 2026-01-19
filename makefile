@@ -37,7 +37,7 @@ build:
 	@$(call update_env_and_run)
 	@echo "🗄️  运行数据库迁移..."
 	@make migrate
-	@make rmi
+	@make rmi-docker-images
 	@echo "✅ 构建完成"
 
 #重新构建中台模块
@@ -69,7 +69,7 @@ dev: debug
 # 运行数据库迁移
 migrate:
 	@echo "🗄️  运行主项目数据库迁移..."
-	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh think migrate:run
+	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh php-migrate
 	@echo "🚀 更新 中台 模块数据库..."
 	@cd ttpos-bmp && make update-ip && make conf && make migrate
 	@echo "✅ 数据库迁移完成"
@@ -141,9 +141,13 @@ think:
 
 # 监听今天的日志（格式化输出，显示完整JSON）
 log:
-	@echo "🔍 监听今天的日志（完整JSON格式）..."
-	@tail -f -n 100 ./main/log/$$(date +%Y-%m-%d).log | while IFS= read -r line; do \
-		echo "$$line" | jq . 2>/dev/null || echo "$$line"; \
+	@echo "🔍 监听今天的日志（完整JSON格式，忽略warn级别）..."
+	@tail -f -n 100 ./main/log/$$(date +%Y-%m-%d).log | grep --line-buffered -v '"level":"warn"' | grep --line-buffered -v '"level":"debug"' | while IFS= read -r line; do \
+		if echo "$$line" | grep -q '"level":"error"'; then \
+			echo "$$line" | jq -C . 2>/dev/null || echo "$$line" | sed 's/.*/\x1b[0;31m&\x1b[0m/'; \
+		else \
+			echo "$$line" | jq -C . 2>/dev/null || echo "$$line"; \
+		fi; \
 	done
 
 # 添加物品库存
@@ -155,12 +159,15 @@ add-parent-company-uuid:
 	cd main && go run ./main.go add-parent-company-uuid
 
 # 删除 dangling 镜像
-rmi:
+rmi-docker-images:
 	docker rmi $$(docker images -qf "dangling=true")
 
 # 授权所有文件
 chown-all:
-	sudo chown -R coder:coder /home/coder/workspaces/ttpos-server-go
+	sudo chown -R $(shell whoami):$(shell id -gn) $(CURDIR)
+	sudo chown -R www-data:www-data $(CURDIR)/admin/runtime
+	sudo chmod -R 755 $(CURDIR)/admin/runtime
+	sudo rm -rf $(CURDIR)/admin/runtime/logs/*
 
 # 更新 MCP Token
 update-mcp-token:

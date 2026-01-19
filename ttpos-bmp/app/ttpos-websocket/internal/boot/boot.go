@@ -10,6 +10,7 @@ import (
 
 	httpController "ttpos-bmp/app/ttpos-websocket/internal/controller/http"
 	_ "ttpos-bmp/app/ttpos-websocket/internal/logic"
+	"ttpos-bmp/app/ttpos-websocket/internal/logic/health"
 	websocketLogic "ttpos-bmp/app/ttpos-websocket/internal/logic/websocket"
 	"ttpos-bmp/app/ttpos-websocket/internal/service"
 )
@@ -59,6 +60,13 @@ func InitHttp(ctx context.Context) {
 	s.Group("/ws", func(group *ghttp.RouterGroup) {
 		group.POST("/push", httpController.PushMessage)
 	})
+
+	// 注册健康检查端点（如果启用）
+	healthCfg := health.Instance().GetConfig()
+	if healthCfg.Enable {
+		s.BindHandler(healthCfg.Path, httpController.HealthCheck)
+		g.Log().Infof(ctx, "健康检查端点已注册: %s", healthCfg.Path)
+	}
 
 	g.Log().Info(ctx, "HTTP 服务初始化完成")
 }

@@ -69,24 +69,62 @@ func (v *purchaseOrderValidator) validateReceiptMaterialStatus(
 ) error {
 	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(db)
 	materialRepo := repository.NewMaterialRepo(db)
+	materialUnitRepo := repository.NewMaterialUnitRepo(db)
 	var disabledMaterials []string
+	var errorMessages []string
+	var unitErrorMessages []string
 
 	for _, itemUuid := range itemUuids {
-		purchaseOrderItem, err := purchaseOrderItemRepo.GetByUuid(itemUuid)
+		purchaseOrderItem, err := purchaseOrderItemRepo.GetByUuid(
+			itemUuid,
+			purchaseOrderItemRepo.WithPreloadUnits(),
+		)
 		if err != nil {
 			return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
 		}
 
+		// 获取物品名称
+		materialName := language.JsonToLocaleResponse(purchaseOrderItem.MaterialName).GetLocale(ctx.GetLanguage())
+
+		// 判断物品是否存在
 		material, err := materialRepo.GetMaterialByUuid(purchaseOrderItem.MaterialUuid)
 		if err != nil {
-			return errors.WithMessage(errors.New("查询物品明细失败"), err.Error())
-		}
-
-		// 判断物品是否停用
-		if !material.Status {
-			materialName := language.JsonToLocaleResponse(purchaseOrderItem.MaterialName).GetLocale(ctx.GetLanguage())
+			errorMessages = append(errorMessages, materialName)
+		} else if !material.Status {
+			// 判断物品是否停用
 			disabledMaterials = append(disabledMaterials, materialName)
 		}
+
+		// 验证 Units 中的单位是否存在
+		if len(purchaseOrderItem.Units) > 0 {
+			for _, unit := range purchaseOrderItem.Units {
+				if unit.UnitUuid > 0 {
+					_, err := materialUnitRepo.GetMaterialUnitByUuid(unit.UnitUuid)
+					if err != nil {
+						unitName := language.JsonToLocaleResponse(unit.UnitName).GetLocale(ctx.GetLanguage())
+						unitErrorMessages = append(unitErrorMessages, fmt.Sprintf("%s(%s)", materialName, unitName))
+					}
+				}
+			}
+		}
+	}
+
+	// 物品未找到
+	if len(errorMessages) > 0 {
+		return errors.NewWithCodeAndData(
+			constant.CodeErrorConfirmClose,
+			errorMessages,
+			fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 未找到。"), v.joinMaterialNames(errorMessages)),
+		)
+	}
+
+	// 单位不存在
+	if len(unitErrorMessages) > 0 {
+		return errors.NewWithCodeAndData(
+			constant.CodeErrorConfirmClose,
+			unitErrorMessages,
+			fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品单位不存在: %s，请检查物品配置"), v.joinMaterialNames(unitErrorMessages)),
+		)
 	}
 
 	// 如果有停用的物品，返回相应的错误消息
@@ -128,26 +166,26 @@ func (v *purchaseOrderValidator) validateSupplierStatus(
 	return nil
 }
 
-// validateReceiptQuantity 验证收货数量
-func (v *purchaseOrderValidator) validateReceiptQuantity(
-	ctx context.Context,
-	orderItem *model.PurchaseOrderItem,
-	receiptNum float64,
-) error {
-	newArrivalNum := orderItem.ArrivalNum + receiptNum
-	if newArrivalNum > orderItem.Num {
-		return errors.New(
-			fmt.Sprintf(
-				i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）"),
-				language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()),
-				orderItem.Num,
-				orderItem.ArrivalNum,
-				receiptNum,
-			),
-		)
-	}
-	return nil
-}
+// // validateReceiptQuantity 验证收货数量
+// func (v *purchaseOrderValidator) validateReceiptQuantity(
+// 	ctx context.Context,
+// 	orderItem *model.PurchaseOrderItem,
+// 	receiptNum float64,
+// ) error {
+// 	newArrivalNum := orderItem.ArrivalNum + receiptNum
+// 	if newArrivalNum > orderItem.Num {
+// 		return errors.New(
+// 			fmt.Sprintf(
+// 				i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）"),
+// 				language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()),
+// 				orderItem.Num,
+// 				orderItem.ArrivalNum,
+// 				receiptNum,
+// 			),
+// 		)
+// 	}
+// 	return nil
+// }
 
 // validateReceiptQuantity 验证收货数量
 func (v *purchaseOrderValidator) validateReceiptQuantityNew(
@@ -206,10 +244,12 @@ type PurchaseOrderItemReq struct {
 }
 
 // buildPurchaseOrderItems 构建采购订单明细
+// skipValidation: 是否跳过物料存在性验证（用于同步到公司店铺时，允许物料不存在，收货时再验证）
 func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 	db *gorm.DB,
 	purchaseOrderUuid uint64,
 	itemReqs []PurchaseOrderItemReq,
+	skipValidation ...bool,
 ) ([]model.PurchaseOrderItem, []model.PurchaseOrderItemUnit, error) {
 	// 批量查询物料
 	materialUuids := make([]uint64, 0, len(itemReqs))
@@ -233,10 +273,15 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 		materials[material.Uuid] = material
 	}
 
-	// 验证所有物料存在
-	for _, itemReq := range itemReqs {
-		if _, exists := materials[itemReq.MaterialUuid]; !exists {
-			return nil, nil, errors.New(fmt.Sprintf("物品UUID %d 不存在", itemReq.MaterialUuid))
+	// 判断是否需要跳过验证
+	shouldSkipValidation := len(skipValidation) > 0 && skipValidation[0]
+
+	// 验证所有物料存在（如果不跳过验证）
+	if !shouldSkipValidation {
+		for _, itemReq := range itemReqs {
+			if _, exists := materials[itemReq.MaterialUuid]; !exists {
+				return nil, nil, errors.New(fmt.Sprintf("物品UUID %d 不存在", itemReq.MaterialUuid))
+			}
 		}
 	}
 
@@ -244,7 +289,16 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 	items := make([]model.PurchaseOrderItem, 0, len(itemReqs))
 	unitList := make([]model.PurchaseOrderItemUnit, 0, len(itemReqs))
 	for _, itemReq := range itemReqs {
-		material := materials[itemReq.MaterialUuid]
+		material, exists := materials[itemReq.MaterialUuid]
+		if !exists {
+			// 如果物料不存在且跳过验证，则跳过该明细项
+			if shouldSkipValidation {
+				continue
+			}
+			// 理论上不会走到这里，因为前面已经验证过
+			return nil, nil, errors.New(fmt.Sprintf("物品UUID %d 不存在", itemReq.MaterialUuid))
+		}
+
 		item := v.buildPurchaseOrderItem(purchaseOrderUuid, material, itemReq.UnitList)
 		items = append(items, item)
 		unitList = append(unitList, item.Units...)
@@ -296,7 +350,7 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItem(
 		MaterialName:      material.Name,
 		Num:               totalNum,
 		UnitUuid:          material.PurchaseUnitUuid,
-		Valuation:         material.GetValuation(),
+		Valuation:         0, // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 		Units:             purchaseOrderItemUnits,
 	}
 

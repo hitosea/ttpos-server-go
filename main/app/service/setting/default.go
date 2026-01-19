@@ -64,7 +64,7 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 			MenuShowSoldOut:         "1",                       // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 			MemberShowSoldOut:       "1",                       // 是否显示会员端售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 			NoOrderCarouselInterval: "10",                      // 未点餐时轮播间隔(秒)
-			OrderDisplayMode:        "carousel",                // 点餐时展示模式 carousel/order/order_carousel
+			OrderDisplayMode:        "order",                   // 点餐时展示模式 carousel/order/order_carousel
 			OrderCarouselInterval:   "10",                      // 点餐时轮播间隔(秒)
 		},
 		AdvancedPassword: "666888", // 高级设置密码
@@ -110,6 +110,31 @@ func (s *Srv) getDefaultTablet(languageList []dto.LanguageItem) setting.Tablet {
 	}
 }
 
+// 默认自助点餐机设置
+func (s *Srv) getDefaultKioskSetting(languageList []dto.LanguageItem) setting.Kiosk {
+	var defaultLanguage = i18n.LanguageEN
+	if len(languageList) > 0 {
+		defaultLanguage = languageList[0].Name
+	}
+
+	// 默认勾选所有语言
+	commonLanguages := make([]string, 0, len(languageList))
+	for _, lang := range languageList {
+		commonLanguages = append(commonLanguages, lang.Name)
+	}
+
+	return setting.Kiosk{
+		KioskResp: setting.KioskResp{
+			AdvancedPassword:  "666888",                 // 高级密码（默认666888）
+			CallWaiterEnabled: 1,                        // 呼叫服务员开关（默认1-开启）
+			LanguageList:      languageList,             // 语言列表
+			Language:          commonLanguages,          // 已设置的语言（默认所有语言）
+			DefaultLanguage:   defaultLanguage,          // 默认语言（默认语言1）
+			Carousel:          []setting.CarouselItem{}, // 轮播内容（默认空数组）
+		},
+	}
+}
+
 // 默认扫码H5设置
 func (s *Srv) getDefaultH5(languageList []dto.LanguageItem) setting.H5 {
 	var defaultLanguage = i18n.LanguageEN
@@ -150,16 +175,17 @@ func (s *Srv) getDefaultKitchen(languageList []dto.LanguageItem) setting.Kitchen
 	}
 	return setting.Kitchen{
 		KitchenResp: setting.KitchenResp{
-			IsOpen:          "1",                                // 是否开启厨显功能 0关闭 1开启
-			IsComeDish:      "1",                                // 是否开启来菜提醒 0-关闭 1-开启
-			IsCallService:   "1",                                // 是否开启顾客呼叫提醒 0-关闭 1-开启
-			Server:          setting.Server{IP: ip, Port: port}, // 厨显服务器连接
-			IsWaitColor:     "0",                                // 是否开启等待时长颜色 0-关闭 1-开启
-			WaitColor:       []string{},                         // 时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000
-			LanguageList:    languageList,                       // 语言列表
-			Language:        []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
-			DefaultLanguage: defaultLanguage,                    // 默认语言
-			IsSmartKitchen:  "0",                                // 是否开启智能后厨 0-关闭 1-开启
+			IsOpen:              "1",                                // 是否开启厨显功能 0关闭 1开启
+			IsComeDish:          "1",                                // 是否开启来菜提醒 0-关闭 1-开启
+			IsCallService:       "1",                                // 是否开启顾客呼叫提醒 0-关闭 1-开启
+			Server:              setting.Server{IP: ip, Port: port}, // 厨显服务器连接
+			IsWaitColor:         "0",                                // 是否开启等待时长颜色 0-关闭 1-开启
+			WaitColor:           []string{},                         // 时长颜色（旧格式：["red", "yellow"]）
+			WaitTimeColorRanges: []setting.WaitTimeColorRange{},     // 等待时长颜色区间配置（新格式）
+			LanguageList:        languageList,                       // 语言列表
+			Language:            []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+			DefaultLanguage:     defaultLanguage,                    // 默认语言
+			IsSmartKitchen:      "0",                                // 是否开启智能后厨 0-关闭 1-开启
 		},
 		AdvancedPassword: "666888", // 高级设置密码
 	}
@@ -237,25 +263,27 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 			Key:  "20",
 			Name: i18n.Translate(language, "不计入总销售额、优惠折扣、服务费、税费"),
 		}}, // 免单计算方式列表
-		FreeMethod:         "10",       // 免单计算方式，10-计入总销售额、优惠折扣、服务费、税费 20-不计入总销售额、优惠折扣、服务费、税费
-		DiscountMethod:     "10",       // 折扣计算方式 10-按百分比 20-直接减免
-		QrCode:             "123456",   // 电子菜单二维码校验失效值，6位数数字
-		NoClearTable:       "0",        // 结账后不清台 0-清台 1-不清台
-		IsNeedPassword:     "1",        // 取消订单/退菜 0-无需密码 1-需要密码
-		DishCardStyle:      "0",        // 菜品卡片样式 0-无图模式 1-图片模式
-		DishCardStyleTime:  "0",        // 菜品卡片样式最后更新时间
-		IsInvoice:          "0",        // 开票信息 0-不需要填写 1-需要填写
-		OpeningHours:       "",         // 营业时间 00:00-23:59
-		DeliveryPriceRatio: 100,        // 外送商品价格和商品原价比例
-		StartSerialNo:      "0001",     // 开始序列号
-		IsBatch:            "0",        // 是否是分批商品 0-否 1-是
-		BatchProductUuids:  []uint64{}, // 分批商品UUID列表
-		BatchTagNum:        0,          // 分批类型数量
-		SafetyStockType:    "1",        // 安全库存类型 1-门店纬度 2-仓库纬度，默认为1
+		FreeMethod:         "10",          // 免单计算方式，10-计入总销售额、优惠折扣、服务费、税费 20-不计入总销售额、优惠折扣、服务费、税费
+		DiscountMethod:     "10",          // 折扣计算方式 10-按百分比 20-直接减免
+		QrCode:             "123456",      // 电子菜单二维码校验失效值，6位数数字
+		NoClearTable:       "0",           // 结账后不清台 0-清台 1-不清台
+		IsNeedPassword:     "1",           // 取消订单/退菜 0-无需密码 1-需要密码
+		DishCardStyle:      "0",           // 菜品卡片样式 0-无图模式 1-图片模式
+		DishCardStyleTime:  "0",           // 菜品卡片样式最后更新时间
+		IsInvoice:          "0",           // 开票信息 0-不需要填写 1-需要填写
+		OpeningHours:       "00:00-23:59", // 营业时间 00:00-23:59
+		DeliveryPriceRatio: 100,           // 外送商品价格和商品原价比例
+		StartSerialNo:      "0001",        // 开始序列号
+		IsBatch:            "0",           // 是否是分批商品 0-否 1-是
+		BatchProductUuids:  []uint64{},    // 分批商品UUID列表
+		BatchTagNum:        0,             // 分批类型数量
+		SafetyStockType:    "1",           // 安全库存类型 1-门店纬度 2-仓库纬度，默认为1
 
-		RequiredParentCompanyApproval: "0",                           // 调拨规则-经过上级门店审批 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
-		ViaParentCompanyWarehouse:     "0",                           // 调拨规则-经过上级门店仓库 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
-		BatchCookingMode:              constant.BatchCookingModePost, // 分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"
+		RequiredParentCompanyApproval: "0",                            // 调拨规则-经过上级门店审批 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
+		ViaParentCompanyWarehouse:     "0",                            // 调拨规则-经过上级门店仓库 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
+		AllowedTransferTypes:          "in,out",                       // 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许, 默认都允许
+		BatchCookingMode:              constant.BatchCookingModePost,  // 分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"
+		BatchPrintMode:                constant.BatchPrintModeDefault, // 分批打印模式: "default" 默认 / "merge" 合并
 
 		EnableOrderSource: "0", // 外卖功能开关 0-关闭 1-开启
 		EnableNationality: "0", // 国籍功能开关 0-关闭 1-开启
@@ -365,19 +393,6 @@ func (s *Srv) getDefaultPrinter(language string, languageList []dto.LanguageItem
 	}
 }
 
-// 默认用户充值设置
-func (s *Srv) getDefaultRecharge() setting.Recharge {
-	return setting.Recharge{
-		IsEntrance:  "1", // 是否允许用户充值
-		IsCustom:    "1", // 是否允许自定义金额
-		IsMatchPlan: "1", // 自定义金额是否自动匹配合适的套餐
-		Describe: "1. 账户充值仅限微信在线方式支付，充值金额实时到账；\n" +
-			"2. 账户充值套餐赠送的金额即时到账；\n" +
-			"3. 账户余额有效期：自充值日起至用完即止；\n" +
-			"4. 若有其它疑问，可拨打客服电话400-000-1234", // 充值说明
-	}
-}
-
 // 默认积分设置
 func (s *Srv) getDefaultPoints() setting.Points {
 	return setting.Points{
@@ -426,36 +441,6 @@ func (s *Srv) getDefaultPoints() setting.Points {
 			PointsExchangeRate: "",
 			AutoPointsExchange: "0",
 		},
-	}
-}
-
-// 默认系统设置
-func (s *Srv) getDefaultSysAdminConfig() setting.SysAdminConfig {
-	return setting.SysAdminConfig{
-		BrandName:     "Shop",                         // 商城名称
-		BrandLogo:     "/image/logo/ttpos_64_64.png",  // 商城背景图
-		BrandLogoLong: "/image/logo/ttpos_146_40.png", // 商城logo
-		BrowserLogo:   "/image/logo/ttpos_64_64.png",  // 浏览器LOGO
-		BrowserTitle:  "Shop",                         // 浏览器标题
-	}
-}
-
-// 默认系统设置
-func (s *Srv) getDefaultSysConfig() setting.SysConfig {
-	return setting.SysConfig{
-		ShopName:    "Shop", // 商城名称
-		CashierName: "收银台",  // 收银台名称
-	}
-}
-
-// 默认充值设置
-func (s *Srv) getDefaultBalance() setting.Balance {
-	return setting.Balance{
-		IsOpen:   "0", // 是否开启
-		IsPlan:   "1", // 是否可以自定义
-		MinMoney: 1,   // 最低充值金额
-		Describe: "a) 账户充值仅限在线方式支付，充值金额实时到账；\n" +
-			"b) 有问题请联系客服;\n", // 充值说明
 	}
 }
 

@@ -74,6 +74,16 @@ func getHttpMessageKeyMutex(messageKey string) *sync.Mutex {
 func PushMessage(r *ghttp.Request) {
 	ctx := r.Context()
 
+	// 验证  X-API-KEY
+	if r.Header.Get("X-API-KEY") != g.Cfg().MustGet(ctx, "jwt.secret").String() {
+		g.Log().Error(ctx, "API-KEY 不正确", r.Header.Get("X-API-KEY"))
+		r.Response.WriteJson(g.Map{
+			"code":    consts.CodeFail,
+			"message": "KEY 不正确",
+		})
+		return
+	}
+
 	// 解析请求参数
 	var params struct {
 		CompanyUuid  uint64      `json:"company_uuid"`
@@ -210,8 +220,8 @@ func processHttpMessage(ctx context.Context, task messageTask) {
 
 	// 检查Redis缓存是否被更新或消息次数超过10
 	if task.MessageKey != "" {
-		// 等待900毫秒
-		time.Sleep(900 * time.Millisecond)
+		// 等待300毫秒
+		time.Sleep(300 * time.Millisecond)
 
 		// 检查消息次数
 		if task.Count <= 10 {

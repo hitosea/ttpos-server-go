@@ -10,12 +10,13 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
 type ISaleOrderPeakTimeRepo interface {
 	Record(recordType string, saleBill *model.SaleBill, refundMoney float64, timezone ...string) error
-	GetMaxRecord(timezone string, startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error)
+	GetMaxRecord(timezone string, startTime, endTime uint, cashierUuid uint64, excludeDataManage bool) ([]business_data_resp.PeakHour, error)
 	CreateSaleOrderPeakTime(saleOrderPeakTime model.SaleOrderPeakTime) error
 }
 
@@ -31,15 +32,23 @@ func NewSaleOrderPeakTimeRepo(db *gorm.DB) ISaleOrderPeakTimeRepo {
 // recordType: inc - 增加, dec - 减少
 func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBill, refundMoney float64, timezone ...string) error {
 	tz := string(utils.ZH_TIMEZONE)
+	var finishTime int64 = 0
 	if len(timezone) > 0 {
 		tz = timezone[0]
+	}
+	if len(timezone) > 1 {
+		finishTimeInt, err := strconv.ParseInt(timezone[1], 10, 64)
+		if err == nil {
+			finishTime = finishTimeInt
+		}
 	}
 	loc, err := time.LoadLocation(tz)
 	if err != nil {
 		loc = time.Local
 	}
 	// 将时间戳转换为time.Time
-	tm := time.Unix(saleBill.FinishTime, 0).In(loc)
+	finishTime = utils.IfInt64(saleBill.FinishTime > 0, saleBill.FinishTime, finishTime)
+	tm := time.Unix(finishTime, 0).In(loc)
 	// 获取日期时间戳 - 将时间设置为当天的0点0分0秒
 	dateTime := time.Date(tm.Year(), tm.Month(), tm.Day(), 0, 0, 0, 0, tm.Location())
 	dateTimestamp := dateTime.Unix()
@@ -87,7 +96,7 @@ func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBi
 }
 
 // GetMaxRecord 获取高峰时段
-func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error) {
+func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime uint, cashierUuid uint64, excludeDataManage bool) ([]business_data_resp.PeakHour, error) {
 	// 获取开始时间和结束时间的时间对象
 	startTimeObj := time.Unix(int64(startTime), 0)
 	endTimeObj := time.Unix(int64(endTime), 0)
@@ -176,6 +185,63 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime
 			OrderNum:   v.Num,
 			Amount:     v.Amount,
 		})
+	}
+	// 如果 saleBillMap 中有数据，需要从对应的时间段中减去
+	if excludeDataManage {
+		saleBillMap := make(map[int64]float64)
+		saleBillRepo := NewOrderRepoImpl(r.db)
+		saleBillList := saleBillRepo.GetSaleBillList(
+			CommonRepo.WhereInDataManageSubQuery(r.db, "uuid", CommonRepo.WhereByType(model.DataManageTypeOrder), CommonRepo.WhereBySoftDelete()),
+			CommonRepo.Preload(
+				WithPreload{
+					Query: "SaleOrders",
+					Args: []interface{}{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
+				},
+				WithPreload{
+					Query: "SaleOrders.PaymentOrders.PaymentMethod",
+				},
+				WithPreload{
+					Query: "SaleOrders.ReturnOrders",
+				},
+			),
+			CommonRepo.WhereBySoftDelete(),
+		)
+		for _, saleBill := range saleBillList {
+			amountDec := decimal.NewFromFloat(saleBill.PaymentAmount)
+			for _, saleOrder := range saleBill.SaleOrders {
+				for _, returnOrder := range saleOrder.ReturnOrders {
+					amountDec = amountDec.Sub(decimal.NewFromFloat(returnOrder.RefundAmount))
+				}
+			}
+			saleBillMap[saleBill.FinishTime] = amountDec.InexactFloat64()
+		}
+		if len(saleBillMap) > 0 {
+			// 遍历 saleBillMap，找到对应的时间段并减少
+			for finishTime, amount := range saleBillMap {
+				// 在 results 中找到匹配的项（finishTime 在时间段范围内）
+				for i, v := range results {
+					// 计算时间段的开始和结束时间戳
+					timePeriodStart := v.Date + v.Hour*3600
+					timePeriodEnd := v.Date + (v.Hour+1)*3600
+					// 检查 finishTime 是否在时间段范围内
+					if finishTime >= timePeriodStart && finishTime < timePeriodEnd {
+						// 找到匹配的时间段，减少 OrderNum 和 Amount
+						peakHours[i].OrderNum--
+						peakHours[i].Amount = utils.DecimalSub(peakHours[i].Amount, amount)
+						// 确保 OrderNum 和 Amount 不为负数
+						if peakHours[i].OrderNum < 0 {
+							peakHours[i].OrderNum = 0
+						}
+						if peakHours[i].Amount < 0 {
+							peakHours[i].Amount = 0
+						}
+						break
+					}
+				}
+			}
+		}
 	}
 	//
 	return peakHours, nil

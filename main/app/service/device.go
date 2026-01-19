@@ -46,6 +46,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		constant.SourceTablet,
 		constant.SourceKitchen,
 		constant.SourceShop,
+		constant.SourceKiosk,
 	}, addReq.Source) ||
 		addReq.CompanyUuid == 0 || addReq.DeviceId == "" {
 		return 0, errors.New("来源设备错误")

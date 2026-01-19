@@ -1,9 +1,9 @@
 package websocket
 
 import (
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
-	"github.com/nacos-group/nacos-sdk-go/v2/common/logger"
 	"go.uber.org/zap"
 )
 
@@ -58,6 +58,8 @@ const (
 	IMPORT_PRODUCT = "import_product"
 	// 导入物品 data= {"time": 1742971471, "status": "finish", "error": ""}
 	IMPORT_MATERIAL = "import_material"
+	// 更新外卖订单 data = {"update_time": 1742971471, "order_uuid": 1, "takeout_order_uuid": "xxx", "platform": "grab", "type": "create | update | delete"}
+	UPDATE_TAKEOUT_ORDER = "update_takeout_order"
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.
@@ -65,7 +67,7 @@ func PushClient(companyUuid uint64, sourceClient, deviceId, messageType string, 
 	utils.Go(func() {
 		err := PushClients(companyUuid, sourceClient, deviceId, messageType, data)
 		if err != nil {
-			logger.Error("推送消息失败", zap.Error(err))
+			logger.Logger.Error("推送消息失败", zap.Error(err))
 		}
 	})
 	return nil

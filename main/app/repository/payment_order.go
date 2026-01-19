@@ -109,6 +109,7 @@ func (r *paymentOrderRepo) GetPaymentOrderRecord(paymentOrderUuid uint64) (*mode
 	paymentOrder, err := r.GetPaymentOrder(
 		CommonRepo.WhereByUuid(paymentOrderUuid),
 		CommonRepo.WhereBySoftDelete(),
+		r.WithPaymentMethod(),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)

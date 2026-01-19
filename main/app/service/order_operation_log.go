@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
+	lang "ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/utils"
 )
 
@@ -238,6 +239,28 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 			desc := i18n.Translate(language, "免单") + " (" + s.settingSrv.SymbolPosition(ctx, freeSale.DiscountMoney) + ")"
 			return ActionDescription{Desc: desc, SplitMessage: splitMessage}
 		}
+	case constant.OrderActivity: // 满减活动
+		var activity event.ActivitySaleOrderPayload
+		if err := json.Unmarshal([]byte(log.Data), &activity); err == nil {
+			// 解析满减字符串，获取类型和金额信息（可选，解析失败不影响显示）
+			text := i18n.Translate(language, activity.FullReductionActivityMessage)
+			result, err := utils.ParseFullReductionString(activity.FullReductionActivityMessage)
+			if err != nil {
+				// 解析失败时忽略错误，继续使用原始消息
+			} else {
+				// 可以在这里使用解析结果，例如：result.Type, result.FullAmount, result.ReductionAmount
+				text = i18n.Translate(language, result.Type) + utils.FormatFloat(result.FullAmount) + i18n.Translate(language, "减") + utils.FormatFloat(result.ReductionAmount)
+			}
+			// 解析活动名称为多语言格式
+			activityName := activity.FullReductionActivityName
+			localeName := lang.JsonToLocaleResponse(activity.FullReductionActivityName)
+			if !localeName.IsNull() {
+				activityName = localeName.GetLocale(language)
+				text = activityName + "-" + text
+			}
+			desc := text + " (" + s.settingSrv.SymbolPosition(ctx, activity.ActivityAmount) + ")"
+			return ActionDescription{Desc: desc, SplitMessage: splitMessage}
+		}
 	case constant.OrderSettle: // 结账
 		var settle event.CheckoutSaleOrderPayload
 		if err := json.Unmarshal([]byte(log.Data), &settle); err == nil {
@@ -263,6 +286,10 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		var reverseSettle event.OrderReverseSettlePayload
 		if err := json.Unmarshal([]byte(log.Data), &reverseSettle); err == nil {
 			var payTypeList []string
+			descStr := ""
+			if reverseSettle.Points > 0 {
+				descStr = descStr + "(" + i18n.Translate(language, "扣除积分") + ": " + utils.FormatFloat(reverseSettle.Points) + ") "
+			}
 			for _, payType := range reverseSettle.PayTypes {
 				payTypeName := payType.Name
 				if payType.Value == constant.PaymentMethodCodeFreePay {
@@ -270,14 +297,18 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 				}
 				payTypeList = append(payTypeList, payTypeName+": "+s.settingSrv.SymbolPosition(ctx, payType.Price))
 			}
-			desc := strings.Join(payTypeList, "、")
+			desc := descStr + strings.Join(payTypeList, "、")
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderRefund: // 退款
 		var refundPayload event.ReturnOrderPayload
 		if err := json.Unmarshal([]byte(log.Data), &refundPayload); err == nil {
 			if refundPayload.RefundType == constant.ReturnOrderRefundTypeTotal { // 整单退款不显示商品
-				return ActionDescription{Desc: "", SplitMessage: ""}
+				descStr := " "
+				if refundPayload.Points > 0 {
+					descStr = descStr + "(" + i18n.Translate(language, "扣除积分") + ": " + utils.FormatFloat(refundPayload.Points) + ") " + i18n.Translate(language, "退款金额")
+				}
+				return ActionDescription{Desc: descStr, SplitMessage: ""}
 			}
 			var desc []string
 			for _, product := range refundPayload.Products {
@@ -290,7 +321,11 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 				}
 				desc = append(desc, item)
 			}
-			descStr := strings.Join(desc, "、")
+			descStr := ""
+			if refundPayload.Points > 0 {
+				descStr = descStr + "(" + i18n.Translate(language, "扣除积分") + ": " + utils.FormatFloat(refundPayload.Points) + ") "
+			}
+			descStr = descStr + strings.Join(desc, "、")
 			return ActionDescription{Desc: descStr, SplitMessage: ""}
 		}
 	case constant.OrderOrderTaking: // 接单 不需要解析data
@@ -397,6 +432,7 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 		constant.OrderDiscount:            i18n.Translate(language, "优惠折扣"),
 		constant.OrderFreeSale:            i18n.Translate(language, "优惠折扣"),
 		constant.OrderCancelDiscount:      i18n.Translate(language, "撤销优惠折扣"),
+		constant.OrderActivity:            i18n.Translate(language, "满减活动"),
 		constant.OrderSettle:              i18n.Translate(language, "结账"),
 		constant.OrderReverseSettle:       i18n.Translate(language, "反结账"),
 		constant.OrderRefund:              i18n.Translate(language, "部分退款"), // 默认部分退款

@@ -3,7 +3,6 @@ package purchase_order
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -31,106 +30,62 @@ func NewPurchaseOrderHelper() *purchaseOrderHelper {
 	return &purchaseOrderHelper{}
 }
 
-// generateOrderNo 生成采购申请订单编号
-// 格式：prefix+年月日+0000自增序列号
-func (h *purchaseOrderHelper) generateOrderNo(db *gorm.DB, prefix string, timezone string) string {
-	// 年月日部分
-	datePart := utils.SetTimezone(timezone).Now().Format("20060102")
+// generateOrderNo 生成采购申请/品牌采购订单编号
+// 格式：prefix + yyyyMMddHHmmss + 序列号（4位）
+// 例如：PR202504030915120001, TPHY202504030915120001
+func (h *purchaseOrderHelper) generateOrderNo(
+	saasDB *gorm.DB,
+	companyUuid uint64,
+	prefix string,
+	numberType string,
+	timezone string,
+) (string, error) {
+	// 获取秒级时间戳
+	now := utils.SetTimezone(timezone).Now()
+	timestamp := now.Format("20060102150405") // yyyyMMddHHmmss
 
-	// 生成自增序列号
-	serialNo, err := h.generatePurchaseOrderSerialNo(db)
+	// 获取日期字符串（用于序列号表）
+	dateStr := now.Format("2006-01-02") // YYYY-MM-DD
+
+	// 从 ttpos_number_sequence 表获取下一个序列号
+	seqRepo := repository.NewNumberSequenceRepo(saasDB)
+	seq, err := seqRepo.GetNextSequence(companyUuid, numberType, dateStr)
 	if err != nil {
-		return ""
+		return "", errors.WithMessage(err, "获取序列号失败")
 	}
 
-	// 组装订单编号：prefix+年月日+0000自增序列号
-	orderNo := prefix + datePart + serialNo
-
-	return orderNo
+	// 组装编号：prefix + timestamp + 序列号（4位）
+	orderNo := fmt.Sprintf("%s%s%04d", prefix, timestamp, seq)
+	return orderNo, nil
 }
 
-// generatePurchaseOrderSerialNo 生成采购申请自增序列号
-func (h *purchaseOrderHelper) generatePurchaseOrderSerialNo(db *gorm.DB) (string, error) {
-	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
+// generateReceiptNo 生成采购收货/品采收货编号
+// 格式：prefix + yyyyMMddHHmmss + 序列号（4位）
+// 例如：PRC202504030915120001, TPHY202504030915120001
+func (h *purchaseOrderHelper) generateReceiptNo(
+	saasDB *gorm.DB,
+	companyUuid uint64,
+	prefix string,
+	numberType string,
+	timezone string,
+) (string, error) {
+	// 获取秒级时间戳
+	now := utils.SetTimezone(timezone).Now()
+	timestamp := now.Format("20060102150405") // yyyyMMddHHmmss
 
-	// 获取今天最新的采购申请
-	latestOrder, err := purchaseOrderRepo.GetLatestOrderToday()
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return "", errors.WithMessage(errors.New("获取最新采购申请失败"), err.Error())
-	}
+	// 获取日期字符串（用于序列号表）
+	dateStr := now.Format("2006-01-02") // YYYY-MM-DD
 
-	// 如果没有查询到今天的采购申请，则设置为0001
-	if latestOrder == nil {
-		return "0001", nil
-	}
-
-	// 从订单编号中提取序列号部分（最后4位）
-	if len(latestOrder.OrderNo) >= 4 {
-		lastSerialNo := latestOrder.OrderNo[len(latestOrder.OrderNo)-4:]
-		serialNoNum, err := strconv.Atoi(lastSerialNo)
-		if err != nil {
-			// 如果解析失败，重新从0001开始
-			return "0001", nil
-		}
-		// 序列号加1
-		newSerialNoNum := serialNoNum + 1
-		return fmt.Sprintf("%04d", newSerialNoNum), nil
-	}
-
-	// 如果订单编号格式不正确，重新从0001开始
-	return "0001", nil
-}
-
-// generateReceiptNo 生成收货单号
-// 格式：SHRK+年月日+0000自增序列号
-func (h *purchaseOrderHelper) generateReceiptNo(db *gorm.DB, timezone string) string {
-	// 固定前缀
-	prefix := "SHRK"
-	// 年月日部分
-	datePart := utils.SetTimezone(timezone).Now().Format("20060102")
-
-	// 生成自增序列号
-	serialNo, err := h.generateReceiptOrderSerialNo(db)
+	// 从 ttpos_number_sequence 表获取下一个序列号
+	seqRepo := repository.NewNumberSequenceRepo(saasDB)
+	seq, err := seqRepo.GetNextSequence(companyUuid, numberType, dateStr)
 	if err != nil {
-		return ""
+		return "", errors.WithMessage(err, "获取序列号失败")
 	}
 
-	// 组装收货单号：SHRK+年月日+0000自增序列号
-	receiptNo := prefix + datePart + serialNo
-
-	return receiptNo
-}
-
-// generateReceiptOrderSerialNo 生成收货单自增序列号
-func (h *purchaseOrderHelper) generateReceiptOrderSerialNo(db *gorm.DB) (string, error) {
-	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
-
-	// 获取今天最新的收货单
-	latestReceipt, err := receiptOrderRepo.GetLatestReceiptToday()
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return "", errors.WithMessage(errors.New("获取最新收货单失败"), err.Error())
-	}
-
-	// 如果没有查询到今天的收货单，则设置为0001
-	if latestReceipt == nil {
-		return "0001", nil
-	}
-
-	// 从收货单号中提取序列号部分（最后4位）
-	if len(latestReceipt.OrderNo) >= 4 {
-		lastSerialNo := latestReceipt.OrderNo[len(latestReceipt.OrderNo)-4:]
-		serialNoNum, err := strconv.Atoi(lastSerialNo)
-		if err != nil {
-			// 如果解析失败，重新从0001开始
-			return "0001", nil
-		}
-		// 序列号加1
-		newSerialNoNum := serialNoNum + 1
-		return fmt.Sprintf("%04d", newSerialNoNum), nil
-	}
-
-	// 如果收货单号格式不正确，重新从0001开始
-	return "0001", nil
+	// 组装编号：prefix + timestamp + 序列号（4位）
+	receiptNo := fmt.Sprintf("%s%s%04d", prefix, timestamp, seq)
+	return receiptNo, nil
 }
 
 // createPurchaseOrderLog 创建采购订单操作日志
@@ -217,11 +172,6 @@ func (h *purchaseOrderHelper) checkAndUpdatePurchaseOrderStatus(
 	}
 
 	return nil
-}
-
-// UpdateRelatedMaterialStock 更新规格/加料关联材料库存
-func (h *purchaseOrderHelper) UpdateRelatedMaterialStock(db *gorm.DB, relatedMaterialUuids []uint64) error {
-	return repository.NewMaterialRepo(db).UpdateRelatedMaterialStock(relatedMaterialUuids)
 }
 
 // HeadquarterUpdateInfo 总部更新信息结构
@@ -340,7 +290,6 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 		// 获取仓库出入库日志Repository
 		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
 		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
-		materialRepo := repository.NewMaterialRepo(tx)
 
 		// 获取目标仓库信息（通过ERP编码查找）
 		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(receiptOrder.TargetWarehouseErpCode)
@@ -367,20 +316,6 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 				logger.Logger.Error("recordErpStockInLog-AddStock", zap.Any("warehouseItemUuid", warehouseItem.Uuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
 				return errors.WithMessage(errors.New("更新仓库商品库存失败"), err.Error())
 			}
-
-			// 更新规格/加料关联材料库存
-			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid, materialRepo.WithRelatedMaterialList())
-			if err != nil {
-				logger.Logger.Error("recordErpStockInLog-GetMaterialByUuid", zap.Any("materialUuid", item.MaterialUuid), zap.Any("err", err))
-				return errors.WithMessage(errors.New("获取物品信息失败"), err.Error())
-			}
-			relatedMaterialUuids := material.GetRelatedMaterialUuids()
-			err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
-			if err != nil {
-				logger.Logger.Error("recordErpStockInLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
-				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
-			}
-
 			// 记录入库日志
 			supplierUuid := func() uint64 {
 				supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
@@ -515,14 +450,6 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			if err != nil {
 				logger.Logger.Error("reduceHeadquarterStockAndLog-ReduceStock", zap.Any("warehouseItemUuid", warehouseItemUuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
 				return errors.WithMessage(errors.New("减少总部库存失败"), err.Error())
-			}
-
-			// 更新规格/加料关联材料库存
-			relatedMaterialUuids := item.Material.GetRelatedMaterialUuids()
-			err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
-			if err != nil {
-				logger.Logger.Error("reduceHeadquarterStockAndLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
-				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
 			}
 
 			// 记录出库日志
@@ -749,4 +676,193 @@ func (h *purchaseOrderHelper) AddToTransitWarehouse(
 	}
 
 	return nil
+}
+
+// checkPurchaseOrderNeedUpdate 检查采购申请是否需要更新
+// 通过对比现有数据和请求数据，判断是否有变动，避免不必要的数据库操作
+func (h *purchaseOrderHelper) checkPurchaseOrderNeedUpdate(
+	purchaseOrder *model.PurchaseOrder,
+	req *req.PurchaseOrderUpdateReq,
+	itemRepo repository.IPurchaseOrderItemRepo,
+) (bool, error) {
+	needUpdate := false
+
+	// 1. 检查基本信息是否变动
+	if purchaseOrder.Status != constant.PurchaseOrderStatusPending &&
+		purchaseOrder.Status != constant.PurchaseOrderStatusHeadquarterPending {
+		// 设置期望到货时间，如果为空则默认为2035-12-31
+		expectArrivalTime := req.ExpectedDeliveryTime
+		if expectArrivalTime == 0 {
+			expectArrivalTime = 2082672000 // 2035-12-31的时间戳
+		}
+
+		if purchaseOrder.SupplierName != req.SupplierName ||
+			purchaseOrder.SupplierErpCode != req.SupplierErpCode ||
+			purchaseOrder.ExpectArrivalTime != expectArrivalTime ||
+			purchaseOrder.WarehouseErpCode != req.WarehouseErpCode {
+			needUpdate = true
+		}
+	}
+
+	// 2. 检查明细是否变动（物料数量或明细列表）
+	if purchaseOrder.Num != float64(len(req.Items)) {
+		needUpdate = true
+	} else {
+		// 查询现有明细
+		existingItems, err := itemRepo.GetByPurchaseOrderUuid(
+			req.Uuid,
+			itemRepo.WithPreloadUnits(),
+		)
+		if err != nil {
+			return false, errors.WithMessage(errors.New("查询现有明细失败"), err.Error())
+		}
+
+		// 构建现有明细映射：MaterialUuid -> Item
+		existingItemMap := make(map[uint64]*model.PurchaseOrderItem)
+		for i := range existingItems {
+			existingItemMap[existingItems[i].MaterialUuid] = &existingItems[i]
+		}
+
+		// 构建请求明细映射：MaterialUuid -> Units
+		type unitInfo struct {
+			Uuid uint64
+			Num  float64
+		}
+		reqItemMap := make(map[uint64][]unitInfo)
+		for _, item := range req.Items {
+			units := make([]unitInfo, len(item.UnitList))
+			for i, unit := range item.UnitList {
+				units[i] = unitInfo{
+					Uuid: unit.Uuid,
+					Num:  unit.Num,
+				}
+			}
+			reqItemMap[item.MaterialUuid] = units
+		}
+
+		// 检查物料列表是否一致
+		if len(existingItemMap) != len(reqItemMap) {
+			needUpdate = true
+		} else {
+			// 逐个对比物料和单位
+			for materialUuid, reqUnits := range reqItemMap {
+				existingItem, exists := existingItemMap[materialUuid]
+				if !exists {
+					needUpdate = true
+					break
+				}
+
+				// 对比单位列表
+				if len(existingItem.Units) != len(reqUnits) {
+					needUpdate = true
+					break
+				}
+
+				// 构建现有单位映射：UnitUuid -> Num
+				existingUnitMap := make(map[uint64]float64)
+				for _, unit := range existingItem.Units {
+					existingUnitMap[unit.UnitUuid] = unit.Num
+				}
+
+				// 检查每个单位的数量是否一致
+				for _, reqUnit := range reqUnits {
+					if existingNum, ok := existingUnitMap[reqUnit.Uuid]; !ok || existingNum != reqUnit.Num {
+						needUpdate = true
+						break
+					}
+				}
+
+				if needUpdate {
+					break
+				}
+			}
+		}
+	}
+
+	return needUpdate, nil
+}
+
+// checkCompanyShopNeedSync 检查子店铺采购申请是否需要同步
+// 通过对比子店铺现有数据和总部当前数据，判断是否有变动，避免不必要的同步操作
+func (h *purchaseOrderHelper) checkCompanyShopNeedSync(
+	companyOrder *model.PurchaseOrder,
+	currentItems []model.PurchaseOrderItem,
+	reqItems []req.PurchaseOrderItemUpdateReq,
+) bool {
+	// 构建现有明细的映射：MaterialCode -> Item
+	existingItemMap := make(map[string]*model.PurchaseOrderItem)
+	for i := range companyOrder.Items {
+		existingItemMap[companyOrder.Items[i].MaterialCode] = &companyOrder.Items[i]
+	}
+
+	// 构建当前明细的映射：MaterialUuid -> MaterialCode 和 MaterialCode -> Item
+	materialCodeMap := make(map[uint64]string)
+	currentItemMap := make(map[string]*model.PurchaseOrderItem)
+	for i := range currentItems {
+		materialCodeMap[currentItems[i].MaterialUuid] = currentItems[i].MaterialCode
+		currentItemMap[currentItems[i].MaterialCode] = &currentItems[i]
+	}
+
+	// 构建请求中的物品映射：MaterialCode -> MaterialUuid
+	reqMaterialCodes := make(map[string]uint64)
+	for _, item := range reqItems {
+		if materialCode, ok := materialCodeMap[item.MaterialUuid]; ok {
+			reqMaterialCodes[materialCode] = item.MaterialUuid
+		}
+	}
+
+	// 1. 检查物料数量是否一致
+	if len(existingItemMap) != len(reqMaterialCodes) {
+		return true
+	}
+
+	// 2. 检查每个物料是否存在且数量、单位一致
+	for materialCode, materialUuid := range reqMaterialCodes {
+		existingItem, existsInCompany := existingItemMap[materialCode]
+		currentItem, existsInCurrent := currentItemMap[materialCode]
+
+		// 子店铺没有这个物料，需要同步
+		if !existsInCompany {
+			return true
+		}
+
+		// 总部没有这个物料（理论上不应该发生），需要同步
+		if !existsInCurrent {
+			return true
+		}
+
+		// 检查数量是否一致
+		if existingItem.Num != currentItem.Num {
+			return true
+		}
+
+		// 检查单位列表是否一致
+		if len(existingItem.Units) != len(currentItem.Units) {
+			return true
+		}
+
+		// 构建单位映射：ErpnextUom -> Num
+		existingUnitMap := make(map[string]float64)
+		for _, unit := range existingItem.Units {
+			existingUnitMap[unit.ErpnextUom] = unit.Num
+		}
+
+		currentUnitMap := make(map[string]float64)
+		for _, unit := range currentItem.Units {
+			currentUnitMap[unit.ErpnextUom] = unit.Num
+		}
+
+		// 检查每个单位的数量是否一致
+		for erpnextUom, existingNum := range existingUnitMap {
+			if currentNum, ok := currentUnitMap[erpnextUom]; !ok || currentNum != existingNum {
+				return true
+			}
+		}
+
+		// 避免未使用变量警告
+		_ = materialUuid
+	}
+
+	// 没有变动
+	return false
 }

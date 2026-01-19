@@ -453,22 +453,80 @@
             try {
               // 清理事件监听器
               document.removeEventListener('keyup', this.onEnter);
-              document.removeEventListener('focus', this.getCode('return'));
+              window.removeEventListener('focus', this.handleFocus);
 
-              console.log('准备跳转到首页，当前路径:', this.$route.path);
+              // 确保 supplier 数据已设置
+              const supplier = getSessionStorage('supplier');
+              if (!supplier || !supplier.app_id) {
+                console.error('supplier 数据未正确设置，延迟重试');
+                setTimeout(() => {
+                  this.getBase();
+                }, 500);
+                return;
+              }
 
-              // 尝试路由跳转
-              await this.$router.push({ path: '/home' });
+              const app_id = supplier.app_id;
+              
+              // 构建带app_id的路径（hash 路由模式下，Vue Router 会自动添加 #）
+              const homePath = `/${app_id}/home`;
 
-              this.logining = false;
-              // 由于路由存在缓存，导致数据更新不及时，所以需要刷新页面
-              location.reload();
+              // 等待路由注册完成（dealWithRoute 是异步的）
+              // 使用 nextTick 确保路由状态已更新
+              await this.$nextTick();
+
+              // 等待路由注册完成（dealWithRoute 在路由守卫中异步执行）
+              // 给路由注册一些时间
+              await new Promise((resolve) => setTimeout(resolve, 300));
+
+              // 先尝试使用 router.push
+              try {
+                // 使用 replace 避免在历史记录中留下登录页
+                await this.$router.push({ path: homePath, replace: true });
+                
+                // 等待路由跳转完成并验证
+                await new Promise((resolve) => setTimeout(resolve, 300));
+                
+                // 验证路由是否成功跳转
+                const currentPath = this.$route.path;
+                if (currentPath && currentPath.includes('/home')) {
+                  // 路由跳转成功，延迟执行 reload 以确保路由状态已稳定
+                  this.logining = false;
+                  // 使用 setTimeout 延迟 reload，确保路由跳转完全完成
+                  setTimeout(() => {
+                    // 再次验证路径，确保不会在错误的路径上刷新
+                    const finalPath = window.location.hash || window.location.pathname;
+                    if (finalPath.includes('/home') || finalPath.includes(app_id)) {
+                      location.reload();
+                    } else {
+                      // 如果路径不对，使用 window.location.href 强制跳转
+                      window.location.href = `#${homePath}`;
+                    }
+                  }, 100);
+                  return;
+                } else {
+                  throw new Error(`路由跳转失败，当前路径: ${currentPath}`);
+                }
+              } catch (routerError) {
+                console.warn('路由跳转失败，使用 window.location.href:', routerError);
+                // 路由跳转失败，使用 window.location.href 强制跳转（hash 路由需要加 #）
+                this.logining = false;
+                // 使用完整的 URL，确保跳转正确
+                const hashPath = `#${homePath}`;
+                window.location.href = hashPath;
+                return;
+              }
             } catch (error) {
               console.error('跳转过程出错:', error);
               // 出错时直接使用强制跳转
-              window.location.href = '/home';
-            } finally {
-              this.logining = false;
+              const supplier = getSessionStorage('supplier');
+              const app_id = supplier?.app_id;
+              if (app_id) {
+                this.logining = false;
+                window.location.href = `#/${app_id}/home`;
+              } else {
+                this.logining = false;
+                console.error('无法获取 app_id，跳转失败');
+              }
             }
           })
           .catch((error) => {

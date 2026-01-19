@@ -12,20 +12,22 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
-	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
-	"ttpos-server-go/app/tasks"
-	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nacos-group/nacos-sdk-go/v2/common/logger"
 )
 
 // DeskHandler 桌台处理程序
@@ -36,6 +38,18 @@ type DeskHandler struct {
 	orderSrv   service.IOrderSrv   // 订单服务
 	otherSrv   service.IOtherSrv   // 其他服务
 	productSrv service.IProductSrv // 产品服务
+}
+
+// InvalidateSaleBillSettingCache 失效销售单设置缓存（辅助函数）
+// 参数：
+//   - ctx: 上下文, 用于提取 companyUuid
+func (h *DeskHandler) InvalidateSaleBillSettingCache(ctx context.Context) {
+	if !adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		return
+	}
+	if err := controller.GetSaleBillSettingController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效销售单设置缓存失败", zap.Error(err))
+	}
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -174,11 +188,12 @@ func (h *DeskHandler) SetOrderSource(c *gin.Context) {
 		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
 		return
 	}
-	if err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid); err != nil {
+	shopCart, err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid)
+	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{})
+	helper.Success(c, shopCart)
 }
 
 // SetNationality 设置桌台订单国籍
@@ -199,11 +214,12 @@ func (h *DeskHandler) SetNationality(c *gin.Context) {
 		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
 		return
 	}
-	if err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid); err != nil {
+	shopCart, err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid)
+	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{})
+	helper.Success(c, shopCart)
 }
 
 // CloseDesk 处理关闭桌台
@@ -315,6 +331,9 @@ func (h *DeskHandler) MergeDesk(c *gin.Context) {
 	//
 	info, deskMergeCheckResp, err := h.deskSrv.MergeDesk(ctx, params)
 	if err != nil {
+		if deskMergeCheckResp == nil {
+			deskMergeCheckResp = &resp.DeskMergeCheckResp{}
+		}
 		helper.ErrorWithData(c, constant.CodeFail, deskMergeCheckResp, err)
 		return
 	}
@@ -756,7 +775,20 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+
 	// 添加商品。 若没有点餐账单则新建一个
+	// if objectStorageAdapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	// 添加商品。 若没有点餐账单则新建一个（无校验版本）
+	// 	res, err := h.orderSrv.InstantOrderCartProductAddSimple(ctx, params)
+	// 	if err != nil {
+	// 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+	// 		return
+	// 	}
+	// 	// 返回结果
+	// 	helper.Success(c, res)
+	// 	return
+	// }
+
 	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
 		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
@@ -1196,6 +1228,9 @@ func (h *DeskHandler) OrderCheck(c *gin.Context) {
 		return
 	}
 	if checkRes != nil {
+		// 如果开启缓存,要失效sale_bill_setting的缓存
+		h.InvalidateSaleBillSettingCache(ctx)
+
 		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
 		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
@@ -1886,51 +1921,6 @@ func (h *DeskHandler) GetOrderMemberList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetDailySalesOutboundSummary 获取每日销售出库汇总
-// @Summary 获取每日销售出库汇总
-// @Description 获取每日销售出库汇总
-// @Tags 收银端.桌台
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Router /cashier/desk/order/daily_sales_outbound_summary [get]
-func (h *DeskHandler) GetDailySalesOutboundSummary(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	dbm := database.GetDBManager(config.Database)
-	company, err := repository.NewCompanyRepo(dbm.GetDB(companyUuid)).GetCompany(repository.CommonRepo.WhereByUuid(companyUuid))
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	tasks.NewDailySalesOutboundSummaryTask(dbm, cache.Global).ProcessCompany(&company)
-	helper.Success(c, gin.H{})
-}
-
-// GetHeadquarterMaterialList 获取总部物品列表
-// @Summary 获取总部物品列表
-// @Description 获取总部物品列表
-// @Tags 收银端.桌台
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Success 200 {object} dto.Response
-// @Router /cashier/desk/order/headquarter_material_list [get]
-func (h *DeskHandler) GetHeadquarterMaterialList(c *gin.Context) {
-	var req req.GetHeadquarterMaterialListReq
-	if err := c.ShouldBindQuery(&req); err != nil {
-		helper.HandleValidationError(c, err, req, nil)
-		return
-	}
-	ctx := helper.GetContext(c)
-	erpSrv := erp.NewIErpSrv(database.GetDBManager(config.Database))
-	res, err := erpSrv.GetHeadquarterMaterialList(ctx, req)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	helper.Success(c, res)
-}
-
 // OrderCartProductBatchCooking 获取分批送厨弹框的销售订单商品列表
 // @Summary 获取分批送厨弹框的销售订单商品列表
 // @Description 获取分批送厨弹框的销售订单商品列表
@@ -2036,13 +2026,13 @@ func (h *DeskHandler) ChangeBatchTag(c *gin.Context) {
 		return
 	}
 	// 更换分批类型
-	err := h.orderSrv.ChangeBatchTag(ctx, params)
+	res, err := h.orderSrv.ChangeBatchTag(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, res)
 }
 
 // GetBatchTagList 获取分批类型列表
@@ -2066,6 +2056,26 @@ func (h *DeskHandler) GetBatchTagList(c *gin.Context) {
 
 	// 返回结果
 	helper.Success(c, batchTagList)
+}
+
+// OrderItemRemarkList 获取单品备注列表
+// @Summary 获取单品备注列表
+// @Description 获取单品备注列表
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.OrderItemRemarkResp}
+// @Router /cashier/desk/order/item/remark/list [get]
+func (h *DeskHandler) OrderItemRemarkList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.otherSrv.GetOrderItemRemarkList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
 }
 
 // RegisterDeskHandlers 注册收银产品路由
@@ -2123,6 +2133,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                                          // 桌台订单商品备注
 		privateApi.POST("/desk/order/remark", wrapper.OrderRemark)                                                         // 整单备注
 		privateApi.GET("/desk/order/remark/list", wrapper.OrderRemarkList)                                                 // 获取整单备注列表
+		privateApi.GET("/desk/order/item/remark/list", wrapper.OrderItemRemarkList)                                        // 获取单品备注列表
 		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                                                     // 查询点餐购物车信息
 		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)                                       // 向购物车添加商品
 		privateApi.POST("/desk/order/cart/product_package/add", wrapper.OrderCartProductPackageAdd)                        // 向购物车添加套餐
@@ -2160,8 +2171,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/print/invoice", wrapper.OrderPrintInvoice)                                            // 打印发票
 		privateApi.POST("/desk/order/unlock", wrapper.OrderUnlock)                                                         // 订单解锁
 		privateApi.GET("/desk/order/member/list", wrapper.GetOrderMemberList)                                              // 使用会员列表
-		privateApi.GET("/desk/order/daily_sales_outbound_summary", wrapper.GetDailySalesOutboundSummary)                   // 获取每日销售出库汇总
-		privateApi.GET("/desk/order/headquarter_material_list", wrapper.GetHeadquarterMaterialList)                        // 获取总部物品列表
 		privateApi.GET("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCookingList)                         // 获取分批送厨弹框的销售订单商品列表
 		privateApi.POST("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCooking)                            // 分批送厨
 		privateApi.POST("/desk/order/cart/batch/change_tag", wrapper.ChangeBatchTag)                                       // 更换分批类型（前置模式）

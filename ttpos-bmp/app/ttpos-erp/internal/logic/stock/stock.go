@@ -292,6 +292,7 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 		"naming_series":    erp.DefaultMaterialRequestSeries,
 		"transaction_date": service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.TransactionDate)).Format("Y-m-d"),
 		"company":          companyName.CompanyName,
+		// "set_warehouse":    targetWarehouseName,
 	}
 
 	if len(req.Purpose) > 0 {

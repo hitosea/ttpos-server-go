@@ -21,11 +21,14 @@ type PaymentMethod struct {
 	FeePercent           float64 `gorm:"column:fee_percent;type:decimal(5,4);default:0;comment:手续费百分比，取值范围0-1;NOT NULL" json:"fee_percent"`
 	IsShowCashier        int     `gorm:"column:is_show_cashier;type:tinyint(1);default:0;comment:0-不显示 1-收银机结账显示;NOT NULL" json:"is_show_cashier"`
 	IsShowAssistant      int     `gorm:"column:is_show_assistant;type:tinyint(1);default:0;comment:0-不显示 1-点餐助手结账显示;NOT NULL" json:"is_show_assistant"`
+	IsShowKiosk          int     `gorm:"column:is_show_kiosk;type:tinyint(1);default:0;comment:0-不显示 1-自助点餐机结账显示;NOT NULL" json:"is_show_kiosk"`
 	IsShowMemberRecharge int     `gorm:"column:is_show_member_recharge;type:tinyint(1);default:0;comment:0-不显示 1-收银机会员充值显示;NOT NULL" json:"is_show_member_recharge"`
 	Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态 0-禁用 1-启用;NOT NULL" json:"status"`
 	Sort                 int     `gorm:"column:sort;type:int(11);default:0;comment:排序;NOT NULL" json:"sort"`
 	DefaultImg           string  `gorm:"column:default_img;type:varchar(255);comment:默认图片;NOT NULL" json:"default_img"`
-	ErpnextPayment       string  `gorm:"column:erpnext_payment;type:varchar(255);comment:ERPNext支付方式;NOT NULL" json:"erpnext_payment"`
+	ErpnextPayment       string  `gorm:"column:erpnext_payment;type:varchar(255);comment:ERPNext支付方式名称;NOT NULL" json:"erpnext_payment"`
+	ErpnextPaymentId     string  `gorm:"column:erpnext_payment_id;type:varchar(255);comment:ERPNext支付方式ID;NOT NULL" json:"erpnext_payment_id"`
+	HeadquarterUuid      uint64  `gorm:"column:headquarter_uuid;type:bigint(20) unsigned;default:0;comment:总部ID;NOT NULL" json:"headquarter_uuid"`
 
 	QrcodeFile *File `gorm:"foreignKey:QrcodeFileUuid;references:Uuid"` // 关联文件
 	LogoFile   *File `gorm:"foreignKey:LogoFileUuid;references:Uuid"`   // 关联文件
@@ -35,6 +38,27 @@ func (model *PaymentMethod) SetNil() {
 	model.QrcodeFile = nil
 	model.LogoFile = nil
 }
+
+// 系统默认支付方式code
+const (
+	PaymentMethodBalance = 10 // 余额
+	PaymentMethodCash    = 40 // 现金
+)
+
+// 渠道提供方
+const (
+	PaymentSourceSystem      = 0 // 系统默认
+	PaymentSourceDefault     = 1 // 自行添加
+	PaymentSourceLianlianpay = 2 // LianLianPay
+	PaymentSourceKbank       = 3 // Kbank
+)
+
+// LianLian渠道支付方式code（特殊code）
+const (
+	PaymentCodeLianlianWechat      = 90111 // LIANLIAN_WECHAT_PAY
+	PaymentCodeLianlianAli         = 90222 // LIANLIAN_ALI_PAY
+	PaymentCodeLianlianQrPromptPay = 90333 // LIANLIAN_QR_PROMPT_PAY
+)
 
 // GetPaymentName 获取支付名称
 func (model *PaymentMethod) GetPaymentName() string {
@@ -77,6 +101,11 @@ func (model *PaymentMethod) HasCommission() bool {
 	return model.FeePercent > 0
 }
 
+// 是否总部支付方式
+func (model *PaymentMethod) IsHeadquarterPayment() bool {
+	return model.HeadquarterUuid > 0
+}
+
 // IsBalance 是否是余额支付
 func (model *PaymentMethod) IsBalance() bool {
 	return model.Code == constant.PaymentMethodCodeBalance
@@ -116,6 +145,16 @@ func (model *PaymentMethod) IsDisabledCancel() bool {
 	return model.IsLianLianPay()
 }
 
+// IsDraft 判断是否草稿状态
+func (model *PaymentMethod) IsDraft() bool {
+	return model.IsHeadquarterPayment() && model.ErpnextPayment == ""
+}
+
+// IsKbankPay 判断是否Kbank支付
+func (model *PaymentMethod) IsKbankPay() bool {
+	return model.Source == constant.PaymentMethodSourceKbank
+}
+
 // GetSourceText 获取来源文本
 func (model *PaymentMethod) GetSourceText(language string) string {
 	if model.Source == 0 {
@@ -124,6 +163,8 @@ func (model *PaymentMethod) GetSourceText(language string) string {
 		return i18n.Translate(language, "自行添加")
 	} else if model.Source == 2 {
 		return i18n.Translate(language, "LianLianPay")
+	} else if model.Source == 3 {
+		return i18n.Translate(language, "Kbank")
 	}
 	return ""
 }
@@ -143,6 +184,7 @@ type PaymentOrder struct {
 	TransactionNumber    string  `gorm:"column:transaction_number;type:varchar(255);comment:交易号;NOT NULL" json:"transaction_number"`
 	Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:支付状态, 0-未支付 1-已支付 2-已退款 3-支付异常;NOT NULL" json:"status"`
 	StatusReason         string  `gorm:"column:status_reason;type:text;default:'';comment:支付状态原因;NOT NULL" json:"status_reason"`
+	PaymentInfo          string  `gorm:"column:payment_info;type:text;default:'';comment:支付信息(JSON格式,存储第三方支付返回的详细信息);NOT NULL" json:"payment_info"`
 
 	// 余额支付相关
 	BalanceAmount     float64 `gorm:"column:balance_amount;type:decimal(12,2);default:0;comment:主账户金额,用于反结账时退款;NOT NULL" json:"balance_amount"`

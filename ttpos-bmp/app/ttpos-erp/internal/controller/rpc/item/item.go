@@ -10,6 +10,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
+	"google.golang.org/protobuf/proto"
 )
 
 // Controller 物品服务控制器
@@ -232,6 +233,8 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 		OpeningStock:       itemInfo.OpeningStock,             // 期初库存
 		Attributes:         attrList,                          // 属性列表（已转换）
 		VariantOf:          itemInfo.VariantOf,                //变体模板
+		AllowNegativeStock: proto.Bool(itemInfo.AllowNegativeStock == 1),
+		SalesUom:           &itemInfo.SalesUom, // 销售单位
 	}
 
 	// 返回成功响应，包含转换后的物品详细信息

@@ -37,7 +37,8 @@ type RecoveryReq struct {
 	Mode        uint   `json:"mode"`         // 模式 0-传菜历史恢复 ; 1-制作历史恢复
 }
 
-// SaleBillUuid 按订单查看送厨商品，确认整单取消时传递销售账单Uuid
-type SaleBillUuid struct {
-	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单Uuid
+// ConfirmReturnAllReq 按订单查看送厨商品，确认整单取消时传递销售账单Uuid和外卖订单Uuid
+type ConfirmReturnAllReq struct {
+	SaleBillUuid     uint64 `json:"sale_bill_uuid"`     // 销售账单Uuid
+	TakeoutOrderUuid uint64 `json:"takeout_order_uuid"` // 外卖订单Uuid
 }

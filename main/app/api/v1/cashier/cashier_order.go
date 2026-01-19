@@ -19,8 +19,9 @@ import (
 
 // OrderHandler 收银点餐处理程序
 type OrderHandler struct {
-	orderSrv service.IOrderSrv // 订单服务
-	deskSrv  service.IDeskSrv  // 桌台服务
+	orderSrv     service.IOrderSrv     // 订单服务
+	deskSrv      service.IDeskSrv      // 桌台服务
+	saasStaffSrv service.ISaasStaffSrv // 统一账号服务
 }
 
 // GetCashierOrderList 处理获取订单列表
@@ -240,13 +241,20 @@ func (h *OrderHandler) ReverseSettleInfo(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @param data body req.CheckAuthorizationReq true "检查授权参数"
 // @Success 200 {object} dto.Response{data=resp.CheckAuthorizationResp}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/check_authorization [post]
 func (h *OrderHandler) CheckAuthorization(c *gin.Context) {
 	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.CheckAuthorizationReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
 	// 调用 Service 检查授权
-	hasPermission, err := h.orderSrv.CheckAuthorization(ctx)
+	hasPermission, err := h.orderSrv.CheckAuthorization(ctx, req.OperationType)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -264,7 +272,7 @@ func (h *OrderHandler) CheckAuthorization(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.VerifyPasswordReq true "密码验证参数"
+// @param data body req.VerifyPasswordForSensitiveOperationReq true "密码验证参数"
 // @Success 200 {object} dto.Response{data=resp.VerifyPasswordResp}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/verify_password [post]
@@ -286,6 +294,34 @@ func (h *OrderHandler) VerifyPassword(c *gin.Context) {
 	helper.Success(c, resp.VerifyPasswordResp{
 		Verified: verified,
 	})
+}
+
+// QueryStaffByContact 根据邮箱或手机号查询员工
+// @Summary 根据邮箱或手机号查询员工
+// @Description 根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示。根据操作类型（operation_type）区分优惠折扣场景和退款场景，不同场景返回对应授权列表中的员工。
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param operation_type query string true "操作类型，discount-折扣操作，refund-退款操作"
+// @Param keyword query string false "搜索关键词（邮箱或手机号，支持模糊匹配）"
+// @Success 200 {object} dto.Response{data=resp.QueryStaffByContactResp}
+// @Router /cashier/order/query_staff [get]
+func (h *OrderHandler) QueryStaffByContact(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var queryReq req.QueryStaffByContactReq
+	if err := c.ShouldBindQuery(&queryReq); err != nil {
+		helper.HandleValidationError(c, err, queryReq, nil)
+		return
+	}
+
+	res, err := h.saasStaffSrv.QueryStaffByContact(ctx, queryReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
+		return
+	}
+
+	helper.Success(c, res)
 }
 
 // ReverseSettle 处理反结账
@@ -484,8 +520,9 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 
 	// 初始化处理器
 	wrapper := OrderHandler{
-		orderSrv: orderSrv,
-		deskSrv:  service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv, mustPlanSrv),
+		orderSrv:     orderSrv,
+		deskSrv:      service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv, mustPlanSrv),
+		saasStaffSrv: service.NewSaasStaffSrv(dbm),
 	}
 
 	// 需要认证
@@ -506,5 +543,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/invoice", wrapper.OrderInvoiceInfo)                // 获取发票信息
 		privateApi.POST("/order/check_authorization", wrapper.CheckAuthorization) // 检查授权
 		privateApi.POST("/order/verify_password", wrapper.VerifyPassword)         // 密码验证
+		privateApi.GET("/order/query_staff", wrapper.QueryStaffByContact)         // 根据邮箱或手机号查询员工
 	}
 }

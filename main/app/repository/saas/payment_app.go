@@ -13,6 +13,7 @@ type paymentAppRepo struct {
 
 type IPaymentAppRepo interface {
 	GetPaymentAppCompanyUuid(uuid uint64) (*model.PaymentApp, error)
+	UpdatePaymentApp(data map[string]any, companyUuid uint64) error
 }
 
 func NewPaymentAppRepo(db *gorm.DB) IPaymentAppRepo {
@@ -30,4 +31,12 @@ func (r *paymentAppRepo) GetPaymentAppCompanyUuid(uuid uint64) (*model.PaymentAp
 		return nil, errors.WithMessage(err)
 	}
 	return &paymentApp, nil
+}
+
+func (r *paymentAppRepo) UpdatePaymentApp(data map[string]any, companyUuid uint64) error {
+	err := r.db.Model(&model.PaymentApp{}).Where("company_uuid = ?", companyUuid).Updates(data).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

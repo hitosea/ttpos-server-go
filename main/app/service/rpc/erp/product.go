@@ -183,10 +183,11 @@ func (s *erpSrv) DeleteProduct(ctx context.Context, params req.DeleteProductErpR
 
 	for _, obj := range params.Items {
 		result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.ItemInfo{
-			ItemCode: obj.ItemCode,
-			Disabled: true,
-			ItemName: obj.ItemName,
-			StockUom: obj.StockUom,
+			ItemCode:   obj.ItemCode,
+			Disabled:   true,
+			ItemName:   obj.ItemName,
+			StockUom:   obj.StockUom,
+			NotForSale: true,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "删除商品到erp失败")
@@ -295,6 +296,7 @@ type UpdateProductReq struct {
 	InternalCode string                `json:"internal_code"`
 	Disabled     bool                  `json:"disabled"`
 	Attributes   []UpdateProductFlavor `json:"attributes"`
+	StockUom     string                `json:"stock_uom"` // 库存单位，可选
 }
 
 type UpdateProductFlavor struct {
@@ -327,6 +329,7 @@ func (s *erpSrv) UpdateProduct(ctx context.Context, params UpdateProductReq) err
 		InternalCode: params.InternalCode,
 		Disabled:     params.Disabled,
 		Attributes:   attributes,
+		StockUom:     params.StockUom,
 	})
 	if err != nil {
 		return err

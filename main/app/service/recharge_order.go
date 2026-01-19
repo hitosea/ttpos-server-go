@@ -14,7 +14,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/modules/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
@@ -62,14 +62,15 @@ type rechargeOrderSrv struct {
 	cashBoxSrv       ICashBoxSrv
 	memberSrv        IMemberSrv
 	smsSrv           ISmsSrv
+	staffShiftSrv    IStaffShiftSrv
 	lock             lock.Lock
 }
 
-func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv) IRechargeOrderSrv {
-	return NewRechargeOrderSrvImpl(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv, smsSrv)
+func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv, staffShiftSrv IStaffShiftSrv) IRechargeOrderSrv {
+	return NewRechargeOrderSrvImpl(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv, smsSrv, staffShiftSrv)
 }
 
-func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv) IRechargeOrderSrv {
+func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv, staffShiftSrv IStaffShiftSrv) IRechargeOrderSrv {
 	return &rechargeOrderSrv{
 		dbm:              dbm,
 		bus:              event.NewSystemBus(),
@@ -79,6 +80,7 @@ func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, payment
 		cashBoxSrv:       cashBoxSrv,
 		memberSrv:        memberSrv,
 		smsSrv:           smsSrv,
+		staffShiftSrv:    staffShiftSrv,
 		lock:             lock.NewSystemLock(),
 	}
 }
@@ -103,10 +105,7 @@ func (s *rechargeOrderSrv) GetPendingRechargeOrder(companyUuid uint64) resp.Rech
 
 		respPaymentOrder.PaymentMethodCode = paymentOrder.PaymentMethod.Code
 		respPaymentOrder.PaymentMethodName = paymentOrder.PaymentMethod.PaymentName
-		respPaymentOrder.DisabledCancel = slices.Contains([]int{constant.PaymentMethodCodeLianLianWechatPay,
-			constant.PaymentMethodCodeLianLianAliPay,
-			constant.PaymentMethodCodeLianLianQRPromptPay}, paymentOrder.PaymentMethod.Code)
-
+		respPaymentOrder.DisabledCancel = paymentOrder.PaymentMethod.IsDisabledCancel()
 		respPaymentOrders = append(respPaymentOrders, respPaymentOrder)
 	}
 
@@ -287,6 +286,19 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 	}
 	if paymentMethod.Code == constant.PaymentMethodCodeBalance {
 		return orderResp, errors.New("不能使用余额支付充值")
+	}
+
+	if order.DutyNo != "" {
+		isValid, err := s.staffShiftSrv.ValidatePaymentMethod(ctx, order.DutyNo, paymentMethod.Uuid)
+
+		if err != nil {
+			return orderResp, errors.WithMessage(err)
+		}
+		if !isValid {
+			return orderResp, errors.New("请交班后再重新选择该支付方式")
+		}
+	} else {
+		return orderResp, errors.New("请交班后再重新选择该支付方式")
 	}
 
 	// 默认支付订单状态
@@ -701,10 +713,20 @@ func (s *rechargeOrderSrv) SavePosInvoice(ctx context.Context, memberRechargeOrd
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 	paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
 	methodMap := make(map[int]string)
+	paymentIdMap := make(map[int]string)
 	for _, paymentMethod := range paymentMethods {
 		if paymentMethod.ErpnextPayment != "" {
 			methodMap[paymentMethod.Code] = paymentMethod.ErpnextPayment
 		}
+		if paymentMethod.ErpnextPaymentId != "" {
+			paymentIdMap[paymentMethod.Code] = paymentMethod.ErpnextPaymentId
+		}
+	}
+	getPaymentId := func(paymentMethodCode int) string {
+		if paymentId, ok := paymentIdMap[paymentMethodCode]; ok {
+			return paymentId
+		}
+		return ""
 	}
 	for _, payment := range memberRechargeOrder.PaymentOrders {
 		if payment.IsDelete() {
@@ -717,8 +739,14 @@ func (s *rechargeOrderSrv) SavePosInvoice(ctx context.Context, memberRechargeOrd
 			// modeOfPayment =  "Cash" // 其他支付方式，默认现金支付
 			return nil, errors.WithMessage(errors.New("不支持的支付方式"))
 		}
+		var paymentID *string
+		paymentId := getPaymentId(payment.PaymentMethod.Code)
+		if paymentId != "" {
+			paymentID = &paymentId
+		}
 		payments = append(payments, &selling.PosInvoicePayment{
 			ModeOfPayment: modeOfPayment,
+			PaymentId:     paymentID,
 			Amount:        payment.Amount,
 		})
 	}
@@ -961,6 +989,19 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 		countOptions = append(countOptions, dateTypeOption)
 	}
 
+	// 处理日期时间字符串参数
+	if listReq.QueryStartDate != "" && listReq.QueryEndDate != "" {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		startTime, err := timeUtil.FormatDateTimeToUnix(listReq.QueryStartDate)
+		if err == nil {
+			listReq.QueryStartTime = startTime
+		}
+		endTime, err := timeUtil.FormatDateTimeToUnix(listReq.QueryEndDate)
+		if err == nil {
+			listReq.QueryEndTime = endTime
+		}
+	}
+
 	// 日期范围
 	if listReq.QueryStartTime != 0 || listReq.QueryEndTime != 0 {
 		var timeRanges []repository.TimeRange
@@ -1176,6 +1217,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 		Member: resp.RechargeOrderMember{
 			Uuid:     uint64(order.Member.ID),
 			Nickname: order.Member.Nickname,
+			Phone:    order.Member.Phone,
 		},
 		Status: order.Status,
 		Cashier: resp.RechargeOrderCashier{
@@ -1224,6 +1266,12 @@ func (s *rechargeOrderSrv) GetRechargeOrderPaymentQrcode(ctx context.Context, re
 		return nil, errors.New("支付方式不可用")
 	}
 
+	// 验证支付配置
+	paymentRepo := NewPaymentRepo(ctx, s.dbm)
+	if err := paymentRepo.ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		return nil, errors.New("请先到支付管理中完善后使用")
+	}
+
 	// 判断支付方式是否已支付
 	orderRepo := repository.NewPaymentOrderRepo(db)
 	paymentOrder, err := orderRepo.GetPaymentOrderInfo(
@@ -1260,7 +1308,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderPaymentQrcode(ctx context.Context, re
 	}
 
 	// 创建连连支付订单
-	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
+	payment, err := paymentRepo.CreatePayment(CreatePaymentReq{
 		RelatedType:       constant.PaymentOrderRelatedTypeRechargeOrder,
 		RelatedUuid:       order.Uuid,
 		PaymentMethodUuid: paymentMethod.Uuid,
@@ -1419,19 +1467,19 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		}
 
 		returnOrderAmounts := make([]model.ReturnOrderAmount, 0, len(order.PaymentOrders))
-		paymentOrderRepo := repository.NewPaymentOrderRepo(tx)
+		// paymentOrderRepo := repository.NewPaymentOrderRepo(tx)
 
 		// 退款现金金额
 		var refundCashAmount float64
 		var currencyUnit string
 		for _, paymentOrder := range order.PaymentOrders {
 			// 标记删除
-			if err := paymentOrderRepo.Update(paymentOrder.Uuid, map[string]any{
-				"status":      constant.PaymentOrderStatusRefund,
-				"delete_time": time.Now().Unix(),
-			}); err != nil {
-				return errors.WithMessage(errors.ErrInternal, err.Error())
-			}
+			// if err := paymentOrderRepo.Update(paymentOrder.Uuid, map[string]any{
+			// 	"status":      constant.PaymentOrderStatusRefund,
+			// 	"delete_time": time.Now().Unix(),
+			// }); err != nil {
+			// 	return errors.WithMessage(errors.ErrInternal, err.Error())
+			// }
 
 			amount := paymentOrder.Amount
 			if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {

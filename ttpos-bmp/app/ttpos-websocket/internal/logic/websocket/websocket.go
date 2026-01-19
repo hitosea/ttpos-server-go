@@ -112,6 +112,8 @@ var (
 	messageKeyMutexes = sync.Map{} // map[string]*sync.Mutex
 	// 保护messageKeyMutexes的锁
 	mutexMapLock sync.Mutex
+	// 取消等待的 channel 映射（用于提前取消定时器）
+	cancelChannels = sync.Map{} // map[string]chan struct{}
 )
 
 // PushMessage 推送消息到客户端
@@ -210,6 +212,7 @@ func (s *sWebSocket) processPushMessage(ctx context.Context, in *dto.PushMessage
 
 // handleDebouncedPush 处理防抖推送
 // 实现防抖机制：在900ms内如果有相同MessageKey的新消息，则取消旧消息的推送
+// 使用 Timer + Channel 替代 Sleep，支持提前取消等待
 func (s *sWebSocket) handleDebouncedPush(ctx context.Context, in *dto.PushMessageInput) {
 	// 创建独立的context用于防抖逻辑，避免因原始context取消导致Redis操作失败
 	// 保留原始context的trace信息用于日志关联
@@ -221,6 +224,16 @@ func (s *sWebSocket) handleDebouncedPush(ctx context.Context, in *dto.PushMessag
 	// 获取MessageKey专用锁
 	keyMutex := getMessageKeyMutex(in.MessageKey)
 	keyMutex.Lock()
+
+	// 如果存在旧的等待 channel，关闭它以取消旧的等待
+	if oldChan, exists := cancelChannels.Load(in.MessageKey); exists {
+		close(oldChan.(chan struct{}))
+		g.Log().Debug(debounceCtx, "取消旧的防抖等待", "message_key", in.MessageKey)
+	}
+
+	// 创建新的取消 channel
+	cancelChan := make(chan struct{})
+	cancelChannels.Store(in.MessageKey, cancelChan)
 
 	// 设置当前推送的UUID到Redis，过期时间2秒
 	_, err := g.Redis().Set(debounceCtx, in.MessageKey, pushUUID)
@@ -234,16 +247,16 @@ func (s *sWebSocket) handleDebouncedPush(ctx context.Context, in *dto.PushMessag
 		g.Log().Error(debounceCtx, "设置Redis过期时间失败", err, "message_key", in.MessageKey)
 	}
 
-	// 获取计数器
+	// 使用 Redis INCR 原子操作增加计数器（避免竞态条件）
 	countKey := fmt.Sprintf("%s_count", in.MessageKey)
-	count, _ := g.Redis().Get(debounceCtx, countKey)
-	countInt := count.Int64()
-
-	// 增加计数器
-	_, err = g.Redis().Set(debounceCtx, countKey, countInt+1)
+	_, err = g.Redis().Incr(debounceCtx, countKey)
 	if err != nil {
-		g.Log().Error(debounceCtx, "设置计数器失败", err, "count_key", countKey)
+		g.Log().Error(debounceCtx, "增加计数器失败", err, "count_key", countKey)
+		keyMutex.Unlock()
+		return
 	}
+
+	// 设置计数器过期时间
 	_, err = g.Redis().Expire(debounceCtx, countKey, 2)
 	if err != nil {
 		g.Log().Error(debounceCtx, "设置计数器过期时间失败", err, "count_key", countKey)
@@ -251,23 +264,43 @@ func (s *sWebSocket) handleDebouncedPush(ctx context.Context, in *dto.PushMessag
 
 	keyMutex.Unlock()
 
-	// 等待900毫秒，观察是否有新的推送请求
-	time.Sleep(900 * time.Millisecond)
+	// 使用 Timer 替代 Sleep，支持提前取消
+	timer := time.NewTimer(900 * time.Millisecond)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		// 定时器到期，继续执行推送逻辑
+		g.Log().Debug(debounceCtx, "防抖等待完成", "message_key", in.MessageKey)
+	case <-cancelChan:
+		// 被新的请求取消
+		g.Log().Info(debounceCtx, "防抖等待被取消", "message_key", in.MessageKey, "reason", "有新的推送请求")
+		return
+	}
 
 	// 检查是否应该推送
 	shouldPush := true
 
+	// 重新获取锁并检查状态
+	keyMutex.Lock()
+	defer keyMutex.Unlock()
+
+	// 重新读取最新的计数值（避免使用过时数据）
+	currentCount, _ := g.Redis().Get(debounceCtx, countKey)
+	currentCountInt := currentCount.Int64()
+
 	// 如果计数小于等于10次，检查UUID是否被更新
-	if countInt <= 10 {
-		keyMutex.Lock()
+	if currentCountInt <= 10 {
 		currentUUID, _ := g.Redis().Get(debounceCtx, in.MessageKey)
 		if currentUUID.String() != pushUUID {
 			// UUID已被更新，说明有新的推送请求，取消本次推送
 			shouldPush = false
-			g.Log().Info(debounceCtx, "防抖取消推送", "message_key", in.MessageKey, "reason", "有新的推送请求")
+			g.Log().Info(debounceCtx, "防抖取消推送", "message_key", in.MessageKey, "reason", "UUID已变更", "count", currentCountInt)
 		}
-		keyMutex.Unlock()
 	}
+
+	// 清理 cancel channel
+	cancelChannels.Delete(in.MessageKey)
 
 	// 如果不应该推送，直接返回
 	if !shouldPush {
@@ -275,19 +308,24 @@ func (s *sWebSocket) handleDebouncedPush(ctx context.Context, in *dto.PushMessag
 	}
 
 	// 清理计数器
-	keyMutex.Lock()
 	_, err = g.Redis().Del(debounceCtx, countKey)
 	if err != nil {
 		g.Log().Warning(debounceCtx, "删除计数器失败", err, "count_key", countKey)
 	}
+
+	// 执行实际推送前释放锁（避免长时间持有锁）
 	keyMutex.Unlock()
 
 	// 执行实际推送（使用独立的context）
-	g.Log().Info(debounceCtx, "防抖推送消息", "message_key", in.MessageKey)
+	g.Log().Info(debounceCtx, "防抖推送消息", "message_key", in.MessageKey, "final_count", currentCountInt)
 	_, err = s.directPushMessage(debounceCtx, in)
 	if err != nil {
 		g.Log().Error(ctx, "防抖推送失败", err, "message_key", in.MessageKey)
 	}
+
+	// 推送后重新获取锁清理 UUID
+	keyMutex.Lock()
+	_, _ = g.Redis().Del(debounceCtx, in.MessageKey)
 }
 
 // GetConnectionStats 获取连接统计信息
@@ -871,7 +909,7 @@ func (s *sWebSocket) handleHeartbeat(ctx context.Context, newConn *ConnectionInf
 		s.updateDeviceHeartbeat(ctx, connKey)
 	}
 
-	g.Log().Debug(ctx, "收到心跳消息", "device_id", newConn.DeviceId)
+	g.Log().Debug(ctx, "收到心跳消息", "company_uuid", newConn.CompanyUuid, "device_id", newConn.DeviceId, "source_client", newConn.SourceClient)
 }
 
 // handleReply 处理已读回复

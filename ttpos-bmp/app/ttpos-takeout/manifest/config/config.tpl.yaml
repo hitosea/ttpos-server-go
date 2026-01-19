@@ -55,12 +55,31 @@ app:
   serviceUrl: $TAKEOUT_SERVICE_URL
   # 换成 jwt的密钥
   callbackSecret:  $JWT_SECRET
+  # TTPOS 主模块地址，用于回退调用菜单导出接口
+  ttposEndpoint: $TTPOS_MAIN_ENDPOINT
+  # TTPOS HTTP Client 配置
+  ttpos-client:
+    dump: false  # 是否打印请求/响应详情
   provider:
     skootar:
       endpoint: $SKOOTAR_ENDPOINT
       username: $SKOOTAR_USERNAME
       apiKey: $SKOOTAR_API_KEY
       channel: $SKOOTAR_CHANNEL
+    grab:
+      platform:
+        clientId: "$GRAB_PLATFORM_CLIENT_ID"
+        clientSecret: "$GRAB_PLATFORM_CLIENT_SECRET"
+        secretKey: "$GRAB_PLATFORM_SECRET_KEY"  # Webhook 签名密钥
+        environment: "$GRAB_ENV"  # production 或 staging
+        timeout: "30s"
+      partner:
+        $GRAB_PARTNER_DEFAULT_CLIENT_ID:
+          clientId: "$GRAB_PARTNER_DEFAULT_CLIENT_ID"
+          clientSecret: "$GRAB_PARTNER_DEFAULT_CLIENT_SECRET"
+          scope: "food.partner_api"     # 未配置时逻辑默认 food.partner_api
+          environment: "$GRAB_ENV"        # production 或 staging
+          timeout: "60s"
 
 
 queue:
@@ -70,7 +89,7 @@ queue:
   poolSize: 20                                          # 消息处理线程池大小，默认20
   rocketmq:
     endpoint: "$ROCKETMQ_ENDPOINT"                   #代理接入点 新版v5客户端支持
-    nameSrvAdders: [ "$ROCKETMQ_NAME_SRV_ADDR" ]                  # nameSrvAdder+端口，支持多个
+    nameSrvAdders: [ $ROCKETMQ_NAME_SRV_ADDR ]        # nameSrvAdder+端口，支持多个（集群模式使用逗号分隔）
     accessKey: "$ROCKETMQ_ACCESS_KEY"                                      # 选填。如果开启了acl控制就必填
     secretKey: "$ROCKETMQ_SECRET_KEY"                                      # 选填。如果开启了acl控制就必填
     brokerAddr: "$ROCKETMQ_BROKER_ADDR"                      # brokerAddr+端口，选填。用于消费者订阅主题前会检查主题是否存在，不存在会自动创建。你也可以在rocketmq控制台手动创建主题
@@ -86,13 +105,14 @@ cache:
 redis:
   default:
     address: "$REDIS_ADDRESSES"
-    password: "$REDIS_PASSWORD"
+    pass: "$REDIS_PASSWORD"
     db: "$REDIS_DB"
     cluster: true
 
 # 调用链监控配置
 otlp:
-  enabled: false
-  serviceName: "ttpos-erp"
-  endpoint: "10.0.11.43:4318"
-  path: "/v1/traces"
+  enabled: ${OTLP_ENABLED}
+  serviceName: "ttpos-takeout"
+  endpoint: "${OTLP_ENDPOINT}"
+  path: "${OTLP_PATH}"
+  token: "${OTEL_TOKEN}"

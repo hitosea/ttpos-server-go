@@ -27,6 +27,7 @@ type Desk struct {
 	DefaultPeopleNum       uint    `json:"default_people_num"`         // 默认人数
 	IsOpenDefaultPeopleNum bool    `json:"is_open_default_people_num"` // 是否开启默认人数
 	BatchTagColor          string  `json:"batch_tag_color"`            // 桌台分批类型的颜色
+	BatchCookingMode       string  `json:"batch_cooking_mode"`         // 分批送厨模式, "post"：后置模式 "pre"：前置模式
 }
 
 type DeskNo struct {

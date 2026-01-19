@@ -22,6 +22,7 @@ type IReturnOrderRepo interface {
 
 	WhereUuid(uuid uint64) DBOption                                   // 通过uuid查询
 	WhereMerchantRefundOrderNo(merchantRefundOrderNo string) DBOption // 通过商户退货单号查询
+	WhereNotReverseSettlement() DBOption                              // 通过不是反结账查询
 
 	WithReturnOrder() DBOption // 预加载退货单
 	WithPaymentMethod() DBOption
@@ -65,7 +66,7 @@ func (r *returnOrderRepo) CreateReturnOrder(order model.ReturnOrder) (model.Retu
 }
 
 func (r *returnOrderRepo) CreateReturnOrderAmount(amounts []model.ReturnOrderAmount) error {
-	for i, _ := range amounts {
+	for i := range amounts {
 		amounts[i].SetNil()
 	}
 	return r.db.Model(&model.ReturnOrderAmount{}).Create(&amounts).Error
@@ -155,5 +156,11 @@ func (r *returnOrderRepo) WithPaymentMethod() DBOption {
 func (r *returnOrderRepo) WhereUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid = ?", uuid)
+	}
+}
+
+func (r *returnOrderRepo) WhereNotReverseSettlement() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_reverse_settlement = 0")
 	}
 }

@@ -16,6 +16,8 @@ import (
 type ProductFlavor struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
+	Source                string `gorm:"column:source;type:varchar(50);default:'';comment:来源标记(grab/manual等);NOT NULL" json:"source"`
+	SourceId              string `gorm:"column:source_id;type:varchar(191);default:'';comment:来源平台的规格ID;NOT NULL;index:idx_source_id" json:"source_id"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	HeadquarterUuid       uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部UUID'"`
@@ -67,6 +69,8 @@ func (model *ProductSauce) HasProductBomCard() bool {
 type ProductUnit struct {
 	BaseModel
 	Name                  string            `gorm:"default:'';column:name;comment:'单位名称'"`
+	Source                string            `gorm:"column:source;type:varchar(50);default:'';comment:来源标记(grab/manual等);NOT NULL" json:"source"`
+	SourceId              string            `gorm:"column:source_id;type:varchar(191);default:'';comment:来源平台的单位ID;NOT NULL;index:idx_source_id" json:"source_id"`
 	MultiLanguageNameUuid uint64            `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                  int               `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ErpnextUom            string            `gorm:"default:'';column:erpnext_uom;comment:'ERPNext UOM'"`
@@ -90,6 +94,8 @@ type PrinterTag struct {
 type ProductAttributeGroup struct {
 	BaseModel
 	Name                      string             `gorm:"default:'';column:name;comment:'名称'"`
+	Source                    string             `gorm:"column:source;type:varchar(50);default:'';comment:来源标记(grab/manual等);NOT NULL" json:"source"`
+	SourceId                  string             `gorm:"column:source_id;type:varchar(191);default:'';comment:来源平台的属性组ID;NOT NULL;index:idx_source_id" json:"source_id"`
 	MultiLanguageNameUuid     uint64             `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                      int                `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ErpnextAttributeGroupName string             `gorm:"default:'';column:erpnext_attribute_group_name;comment:'ERPNext Attribute Group Name'"`
@@ -98,15 +104,22 @@ type ProductAttributeGroup struct {
 	ProductAttributes         []ProductAttribute `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 商品属性
 }
 
+func (model *ProductAttributeGroup) IsEditable() bool {
+	return model.HeadquarterUuid == 0
+}
+
 // ProductAttribute 商品属性表,定义商品的属性信息 ttpos_product_attribute
 type ProductAttribute struct {
 	BaseModel
-	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
-	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
-	AttributeGroupUuid    uint64 `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
-	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
-	ErpnextAttributeValue string `gorm:"default:'';column:erpnext_attribute_value;comment:'ERPNext Attribute Value'"`
-	HeadquarterUuid       uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
+	Name                  string  `gorm:"default:'';column:name;comment:'名称'"`
+	Source                string  `gorm:"column:source;type:varchar(50);default:'';comment:来源标记(grab/manual等);NOT NULL" json:"source"`
+	SourceId              string  `gorm:"column:source_id;type:varchar(191);default:'';comment:来源平台的属性ID;NOT NULL;index:idx_attr_source_id" json:"source_id"`
+	MultiLanguageNameUuid uint64  `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	AttributeGroupUuid    uint64  `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
+	Sort                  int     `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
+	Price                 float64 `gorm:"type:decimal(10,2);default:0.00;column:price;comment:'属性价格（外卖平台属性加价）';NOT NULL" json:"price"`
+	ErpnextAttributeValue string  `gorm:"default:'';column:erpnext_attribute_value;comment:'ERPNext Attribute Value'"`
+	HeadquarterUuid       uint64  `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 	// 关联ttpos_product_package_attribute，ttpos_product_package_attribute的attribute_uuid等于当前商品属性的uuid
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品包属性
 
@@ -117,7 +130,8 @@ type ProductAttribute struct {
 // ProductPackageAttributeGroup 产品包属性组表,定义产品包的属性分组信息 ttpos_product_package_attribute_group
 type ProductPackageAttributeGroup struct {
 	BaseModel
-	IsMust                    uint   `gorm:"default:0;column:is_must;comment:'是否必选, 0-否 1-是'"`
+	IsMust                    uint   `gorm:"default:0;column:is_must;comment:'是否必选, 0-否 1-是（废弃，使用min_selection替代）'"`
+	MinSelection              uint   `gorm:"default:0;column:min_selection;comment:'最小选择数量'"`
 	MaxSelection              uint   `gorm:"default:0;column:max_selection;comment:'最大选择数量'"`
 	ProductPackageUuid        uint64 `gorm:"default:0;column:product_package_uuid;comment:'产品包UUID'"`
 	ProductAttributeGroupUuid uint64 `gorm:"default:0;column:product_attribute_group_uuid;comment:'商品属性组UUID'"`
@@ -137,12 +151,22 @@ func (model *ProductPackageAttributeGroup) IsMustBool() bool {
 	return model.IsMust == constant.ProductAttributeGroupRequiredOn
 }
 
+func (model *ProductPackageAttributeGroup) GetSelectionRange() (int, int) {
+	min := int(model.MinSelection)
+	max := int(model.MaxSelection)
+	if max == 0 {
+		max = min // 最大可选数量为0，则最大可选数量为最小可选数量
+	}
+	return min, max
+}
+
 // ProductPackageAttribute 产品包属性表,定义产品包的属性信息 ttpos_product_package_attribute
 type ProductPackageAttribute struct {
 	BaseModel
-	ProductPackageAttributeGroupUuid uint64 `gorm:"default:0;column:product_package_attribute_group_uuid;comment:'产品包属性组UUID'"`
-	AttributeUuid                    uint64 `gorm:"default:0;column:attribute_uuid;comment:'产品属性UUID'"`
-	IsDefaultSelected                uint   `gorm:"default:0;column:is_default_selected;comment:'是否默认选中, 0-否 1-是'"`
+	ProductPackageAttributeGroupUuid uint64  `gorm:"default:0;column:product_package_attribute_group_uuid;comment:'产品包属性组UUID'"`
+	AttributeUuid                    uint64  `gorm:"default:0;column:attribute_uuid;comment:'产品属性UUID'"`
+	IsDefaultSelected                uint    `gorm:"default:0;column:is_default_selected;comment:'是否默认选中, 0-否 1-是'"`
+	Price                            float64 `gorm:"type:decimal(10,2);default:0.00;column:price;comment:'属性价格（商品包级别的属性加价）';NOT NULL" json:"price"`
 
 	// 关联ttpos_product_package_attribute_group
 	ProductPackageAttributeGroup ProductPackageAttributeGroup `gorm:"foreignKey:product_package_attribute_group_uuid;references:uuid" json:"-"` // 产品包属性组
@@ -170,6 +194,7 @@ type ProductPackage struct {
 	MultiLanguageNameUuid         uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	ImageName                     string `gorm:"default:'';column:image_name;comment:'图片名称'"`
 	ImageFileUuid                 uint64 `gorm:"default:0;column:image_file_uuid;comment:'图片UUID'"`
+	ImageUrl                      string `gorm:"default:'';column:image_url;comment:'外部图片URL地址（当image_file_uuid为空时使用）'"`
 	DeductStockType               uint   `gorm:"default:0;column:deduct_stock_type;comment:'库存计算方法, 0-下单减库存 1-付款减库存'"`
 	NumType                       uint   `gorm:"default:0;column:num_type;comment:'数量计算方法, 0-整数 1-小数'"`
 	UnitUuid                      uint64 `gorm:"default:0;column:unit_uuid;comment:'单位UUID'"`
@@ -186,6 +211,7 @@ type ProductPackage struct {
 	IsShowAssistant               uint   `gorm:"default:0;column:is_show_assistant;comment:'是否在助手设备显示, 0-否 1-是'"`
 	IsShowH5                      uint   `gorm:"default:0;column:is_show_h5;comment:'是否在H5设备显示, 0-否 1-是'"`
 	IsShowDelivery                uint   `gorm:"default:0;column:is_show_delivery;comment:'是否在外送显示, 0-否 1-是'"`
+	IsShowKiosk                   uint   `gorm:"default:0;column:is_show_kiosk;comment:'是否在自助点餐机显示, 0-否 1-是'"`
 	Sort                          uint   `gorm:"default:0;column:sort;comment:'排序'"`
 	LimitNum                      uint   `gorm:"default:0;column:limit_num;comment:'限购数量'"`
 	Describe                      string `gorm:"default:'';column:describe;comment:'卖点描述'"`
@@ -197,7 +223,8 @@ type ProductPackage struct {
 	Price float64 `gorm:"default:0;column:price;comment:'套餐价格'"`
 
 	ProductType         uint  `gorm:"default:0;column:product_type;comment:'商品类型, 0-商品 1-套餐'"`
-	SauceRequired       uint8 `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
+	SauceRequired       uint8 `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是（废弃，使用sauce_min_selection替代）'"`
+	SauceMinSelection   uint  `gorm:"default:0;column:sauce_min_selection;comment:'小料最小选择数量'"`
 	SauceMaxSelection   uint  `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
 	OpenDiscount        uint  `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
 	OpenOverallDiscount *uint `gorm:"default:1;column:open_overall_discount;comment:'是否开启整单折扣, 0-否 1-是'"`
@@ -234,6 +261,16 @@ func (model *ProductPackage) SetNil() {
 	model.TakeoutTax = Tax{}
 	model.ProductCategory = ProductCategory{}
 	model.ImageFile = File{}
+}
+
+// 获取小料可选数量的范围
+func (model *ProductPackage) GetSauceSelectionRange() (int, int) {
+	min := int(model.SauceMinSelection)
+	max := int(model.SauceMaxSelection)
+	if max == 0 {
+		max = min // 最大可选数量为0，则最大可选数量为最小可选数量
+	}
+	return min, max
 }
 
 // 是否是分批商品
@@ -275,6 +312,10 @@ func (model *ProductPackage) GetIsShowDelivery() bool {
 	return model.IsShowDelivery == 1
 }
 
+func (model *ProductPackage) GetIsShowKiosk() bool {
+	return model.IsShowKiosk == 1
+}
+
 func (model *ProductPackage) GetOpenDiscount() bool {
 	return model.OpenDiscount == 1
 }
@@ -289,11 +330,11 @@ func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 		// 商品规格
 		if bom.IsFlavor() && !bom.IsDelete() {
 			flavorList = append(flavorList, product_resp.ProductFlavor{
-				Uuid:         bom.ProductFlavor.Uuid,
-				BomUuid:      bom.Uuid,
-				LocaleName:   bom.ProductFlavor.MultiLanguageName.GetNames(),
-				Price:        bom.Price,
-				StockNum:     bom.GetStockNum(),
+				Uuid:       bom.ProductFlavor.Uuid,
+				BomUuid:    bom.Uuid,
+				LocaleName: bom.ProductFlavor.MultiLanguageName.GetNames(),
+				Price:      bom.Price,
+				// StockNum:     bom.GetStockNum(),
 				Barcode:      bom.BarcodeValue,
 				InternalCode: bom.InternalCode,
 			})
@@ -302,11 +343,11 @@ func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 		if bom.IsPackageFlavor() && !bom.IsDelete() {
 			name := language.JsonToLocaleResponse(bom.Name)
 			flavorList = append(flavorList, product_resp.ProductFlavor{
-				Uuid:         0,
-				BomUuid:      bom.Uuid,
-				LocaleName:   *name,
-				Price:        bom.Price,
-				StockNum:     bom.GetStockNum(),
+				Uuid:       0,
+				BomUuid:    bom.Uuid,
+				LocaleName: *name,
+				Price:      bom.Price,
+				// StockNum:     bom.GetStockNum(),
 				Barcode:      bom.BarcodeValue,
 				InternalCode: bom.InternalCode,
 			})
@@ -320,11 +361,11 @@ func (model *ProductPackage) GetRespSaucesList() []product_resp.ProductSauce {
 	for _, bom := range model.ProductBoms {
 		if bom.IsSauce() && !bom.IsDelete() {
 			sauceList = append(sauceList, product_resp.ProductSauce{
-				Uuid:              bom.ProductSauce.Uuid,
-				BomUuid:           bom.Uuid,
-				LocaleName:        bom.ProductSauce.MultiLanguageName.GetNames(),
-				Price:             bom.Price,
-				StockNum:          bom.GetStockNum(),
+				Uuid:       bom.ProductSauce.Uuid,
+				BomUuid:    bom.Uuid,
+				LocaleName: bom.ProductSauce.MultiLanguageName.GetNames(),
+				Price:      bom.Price,
+				// StockNum:          bom.GetStockNum(nil),
 				IsDefaultSelected: bom.IsDefaultSelect == 1,
 			})
 		}
@@ -353,6 +394,7 @@ func (model *ProductPackage) GetRespAttributeGroupList() []product_resp.ProductA
 			Uuid:       attributeGroup.ProductAttributeGroup.Uuid,
 			LocaleName: attributeGroup.ProductAttributeGroup.MultiLanguageName.GetNames(),
 			IsMust:     attributeGroup.IsMust == 1,
+			MinSelect:  attributeGroup.MinSelection,
 			MaxSelect:  attributeGroup.MaxSelection,
 			Attributes: product_resp.ProductAttributeValueList{
 				List: attributes,
@@ -388,15 +430,17 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 				FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
 				Num:              product.Num,
 				Price:            product.ProductBom.Price,
+				AddPrice:         product.AddPrice,
 				IsRequired:       isRequired,
 				IsDefault:        isDefault,
 			})
 		}
 		packageSubProductGroupList = append(packageSubProductGroupList, product_resp.ProductPackageSubProductGroup{
-			Uuid:          packageSubProductGroup.Uuid,
-			LocaleName:    packageSubProductGroup.MultiLanguageName.GetNames(),
-			GroupType:     packageSubProductGroup.GroupType,
-			OptionalCount: packageSubProductGroup.OptionalCount,
+			Uuid:             packageSubProductGroup.Uuid,
+			LocaleName:       packageSubProductGroup.MultiLanguageName.GetNames(),
+			GroupType:        packageSubProductGroup.GroupType,
+			OptionalMinCount: packageSubProductGroup.OptionalMinCount,
+			OptionalCount:    packageSubProductGroup.OptionalCount,
 			Products: product_resp.ProductPackageSubProductList{
 				List: products,
 			},
@@ -440,29 +484,6 @@ func (model *ProductPackage) TaxRate(dineType uint) float64 {
 		return model.DineTax.TaxRate
 	}
 	return model.TakeoutTax.TaxRate
-}
-
-// 判断商品是否已经无法加购：下架、售罄、删除
-func (model *ProductPackage) IsSaleout() bool {
-	return model.IsDown() || model.GetStockNum() <= 0 || model.IsDelete()
-}
-
-func (model *ProductPackage) GetStockNum() int {
-	stockNum := 0
-	for index, bom := range model.ProductBoms {
-		if bom.IsSauce() {
-			continue
-		}
-		if index == 0 {
-			stockNum = int(bom.GetStockNum())
-			continue
-		}
-		// 取库存最大的一个
-		if bom.GetStockNum() > float64(stockNum) {
-			stockNum = int(bom.GetStockNum())
-		}
-	}
-	return stockNum
 }
 
 // IsUp 判断商品是否是上架状态。排除下架、删除状态
@@ -538,7 +559,7 @@ type ProductBom struct {
 	Name            string  `gorm:"column:name;type:text;comment:商品名称或小料名称(不用于业务显示)" json:"name"`
 	ErpCode         string  `gorm:"column:erp_code;type:varchar(255);default:'';comment:商品编码;NOT NULL" json:"erp_code"`
 	StockNum        float64 `gorm:"column:stock_num;type:decimal(12,4);default:0.0000;comment:库存数量;NOT NULL" json:"stock_num"`
-	IsOpenStock     int     `gorm:"column:is_open_stock;type:tinyint(1);default:1;comment:是否开启库存, 0-否 1-是;NOT NULL" json:"is_open_stock"`
+	IsOpenStock     int     `gorm:"column:is_open_stock;type:tinyint(1);default:0;comment:是否开启库存, 0-否 1-是;NOT NULL" json:"is_open_stock"`
 	BarcodeValue    string  `gorm:"column:barcode_value;type:varchar(255);comment:条形码值;NOT NULL" json:"barcode_value"`
 	InternalCode    string  `gorm:"column:internal_code;type:varchar(255);default:'';comment:内部编码;NOT NULL" json:"internal_code"`
 	IsDefaultSelect int     `gorm:"column:is_default_select;type:tinyint(1);default:0;comment:是否默认选择, 0-否 1-是;NOT NULL" json:"is_default_select"`
@@ -546,17 +567,19 @@ type ProductBom struct {
 	IsSoldOut       int     `gorm:"column:is_sold_out;type:tinyint(1);default:0;comment:是否沽清, 0-否 1-是;NOT NULL" json:"is_sold_out"`
 	ActualSaleNum   float64 `gorm:"column:actual_sale_num;type:decimal(12,4);default:0.0000;comment:实际销量;NOT NULL" json:"actual_sale_num"`
 
+	UseBomCardStock int `gorm:"column:use_bom_card_stock;type:tinyint(1);default:0;comment:是否使用成本卡库存, 0-否 1-是;NOT NULL" json:"use_bom_card_stock"`
+
 	// 关联ID
 	ProductFlavorUuid  uint64 `gorm:"column:product_flavor_uuid;type:bigint(20) unsigned;default:0;comment:商品规格ID(仅商品使用);NOT NULL" json:"product_flavor_uuid"`
 	ProductSauceUuid   uint64 `gorm:"column:product_sauce_uuid;type:bigint(20) unsigned;default:0;comment:商品小料ID(仅小料使用);NOT NULL" json:"product_sauce_uuid"`
 	ProductPackageUuid uint64 `gorm:"column:product_package_uuid;type:bigint(20) unsigned;default:0;comment:商品包ID;NOT NULL" json:"product_package_uuid"`
 	ProductBomCardUuid uint64 `gorm:"column:product_bom_card_uuid;type:bigint(20) unsigned;default:0;comment:成本卡ID;NOT NULL" json:"product_bom_card_uuid"`
 
-	ProductPackage  ProductPackage     `gorm:"foreignKey:ProductPackageUuid;references:uuid" json:"-"`    // 商品
-	ProductFlavor   ProductFlavor      `gorm:"foreignKey:product_flavor_uuid;references:uuid" json:"-"`   // 商品规格
-	ProductSauce    ProductSauce       `gorm:"foreignKey:product_sauce_uuid;references:uuid" json:"-"`    // 商品小料
-	FlavorMaterials []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`                   // 规格商品的组成材料
-	ProductBomCard  *ProductBomCard    `gorm:"foreignKey:product_bom_card_uuid;references:uuid" json:"-"` // 成本卡
+	ProductPackage  ProductPackage     `gorm:"foreignKey:ProductPackageUuid;references:uuid"`    // 商品
+	ProductFlavor   ProductFlavor      `gorm:"foreignKey:product_flavor_uuid;references:uuid"`   // 商品规格
+	ProductSauce    ProductSauce       `gorm:"foreignKey:product_sauce_uuid;references:uuid"`    // 商品小料
+	FlavorMaterials []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`          // 规格商品的组成材料
+	ProductBomCard  *ProductBomCard    `gorm:"foreignKey:product_bom_card_uuid;references:uuid"` // 成本卡
 }
 
 func (model *ProductBom) SetNil() {
@@ -571,16 +594,11 @@ func (model *ProductBom) HasProductBomCard() bool {
 	return model.ProductBomCardUuid != 0
 }
 
-func (model *ProductBom) GetStockNum() float64 {
-	// 如果关闭库存，返回999999表示无限库存
-	if !model.IsOpenStockBool() {
-		return constant.ProductBomInfiniteStock
+func (model *ProductBom) GetStockNum(fn func(productBomUuid uint64) float64) float64 {
+	if fn != nil {
+		return fn(model.Uuid)
 	}
-	// 如果标记沽清，返回0
-	if model.IsSoldOut == constant.ProductStatusSaleOut {
-		return 0
-	}
-	return model.StockNum
+	return constant.ProductBomInfiniteStock
 }
 
 // RelatedMaterial 关联材料表,定义关联材料的相关信息 ttpos_related_material
@@ -610,8 +628,12 @@ func (model *RelatedMaterial) SetNil() {
 }
 
 // 计算预计可生产的产品数量。材料库存数量 / 材料用量
-func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
-	materialStockNum := model.Material.GetStockNum() // 材料库存数量，单位：基准单位
+func (model *RelatedMaterial) CalculateExpectedProductionNum(opts ...func(*GetStockNumOption)) float64 {
+	// 材料对象为空时，返回0
+	if model.Material == nil {
+		return 0
+	}
+	materialStockNum := model.Material.GetStockNum(opts...) // 材料库存数量，单位：基准单位
 	if materialStockNum <= 0 {
 		return 0
 	}
@@ -626,10 +648,10 @@ func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
 	return result
 }
 
-func (model *RelatedMaterial) GetExpectedProductionNum() float64 {
+func (model *RelatedMaterial) GetExpectedProductionNum(opts ...func(*GetStockNumOption)) float64 {
 	num := model.expectedProductionNum
 	if num <= 0 {
-		num = model.CalculateExpectedProductionNum()
+		num = model.CalculateExpectedProductionNum(opts...)
 	}
 	return num
 }
@@ -686,38 +708,36 @@ func (model *RelatedMaterial) IsBomCardManage() bool {
 }
 
 // IsStockShortage 判断库存是否不足
-func (model *ProductBom) IsStockShortage(productNum float64) bool {
-	// 如果关闭库存，则不检查库存不足
-	if !model.IsOpenStockBool() {
-		return false
-	}
-	return model.GetStockNum() < productNum
-}
+// func (model *ProductBom) IsStockShortage(productNum float64) bool {
+// 	// 如果关闭库存，则不检查库存不足
+// 	if !model.IsOpenStockBool() {
+// 		return false
+// 	}
+// 	return model.GetStockNum(nil) < productNum
+// }
 
 // IsStockShortageWithMaterial 判断库存是否不足,检查材料库存
-func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
+func (model *ProductBom) IsStockShortageWithMaterial(productNum float64, productBomStockNum func(productBomUuid uint64) float64) bool {
 	// 如果是关联材料的规格，则检查关联材料的库存
 	if model.IsFlavor() {
-		for _, material := range model.FlavorMaterials {
-			if material.IsDelete() {
-				continue
-			}
-			materialStockNum := material.Material.GetStockNum()
-			if materialStockNum < material.GetDecreaseNum(productNum) {
-				return true
-			}
+		stockNum := productBomStockNum(model.Uuid)
+		if stockNum < productNum {
+			return true // 表示库存不足
 		}
 	}
 	// 如果是关联材料的小料，则检查关联材料的库存
 	if model.IsSauce() {
-		for _, material := range model.ProductSauce.SauceMaterials {
-			materialStockNum := material.Material.GetStockNum()
-			if materialStockNum < material.GetDecreaseNum(productNum) {
-				return true
-			}
+		stockNum := productBomStockNum(model.Uuid)
+		if stockNum < productNum {
+			return true // 表示库存不足
 		}
 	}
-	return model.IsStockShortage(productNum)
+
+	stockNum := productBomStockNum(model.Uuid)
+	if stockNum < productNum {
+		return true // 表示库存不足
+	}
+	return false
 }
 
 // IsPriceChanged 判断商品价格是否变动
@@ -725,19 +745,19 @@ func (model *ProductBom) IsPriceChanged(price float64) bool {
 	return model.Price != price
 }
 
-// IsSoldOutStatus 判断是否标记沽清、或售罄无库存
-func (model *ProductBom) IsSoldOutStatus() bool {
-	return model.IsSoldOut == constant.ProductStatusSaleOut || model.GetStockNum() <= 0
-}
+// // IsSoldOutStatus 判断是否标记沽清、或售罄无库存
+// func (model *ProductBom) IsSoldOutStatus() bool {
+// 	return model.IsSoldOut == constant.ProductStatusSaleOut || model.GetStockNum(nil) <= 0
+// }
 
 func (model *ProductBom) IsDefaultSelectBool() bool {
 	return model.IsDefaultSelect == constant.ProductPackageSauceDefaultSelectionOn
 }
 
-// IsNotSoldOutStatus 判断bom是否还可以销售
-func (model *ProductBom) IsNotSoldOutStatus() bool {
-	return !model.IsSoldOutStatus()
-}
+// // IsNotSoldOutStatus 判断bom是否还可以销售
+// func (model *ProductBom) IsNotSoldOutStatus() bool {
+// 	return !model.IsSoldOutStatus()
+// }
 
 // IsOpenStockBool 判断是否开启库存
 func (model *ProductBom) IsOpenStockBool() bool {
@@ -890,11 +910,11 @@ func (model *ProductBomCard) IsHeadquarter() bool {
 }
 
 // 计算预计可生产的产品数量
-func (model *ProductBomCard) CalculateExpectedProductionNum() float64 {
+func (model *ProductBomCard) CalculateExpectedProductionNum(opts ...func(*GetStockNumOption)) float64 {
 	totalExpectedProductionNum := 9999999999.0
 	for _, material := range model.RelatedMaterials {
 		// 取最小值
-		expectedProductionNum := material.GetExpectedProductionNum()
+		expectedProductionNum := material.GetExpectedProductionNum(opts...)
 		if expectedProductionNum < totalExpectedProductionNum {
 			totalExpectedProductionNum = expectedProductionNum
 		}

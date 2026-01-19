@@ -62,6 +62,7 @@ TTPOS 业务中台 (ttpos-bmp) 是 TTPOS 系统的核心业务处理模块，采
 
 | 场景               | 查看                                                                        |
 | ------------------ | --------------------------------------------------------------------------- |
+| **了解项目整体**   | [TTPOS 项目总览](./human/guides/ttpos-project-overview.md)                 |
 | **开发新功能**     | [功能开发工作流](./agent/workflows/feature-development.md)                  |
 | **修复Bug**        | [Bug修复工作流](./agent/workflows/bug-fixing.md)                            |
 | **创建数据库迁移** | [数据库迁移工作流](./agent/workflows/database-migration.md)                 |

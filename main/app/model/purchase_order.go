@@ -26,6 +26,7 @@ type PurchaseOrder struct {
 	ExpectArrivalTime       int64   `gorm:"column:expect_arrival_time;type:int(10) unsigned;not null;default:0;comment:期望到货日期（时间戳）" json:"expect_arrival_time"`
 	PassTime                int64   `gorm:"column:pass_time;type:int(10) unsigned;not null;default:0;comment:通过时间（时间戳）" json:"pass_time"`
 	RejectTime              int64   `gorm:"column:reject_time;type:int(10) unsigned;not null;default:0;comment:驳回时间（时间戳）" json:"reject_time"`
+	RejectReason            string  `gorm:"column:reject_reason;type:text;comment:驳回原因" json:"reject_reason"`
 	FirstReceiveTime        int64   `gorm:"column:first_receive_time;type:int(10) unsigned;not null;default:0;comment:第一次收货时间（时间戳），从\"已通过\"状态变成\"部分收货\"状态的时间" json:"first_receive_time"`
 	FinalReceiveTime        int64   `gorm:"column:final_receive_time;type:int(10) unsigned;not null;default:0;comment:最终收货时间（时间戳），从\"部分收货\"状态变成\"全部收货\"状态的时间" json:"final_receive_time"`
 	PurchaseType            int     `gorm:"column:purchase_type;type:int(10);not null;default:0;comment:采购类型, 1-外部采购 2-内部采购" json:"purchase_type"`
@@ -34,6 +35,7 @@ type PurchaseOrder struct {
 	HeadquarterStatus       int     `gorm:"column:headquarter_status;type:int(10);not null;default:0;comment:总部状态：0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货" json:"headquarter_status"`
 	CompanyUuid             uint64  `gorm:"column:company_uuid;type:bigint(20) unsigned;not null;default:0;comment:公司UUID-用于识别子商户" json:"company_uuid"`
 	CompanyName             string  `gorm:"column:company_name;type:varchar(255);not null;default:'';comment:公司名称" json:"company_name"`
+	CompanyStoreCode        string  `gorm:"column:company_store_code;type:varchar(255);not null;default:'';comment:公司店铺编码" json:"company_store_code"`
 	DefaultWarehouseErpCode string  `gorm:"column:default_warehouse_erp_code;type:varchar(255);not null;default:'';comment:默认仓库ERP编码" json:"default_warehouse_erp_code"`
 	DefaultWarehouseName    string  `gorm:"column:default_warehouse_name;type:text;comment:默认仓库名称" json:"default_warehouse_name"`
 
@@ -371,6 +373,7 @@ type PurchaseReceiptOrderItemUnit struct {
 
 	// 关联关系
 	PurchaseReceiptOrderItem PurchaseReceiptOrderItem `gorm:"foreignKey:ItemUuid;references:Uuid" json:"purchase_receipt_order_item,omitempty"`
+	MaterialUnit             *MaterialUnit            `gorm:"foreignKey:Uuid;references:UnitUuid" json:"material_unit,omitempty"`
 }
 
 // TableName 指定表名

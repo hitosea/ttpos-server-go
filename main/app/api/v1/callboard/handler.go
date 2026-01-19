@@ -79,14 +79,14 @@ func (h *Handler) GetBindInfo(c *gin.Context) {
 
 // GetQueueData 获取队列数据
 // @Summary 获取排队队列数据
-// @Description 获取等待队列和取餐队列数据
+// @Description 获取等待队列和取餐队列数据，同时返回叫号系统配置信息（系统名称、背景图片、超时限制、语音叫号开关、叫号次数）
 // @Tags 叫号展示.设备端
 // @Accept json
 // @Produce json
 // @Param device_id query string true "设备ID"
 // @Param limit query int true "限制数量"
-// @Param update_time query int true "更新时间,unix时间戳"
-// @Success 200 {object} dto.Response{data=resp.QueueDataResp}
+// @Param update_time query int false "更新时间,unix时间戳"
+// @Success 200 {object} dto.Response{data=resp.QueueDataResp} "响应包含队列数据和配置信息，配置字段为必返字段，缺失时使用默认值"
 // @Router /callboard/data [get]
 func (h *Handler) GetQueueData(c *gin.Context) {
 	var reqData req.GetQueueDataReq

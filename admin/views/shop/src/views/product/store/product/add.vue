@@ -92,8 +92,7 @@
       ],
       product_attr: [],
       product_feed: [],
-      feed_required: 0,
-      feed_open_max_select: 0,
+      feed_min_select: 0,
       feed_max_select: 0,
       min_buy: 1,
       product_unit: JSON.parse(languageData),
@@ -133,13 +132,14 @@
       ],
       open_overall_discount: 1,
       package_price: null,
-      is_open_stock: 1,
+      is_open_stock: 0,
       package_stock: null,
       package_group: [
         {
           group_name: JSON.parse(languageData),
           group_type: 0, // 0-固定套餐 1-可选套餐
-          optional_count :0, // 可选套餐数量
+          optional_min_count: 0,
+          optional_count :1, // 可选套餐数量
           product_list: [],
         },
       ],
@@ -263,7 +263,8 @@
         params.package_group.forEach((group) => {
           group.group_name = JSON.stringify(group.group_name);
           group.group_type = group.group_type || 0;
-          group.optional_count = group.optional_count || 0;
+          group.optional_count = group.optional_count || 1;
+          group.optional_min_count = group.optional_min_count || 0;
           // group.product_list 只需要保留product_id、num、sort，其他字段删除
           let productList = [];
           group.product_list.forEach((product) => {
@@ -286,6 +287,11 @@
 
       // 将等级列表转换为json
       params.alone_grade_equity = convertJson(form.gradeList);
+
+      // 处理商品卖点
+      if (form.model.selling_point_i18n) {
+        params.selling_point = JSON.stringify(form.model.selling_point_i18n);
+      }
 
       // 调用接口添加产品
       try {

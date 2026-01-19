@@ -1,0 +1,8 @@
+package constant
+
+// 打印机类型枚举
+const (
+	PRINTER_TYPE_XPRINTER_LAN = "XPRINTER_LAN"
+	PRINTER_TYPE_GP_D300I     = "CODESOFT_LAN"
+	PRINTER_TYPE_GP_C200IV    = "CODESOFT_LAN"
+)

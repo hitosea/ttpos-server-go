@@ -35,6 +35,7 @@ type ITransferOrderRepo interface {
 	WhereStatusIn(statusIn []int) DBOption
 	WhereSenderCompanyUuid(senderCompanyUuid uint64) DBOption
 	WhereReceiverCompanyUuid(receiverCompanyUuid uint64) DBOption
+	WhereSubmitSide(currentCompanyUuid uint64, submitSide string) DBOption // 提交方筛选选项
 	WhereOutWarehouseErpCode(outWarehouseErpCode string) DBOption
 	WhereInWarehouseErpCode(inWarehouseErpCode string) DBOption
 	WhereCreateTimeRange(start, end int) DBOption
@@ -141,15 +142,16 @@ func (r *TransferOrderRepoImpl) GetListWithPagination(pageNo, pageSize int, opts
 //   - pageSize: 每页大小
 //   - shopDbName: 门店数据库名称，例如 "shop8609817471094784"
 type TransferOrderQueryReq struct {
-	PageNo              int
-	PageSize            int
-	CompanyUuid         uint64
-	OrderNo             string
-	StatusIn            []int
-	OrderTimeStart      int
-	OrderTimeEnd        int
-	OppositeCompanyUuid []uint64
-	MyRole              []string // 我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批
+	PageNo              int      // 页码
+	PageSize            int      // 每页大小
+	CompanyUuid         uint64   // 当前公司UUID
+	OrderNo             string   // 单据编号
+	StatusIn            []int    // 状态筛选: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成
+	OrderTimeStart      int      // 单据时间开始
+	OrderTimeEnd        int      // 单据时间结束
+	OppositeCompanyUuid []uint64 // 对方机构UUID列表
+	MyRole              []string // 我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批 my_approver-我审批
+	SubmitSide          string   // 提交方筛选：all-全部 self-本店提交 other-他店提交
 }
 
 func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferOrderQueryReq) ([]model.TransferOrder, int64, error) {
@@ -187,19 +189,27 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 	// 包裹查询结果
 	baseSQL = fmt.Sprintf("SELECT * FROM (%s) t WHERE delete_time = 0 ", baseSQL)
 
+	// 收集查询参数，使用占位符避免SQL注入
+	var args []interface{}
+
+	// 订单号查询 - 使用占位符避免SQL注入
 	if query.OrderNo != "" {
-		baseSQL += fmt.Sprintf(" AND (order_no LIKE '%%%s%%' OR erp_order_no LIKE '%%%s%%') ", query.OrderNo, query.OrderNo)
+		baseSQL += " AND (order_no LIKE ? OR erp_order_no LIKE ?) "
+		likePattern := "%" + query.OrderNo + "%"
+		args = append(args, likePattern, likePattern)
 	}
 
+	// 状态筛选 - 使用占位符
 	if len(query.StatusIn) > 0 {
-		// 将int切片转换为字符串切片
-		statusStrings := make([]string, len(query.StatusIn))
+		placeholders := make([]string, len(query.StatusIn))
 		for i, status := range query.StatusIn {
-			statusStrings[i] = fmt.Sprintf("%d", status)
+			placeholders[i] = "?"
+			args = append(args, status)
 		}
-		baseSQL += fmt.Sprintf(" AND status IN (%s) ", strings.Join(statusStrings, ","))
+		baseSQL += fmt.Sprintf(" AND status IN (%s) ", strings.Join(placeholders, ","))
 	}
 
+	// 时间范围筛选 - 使用占位符
 	if query.OrderTimeStart > 0 && query.OrderTimeEnd > 0 {
 		// 判断如果是毫秒级别的时间戳，则转换为秒级别的时间戳
 		if query.OrderTimeStart > 1000000000000 {
@@ -208,18 +218,23 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 		if query.OrderTimeEnd > 1000000000000 {
 			query.OrderTimeEnd = query.OrderTimeEnd / 1000
 		}
-		baseSQL += fmt.Sprintf(" AND order_time >= %d AND order_time <= %d ", query.OrderTimeStart, query.OrderTimeEnd)
+		baseSQL += " AND order_time >= ? AND order_time <= ? "
+		args = append(args, query.OrderTimeStart, query.OrderTimeEnd)
 	}
 
+	// 对方公司UUID筛选 - 使用占位符
 	if len(query.OppositeCompanyUuid) > 0 {
-		oppositeCompanyUuidStrings := make([]string, len(query.OppositeCompanyUuid))
+		placeholders := make([]string, len(query.OppositeCompanyUuid))
 		for i, oppositeCompanyUuid := range query.OppositeCompanyUuid {
-			oppositeCompanyUuidStrings[i] = fmt.Sprintf("'%d'", oppositeCompanyUuid)
+			placeholders[i] = "?"
+			args = append(args, oppositeCompanyUuid)
 		}
-		baseSQL += fmt.Sprintf(" AND (sender_company_uuid IN (%s) OR receiver_company_uuid IN (%s)) ",
-			strings.Join(oppositeCompanyUuidStrings, ","),
-			strings.Join(oppositeCompanyUuidStrings, ","),
-		)
+		inClause := strings.Join(placeholders, ",")
+		baseSQL += fmt.Sprintf(" AND (sender_company_uuid IN (%s) OR receiver_company_uuid IN (%s)) ", inClause, inClause)
+		// 需要添加两次参数，因为有两个IN子句
+		for _, oppositeCompanyUuid := range query.OppositeCompanyUuid {
+			args = append(args, oppositeCompanyUuid)
+		}
 	}
 
 	if len(query.MyRole) > 0 {
@@ -234,19 +249,36 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 			if slices.Contains(query.MyRole, "approver") {
 				baseSQL += fmt.Sprintf(` EXISTS (
 					SELECT 1 FROM saas.ttpos_transfer_order_approval b
-					WHERE b.transfer_order_uuid = t.uuid 
+					WHERE b.transfer_order_uuid = t.uuid
 					AND b.approval_company_uuid = %d
 					AND b.delete_time = 0
 					AND b.approval_type in ('sender_parent', 'receiver_parent')
 				) OR`, companyUuid)
 			}
+			if slices.Contains(query.MyRole, "my_approver") {
+				baseSQL += fmt.Sprintf(" next_approval_company_uuid = %d OR ", companyUuid)
+			}
 			baseSQL += fmt.Sprintf(" 0 = 1 )")
+		}
+	}
+
+	// 提交方筛选
+	if query.SubmitSide != "" {
+		switch query.SubmitSide {
+		case "self":
+			// 仅本店提交（company_uuid 为本店）
+			baseSQL += fmt.Sprintf(" AND company_uuid = %d ", companyUuid)
+		case "other":
+			// 仅其他门店提交（company_uuid 不是本店）
+			baseSQL += fmt.Sprintf(" AND company_uuid != %d ", companyUuid)
+		case "all":
+			// 全部：不添加额外条件（已经在 UNION 中处理）
 		}
 	}
 
 	// 统计总数
 	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM (%s) t`, baseSQL)
-	if err := r.db.Raw(countSQL).Count(&total).Error; err != nil {
+	if err := r.db.Raw(countSQL, args...).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -258,8 +290,11 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 		LIMIT ? OFFSET ?
 	`, baseSQL)
 
+	// 添加分页参数到args
+	paginationArgs := append(args, query.PageSize, offset)
+
 	// 执行分页查询
-	err := r.db.Raw(querySQL, query.PageSize, offset).Scan(&transferOrders).Error
+	err := r.db.Raw(querySQL, paginationArgs...).Scan(&transferOrders).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -351,6 +386,28 @@ func (r *TransferOrderRepoImpl) WhereReceiverCompanyUuid(receiverCompanyUuid uin
 	}
 }
 
+// WhereSubmitSide 提交方筛选条件
+func (r *TransferOrderRepoImpl) WhereSubmitSide(currentCompanyUuid uint64, submitSide string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if currentCompanyUuid == 0 {
+			return db
+		}
+		switch submitSide {
+		case "self":
+			// 仅本店提交（company_uuid 为本店）
+			return db.Where("company_uuid = ?", currentCompanyUuid)
+		case "other":
+			// 仅其他门店提交（company_uuid 不是本店）
+			return db.Where("company_uuid != ?", currentCompanyUuid)
+		case "all":
+			fallthrough
+		default:
+			// 全部：不添加额外筛选（已在基础查询中处理与本店相关的调拨单）
+			return db
+		}
+	}
+}
+
 // WhereOutWarehouseErpCode 出库仓库ERP编码条件
 func (r *TransferOrderRepoImpl) WhereOutWarehouseErpCode(outWarehouseErpCode string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -433,7 +490,7 @@ func (r *TransferOrderRepoImpl) WhereHeadquarterUuid(headquarterUuid uint64) DBO
 // WithItems 预加载明细
 func (r *TransferOrderRepoImpl) WithItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("Items").Preload("Items.Units")
+		return db.Preload("Items").Preload("Items.Units").Preload("Items.Material.NotBaseUnitList")
 	}
 }
 

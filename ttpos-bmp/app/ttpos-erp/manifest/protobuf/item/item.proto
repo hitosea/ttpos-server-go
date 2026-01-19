@@ -57,6 +57,8 @@ message ItemInfo {
   repeated ItemAttribute attributes = 22; // 变体参数列表，可选。 多规格商品时必填。
   string item_group_name = 23; // 物品分组名称，可选,  PosAttribute 属性/PosAddon 加料 时必填
   string variant_of = 24; // 变体物品编码，可选。 多规格商品时填。
+  optional bool allow_negative_stock = 25; // 是否允许负库存，未传则保持原值
+  optional string sales_uom = 26; // 销售单位，可选
 }
 
 message ItemAttribute {

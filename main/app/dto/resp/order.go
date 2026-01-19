@@ -137,7 +137,7 @@ type OrderInfos struct {
 	PaymentAmount   float64             `json:"payment_amount"`    // 支付金额
 	RefundAmount    float64             `json:"refund_amount"`     // 退款金额
 	MemberNames     string              `json:"member_names"`      // 会员名称
-	MemberUuids     string              `json:"member_uuids"`      // 会员名称
+	MemberUuids     string              `json:"member_uuids"`      // 昵称+会员手机号 任务:37911【优化】收银机/商家后台-订单详情中调整会员信息内容
 	BuffetNames     string              `json:"buffet_names"`      // 自助餐名称
 	CancelReason    string              `json:"cancel_reason"`     // 取消原因
 	CashierName     string              `json:"cashier_name"`      // 收银员名称
@@ -237,10 +237,12 @@ type OrderReverseSettleDesk struct {
 
 // 发票信息
 type SaleOrderInvoiceInfo struct {
+	InvoiceNumber    string `json:"invoice_number"`
 	CompanyName      string `json:"company_name"`
 	CompanyAddr      string `json:"company_addr"`
 	CompanyTaxNumber string `json:"company_tax_number"`
 	CompanyPhone     string `json:"company_phone"`
+	PrintNum         int    `json:"print_num"`
 }
 
 // OrderBuffetResp 订单自助餐信息
@@ -263,4 +265,9 @@ type VerifyPasswordResp struct {
 type DeskBuffetCustomerType struct {
 	Uuid    uint64 `json:"uuid"`     // 自助餐顾客类型uuid
 	MealNum uint   `json:"meal_num"` // 就餐人数
+}
+
+// GetPaymentAmountResp 获取支付金额响应
+type GetPaymentAmountResp struct {
+	PaymentAmount float64 `json:"payment_amount"` // 支付金额
 }

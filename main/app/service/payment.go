@@ -21,6 +21,7 @@ import (
 	"ttpos-server-go/config"
 	contexts "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/encrypt"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
@@ -84,20 +85,26 @@ type LianLianPaymentResp struct {
 
 // PaymentRepo 连连支付仓库
 type PaymentRepo struct {
-	dbm               *database.DBManager
-	ctx               contexts.Context
-	payServiceUrl     string
-	payCallbackUrl    string // 支付回调地址
-	refundCallbackUrl string // 退款回调地址
-	orderCurrency     string // 订单币种 [THB, USD, JPY, CNY]
+	dbm                    *database.DBManager
+	ctx                    contexts.Context
+	payServiceIp           string
+	payServiceUrl          string
+	payServiceRsaPublicKey string
+	payServiceAuthUri      string
+	payCallbackUrl         string // 支付回调地址
+	refundCallbackUrl      string // 退款回调地址
+	orderCurrency          string // 订单币种 [THB, USD, JPY, CNY]
 }
 
 // NewPaymentRepo 创建连连支付仓库
 func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo {
 	return &PaymentRepo{
-		ctx:           ctx,
-		dbm:           dbm,
-		payServiceUrl: viper.GetString("PAY_SERVICE_URL"),
+		ctx:                    ctx,
+		dbm:                    dbm,
+		payServiceIp:           viper.GetString("PAY_SERVICE_IP"),
+		payServiceUrl:          viper.GetString("PAY_SERVICE_URL"),
+		payServiceRsaPublicKey: viper.GetString("PAY_SERVICE_RSA_PUBLIC_KEY"),
+		payServiceAuthUri:      viper.GetString("PAY_SERVICE_AUTH_URI"),
 		payCallbackUrl: func() string {
 			if viper.GetString("PAY_SERVICE_LIANLIAN_CALLBACK_URL") == "" {
 				if config.Server.Domain != "" {
@@ -603,6 +610,15 @@ func (p *PaymentRepo) getPaymentInfo(paymentMethodCode int) (string, string, err
 	return url, orderType, nil
 }
 
+// validateConfigError 验证支付配置错误
+func (p *PaymentRepo) ValidateConfigError(companyUuid uint64) error {
+	_, paymentAppErr := p.validateConfig(companyUuid)
+	if paymentAppErr != nil {
+		return paymentAppErr
+	}
+	return nil
+}
+
 // validateConfig 验证支付配置
 func (p *PaymentRepo) validateConfig(companyUuid uint64) (*model.PaymentApp, error) {
 	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(p.dbm.GetDB(0)).GetPaymentAppCompanyUuid(companyUuid)
@@ -811,4 +827,76 @@ func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req Membe
 		}
 	}
 	return &returnOrder, nil
+}
+
+// GetSignSaltParams 获取签名盐参数
+type GetSignSaltParams struct {
+	LlWhiteIp            string `json:"ll_white_ip"`
+	LlMerchantId         string `json:"ll_merchant_id"`
+	LlPublicKey          string `json:"ll_public_key"`
+	LlMerchantPrivateKey string `json:"ll_merchant_private_key"`
+	LlToken              string `json:"ll_token"`
+	LlStoreId            string `json:"ll_store_id"`
+	ShopSupplierId       uint64 `json:"shop_supplier_id"`
+}
+
+// GetSignSaltResponse 获取签名盐响应
+type GetSignSaltResponse struct {
+	SignSalt string `json:"sign_salt"`
+}
+
+// GetSignSalt 获取签名盐
+func (p *PaymentRepo) GetSignSalt(params GetSignSaltParams) (string, error) {
+	if p.payServiceIp == "" || p.payServiceUrl == "" || p.payServiceRsaPublicKey == "" {
+		return "", errors.New("支付服务环境配置错误")
+	}
+	if params.LlWhiteIp != p.payServiceIp {
+		return "", errors.New("白名单IP不匹配")
+	}
+	plaintext, err := json.Marshal(params)
+	if err != nil {
+		logger.Logger.Error("GetSignSalt-json.Marshal", zap.Error(err))
+		return "", errors.WithMessage(err, "参数序列化失败")
+	}
+
+	rsaPublicKey, err := encrypt.GetPublicKey(p.payServiceRsaPublicKey)
+	if err != nil {
+		logger.Logger.Error("GetSignSalt-encrypt.GetPublicKey", zap.Error(err))
+		return "", errors.WithMessage(err, "支付服务环境配置错误")
+	}
+
+	encryptedData, err := encrypt.PubEncrypt(string(plaintext), rsaPublicKey)
+	if err != nil {
+		logger.Logger.Error("GetSignSalt-encrypt.PubEncrypt", zap.Error(err))
+		return "", errors.WithMessage(err, "加密数据失败")
+	}
+
+	type RequestData struct {
+		EncryptData string `json:"encrypt_data"`
+	}
+	requestData := RequestData{
+		EncryptData: encryptedData,
+	}
+	jsonData, err := json.Marshal(requestData)
+	if err != nil {
+		logger.Logger.Error("GetSignSalt-json.Marshal", zap.Error(err))
+		return "", errors.WithMessage(err, "参数序列化失败")
+	}
+
+	response, err := p.postRequest(p.payServiceUrl+p.payServiceAuthUri, string(jsonData), map[string]string{
+		"Content-Type": "application/json; charset=utf-8",
+	}, RequestTimeOut)
+	if err != nil {
+		logger.Logger.Error("GetSignSalt-postRequest", zap.Error(err))
+		return "", errors.WithMessage(err, "请求支付服务失败")
+	}
+
+	// 解析响应
+	var resp GetSignSaltResponse
+	if err := utils.MapToStruct(response, &resp); err != nil {
+		logger.Logger.Error("GetSignSalt-MapToStruct", zap.Error(err))
+		return "", errors.WithMessage(err, "响应数据格式错误")
+	}
+
+	return resp.SignSalt, nil
 }

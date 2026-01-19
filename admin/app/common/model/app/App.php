@@ -218,6 +218,7 @@ class App extends BaseModel
             'is_open_marketing' => $this->supplier?->is_open_marketing, // 是否开启营销活动
             'is_open_coupon' => $this->supplier?->is_open_coupon, // 是否开启优惠券
             'is_open_delivery' => $this->supplier?->delivery_status, // 是否开启外送
+            'enable_grab_delivery' => $this->supplier?->enable_grab_delivery ?? 0, // 是否启用Grab外卖：0-否；1-是
         ];
         //
         return $data;

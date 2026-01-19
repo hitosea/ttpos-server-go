@@ -22,12 +22,18 @@ type TimeUtil interface {
 	YesterdayStartEndUnix() (int64, int64)                                                            // 获取昨天的开始时间和结束时间戳
 	WeekStartEndUnix() (int64, int64)                                                                 // 获取本周的开始时间和结束时间戳
 	MonthStartEndUnix() (int64, int64)                                                                // 获取本月的开始时间和结束时间戳
+	Last7DaysStartEndUnix() (int64, int64)                                                            // 获取近7天的开始时间和结束时间戳
+	LastMonthStartEndUnix() (int64, int64)                                                            // 获取上月的开始时间和结束时间戳
+	YearStartEndUnix() (int64, int64)                                                                 // 获取今年的开始时间和结束时间戳
 	FormatUnixTime(timestamp int64, layout string) string                                             // 将时间戳转换为指定格式的时间字符串
 	FormatUnixTimeDefault(timestamp int64) string                                                     // 将时间戳转换为默认格式(2006-01-02 15:04:05)的时间字符串
 	FormatUnixTimeWithSlash(timestamp int64) string                                                   // 将时间戳转换为默认格式(2006/01/02 15:04:05)的时间字符串
 	FormatUnixTimeDetail(timestamp int64) TimeDetail                                                  // 获取时间详情
 	GetTimeRange(dayType DayType) (int64, int64, error)                                               // 订单列表：今天、昨天、本周搜索时间范围
 	FormatTimeToUnix(timeStr string) (int64, error)                                                   // 2025-04-30转为时间戳
+	FormatTimeToTime(timeStr string) (time.Time, error)                                               // 2025-04-30转为time.Time对象（使用当前时区）
+	FormatDateTimeToUnix(timeStr string) (int64, error)                                               // 将日期时间字符串转换为时间戳（支持 YYYY-MM-DD HH:mm:ss 和 YYYY-MM-DD 格式）
+	FormatDateTimeToTime(timeStr string) (time.Time, error)                                           // 将日期时间字符串转换为time.Time对象（支持 YYYY-MM-DD HH:mm:ss 和 YYYY-MM-DD 格式）
 	OpeningHoursStartEndUnix(openingHours string, opts ...func(o *OpeningHoursOption)) (int64, int64) // 营业时间开始和结束时间戳
 }
 
@@ -125,6 +131,49 @@ func (t Timezone) WeekStartEndUnix() (int64, int64) {
 
 func (t Timezone) MonthStartEndUnix() (int64, int64) {
 	start, end := t.MonthStartEnd()
+	return start.Unix(), end.Unix()
+}
+
+// Last7DaysStartEnd 获取近7天的开始时间和结束时间
+func (t Timezone) Last7DaysStartEnd() (time.Time, time.Time) {
+	now := t.Now()
+	end := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location())
+	start := time.Date(now.Year(), now.Month(), now.Day()-6, 0, 0, 0, 0, now.Location())
+	return start, end
+}
+
+// Last7DaysStartEndUnix 获取近7天的开始时间和结束时间戳
+func (t Timezone) Last7DaysStartEndUnix() (int64, int64) {
+	start, end := t.Last7DaysStartEnd()
+	return start.Unix(), end.Unix()
+}
+
+// LastMonthStartEnd 获取上月的开始时间和结束时间
+func (t Timezone) LastMonthStartEnd() (time.Time, time.Time) {
+	now := t.Now()
+	lastMonth := now.AddDate(0, -1, 0)
+	start := time.Date(lastMonth.Year(), lastMonth.Month(), 1, 0, 0, 0, 0, now.Location())
+	end := time.Date(lastMonth.Year(), lastMonth.Month()+1, 0, 23, 59, 59, 999999999, now.Location())
+	return start, end
+}
+
+// LastMonthStartEndUnix 获取上月的开始时间和结束时间戳
+func (t Timezone) LastMonthStartEndUnix() (int64, int64) {
+	start, end := t.LastMonthStartEnd()
+	return start.Unix(), end.Unix()
+}
+
+// YearStartEnd 获取今年的开始时间和结束时间
+func (t Timezone) YearStartEnd() (time.Time, time.Time) {
+	now := t.Now()
+	start := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+	end := time.Date(now.Year(), 12, 31, 23, 59, 59, 999999999, now.Location())
+	return start, end
+}
+
+// YearStartEndUnix 获取今年的开始时间和结束时间戳
+func (t Timezone) YearStartEndUnix() (int64, int64) {
+	start, end := t.YearStartEnd()
 	return start.Unix(), end.Unix()
 }
 
@@ -245,6 +294,70 @@ func (t Timezone) FormatTimeToUnix(timeStr string) (int64, error) {
 		return 0, err
 	}
 	return time.Unix(), nil
+}
+
+// FormatTimeToTime 2025-04-30转为time.Time对象（使用当前时区）
+func (t Timezone) FormatTimeToTime(timeStr string) (time.Time, error) {
+	loc, err := time.LoadLocation(string(t))
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.ParseInLocation("2006-01-02", timeStr, loc)
+}
+
+// FormatDateTimeToUnix 将日期时间字符串转换为时间戳（支持商户时区）
+// timeStr: 日期时间字符串，支持两种格式：
+//   - "YYYY-MM-DD HH:mm:ss" - 完整日期时间格式，如 "2025-12-30 11:42:00"
+//   - "YYYY-MM-DD" - 仅日期格式，如 "2025-12-30"（时间默认为 00:00:00）
+// 返回：时间戳（Unix 时间戳，10位）
+func (t Timezone) FormatDateTimeToUnix(timeStr string) (int64, error) {
+	loc, err := time.LoadLocation(string(t))
+	if err != nil {
+		return 0, fmt.Errorf("加载时区失败: %w", err)
+	}
+
+	// 支持两种格式：YYYY-MM-DD 和 YYYY-MM-DD HH:mm:ss
+	var layout string
+	timeStr = strings.TrimSpace(timeStr)
+	if len(timeStr) == 10 {
+		layout = "2006-01-02"
+	} else if len(timeStr) == 19 {
+		layout = "2006-01-02 15:04:05"
+	} else {
+		return 0, errors.New("日期时间格式错误，应为 YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss")
+	}
+
+	tm, err := time.ParseInLocation(layout, timeStr, loc)
+	if err != nil {
+		return 0, fmt.Errorf("解析日期时间失败: %w", err)
+	}
+
+	return tm.Unix(), nil
+}
+
+// FormatDateTimeToTime 将日期时间字符串转换为 time.Time 对象（使用商户时区）
+// timeStr: 日期时间字符串，支持两种格式：
+//   - "YYYY-MM-DD HH:mm:ss" - 完整日期时间格式，如 "2025-12-30 11:42:00"
+//   - "YYYY-MM-DD" - 仅日期格式，如 "2025-12-30"（时间默认为 00:00:00）
+// 返回：time.Time 对象（使用商户时区）
+func (t Timezone) FormatDateTimeToTime(timeStr string) (time.Time, error) {
+	loc, err := time.LoadLocation(string(t))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("加载时区失败: %w", err)
+	}
+
+	// 支持两种格式：YYYY-MM-DD 和 YYYY-MM-DD HH:mm:ss
+	var layout string
+	timeStr = strings.TrimSpace(timeStr)
+	if len(timeStr) == 10 {
+		layout = "2006-01-02"
+	} else if len(timeStr) == 19 {
+		layout = "2006-01-02 15:04:05"
+	} else {
+		return time.Time{}, errors.New("日期时间格式错误，应为 YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss")
+	}
+
+	return time.ParseInLocation(layout, timeStr, loc)
 }
 
 type OpeningHoursOption struct {

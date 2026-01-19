@@ -9,6 +9,7 @@ import (
 type OrderReverseSettlePayload struct {
 	BasePayload
 	PayTypes []PayType `json:"pay_type"`
+	Points   float64   `json:"points"`
 }
 
 func (payload *OrderReverseSettlePayload) ToJsonString() string {

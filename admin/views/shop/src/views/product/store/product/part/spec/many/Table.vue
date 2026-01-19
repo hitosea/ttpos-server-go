@@ -53,7 +53,8 @@
               </el-form-item>
             </template>
           </el-table-column>
-          <el-table-column :label="'*' + $t('库存')" minWidth="160">
+          <!-- 暂时隐藏库存查询 2025年12月12日13:49:13 任务37468 -->
+          <!-- <el-table-column :label="'*' + $t('库存')" minWidth="160">
             <template #default="scope">
               <el-form-item
                 for="no_click"
@@ -90,7 +91,7 @@
                 ></numInput>
               </el-form-item>
             </template>
-          </el-table-column>
+          </el-table-column> -->
           <el-table-column v-if="baseSale == '1'" :label="$t('商品条码')" minWidth="160">
             <template #default="scope">
               <el-form-item
@@ -146,7 +147,8 @@
               </el-form-item>
             </template>
           </el-table-column>
-          <el-table-column v-if="baseSale == '1'" :label="$t('材料')" minWidth="330">
+          <!-- 暂时隐藏库存查询 2025年12月12日13:49:13 任务37468 -->
+          <!-- <el-table-column v-if="baseSale == '1'" :label="$t('材料')" minWidth="330">
             <template #default="scope">
               <el-form-item for="no_click" label="" style="margin-bottom: 0">
                 <el-button
@@ -161,6 +163,7 @@
                 <el-form-item for="no_click" label="" class="max-w230">
                   <el-input v-model="item.product_name_text" disabled></el-input>
                 </el-form-item>
+             
                 <el-form-item
                   for="no_click"
                   label=""
@@ -191,7 +194,7 @@
                 </el-icon>
               </div>
             </template>
-          </el-table-column>
+          </el-table-column> -->
           <el-table-column label="" fixed="right" width="100">
             <template #default="scope">
               <el-form-item label="" style="margin-bottom: 0">

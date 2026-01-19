@@ -83,7 +83,10 @@ func (s *DataManageSrv) GetDataManage(ctx context.Context) (*setting_resp.GetDat
 
 	// 获取统计信息
 	statisticsData := statisticsRepo.CountSale(
-		commonRepo.WhereInDataManageSubQuery("sale_bill_uuid"),
+		commonRepo.WhereInDataManageSubQuery(db, "sale_bill_uuid",
+			commonRepo.WhereByType(model.DataManageTypeOrder),
+			commonRepo.WhereBySoftDelete(),
+		),
 	)
 	// 总优惠折扣率 = 总优惠折扣 / 总销售额
 	var discountRatio decimal.Decimal

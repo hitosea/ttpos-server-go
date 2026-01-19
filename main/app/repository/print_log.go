@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/pkg/logger"
 
 	"go.uber.org/zap"
@@ -181,7 +181,7 @@ func (r *printerLogRepo) GetShiftPrinterData(companyUuid uint64, deviceSn string
 		r.WithPrinter(),
 		r.WithPrinterPrinterType(),
 		r.WhereType(1),
-		r.WhereDataType(constant.PrinterTemplateHandoverSheet),
+		r.WhereDataType(printerConst.PrinterTemplateHandoverSheet),
 		r.WhereStatus(1),
 		r.WhereFirstExecution(0),
 		func(db *gorm.DB) *gorm.DB {

@@ -16,6 +16,7 @@ type ICompanyRepo interface {
 	GetCompany(opts ...DBOption) (model.Company, error)                                        // 获取公司
 	GetAllSubShopsAndHeadquarterListByCompanyUuid(companyUuid uint64) ([]model.Company, error) // 获取所有子店（包括总部）
 	GetNoDeleteListByHeadquarterUuid(headquarterUuid uint64) ([]model.Company, error)          // 获取公司列表
+	GetVisibleCompanyList(companyUuid uint64) ([]model.Company, error)                         // 获取本店能看到的所有店（包括自己和parent_company_uuids包含自己的店）
 	GetCompanyInfo(ctx context.Context, opts ...DBOption) (model.Company, error)
 	GetCompanyInfoByUuid(uuid uint64) (*model.Company, error)
 	CreateCompany(obj model.Company) error
@@ -88,6 +89,23 @@ func (r *companyRepo) GetNoDeleteListByHeadquarterUuid(headquarterUuid uint64) (
 	db := r.db.Model(&model.Company{})
 	db = db.Joins("LEFT JOIN ttpos_company_setting ON ttpos_company.uuid = ttpos_company_setting.company_uuid")
 	db = db.Where("ttpos_company_setting.headquarter_uuid = ? OR ttpos_company.uuid = ?", headquarterUuid, headquarterUuid)
+	db = db.Where("ttpos_company.delete_time = ?", 0)
+	result := db.Find(&companies)
+	if result.Error != nil {
+		return companies, result.Error
+	}
+	return companies, nil
+}
+
+// GetVisibleCompanyList 获取本店能看到的所有店（包括自己和parent_company_uuids包含自己的店）
+func (r *companyRepo) GetVisibleCompanyList(companyUuid uint64) ([]model.Company, error) {
+	var companies []model.Company
+	db := r.db.Model(&model.Company{})
+	db = db.Joins("LEFT JOIN ttpos_company_setting ON ttpos_company.uuid = ttpos_company_setting.company_uuid")
+	db = db.Where(`
+		ttpos_company.uuid = ? OR 
+		find_in_set(?, ttpos_company_setting.parent_company_uuids)
+	`, companyUuid, companyUuid)
 	db = db.Where("ttpos_company.delete_time = ?", 0)
 	result := db.Find(&companies)
 	if result.Error != nil {

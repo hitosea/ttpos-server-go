@@ -234,3 +234,24 @@ func (*Controller) CancelStockReconciliation(ctx context.Context, req *stock.Can
 	// 返回成功响应
 	return rpc.ApiSuccessWithData(resp.Message, resp), nil
 }
+
+// GetBin 查询 Bin 记录
+// 参数：ctx 上下文，req GetBin 请求
+// 返回：ResponseInfo 响应，错误信息
+func (c *Controller) GetBin(ctx context.Context, req *stock.GetBinReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if req.Warehouse == "" {
+		g.Log().Warning(ctx, "GetBin 参数错误", req)
+		return rpc.ApiError("参数错误：warehouse 为必填项"), nil
+	}
+
+	// 调用 Logic 层
+	binData, err := service.Stock().GetBin(ctx, req)
+	if err != nil {
+		g.Log().Error(ctx, "GetBin 失败", err)
+		return rpc.ApiError("查询 Bin 记录失败: " + err.Error()), nil
+	}
+
+	// 包装为 ResponseInfo
+	return rpc.ApiSuccessWithData("查询成功", binData), nil
+}

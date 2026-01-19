@@ -9,6 +9,7 @@ import (
 type ActivitySaleOrderPayload struct {
 	BasePayload
 	FullReductionActivityUuid    uint64  `json:"full_reduction_activity_uuid"`    // 满减活动UUID
+	FullReductionActivityName    string  `json:"full_reduction_activity_name"`    // 满减活动名称
 	FullReductionActivityMessage string  `json:"full_reduction_activity_message"` // 满减规则信息（如"满200减20"）
 	ActivityAmount               float64 `json:"activity_amount"`                 // 满减活动抵扣金额
 	OldPrice                     float64 `json:"old_price"`                       // 使用活动前的订单金额

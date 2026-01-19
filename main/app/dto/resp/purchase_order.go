@@ -14,6 +14,7 @@ type PurchaseOrderInfo struct {
 	OrderNo           string             `json:"order_no"`            // 申请单编号（单据编号）
 	ErpOrderNo        string             `json:"erp_order_no"`        // ERP申请单编号（采购单号）
 	Status            int                `json:"status"`              // 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核
+	RejectReason      string             `json:"reject_reason"`       // 驳回原因
 	HeadquarterStatus int                `json:"headquarter_status"`  // V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
 	OrderTime         int64              `json:"order_time"`          // 单据日期
 	Num               int                `json:"num"`                 // 物品数量
@@ -27,6 +28,7 @@ type PurchaseOrderInfo struct {
 	ReceiptProgress   string             `json:"receipt_progress"`    // 收货进度（百分比0.00%）前端直接显示
 	CompanyUuid       uint64             `json:"company_uuid"`        // V2.6 公司UUID
 	CompanyName       string             `json:"company_name"`        // V2.6 公司名称
+	CompanyStoreCode  string             `json:"company_store_code"`  // 公司店铺编码
 }
 
 // PurchaseOrderDetailResp 采购订单详情响应

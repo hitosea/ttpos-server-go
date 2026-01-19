@@ -15,7 +15,7 @@
                   v-model:valueData="language.reason"
                   :value="language.reason"
                   :placeholder="$t('请输入原因')"
-                  :maxlength="50"
+                  :maxlength="100"
                   :langKey="language.name"
                   width="w-full"
                   @translate="(response) => translate(item)(response)"

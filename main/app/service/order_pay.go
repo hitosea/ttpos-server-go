@@ -14,8 +14,8 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/app/repository/saas"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
@@ -105,11 +105,11 @@ func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderP
 		saleOrder.AddCoupon(req.CouponUuid, req.CouponRequirement, couponAmount)
 	}
 
-	db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 选择优惠券后，将积分自动抵扣失效改为手动抵扣
 		saleOrder.AutoPointsExchange = 0
 
-		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
 		if hasCoupon {
@@ -124,7 +124,9 @@ func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderP
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	// 获取支付结账页面信息
 	return s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, req.SaleOrderUuid)
@@ -165,7 +167,7 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 
 	// 检查积分数量是否超过最大抵扣数
 	if saleOrder.Member != nil && saleBill.SaleBillSetting.IsOpenPointsExchange() {
-		maxPoints := saleOrder.CaclMaxPoints()
+		maxPoints := saleOrder.CalcMaxPoints()
 		if req.Points > maxPoints {
 			return nil, errors.New("积分数量超过最大抵扣数")
 		}
@@ -175,7 +177,7 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 			// 手动抵扣积分，更新销售订单的抵扣积分和抵扣金额
 			saleOrder.PayPoints = req.Points
 			saleOrder.AutoPointsExchange = 0
-			saleOrder.PayPointsAmount = saleOrder.CaclPointsExchangeAmount()
+			saleOrder.PayPointsAmount = saleOrder.CalcPointsExchangeAmount()
 
 			if err := db.Transaction(func(tx *gorm.DB) error {
 				saleOrder.SetCheckoutZeroRuleCancel() // 取消抹零，修改saleBill中的数据
@@ -186,6 +188,11 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 				saleOrder.SetPointsCouponCancel()
 				if err := repository.NewSaleOrderCouponRepo(tx).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
 					return errors.WithMessage(err, "取消销售订单所有优惠券失败")
+				}
+				// 取消满减活动
+				saleOrder.SetActivityCancel()
+				if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderActivity(saleOrder.Uuid, 0, "", 0, saleOrder.AutoPointsExchange); err != nil {
+					return errors.WithMessage(err, "取消销售订单满减活动失败")
 				}
 				// 更新销售订单的积分抵扣信息
 				if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 0); err != nil {
@@ -252,6 +259,12 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		return nil, errors.New("支付方式不可用")
 	}
 
+	// 验证支付配置
+	paymentRepo := NewPaymentRepo(ctx, s.dbm)
+	if err := paymentRepo.ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		return nil, errors.New("请先到支付管理中完善后使用")
+	}
+
 	// 判断支付方式是否已支付
 	orderRepo := repository.NewPaymentOrderRepo(db)
 	paymentOrder, err := orderRepo.GetPaymentOrderInfo(
@@ -287,7 +300,7 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	}
 
 	// 创建连连支付订单
-	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
+	payment, err := paymentRepo.CreatePayment(CreatePaymentReq{
 		RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
 		RelatedUuid:       saleOrder.Uuid,
 		PaymentMethodUuid: paymentMethod.Uuid,
@@ -339,6 +352,23 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	paymentMethod, err := repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(req.PaymentMethodUuid)
 	if err != nil {
 		return nil, errors.WithMessage(errors.New("支付方式未开启"))
+	}
+
+	// 验证支付方式是否在开账时保存的列表中
+	staff := ctx.GetStaff()
+	if staff.DutyNo != "" {
+		cashBoxSrv := NewCashBoxSrv(s.dbm)
+		statisticsSrv := NewStatisticsSrv()
+		staffShiftSrv := NewStaffShiftSrv(cache.Global, s.dbm, cashBoxSrv, statisticsSrv)
+		isValid, err := staffShiftSrv.ValidatePaymentMethod(ctx, staff.DutyNo, paymentMethod.Uuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if !isValid {
+			return nil, errors.New("请交班后再重新选择该支付方式")
+		}
+	} else {
+		return nil, errors.New("请交班后再重新选择该支付方式")
 	}
 
 	// 支付方式是否可用
@@ -428,6 +458,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		Amount:               amount, // 实收金额
 		TransactionNumber:    "",
 		Status:               paymentOrderStatus,
+		PaymentInfo:          req.PaymentInfo,
 	}
 
 	// 判断这个支付方式是否已经支付过，如果已经支付过，则更新支付单
@@ -501,10 +532,17 @@ func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
+	// 获取支付单
 	paymentOrder, err := repository.NewPaymentOrderRepo(db).GetPaymentOrderRecord(req.PaymentOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// Kbank支付不支持撤销
+	if paymentOrder.PaymentMethod != nil && paymentOrder.PaymentMethod.IsKbankPay() {
+		return nil, errors.New("Kbank支付不支持撤销")
+	}
+
 	// 撤销支付单
 	paymentOrder.Cancel()
 	paymentOrder.SetNil()
@@ -543,6 +581,60 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		return nil, errSaleBill
 	}
 
+	// 获取销售订单信息
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("无法查询到销售订单")
+	}
+
+	// 检查材料库存是否充足
+	{
+		withoutWarehouseOutFormSaleOrderProducts, err := s.getSaleOrderProductWithoutWarehouseOutForm(ctx, saleOrder.Uuid, saleOrder.SaleOrderProducts)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		// 获取减库存的清单信息
+		decreaseStockList, err := s.getDecreaseStockList(ctx, withoutWarehouseOutFormSaleOrderProducts)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		// 检查材料库存是否充足
+		if err := s.checkMaterialStock(ctx, db, decreaseStockList); err != nil {
+			// 如果检查不通过，按商品顺序检查，返回具体哪些商品库存不足
+			insufficientProducts, errDetail := s.checkMaterialStockByProductOrder(ctx, db, decreaseStockList)
+			if errDetail != nil {
+				return nil, errors.WithMessage(errDetail)
+			}
+			if len(insufficientProducts) > 0 {
+				// 构建商品名称列表
+				productNames := make([]string, 0, len(insufficientProducts))
+				for _, product := range insufficientProducts {
+					productName := product.GetProductNameAttributes(ctx.GetLanguage())
+					if productName == "" {
+						localeName := product.GetLocaleName()
+						productName = localeName.GetLocale(ctx.GetLanguage())
+						if productName == "" {
+							productName = localeName.EN
+							if productName == "" {
+								productName = localeName.ZH
+							}
+							if productName == "" {
+								productName = fmt.Sprintf("商品(%d)", product.Uuid)
+							}
+						}
+					}
+					productNames = append(productNames, productName)
+				}
+				return nil, errors.NewWithCode(
+					constant.CodeWarehouseStockNotEnough,
+					"以下商品材料库存不足: "+strings.Join(productNames, ", "),
+				)
+			}
+			// 如果按商品顺序检查也没有找到具体商品，返回原始错误
+			return nil, errors.WithMessage(err)
+		}
+	}
+
 	// 重新计算销售账单
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
@@ -552,12 +644,11 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 	if ctx.GetSource() != constant.SourceCashier && saleBill.IsSplit() {
 		return nil, errors.NewWithCode(constant.CodeOrderCheckSplit, "当前订单已经拆单，请前去收银机操作")
 	}
-
-	// 获取销售订单信息
-	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("无法查询到销售订单")
 	}
+
+	oldPrice := saleOrder.GetAmountValueNoActivityAmount()
 
 	// 如果选择了活动，验证活动有效性
 	if saleOrder.FullReductionActivityUuid > 0 {
@@ -762,8 +853,12 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		}
 		// 更新会员消费金额和消费次数
 		consumptionAmount := decimal.NewFromFloat(saleOrder.GetAmountValue()).Sub(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee)).Truncate(2).InexactFloat64()
-		repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, consumptionAmount)
-		repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid)
+		if err := repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, consumptionAmount); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if err := repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 		// 处理会员升级 todo 如果后面的逻辑报错，这个升级没有回滚，应该放在事务中升级
 		utils.Go(func() {
 			s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), saleOrder.ConsumerUuid)
@@ -918,7 +1013,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		}
 		// 构建出库单
 
-		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid(), staffShiftLogUuid)
+		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid(), staffShiftLogUuid, 0)
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			for _, warehouseOutForm := range warehouseOutForms {
 				if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
@@ -938,8 +1033,16 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		}
 	})
 
-	// 该订单的所有出库记录都标记已出库。将预出库的状态改为已出库
-	repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid)
+	// 如果所有子单都已结账，将预出库的状态改为已出库
+	if saleBill.CanFinishSaleBill() {
+		if err := repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsStatusBySaleBillUuid(saleBill.Uuid); err != nil {
+			logger.Logger.Error("更新出库单记录状态失败", zap.Error(err), zap.Uint64("saleBillUuid", saleBill.Uuid), zap.Uint64("saleOrderUuid", saleOrder.Uuid), zap.Uint64("companyUuid", ctx.GetCompanyUuid()))
+		}
+	} else {
+		if err := repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid); err != nil {
+			logger.Logger.Error("更新出库单记录状态失败", zap.Error(err), zap.Uint64("saleOrderUuid", saleOrder.Uuid), zap.Uint64("companyUuid", ctx.GetCompanyUuid()))
+		}
+	}
 
 	// 发送结账短信
 	if saleOrder.ConsumerUuid != 0 {
@@ -986,7 +1089,35 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 	saleOrderPaymentAmount := saleOrder.PaymentAmount
 	saleOrderChangeAmount := saleOrder.ChangeAmount
 	utils.Go(func() {
-
+		// 发布活动事件
+		if saleOrder.FullReductionActivityUuid > 0 {
+			event.NewSystemBus().PublishActivitySaleOrderEvent(event.ActivitySaleOrderPayload{
+				BasePayload: event.BasePayload{
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  request.SaleBillUuid,
+					SaleOrderUuid: request.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				FullReductionActivityUuid: saleOrder.FullReductionActivityUuid,
+				FullReductionActivityName: func() string {
+					if saleOrder.FullReductionActivityUuid > 0 {
+						activityRepo := repository.NewFullReductionActivityRepo(db)
+						activity, err := activityRepo.GetByUuid(saleOrder.FullReductionActivityUuid)
+						if err != nil {
+							return ""
+						}
+						return activity.Name
+					}
+					return ""
+				}(),
+				FullReductionActivityMessage: saleOrder.FullReductionActivityMessage,
+				ActivityAmount:               saleOrder.ActivityAmount,
+				OldPrice:                     oldPrice,
+				NewPrice:                     saleOrder.GetAmountValue(),
+			})
+		}
 		// 结账前，发布"抹零"事件。如果优惠折扣自动抹零且抹零金额不为0，则发布"抹零"事件。
 		if saleOrder.IsAutoZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroFee != 0 {
 			event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountSaleOrderPayload{
@@ -1088,6 +1219,18 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 
 // InstantOrderFree 免单
 func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error) {
+	// 版本判断：从请求头获取客户端版本
+	// 如果版本 >= v2.10.0，进行权限验证；否则不进行权限验证（向后兼容）
+	var authorizedStaff *model.Staff
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		// 版本 >= v2.10.0，进行授权验证（免单操作属于折扣类型，使用折扣操作的授权验证逻辑）
+		var err error
+		authorizedStaff, err = s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, req.AuthorizedStaffAccount, req.AuthorizedStaffPassword)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 获取销售账单信息
@@ -1255,7 +1398,8 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 			})
 		}
 
-		s.bus.PublishFreeSaleOrderEvent(event.FreeSaleOrderPayload{
+		// 构建免单事件 Payload
+		freePayload := event.FreeSaleOrderPayload{
 			BasePayload: event.BasePayload{ // 免单
 				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
@@ -1271,7 +1415,16 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 			ChangeDue:     0, // 免单时，找零金额为0
 			IsFree:        utils.BoolToUint(true),
 			DiscountMoney: saleOrder.GetAmount(),
-		})
+		}
+		// 如果使用了授权验证，记录授权员工信息
+		if authorizedStaff != nil {
+			freePayload.AuthorizedStaff = &event.AuthorizedStaffInfo{
+				Uuid:  authorizedStaff.Uuid,
+				Name:  authorizedStaff.RealName,
+				Email: authorizedStaff.Username,
+			}
+		}
+		s.bus.PublishFreeSaleOrderEvent(freePayload)
 	})
 
 	// 发布"统计"事件
@@ -1418,6 +1571,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			PaymentCommissionFee: paymentOrder.PaymentCommissionFee,
 			Amount:               paymentOrder.Amount,
 			DisabledCancel:       paymentOrder.PaymentMethod.IsDisabledCancel(),
+			PaymentInfo:          paymentOrder.PaymentInfo,
 		}
 		paymentOrders = append(paymentOrders, order)
 	}
@@ -1425,13 +1579,13 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	var pointsExchange resp.PointsExchangeInfo
 	if saleOrder.Member != nil && saleBill.SaleBillSetting.IsOpenPointsExchange() {
 		// 积分抵扣信息。
-		maxPoints := saleOrder.CaclMaxPoints()
+		maxPoints := saleOrder.CalcMaxPoints()
 
 		// 如果自动抵扣积分，且未创建付款单，则更新销售订单的抵扣积分和抵扣金额
 		if saleBill.SaleBillSetting.IsOpenPointsExchange() && saleOrder.AutoPointsExchange == 1 && len(saleOrder.PaymentOrders) == 0 {
 			// 自动抵扣积分，更新销售订单的抵扣积分和抵扣金额
 			saleOrder.PayPoints = maxPoints
-			saleOrder.PayPointsAmount = saleOrder.CaclPointsExchangeAmount()
+			saleOrder.PayPointsAmount = saleOrder.CalcPointsExchangeAmount()
 
 			// 更新销售订单的积分抵扣信息
 			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 1); err != nil {
@@ -1461,33 +1615,63 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 
 	methodItems := make([]resp.PaymentMethodItem, 0)
 	amounts := make([]resp.PaymentMethodAmount, 0)
+	// 计算活动抵扣金额
+	discountAmount := 0.0
+	if saleOrder.FullReductionActivityUuid > 0 {
+		discountAmount, _, err = s.calculateActivityDiscount(ctx, saleOrder, saleOrder.FullReductionActivityUuid)
+		if err != nil {
+			// return nil, errors.WithMessage(err, "计算活动抵扣金额失败")
+			ctx.Log().Error("计算活动抵扣金额失败", zap.Any("company_uuid", ctx.GetCompanyUuid()), zap.Any("sale_order_uuid", saleOrder.Uuid), zap.Any("activity_uuid", saleOrder.FullReductionActivityUuid), zap.Error(err))
+		}
+	}
 
-	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(s.dbm.GetDB(constant.DefaultDB)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
+	// 连连支付是否可用
+	lianLianPayAvailable := true
+	if err := NewPaymentRepo(ctx, s.dbm).ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		lianLianPayAvailable = false
+	}
+
+	// 遍历支付方式
 	for _, paymentMethod := range paymentMethods {
+		isAvailable := true
 		// 不显示免单
 		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {
 			continue
 		}
+		if paymentMethod.Code == constant.PaymentMethodCodeFreeMealForErp {
+			continue
+		}
+		// 不显示 Grab 和 LINE MAN 支付方式
+		if paymentMethod.Code == constant.PaymentMethodCodeGrab || paymentMethod.Code == constant.PaymentMethodCodeLineMan {
+			continue
+		}
 		// LianLianPay 没有配置支付信息 不显示
-		if paymentMethod.Code == constant.PaymentMethodCodeLianLianWechatPay ||
-			paymentMethod.Code == constant.PaymentMethodCodeLianLianAliPay ||
-			paymentMethod.Code == constant.PaymentMethodCodeLianLianQRPromptPay {
-			if paymentAppErr != nil || paymentApp == nil || paymentApp.ID == 0 {
-				continue
-			}
+		if !lianLianPayAvailable && paymentMethod.IsLianLianPay() {
+			continue
 		}
 
+		// 获取支付方式logo和二维码
 		var logoUrl string
 		var qrcodeUrl string
 		if paymentMethod.LogoFile != nil {
 			logoUrl = paymentMethod.LogoFile.GetUrl(baseUrl)
 		}
 		if logoUrl == "" && paymentMethod.DefaultImg != "" {
-			logoUrl = strings.TrimRight(baseUrl, "/") + paymentMethod.DefaultImg
+			if strings.HasPrefix(paymentMethod.DefaultImg, "http") || strings.HasPrefix(paymentMethod.DefaultImg, "https") {
+				logoUrl = paymentMethod.DefaultImg
+			} else {
+				logoUrl = strings.TrimRight(baseUrl, "/") + paymentMethod.DefaultImg
+			}
 		}
 		if paymentMethod.QrcodeFile != nil {
 			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl(baseUrl)
 		}
+
+		// 总部支付方式
+		if paymentMethod.IsHeadquarterPayment() && paymentMethod.ErpnextPayment == "" {
+			isAvailable = false
+		}
+
 		methodItem := resp.PaymentMethodItem{
 			Source:        paymentMethod.Source,
 			SourceText:    paymentMethod.GetSourceText(ctx.GetLanguage()),
@@ -1497,13 +1681,14 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			FeePercent:    paymentMethod.FeePercent,
 			Logo:          logoUrl,
 			Qrcode:        qrcodeUrl,
+			IsAvailable:   isAvailable,
 			Code:          paymentMethod.Code,
 		}
 		methodItems = append(methodItems, methodItem)
 
 		commissionFee := saleOrder.CalcCommissionFee()
 
-		saleOrderAmount := saleOrder.GetAmountValue() // 积分抵扣后的应收金额
+		saleOrderAmount := saleOrder.GetAmountValueWithActivityAmount(discountAmount) // 积分抵扣后的应收金额
 		saleOrderOriginAmount := saleOrder.GetOriginAmountValue()
 		if commissionFee > 0 {
 			// 如果有手续费
@@ -1513,8 +1698,8 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				SaleOrderAmount:       saleOrderAmount,
 				CommissionFee:         commissionFee,
 				CouponExchangeAmount:  saleOrder.CalcCouponExchangeAmount(),
-				ActivityAmount:        saleOrder.ActivityAmount,
-				UnpaidAmount:          saleOrder.CalcUnPayAmount(true),
+				ActivityAmount:        discountAmount,
+				UnpaidAmount:          saleOrder.CalcUnPayAmount(true, discountAmount),
 				ZeroAmount:            0, // 只有没有手续费时才会抹零
 				ZeroRule:              constant.SaleBillSettingCheckoutZeroingMethodNone,
 				PaymentMethodUuid:     methodItem.Uuid,
@@ -1537,8 +1722,8 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				SaleOrderAmount:       saleOrderAmount,
 				CommissionFee:         commissionFee,
 				CouponExchangeAmount:  unpaidAmount,
-				ActivityAmount:        saleOrder.ActivityAmount,
-				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),
+				ActivityAmount:        discountAmount,
+				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission, discountAmount),
 				ZeroAmount:            zeroFee, // 只有没有手续费时且支付方式不需要手续费才会抹零
 				IsAutoZero:            saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting),
 				ZeroRule:              saleOrder.ZeroCheckoutRule,
@@ -1569,7 +1754,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 }
 
 // getFullReductionActivityList 获取满减活动列表
-func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill) (resp.FullReductionActivityList, error) {
+func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *model.SaleOrder, _ *model.SaleBill) (resp.FullReductionActivityList, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	now := time.Now().Unix()
 
@@ -1607,7 +1792,7 @@ func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *
 		meetsThreshold := s.checkActivityThreshold(activity, orderAmount)
 
 		// 判断活动是否可用
-		isAvailable := isInTimeRange && meetsThreshold && !hasPartialPayment && !isFinalAmountZero
+		isAvailable := isInTimeRange && meetsThreshold && !isFinalAmountZero
 
 		// 判断活动是否已选中
 		isSelected := activity.Uuid == selectedActivityUuid
@@ -1615,12 +1800,26 @@ func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *
 		// 计算活动抵扣金额（如果已选中）
 		discountAmount := 0.0
 		if isSelected {
-			var err error
-			discountAmount, _, err = s.calculateActivityDiscount(ctx, saleOrder, activity.Uuid)
-			if err != nil {
-				// 如果计算失败，忽略错误，继续处理其他活动
-				discountAmount = 0.0
+			// 如果活动不可用,则取消选中活动。避免前端显示已选中活动，但活动不可用
+			if !isAvailable {
+				isSelected = false
+				if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderActivity(saleOrder.Uuid, 0, "", 0, saleOrder.AutoPointsExchange); err != nil {
+					ctx.Log().Error("取消选中活动失败", zap.Any("company_uuid", ctx.GetCompanyUuid()), zap.Any("sale_order_uuid", saleOrder.Uuid), zap.Error(err))
+				}
+			} else {
+				var err error
+				discountAmount, _, err = s.calculateActivityDiscount(ctx, saleOrder, activity.Uuid)
+				if err != nil {
+					ctx.Log().Error("计算活动抵扣金额失败", zap.Any("company_uuid", ctx.GetCompanyUuid()), zap.Any("sale_order_uuid", saleOrder.Uuid), zap.Any("activity_uuid", activity.Uuid), zap.Error(err))
+					// 如果计算失败，忽略错误，继续处理其他活动
+					discountAmount = 0.0
+				}
 			}
+		}
+
+		// 如果活动可用，且订单已部分支付，且未选中活动，则活动不可用
+		if isAvailable && hasPartialPayment && !isSelected {
+			isAvailable = false
 		}
 
 		// 构建活动规则列表
@@ -1726,7 +1925,7 @@ func (s *orderSrv) calculateActivityDiscount(ctx context.Context, saleOrder *mod
 	}
 
 	// 计算订单金额（积分抵扣后的应收金额）
-	orderAmount := saleOrder.GetAmountValue()
+	orderAmount := saleOrder.GetAmountValueNoActivityAmount()
 
 	// 根据活动类型计算抵扣金额
 	var discountAmount float64
@@ -1737,7 +1936,7 @@ func (s *orderSrv) calculateActivityDiscount(ctx context.Context, saleOrder *mod
 		maxDiscount := 0.0
 		maxThreshold := 0.0
 		for _, rule := range activity.Rules {
-			if orderAmount >= rule.Threshold && rule.Threshold > maxThreshold {
+			if orderAmount >= rule.Threshold && rule.ReductionAmount > maxDiscount {
 				maxThreshold = rule.Threshold
 				maxDiscount = rule.ReductionAmount
 			}
@@ -1838,15 +2037,15 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 		}
 
 		// 计算活动抵扣金额
-		discountAmount, activityMessage, err := s.calculateActivityDiscount(ctx, saleOrder, req.FullReductionActivityUuid)
-		if err != nil {
-			return nil, errors.WithMessage(err, "计算活动抵扣金额失败")
-		}
+		// discountAmount, activityMessage, err := s.calculateActivityDiscount(ctx, saleOrder, req.FullReductionActivityUuid)
+		// if err != nil {
+		// 	return nil, errors.WithMessage(err, "计算活动抵扣金额失败")
+		// }
 
 		// 更新订单的活动信息
 		saleOrder.FullReductionActivityUuid = req.FullReductionActivityUuid
-		saleOrder.FullReductionActivityMessage = activityMessage
-		saleOrder.ActivityAmount = discountAmount
+		// saleOrder.FullReductionActivityMessage = activityMessage
+		saleOrder.ActivityAmount = 0
 
 		// 选择活动后，将积分自动抵扣失效改为手动抵扣
 		saleOrder.AutoPointsExchange = 0
@@ -1854,9 +2053,6 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 		// 取消活动
 		saleOrder.SetActivityCancel()
 	}
-
-	// 记录使用活动前的订单金额
-	oldPrice := saleOrder.GetAmountValue()
 
 	// 使用事务更新订单
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -1866,7 +2062,7 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 			saleOrder.Uuid,
 			saleOrder.FullReductionActivityUuid,
 			saleOrder.FullReductionActivityMessage,
-			saleOrder.ActivityAmount,
+			0,
 			saleOrder.AutoPointsExchange,
 		); err != nil {
 			return errors.WithMessage(err, "更新订单活动信息失败")
@@ -1889,32 +2085,6 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
-
-	// 获取更新后的订单金额
-	saleOrder = saleBill.GetSaleOrder(req.SaleOrderUuid)
-	if saleOrder == nil {
-		return nil, errors.New("无法查询到销售订单")
-	}
-	newPrice := saleOrder.GetAmountValue()
-
-	// 发布活动事件
-	utils.Go(func() {
-		event.NewSystemBus().PublishActivitySaleOrderEvent(event.ActivitySaleOrderPayload{
-			BasePayload: event.BasePayload{
-				Ctx:           ctx,
-				CompanyUuid:   ctx.GetCompanyUuid(),
-				Source:        ctx.GetSource(),
-				SaleBillUuid:  req.SaleBillUuid,
-				SaleOrderUuid: req.SaleOrderUuid,
-				OperatorUuid:  int64(ctx.GetStaffUuid()),
-			},
-			FullReductionActivityUuid:    saleOrder.FullReductionActivityUuid,
-			FullReductionActivityMessage: saleOrder.FullReductionActivityMessage,
-			ActivityAmount:               saleOrder.ActivityAmount,
-			OldPrice:                     oldPrice,
-			NewPrice:                     newPrice,
-		})
-	})
 
 	// 获取支付结账页面信息
 	return s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, req.SaleOrderUuid)

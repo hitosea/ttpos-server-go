@@ -38,15 +38,15 @@ type JobColumns struct {
 	Remark               string // 订单备注
 	Reserved1            string // 保留字段1
 	Reserved2            string // 保留字段2
-	CreatedAt            string // 创建时间
-	UpdatedAt            string // 更新时间
-	DeletedAt            string // 软删除
 	CallbackUrl          string // 订单状态更新回调
 	SkootarId            string // 骑手Id
 	SkootarName          string // 骑手名称
 	SkootarPhone         string // 骑手电话
 	SkootarImageUrl      string // 骑手头像
 	SkootarRating        string // 骑手评分
+	CreatedAt            string // 创建时间
+	UpdatedAt            string // 更新时间
+	DeletedAt            string // 软删除
 }
 
 // jobColumns holds the columns for the table takeout_job.
@@ -68,15 +68,15 @@ var jobColumns = JobColumns{
 	Remark:               "remark",
 	Reserved1:            "reserved1",
 	Reserved2:            "reserved2",
-	CreatedAt:            "created_at",
-	UpdatedAt:            "updated_at",
-	DeletedAt:            "deleted_at",
 	CallbackUrl:          "callback_url",
 	SkootarId:            "skootar_id",
 	SkootarName:          "skootar_name",
 	SkootarPhone:         "skootar_phone",
 	SkootarImageUrl:      "skootar_image_url",
 	SkootarRating:        "skootar_rating",
+	CreatedAt:            "created_at",
+	UpdatedAt:            "updated_at",
+	DeletedAt:            "deleted_at",
 }
 
 // NewJobDao creates and returns a new DAO object for table data access.

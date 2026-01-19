@@ -17,10 +17,16 @@ class ProductAttribute
     {
         $attributeList = $data['product_attr'] ?? [];
         foreach ($attributeList as $key => $item) {
+            // 计算默认最大可选（如果未设置）
+            $attrValueCount = count($item['attribute_ids'] ?? []);
+            $maxSelect = $item['attribute_max_select'] ?? $attrValueCount;
+            
             // 新增属性组
             $group = ProductAttributeGroupModel::create([
-                'is_must' => $item['attribute_required'] ?? 0, // 是否必选
-                'max_selection' => $item['attribute_max_select'] ?? 0, // 最大选择数量
+                'min_selection' => $item['attribute_min_select'] ?? 0, // 最小选择数量
+                'max_selection' => $maxSelect, // 最大选择数量
+                // 保留 is_must 字段用于兼容旧数据
+                'is_must' => ($item['attribute_min_select'] ?? 0) > 0 ? 1 : 0,
                 'product_package_uuid' => $product['uuid'], // 产品包uuid
                 'product_attribute_group_uuid' => $item['parent_id'], // 属性组uuid
                 'sort' => $key // 排序
@@ -55,22 +61,29 @@ class ProductAttribute
                 ->where('product_package_uuid', $product['uuid'])
                 ->find();
             if (!$group) {
+                // 计算默认最大可选（如果未设置）
+                $attrValueCount = count($item['attribute_ids'] ?? []);
+                $maxSelect = $item['attribute_max_select'] ?? $attrValueCount;
+                
                 $group = ProductAttributeGroupModel::create([
-                    'is_must' => $item['attribute_required'] ?? 0,
-                    'max_selection' => $item['attribute_max_select'] ?? 0,
+                    'min_selection' => $item['attribute_min_select'] ?? 0,
+                    'max_selection' => $maxSelect,
+                    // 保留 is_must 字段用于兼容旧数据
+                    'is_must' => ($item['attribute_min_select'] ?? 0) > 0 ? 1 : 0,
                     'product_package_uuid' => $product['uuid'],
                     'product_attribute_group_uuid' => $item['parent_id'],
                     'sort' => $key
                 ]);
             } else {
-                $attributeOpenMaxSelect = $item['attribute_open_max_select'] ?? 0;
-                $attributeMaxSelect = $item['attribute_max_select'] ?? 0;
-                if ($attributeOpenMaxSelect == 0) {
-                    $attributeMaxSelect = 0;
-                }
+                // 计算默认最大可选（如果未设置）
+                $attrValueCount = count($item['attribute_ids'] ?? []);
+                $maxSelect = $item['attribute_max_select'] ?? $attrValueCount;
+                
                 $group->save([
-                    'is_must' => $item['attribute_required'] ?? 0,
-                    'max_selection' => $attributeMaxSelect,
+                    'min_selection' => $item['attribute_min_select'] ?? 0,
+                    'max_selection' => $maxSelect,
+                    // 保留 is_must 字段用于兼容旧数据
+                    'is_must' => ($item['attribute_min_select'] ?? 0) > 0 ? 1 : 0,
                     'sort' => $group['sort'] != $key ? $key : $group['sort']
                 ]);
             }

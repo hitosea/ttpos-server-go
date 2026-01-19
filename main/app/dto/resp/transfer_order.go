@@ -16,13 +16,16 @@ type TransferOrderInfo struct {
 	Uuid                     uint64             `json:"uuid"`                         // 调拨单UUID
 	CompanyUuid              uint64             `json:"company_uuid"`                 // 所属公司UUID (发起门店)
 	CompanyName              string             `json:"company_name"`                 // 所属公司名称 (发起门店)
+	CompanyStoreCode         string             `json:"company_store_code"`           // 公司店铺编码
 	OrderNo                  string             `json:"order_no"`                     // 单据编号
 	ErpOrderNo               string             `json:"erp_order_no"`                 // ERP调拨单号
 	TransferType             int                `json:"transfer_type"`                // 调拨类型: 1-调入 2-调出
 	SenderCompanyUuid        uint64             `json:"sender_company_uuid"`          // 发货门店UUID
 	SenderCompanyName        string             `json:"sender_company_name"`          // 发货门店名称
+	SenderCompanyStoreCode   string             `json:"sender_company_store_code"`    // 发货门店编码
 	ReceiverCompanyUuid      uint64             `json:"receiver_company_uuid"`        // 收货门店UUID
 	ReceiverCompanyName      string             `json:"receiver_company_name"`        // 收货门店名称
+	ReceiverCompanyStoreCode string             `json:"receiver_company_store_code"`  // 收货门店编码
 	OutWarehouseErpCode      string             `json:"out_warehouse_erp_code"`       // 出库仓库ERP编码
 	OutWarehouseName         dto.LocaleResponse `json:"out_warehouse_name"`           // 出库仓库名称
 	InWarehouseErpCode       string             `json:"in_warehouse_erp_code"`        // 入库仓库ERP编码
@@ -60,6 +63,7 @@ type TransferOrderItemInfo struct {
 	MaterialInternalCode string                       `json:"material_internal_code"` // 物品内部编码
 	Valuation            float64                      `json:"valuation"`              // 估值单价（基准单位）
 	AvailableNum         float64                      `json:"available_num"`          // 可用库存数量
+	UnitLocaleName       dto.LocaleResponse           `json:"unit_locale_name"`       // 单位名称
 	Units                []TransferOrderItemUnitInfo  `json:"units"`                  // 单位列表
 	UnitList             []material_resp.MaterialUnit `json:"unit_list"`              // 单位列表
 }
@@ -167,6 +171,7 @@ type TransferOrderCompanyListResp struct {
 type TransferOrderCompanyItem struct {
 	Uuid          uint64 `json:"uuid"`           // 门店UUID
 	Name          string `json:"name"`           // 门店名称
+	StoreCode     string `json:"store_code"`     // 门店编码
 	IsHeadquarter bool   `json:"is_headquarter"` // 是否总部
 }
 

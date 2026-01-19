@@ -157,3 +157,34 @@
     }
 }
 ```
+
+
+------
+
+## 无估值率传入时盘点
+
+```json
+{
+  "company_abbr": "CFG",
+  "branch": "蓝象总店",
+  "posting_date": "2025-12-23",
+  "posting_time": "06:04:27",
+  "purpose": "Stock Reconciliation",
+  "warehouse": "蓝象总店-Normal-Default - CFG",
+  "items": [
+    {
+      "item_code": "WPR3693334839296001",
+      "qty": 99931
+    }
+  ]
+}
+
+```
+
+```json
+{
+    "code": "1",
+    "message": "缺少对应仓库的入库记录,无估值率!",
+    "data": null
+}
+```

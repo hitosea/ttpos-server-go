@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
@@ -120,6 +121,8 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 	opts := []repository.DBOption{
 		warehouseLogRepo.WhereLogType(1), // 出库
 		warehouseLogRepo.WhereScene(1),   // 销售出库
+		// 未删除的记录
+		repository.CommonRepo.WhereBySoftDelete(),
 		func(db *gorm.DB) *gorm.DB {
 			return db.Where("opening_hours = ?", openingYearHours)
 		},
@@ -133,7 +136,7 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 		return nil
 	}
 
-	logger.Logger.Info("门店 %s 已到达营业结束时间，开始统计销售出库记录", zap.String("company_name", company.Name))
+	logger.Logger.Info(fmt.Sprintf("门店 %s 已到达营业结束时间，开始统计销售出库记录", company.Name))
 
 	// 统计当天销售出库记录
 	outboundRecords, err := t.getDailySalesOutboundRecords(company.Uuid, startTime, endTime)
@@ -142,7 +145,7 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 	}
 
 	if len(outboundRecords) == 0 {
-		logger.Logger.Info("门店 %s 今日无销售出库记录", zap.String("company_name", company.Name))
+		logger.Logger.Info(fmt.Sprintf("门店 %s 今日无销售出库记录", company.Name))
 		return nil
 	}
 
@@ -183,6 +186,10 @@ func (t *DailySalesOutboundSummaryTask) isBusinessEndTime(company *model.Company
 
 	// 获取营业时间的开始和结束时间戳
 	startTime, endTime := timeUtil.OpeningHoursStartEndUnix(openingHours, utils.WithOpeningHoursType(1))
+
+	// 如果当前时间是0点，则调整为前一天的时间
+	startTime, endTime = t.adjustOpeningHoursForMidnight(timeUtil, startTime, endTime)
+
 	logger.Logger.Info(fmt.Sprintf("openingHours: %s,营业开始时间: %s(%d),营业结束时间: %s(%d)", openingHours, timeUtil.FormatUnixTime(startTime, "2006-01-02 15:04:05"), startTime, timeUtil.FormatUnixTime(endTime, "2006-01-02 15:04:05"), endTime))
 	now := timeUtil.Now().Unix()
 
@@ -191,11 +198,27 @@ func (t *DailySalesOutboundSummaryTask) isBusinessEndTime(company *model.Company
 	return now >= endTime, startTime, endTime
 }
 
-// getDailySalesOutboundRecords 获取当天销售出库记录
+// adjustOpeningHoursForMidnight 如果当前时间是0点，则将营业时间调整为前一天
+func (t *DailySalesOutboundSummaryTask) adjustOpeningHoursForMidnight(timeUtil utils.TimeUtil, startTime, endTime int64) (int64, int64) {
+	now := timeUtil.Now()
+	// 判断当前时间是否是0点（小时）
+	if now.Hour() == 0 {
+		// 减去一天的秒数（24小时）
+		oneDaySeconds := int64(24 * 60 * 60)
+		startTime = startTime - oneDaySeconds
+		endTime = endTime - oneDaySeconds
+		logger.Logger.Info(fmt.Sprintf("当前时间为0点，已调整为前一天的营业时间: 开始时间 %s(%d), 结束时间 %s(%d)",
+			timeUtil.FormatUnixTime(startTime, "2006-01-02 15:04:05"), startTime,
+			timeUtil.FormatUnixTime(endTime, "2006-01-02 15:04:05"), endTime))
+	}
+	return startTime, endTime
+}
+
+// getDailySalesOutboundRecords 获取当天销售出库记录（包含堂食和外卖订单）
 func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid uint64, startTime int64, endTime int64) ([]*OutboundRecord, error) {
 	db := t.dbm.GetDB(companyUuid)
 
-	// 使用 repository 方法查询出库单明细
+	// 1. 查询堂食订单原料
 	saleOrderMaterialRepo := repository.NewSaleOrderMaterialRepo(db)
 	saleOrderMaterials, err := saleOrderMaterialRepo.GetSaleOrderMaterialByCreateTimeBetween(
 		startTime,
@@ -205,12 +228,25 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 		return nil, err
 	}
 
-	// 按仓库和物料分组汇总数量
+	// 2. 查询外卖订单原料
+	takeoutOrderMaterialRepo := persistence.NewTakeoutOrderMaterialRepo(db)
+	takeoutOrderMaterials, err := takeoutOrderMaterialRepo.GetTakeoutOrderMaterialByCreateTimeBetween(
+		startTime,
+		endTime,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. 按仓库和物料分组汇总数量
 	recordMap := make(map[string]*OutboundRecord)
+
+	// 3.1 处理堂食订单原料
 	for _, item := range saleOrderMaterials {
 		key := fmt.Sprintf("%d_%d", item.WarehouseUuid, item.MaterialUuid)
 		if record, exists := recordMap[key]; exists {
 			record.TotalNum += item.Num
+			record.SourceUuids = append(record.SourceUuids, item.Uuid)
 		} else {
 			materialName := ""
 			materialBaseUnitUuid := uint64(0)
@@ -224,9 +260,7 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 
 			// 这里需要额外查询单位名称，因为关联查询比较复杂
 			if materialBaseUnitUuid > 0 {
-				var unitName string
 				materialBaseUnitName = item.Material.Unit.Name
-				materialBaseUnitName = unitName
 			}
 
 			recordMap[key] = &OutboundRecord{
@@ -234,16 +268,61 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 				WarehouseUuid:        item.WarehouseUuid,
 				MaterialUuid:         item.MaterialUuid,
 				TotalNum:             item.Num,
-				Valuation:            item.Material.Valuation,
+				Valuation:            0.0, // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 				SupplierUuid:         item.Material.SupplierUuid,
 				MaterialName:         materialName,
 				MaterialBaseUnitUuid: materialBaseUnitUuid,
 				MaterialBaseUnitName: materialBaseUnitName,
+				SourceType:           "sale",
+				SourceUuids:          []uint64{item.Uuid},
 			}
 		}
 	}
 
-	// 转换为切片返回
+	// 3.2 处理外卖订单原料
+	for _, item := range takeoutOrderMaterials {
+		key := fmt.Sprintf("%d_%d", item.WarehouseUuid, item.MaterialUuid)
+		if record, exists := recordMap[key]; exists {
+			// 如果已存在记录，累加数量并记录来源
+			record.TotalNum += item.Num
+			// 如果来源类型不同，标记为混合
+			if record.SourceType != "takeout" {
+				record.SourceType = "mixed"
+			}
+			record.SourceUuids = append(record.SourceUuids, item.Uuid)
+		} else {
+			materialName := ""
+			materialBaseUnitUuid := uint64(0)
+			materialBaseUnitName := ""
+
+			// 从关联的物料信息中获取数据
+			if item.Material != nil {
+				materialName = item.Material.Name
+				materialBaseUnitUuid = item.Material.UnitUuid
+			}
+
+			// 这里需要额外查询单位名称，因为关联查询比较复杂
+			if materialBaseUnitUuid > 0 && item.Material.Unit != nil {
+				materialBaseUnitName = item.Material.Unit.Name
+			}
+
+			recordMap[key] = &OutboundRecord{
+				Uuid:                 item.Uuid,
+				WarehouseUuid:        item.WarehouseUuid,
+				MaterialUuid:         item.MaterialUuid,
+				TotalNum:             item.Num,
+				Valuation:            0.0,
+				SupplierUuid:         item.Material.SupplierUuid,
+				MaterialName:         materialName,
+				MaterialBaseUnitUuid: materialBaseUnitUuid,
+				MaterialBaseUnitName: materialBaseUnitName,
+				SourceType:           "takeout",
+				SourceUuids:          []uint64{item.Uuid},
+			}
+		}
+	}
+
+	// 4. 转换为切片返回
 	var records []*OutboundRecord
 	for _, record := range recordMap {
 		records = append(records, record)
@@ -254,15 +333,17 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 
 // OutboundRecord 出库记录汇总
 type OutboundRecord struct {
-	Uuid                 uint64  `json:"uuid"` // 出库记录ID
-	WarehouseUuid        uint64  `json:"warehouse_uuid"`
-	MaterialUuid         uint64  `json:"material_uuid"`
-	TotalNum             float64 `json:"total_num"`
-	Valuation            float64 `json:"valuation"` // 估值率
-	SupplierUuid         uint64  `json:"supplier_uuid"`
-	MaterialName         string  `json:"material_name"`
-	MaterialBaseUnitUuid uint64  `json:"material_base_unit_uuid"`
-	MaterialBaseUnitName string  `json:"material_base_unit_name"`
+	Uuid                 uint64   `json:"uuid"` // 出库记录ID
+	WarehouseUuid        uint64   `json:"warehouse_uuid"`
+	MaterialUuid         uint64   `json:"material_uuid"`
+	TotalNum             float64  `json:"total_num"`
+	Valuation            float64  `json:"valuation"` // 估值率
+	SupplierUuid         uint64   `json:"supplier_uuid"`
+	MaterialName         string   `json:"material_name"`
+	MaterialBaseUnitUuid uint64   `json:"material_base_unit_uuid"`
+	MaterialBaseUnitName string   `json:"material_base_unit_name"`
+	SourceType           string   `json:"source_type"`  // 来源类型: "sale" 堂食订单, "takeout" 外卖订单
+	SourceUuids          []uint64 `json:"source_uuids"` // 来源记录UUID列表
 }
 
 // saveOutboundSummaryRecords 保存出库汇总记录到ttpos_warehouse_in_out_log表
@@ -279,9 +360,22 @@ func (t *DailySalesOutboundSummaryTask) saveOutboundSummaryRecords(companyUuid u
 		// 使用 repository 方法创建记录
 		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
 
-		uuids := make([]uint64, 0)
+		// 分别收集堂食和外卖订单原料的UUID
+		saleOrderMaterialUuids := make([]uint64, 0)
+		takeoutOrderMaterialUuids := make([]uint64, 0)
+
 		for _, record := range records {
-			uuids = append(uuids, record.Uuid)
+			// 根据来源类型收集UUID
+			if record.SourceType == "sale" {
+				saleOrderMaterialUuids = append(saleOrderMaterialUuids, record.SourceUuids...)
+			} else if record.SourceType == "takeout" {
+				takeoutOrderMaterialUuids = append(takeoutOrderMaterialUuids, record.SourceUuids...)
+			} else if record.SourceType == "mixed" {
+				// 混合类型：需要根据原始数据来判断（这里简化处理，都加入堂食）
+				// TODO: 在实际场景中，可能需要更细粒度的区分
+				saleOrderMaterialUuids = append(saleOrderMaterialUuids, record.SourceUuids...)
+			}
+
 			logRecord := &model.WarehouseInOutLog{
 				LogType:              constant.WarehouseInOutLogLogTypeOut, // 出库
 				Scene:                constant.WarehouseInOutLogSceneSale,  // 销售出库
@@ -303,11 +397,23 @@ func (t *DailySalesOutboundSummaryTask) saveOutboundSummaryRecords(companyUuid u
 				continue
 			}
 		}
-		// 更新销售订单原料的统计状态
-		saleOrderMaterialRepo := repository.NewSaleOrderMaterialRepo(tx)
-		if err := saleOrderMaterialRepo.UpdateSaleOrderMaterialIsSummarized(uuids); err != nil {
-			return errors.WithMessage(err)
+
+		// 更新堂食订单原料的统计状态
+		if len(saleOrderMaterialUuids) > 0 {
+			saleOrderMaterialRepo := repository.NewSaleOrderMaterialRepo(tx)
+			if err := saleOrderMaterialRepo.UpdateSaleOrderMaterialIsSummarized(saleOrderMaterialUuids); err != nil {
+				return errors.WithMessage(err)
+			}
 		}
+
+		// 更新外卖订单原料的统计状态
+		if len(takeoutOrderMaterialUuids) > 0 {
+			takeoutOrderMaterialRepo := persistence.NewTakeoutOrderMaterialRepo(tx)
+			if err := takeoutOrderMaterialRepo.UpdateTakeoutOrderMaterialIsSummarized(takeoutOrderMaterialUuids); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+
 		return nil
 	}); err != nil {
 		return err

@@ -40,6 +40,7 @@ type IErpSrv interface {
 	ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error)
 	GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetPaymentMethodListReq) (*resp.GetPaymentMethodListResp, error)
 	AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.AddPaymentMethodReq) error
+	SaveModeOfPayment(ctx pkgCtx.Context, saveModeOfPaymentReq req.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error)
 
 	// 采购单
 	GetMaterialRequestList(ctx pkgCtx.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
@@ -51,6 +52,7 @@ type IErpSrv interface {
 	SubmitStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SaveStockReconciliationReq) (*stock.SaveStockReconciliationResp, error)
 	ApproveStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SubmitStockReconciliationReq) (*stock.SubmitStockReconciliationResp, error)
 	RejectStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, cancelStockReconciliationReq *stock.CancelStockReconciliationReq) (*stock.CancelStockReconciliationReq, error)
+	GetMaterialStockNumByBin(ctx cc.Context, warehouseErpCode string) ([]*stock.ItemStockBin, error)
 
 	// 调拨单
 	SaveMaterialTransfer(ctx pkgCtx.Context, companySetting model.CompanySetting, saveMaterialTransferReq *material_transfer.MaterialTransferReq) (*material_transfer.MaterialTransferResp, error)

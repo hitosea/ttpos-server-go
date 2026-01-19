@@ -147,9 +147,9 @@ func (model *SaleBill) CalcAll(options ...func(option *CalcOption)) {
 	if option.SaleBillSetting != nil {
 		setting = option.SaleBillSetting
 	}
-	for i, _ := range model.SaleOrders {
+	for i := range model.SaleOrders {
 		saleOrder := model.SaleOrders[i]
-		for j, _ := range saleOrder.SaleOrderProducts {
+		for j := range saleOrder.SaleOrderProducts {
 			saleOrderProduct := saleOrder.SaleOrderProducts[j]
 			if saleOrderProduct == nil {
 				continue

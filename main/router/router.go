@@ -2,23 +2,21 @@ package router
 
 import (
 	"net/http"
-	"slices"
-	"strconv"
-	"strings"
 	"ttpos-server-go/app/api/v1/admin"
 	"ttpos-server-go/app/api/v1/assistant"
 	"ttpos-server-go/app/api/v1/callboard"
 	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/api/v1/h5"
+	"ttpos-server-go/app/api/v1/kiosk"
 	"ttpos-server-go/app/api/v1/kitchen"
 	"ttpos-server-go/app/api/v1/member"
 	"ttpos-server-go/app/api/v1/menu"
 	"ttpos-server-go/app/api/v1/passport"
 	"ttpos-server-go/app/api/v1/shop"
 	"ttpos-server-go/app/api/v1/tablet"
-	_ "ttpos-server-go/app/event" // 注册事件
-	"ttpos-server-go/app/service"
-	"ttpos-server-go/app/service/rpc"
+	"ttpos-server-go/app/api/v1/takeout"
+	_ "ttpos-server-go/app/event"                                // 注册事件
+	_ "ttpos-server-go/app/modules/takeout/infrastructure/event" // 注册 takeout 模块事件处理器
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -31,35 +29,15 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	r.GET("api/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "healthy")
 	})
-	r.GET("api/v1/testrpc", middleware.Internal(), func(c *gin.Context) {
-		rpc.TestCompanyList(c.Request.Context())
-		rpc.TestEstimateDistance(c.Request.Context())
-		c.String(http.StatusOK, "Success")
-	})
-	r.GET("api/add_multi_language_name_uuid", func(c *gin.Context) {
-		uuids := strings.Split(c.Query("uuids"), ",")
-		var uuidUint64s []uint64
-		for _, uuid := range uuids {
-			uuidUint64, _ := strconv.ParseUint(strings.TrimSpace(uuid), 10, 64)
-			if uuidUint64 > 0 && !slices.Contains(uuidUint64s, uuidUint64) {
-				uuidUint64s = append(uuidUint64s, uuidUint64)
-			}
-		}
-		companyUuid, _ := strconv.ParseUint(c.Query("company_uuid"), 10, 64)
-		if companyUuid > 0 && len(uuidUint64s) > 0 && dbm.GetDB(companyUuid) != nil {
-			translateSrv := service.NewTranslateSrv(dbm, cache)
-			translateSrv.AddMultiLanguageNameUuidToSet(companyUuid, uuidUint64s...)
-		} else {
-			c.String(http.StatusBadRequest, "参数错误")
-		}
-		c.String(http.StatusOK, "ok")
-	})
 
+	// 认证中间件下放给子路由组
+	// ai: 查看 RegisterAuthHandlers 方法的代码，了解认证中间件是如何下放的
 	apiV1 := r.Group("api/v1")
 	{
 		adminGroup := apiV1.Group("/admin")
 		{
 			admin.RegisterHandlers(adminGroup, dbm, cache)
+			admin.RegisterTakeoutHandlers(adminGroup, dbm)
 		}
 
 		// 通用接口
@@ -73,6 +51,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		{
 			internalGroup.Use(middleware.Internal())
 			passport.RegisterInternalHandlers(internalGroup, dbm, cache)
+			shop.RegisterProductInternalHandlers(internalGroup, dbm, cache) // 商品内部接口
 		}
 
 		// 商家端/移动管理端
@@ -86,8 +65,9 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterAuthHandlers(shopGroup, dbm, cache)                // 认证
 			shop.RegisterStaffHandlers(shopGroup, dbm, cache)               // 管理员管理
-			shop.RegisterRoleHandlers(shopGroup, dbm, cache)                 // 角色管理
+			shop.RegisterRoleHandlers(shopGroup, dbm, cache)                // 角色管理
 			shop.RegisterSettingHandlers(shopGroup, dbm, cache)             // 设置
+			shop.RegisterPaymentMethodHandlers(shopGroup, dbm, cache)       // 支付方式管理
 			shop.RegisterProductHandlers(shopGroup, dbm, cache)             // 商品
 			shop.RegisterProductLabelHandlers(shopGroup, dbm, cache)        // 商品标签
 			shop.RegisterMaterialHandlers(shopGroup, dbm, cache)            // 物品管理
@@ -103,8 +83,10 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterExportRecordHandlers(shopGroup, dbm, cache)        // 导出记录
 			shop.RegisterDeskMapHandlers(shopGroup, dbm, cache)             // 桌台地图
 			shop.RegisterNationalityRoutes(shopGroup, dbm, cache)           // 国籍管理
+			shop.RegisterCountryRoutes(shopGroup, dbm, cache)               // 国家管理
 			shop.RegisterOrderSourceRoutes(shopGroup, dbm, cache)           // 外卖来源管理
 			shop.RegisterFullReductionActivityRoutes(shopGroup, dbm, cache) // 满减活动管理
+			shop.RegisterTakeoutHandlers(shopGroup, dbm, cache)             // 外卖平台集成
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")
@@ -128,6 +110,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			cashier.RegisterStatisticsHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterOrderSourceRoutes(cashierGroup, dbm, cache)
 			cashier.RegisterNationalityRoutes(cashierGroup, dbm, cache)
+			cashier.RegisterTakeoutHandlers(cashierGroup, dbm, cache)
 		}
 		// 点餐助手端
 		assistantGroup := apiV1.Group("/assistant")
@@ -171,6 +154,14 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			tablet.RegisterProductHandlers(tabletGroup, dbm, cache)
 			tablet.RegisterBuffetHandlers(tabletGroup, dbm, cache)
 		}
+		// 自助点餐机
+		kioskGroup := apiV1.Group("/kiosk")
+		{
+			kiosk.RegisterAuthHandlers(kioskGroup, dbm, cache)
+			kiosk.RegisterBaseHandlers(kioskGroup, dbm, cache)
+			kiosk.RegisterProductHandlers(kioskGroup, dbm, cache)
+			kiosk.RegisterOrderHandlers(kioskGroup, dbm, cache)
+		}
 		// 会员端
 		memberGroup := apiV1.Group("/member")
 		{
@@ -188,6 +179,12 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		callBoardGroup := apiV1.Group("/callboard")
 		{
 			callboard.RegisterHandlers(callBoardGroup, dbm, cache)
+		}
+
+		// 外卖平台集成（使用 shop 的认证）
+		takeoutGroup := apiV1.Group("/takeout")
+		{
+			takeout.RegisterTakeoutHandlers(takeoutGroup, dbm, cache)
 		}
 	}
 }

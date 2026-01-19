@@ -4,6 +4,9 @@ import (
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
+	"ttpos-server-go/pkg/cache"
 
 	"gorm.io/gorm"
 )
@@ -11,7 +14,7 @@ import (
 type IProductPackageAttributeRepo interface {
 	GetProductPackageAttribute(opts ...DBOption) (*model.ProductPackageAttribute, error)
 	GetProductPackageAttributes(opts ...DBOption) ([]*model.ProductPackageAttribute, error)
-	GetProductPackageAttributesByUuids(uuids []uint64) ([]*model.ProductPackageAttribute, error)
+	GetProductPackageAttributesByUuids(companyUuid uint64, uuids []uint64) ([]*model.ProductPackageAttribute, error)
 	CreateProductPackageAttributes(productPackageAttributes []model.ProductPackageAttribute) error
 	DeleteProductPackageAttribute(opts ...DBOption) error
 	UpdateProductPackageAttribute(data map[string]any, opts ...DBOption) error
@@ -60,7 +63,28 @@ func (r *productPackageAttributeRepoImpl) GetProductPackageAttributes(opts ...DB
 	return productPackageAttributes, nil
 }
 
-func (r *productPackageAttributeRepoImpl) GetProductPackageAttributesByUuids(uuids []uint64) ([]*model.ProductPackageAttribute, error) {
+func (r *productPackageAttributeRepoImpl) GetProductPackageAttributesByUuids(companyUuid uint64, uuids []uint64) ([]*model.ProductPackageAttribute, error) {
+	// 检查是否启用对象存储缓存
+	var productPackageAttributes []*model.ProductPackageAttribute
+	var err error
+
+	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 使用对象存储模块缓存查询
+		productPackageAttributes, err = r.getProductPackageAttributesWithCache(companyUuid, uuids)
+	} else {
+		// 直接查询数据库
+		productPackageAttributes, err = r.queryProductPackageAttributes(uuids)
+	}
+
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productPackageAttributes, nil
+}
+
+// queryProductPackageAttributes 查询商品包属性列表（包含预加载的关联数据）
+// 这是一个私有方法，用于统一查询逻辑，避免代码重复
+func (r *productPackageAttributeRepoImpl) queryProductPackageAttributes(uuids []uint64) ([]*model.ProductPackageAttribute, error) {
 	productPackageAttributes, err := r.GetProductPackageAttributes(
 		CommonRepo.WhereInUuids(uuids),
 		CommonRepo.Preload(WithPreload{
@@ -71,6 +95,65 @@ func (r *productPackageAttributeRepoImpl) GetProductPackageAttributesByUuids(uui
 		return nil, errors.WithMessage(err)
 	}
 	return productPackageAttributes, nil
+}
+
+// getProductPackageAttributesWithCache 使用对象存储模块缓存查询商品包属性列表
+func (r *productPackageAttributeRepoImpl) getProductPackageAttributesWithCache(companyUuid uint64, uuids []uint64) ([]*model.ProductPackageAttribute, error) {
+	if len(uuids) == 0 {
+		return []*model.ProductPackageAttribute{}, nil
+	}
+	if companyUuid == 0 {
+		return nil, errors.New("getProductPackageAttributesWithCache companyUuid cannot be 0")
+	}
+
+	// 构建批量查询的 keys
+	keys := make([]string, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			keys = append(keys, persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeProductPackageAttribute, uuid))
+		}
+	}
+
+	if len(keys) == 0 {
+		return []*model.ProductPackageAttribute{}, nil
+	}
+
+	// 获取缓存层（使用订单相关对象缓存配置）
+	cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackageAttribute](cache.Global, 5*time.Minute)
+
+	// 使用批量查询缓存
+	batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductPackageAttribute, error) {
+		// 缓存未命中时，从数据库查询
+		attributes, err := r.queryProductPackageAttributes(uuids)
+		if err != nil {
+			return nil, err
+		}
+		// 转换为 map[string]*model.ProductPackageAttribute
+		result := make(map[string]*model.ProductPackageAttribute)
+		for _, attr := range attributes {
+			key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeProductPackageAttribute, attr.Uuid)
+			result[key] = attr
+		}
+		return result, nil
+	})
+
+	if err != nil {
+		// 缓存查询失败，降级到直接查询数据库
+		return r.queryProductPackageAttributes(uuids)
+	}
+
+	// 将批量查询结果转换为列表，保持原有顺序
+	result := make([]*model.ProductPackageAttribute, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeProductPackageAttribute, uuid)
+			if attr, ok := batchResult[key]; ok && attr != nil {
+				result = append(result, attr)
+			}
+		}
+	}
+
+	return result, nil
 }
 
 func (r *productPackageAttributeRepoImpl) CreateProductPackageAttributes(productPackageAttributes []model.ProductPackageAttribute) error {

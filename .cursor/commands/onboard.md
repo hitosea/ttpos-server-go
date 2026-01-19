@@ -51,7 +51,7 @@ description: 项目快速入门引导（后端版）
 
 ### workflow 模式
 - 常见工作流导航
-- 需求管理（/propose）→ 功能开发（/create-spec）→ Bug 修复
+- 需求管理（/propose）→ 功能开发（/spec-create）→ Bug 修复
 - API 对接 → 数据库迁移
 
 ### faq 模式

@@ -359,15 +359,65 @@ func (r *saleBillRepo) UpdateSaleBillBatchTagUuid(saleBillUuid uint64, batchTagU
 }
 
 // UpdateOrderSource 更新销售账单的订单来源
+// JSON 方案：同时保存 order_source_uuid 和 order_source_name 快照（包含所有语言）
+// Requirement: story-main-order-source-snapshot-fix
 func (r *saleBillRepo) UpdateOrderSource(saleBillUuid uint64, orderSourceUuid uint64) error {
-	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
-		OrderSourceUuid: orderSourceUuid,
-	}).Error
+	saleBill := model.SaleBill{OrderSourceUuid: orderSourceUuid}
+	// 表示取消设置外卖来源. 方法可以给外卖来源UUID为0，表示取消设置外卖来源. 非0表示设置外卖来源.
+	if orderSourceUuid == 0 {
+		saleBill.OrderSourceName = ""
+	} else {
+		// 1. 查询外卖来源信息（包括多语言数据）
+		orderSourceRepo := NewOrderSourceRepo(r.db)
+		orderSource, err := orderSourceRepo.FindByUuid(orderSourceUuid)
+		if err != nil {
+			return errors.WithMessage(err, "查询外卖来源信息失败")
+		}
+		if orderSource == nil {
+			return errors.WithMessage(errors.New("外卖来源不存在"))
+		}
+
+		// 2. 序列化为 JSON 快照
+		if err := saleBill.SetOrderSourceNameSnapshot(orderSource.MultiLanguageName); err != nil {
+			return errors.WithMessage(err, "序列化外卖来源快照失败")
+		}
+	}
+
+	// 3. 同时更新 order_source_uuid 和 order_source_name
+	return r.db.Model(&model.SaleBill{}).
+		Select("order_source_uuid", "order_source_name").
+		Where("uuid = ?", saleBillUuid).
+		Updates(saleBill).Error
 }
 
 // UpdateNationality 更新销售账单的国籍
+// JSON 方案：同时保存 nationality_uuid 和 nationality_name 快照（包含所有语言）
+// Requirement: story-main-nationality-snapshot-fix
 func (r *saleBillRepo) UpdateNationality(saleBillUuid uint64, nationalityUuid uint64) error {
-	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
-		NationalityUuid: nationalityUuid,
-	}).Error
+	saleBill := model.SaleBill{NationalityUuid: nationalityUuid}
+	// 表示取消设置国籍. 方法可以给国籍UUID为0，表示取消设置国籍. 非0表示设置国籍.
+	if nationalityUuid == 0 {
+		saleBill.NationalityName = ""
+	} else {
+		// 1. 查询国籍信息（包括多语言数据）
+		nationalityRepo := NewNationalityRepo(r.db)
+		nationality, err := nationalityRepo.FindByUuid(nationalityUuid)
+		if err != nil {
+			return errors.WithMessage(err, "查询国籍信息失败")
+		}
+		if nationality == nil {
+			return errors.WithMessage(errors.New("国籍不存在"))
+		}
+
+		// 2. 序列化为 JSON 快照
+		if err := saleBill.SetNationalityNameSnapshot(nationality.MultiLanguageName); err != nil {
+			return errors.WithMessage(err, "序列化国籍快照失败")
+		}
+	}
+
+	// 3. 同时更新 nationality_uuid 和 nationality_name
+	return r.db.Model(&model.SaleBill{}).
+		Select("nationality_uuid", "nationality_name").
+		Where("uuid = ?", saleBillUuid).
+		Updates(saleBill).Error
 }

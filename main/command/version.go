@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
-	"ttpos-server-go/version"
+	"ttpos-server-go/config"
 
 	"github.com/spf13/cobra"
 )
@@ -30,9 +30,9 @@ var versionCmd = &cobra.Command{
 		// 如果提供了任何参数，则更新版本信息
 		if newVersion != "" || newCommit != "" || newBuildTime != "" {
 			updateVersion()
-			fmt.Println("版本已更新为: " + version.Version + "/" + version.CommitSHA + ", build at " + version.BuildTime)
+			fmt.Println("版本已更新为: " + config.Version + "/" + config.CommitSHA + ", build at " + config.BuildTime)
 		} else {
-			fmt.Println("ttpos-server-go version: " + version.Version + "/" + version.CommitSHA + ", build at " + version.BuildTime)
+			fmt.Println("ttpos-server-go version: " + config.Version + "/" + config.CommitSHA + ", build at " + config.BuildTime)
 		}
 	},
 }
@@ -40,7 +40,7 @@ var versionCmd = &cobra.Command{
 // 更新版本信息
 func updateVersion() {
 	// 版本文件路径
-	versionFilePath := "version/version.go"
+	versionFilePath := "config/version.go"
 
 	// 读取当前版本文件内容
 	content, err := os.ReadFile(versionFilePath)
@@ -79,15 +79,15 @@ func updateVersion() {
 
 	// 更新内存中的版本信息
 	if newVersion != "" {
-		version.Version = newVersion
+		config.Version = newVersion
 	}
 	if newCommit != "" {
-		version.CommitSHA = newCommit
+		config.CommitSHA = newCommit
 	}
 	if newBuildTime != "" {
-		version.BuildTime = newBuildTime
+		config.BuildTime = newBuildTime
 	} else if newVersion != "" || newCommit != "" {
-		version.BuildTime = time.Now().Format("2006-01-02")
+		config.BuildTime = time.Now().Format("2006-01-02")
 	}
 }
 

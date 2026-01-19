@@ -11,19 +11,20 @@ description: Spec 命名和结构规范
 ## 命名格式
 
 ```
-{level}-{app}-{feature}
+{level}-{module}-{feature}
 ```
 
 **参数
 - `{level}`: `story` (用户故事) | `task` (技术任务)
-- `{app}`: pos | shop | kds | qds | assistant | tablet | mobile | menu | member | `all`
+- `{module}`: 业务模块（order, member, product, shop, admin, bmp...）
 - `{feature}`: kebab-case
 
 **示例
 ```
-story-pos-quick-payment               # POS端快捷支付
-task-shop-report-export               # Shop端报表导出
-story-all-connectivity-indicator      # 全应用网络指示器
+story-order-quick-payment         # 订单模块快捷支付
+task-shop-report-export           # 店铺模块报表导出
+story-member-sync                 # 会员模块同步功能
+task-all-database-migration       # 全模块数据库迁移
 ```
 
 
@@ -33,37 +34,37 @@ story-all-connectivity-indicator      # 全应用网络指示器
 
 ### 核心原则
 
-**按应用垂直拆分 Spec**
+**按模块垂直拆分 Spec**
 
 ```yaml
 ❌ 错误:
-story-pos-shop-kds-order-sync  # 跨3个应用，难以控制SP
+story-order-member-product-sync  # 跨3个模块，难以控制SP
 
 ✅ 正确:
-story-pos-order-sync    # POS端，SP3
-story-shop-order-sync   # Shop端，SP3
-story-kds-order-sync    # KDS端，SP3
+story-order-sync    # 订单模块，SP3
+story-member-sync   # 会员模块，SP3
+story-product-sync  # 商品模块，SP3
 ```
 
 ### 为什么
 
-1. **独立交付 每个应用可独立开发、测试、部署
+1. **独立交付 每个模块可独立开发、测试、部署
 2. **并行开发 不同团队可同时开发
-3. **SP 可控 单应用 Spec 的 SP 更容易 ≤5
+3. **SP 可控 单模块 Spec 的 SP 更容易 ≤5
 4. **职责清晰 每个 Spec 有明确的负责团队
 
 
 ---
 
-## 跨应用场景处理
+## 跨模块场景处理
 
 ### 场景 A: 相似功能，不同实现
 
 **拆分为多个 Spec
 ```
-story-pos-category-display
-story-assistant-category-display
-story-tablet-category-display
+story-order-status-sync
+story-member-status-sync
+story-product-status-sync
 ```
 
 ### 场景 B: 完全相同功能和实现
@@ -73,7 +74,7 @@ story-tablet-category-display
 story-all-connectivity-indicator      # 共享代码
 ```
 
-### 场景 C: 后端功能
+### 场景 C: 纯后端功能
 
 **使用 task-all
 ```
@@ -87,7 +88,7 @@ task-all-database-migration          # 数据库迁移
 ## Spec 目录结构
 
 ```
-docs/shared/specs/{level}-{app}-{feature}/
+docs/shared/specs/{level}-{module}-{feature}/
 ├── requirements.md    # 需求规格说明
 ├── design.md          # 技术设计文档
 └── tasks.md           # 实施任务分解
@@ -126,9 +127,9 @@ docs/shared/specs/{level}-{app}-{feature}/
 ### 关联机制
 
 ```
-/propose quick-payment → 需求评审 → /create-spec story-pos-quick-payment
-                                              ↓
-                                        自动关联 Proposal
+/propose quick-payment → 需求评审 → /spec-create → 产品审核 → /spec-design
+                                         ↓               ↓            ↓
+                                   创建 requirements   审核通过    创建 design + tasks
 ```
 
 ### 双向链接
@@ -139,19 +140,48 @@ docs/shared/specs/{level}-{app}-{feature}/
 
 ---
 
-## 创建 Spec
+## 创建 Spec（两阶段流程）
 
-### 使用指令
+### Phase 1: 创建需求文档
 
 ```bash
-/create-spec story-pos-quick-payment
+/spec-create story-order-quick-payment
 ```
 
 **功能
-- ✅ 创建目录和文件
+- ✅ 创建 requirements.md
 - ✅ 自动填充基本信息
 - ✅ 智能关联 Proposal
-- ✅ 回写 Proposal 状态
+- ✅ 初始化审核状态为「待审核」
+
+**输出
+```
+docs/shared/specs/active/story-order-quick-payment/
+└── requirements.md  # 审核状态: 待审核
+```
+
+### Phase 2: 创建设计文档（产品审核通过后）
+
+```bash
+/spec-design story-order-quick-payment
+```
+
+**前置条件
+- requirements.md 存在
+- 审核状态为「已通过」
+
+**功能
+- ✅ 检查审核状态
+- ✅ 创建 design.md
+- ✅ 创建 tasks.md
+
+**输出
+```
+docs/shared/specs/active/story-order-quick-payment/
+├── requirements.md  # 审核状态: 已通过
+├── design.md        # 技术设计
+└── tasks.md         # 任务分解
+```
 
 
 ---
@@ -174,7 +204,7 @@ docs/shared/specs/{level}-{app}-{feature}/
 
 ## 完整示例
 
-参考: `docs/shared/specs/example-story-pos-quick-payment/`
+参考: `docs/shared/specs/example-story-order-quick-payment/`
 
 包含:
 - ✅ 标准目录结构
@@ -191,13 +221,14 @@ docs/shared/specs/{level}-{app}-{feature}/
 
 - 详细指南 `docs/shared/specs/README.md` 
 - SP 评估 `.cursor/rules/scrum_story_point.mdc`
-- 需求管理 `docs/agent/workflows/requirement-management.md`
-- Proposal 关联 `docs/agent/workflows/proposal-spec-linking.md`
+- 需求管理 `docs/agent/workflows/requirement/management.md`
+- Proposal 关联 `docs/agent/workflows/requirement/linking.md`
 
 ### 指令集
 
 - 🔧 `/propose` - 创建需求提案
-- 🔧 `/create-spec` - 创建 Spec 文档
+- 🔧 `/spec-create` - 创建需求文档（requirements.md）
+- 🔧 `/spec-design` - 创建设计文档（design.md + tasks.md）
 - 🔧 `/check-tasks` - 检查任务进度
 
 ---

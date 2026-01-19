@@ -8,6 +8,7 @@ use think\facade\Cache;
 use app\admin\model\CompanyStaff;
 use app\common\service\websocket\Websocket;
 use app\common\model\shop\User as UserModel;
+use app\admin\model\admin\Staff as SaasStaffModel;
 
 
 /**
@@ -24,6 +25,7 @@ class User extends UserModel
     public function getList($limit = 20)
     {
         return $this->with(['userRole.role', 'supplier'])
+            ->where('delete_time', 0)
             ->field('uuid, uuid as shop_user_id, username as user_name, real_name, is_super, user_type, is_disable as is_status, create_time')
             ->order(['create_time' => 'desc'])
             ->paginate($limit);
@@ -115,16 +117,26 @@ class User extends UserModel
         $this->startTrans();
         try {
             //
+            // 使用 bcrypt 加密密码
             $arr = [
                 'uuid' => createUuid(),
                 'phone' => trim($data['phone']),
                 'username' => trim($data['user_name']),
-                'password' => salt_hash($data['password']),
-                'permission_password' => salt_hash($data['permission_password']),
+                'password' => hash_password_bcrypt($data['password']),
+                'permission_password' => hash_password_bcrypt($data['permission_password']),
                 'real_name' => trim($data['real_name']),
                 'user_type' => $user['user_type'],
                 'company_uuid' => $appId
             ];
+            // 平台saas.ttpos_staff表
+            (new SaasStaffModel([], 0))->setAppId(0)->create([
+                "uuid" => $arr['uuid'],
+                "email" => $arr['username'],
+                "phone" => $arr['phone'],
+                "real_name" => $arr['real_name'],
+                "password" => $arr['password'],
+                "last_company_uuid" => $appId,
+            ]);
             // 添加到平台主表
             $res = (new CompanyStaff([], 0))->setAppId(0)->create($arr);
             self::setAppId($appId)->create($arr);
@@ -133,7 +145,7 @@ class User extends UserModel
             $model = new UserRole();
             foreach ($data['role_id'] as $val) {
                 $add_arr[] = [
-                    'uuid'=> createUuid(),
+                    'uuid' => createUuid(),
                     'staff_uuid' => $res['uuid'],
                     'role_uuid' => $val,
                 ];
@@ -215,20 +227,24 @@ class User extends UserModel
             $arr = [
                 'phone' => $data['phone'],
                 'username' => $data['user_name'],
-                'password' => salt_hash($data['password']),
                 'real_name' => $data['real_name'],
             ];
-            if (empty($data['password'])) {
-                unset($arr['password']);
-            } else {
+            
+            // 密码处理：如果提供了新密码，使用 bcrypt 加密
+            if (!empty($data['password'])) {
+                $arr['password'] = hash_password_bcrypt($data['password']);
                 $arr['password_change_time'] = time();
             }
-            // 权限密码处理：如果传了且不为空，则更新；否则不更新（保持原值）
+            
+            // 权限密码处理：如果传了且不为空，使用 bcrypt 加密
             if (!empty($data['permission_password'])) {
-                $arr['permission_password'] = salt_hash($data['permission_password']);
+                $arr['permission_password'] = hash_password_bcrypt($data['permission_password']);
             }
 
             $where['uuid'] = $data['shop_user_id'];
+            $saasStaffUpdate = $arr;
+            $saasStaffUpdate['email'] = $data['user_name'];
+            (new SaasStaffModel([], 0))->setAppId(0)->update($saasStaffUpdate, $where);
             (new CompanyStaff([], 0))->setAppId(0)->update($arr, $where);
             self::setAppId($appId)->update($arr, $where);
 
@@ -237,7 +253,7 @@ class User extends UserModel
             $add_arr = [];
             foreach ($data['role_id'] as $val) {
                 $add_arr[] = [
-                    'uuid'=> createUuid(),
+                    'uuid' => createUuid(),
                     'staff_uuid' => $data['shop_user_id'],
                     'role_uuid' => $val,
                 ];
@@ -249,14 +265,14 @@ class User extends UserModel
             Cache::tag('cashier')->clear();
             // 推送配置更新
             Websocket::pushClient(
-                request()->appId, 
-                Websocket::SOURCE_All, 
-                Websocket::SOURCE_All, 
-                Websocket::UPDATE_PERMISSION, 
-                $data['shop_user_id'], 
+                request()->appId,
+                Websocket::SOURCE_All,
+                Websocket::SOURCE_All,
+                Websocket::UPDATE_PERMISSION,
+                $data['shop_user_id'],
                 [
                     'staff_uuid' => $data['shop_user_id'],
-                    'update_time' => time(), 
+                    'update_time' => time(),
                 ]
             );
             //
@@ -301,7 +317,7 @@ class User extends UserModel
         $userToDelete->delete();
         UserRole::destroy(['staff_uuid' => $shop_user_id]);
         //
-        return (new CompanyStaff([], 0))->setAppId(0)->where('uuid', $shop_user_id)->find()?->delete();
+        return (new CompanyStaff([], 0))->setAppId(0)->where('uuid', $shop_user_id)->where('company_uuid', $user['company_uuid'])->find()?->delete();
     }
 
     /**
@@ -319,6 +335,7 @@ class User extends UserModel
         }
         // 删除收银机缓存
         Cache::tag('cashier')->clear();
+        (new CompanyStaff([], 0))->setAppId(0)->update(['is_disable' => $status], ['uuid' => $this['uuid'], 'company_uuid' => $this['company_uuid']]);
         return $this->save([
             'is_disable' => $status
         ]);

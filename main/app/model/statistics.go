@@ -1,6 +1,10 @@
 package model
 
-import "database/sql"
+import (
+	"database/sql"
+
+	"github.com/shopspring/decimal"
+)
 
 // StatisticsSale 销售统计表 ttpos_statistics_sale
 type StatisticsSale struct {
@@ -35,6 +39,9 @@ type StatisticsSale struct {
 	IsMeger              int     `gorm:"column:is_meger;type:int(11);default:0;comment:是否合单;NOT NULL" json:"is_meger"`
 	IsSpecial            int     `gorm:"column:is_special;type:int(11);default:0;comment:是否特殊订单;NOT NULL" json:"is_special"`
 	IsTakeout            int     `gorm:"column:is_takeout;type:int(11);default:0;comment:是否外送;NOT NULL" json:"is_takeout"`
+	OrderSourceUuid      uint64  `gorm:"column:order_source_uuid;type:bigint(20) unsigned;default:0;comment:订单来源UUID（0=店内，>0=外卖/渠道）;NOT NULL" json:"order_source_uuid"`
+	NationalityUuid      uint64  `gorm:"column:nationality_uuid;type:bigint(20) unsigned;default:0;comment:国籍UUID（0=未记录）;NOT NULL" json:"nationality_uuid"`
+	Source               uint    `gorm:"column:source;type:int(10);default:0;comment:订单来源：0-默认值、1-收银机、2-点餐助手、3-平板、4-H5;NOT NULL" json:"source"`
 	RefundServiceFee     float64 `gorm:"column:refund_service_fee;type:decimal(14,2);default:0.00;comment:退款服务费;NOT NULL" json:"refund_service_fee"`
 	RefundDiscount       float64 `gorm:"column:refund_discount;type:decimal(14,2);default:0.00;comment:退款优惠折扣;NOT NULL" json:"refund_discount"`
 	RefundDiscountMember float64 `gorm:"column:refund_discount_member;type:decimal(14,2);default:0.00;comment:退款会员折扣;NOT NULL" json:"refund_discount_member"`
@@ -155,46 +162,52 @@ type StatisticsMemberPayment struct {
 
 // StatisticsSaleData 销售统计数据
 type StatisticsSaleData struct {
-	TotalSaleAmount            sql.NullFloat64 `gorm:"column:total_sale_amount;comment:总销售额"`
-	TotalReceivedAmount        sql.NullFloat64 `gorm:"column:total_received_amount;comment:总实收金额"`
-	TotalProductPrice          sql.NullFloat64 `gorm:"column:total_product_price;comment:总商品原价"`
-	TotalProductOriginPrice    sql.NullFloat64 `gorm:"column:total_product_origin_price;comment:总原商品金额"`
-	TotalProductNum            sql.NullFloat64 `gorm:"column:total_product_num;comment:总商品数量"`
-	TotalDiscountMember        sql.NullFloat64 `gorm:"column:total_discount_member;comment:总会员折扣"`
-	TotalBusinessAmount        sql.NullFloat64 `gorm:"column:total_business_amount;comment:总营业收入"`
-	TotalServiceFee            sql.NullFloat64 `gorm:"column:total_service_fee;comment:总服务费"`
-	TotalPaymentFee            sql.NullFloat64 `gorm:"column:total_payment_fee;comment:总支付手续费"`
-	TotalTax                   sql.NullFloat64 `gorm:"column:total_tax;comment:总税额"`
-	TotalRefundAmount          sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`
-	TotalDiscount              sql.NullFloat64 `gorm:"column:total_discount;comment:总优惠折扣"`
-	TotalGiftAmount            sql.NullFloat64 `gorm:"column:total_gift_amount;comment:总赠菜金额"`
-	TotalGiftNum               sql.NullFloat64 `gorm:"column:total_gift_num;comment:总赠菜数量"`
-	TotalFreeAmount            sql.NullFloat64 `gorm:"column:total_free_amount;comment:总免单金额"`
-	TotalFreeNum               sql.NullFloat64 `gorm:"column:total_free_num;comment:总免单数量"`
-	TotalOrderNum              sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
-	TotalTakeoutSaleAmount     sql.NullFloat64 `gorm:"total_takeout_sale_amount;comment:总外送销售"`
-	TotalTakeoutBusinessAmount sql.NullFloat64 `gorm:"total_takeout_business_amount;comment:总外送营收"`
-	TotalTakeoutRefundAmount   sql.NullFloat64 `gorm:"total_takeout_refund_amount;comment:总外送退款金额"`
-	TotalTakeoutDeliveryFee    sql.NullFloat64 `gorm:"total_takeout_delivery_fee;comment:总外送配送费"`
-	TotalDeskNum               sql.NullInt64   `gorm:"column:total_desk_num;comment:总桌台数量"`
-	TotalDeskOrderAmount       sql.NullFloat64 `gorm:"column:total_desk_order_amount;comment:总桌台订单金额"`
-	TotalMealNum               sql.NullInt64   `gorm:"column:total_meal_num;comment:总用餐人数"`
-	TotalInstantOrderAmount    sql.NullFloat64 `gorm:"column:total_instant_order_amount;comment:总即时订单金额"`
-	TotalInstantOrderNum       sql.NullInt64   `gorm:"column:total_instant_order_num;comment:总即时订单数量"`
-	TotalTakeoutOrderAmount    sql.NullFloat64 `gorm:"column:total_takeout_order_amount;comment:总外送订单金额"`
-	TotalTakeoutOrderNum       sql.NullInt64   `gorm:"column:total_takeout_order_num;comment:总外送订单数量"`
-	MinOrderAmount             sql.NullFloat64 `gorm:"column:min_order_amount;comment:最小订单金额"`
-	MaxOrderAmount             sql.NullFloat64 `gorm:"column:max_order_amount;comment:最大订单金额"`
-	AvgOrderAmount             sql.NullFloat64 `gorm:"column:avg_order_amount;comment:平均订单金额"`
-	MinDeskOrderAmount         sql.NullFloat64 `gorm:"column:min_desk_order_amount;comment:最小桌台订单金额"`
-	MaxDeskOrderAmount         sql.NullFloat64 `gorm:"column:max_desk_order_amount;comment:最大桌台订单金额"`
-	AvgDeskOrderAmount         sql.NullFloat64 `gorm:"column:avg_desk_order_amount;comment:平均桌台订单金额"`
-	MinInstantOrderAmount      sql.NullFloat64 `gorm:"column:min_instant_order_amount;comment:最小即时订单金额"`
-	MaxInstantOrderAmount      sql.NullFloat64 `gorm:"column:max_instant_order_amount;comment:最大即时订单金额"`
-	AvgInstantOrderAmount      sql.NullFloat64 `gorm:"column:avg_instant_order_amount;comment:平均即时订单金额"`
-	MinTakeoutOrderAmount      sql.NullFloat64 `gorm:"column:min_takeout_order_amount;comment:最小外送订单金额"`
-	MaxTakeoutOrderAmount      sql.NullFloat64 `gorm:"column:max_takeout_order_amount;comment:最大外送订单金额"`
-	AvgTakeoutOrderAmount      sql.NullFloat64 `gorm:"column:avg_takeout_order_amount;comment:平均外送订单金额"`
+	TotalSaleAmount                 sql.NullFloat64 `gorm:"column:total_sale_amount;comment:总销售额"`
+	TotalReceivedAmount             sql.NullFloat64 `gorm:"column:total_received_amount;comment:总实收金额"`
+	TotalProductPrice               sql.NullFloat64 `gorm:"column:total_product_price;comment:总商品原价"`
+	TotalProductOriginPrice         sql.NullFloat64 `gorm:"column:total_product_origin_price;comment:总原商品金额"`
+	TotalProductNum                 sql.NullFloat64 `gorm:"column:total_product_num;comment:总商品数量"`
+	TotalDiscountMember             sql.NullFloat64 `gorm:"column:total_discount_member;comment:总会员折扣"`
+	TotalBusinessAmount             sql.NullFloat64 `gorm:"column:total_business_amount;comment:总营业收入"`
+	TotalServiceFee                 sql.NullFloat64 `gorm:"column:total_service_fee;comment:总服务费"`
+	TotalPaymentFee                 sql.NullFloat64 `gorm:"column:total_payment_fee;comment:总支付手续费"`
+	TotalTax                        sql.NullFloat64 `gorm:"column:total_tax;comment:总税额"`
+	TotalRefundAmount               sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`
+	TotalDiscount                   sql.NullFloat64 `gorm:"column:total_discount;comment:总优惠折扣"`
+	TotalGiftAmount                 sql.NullFloat64 `gorm:"column:total_gift_amount;comment:总赠菜金额"`
+	TotalGiftNum                    sql.NullFloat64 `gorm:"column:total_gift_num;comment:总赠菜数量"`
+	TotalFreeAmount                 sql.NullFloat64 `gorm:"column:total_free_amount;comment:总免单金额"`
+	TotalFreeNum                    sql.NullFloat64 `gorm:"column:total_free_num;comment:总免单数量"`
+	TotalOrderAmount                sql.NullFloat64 `gorm:"column:total_order_amount;comment:总订单金额"`
+	TotalOrderNum                   sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
+	TotalTakeoutSaleAmount          sql.NullFloat64 `gorm:"total_takeout_sale_amount;comment:总外送销售"`
+	TotalTakeoutBusinessAmount      sql.NullFloat64 `gorm:"total_takeout_business_amount;comment:总外送营收"`
+	TotalTakeoutRefundAmount        sql.NullFloat64 `gorm:"total_takeout_refund_amount;comment:总外送退款金额"`
+	TotalTakeoutDeliveryFee         sql.NullFloat64 `gorm:"total_takeout_delivery_fee;comment:总外送配送费"`
+	TotalDeskNum                    sql.NullInt64   `gorm:"column:total_desk_num;comment:总桌台数量"`
+	TotalDeskOrderAmount            sql.NullFloat64 `gorm:"column:total_desk_order_amount;comment:总桌台订单金额"`
+	TotalMealNum                    sql.NullInt64   `gorm:"column:total_meal_num;comment:总用餐人数"`
+	TotalInstantOrderAmount         sql.NullFloat64 `gorm:"column:total_instant_order_amount;comment:总即时订单金额-店内"`
+	TotalInstantOrderNum            sql.NullInt64   `gorm:"column:total_instant_order_num;comment:总即时订单数量-店内"`
+	TotalInstantOrderTakeawayAmount sql.NullFloat64 `gorm:"column:total_instant_order_takeaway_amount;comment:总即时订单金额-外卖"`
+	TotalInstantOrderTakeawayNum    sql.NullInt64   `gorm:"column:total_instant_order_takeaway_num;comment:总即时订单数量-外卖"`
+	TotalTakeoutOrderAmount         sql.NullFloat64 `gorm:"column:total_takeout_order_amount;comment:总外送订单金额"`
+	TotalTakeoutOrderNum            sql.NullInt64   `gorm:"column:total_takeout_order_num;comment:总外送订单数量"`
+	MinOrderAmount                  sql.NullFloat64 `gorm:"column:min_order_amount;comment:最小订单金额"`
+	MaxOrderAmount                  sql.NullFloat64 `gorm:"column:max_order_amount;comment:最大订单金额"`
+	AvgOrderAmount                  sql.NullFloat64 `gorm:"column:avg_order_amount;comment:平均订单金额"`
+	MinDeskOrderAmount              sql.NullFloat64 `gorm:"column:min_desk_order_amount;comment:最小桌台订单金额"`
+	MaxDeskOrderAmount              sql.NullFloat64 `gorm:"column:max_desk_order_amount;comment:最大桌台订单金额"`
+	AvgDeskOrderAmount              sql.NullFloat64 `gorm:"column:avg_desk_order_amount;comment:平均桌台订单金额"`
+	MinInstantOrderAmount           sql.NullFloat64 `gorm:"column:min_instant_order_amount;comment:最小即时订单金额-店内"`
+	MaxInstantOrderAmount           sql.NullFloat64 `gorm:"column:max_instant_order_amount;comment:最大即时订单金额-店内"`
+	AvgInstantOrderAmount           sql.NullFloat64 `gorm:"column:avg_instant_order_amount;comment:平均即时订单金额-店内"`
+	MinInstantOrderTakeawayAmount   sql.NullFloat64 `gorm:"column:min_instant_order_takeaway_amount;comment:最小即时订单金额-外卖"`
+	MaxInstantOrderTakeawayAmount   sql.NullFloat64 `gorm:"column:max_instant_order_takeaway_amount;comment:最大即时订单金额-外卖"`
+	AvgInstantOrderTakeawayAmount   sql.NullFloat64 `gorm:"column:avg_instant_order_takeaway_amount;comment:平均即时订单金额-外卖"`
+	MinTakeoutOrderAmount           sql.NullFloat64 `gorm:"column:min_takeout_order_amount;comment:最小外送订单金额"`
+	MaxTakeoutOrderAmount           sql.NullFloat64 `gorm:"column:max_takeout_order_amount;comment:最大外送订单金额"`
+	AvgTakeoutOrderAmount           sql.NullFloat64 `gorm:"column:avg_takeout_order_amount;comment:平均外送订单金额"`
 }
 
 // StatisticsSaleDaysData 销售天数统计数据
@@ -211,6 +224,8 @@ type StatisticsPaymentData struct {
 	PaymentName        string          `gorm:"column:payment_name;comment:支付方式名称"`
 	PaymentCode        int             `gorm:"column:payment_code;comment:支付方式编码"`
 	ErpnextPayment     string          `gorm:"column:erpnext_payment;comment:ERPNext支付方式"`
+	ErpnextPaymentId   string          `gorm:"column:erpnext_payment;comment:ERPNext支付方式ID"`
+	Source             int             `gorm:"column:source;comment:来源 0-系统 1-手动 2-LianLianPay"`
 	TotalOrderNum      sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
 	TotalPaymentAmount sql.NullFloat64 `gorm:"column:total_payment_amount;comment:总支付金额"`
 	TotalRefundAmount  sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`
@@ -242,12 +257,19 @@ type StatisticsCategoryData struct {
 // StatisticsProductData 商品统计数据
 type StatisticsProductData struct {
 	ProductPackageUuid sql.NullInt64   `gorm:"column:product_package_uuid;comment:商品包uuid"` // 用于拿到排行榜数据后在查询商品名称
+	ProductBomUuid     sql.NullInt64   `gorm:"column:product_bom_uuid;comment:商品BOM uuid"`  // 用于合并店内和外卖商品数据
 	ProductName        sql.NullString  `gorm:"column:product_name;comment:商品名称"`
 	FlavorName         sql.NullString  `gorm:"column:flavor_name;comment:规格名称"`
 	SalePrice          sql.NullFloat64 `gorm:"column:sale_price;comment:销售单价"`
 	SaleNum            sql.NullFloat64 `gorm:"column:sale_num;comment:销售数量"`
 	SaleAmount         sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
 	ProductType        sql.NullInt64   `gorm:"column:product_type;comment:商品类型"`
+	// 排序字段（用于合并后排序）
+	PpcSort       sql.NullInt64 `gorm:"column:ppc_sort;comment:父分类排序"`
+	PpcCreateTime sql.NullInt64 `gorm:"column:ppc_create_time;comment:父分类创建时间"`
+	PcSort        sql.NullInt64 `gorm:"column:pc_sort;comment:子分类排序"`
+	PcCreateTime  sql.NullInt64 `gorm:"column:pc_create_time;comment:子分类创建时间"`
+	PpCreateTime  sql.NullInt64 `gorm:"column:pp_create_time;comment:商品创建时间"`
 }
 
 // StatisticsAreaData 区域统计数据
@@ -355,10 +377,93 @@ type StatisticsBusinessSummaryData struct {
 	TakeoutOrderAmount sql.NullFloat64 `gorm:"column:takeout_order_amount;comment:外送订单金额"`
 }
 
+// StatisticsRefundSummaryData 退款金额汇总统计数据
+type StatisticsRefundSummaryData struct {
+	Date                sql.NullString  `gorm:"column:date;comment:日期"`
+	RefundAmount        sql.NullFloat64 `gorm:"column:refund_amount;comment:退款金额"`
+	RefundNum           sql.NullInt64   `gorm:"column:refund_num;comment:退款笔数"`
+	RefundRate          sql.NullFloat64 `gorm:"column:refund_rate;comment:退款率"`
+	PartialRefundAmount sql.NullFloat64 `gorm:"column:partial_refund_amount;comment:部分退款金额"`
+	PartialRefundNum    sql.NullInt64   `gorm:"column:partial_refund_num;comment:部分退款笔数"`
+	FullRefundAmount    sql.NullFloat64 `gorm:"column:full_refund_amount;comment:整单退款金额"`
+	FullRefundNum       sql.NullInt64   `gorm:"column:full_refund_num;comment:整单退款笔数"`
+	OrderNum            sql.NullInt64   `gorm:"column:order_num;comment:订单数量"`
+}
+
 // StatisticsBusinessPaymentMethodData 支付方式统计数据
 type StatisticsBusinessPaymentMethodData struct {
-	Date          sql.NullString  `gorm:"column:date;comment:日期"`
-	PaymentName   sql.NullString  `gorm:"column:payment_name;comment:支付方式名称"`
-	PaymentNum    sql.NullInt64   `gorm:"column:payment_num;comment:支付次数"`
-	PaymentAmount sql.NullFloat64 `gorm:"column:payment_amount;comment:支付金额"`
+	Date                    sql.NullString  `gorm:"column:date;comment:日期"`
+	PaymentMethodSort       sql.NullInt64   `gorm:"column:payment_method_sort;comment:支付方式排序"`
+	PaymentMethodCreateTime sql.NullInt64   `gorm:"column:payment_method_create_time;comment:支付方式创建时间"`
+	PaymentName             sql.NullString  `gorm:"column:payment_name;comment:支付方式名称"`
+	PaymentNum              sql.NullInt64   `gorm:"column:payment_num;comment:支付次数"`
+	PaymentAmount           sql.NullFloat64 `gorm:"column:payment_amount;comment:支付金额"`
+}
+
+// ChannelSaleRepoResult 渠道营业统计 Repository 返回结果
+type ChannelSaleRepoResult struct {
+	TotalOrderNum      sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
+	MinOrderAmount     sql.NullFloat64 `gorm:"column:min_order_amount;comment:最小订单金额"`
+	MaxOrderAmount     sql.NullFloat64 `gorm:"column:max_order_amount;comment:最大订单金额"`
+	AvgOrderAmount     sql.NullFloat64 `gorm:"column:avg_order_amount;comment:平均订单金额"`
+	TotalDeskNum       sql.NullInt64   `gorm:"column:total_desk_num;comment:总桌台数量"`
+	TotalMealNum       sql.NullInt64   `gorm:"column:total_meal_num;comment:总用餐人数"`
+	OrderAmountMealAvg sql.NullFloat64 `gorm:"column:order_amount_meal_avg;comment:人均订单金额"`
+	TotalOrderAmount   sql.NullFloat64 `gorm:"column:total_order_amount;comment:总订单金额"`
+}
+
+// UserAnalysisItemRepo 用户分析统计项（Repository层）
+type UserAnalysisItemRepo struct {
+	Name       string          `gorm:"column:name"`        // 名称
+	OrderCount int64           `gorm:"column:order_count"` // 订单数
+	Percentage decimal.Decimal `gorm:"column:percentage"`  // 占比（decimal类型）
+}
+
+// UserAnalysisRepoResult 用户分析统计结果（Repository层）
+type UserAnalysisRepoResult struct {
+	Nationality   []UserAnalysisItemRepo `json:"nationality"`    // 国籍统计
+	OrderSource   []UserAnalysisItemRepo `json:"order_source"`   // 点餐方式来源统计
+	DeskSource    []UserAnalysisItemRepo `json:"desk_source"`    // 桌台方式来源统计
+	DiningMethod  []UserAnalysisItemRepo `json:"dining_method"`  // 用餐方式统计
+	TakeoutMethod []UserAnalysisItemRepo `json:"takeout_method"` // 外卖方式统计（Grab/LINE MAN）
+}
+
+// StatisticsTakeoutData 外卖订单统计数据
+type StatisticsTakeoutSaleData struct {
+	TotalSaleAmount         float64 `gorm:"column:total_sale_amount;comment:总销售额(顾客实付)"`
+	TotalPayAmount          float64 `gorm:"column:total_pay_amount;comment:总实付金额(顾客实付)"`
+	TotalOrderNum           int64   `gorm:"column:total_order_num;comment:总订单数量"`
+	TotalRefundAmount       float64 `gorm:"column:total_refund_amount;comment:总退款金额"`
+	MinOrderAmount          float64 `gorm:"column:min_order_amount;comment:最小订单金额(顾客实付)"`
+	MaxOrderAmount          float64 `gorm:"column:max_order_amount;comment:最大订单金额(顾客实付)"`
+	TotalDiscount           float64 `gorm:"column:total_discount;comment:总优惠折扣(平台优惠+商户优惠)"`
+	TotalTax                float64 `gorm:"column:total_tax;comment:总税费"`
+	TotalBusinessAmount     float64 `gorm:"column:total_business_amount;comment:总营业收入(实付金额-税费)"`
+	CancelOrderNum          int64   `gorm:"column:cancel_order_num;comment:取消订单数"`
+	CancelOrderAmount       float64 `gorm:"column:cancel_order_amount;comment:取消订单金额(拒单状态的小计金额)"`
+	TotalProductNum         int64   `gorm:"column:total_product_num;comment:总商品数量"`
+	TotalOrderAmount        float64 `gorm:"column:total_order_amount;comment:总订单金额(顾客实付,用于计算平均值)"`
+	TotalProductOriginPrice float64 `gorm:"column:total_product_origin_price;comment:总原商品金额(小计金额,兼容前端)"`
+}
+
+// StatisticsTakeoutPaymentData 外卖订单支付方式统计数据
+type StatisticsTakeoutPaymentData struct {
+	ID                 uint64  `gorm:"column:id;comment:支付方式ID"`
+	Sort               int     `gorm:"column:sort;comment:支付方式排序"`
+	CreateTime         int64   `gorm:"column:create_time;comment:支付方式创建时间"`
+	PaymentName        string  `gorm:"column:payment_name;comment:支付方式名称"`
+	PaymentCode        int     `gorm:"column:payment_code;comment:支付方式编码"`
+	ErpnextPayment     string  `gorm:"column:erpnext_payment;comment:ERPNext支付方式"`
+	ErpnextPaymentId   string  `gorm:"column:erpnext_payment;comment:ERPNext支付方式ID"`
+	Source             int     `gorm:"column:source;comment:来源 0-系统 1-手动 2-LianLianPay"`
+	TotalOrderNum      int64   `gorm:"column:total_order_num;comment:总订单数量"`
+	TotalPaymentAmount float64 `gorm:"column:total_payment_amount;comment:总支付金额"`
+	TotalRefundAmount  float64 `gorm:"column:total_refund_amount;comment:总退款金额"`
+}
+
+// StatisticsTakeoutReceivedAmountData 外卖订单实收金额统计数据
+type StatisticsTakeoutReceivedAmountData struct {
+	AcceptedTime        int64   `gorm:"column:accepted_time"`         // 接单时间
+	TakeoutOrderUuid    uint64  `gorm:"column:takeout_order_uuid"`    // 外卖订单UUID
+	TotalReceivedAmount float64 `gorm:"column:total_received_amount"` // 总实收金额
 }

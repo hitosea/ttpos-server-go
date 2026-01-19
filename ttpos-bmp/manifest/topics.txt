@@ -1,6 +1,9 @@
 item-sync
+item-sync-delay
 erp-item-change
 erp-doc-change
+
+#---- ERP ttpos-erp ----
 #保存pos invoice
 save-pos-invoice
 return-pos-invoice
@@ -8,7 +11,20 @@ cancel-pos-invoice
 close-pos-entry
 #重做pos订单
 redo-pos
+#--- END ERP
+
+#---- Message ttpos-message ----
 #发送消息
 ttpos-message-send
+#--- END Message  ----
+
 #LAN 打印机上报
 lan-printer-report
+
+
+#---- 外卖 ttpos-takeout ----
+takeout_provider_menu_update
+takeout_store_integration_state
+takeout_grab_order
+
+#---  END 外卖 ----

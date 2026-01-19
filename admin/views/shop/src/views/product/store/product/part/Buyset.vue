@@ -103,7 +103,15 @@
     </el-form-item>
 
     <el-form-item v-if="form.model.type == 10 || form.model.type == 30" for="no_click" :label="$t('商品排序：')">
-      <el-input-number :controls="false" :min="0" :max="999" :disabled="erp_is_open == 1" :placeholder="$t('接近0，排序等级越高')" v-model="form.model.product_sort" class="max-w460"></el-input-number>
+      <el-input-number
+        :controls="false"
+        :min="0"
+        :max="999"
+        :disabled="erp_is_open == 1"
+        :placeholder="$t('接近0，排序等级越高')"
+        v-model="form.model.product_sort"
+        class="max-w460"
+      ></el-input-number>
     </el-form-item>
 
     <el-form-item for="no_click" :label="$t('限购数量：')" v-if="form.model.type == 10 || form.model.type == 30">
@@ -132,8 +140,15 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item for="no_click" :label="$t('商品卖点：')" v-if="form.model.type == 10">
-        <el-input type="textarea" :placeholder="$t('请输入商品卖点')" v-model="form.model.selling_point" show-word-limit :maxlength="50" class="max-w460"></el-input>
+      <el-form-item for="no_click" >
+        <UniqueNameFormAreaText
+          ref="uniqueNameFormAreaTextRef"
+          width="460px"
+          :required="false"
+          :labelPrefix="$t('商品卖点')"
+          :maxlength="500"
+          :overrideLanguages="form.model.product_id ? form.model.selling_point_i18n : undefined"
+        />
       </el-form-item>
 
       <el-form-item for="no_click" :label="$t('供应商：')" v-if="baseSale == '1' && form.model.type != 30">
@@ -245,6 +260,7 @@
   import { useUserStore } from '@/store';
   import PorductApi from '@/api/product.js';
   import PurchaseApi from '@/api/purchase.js';
+  import UniqueNameFormAreaText from '@/components/product/UniqueNameFormAreaText.vue';
 
   // 获取用户信息和配置
   const { currency, userInfo, erp_is_open, computedSupplier } = useUserStore();
@@ -258,7 +274,6 @@
 
   // 注入form
   const form = inject('form', {});
-
   // 响应式数据
   const unit = ref('%');
   const grade_unit = ref('%');
@@ -270,6 +285,7 @@
   const is_open_assistant_ref = ref(is_open_assistant);
   const is_open_kitchen_kds_ref = ref(is_open_kitchen_kds);
   const showMore = ref(false);
+  const uniqueNameFormAreaTextRef = ref(null);
 
   // 组件挂载时初始化
   onMounted(() => {
@@ -306,6 +322,16 @@
       minPrice.value = Math.min(...price);
     },
     { immediate: true, deep: true }
+  );
+
+  watch(
+    () => uniqueNameFormAreaTextRef.value?.data,
+    (val) => {
+      if (val) {
+        form.model.selling_point_i18n = val;
+      }
+    },
+    { immediate: false, deep: true }
   );
 
   // 监听计价方式变化
@@ -393,6 +419,27 @@
     }
     return result;
   };
+
+  // 设置商品卖点数据
+  const setSellingPointData = (data) => {
+    if (uniqueNameFormAreaTextRef.value && data) {
+      try {
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+        uniqueNameFormAreaTextRef.value.data = parsedData;
+        return true;
+      } catch (error) {
+        console.error('设置商品卖点数据失败:', error);
+        return false;
+      }
+    }
+    return false;
+  };
+
+  // 暴露内部组件引用给父组件使用
+  defineExpose({
+    uniqueNameFormAreaTextRef,
+    setSellingPointData,
+  });
 </script>
 
 <style lang="scss" scoped>

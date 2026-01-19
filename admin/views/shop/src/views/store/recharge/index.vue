@@ -144,7 +144,7 @@
           <el-table-column prop="" :label="$t('会员')" show-overflow-tooltip>
             <template #default="scope">
               <template v-if="scope.row.member_uuid">
-                <span class="gray9">{{ $t('会员ID') }}&nbsp;({{ scope.row.member_uuid }})</span>
+                <span class="gray9">{{ $t('会员：') }}&nbsp;{{ scope.row.member_uuid }}</span>
               </template>
               <p v-else>-</p>
             </template>

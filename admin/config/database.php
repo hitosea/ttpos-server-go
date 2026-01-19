@@ -33,7 +33,7 @@ return [
             // 密码
             'password' => Env::get('DB_PASSWORD', '123456'),
             // 端口
-            'hostport' => Env::get('DB_PORT', '3306'),
+            'hostport' => Env::get('DB_RW_PORT', Env::get('DB_PORT', '3306')),
             // 数据库连接参数
             'params' => [],
             // 数据库编码默认采用utf8

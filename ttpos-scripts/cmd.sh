@@ -136,20 +136,20 @@ EOF
         default_value="$(env_get DB_PORT_OPEN)"
         if [ -z "$default_value" ]; then
             read_tip="请输入代理端口 (3300-65500): "
-            read -rp "$read_tip" inputport
+            read -rp "$read_tip" inputPort
         fi
-        inputport=${inputport:-$default_value}
-        if [ $inputport -lt 3300 ] || [ $inputport -gt 65500 ]; then
+        inputPort=${inputPort:-$default_value}
+        if [ $inputPort -lt 3300 ] || [ $inputPort -gt 65500 ]; then
             error "端口范围不正确！"
             exit 1
         fi
-        env_set DB_PORT $inputport
-        env_set DB_PORT_OPEN $inputport
+        env_set DB_PORT $inputPort
+        env_set DB_PORT_OPEN $inputPort
         run_mysql rm-port
         container_network=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' ${container_name})
         docker run --name ${container_name}-port \
             --network ${container_network} \
-            -p ${inputport}:3306 \
+            -p ${inputPort}:3306 \
             -v ${cur_path}/docker/mysql/tmp/${container_name}.conf:/etc/nginx/nginx.conf \
             -d nginx:alpine > /dev/null
         judge "开启代理"

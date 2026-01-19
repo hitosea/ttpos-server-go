@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -21,6 +22,7 @@ type Claims struct {
 	DeviceId       string    `json:"device_id"`        // 设备ID
 	Assistant      Assistant `json:"assistant"`        // 点餐助手绑定的收银机信息
 	IsRefreshToken bool      `json:"is_refresh_token"` // 是否refresh_token
+	Brand          string    `json:"brand"`            // 品牌名称
 	jwt.RegisteredClaims
 }
 
@@ -35,7 +37,10 @@ func GenerateToken(claims Claims, secret string, expire int, isRefreshToken bool
 }
 
 func ParseToken(tokenString, secret string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
+		if token.Method.Alg() != "HS256" {
+			return nil, fmt.Errorf("invalid signing method: %v", token.Header["alg"])
+		}
 		return []byte(secret), nil
 	})
 	if err != nil {

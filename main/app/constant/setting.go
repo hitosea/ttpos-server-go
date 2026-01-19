@@ -18,6 +18,7 @@ const (
 	SettingH5             = "h5"               // 各端-扫码H5设置
 	SettingKitchen        = "kitchen"          // 各端-厨显设置
 	SettingAssistant      = "assistant"        // 各端-点餐助手设置
+	SettingKiosk          = "kiosk"            // 各端-自助点餐机设置
 	SettingBuffet         = "buffet"           // 自助餐-自助餐设置
 	SettingPointsRule     = "points_rule"      // 积分规则设置
 	SettingCloudBasic     = "cloud_basic"      // 云端-基础信息
@@ -65,4 +66,10 @@ const (
 const (
 	BatchCookingModePre  = "pre"  // 前置关联模式：商品选购时就关联分批类型
 	BatchCookingModePost = "post" // 后置关联模式：商品下单后在送厨弹窗中选择类型（默认）
+)
+
+// 分批打印模式
+const (
+	BatchPrintModeDefault = "default" // 默认
+	BatchPrintModeMerge   = "merge"   // 合并
 )

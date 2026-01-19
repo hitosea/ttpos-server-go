@@ -335,6 +335,31 @@ func (h *OrderHandler) ExportShopOrderList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetPaymentAmount 处理获取实付金额
+// @Summary 获取实付金额
+// @Description 获取实付金额
+// @Tags 商家端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderPaymentAmountReq true "详情参数"
+// @Success 200 {object} resp.GetPaymentAmountResp "实付金额"
+// @Failure 404 {object} nil "未找到"
+// @Router /shop/order/payment_amount [post]
+func (h *OrderHandler) GetPaymentAmount(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.OrderPaymentAmountReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	// 获取实付金额
+	res := h.service.GetPaymentAmount(ctx, req)
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterOrderHandlers 注册商家订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -370,5 +395,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
 		privateApi.POST("/order/re_return", wrapper.ReReturnOrder)
 		privateApi.POST("/order/reject_all", wrapper.RejectAllH5Order)
+		privateApi.POST("/order/payment_amount", wrapper.GetPaymentAmount)
 	}
 }

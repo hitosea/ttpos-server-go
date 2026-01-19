@@ -97,7 +97,7 @@ nacos:
 redis:
   default:
     address: "$REDIS_ADDRESSES"            # Redis地址（集群模式使用逗号分隔多个地址，如：host1:port1,host2:port2,host3:port3）
-    password: "$REDIS_PASSWORD"            # 密码
+    pass: "$REDIS_PASSWORD"            # 密码
     db: $REDIS_DB                          # 数据库索引
     cluster: true                          # 是否为集群模式
     minIdle: 5                             # 最小空闲连接数
@@ -121,7 +121,7 @@ queue:
     timeout: 0                                        # 队列超时时间以秒为单位，0表示永不超时。如果队列在设定的超时时间内没有被消费，则会被销毁
   rocketmq:
     endpoint: "$ROCKETMQ_ENDPOINT"                   #代理接入点 新版v5客户端支持
-    nameSrvAdders: [ "$ROCKETMQ_NAME_SRV_ADDR" ]                  # nameSrvAdder+端口，支持多个
+    nameSrvAdders: [ $ROCKETMQ_NAME_SRV_ADDR ]        # nameSrvAdder+端口，支持多个（集群模式使用逗号分隔）
     accessKey: "$ROCKETMQ_ACCESS_KEY"                                      # 选填。如果开启了acl控制就必填
     secretKey: "$ROCKETMQ_SECRET_KEY"                                      # 选填。如果开启了acl控制就必填
     brokerAddr: "$ROCKETMQ_BROKER_ADDR"                      # brokerAddr+端口，选填。用于消费者订阅主题前会检查主题是否存在，不存在会自动创建。你也可以在rocketmq控制台手动创建主题
@@ -130,3 +130,29 @@ queue:
     invisibleDuration: 25   #invisibleDuration should > 20s
     awaitDuration: 5      # maximum waiting time for receive func
     unitName: "" # 消费者单元名称，默认使用GUID
+
+# 健康检查配置
+health:
+  enable: true                          # 是否启用健康检查
+  path: "/health"                       # 健康检查端点路径
+  token: "$HEALTH_TOKEN"                # 访问令牌（为空则不校验）
+  allowedIps: []                        # IP 白名单（为空则不限制）
+  cacheTtl: "2s"                        # 检查结果缓存时间
+  timeout: "500ms"                      # 单个检查超时时间
+  
+  # 依赖检测配置
+  dependencies:
+    mysql:
+      enabled: true                     # 是否检测 MySQL
+      pingQuery: "SELECT 1"             # Ping 查询语句
+    redis:
+      enabled: true                     # 是否检测 Redis
+      cluster: true                     # 是否集群模式
+    rocketmq:
+      enabled: false                    # 是否检测 RocketMQ（预留）
+    nacos:
+      enabled: false                    # 是否检测 Nacos（预留）
+  
+  # 降级配置（可选）
+  degrade:
+    pausePush: false                    # 健康检查失败时是否暂停推送

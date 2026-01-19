@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
+	printerService "ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
@@ -20,7 +21,7 @@ type BaseHandler struct {
 	authSrv    service.IAuthSrv
 	deviceSrv  service.IDeviceSrv
 	settingSrv setting.ISrv
-	pinterSrv  service.IPrinterSrv
+	pinterSrv  printerService.IPrinterSrv
 }
 
 // GetBase 基本信息
@@ -154,7 +155,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		authSrv:    authSrv,
 		deviceSrv:  deviceSrv,
 		settingSrv: settingSrv,
-		pinterSrv:  service.NewPrinterSrv(dbm, cache),
+		pinterSrv:  printerService.NewPrinterSrv(dbm, cache),
 	}
 
 	// 需要认证

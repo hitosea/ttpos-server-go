@@ -351,7 +351,7 @@ func (s *orderImportSrv) getOrderDetailsByOrderNo(detailList []OrderDetailData, 
 }
 
 // validateOrderData 校验订单数据
-func (s *orderImportSrv) validateOrderData(ctx context.Context, db *gorm.DB, orderBasic *OrderBasicData, details []OrderDetailData) error {
+func (s *orderImportSrv) validateOrderData(_ context.Context, db *gorm.DB, orderBasic *OrderBasicData, details []OrderDetailData) error {
 	// 1. 校验必填字段
 	if orderBasic.OrderNo == "" {
 		return errors.New("订单号不能为空")
@@ -450,7 +450,7 @@ func (s *orderImportSrv) validateOrderData(ctx context.Context, db *gorm.DB, ord
 }
 
 // createOrder 创建订单
-func (s *orderImportSrv) createOrder(ctx context.Context, db *gorm.DB, orderBasic *OrderBasicData, details []OrderDetailData) error {
+func (s *orderImportSrv) createOrder(_ context.Context, db *gorm.DB, orderBasic *OrderBasicData, details []OrderDetailData) error {
 	// 1. 查找门店 UUID（已在 validateOrderData 中校验，这里再次确认）
 	// companyRepo := repository.NewCompanyRepo(db)
 	// _, err := companyRepo.GetCompany(
@@ -519,6 +519,8 @@ func (s *orderImportSrv) createOrder(ctx context.Context, db *gorm.DB, orderBasi
 		Remark:        orderBasic.Remark,
 		ConsumerUuid:  consumerUuid,
 		DeskUuid:      deskUuid,
+		Source:        constant.SaleBillSourceDefault, // 导入订单使用默认值 0
+		ClientVersion: "",                              // 导入订单没有版本信息，使用空字符串
 		// ShopUuid 字段不存在，通过 DeskUuid 关联到门店
 	}
 

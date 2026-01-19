@@ -4,7 +4,53 @@
 
 ---
 
-## 📂 目录说明
+## 📂 目录结构
+
+```
+docs/shared/specs/
+├── active/      # 开发中的需求（默认创建位置）
+├── archived/    # 已完成并发布的需求（按版本归档）
+│   └── v2.10/
+└── deprecated/  # 已废弃的需求
+```
+
+### 状态说明
+
+| 状态 | 目录 | 说明 |
+|------|------|------|
+| **Active** | `active/` | 正在开发中的需求，新创建的 Spec 默认放这里 |
+| **Archived** | `archived/{version}/` | 已完成并随版本发布的需求，按 minor 版本号归档 |
+| **Deprecated** | `deprecated/` | 已废弃、被替代或取消的需求 |
+
+### 状态流转
+
+```
+创建 → active/
+         ↓
+      开发完成 & 发布
+         ↓
+    ┌────┴────┐
+    ↓         ↓
+archived/   deprecated/
+ (上线)      (废弃)
+```
+
+### 状态管理命令
+
+```bash
+# 归档到指定版本（任务必须全部完成）
+/spec-archive @story-order-quick-payment --version v2.10
+
+# 废弃 Spec（必须提供原因）
+/spec-deprecate @story-old-feature --reason "需求取消"
+
+# 恢复 Spec 到 active
+/spec-restore @story-order-quick-payment
+```
+
+---
+
+## 📝 目录说明
 
 本目录存放功能规格文档（Spec），每个 Spec 应包含：
 
@@ -57,20 +103,44 @@ story-order-quick-payment/
 
 ---
 
-## 📋 创建新 Spec
+## 📋 创建新 Spec（两阶段流程）
 
-### 使用 Agent 指令
+### Phase 1: 创建需求文档
 
 ```bash
-/create-spec story-order-quick-payment
+/spec-create story-order-quick-payment
+```
+
+输出：
+```
+docs/shared/specs/active/story-order-quick-payment/
+└── requirements.md  # 审核状态: 待审核
+```
+
+### Phase 2: 创建设计文档（产品审核通过后）
+
+```bash
+/spec-design story-order-quick-payment
+```
+
+前置条件：requirements.md 审核状态为「已通过」
+
+输出：
+```
+docs/shared/specs/active/story-order-quick-payment/
+├── requirements.md  # 审核状态: 已通过
+├── design.md        # 技术设计
+└── tasks.md         # 任务分解
 ```
 
 ### 手动创建
 
 ```bash
-mkdir -p docs/shared/specs/story-order-quick-payment
-cd docs/shared/specs/story-order-quick-payment
-touch requirements.md design.md tasks.md
+mkdir -p docs/shared/specs/active/story-order-quick-payment
+cd docs/shared/specs/active/story-order-quick-payment
+touch requirements.md  # 先创建需求文档
+# 审核通过后再创建
+touch design.md tasks.md
 ```
 
 ### Graphiti & 活动日志
@@ -85,8 +155,8 @@ touch requirements.md design.md tasks.md
 
 ### 工作流
 
-- [需求管理工作流](../../agent/workflows/requirement-management.md)
-- [功能开发工作流](../../agent/workflows/feature-development.md)
+- [需求管理工作流](../../agent/workflows/requirement/management.md)
+- [功能开发工作流](../../agent/workflows/development/feature.md)
 
 ### 模板
 
@@ -101,4 +171,4 @@ touch requirements.md design.md tasks.md
 
 ---
 
-**最后更新**: 2025-11-16
+**最后更新**: 2025-11-25

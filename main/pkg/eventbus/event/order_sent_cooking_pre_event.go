@@ -9,7 +9,8 @@ import (
 // SentCookingPayload 预送厨事件数据结构
 type SentCookingPrePayload struct {
 	BasePayload
-	Products ProductsPre `json:"products"` // 用餐人数
+	Products        ProductsPre `json:"products"`           // 正式送厨的分批商品
+	IsPreBatchPrint bool        `json:"is_pre_batch_print"` // 是否是预先分批打印送厨单. 只有前置送厨且开启合并打印模式时，才会是true
 }
 
 // OrderProduct 订单商品
@@ -32,6 +33,7 @@ type OrderProductPre struct {
 	IsPackage             bool                 `json:"is_package"`          // 是否套餐
 	IsSubProduct          bool                 `json:"is_sub_product"`      // 是否套餐子商品
 	Remark                string               `json:"remark"`              // 备注
+	RemarkLocale          dto.LocaleResponse   `json:"remark_locale"`       // 备注（包含预设备注和自定义备注，多语言）
 	BatchTagUuid          uint64               `json:"batch_tag_uuid"`      // 分批类型UUID, 必填
 	SubProducts           []OrderProduct       `json:"sub_products"`        // 套餐子商品
 }

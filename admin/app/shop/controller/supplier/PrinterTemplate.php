@@ -65,6 +65,31 @@ class PrinterTemplate extends Controller
     public function setTemplate()
     {
         $id = $this->postData()['id'];
+        $tmpUuid = $this->postData()['tmp_uuid'] ?? 0;
+        
+        // 调用 Go Main 的使用打印机定制接口
+        if ($tmpUuid > 0) {
+            $res = HttpHelp::postRequest('http://nginx/api/v1/shop/printer/customize/use', json_encode([
+                'customize_uuid' => intval($tmpUuid),
+            ]), [
+                'Authorization: Bearer ' . request()->header('token'),
+                'Accept-Language: ' . request()->header('language'),
+                'Content-Type: application/json; charset=utf-8',
+            ]);
+            
+            if (!$res) {
+                return $this->renderError('请求失败');
+            }
+            
+            $res = json_decode($res, true);
+            if (($res['code'] ?? -1) != 0) {
+                return $this->renderError($res['msg'] ?? '操作失败');
+            }
+            
+            return $this->renderSuccess('操作成功');
+        }
+        
+        // 如果 tmp_uuid 为 0，使用原来的 PHP 模型处理
         $data = $this->postData();
         $model = PrinterTemplateModel::detail($id);
         /** @var PrinterTemplateModel $model */

@@ -373,7 +373,7 @@ func (*RedoPosConsumer) GetConcurrency() int {
 }
 
 // Handle 重做未处理的订单
-// 消息参考: {"msg_type":"save-pos-invoice","pos_open_entry_name":"POS-OPE-2025-00238"}
+// 消息参考: {"msg_type":"save-pos-invoice","pos_open_entry_name":"POS-OPE-2025-00238","site_code":"SITE001"}
 func (*RedoPosConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) (err error) {
 	g.Log().Info(ctx, "收到重做消息：", string(mqMsg.Body))
 	j, err := gjson.DecodeToJson(mqMsg.Body)
@@ -388,16 +388,25 @@ func (*RedoPosConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) (err erro
 		g.Log().Infof(ctx, "重做开单名称不能为空：%s", msg.PosOpenEntryName)
 		return nil
 	}
+	// 验证 SiteCode（向后兼容）
+	if msg.SiteCode == "" {
+		g.Log().Warningf(ctx, "重做消息缺少 SiteCode，可能存在跨站点风险：%s", string(mqMsg.Body))
+	}
 	//重发所有未处理的商品发票
 	switch msg.MsgType {
 	case mq.MsgTypeSavePosInvoice:
 		posInvoiceDao := dao.ReceivePosInvoice.Ctx(ctx)
 		//查询所有未处理的商品发票
 		posInvoiceList := make([]*entity.ReceivePosInvoice, 0)
-		err = posInvoiceDao.Where(do.ReceivePosInvoice{
+		whereCondition := do.ReceivePosInvoice{
 			OpenPosEntryName: msg.PosOpenEntryName,
 			Docstatus:        erp.DocstatusDraft,
-		}).Scan(&posInvoiceList)
+		}
+		// 添加 SiteCode 过滤（当 SiteCode 不为空时）
+		if msg.SiteCode != "" {
+			whereCondition.SiteCode = msg.SiteCode
+		}
+		err = posInvoiceDao.Where(whereCondition).Scan(&posInvoiceList)
 		if err != nil {
 			return gerror.Wrapf(err, "查询商品发票失败")
 		}
@@ -414,16 +423,21 @@ func (*RedoPosConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) (err erro
 		}
 	case mq.MsgTypeCancelPosInvoice:
 		cancelDao := dao.ReceiveCancelPosInvoice.Ctx(ctx)
-		//查询所有未处理的商品发票
+		//查询所有未处理的取消发票
 		cancelList := make([]*entity.ReceiveCancelPosInvoice, 0)
-		err = cancelDao.Where(do.ReceiveCancelPosInvoice{
+		whereCondition := do.ReceiveCancelPosInvoice{
 			OpenPosEntryName: msg.PosOpenEntryName,
 			Docstatus:        erp.DocstatusDraft,
-		}).Scan(&cancelList)
-		if err != nil {
-			return gerror.Wrapf(err, "查询商品发票失败")
 		}
-		//重发所有未处理的商品发票
+		// 添加 SiteCode 过滤（当 SiteCode 不为空时）
+		if msg.SiteCode != "" {
+			whereCondition.SiteCode = msg.SiteCode
+		}
+		err = cancelDao.Where(whereCondition).Scan(&cancelList)
+		if err != nil {
+			return gerror.Wrapf(err, "查询取消发票失败")
+		}
+		//重发所有未处理的取消发票
 		for _, cancel := range cancelList {
 			//发送消息
 			if err = queue.Push(string(consts.TopicCancelPosInvoice), &mq.AsyncSellingMsg{
@@ -436,16 +450,21 @@ func (*RedoPosConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) (err erro
 		}
 	case mq.MsgTypeReturnPosInvoice:
 		returnDao := dao.ReceiveReturnPosInvoice.Ctx(ctx)
-		//查询所有未处理的商品发票
+		//查询所有未处理的退货发票
 		returnList := make([]*entity.ReceiveReturnPosInvoice, 0)
-		err = returnDao.Where(do.ReceiveReturnPosInvoice{
+		whereCondition := do.ReceiveReturnPosInvoice{
 			OpenPosEntryName: msg.PosOpenEntryName,
 			Docstatus:        erp.DocstatusDraft,
-		}).Scan(&returnList)
-		if err != nil {
-			return gerror.Wrapf(err, "查询商品发票失败")
 		}
-		//重发所有未处理的商品发票
+		// 添加 SiteCode 过滤（当 SiteCode 不为空时）
+		if msg.SiteCode != "" {
+			whereCondition.SiteCode = msg.SiteCode
+		}
+		err = returnDao.Where(whereCondition).Scan(&returnList)
+		if err != nil {
+			return gerror.Wrapf(err, "查询退货发票失败")
+		}
+		//重发所有未处理的退货发票
 		for _, returnInvoice := range returnList {
 			//发送消息
 			if err = queue.Push(string(consts.TopicReturnPosInvoice), &mq.AsyncSellingMsg{
@@ -458,16 +477,21 @@ func (*RedoPosConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) (err erro
 		}
 	case mq.MsgTypeClosePosEntry:
 		closePosDao := dao.ReceiveClosePos.Ctx(ctx)
-		//查询所有未处理的商品发票
+		//查询所有未处理的关账记录
 		closePosList := make([]*entity.ReceiveClosePos, 0)
-		err = closePosDao.Where(do.ReceiveClosePos{
+		whereCondition := do.ReceiveClosePos{
 			PosOpenEntryName: msg.PosOpenEntryName,
 			Docstatus:        erp.DocstatusDraft,
-		}).Scan(&closePosList)
+		}
+		// 添加 SiteCode 过滤（当 SiteCode 不为空时）
+		if msg.SiteCode != "" {
+			whereCondition.SiteCode = msg.SiteCode
+		}
+		err = closePosDao.Where(whereCondition).Scan(&closePosList)
 		if err != nil {
 			return gerror.Wrapf(err, "查询关账记录失败")
 		}
-		//重发所有未处理的商品发票
+		//重发所有未处理的关账记录
 		for _, closePos := range closePosList {
 			//发送消息
 			if err = queue.Push(string(consts.TopicClosePosEntry), &mq.AsyncSellingMsg{

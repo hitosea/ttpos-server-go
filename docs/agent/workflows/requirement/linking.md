@@ -1,6 +1,6 @@
 # Proposal ↔ Spec 链接工作流
 
-> 🤖 Agent 执行清单：确保 `/propose` 创建的提案与 `/create-spec` 生成的 Spec 双向关联，并同步 Graphiti/活动日志。
+> 🤖 Agent 执行清单：确保 `/propose` 创建的提案与 `/spec-create` 生成的 Spec 双向关联，并同步 Graphiti/活动日志。
 
 ---
 
@@ -8,9 +8,11 @@
 
 ```
 创建 Proposal → 填写提案 → 评审决定 →
-  批准 → 创建 Spec → requirements/design/tasks → 建立双向链接
-                                   ↓
-                          Graphiti Episode + 活动日志
+  批准 → /spec-create → requirements → 产品审核 →
+                                         ↓
+                             /spec-design → design + tasks → 建立双向链接
+                                                   ↓
+                                          Graphiti Episode + 活动日志
 ```
 
 ---
@@ -25,41 +27,66 @@
 
 ## Step 1: 识别提案
 
-1. 打开 `docs/team/proposals/{YYYY-MM-DD}-{feature}.md`。
+1. 打开 `docs/team/proposals/{YYYY-MM}/{feature}.md`。
 2. 确认提案包含：
    - 背景/价值/风险
    - 评审结论（批准/修改/拒绝）
    - SP 粗评估
-3. 在“关联 Spec”字段标注 `待创建`。
+3. 在"关联 Spec"字段标注 `待创建`。
 
 ---
 
-## Step 2: 创建 Spec
+## Step 2: 创建 Spec 需求文档
 
 ```bash
-/create-spec story-{module}-{feature}
+/spec-create story-{module}-{feature}
 ```
 
 生成目录：
 
 ```
-docs/shared/specs/story-{module}-{feature}/
-├── requirements.md
-├── design.md
-└── tasks.md
+docs/shared/specs/active/story-{module}-{feature}/
+└── requirements.md  # 审核状态: 待审核
+```
+
+> 此时只创建 requirements.md，等待产品审核通过。
+
+---
+
+## Step 3: 产品审核
+
+1. PM 审核 requirements.md 中的 User Story 和 AC。
+2. 审核通过后，更新审核状态为「已通过」。
+3. 如需修改，更新审核状态为「需修改」，并填写审核意见。
+
+---
+
+## Step 4: 创建 Spec 设计文档
+
+```bash
+/spec-design story-{module}-{feature}
+```
+
+生成文件：
+
+```
+docs/shared/specs/active/story-{module}-{feature}/
+├── requirements.md  # 已存在（审核状态: 已通过）
+├── design.md        # 新创建：技术设计
+└── tasks.md         # 新创建：任务分解
 ```
 
 > 如需手动创建，参考 `docs/shared/specs/README.md` + `docs/agent/templates/*.md`。
 
 ---
 
-## Step 3: 建立双向链接
+## Step 5: 建立双向链接
 
 ### 在 Proposal 中
 
 - 更新 `关联 Spec` 字段：
   ```markdown
-  **关联 Spec** | [story-order-quick-payment](../shared/specs/story-order-quick-payment/)
+  **关联 Spec** | [story-order-quick-payment](../../../shared/specs/active/story-order-quick-payment/)
   ```
 - 如需跟踪多个 Spec，使用列表形式。
 
@@ -67,16 +94,16 @@ docs/shared/specs/story-{module}-{feature}/
 
 - 在 `requirements.md` 页首添加 Proposal 引用（示例）：
   ```markdown
-  | 来源 Proposal | [docs/team/proposals/2025-11-16-quick-payment.md](../../../team/proposals/2025-11-16-quick-payment.md) |
+  | 来源 Proposal | [docs/team/proposals/2025-11/quick-payment.md](../../../../team/proposals/2025-11/quick-payment.md) |
   ```
 - 在 `design.md` / `tasks.md` 的基础信息部分同步引用，保证文件单独打开时也能定位 Proposal。
 
 ---
 
-## Step 4: 回写状态与活动日志
+## Step 6: 回写状态与活动日志
 
 1. **Proposal 状态**
-   - 将“状态”字段更新为 `进行中` / `已完成`，并记录负责团队。
+   - 将"状态"字段更新为 `进行中` / `已完成`，并记录负责团队。
 2. **活动日志**
    - 在 `docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md` 中追加记录：
      ```markdown
@@ -85,7 +112,7 @@ docs/shared/specs/story-{module}-{feature}/
 
 ---
 
-## Step 5: Graphiti 提醒
+## Step 7: Graphiti 提醒
 
 - 若 Spec 设计或任务分解中发现可复用经验：
   1. 复制 `docs/agent/templates/graphiti-episode.md` 到 `docs/agent/graphiti/`.
@@ -94,10 +121,12 @@ docs/shared/specs/story-{module}-{feature}/
 
 ---
 
-## Step 6: QA Checklist
+## Step 8: QA Checklist
 
 - [ ] Proposal ↔ Spec 相互引用且路径正确。
 - [ ] Proposal 状态与负责人已更新。
+- [ ] requirements.md 审核状态正确（待审核/已通过/需修改）。
+- [ ] design.md 和 tasks.md 已创建（审核通过后）。
 - [ ] 相关 README/索引（如 `docs/team/README.md`、`docs/shared/specs/README.md`）已补充新条目。
 - [ ] 活动日志已有记录。
 - [ ] 若触发知识沉淀，Graphiti Episode 已创建并互链。
@@ -123,4 +152,4 @@ docs/shared/specs/story-{module}-{feature}/
 
 ---
 
-**最后更新**：2025-11-17
+**最后更新**：2025-11-25

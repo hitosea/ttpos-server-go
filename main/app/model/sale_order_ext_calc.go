@@ -65,8 +65,8 @@ func (model *SaleOrder) CalcCommissionFee() float64 {
 // 计算销售订单未付款的金额。
 // 支付没有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和-结账抹零金额
 // 支付有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和
-func (model *SaleOrder) CalcUnPayAmount(hasCommission bool) float64 {
-	amount := model.GetAmountValue()
+func (model *SaleOrder) CalcUnPayAmount(hasCommission bool, activityAmount float64) float64 {
+	amount := model.GetAmountValueWithActivityAmount(activityAmount)
 	if hasCommission {
 		// 销售订单各个支付单的支付金额之和
 		payOrderAmount := model.calcPayOrderAmount()
@@ -148,7 +148,7 @@ func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float6
 	model.ZeroFee = calc.ZeroFee
 	calc.CustomDiscountFee = model.calcCustomDiscountFee(products, calc.Amount)
 	model.CustomDiscountFee = calc.CustomDiscountFee
-	calc.PayPointsAmount = model.CaclPointsExchangeAmount()
+	calc.PayPointsAmount = model.CalcPointsExchangeAmount()
 	model.PayPointsAmount = calc.PayPointsAmount // 有抵扣积分时，抵扣金额才大于0
 	// 再重新计算一次应付金额
 	calc.Amount = model.calcAmountZero(calc.Amount, calc.ZeroFee)
@@ -368,7 +368,7 @@ func (model *SaleOrder) calcOriginTaxFee(products []*SaleOrderProduct, serviceFe
 // 计算已送厨商品的销售订单的自定义优惠折扣金额。
 // 没有整单改价时，订单自定义优惠金额=销售订单商品金额（折前价，含赠菜商品的金额之和）- 销售订单商品金额（折后价）- 会员折扣金额 + 订单抹零金额 + 赠菜商品的金额之和 。 总的优惠金额= 销售订单商品金额（折前价）- 销售订单商品金额（折后价）。这样计算的原因是避免四舍五入引起的误差问题
 // 有整单改价时，订单自定义优惠金额=销售订单应收金额 - 整单改价金额
-func (model *SaleOrder) calcCustomDiscountFee(products []*SaleOrderProduct, amount float64) float64 {
+func (model *SaleOrder) calcCustomDiscountFee(_ []*SaleOrderProduct, amount float64) float64 {
 	// 有整单改价时, 订单自定义优惠金额=销售订单应收金额 - 整单改价金额
 	if model.CustomAmount != constant.SaleOrderCustomAmountCancel {
 		return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.CustomAmount)).Truncate(3).Round(2).InexactFloat64()
@@ -513,7 +513,7 @@ func (model *SaleOrder) calcAmountZero(amountNum, zeroFee float64) float64 {
 // CaclMaxPoints 计算最大可抵扣积分
 // 1. 当会员积分余额充足时，最大可抵扣积分=订单应收/积分抵扣比例
 // 2. 当会员积分余额不足时，最大可抵扣积分=会员积分余额
-func (model *SaleOrder) CaclMaxPoints() float64 {
+func (model *SaleOrder) CalcMaxPoints() float64 {
 	if model.Member == nil {
 		return 0 // 非会员订单，不支持积分抵扣
 	}
@@ -540,7 +540,7 @@ func (model *SaleOrder) CaclMaxPoints() float64 {
 }
 
 // 计算积分抵扣金额
-func (model *SaleOrder) CaclPointsExchangeAmount() float64 {
+func (model *SaleOrder) CalcPointsExchangeAmount() float64 {
 	if model.Member == nil {
 		return 0 // 非会员订单，不支持积分抵扣
 	}

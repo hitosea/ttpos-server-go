@@ -5,6 +5,7 @@
 package logic
 
 import (
+	_ "ttpos-bmp/app/ttpos-erp/internal/logic/accounts"
 	_ "ttpos-bmp/app/ttpos-erp/internal/logic/buying"
 	_ "ttpos-bmp/app/ttpos-erp/internal/logic/company"
 	_ "ttpos-bmp/app/ttpos-erp/internal/logic/core"

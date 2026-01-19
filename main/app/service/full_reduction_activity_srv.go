@@ -41,8 +41,11 @@ func NewFullReductionActivitySrv(dbm *database.DBManager) IFullReductionActivity
 
 // Create 创建满减活动
 func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
-	// 验证请求
-	if err := req.Validate(); err != nil {
+	// 获取商家时区
+	companySetting := ctx.GetCompanySetting()
+	timezone := (&companySetting).GetTimezone()
+	// 验证请求并初始化日期字段
+	if err := req.Validate(timezone); err != nil {
 		return err
 	}
 
@@ -144,8 +147,11 @@ func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullRedu
 
 // Update 更新满减活动
 func (s *fullReductionActivitySrv) Update(ctx context.Context, req *req.FullReductionActivityUpdateReq) error {
-	// 验证请求
-	if err := req.Validate(); err != nil {
+	// 获取商家时区
+	companySetting := ctx.GetCompanySetting()
+	timezone := (&companySetting).GetTimezone()
+	// 验证请求并初始化日期字段
+	if err := req.Validate(timezone); err != nil {
 		return err
 	}
 
@@ -160,6 +166,11 @@ func (s *fullReductionActivitySrv) Update(ctx context.Context, req *req.FullRedu
 	}
 	if activity == nil {
 		return errors.WithMessage(errors.New("活动不存在"), "活动不存在")
+	}
+
+	// 检查是否为总部来源数据
+	if !isEditable(ctx, activity.HeadquarterUuid) {
+		return errors.New("活动不可编辑")
 	}
 
 	// 检查活动状态：已结束和已失效的活动不可编辑
@@ -205,6 +216,11 @@ func (s *fullReductionActivitySrv) Update(ctx context.Context, req *req.FullRedu
 		activity.IsAllDay = req.IsAllDay
 		activity.ReductionType = req.ReductionType
 		activity.UpdateTime = currentTime
+
+		if req.IsAllDay == constant.Yes {
+			activity.StartTime = ""
+			activity.EndTime = ""
+		}
 
 		activityRepoTx := repository.NewFullReductionActivityRepo(tx)
 		if err := activityRepoTx.UpdateActivity(activity); err != nil {
@@ -325,6 +341,11 @@ func (s *fullReductionActivitySrv) Delete(ctx context.Context, uuid uint64) erro
 		return errors.WithMessage(errors.New("活动不存在"), "活动不存在")
 	}
 
+	// 检查是否为总部来源数据
+	if !isEditable(ctx, activity.HeadquarterUuid) {
+		return errors.New("活动不可删除")
+	}
+
 	// 检查活动状态，进行中的活动不可删除
 	now := time.Now().Unix()
 	status := activity.GetStatus(now, "")
@@ -405,9 +426,23 @@ func (s *fullReductionActivitySrv) buildResp(ctx context.Context, activity *mode
 		})
 	}
 
+	// 获取商家时区
+	companySetting := ctx.GetCompanySetting()
+	timezone := (&companySetting).GetTimezone()
+
+	// 将时间戳转换为日期字符串
+	timeUtil := utils.Timezone(timezone)
+	startDateStr := ""
+	endDateStr := ""
+	if activity.StartDate > 0 {
+		startDateStr = timeUtil.FormatUnixTime(activity.StartDate, "2006/01/02")
+	}
+	if activity.EndDate > 0 {
+		endDateStr = timeUtil.FormatUnixTime(activity.EndDate, "2006/01/02")
+	}
+
 	// 获取活动状态
 	now := time.Now().Unix()
-	timezone := "" // 可以从 ctx 获取时区
 	status := activity.GetStatus(now, timezone)
 
 	// 获取满减方式名称
@@ -421,6 +456,8 @@ func (s *fullReductionActivitySrv) buildResp(ctx context.Context, activity *mode
 		LocaleName:        name, // ✅ 使用 LocaleResponse
 		StartDate:         activity.StartDate,
 		EndDate:           activity.EndDate,
+		StartDateStr:      startDateStr,
+		EndDateStr:        endDateStr,
 		StartTime:         activity.StartTime,
 		EndTime:           activity.EndTime,
 		IsAllDay:          activity.IsAllDay,
@@ -429,5 +466,6 @@ func (s *fullReductionActivitySrv) buildResp(ctx context.Context, activity *mode
 		IsDisabled:        activity.IsDisabled,
 		Status:            status,
 		Rules:             rules,
+		IsEditable:        isEditable(ctx, activity.HeadquarterUuid),
 	}, nil
 }

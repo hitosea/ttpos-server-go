@@ -141,13 +141,15 @@ func (c *Controller) validateOpenPosEntryReq(req *selling.OpenPosEntryReq) error
 		return gerror.New("开帐详情不能为空")
 	}
 
-	// 验证开帐详情
+	// 验证开账详情
 	for i, detail := range req.OpenPosEntryDetail {
-		if strings.TrimSpace(detail.ModeOfPayment) == "" {
-			return gerror.Newf("第%d项支付方式不能为空", i+1)
+		// 参数校验：payment_id 和 mode_of_payment 不能同时为空
+		if (detail.PaymentId == nil || strings.TrimSpace(*detail.PaymentId) == "") &&
+			(detail.ModeOfPayment == nil || strings.TrimSpace(*detail.ModeOfPayment) == "") {
+			return gerror.Newf("open_pos_entry_detail[%d]: payment_id 和 mode_of_payment 不能同时为空", i)
 		}
 		if detail.OpeningAmount < 0 {
-			return gerror.Newf("第%d项开帐金额不能为负数", i+1)
+			return gerror.Newf("第%d项开账金额不能为负数", i+1)
 		}
 	}
 
@@ -197,8 +199,10 @@ func (c *Controller) validateClosePosEntryReq(req *selling.ClosePosEntryReq) err
 
 	// 验证关帐详情
 	for i, detail := range req.ClosePosEntryDetail {
-		if strings.TrimSpace(detail.ModeOfPayment) == "" {
-			return gerror.Newf("第%d项支付方式不能为空", i+1)
+		// 参数校验：payment_id 和 mode_of_payment 不能同时为空
+		if (detail.PaymentId == nil || strings.TrimSpace(*detail.PaymentId) == "") &&
+			(detail.ModeOfPayment == nil || strings.TrimSpace(*detail.ModeOfPayment) == "") {
+			return gerror.Newf("close_pos_entry_detail[%d]: payment_id 和 mode_of_payment 不能同时为空", i)
 		}
 		if detail.OpeningAmount < 0 {
 			return gerror.Newf("第%d项开帐金额不能为负数", i+1)
@@ -479,4 +483,57 @@ func (*Controller) GetModeOfPaymentList(ctx context.Context, req *selling.GetMod
 		return rpc.ApiError(err.Error()), nil
 	}
 	return rpc.ApiSuccessWithData("获取支付方式成功", resp), nil
+}
+
+// GetModeOfPayment 查询单个支付方式
+func (*Controller) GetModeOfPayment(ctx context.Context, req *selling.GetModeOfPaymentReq) (*api.ResponseInfo, error) {
+	resp, err := service.Selling().GetModeOfPayment(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("查询支付方式成功", resp), nil
+}
+
+// SaveModeOfPayment 保存/同步支付方式
+func (c *Controller) SaveModeOfPayment(ctx context.Context, req *selling.SaveModeOfPaymentReq) (*api.ResponseInfo, error) {
+	if err := c.validateSaveModeOfPaymentReq(req); err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	resp, err := service.Selling().SaveModeOfPayment(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("保存支付方式成功", resp), nil
+}
+
+func (c *Controller) validateSaveModeOfPaymentReq(req *selling.SaveModeOfPaymentReq) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+	if strings.TrimSpace(req.CompanyAbbr) == "" {
+		return gerror.New("公司简称不能为空")
+	}
+	if strings.TrimSpace(req.Branch) == "" {
+		return gerror.New("分支不能为空")
+	}
+
+	// 判断是更新操作还是创建操作
+	// 如果传入了 name 或 payment_id，则识别为更新操作
+	isUpdate := (req.Name != nil && strings.TrimSpace(*req.Name) != "") ||
+		(req.PaymentId != "" && strings.TrimSpace(req.PaymentId) != "")
+
+	// 创建操作时，channel 和 pay_type 必填
+	// 更新操作时，channel 和 pay_type 不是必填
+	if !isUpdate {
+		if strings.TrimSpace(req.PayType) == "" {
+			return gerror.New("支付类型不能为空")
+		}
+	}
+
+	// 更新操作时，name 不能为空字符串
+	if req.Name != nil && strings.TrimSpace(*req.Name) == "" {
+		return gerror.New("支付方式名称不能为空")
+	}
+
+	return nil
 }

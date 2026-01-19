@@ -6,24 +6,27 @@
     <div>
       <div class="mt16">
         <el-form-item for="no_click" :label="$t('商品加料：')">
-          <el-button type="primary" :disabled="form.model.product_feed.length >= 10 || erp_is_open == 1" @click="addIngredients">{{ $t('添加加料') }}+</el-button>
+          <el-button type="primary" :disabled="form.model.product_feed.length >= 100 || erp_is_open == 1" @click="addIngredients">{{ $t('添加加料') }}+</el-button>
         </el-form-item>
         <!--加料-->
         <template v-if="form.model.product_feed.length > 0">
           <div class="table-checkbox">
-            <div> <el-checkbox v-model="form.model.feed_required" size="large" :disabled="erp_is_open == 1" :true-value="1" :false-value="0" :label="$t('必选')" /></div>
+            <!-- 
+            2025年12月24日09:37:50 去掉必选选项 任务37650
+            <div> <el-checkbox v-model="form.model.feed_required" size="large" :disabled="erp_is_open == 1" :true-value="1" :false-value="0" :label="$t('必选')" /></div> -->
             <div class="table-c-item">
-              <el-checkbox
-                v-model="form.model.feed_open_max_select"
-                size="large"
-                :disabled="erp_is_open == 1"
-                :true-value="1"
-                :false-value="0"
-                :label="$t('最多可选')"
-                @change="checkDefaultSelect"
-              />
+              <div class="table-c-item-label">{{ $t('可选') }}</div>
               <el-input-number
-                v-if="form.model.feed_open_max_select == '1'"
+                :disabled="erp_is_open == 1"
+                :controls="false"
+                :min="0"
+                :max="form.model.feed_max_select"
+                :precision="0"
+                v-model="form.model.feed_min_select"
+                class="max-w45"
+              ></el-input-number>
+              <span>-</span>
+              <el-input-number
                 @input="checkDefaultSelect()"
                 @blur="onBlur"
                 :disabled="erp_is_open == 1"
@@ -31,7 +34,7 @@
                 :min="1"
                 :max="form.model.product_feed.length"
                 v-model="form.model.feed_max_select"
-                class="max-w460"
+                class="max-w45"
               ></el-input-number>
             </div>
             <el-icon class="delete-icon" @click="handleDelete()" :disabled="erp_is_open == 1">
@@ -75,7 +78,8 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="stock_num" :label="$t('库存')" width="180">
+            <!-- 暂时隐藏库存查询 2025年12月12日13:49:13 任务37468 -->
+            <!-- <el-table-column prop="stock_num" :label="$t('库存')" width="180">
               <template #default="scope">
                 <el-form-item
                   for="no_click"
@@ -102,7 +106,7 @@
                   ></numInput>
                 </el-form-item>
               </template>
-            </el-table-column>
+            </el-table-column> -->
             <el-table-column prop="name" :label="$t('默认勾选')" width="400">
               <template #default="scope">
                 <el-form-item
@@ -112,7 +116,7 @@
                   :rules="[
                     {
                       validator: () => {
-                        return defaultSelect(form.model.feed_open_max_select, form.model.feed_max_select, form.model.product_feed) ? true : false;
+                        return defaultSelect(form.model.feed_max_select, form.model.product_feed) ? true : false;
                       },
                       message: $t('不能超过最多可选数量') + ' ' + form.model.feed_max_select,
                     },
@@ -122,11 +126,11 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="name" :label="$t('关联材料')" width="120">
+            <!-- <el-table-column prop="name" :label="$t('关联材料')" width="120">
               <template #default="scope">
                 {{ scope.row.material.length > 0 ? $t('是') : $t('否') }}
               </template>
-            </el-table-column>
+            </el-table-column> -->
             <el-table-column prop="name" :label="$t('操作')" width="120">
               <template #default="scope">
                 <el-button @click="deleteClick(scope.$index)" :disabled="erp_is_open == 1" type="primary" link size="small"> {{ $t('删除') }}</el-button>
@@ -137,7 +141,7 @@
         <!-- </el-form-item> -->
       </div>
     </div>
-    <addFeed v-if="open_add_feed" :open="open_add_feed" :feed_ids="feed_ids" :maxSelect="10" @close="handleClose" />
+    <addFeed v-if="open_add_feed" :open="open_add_feed" :feed_ids="feed_ids" :maxSelect="100" @close="handleClose" />
   </div>
 </template>
 
@@ -201,8 +205,7 @@
         }
       });
       if (val.model.product_feed.length == 0) {
-        form.model.feed_required = 0;
-        form.model.feed_open_max_select = 0;
+        form.model.feed_min_select = 0;
         form.model.feed_max_select = 0;
       }
     },
@@ -310,14 +313,14 @@
     });
   };
 
-  const defaultSelect = (feed_open_max_select, feed_max_select, product_feed) => {
+  const defaultSelect = (feed_max_select, product_feed) => {
     let count = 0;
     product_feed.map((item) => {
       if (item.default_select === 1) {
         count++;
       }
     });
-    if (count > feed_max_select && feed_open_max_select == '1' && feed_max_select != null) {
+    if (count > feed_max_select && feed_max_select != null) {
       return false;
     } else {
       return true;
@@ -404,6 +407,14 @@
     align-items: center;
     gap: 16px;
     background-color: var(--el-table-header-bg-color);
+    margin-bottom: 8px;
+  }
+  .table-c-item-label {
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+  .max-w45{
+    max-width: 45px;
   }
   .table-c-item {
     display: flex;

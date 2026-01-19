@@ -60,7 +60,7 @@ class Supplier extends SupplierModel
 
         //
         $host = env('DB_HOST');
-        $port = env('DB_PORT');
+        $port = config('database.connections.mysql.hostport'); // 使用配置文件中的端口
         $pdo = new PDO("mysql:host={$host};port={$port}", env('DB_USERNAME'), env('DB_PASSWORD'));
 
         // 检测数据库
@@ -98,7 +98,7 @@ class Supplier extends SupplierModel
         $shopUser = CompanyStaff::where('company_uuid', $companyUuid)->find();
         //
         $host = env('DB_HOST');
-        $port = env('DB_PORT');
+        $port = config('database.connections.mysql.hostport'); // 使用配置文件中的端口
         $prefix = env('DB_PREFIX');
         $pdo = new PDO("mysql:host={$host};port={$port}", env('DB_USERNAME'), env('DB_PASSWORD'));
         // 检测数据库
@@ -390,7 +390,7 @@ class Supplier extends SupplierModel
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 0,
                 'status' => $isOpenMember,
-                'sort' => 1,
+                'sort' => 2,
                 'default_img' => '/image/pay/ja_pay.png',
                 'create_time' => time(),
                 'update_time' => time(),
@@ -405,7 +405,7 @@ class Supplier extends SupplierModel
                 'is_show_cashier' => 1,
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 0,
-                'sort' => 0,
+                'sort' => 3,
                 'default_img' => '',
                 'create_time' => time(),
                 'update_time' => time(),
@@ -420,7 +420,7 @@ class Supplier extends SupplierModel
                 'is_show_cashier' => 1,
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 0,
-                'sort' => 0,
+                'sort' => 4,
                 'default_img' => '',
                 'create_time' => time(),
                 'update_time' => time(),
@@ -435,7 +435,7 @@ class Supplier extends SupplierModel
                 'is_show_cashier' => 1,
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 0,
-                'sort' => 0,
+                'sort' => 5,
                 'default_img' => '',
                 'create_time' => time(),
                 'update_time' => time(),

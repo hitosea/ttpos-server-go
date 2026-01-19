@@ -27,6 +27,8 @@ type OrderListReq struct {
 	EnablePayTime       bool   `form:"enable_pay_time"`                  // 启用支付时间 false-不启用，true-启用
 	QueryStartTime      uint   `form:"query_start_time"`                 // 查询开始时间戳
 	QueryEndTime        uint   `form:"query_end_time"`                   // 查询结束时间戳
+	QueryStartDate      string `form:"query_start_date"`                 // 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+	QueryEndDate        string `form:"query_end_date"`                   // 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
 	Status              int    `form:"status,default=-1"`                // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
 	BillType            int    `form:"bill_type,default=-1"`             // 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
 	DiningMethod        int    `form:"dining_method,default=-1"`         // 用餐方式, -1=全都、 0-堂食 1-打包
@@ -283,10 +285,11 @@ type OrderChangePopulationReq struct {
 
 // OrderProductRemarkReq 订单商品remark
 type OrderProductRemarkReq struct {
-	SaleBillUuid     uint64 `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
-	SaleOrderUuid    uint64 `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
-	OrderProductUuid uint64 `json:"order_product_uuid" binding:"required"` // 订单商品UUID
-	Remark           string `json:"remark"`                                // remark
+	SaleBillUuid     uint64   `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
+	SaleOrderUuid    uint64   `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
+	OrderProductUuid uint64   `json:"order_product_uuid" binding:"required"` // 订单商品UUID
+	Remark           string   `json:"remark"`                                // remark
+	RemarkUuids      []uint64 `json:"remark_uuids"`                          // 备注预设UUID列表
 }
 
 // OrderRemarkReq 订单备注
@@ -372,8 +375,19 @@ type CashBoxBalanceChangeReq struct {
 	OrderNo     string  `json:"order_no"`     // 订单编号
 }
 
+// CheckAuthorizationReq 检查授权请求
+type CheckAuthorizationReq struct {
+	OperationType string `json:"operation_type" binding:"required,oneof=discount refund"` // 操作类型: discount-折扣操作 refund-退款操作
+}
+
 // VerifyPasswordForSensitiveOperationReq 敏感操作密码验证请求
 type VerifyPasswordForSensitiveOperationReq struct {
-	AuthorizedStaffAccount string `json:"authorized_staff_account" binding:"required"` // 授权员工账号（邮箱或手机号）
-	Password               string `json:"password" binding:"required"`                 // 权限密码
+	OperationType          string `json:"operation_type" binding:"required,oneof=discount refund"` // 操作类型: discount-折扣操作 refund-退款操作
+	AuthorizedStaffAccount string `json:"authorized_staff_account" binding:"required"`             // 授权员工账号（邮箱或手机号）
+	Password               string `json:"password" binding:"required"`                             // 权限密码
+}
+
+// OrderPaymentAmountReq 获取实付金额请求
+type OrderPaymentAmountReq struct {
+	SaleBillUuids []uint64 `json:"sale_bill_uuids"` // 销售账单UUID列表
 }

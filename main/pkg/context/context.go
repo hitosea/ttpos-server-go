@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -14,11 +15,12 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/gin-gonic/gin"
 )
 
-type Operator string
+// Operator 版本比较操作符类型（向后兼容别名）
+// 实际类型定义在 utils 包中
+type Operator = utils.VersionOperator
 
 const (
 	LT  Operator = "<"
@@ -28,6 +30,7 @@ const (
 )
 
 type Context interface {
+	context.Context
 	GetLanguage() string                     // 获取语言
 	SetLanguage(language string)             // 设置语言
 	GetCompanyUuid() uint64                  // 获取商家ID
@@ -79,7 +82,13 @@ type Context interface {
 	GetCache() cache.Cache                    // 获取缓存
 	Version(op Operator, version string) bool // 比较版本
 	GetVersion() string                       // 获取客户端版本号
+	SetVersion(version string)                // 设置版本
 	Log() *zap.Logger                         // 获取日志实例
+
+	GetBrand() string // 获取品牌名称
+
+	// 基础信息
+	SetBasicInfo(db *gorm.DB, companyInfo *model.Company) error // 设置基础信息
 }
 
 type ContextImpl struct {
@@ -102,6 +111,7 @@ type ContextImpl struct {
 	requestUuid    string               // 请求uuid
 	h5OrderUuid    string               // H5订单ID
 	hasLock        bool                 // 是否已经上锁
+	version        string               // 客户端版本号（用于队列等非HTTP场景）
 	log            *zap.Logger
 	db             *gorm.DB
 }
@@ -331,7 +341,7 @@ func (c *ContextImpl) GetAssistantUuid() uint64 {
 }
 
 func (c *ContextImpl) GetDeviceSn() string {
-	if c.deviceSn == "" {
+	if c.deviceSn == "" && c.cc != nil {
 		c.deviceSn = c.cc.GetHeader("Device-Id")
 	}
 	return c.deviceSn
@@ -354,9 +364,25 @@ func (c *ContextImpl) AddLock() {
 }
 
 func (c *ContextImpl) GetVersion() string {
-	return c.cc.GetHeader("Client-Version")
+	// 队列或后台任务场景，从内部变量读取
+	if c.version != "" {
+		return c.version
+	}
+	// HTTP 场景，从 Header 读取
+	if c.cc != nil {
+		return c.cc.GetHeader("Client-Version")
+	}
+	return ""
 }
 
+func (c *ContextImpl) SetVersion(version string) {
+	// 设置内部变量
+	c.version = version
+	// 如果有 gin.Context，同步到 Header
+	if c.cc != nil {
+		c.cc.Request.Header.Set("Client-Version", version)
+	}
+}
 func (c *ContextImpl) Log() *zap.Logger {
 	return c.log
 }
@@ -406,27 +432,11 @@ func (c *ContextImpl) GetCfIPCountry() string {
 	return c.cc.GetHeader("CF-IPCountry")
 }
 
-// 版本小于指定版本
+// Version 比较客户端版本号
 func (c *ContextImpl) Version(op Operator, version string) bool {
-	v1, err := semver.NewVersion(c.cc.GetHeader("Client-Version"))
-	if err != nil {
-		return false
-	}
-	v2, err := semver.NewVersion(version)
-	if err != nil {
-		return false
-	}
-	switch op {
-	case GTE:
-		return v1.GreaterThan(v2) || v1.Equal(v2)
-	case GT:
-		return v1.GreaterThan(v2)
-	case LT:
-		return v1.LessThan(v2)
-	case EQ:
-		return v1.Equal(v2)
-	}
-	return false
+	// 使用 GetVersion() 方法，支持队列和 HTTP 两种场景
+	clientVersion := c.GetVersion()
+	return utils.CompareVersion(clientVersion, op, version)
 }
 
 // generateRandomIP 生成随机IP地址
@@ -478,4 +488,18 @@ func (c *ContextImpl) IsMobile() bool {
 
 func (c *ContextImpl) GetCache() cache.Cache {
 	return cache.Global
+}
+
+func (c *ContextImpl) GetBrand() string {
+	return c.cc.GetString(jwt.Brand)
+}
+
+// 设置基础信息
+func (c *ContextImpl) SetBasicInfo(db *gorm.DB, companyInfo *model.Company) error {
+	c.SetDB(db)
+	c.SetCompanyUuid(companyInfo.Uuid)
+	c.SetCompany(*companyInfo)
+	c.SetCompanySetting(*companyInfo.CompanySetting)
+	c.SetVersion("v2.11.0")
+	return nil
 }

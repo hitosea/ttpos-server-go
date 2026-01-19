@@ -79,6 +79,7 @@ type RechargeOrderOperationLog struct {
 type RechargeOrderMember struct {
 	Uuid     uint64 `json:"uuid"`     // 会员Uuid
 	Nickname string `json:"nickname"` // 会员昵称
+	Phone    string `json:"phone"`    // 会员手机号
 }
 
 type RechargeOrderCashier struct {

@@ -283,6 +283,14 @@ let SettingApi = {
     return request._post('/shop/setting.Business/orderRemark', data, errorback);
   },
 
+  /*单品备注*/
+  getItemRemark(data, errorback) {
+    return request._get('/shop/setting.Business/orderItemRemark', data, errorback);
+  },
+  setItemRemark(data, errorback) {
+    return request._post('/shop/setting.Business/orderItemRemark', data, errorback);
+  },
+
   /*订单方案新增*/
   orderSchemeAdd(data, errorback) {
     return request._post('/shop/setting.Business/orderSchemeAdd', data, errorback);

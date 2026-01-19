@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"strings"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -74,9 +76,11 @@ func (s *ProductLabelSrvImpl) GetProductLabelList(ctx context.Context) (*resp.Pr
 			IsShowH5:            label.IsShowH5,
 			IsShowDelivery:      label.IsShowDelivery,
 			IsShowMenu:          label.IsShowMenu,
+			IsShowKiosk:         label.IsShowKiosk,
 			ProductPackageCount: len(label.ProductPackages),
 			CreateTime:          label.CreateTime,
 			ProductPackages:     []resp.ProductLabelPackageItem{},
+			IsEditable:          isEditable(ctx, label.HeadquarterUuid),
 		}
 
 		// 组装关联的商品列表
@@ -95,6 +99,60 @@ func (s *ProductLabelSrvImpl) GetProductLabelList(ctx context.Context) (*resp.Pr
 	}, nil
 }
 
+// checkHeadquarterLabelConflict 检查商品是否已被总部标签关联
+// 返回冲突的商品名称列表和总部标签名称
+func (s *ProductLabelSrvImpl) checkHeadquarterLabelConflict(
+	ctx context.Context,
+	productPackageUuids []uint64,
+) ([]string, string, error) {
+	if len(productPackageUuids) == 0 {
+		return nil, "", nil
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productLabelRepo := repository.NewProductLabelRepo(db)
+
+	// 查询冲突的商品包和标签
+	conflictPackages, conflictLabels, err := productLabelRepo.CheckHeadquarterLabelConflict(productPackageUuids)
+	if err != nil {
+		return nil, "", errors.WithMessage(err, "检查冲突失败")
+	}
+
+	// 如果没有冲突，返回 nil
+	if len(conflictPackages) == 0 {
+		return nil, "", nil
+	}
+
+	// 获取当前语言
+	lang := ctx.GetLanguage()
+	if lang == "" {
+		lang = "en" // 默认使用英文
+	}
+
+	// 提取商品名称列表（根据当前语言，带后备机制）
+	productNames := make([]string, 0, len(conflictPackages))
+	for _, pkg := range conflictPackages {
+		// 使用 GetNameByLangWithFallback 获取商品名称（优先指定语言，然后英语，最后其他语言）
+		name := pkg.MultiLanguageName.GetNameByLangWithFallback(lang)
+		if name == "" {
+			// 如果所有语言都没有名称，使用 UUID 作为标识
+			name = fmt.Sprintf("商品(%d)", pkg.Uuid)
+		}
+		productNames = append(productNames, name)
+	}
+
+	// 获取标签名称（取第一个冲突标签的名称）
+	labelName := ""
+	if len(conflictLabels) > 0 {
+		labelName = conflictLabels[0].Name
+		if labelName == "" {
+			labelName = fmt.Sprintf("标签(%d)", conflictLabels[0].Uuid)
+		}
+	}
+
+	return productNames, labelName, nil
+}
+
 // AddProductLabel 添加商品标签
 func (s *ProductLabelSrvImpl) AddProductLabel(ctx context.Context, req req.ProductLabelAddReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -102,6 +160,18 @@ func (s *ProductLabelSrvImpl) AddProductLabel(ctx context.Context, req req.Produ
 	// 验证请求
 	if err := req.Validate(); err != nil {
 		return errors.WithMessage(err)
+	}
+
+	// 检查冲突
+	if len(req.ProductPackageUuids) > 0 {
+		productNames, labelName, err := s.checkHeadquarterLabelConflict(ctx, req.ProductPackageUuids)
+		if err != nil {
+			return errors.WithMessage(err, "检查冲突失败")
+		}
+		if len(productNames) > 0 {
+			return errors.New(fmt.Sprintf("商品[%s]已经被来源总部的标签[%s]关联，无法被当前标签关联",
+				strings.Join(productNames, "、"), labelName))
+		}
 	}
 
 	// 创建事务
@@ -118,6 +188,7 @@ func (s *ProductLabelSrvImpl) AddProductLabel(ctx context.Context, req req.Produ
 			IsShowH5:        req.IsShowH5,
 			IsShowDelivery:  req.IsShowDelivery,
 			IsShowMenu:      req.IsShowMenu,
+			IsShowKiosk:     req.IsShowKiosk,
 		}
 
 		uuid, err := productLabelRepo.CreateProductLabel(label)
@@ -146,6 +217,18 @@ func (s *ProductLabelSrvImpl) EditProductLabel(ctx context.Context, req req.Prod
 		return errors.WithMessage(err)
 	}
 
+	// 检查冲突
+	if len(req.ProductPackageUuids) > 0 {
+		productNames, labelName, err := s.checkHeadquarterLabelConflict(ctx, req.ProductPackageUuids)
+		if err != nil {
+			return errors.WithMessage(err, "检查冲突失败")
+		}
+		if len(productNames) > 0 {
+			return errors.New(fmt.Sprintf("商品[%s]已经被来源总部的标签[%s]关联，无法被当前标签关联",
+				strings.Join(productNames, "、"), labelName))
+		}
+	}
+
 	// 创建事务
 	return db.Transaction(func(tx *gorm.DB) error {
 		productLabelRepo := repository.NewProductLabelRepo(tx)
@@ -157,6 +240,11 @@ func (s *ProductLabelSrvImpl) EditProductLabel(ctx context.Context, req req.Prod
 		}
 		if existLabel == nil {
 			return errors.New("标签不存在")
+		}
+
+		// 检查是否为总部来源数据
+		if !isEditable(ctx, existLabel.HeadquarterUuid) {
+			return errors.New("标签不可编辑")
 		}
 
 		// 更新标签
@@ -172,6 +260,7 @@ func (s *ProductLabelSrvImpl) EditProductLabel(ctx context.Context, req req.Prod
 			IsShowH5:        req.IsShowH5,
 			IsShowDelivery:  req.IsShowDelivery,
 			IsShowMenu:      req.IsShowMenu,
+			IsShowKiosk:     req.IsShowKiosk,
 		}
 
 		err = productLabelRepo.UpdateProductLabel(label)
@@ -212,6 +301,11 @@ func (s *ProductLabelSrvImpl) DeleteProductLabel(ctx context.Context, req req.Pr
 		}
 		if existLabel == nil {
 			return errors.New("标签不存在")
+		}
+
+		// 检查是否为总部来源数据
+		if !isEditable(ctx, existLabel.HeadquarterUuid) {
+			return errors.New("标签不可删除")
 		}
 
 		// 清除商品与标签的关联关系

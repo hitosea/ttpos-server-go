@@ -56,6 +56,32 @@ Go/PHP/JavaScript 调用示例
 重要提示和最佳实践
 ```
 
+### [Bug 管理](./bugs/)
+**用途：** Bug 报告、跟踪和归档  
+**格式：** Bug 目录，包含 bug.md
+
+```
+bugs/
+├── active/                          # 未解决的 Bug
+│   └── bug-{YYMMDD}-{序号}-{module}-{brief}/
+│       └── bug.md
+└── resolved/                        # 已解决的 Bug（按版本归档）
+    └── {version}/
+        └── bug-{YYMMDD}-{序号}-{module}-{brief}/
+            └── bug.md
+```
+
+**命名规范：**
+```yaml
+Bug ID 格式: bug-{YYMMDD}-{序号}
+示例: bug-251127-001
+说明:
+  - YYMMDD: 发现日期
+  - 序号: 当日递增的三位序号（001, 002...）
+  - module: 业务模块（order, member, product等）
+  - brief: 简短问题描述（kebab-case）
+```
+
 ### [问题排查](./troubleshooting/)
 **用途：** 常见问题和解决方案  
 **格式：** 问题分类文档
@@ -82,6 +108,34 @@ Go/PHP/JavaScript 调用示例
 
 ## 相关资源
 相关文档链接
+```
+
+### [外卖系统](./takeout/)
+**用途：** 外卖系统相关文档  
+**格式：** 架构说明、业务流程、数据结构
+
+目前包含：
+- [数据库架构说明](./takeout/database-architecture.md) - 完整的外卖系统数据库设计
+- [订单收货人](./takeout/takeout_order_receiver.md) - 收货人信息管理
+
+推荐结构：
+```markdown
+# {模块名称}
+
+## 概述
+模块功能和定位
+
+## 架构设计
+核心架构和设计理念
+
+## 数据模型
+表结构和关系
+
+## 业务流程
+关键业务流程说明
+
+## 最佳实践
+开发和使用建议
 ```
 
 ### [第三方集成](./integrations/)
@@ -113,6 +167,14 @@ integrations/{service}/
   2. 查看 specs/{spec-name}/design.md 了解技术方案
   3. 按照 specs/{spec-name}/tasks.md 逐任务执行
   4. 参考 api/ 文档了解接口规范
+
+场景: 修复 Bug
+步骤:
+  1. 使用 /bug-create 创建 Bug 报告
+  2. 调查分析并填写技术分析
+  3. 使用 /bug-spec 创建修复方案和任务
+  4. 实施修复并完成任务
+  5. 使用 /bug-archive 归档 Bug
 ```
 
 ### 人类使用
@@ -124,6 +186,12 @@ integrations/{service}/
   2. 查看 api/ 了解接口定义
   3. 参考 troubleshooting/ 解决问题
   4. 查阅 integrations/ 对接第三方服务
+
+场景: 查询历史 Bug
+步骤:
+  1. 查看 bugs/active/ 了解未解决问题
+  2. 查看 bugs/resolved/{version}/ 了解已修复问题
+  3. 使用 Graphiti 搜索相似问题经验
 ```
 
 ---

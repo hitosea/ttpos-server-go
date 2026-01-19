@@ -14,7 +14,8 @@ type IExportRecordRepo interface {
 	Create(record *model.ExportRecord) error
 	Update(uuid uint64, data map[string]any) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.ExportRecord, error)
-	GetUnfinishedExportRecord(exportType uint8) (*model.ExportRecord, error) // 查询3小时内未完成的导出记录
+	GetUnfinishedExportRecord(exportType uint8) (*model.ExportRecord, error)                   // 查询3小时内未完成的导出记录
+	GetByDateAndType(exportType uint8, startTime, endTime int64) ([]model.ExportRecord, error) // 查询指定日期范围内指定类型的导出记录
 	GetList(opts ...DBOption) ([]model.ExportRecord, error)
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.ExportRecord, int64, error)
 	GetByUuids(uuids []uint64, opts ...DBOption) ([]model.ExportRecord, error)
@@ -186,4 +187,23 @@ func (r *ExportRecordRepoImpl) GetUnfinishedExportRecord(exportType uint8) (*mod
 		return nil, err
 	}
 	return &record, err
+}
+
+// GetByDateAndType 查询指定日期范围内指定类型的导出记录
+// 注意：数据库连接已包含商户隔离，无需额外的 company_uuid 过滤
+// 只查询导出成功的记录（status = 1），用于计算文件名序号
+func (r *ExportRecordRepoImpl) GetByDateAndType(
+	exportType uint8,
+	startTime, endTime int64,
+) ([]model.ExportRecord, error) {
+	var records []model.ExportRecord
+	err := r.db.Model(&model.ExportRecord{}).
+		Where("export_type = ?", exportType).
+		Where("create_time >= ?", startTime).
+		Where("create_time <= ?", endTime).
+		Where("status = ?", model.ExportStatusSuccess).
+		Where("delete_time = ?", 0).
+		Find(&records).Error
+	// GORM 的 Find 方法在查询为空时会返回空切片 []model.ExportRecord{}，而不是 nil
+	return records, err
 }

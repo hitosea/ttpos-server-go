@@ -12,16 +12,21 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nacos-group/nacos-sdk-go/v2/common/logger"
 )
 
 // InstantHandler 收银点餐处理程序
@@ -30,6 +35,18 @@ type InstantHandler struct {
 	memberSrv  service.IMemberSrv  // 会员服务
 	otherSrv   service.IOtherSrv   // 其他服务
 	productSrv service.IProductSrv // 产品服务
+}
+
+// InvalidateSaleBillSettingCache 失效销售单设置缓存（辅助函数）
+// 参数：
+//   - ctx: 上下文, 用于提取 companyUuid
+func (h *InstantHandler) InvalidateSaleBillSettingCache(ctx context.Context) {
+	if !adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		return
+	}
+	if err := controller.GetSaleBillSettingController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效销售单设置缓存失败", zap.Error(err))
+	}
 }
 
 func (h *InstantHandler) CreateInstantOrder(c *gin.Context) {
@@ -167,11 +184,13 @@ func (h *InstantHandler) SetOrderSource(c *gin.Context) {
 		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
 		return
 	}
-	if err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid); err != nil {
+	shopCart, err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid)
+	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{})
+	//
+	helper.Success(c, shopCart)
 }
 
 // SetNationality 设置点餐订单国籍
@@ -192,11 +211,12 @@ func (h *InstantHandler) SetNationality(c *gin.Context) {
 		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
 		return
 	}
-	if err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid); err != nil {
+	shopCart, err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid)
+	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{})
+	helper.Success(c, shopCart)
 }
 
 // OrderList 处理显示点餐订单列表（取单列表）
@@ -477,6 +497,27 @@ func (h *InstantHandler) OrderRemark(c *gin.Context) {
 func (h *InstantHandler) OrderRemarkList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	info, err := h.otherSrv.GetOrderRemarkList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
+// OrderItemRemarkList 处理获取单品备注列表
+// @Summary 获取单品备注列表
+// @Description 获取单品备注列表
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.OrderItemRemarkResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/item/remark/list [get]
+func (h *InstantHandler) OrderItemRemarkList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.otherSrv.GetOrderItemRemarkList(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1293,6 +1334,8 @@ func (h *InstantHandler) OrderCheck(c *gin.Context) {
 		return
 	}
 	if checkRes != nil {
+		// 如果开启缓存,要失效sale_bill_setting的缓存
+		h.InvalidateSaleBillSettingCache(ctx)
 		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
 		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
@@ -1643,13 +1686,13 @@ func (h *InstantHandler) ChangeBatchTag(c *gin.Context) {
 		return
 	}
 	// 更换分批类型
-	err := h.orderSrv.ChangeBatchTag(ctx, params)
+	res, err := h.orderSrv.ChangeBatchTag(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, res)
 }
 
 // OrderPaymentActivity 选择或取消满减活动
@@ -1728,6 +1771,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)                                          // 点餐订单商品备注
 		privateApi.POST("/instant/order/remark", wrapper.OrderRemark)                                                         // 整单备注
 		privateApi.GET("/instant/order/remark/list", wrapper.OrderRemarkList)                                                 // 获取整单备注列表
+		privateApi.GET("/instant/order/item/remark/list", wrapper.OrderItemRemarkList)                                        // 获取单品备注列表
 		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                                                     // 查询点餐购物车信息
 		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)                                       // 向购物车添加商品
 		privateApi.POST("/instant/order/cart/product_package/add", wrapper.OrderCartProductPackageAdd)                        // 向购物车添加套餐

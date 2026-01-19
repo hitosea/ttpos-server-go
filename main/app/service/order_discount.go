@@ -93,12 +93,6 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		return nil, errors.WithMessage(err, "更新销售订单失败")
 	}
 
-	// 获取新的数据
-	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-
 	// 发布"改价"事件
 	utils.Go(func() {
 		event.NewSystemBus().PublishChangeSaleOrderProductPriceEvent(event.ChangeSaleOrderProductPricePayload{
@@ -119,6 +113,17 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		})
 	})
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
+
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	return info, nil
 }
 
@@ -131,10 +136,16 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, request req.OrderAmoun
 		ctx.AddLock()
 	}
 
-	// 授权验证（折扣操作：整单改价）
-	authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
-	if err != nil {
-		return nil, errors.WithMessage(err)
+	// 版本判断：从请求头获取客户端版本
+	// 如果版本 >= v2.10.0，进行权限验证；否则不进行权限验证（向后兼容）
+	var authorizedStaff *model.Staff
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		// 版本 >= v2.10.0，进行授权验证（折扣操作：整单改价）
+		var err error
+		authorizedStaff, err = s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	if err := request.Validate(); err != nil {
@@ -201,6 +212,12 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, request req.OrderAmoun
 		})
 	})
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
+
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
 	if err != nil {
@@ -219,10 +236,16 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, request req.OrderDiscountR
 		ctx.AddLock()
 	}
 
-	// 授权验证（折扣操作：打折）
-	authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
-	if err != nil {
-		return nil, errors.WithMessage(err)
+	// 版本判断：从请求头获取客户端版本
+	// 如果版本 >= v2.10.0，进行权限验证；否则不进行权限验证（向后兼容）
+	var authorizedStaff *model.Staff
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		// 版本 >= v2.10.0，进行授权验证（折扣操作：打折）
+		var err error
+		authorizedStaff, err = s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	if err := request.Validate(); err != nil {
@@ -303,6 +326,12 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, request req.OrderDiscountR
 		})
 	})
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
+
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
 	if err != nil {
@@ -321,10 +350,16 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, request req.OrderZeroRuleR
 		ctx.AddLock()
 	}
 
-	// 授权验证（折扣操作：抹零）
-	authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
-	if err != nil {
-		return nil, errors.WithMessage(err)
+	// 版本判断：从请求头获取客户端版本
+	// 如果版本 >= v2.10.0，进行权限验证；否则不进行权限验证（向后兼容）
+	var authorizedStaff *model.Staff
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		// 版本 >= v2.10.0，进行授权验证（折扣操作：抹零）
+		var err error
+		authorizedStaff, err = s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	if err := request.Validate(); err != nil {
@@ -387,6 +422,12 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, request req.OrderZeroRuleR
 			AuthorizedStaff: authorizedStaffInfo,
 		})
 	})
+
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
@@ -452,6 +493,12 @@ func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscoun
 			OrderName: req.SaleOrderUuid,
 		})
 	})
+
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)

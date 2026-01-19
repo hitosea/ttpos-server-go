@@ -80,10 +80,10 @@
         <div class="product-selector-form">
           <el-form size="small" ref="formRef" :model="form" :inline="true">
             <el-form-item :label="$t('商品名称')" :placeholder="$t('请输入商品名称')">
-              <el-input size="small" v-model="form.product_name" @input="onDebounceSearch" />
+              <el-input size="small" v-model="form.product_name" @input="onDebounceSearch" :disabled="loading" />
             </el-form-item>
             <el-form-item>
-              <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch">
+              <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch" :disabled="loading">
                 {{ $t('查询') }}
               </el-button>
             </el-form-item>
@@ -110,7 +110,7 @@
                 <el-table-column type="selection" width="40" :selectable="selectable" />
                 <el-table-column prop="product_name_text" :label="$t('商品名称')" />
                 <el-table-column v-if="props.haveSku" prop="spec_name_text" :label="$t('规格')" />
-                <el-table-column v-if="props.haveSku" prop="stock_num" :label="$t('库存')" />
+                <!-- <el-table-column v-if="props.haveSku" prop="stock_num" :label="$t('库存')" /> -->
               </el-table>
             </template>
           </el-auto-resizer>
@@ -629,6 +629,7 @@
 
   let searchTimer;
   const onDebounceSearch = () => {
+    if (loading.value) return;
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
       onSearch();
@@ -638,6 +639,7 @@
   const searchValue = ref('');
 
   const onSearch = () => {
+    if (loading.value) return;
     searchValue.value = form.product_name;
 
     nextTick(() => {

@@ -29,7 +29,7 @@
 
 **记录内容：**
 
-- Cursor 指令调用（/propose, /create-spec 等）
+- Cursor 指令调用（/propose, /spec-create 等）
 - 工作流执行（功能开发、Bug 修复等）
 - Graphiti 知识记录
 - 重要决策和会议
@@ -82,7 +82,7 @@ graph LR
 2. 填写提案内容（目标、价值、风险）
 3. 组织需求评审会议
 4. 记录评审决策
-5. 批准后使用 `/create-spec story-{module}-{feature}` 创建 Spec
+5. 批准后使用 `/spec-create story-{module}-{feature}` 创建 Spec
 6. SP 评估（≤5 进入开发，>5 拆分）
 
 ### 功能开发流程

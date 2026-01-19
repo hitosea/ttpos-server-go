@@ -41,13 +41,22 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 		return nil, false, errors.WithMessage(err, "repository.NewOrderRepo(db).GetOrderCartInfo failed", fmt.Sprintf("saleBillUuid:%d", saleBillUuid))
 	}
 
-	planList, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
-	if errMustPlan != nil {
-		ctx.Log().Info("获取必点列表失败", zap.Error(errMustPlan))
-		return nil, false, errors.New("获取必点列表失败")
+	// 先判断商户是否有生效的必点方案
+	hasActiveMustPlan, err := repository.NewProductMustPlanRepo(db).HasActiveProductMustPlan(ctx)
+	if err != nil {
+		ctx.Log().Error("判断商户是否有生效的必点方案失败", zap.Error(err))
 	}
-	mustPlanList = planList
-	ctx.Log().Debug("构建好必点方案列表", zap.Any("数量", len(mustPlanList)))
+	if hasActiveMustPlan {
+		planList, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
+		if errMustPlan != nil {
+			ctx.Log().Info("获取必点列表失败", zap.Error(errMustPlan))
+			return nil, false, errors.New("获取必点列表失败")
+		}
+		mustPlanList = planList
+		ctx.Log().Debug("构建好必点方案列表", zap.Any("数量", len(mustPlanList)))
+	} else {
+		ctx.Log().Debug("商户无生效必点方案，跳过查询")
+	}
 
 	// 遍历得到要自动加购的商品
 	for i, plan := range mustPlanList {
@@ -146,7 +155,10 @@ func (s *orderSrv) GetProductNameByItemCode(ctx context.Context, itemCode string
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
-			bom, _ := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.SaleOrderProductBoms[0].ProductBomUuid)
+			bom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(ctx.GetCompanyUuid(), product.SaleOrderProductBoms[0].ProductBomUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
 			localeName = product.GetNameAndFlavorNameFrom(bom, &names)
 		}
 		productInfos = append(productInfos, ProductInfo{
@@ -217,11 +229,11 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 	}
 
 	// 判断必点商品是否售罄
-	if mustPlanList != nil && len(mustPlanList) > 0 {
+	if len(mustPlanList) > 0 {
 		for _, plan := range mustPlanList {
 			if plan.NeedNum > 0 {
 				// 判断商品是否售罄。如果售罄，则允许"确认必点"
-				isSoldOut, err := planProductSoldOut(ctx, &plan)
+				isSoldOut, err := planProductSoldOut(ctx, s.dbm, &plan)
 				if err != nil {
 					return false, nil, errors.WithMessage(err)
 				}
@@ -484,7 +496,7 @@ func (s *orderSrv) GetMustPlanList(ctx context.Context, saleBillUuid uint64) (re
 }
 
 // GetUnsentKitchen 未送厨商品列表
-func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error) {
+func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, saleBill *model.SaleBill, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error) {
 	// 初始化返回结果
 	res := resp.UnsentKitchen{
 		Products:   resp.CartProductList{List: make([]resp.Product, 0)},
@@ -536,9 +548,12 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 	})
 
 	// 获取销售账单信息并计算未送厨商品总金额
-	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
-	if err != nil {
-		return res, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
+	if saleBill == nil {
+		var err error
+		saleBill, err = repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
+		if err != nil {
+			return res, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
+		}
 	}
 
 	for _, order := range saleBill.SaleOrders {
@@ -549,7 +564,7 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 }
 
 // GetSentKitchen 已送厨商品列表
-func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart) (resp.SentKitchen, error) {
+func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, saleBill *model.SaleBill) (resp.SentKitchen, error) {
 	if shopCart == nil {
 		var err error
 		shopCart, err = s.GetOrderCartInfo(ctx, saleBillUuid)
@@ -589,7 +604,9 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 		for _, product := range signProducts {
 			products = append(products, product)
 		}
-
+		sort.Slice(products, func(i, j int) bool {
+			return products[i].CreateTime < products[j].CreateTime
+		})
 		groups = append(groups, resp.SentKitchenProductGroup{
 			SendKitchenTime: sendKitchenTime,
 			Products: resp.GroupProductList{
@@ -604,9 +621,12 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 	})
 
 	// 获取销售账单并计算金额
-	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
-	if err != nil {
-		return resp.SentKitchen{}, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
+	if saleBill == nil {
+		var err error
+		saleBill, err = repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
+		if err != nil {
+			return resp.SentKitchen{}, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
+		}
 	}
 
 	amount := resp.AmountInfo{ProductNum: productNum}
@@ -753,6 +773,49 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 				return products
 			}(),
 		})
+	})
+	// 发起"预送厨"操作的事件
+	utils.Go(func() {
+		// 获取业务设置，检查是否开启合并打印模式
+		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+		if err != nil {
+			ctx.Log().Error("获取业务设置失败", zap.Error(err))
+			return
+		}
+		// 如果该订单是前置分批送厨模式,且开启合并打印模式,则打印预送厨单。否则不打印。
+		// 检查是否是前置分批送厨模式
+		if saleBill.SaleBillSetting != nil && saleBill.SaleBillSetting.BatchCookingMode == constant.BatchCookingModePre &&
+			businessSetting.BatchPrintMode == constant.BatchPrintModeMerge {
+
+			// 获取当前所有 pre_batch_print_time 为0的预送厨状态商品
+			unprintedPreCookingProducts := saleBill.GetSaleOrderProductPreCookingUnprinted()
+			if len(unprintedPreCookingProducts) == 0 {
+				return
+			}
+
+			s.bus.PublishSentCookingPreEvent(event.SentCookingPrePayload{
+				BasePayload: event.BasePayload{ // 送厨
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  saleBill.Uuid,
+					SaleOrderUuid: req.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				IsPreBatchPrint: true, // 是预先分批打印送厨单
+				Products: func() event.ProductsPre {
+					products := make(event.ProductsPre, 0)
+					// 只传递 pre_batch_print_time 为0的预送厨商品
+					for _, unCookingSaleOrderProduct := range unprintedPreCookingProducts {
+						products = append(products, s.convertToEventOrderProductPre(
+							unCookingSaleOrderProduct,
+							saleBill,
+						))
+					}
+					return products
+				}(),
+			})
+		}
 	})
 	shopCart, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {

@@ -24,6 +24,7 @@ define update_env_and_run
 	else \
 		echo '\nREDIS_CLUSTER_ANNOUNCE_IP=$(LOCAL_IP)' >> .env; \
 	fi;
+	sed -i.bak 's/^SERVER_IP=.*/SERVER_IP=$(LOCAL_IP)/' .env && rm .env.bak;
 	chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh up -d
 	@make start-http-debug-proxy
 endef
@@ -118,6 +119,7 @@ init-env:
 		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_PASSWORD=.*/DB_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
+		sed -i.bak 's/^SERVER_IP=.*/SERVER_IP=$(LOCAL_IP)/' .env && rm .env.bak; \
 	fi
 	@echo "🔍 检查 .env 文件是否存在"
 	$(call update_env_and_run);
@@ -181,7 +183,7 @@ build-web:
 	@echo "🔍 检查前端文件变化..."
 	@if [ -d "admin/views" ]; then \
 		FRONTEND_CHANGED=0; \
-		BUILD_MARKER="./admin/runtime/frontend_build_marker"; \
+		BUILD_MARKER="./admin/vendor/frontend_build_marker"; \
 		if [ ! -f "$$BUILD_MARKER" ]; then \
 			echo "📝 首次构建，开始构建前端..."; \
 			FRONTEND_CHANGED=1; \
@@ -206,6 +208,7 @@ build-web:
 			echo "🚀 正在构建前端项目..."; \
 			cd admin && ./build && echo "✅ 前端构建完成" || (echo "❌ 前端构建失败" && exit 1); \
 			cd ..; \
+			mkdir -p $$(dirname $$BUILD_MARKER); \
 			git rev-parse HEAD > $$BUILD_MARKER 2>/dev/null || echo "unknown" > $$BUILD_MARKER; \
 		fi; \
 	else \
@@ -219,7 +222,7 @@ build-run:
 # 快速增加版本号
 add-version:
 	@echo "快速增加版本号..."
-	@CURRENT_VERSION=$$(grep 'Version.*=.*"' main/version/version.go | sed 's/.*"\(.*\)".*/\1/'); \
+	@CURRENT_VERSION=$$(grep 'Version.*=.*"' main/config/version.go | sed 's/.*"\(.*\)".*/\1/'); \
 	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1); \
 	MINOR=$$(echo $$CURRENT_VERSION | cut -d. -f2); \
 	PATCH=$$(echo $$CURRENT_VERSION | cut -d. -f3); \
@@ -236,7 +239,7 @@ redis-clear-data-node-conf:
 	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh down redis-node-2
 	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh down redis-node-3
 	@sudo chown -R coder:coder /home/coder/workspaces/ttpos-server-go/docker > /dev/null 2>&1 || true
-	@rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1 
+	@rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1 || true
 	@sudo rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1 || true
 
 # 检查env的DB_HOST是否等于 LOCAL_IP。等于的话 就执行 make mysql-open;
@@ -270,30 +273,30 @@ start-http-debug-proxy:
 	TARGET_URL="http://$(LOCAL_IP):$$SERVER_PORT,http://$(LOCAL_IP):$$NGINX_PORT"; \
 	echo "🎯 目标URL: $$TARGET_URL, 代理端口: $$PROXY_PORT"; \
 	docker run -d \
-		--name http-debug-proxy \
+		--name http-proxy-debug-view \
 		-p $$PROXY_PORT:8080 \
 		-p 8091:8091 \
 		-e TARGET_URL="$$TARGET_URL" \
 		-e PROXY_PORT=8080 \
 		-e WEB_PORT=8091 \
 		--restart unless-stopped \
-		weifashi/http-debug-proxy > /dev/null 2>&1 || \
+		602666178/http-proxy-debug-view > /dev/null 2>&1 || \
 		(echo "⚠️  HTTP调试代理容器已存在，正在重启..." && \
-		docker rm -f http-debug-proxy > /dev/null 2>&1 && \
+		docker rm -f http-proxy-debug-view > /dev/null 2>&1 && \
 		docker run -d \
-			--name http-debug-proxy \
+			--name http-proxy-debug-view \
 			-p $$PROXY_PORT:8080 \
 			-p 8091:8091 \
 			-e TARGET_URL="$$TARGET_URL" \
 			-e PROXY_PORT=8080 \
 			-e WEB_PORT=8091 \
 			--restart unless-stopped \
-			weifashi/http-debug-proxy:latest > /dev/null 2>&1); \
+			602666178/http-proxy-debug-view:latest > /dev/null 2>&1); \
 	echo "✅ HTTP调试代理已启动 - 代理端口: $$PROXY_PORT, 调试界面: http://localhost:8091"
 
 stop-http-debug-proxy:
 	@echo "🛑 停止HTTP调试代理容器..."
-	@docker rm -f http-debug-proxy > /dev/null 2>&1 || echo "✅ HTTP调试代理已停止"
+	@docker rm -f http-proxy-debug-view > /dev/null 2>&1 || echo "✅ HTTP调试代理已停止"
 
 # 运行数据库迁移
 php-migrate:

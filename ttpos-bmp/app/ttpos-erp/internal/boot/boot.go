@@ -15,8 +15,9 @@ var (
 
 func init() {
 	// 基础初始化（不启动服务器）
-	uuid.InitIdGenerator(ctx)
-	//设置缓存
+	// 指定应用类型为 ERP，避免跨应用 ID 冲突
+	uuid.InitIdGenerator(ctx, uuid.AppTypeERP)
+	// 设置缓存
 	cache.SetAdapter(ctx)
 }
 

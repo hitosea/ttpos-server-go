@@ -4,6 +4,22 @@ alwaysApply: true
 
 # Protobuf 开发规范
 
+## 初始化
+- 当环境缺少 protocol依赖时，安装编译的依赖 
+  ```bash
+  #安装编译器
+  sudo apt update && apt install -y protobuf-compiler
+  # 安装 protocol 编译器插件
+  go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+  # 更新 PATH 以便 protoc 能找到插件
+  export PATH="$PATH:$(go env GOPATH)/bin"
+  # 验证安装
+  protoc --version
+  protoc-gen-go --version
+  protoc-gen-go-grpc --version
+  ```
+
 ## 1. 文件命名规范
 
 ### 1.1 文件命名

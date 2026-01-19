@@ -8,6 +8,7 @@ use app\common\model\shop\Access as AccessModel;
 use app\common\model\shop\LoginLog as LoginLogModel;
 use app\common\model\shop\UserShiftLog;
 use app\shop\model\settings\Setting as SettingModel;
+use app\admin\model\admin\Staff as SaasStaffModel;
 
 /**
  * 后台管理员登录模型
@@ -22,16 +23,32 @@ class User extends UserModel
         $username = $user['username'] ?? '';
         $password = $user['password'] ?? '';
 
+        // 先查询用户（不验证密码）
         $user = $this->with(['app', 'supplier'])
             ->where(function ($q) use ($username) {
                 $q->whereRaw('BINARY username = :username', ['username' => $username]);
                 $q->whereOr('phone', $username);
             })
-            ->where('password', $password)
             ->find();
         if (!$user) {
             $this->error = '账号或密码错误';
             return false;
+        }
+
+        // 验证密码（支持 MD5 和 bcrypt）
+        list($isValid, $needUpgrade) = verify_password($password, $user['password']);
+        if (!$isValid) {
+            $this->error = '账号或密码错误';
+            return false;
+        }
+
+        $newHash = '';
+        // 如果需要升级，异步升级为 bcrypt
+        if ($needUpgrade) {
+            $newHash = upgrade_password_async($user['uuid'], 'ttpos_staff', 'uuid', 'password', $password, $user['company_uuid']);
+            if ($newHash) {
+                $user->password = $newHash;
+            }
         }
         if ($user['delete_time'] > 0) {
             $this->error = '账号已删除，请联系管理员';
@@ -83,15 +100,21 @@ class User extends UserModel
             return false;
         }
         $user_info = User::detail($user['uuid']);
-        if ($user_info['password'] != salt_hash($data['oldpass'])) {
+        
+        // 验证旧密码（支持 MD5 和 bcrypt）
+        list($isValid, $needUpgrade) = verify_password($data['oldpass'], $user_info['password']);
+        if (!$isValid) {
             $this->error = '原密码错误';
             return false;
         }
+        
         if ($data['password'] != $data['confirmPass']) {
             $this->error = '两次密码输入不一致';
             return false;
         }
-        $date['password'] = salt_hash($data['password']);
+        
+        // 使用 bcrypt 加密新密码
+        $date['password'] = hash_password_bcrypt($data['password']);
         $user_info->save($date);
         //
         return true;
@@ -115,10 +138,14 @@ class User extends UserModel
         }
         //
         $userInfo = User::detail($user['uuid']);
-        if ($userInfo['password'] != salt_hash($oldPassword)) {
+        
+        // 验证旧密码（支持 MD5 和 bcrypt）
+        list($isValid, $needUpgrade) = verify_password($oldPassword, $userInfo['password']);
+        if (!$isValid) {
             $this->error = '原密码错误';
             return false;
         }
+        
         if ($userInfo['password_change_count'] > 0) {
             $this->error = '已经修改过密码';
             return false;
@@ -127,9 +154,14 @@ class User extends UserModel
             $this->error = '两次密码输入不一致';
             return false;
         }
+        
+        // 使用 bcrypt 加密新密码
         $date['password_change_count'] = $userInfo['password_change_count'] + 1;
-        $date['password'] = salt_hash($newPassword);
+        $date['password'] = hash_password_bcrypt($newPassword);
         $userInfo->save($date);
+
+        // 同步更新到saas.ttpos_staff表
+        (new SaasStaffModel([], 0))->setAppId(0)->update($date, ['uuid' => $user['uuid']]);
         //
         return true;
     }

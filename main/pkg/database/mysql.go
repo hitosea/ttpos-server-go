@@ -31,6 +31,7 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 		loggers.SqlLogger,
 		time.Duration(conf.SlowQueryTime)*time.Second, // 慢查询阈值
 		ignoreRecordNotFoundError,                     // 忽略ErrRecordNotFound错误
+		dbName,                                        // 数据库名
 	)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{

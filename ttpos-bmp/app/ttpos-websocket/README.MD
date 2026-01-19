@@ -242,6 +242,134 @@ ws://host:8080/ws?client={client_type}&token={jwt_token}
 
 更多消息类型请参考 `internal/consts/consts.go`。
 
+### 健康检查接口
+
+#### 端点
+
+```
+GET /internal/healthz
+```
+
+**查询参数**：
+- `detail`: 是否返回详细信息（默认 `true`）
+- `scope`: 探针类型（可选：`liveness`/`readiness`/`startup`）
+
+**请求头**（可选）：
+- `X-Health-Token`: 访问令牌（如果配置了 `health.token`）
+
+#### 响应格式
+
+**成功（200 OK）**：
+```json
+{
+  "status": "UP",
+  "timestamp": 1732704000000,
+  "components": {
+    "mysql": {
+      "status": "UP",
+      "latency_ms": 12
+    },
+    "redis": {
+      "status": "UP",
+      "latency_ms": 3
+    }
+  },
+  "meta": {
+    "cache_hit": false,
+    "checker_count": 2
+  }
+}
+```
+
+**失败（503 Service Unavailable）**：
+```json
+{
+  "status": "DOWN",
+  "timestamp": 1732704000000,
+  "components": {
+    "mysql": {
+      "status": "DOWN",
+      "latency_ms": 1005,
+      "error": "MySQL 连接失败",
+      "detail": "context deadline exceeded"
+    },
+    "redis": {
+      "status": "UP",
+      "latency_ms": 3
+    }
+  }
+}
+```
+
+响应头包含 `Retry-After: 10`（当状态为 DOWN 时）。
+
+#### Kubernetes 探针示例
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /internal/healthz?detail=false
+    port: 14051
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /internal/healthz
+    port: 14051
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 2
+
+startupProbe:
+  httpGet:
+    path: /internal/healthz
+    port: 14051
+  initialDelaySeconds: 0
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 30
+```
+
+#### Docker Compose 健康检查
+
+```yaml
+services:
+  ttpos-websocket:
+    image: ttpos-websocket:latest
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:14051/internal/healthz?detail=false"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+```
+
+#### 配置项
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `health.enable` | `true` | 是否启用健康检查 |
+| `health.path` | `/health` | 健康检查端点路径 |
+| `health.token` | `""` | 访问令牌（为空则不校验） |
+| `health.allowedIps` | `[]` | IP 白名单（为空则不限制） |
+| `health.cacheTtl` | `2s` | 检查结果缓存时间 |
+| `health.timeout` | `500ms` | 单个检查超时时间 |
+| `health.dependencies.mysql.enabled` | `true` | 是否检测 MySQL |
+| `health.dependencies.redis.enabled` | `true` | 是否检测 Redis |
+| `health.degrade.pausePush` | `false` | 健康检查失败时是否暂停推送 |
+
+#### Prometheus 指标
+
+健康检查会输出以下指标（当前版本为日志输出，后续版本将集成 Prometheus）：
+
+- `ttpos_websocket_health_status{component}`: 健康状态（1=UP, 0=DOWN）
+- `ttpos_websocket_health_fail_total{component}`: 累计失败次数
+- `ttpos_websocket_health_latency_ms{component}`: 检查延迟（毫秒）
+
 ## 👨‍💻 开发指南
 
 ### 生成 Protobuf

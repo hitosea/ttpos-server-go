@@ -28,6 +28,9 @@ if [ -z "$ROCKETMQ_NAME_SRV_ADDR" ]; then
     exit 1
 fi
 
+# 如果 ROCKETMQ_NAME_SRV_ADDR 包含多个逗号分隔的地址，只取第一个
+ROCKETMQ_NAME_SRV_ADDR="${ROCKETMQ_NAME_SRV_ADDR%%,*}"
+
 if [ -z "$ROCKETMQ_BROKER_ADDR" ]; then
     echo "错误: ROCKETMQ_BROKER_ADDR 环境变量未设置"
     exit 1
@@ -54,7 +57,7 @@ fi
 
 # 获取现有的 topic 列表
 echo "正在获取现有 topic 列表..."
-EXISTING_TOPICS=$(docker run $NETWORK_OPTS --rm apache/rocketmq:5.3.2 ./mqadmin topicList -n "$ROCKETMQ_NAME_SRV_ADDR" 2>/dev/null | grep -v "^#" | grep -v "^$" | awk '{print $1}' | sort)
+EXISTING_TOPICS=$(timeout 5 docker run $NETWORK_OPTS --rm apache/rocketmq:5.3.4 ./mqadmin topicList -n "$ROCKETMQ_NAME_SRV_ADDR" 2>/dev/null | grep -v "^#" | grep -v "^$" | awk '{print $1}' | sort)
 
 if [ $? -ne 0 ]; then
     echo "错误: 无法获取现有 topic 列表，请检查 RocketMQ 服务是否正常运行"
@@ -90,14 +93,14 @@ else
     while IFS= read -r topic; do
         if [ -n "$topic" ]; then
             echo "正在创建 topic: $topic"
-            docker run $NETWORK_OPTS --rm apache/rocketmq:5.3.2 ./mqadmin updateTopic \
+            timeout 15 docker run $NETWORK_OPTS --rm apache/rocketmq:5.3.4 ./mqadmin updateTopic \
                 -n "$ROCKETMQ_NAME_SRV_ADDR" \
                 -t "$topic" \
                 -p 6 \
                 -r 4 \
                 -w 4 \
                 -c DefaultCluster
-            
+
             if [ $? -eq 0 ]; then
                 echo "✓ 成功创建 topic: $topic"
             else

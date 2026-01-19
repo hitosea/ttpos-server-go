@@ -33,6 +33,8 @@ type PackageSelectedInfo struct {
 	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"` // 套餐分组UUID
 	FlavorUuid              uint64   `json:"flavor_uuid"`                // 某个规格商品ID
 	AttributeUuidList       []uint64 `json:"attribute_uuid"`             // 属性ID列表
+	Num                     float64  `json:"num"`                        // 套餐子商品数量
+	UnitNum                 float64  `json:"unit_num"`                   // 每份数量
 }
 
 type OrderRemarkRes struct {
@@ -45,6 +47,13 @@ type OrderRemarkResItem struct {
 	Remark       dto.LocaleResponse `json:"remark"`        // 备注
 	CustomRemark string             `json:"custom_remark"` // 自定义备注
 	CreateTime   int64              `json:"create_time"`   // 创建时间(时间戳)
+}
+
+// RemarkInfo 备注信息
+type RemarkInfo struct {
+	Uuids        []uint64           `json:"uuids"`         // 备注UUID列表
+	Remark       dto.LocaleResponse `json:"remark"`        // 备注
+	CustomRemark string             `json:"custom_remark"` // 自定义备注
 }
 
 // 整单备注信息
@@ -161,6 +170,8 @@ type ShopCart struct {
 	SaleOrderList   []SaleOrder          `json:"sale_order_list"`        // 销售订单列表
 	UpdateTime      int64                `json:"update_time"`            // 更新时间
 	OrderRemark     *OrderRemarkRes      `json:"order_remark,omitempty"` // 整单备注信息
+	// 分批送厨的模式
+	BatchCookingMode string `json:"batch_cooking_mode"` // 分批送厨的模式 "post"：后置模式 "pre"：前置模式
 
 	Product *product_resp.Product `json:"product,omitempty"` // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
 
@@ -302,6 +313,9 @@ type SaleOrder struct {
 type Product struct {
 	Uuid                uint64             `json:"uuid"`                  // 商品uuid
 	ProductPackageUuid  uint64             `json:"product_package_uuid"`  // 商品包uuid
+	CategoryUuid        uint64             `json:"category_uuid"`         // 分类uuid
+	FirstCategoryUuid   uint64             `json:"first_category_uuid"`   // 一级分类uuid
+	SpecialCategoryUuid uint64             `json:"special_category_uuid"` // 特殊分类uuid
 	MustPlanUuid        uint64             `json:"must_plan_uuid"`        // 必点方案uuid
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称。商品名称、自助餐名称、自助餐加钟名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
@@ -313,6 +327,7 @@ type Product struct {
 	DiscountPrice       float64            `json:"discount_price"`        // 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量
 	Status              int                `json:"status"`                // 0: 未送厨 1:已送厨 2:制作完成（出餐）
 	Remark              string             `json:"remark"`                // 备注
+	RemarkInfo          RemarkInfo         `json:"remark_info"`           // 备注信息
 	IsMust              bool               `json:"is_must"`               // 是否必点
 	IsGift              bool               `json:"is_gift"`               // 是否是赠菜
 	IsWrap              bool               `json:"is_wrap"`               // 是否是打包
@@ -330,6 +345,7 @@ type Product struct {
 	ShowBatchTag        bool               `json:"show_batch_tag"`        // 是否显示分批类型
 	BatchTagName        dto.LocaleResponse `json:"batch_tag_name"`        // 分批类型名称
 	BatchTagColor       string             `json:"batch_tag_color"`       // 分批类型颜色
+	BatchTagUuid        uint64             `json:"batch_tag_uuid"`        // 分批类型UUID
 	// 后端使用，前端不返回
 	CreateTime         int64   `json:"-"` // 创建时间（点餐助手未送厨）
 	SendKitchenTime    int64   `json:"-"` // 送厨时间
@@ -353,7 +369,7 @@ type PackageProduct struct {
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 float64            `json:"num"`                   // 数量
 	UnitNum             float64            `json:"unit_num"`              // 单位数量
-	AddPrice            float64            `json:"add_price"`              // 加价金额
+	AddPrice            float64            `json:"add_price"`             // 加价金额
 }
 
 // GetPrice 获取商品价格(折后价)

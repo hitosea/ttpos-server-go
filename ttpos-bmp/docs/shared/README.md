@@ -24,6 +24,11 @@
   - 延迟消息使用
   - 错误处理和重试
 
+### [mq-topics/](./mq-topics/) - MQ Topic 清单
+**用途：** 按模块汇总当前仓库实际使用的 MQ topic、消息体结构、生产/消费位置
+- [Topic 索引](./mq-topics/README.md)
+- `ttpos-erp` / `ttpos-message` / `ttpos-takeout` / `ttpos-websocket` 分模块说明
+
 ### [troubleshooting/](./troubleshooting/) - 问题排查
 **用途：** 常见问题和故障处理指南
 - 开发环境问题
@@ -37,6 +42,7 @@
 |------|----------|
 | 服务发现配置 | [Nacos集成](./integrations/nacos/) |
 | 消息队列使用 | [RocketMQ集成](./integrations/rocketmq/) |
+| MQ topic 对接/排查 | [MQ Topic 清单](./mq-topics/) |
 | 开发环境问题 | [问题排查](./troubleshooting/) |
 | API接口规范 | [功能规格](./specs/) |
 

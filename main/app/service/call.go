@@ -3,11 +3,13 @@ package service
 import (
 	"time"
 	"ttpos-server-go/app/constant"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	takeoutPersistence "ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -77,8 +79,8 @@ func (s *callSrv) GetAbnormalPrintList(companyUuid uint64, listReq req.AbnormalP
 	printerLogs, total, err := printerLogRepo.PaginateGet(
 		listReq.PageNo,
 		listReq.PageSize,
-		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
-		printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
+		printerLogRepo.WhereStatus(printerConstant.PrinterLogStatusEnd),
+		printerLogRepo.WhereType(printerConstant.PrinterLogTypeDefault),
 		printerLogRepo.WithPrinter(),
 		printerLogRepo.WithSaleOrder(),
 		printerLogRepo.WithSaleBill(),
@@ -131,8 +133,8 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 		return res, errors.WithMessage(errors.New("获取未处理呼叫数量失败"), err.Error())
 	}
 	printerLogRepo := repository.NewPrinterLogRepo(db)
-	abnormalPrintCount, err = printerLogRepo.GetPrintLogCount(printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
-		printerLogRepo.WhereType(constant.PrinterLogTypeDefault), printerLogRepo.WhereFirstExecution(0))
+	abnormalPrintCount, err = printerLogRepo.GetPrintLogCount(printerLogRepo.WhereStatus(printerConstant.PrinterLogStatusEnd),
+		printerLogRepo.WhereType(printerConstant.PrinterLogTypeDefault), printerLogRepo.WhereFirstExecution(0))
 	if err != nil {
 		logger.Logger.Error("获取异常打印数量失败", zap.Error(err))
 		return res, errors.WithMessage(errors.New("获取异常打印数量失败"), err.Error())
@@ -151,11 +153,23 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 		return res, errors.WithMessage(errors.New("获取待接单外送订单数量失败"), err.Error())
 	}
 
+	// 获取待处理的外卖订单数量（Grab/Lineman等平台）
+	// 包括待接单(0)和已接单配餐中(1)的订单
+	takeoutOrderRepo := takeoutPersistence.NewTakeoutOrderRepo(db)
+	unhandledTakeoutOrderCount, err := takeoutOrderRepo.GetCount(
+		takeoutOrderRepo.WherePendingOrAutoAccepted(), // 待接单或已自动接单
+	)
+	if err != nil {
+		logger.Logger.Error("获取待接单外卖订单数量失败", zap.Error(err))
+		return res, errors.WithMessage(errors.New("获取待接单外卖订单数量失败"), err.Error())
+	}
+
 	return resp.UnprocessedResp{
 		UnprocessedCallCount:        unprocessedCallCount,
 		AbnormalPrintCount:          abnormalPrintCount,
 		UnprocessedH5OrderCount:     unhandledH5OrderCount,
 		UnprocessedMemberOrderCount: unhandledMemberSaleOrderCount,
+		UnprocessedTakeoutCount:     unhandledTakeoutOrderCount, // 新增外卖订单数量
 		UpdateTime:                  time.Now().Unix(),
 	}, nil
 }
@@ -175,6 +189,9 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 		MemberSaleOrder: resp.UnprocessedMemberSaleOrder{
 			List: make([]resp.UnprocessedMemberSaleOrderItem, 0),
 		},
+		TakeoutOrder: resp.UnprocessedTakeoutOrder{
+			List: make([]resp.UnprocessedTakeoutOrderItem, 0),
+		},
 	}
 	thirtyMinutesAgo := time.Now().Add(-30 * time.Minute).Unix()
 	callRepo := repository.NewCallRepo(ctx.GetDB())
@@ -189,8 +206,8 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 	abnormalPrints, _, err := printerLogRepo.PaginateGet(
 		1,
 		10,
-		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
-		printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
+		printerLogRepo.WhereStatus(printerConstant.PrinterLogStatusEnd),
+		printerLogRepo.WhereType(printerConstant.PrinterLogTypeDefault),
 		printerLogRepo.WhereCreateTimeGt(thirtyMinutesAgo),
 		printerLogRepo.WithPrinter(),
 		printerLogRepo.WithSaleOrder(),
@@ -212,6 +229,18 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 	memberSaleOrders, err := memberSaleOrderRepo.GetForCall(memberSaleOrderRepo.WhereUpdateTimeGt(thirtyMinutesAgo))
 	if err != nil {
 		return res, errors.WithMessage(errors.New("获取未处理的外送订单失败"), err.Error())
+	}
+
+	// 查询外卖订单（待接单 或 已接单且自动接单）
+	takeoutOrderRepo := takeoutPersistence.NewTakeoutOrderRepo(ctx.GetDB())
+	takeoutOrders, _, err := takeoutOrderRepo.GetList(
+		takeoutOrderRepo.Offset(0),
+		takeoutOrderRepo.Limit(10),
+		takeoutOrderRepo.WherePendingOrAutoAccepted(),       // 待接单或已自动接单
+		takeoutOrderRepo.WhereOrderTimeGt(thirtyMinutesAgo), // 30分钟内的订单
+	)
+	if err != nil {
+		return res, errors.WithMessage(errors.New("获取未处理的外卖订单失败"), err.Error())
 	}
 
 	// 未处理的呼叫
@@ -268,20 +297,47 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 		})
 	}
 
+	// 外卖订单
+	for _, takeoutOrder := range takeoutOrders {
+		res.TakeoutOrder.List = append(res.TakeoutOrder.List, resp.UnprocessedTakeoutOrderItem{
+			Uuid:             takeoutOrder.Uuid,
+			Platform:         takeoutOrder.Platform,
+			ShortOrderNumber: takeoutOrder.ShortOrderNumber,
+			OrderState:       takeoutOrder.OrderState,
+			IsAbnormal:       takeoutOrder.IsAbnormal,
+			IsAutoAccept:     takeoutOrder.IsAutoAcceptOrder(), // 自动接单
+			Subtotal:         takeoutOrder.Subtotal,
+			OrderTime:        takeoutOrder.OrderTime,
+		})
+	}
+
 	return res, nil
 }
 
 // Call 平板端呼叫
 func (s *callSrv) Call(ctx context.Context, callReq req.CallReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	deskRepo := repository.NewDeskRepo(db)
-	desk, err := deskRepo.GetDesk(deskRepo.WhereUuid(ctx.GetDeskUuid()))
-	if err != nil {
-		return errors.New("桌台不存在")
+
+	var deskUuid uint64
+	var deskNo string
+
+	// 如果 deskUuid 为 0，可能是 Kiosk 终端（无桌台），使用设备ID作为标识
+	if ctx.GetDeskUuid() == 0 && ctx.GetSource() == constant.SourceKiosk {
+		deskUuid = 0
+		deskNo = "自助点餐机-" + ctx.GetDeviceSn() // 使用设备ID作为标识
+	} else {
+		deskRepo := repository.NewDeskRepo(db)
+		desk, err := deskRepo.GetDesk(deskRepo.WhereUuid(ctx.GetDeskUuid()))
+		if err != nil {
+			return errors.New("桌台不存在")
+		}
+		deskUuid = desk.Uuid
+		deskNo = desk.DeskNo
 	}
+
 	if err := repository.NewCallRepo(db).CreateCall(model.CustomerCall{
-		DeskUuid: desk.Uuid,
-		DeskNo:   desk.DeskNo,
+		DeskUuid: deskUuid,
+		DeskNo:   deskNo,
 		CallType: callReq.CallType,
 	}); err != nil {
 		return err

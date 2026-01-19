@@ -182,14 +182,10 @@ func (s *orderSourceSrv) Update(ctx context.Context, req req.OrderSourceUpdateRe
 
 // Delete 删除外卖来源
 func (s *orderSourceSrv) Delete(ctx context.Context, req req.OrderSourceDeleteReq) error {
-	// 校验是否可删除
-	if err := s.CheckCanDelete(ctx, req.Uuid); err != nil {
-		return err
-	}
-
 	db := ctx.GetDB()
 
-	// 软删除外卖来源
+	// 软删除外卖来源（移除CheckCanDelete检查，允许删除已使用的配置）
+	// 历史订单仍可通过 GetByUuidWithDeleted 查询到配置名称
 	orderSourceRepo := repository.NewOrderSourceRepo(db)
 	err := orderSourceRepo.SoftDelete(req.Uuid)
 	if err != nil {

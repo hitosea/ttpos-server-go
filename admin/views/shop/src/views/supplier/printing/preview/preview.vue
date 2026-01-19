@@ -9,7 +9,33 @@
           {{ $t('模板2') }}
         </div>
       </div>
-      <div class="box-border">
+      <div class="tabs-box" v-if="detail">
+        <div
+          @click="customizeChange(detail?.default_tpl)"
+          v-if="detail?.default_tpl?.name"
+          class="tabs-button"
+          :class="detail?.default_tpl?.customize_uuid == customize_uuid ? 'tabs-active' : ''"
+        >
+          {{ $t(detail?.default_tpl?.name) }}
+        </div>
+        <div
+          @click="customizeChange(item)"
+          v-if="detail?.is_adv_receipt_tpl"
+          v-for="item in detail?.adv_receipt_tpls"
+          :key="item.customize_uuid"
+          class="tabs-button"
+          :class="item.customize_uuid == customize_uuid ? 'tabs-active' : ''"
+        >
+          {{ $t(item.name) }}
+        </div>
+      </div>
+      <div v-if="customize_uuid && customize_uuid != 0" class="text-center mb-12">{{ $t('如调整自定义模板，请前往桌面端操作') }}</div>
+      <div class="box-border" v-if="imgUrl">
+        <p class="title-name">
+          <img style="width: 100%; height: 100%" :src="imgUrl" alt="" class="logo" />
+        </p>
+      </div>
+      <div v-else class="box-border">
         <template v-if="mode == 1">
           <p class="Invoice-p">{{ $t('店铺名称') }}</p>
           <p class="Invoice-p mb-16" v-html="$t('非常感谢您今天的到来，我们期待您的再次光临')"></p>
@@ -94,7 +120,7 @@
       </div>
       <div class="box-border one-menu">
         <template v-if="mode == 1">
-          <p class="font24"> {{ $t('桌位: A01 (4人)') }} </p>
+          <p class="font24"> {{ $t('(外卖)') }}{{ $t('桌位: A01 (4人)') }} </p>
           <div class="text-order—remark">
             {{ $t('整单备注：这是整单备注备注') }}
           </div>
@@ -119,9 +145,7 @@
           </p>
         </template>
         <template v-if="mode == 2">
-          <h3>
-            {{ $t('桌位: A01 (4人)') }}
-          </h3>
+          <h3> {{ $t('(外卖)') }}{{ $t('桌位: A01 (4人)') }} </h3>
           <div class="text-order—remark">
             {{ $t('整单备注：这是整单备注备注') }}
           </div>
@@ -280,12 +304,8 @@
           </h3>
         </template>
         <template v-if="title == $t('整单打印')">
-          <h4 class="mb-12" v-if="mode == 1">
-            {{ $t('桌位: A01 (4人)') }}
-          </h4>
-          <h3 v-if="mode == 2 || mode == 3">
-            {{ $t('桌位: A01 (4人)') }}
-          </h3>
+          <h4 class="mb-12" v-if="mode == 1"> {{ $t('(外卖)') }}{{ $t('桌位: A01 (4人)') }} </h4>
+          <h3 v-if="mode == 2 || mode == 3"> {{ $t('(外卖)') }}{{ $t('桌位: A01 (4人)') }} </h3>
           <div class="text-order—remark">
             {{ $t('整单备注：这是整单备注备注') }}
           </div>
@@ -294,18 +314,14 @@
           <h2 class="mb-8" v-if="mode == 2">*******************************************</h2>
           <h4 class="mb-8" v-if="mode == 1 || mode == 2"> {{ $t('退菜单') }}</h4>
           <h2 class="mb-24" v-if="mode == 2">*******************************************</h2>
-          <h4 class="Invoice-h4 mb-8" v-if="mode == 1 || mode == 2">
-            {{ $t('桌位: A01 (4人)') }}
-          </h4>
+          <h4 class="Invoice-h4 mb-8" v-if="mode == 1 || mode == 2"> {{ $t('(外卖)') }}{{ $t('桌位: A01 (4人)') }} </h4>
           <div class="text-order—remark">
             {{ $t('整单备注：这是整单备注备注') }}
           </div>
         </template>
         <template v-if="title == $t('出菜单')">
           <h4 class="mb-8"> {{ $t('出菜单') }}</h4>
-          <h4 class="Invoice-h4 mb-8">
-            {{ $t('桌号/序号/外送: A01 (4人)') }}
-          </h4>
+          <h4 class="Invoice-h4 mb-8"> {{ $t('(外卖)') }}{{ $t('桌号/序号/外送: A01 (4人)') }} </h4>
           <div class="text-order—remark">
             {{ $t('整单备注：这是整单备注备注') }}
           </div>
@@ -499,11 +515,11 @@
       }
       if (this.title == $t('结账单')) {
         this.details = previewData.two;
-        this.titleName = $t('桌位: ') + 'A01' + $t('（4人）');
+        this.titleName = $t('(外卖)') + $t('桌位: ') + 'A01' + $t('（4人）');
       }
       if (this.title == $t('预结账单')) {
         this.details = previewData.three;
-        this.titleName = $t('桌位: ') + 'A01' + $t('（4人）');
+        this.titleName = $t('(外卖)') + $t('桌位: ') + 'A01' + $t('（4人）');
       }
       if (this.title == $t('一菜一单')) {
         this.dialogWidth = 2;
@@ -563,6 +579,7 @@
         SettingApi.printerTemplateDetail(Params, true).then((data) => {
           self.detail = data.data;
           if (this.customize_uuid != 0) {
+            console.log(self.detail?.adv_receipt_tpls,'adv_receipt_tpls');
             let customize = self.detail?.adv_receipt_tpls?.find((item) => item.customize_uuid == this.customize_uuid);
             if (customize) {
               self.customizeChange(customize);

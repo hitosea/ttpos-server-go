@@ -31,10 +31,12 @@ type Business struct {
 	BatchProductUuids []uint64 `json:"batch_product_uuids"` // 分批商品UUID列表
 	BatchTagNum       uint     `json:"batch_tag_num"`       // 分批类型数量
 	BatchCookingMode  string   `json:"batch_cooking_mode"`  // 分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"
+	BatchPrintMode    string   `json:"batch_print_mode"`    // 分批打印模式: "default" 默认 / "merge" 合并
 	SafetyStockType   string   `json:"safety_stock_type"`   // 安全库存类型 1-门店维度 2-仓库维度，默认为1
 
 	RequiredParentCompanyApproval string `json:"required_parent_company_approval"` // 调拨规则-经过上级门店审批 "0"-否 "1"-是，总部和上级支持此选项
 	ViaParentCompanyWarehouse     string `json:"via_parent_company_warehouse"`     // 调拨规则-经过上级门店仓库 "0"-否 "1"-是，总部和上级支持此选项
+	AllowedTransferTypes          string `json:"allowed_transfer_types"`           // 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
 
 	DiscountNeedPassword       string   `json:"discount_need_password"`        // 折扣操作是否需要密码 0-否 1-是
 	DiscountAuthorizedStaffIds []uint64 `json:"discount_authorized_staff_ids"` // 折扣操作授权员工ID列表
@@ -52,6 +54,7 @@ type ShopBusiness struct {
 	FreeReasonCount       int `json:"free_reason_count"`        // 免单原因数量
 	ReturnFoodReasonCount int `json:"return_food_reason_count"` // 退菜原因数量
 	OrderRemarkCount      int `json:"order_remark_count"`       // 整单备注原因数量
+	OrderItemRemarkCount  int `json:"order_item_remark_count"`  // 整单备注原因数量
 
 	HeadquarterRequiredParentCompanyApproval string `json:"headquarter_required_parent_company_approval"` // 总部调拨规则-经过上级门店审批 "0"-否 "1"-是
 	HeadquarterViaParentCompanyWarehouse     string `json:"headquarter_via_parent_company_warehouse"`     // 总部调拨规则-经过上级门店仓库 "0"-否 "1"-是
@@ -83,6 +86,16 @@ func (resp *Business) IsRequiredParentCompanyApproval() bool {
 // 是否经过上级门店仓库
 func (resp *Business) IsViaParentCompanyWarehouse() bool {
 	return resp.ViaParentCompanyWarehouse == "1"
+}
+
+// 是否允许调入
+func (resp *Business) IsAllowTransferIn() bool {
+	return resp.AllowedTransferTypes == "in" || resp.AllowedTransferTypes == "in,out"
+}
+
+// 是否允许调出
+func (resp *Business) IsAllowTransferOut() bool {
+	return resp.AllowedTransferTypes == "out" || resp.AllowedTransferTypes == "in,out"
 }
 
 type ZeroingMethodItem MethodItem

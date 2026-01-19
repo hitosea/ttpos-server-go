@@ -41,6 +41,12 @@ const (
 	WarehouseOutFormStatusCanceled        // 撤销 1
 )
 
+// WarehouseOutFormOrderType 出库单订单类型
+const (
+	WarehouseOutFormOrderTypeDineIn  = iota // 堂食订单 0
+	WarehouseOutFormOrderTypeTakeout        // 外卖订单 1
+)
+
 // WarehouseMonthlyFormScene 月度报表场景
 const (
 	WarehouseMonthlyFormSceneStart = iota // 月初 0

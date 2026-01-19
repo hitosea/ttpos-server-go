@@ -36,9 +36,7 @@ func VerifyCode(cache cache.Cache, companyUuid uint64, phone string, code string
 	cacheKey := fmt.Sprintf(CodeCacheKey, companyUuid, phone)
 	cacheCode, ok := cache.Get(cacheKey)
 	if !ok || cacheCode == "" || cacheCode.(string) != code {
-		if config.Server.Mode != "debug" || code != "123456" {
-			return errors.New("验证码不正确")
-		}
+		return errors.New("验证码不正确")
 	}
 	cache.Del(cacheKey)
 	return nil

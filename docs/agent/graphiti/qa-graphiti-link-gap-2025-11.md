@@ -18,7 +18,7 @@
 - **Related Docs**（相对路径）：
   - `docs/agent/templates/graphiti-episode.md`
   - `docs/agent/workflows/feature-development.md`
-  - `docs/shared/specs/story-order-quick-payment/tasks.md`
+  - `docs/shared/specs/active/story-order-quick-payment/tasks.md`
 - **Related Tickets/Specs**：
   - `story-order-quick-payment`
 

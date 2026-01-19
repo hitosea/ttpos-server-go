@@ -144,7 +144,8 @@ var syncErpDataCmd = &cobra.Command{
 		productSrv := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
 		materialSrv := service.NewMaterialSrv(dbm, localeSrv, settingSrv, translateSrv, messageSrv)
 		warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv)
-		syncSrv := service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv)
+		paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
+		syncSrv := service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv, paymentMethodSrv)
 
 		// 设置上下文
 		ctx := ttposContext.NewContext()

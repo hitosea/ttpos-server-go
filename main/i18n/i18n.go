@@ -84,8 +84,8 @@ func Exists(language, key string) bool {
 	return exists
 }
 
-func toAnySlice(strSlice []string) []interface{} {
-	anySlice := make([]interface{}, len(strSlice))
+func toAnySlice(strSlice []string) []any {
+	anySlice := make([]any, len(strSlice))
 	for i, v := range strSlice {
 		anySlice[i] = v
 	}

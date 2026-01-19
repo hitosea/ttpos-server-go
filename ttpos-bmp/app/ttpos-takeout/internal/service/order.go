@@ -1,0 +1,77 @@
+// ================================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// You can delete these comments if you wish manually maintain this interface file.
+// ================================================================================
+
+package service
+
+import (
+	"context"
+	api "ttpos-bmp/app/ttpos-takeout/api/order"
+)
+
+type (
+	IOrder interface {
+		// GetOrderInfo 获取订单信息
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 获取订单信息请求，包含 shop_uuid 和 order_uuid
+		//
+		// 返回：
+		//   - res: 订单信息响应
+		//   - err: 错误信息
+		GetOrderInfo(ctx context.Context, req *api.GetOrderInfoReq) (res *api.GetOrderInfoResp, err error)
+		// PrepareOrder 准备订单（接受/拒绝）
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 准备订单请求，包含 order_uuid 和 to_state
+		//
+		// 返回：
+		//   - res: 准备订单响应
+		//   - err: 错误信息
+		PrepareOrder(ctx context.Context, req *api.PrepareOrderReq) (res *api.PrepareOrderResp, err error)
+		// MarkOrderReady 标记订单准备完成
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - takeoutOrderUuid: 外卖订单 UUID
+		//   - requestId: 请求追踪 ID（可选）
+		//
+		// 返回：
+		//   - orderUuid: 订单 UUID
+		//   - err: 错误信息
+		MarkOrderReady(ctx context.Context, takeoutOrderUuid string, requestId string) (orderUuid string, err error)
+		// CancelOrder 取消订单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 取消订单请求，包含 order_uuid 和 cancel_code
+		//
+		// 返回：
+		//   - res: 取消订单响应
+		//   - err: 错误信息
+		CancelOrder(ctx context.Context, req *api.CancelOrderReq) (res *api.CancelOrderResp, err error)
+		// CheckOrderCancelable 检查订单是否可取消
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 检查订单可取消性请求，包含 order_uuid
+		//
+		// 返回：
+		//   - res: 检查订单可取消性响应
+		//   - err: 错误信息
+		CheckOrderCancelable(ctx context.Context, req *api.CheckOrderCancelableReq) (res *api.CheckOrderCancelableResp, err error)
+	}
+)
+
+var (
+	localOrder IOrder
+)
+
+func Order() IOrder {
+	if localOrder == nil {
+		panic("implement not found for interface IOrder, forgot register?")
+	}
+	return localOrder
+}
+
+func RegisterOrder(i IOrder) {
+	localOrder = i
+}

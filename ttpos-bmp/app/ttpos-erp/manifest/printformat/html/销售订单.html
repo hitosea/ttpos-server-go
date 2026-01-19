@@ -1,224 +1,224 @@
 <div class="po-wrapper">
 
-    {% set company = frappe.get_doc("Company", doc.company) %} {% set
-    company_addr_name = doc.company_address %} {% if not company_addr_name %} {%
-    set company_addr_name = frappe.db.get_value( "Dynamic Link", {"link_doctype":
-    "Company", "link_name": doc.company}, "parent" ) %} {% endif %} {% set
-    company_address = frappe.utils.get_address_display(company_addr_name) if
-    company_addr_name else "" %} {% set currency = doc.currency or
-    company.default_currency %} {% set subtotal = doc.total or doc.base_total or 0
-    %} {% set grand_total = doc.grand_total or doc.base_grand_total or 0 %} {% set
-    taxes_total = doc.total_taxes_and_charges or doc.base_total_taxes_and_charges
-    or 0 %} {% set discount_amount = doc.discount_amount or 0 %} {% set taxes =
-    doc.taxes or [] %} {% set vat = namespace(value=0) %} {% for tax in taxes %}
-    {% set tax_amount = tax.tax_amount or tax.base_tax_amount or 0 %} {% if "VAT"
-    in (tax.description or "").upper() %} {% set vat.value = vat.value +
-    tax_amount %} {% endif %} {% endfor %} {% set other_charges = taxes_total -
-    vat.value %}
-  
-    <div class="top-section">
-      <div class="title-row">
-        <img src="https://wallace.ttpos.com/files/wallace-logo.png" alt="Company Logo" class="logo" /> 
-        <div class="po-title">SALES ORDER</div>
-      </div>
-      <div class="header-grid">
-        <div class="company-block">
-          <div class="company-info">
-            <strong>{{ doc.company }}</strong><br />
-          {{ (company_address or "989 AIA EAST GATEWAY BUILDING, ROOM NO.1101-1102, 11TH FLOOR, DEBARATANA RD.,BANGNA NUEA, BANGNA, BANGKOK 10260 ") | replace("BUILDING,", "BUILDING,<br />") | replace("DEBARATANA RD.,", "DEBARATANA RD.,<br />") | safe }}<br />
-  
-            PHONE&nbsp;:&nbsp;{{ company.phone_no or company.phone or '082-168-8984' }}
-          </div>
-        </div>
-        <div class="meta-block">
-          <table class="meta-table">
-            <tr>
-              <td class="meta-label">TABULATION DATE</td>
-              <td>
-                {{ frappe.format_value(doc.transaction_date, {"fieldtype":"Date"}) }}
-              </td>
-            </tr>
-            <tr>
-              <td class="meta-label">ORDER NUMBER</td>
-              <td>{{ doc.name }}</td>
-            </tr>
-            <tr>
-              <td class="meta-label">DELIVERY DATE</td>
-              <td>
-                {{ frappe.format_value(doc.schedule_date, {"fieldtype":"Date"}) }}
-              </td>
-            </tr>
-            <tr>
-              <td class="meta-label">PAYMENT TERMS</td>
-              <td>{{ doc.payment_terms or '30 DAYS' }}</td>
-            </tr>
-            <tr>
-              <td class="meta-label">VENDOR CODE</td>
-              <td>{{ doc.supplier or '—' }}</td>
-            </tr>
-          </table>
+  {% set company = frappe.get_doc("Company", doc.company) %} {% set
+  company_addr_name = doc.company_address %} {% if not company_addr_name %} {%
+  set company_addr_name = frappe.db.get_value( "Dynamic Link", {"link_doctype":
+  "Company", "link_name": doc.company}, "parent" ) %} {% endif %} {% set
+  company_address = frappe.utils.get_address_display(company_addr_name) if
+  company_addr_name else "" %} {% set currency = doc.currency or
+  company.default_currency %} {% set subtotal = doc.total or doc.base_total or 0
+  %} {% set grand_total = doc.grand_total or doc.base_grand_total or 0 %} {% set
+  taxes_total = doc.total_taxes_and_charges or doc.base_total_taxes_and_charges
+  or 0 %} {% set discount_amount = doc.discount_amount or 0 %} {% set taxes =
+  doc.taxes or [] %} {% set vat = namespace(value=0) %} {% for tax in taxes %}
+  {% set tax_amount = tax.tax_amount or tax.base_tax_amount or 0 %} {% if "VAT"
+  in (tax.description or "").upper() %} {% set vat.value = vat.value +
+  tax_amount %} {% endif %} {% endfor %} {% set other_charges = taxes_total -
+  vat.value %}
+
+  <div class="top-section">
+    <div class="title-row">
+      <img src="https://wallace.ttpos.com/files/wallace-logo.png" alt="Company Logo" class="logo" /> 
+      <div class="po-title">SALES ORDER</div>
+    </div>
+    <div class="header-grid">
+      <div class="company-block">
+        <div class="company-info">
+          <strong>{{ doc.company }}</strong><br />
+        {{ (company_address or "989 AIA EAST GATEWAY BUILDING, ROOM NO.1101-1102, 11TH FLOOR, DEBARATANA RD.,BANGNA NUEA, BANGNA, BANGKOK 10260 ") | replace("BUILDING,", "BUILDING,<br />") | replace("DEBARATANA RD.,", "DEBARATANA RD.,<br />") | safe }}<br />
+
+          PHONE&nbsp;:&nbsp;{{ company.phone_no or company.phone or '082-168-8984' }}
         </div>
       </div>
-      <div class="header-divider"></div>
-    </div>
-  
-    <div class="info-row">
-      <div class="info-block">
-        <div class="title">CUSTOMER</div>
-        <div class="body">
-          <strong>{{ doc.customer_name or doc.get('customer_name', '') }}</strong><br />
-          {{ doc.customer_address or doc.get('customer_address', '') }}<br />
-          {{ doc.contact_person or doc.get('contact_person', '') }}<br />
-        </div>
-      </div>
-      <div class="info-block">
-        <div class="title">SHIP TO</div>
-        <div class="body">
-          {{ doc.shipping_address_name or 'WAREHOUSE BANG PLA' }}<br />
-          {{ doc.shipping_address_display or "" }}<br />
-          ATTENTION&nbsp;:&nbsp;{{ doc.contact_person or 'RECEIVING' }}
-        </div>
-      </div>
-    </div>
-  
-    <table class="items-table">
-      <thead>
-        <tr>
-          <th class="col-no">NO.</th>
-          <th class="col-code">CODE</th>
-          <th class="col-description">DESCRIPTION</th>
-          <th class="col-qty">QUANTITY</th>
-          <th class="col-unit">UNIT</th>
-          <th class="col-price">PRICE / UNIT</th>
-          <th class="col-total">TOTAL</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in doc.items %}
-        <tr>
-          <td class="col-no">{{ row.idx }}</td>
-          <td class="col-code">{{ row.custom_internal_code or row.item_code }}</td>
-          <td class="col-description">{{ row.description or row.item_name }}</td>
-          <td class="col-qty">
-            {{ frappe.format_value(row.qty, {"fieldtype":"Float"}) }}
-          </td>
-          <td class="col-unit">{{ row.uom }}</td>
-          <td class="col-price">
-            {{ frappe.format_value(row.rate, {"fieldtype":"Currency", "currency":
-            currency}) }}
-          </td>
-          <td class="col-total">
-            {{ frappe.format_value(row.amount or row.base_amount,
-            {"fieldtype":"Currency", "currency": currency}) }}
-          </td>
-        </tr>
-        {% endfor %} {% set max_rows = 12 %} {% set blank_rows = max_rows -
-        (doc.items|length or 0) %} {% for i in range(blank_rows if blank_rows > 0
-        else 0) %}
-        <tr>
-          <td class="col-no">&nbsp;</td>
-          <td class="col-code"></td>
-          <td class="col-description"></td>
-          <td class="col-qty"></td>
-          <td class="col-unit"></td>
-          <td class="col-price"></td>
-          <td class="col-total"></td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  
-    <div class="comments-grid">
-      <div class="comments-block">
-        <div class="title">COMMENTS OR SPECIAL INSTRUCTIONS</div>
-        <div class="body">{{ (doc.remarks or '&nbsp;') | safe }}</div>
-      </div>
-      <table class="summary-table">
-        <tr>
-          <td>SUBTOTAL</td>
-          <td>
-            {{ frappe.format_value(subtotal, {"fieldtype":"Currency", "currency":
-            currency}) }}
-          </td>
-        </tr>
-        <tr>
-          <td>VAT 7%</td>
-          <td>
-            {{ frappe.format_value(vat.value, {"fieldtype":"Currency", "currency":
-            currency}) }}
-          </td>
-        </tr>
-        <tr>
-          <td>DISCOUNT</td>
-          <td>
-            {{ frappe.format_value(discount_amount, {"fieldtype":"Currency",
-            "currency": currency}) }}
-          </td>
-        </tr>
-        <tr>
-          <td>OTHER</td>
-          <td>
-            {{ frappe.format_value(other_charges, {"fieldtype":"Currency",
-            "currency": currency}) }}
-          </td>
-        </tr>
-        <tr>
-          <td>TOTAL</td>
-          <td>
-            {{ frappe.format_value(grand_total, {"fieldtype":"Currency",
-            "currency": currency}) }}
-          </td>
-        </tr>
-      </table>
-    </div>
-  
-    <div class="shelf-life">
-      <div class="title">SHELF LIFE</div>
-      <div class="body">
-        {{ doc.custom_shelf_life_note or '' }}
+      <div class="meta-block">
+        <table class="meta-table">
+          <tr>
+            <td class="meta-label">TABULATION DATE</td>
+            <td>
+              {{ frappe.format_value(doc.transaction_date, {"fieldtype":"Date"}) }}
+            </td>
+          </tr>
+          <tr>
+            <td class="meta-label">ORDER NUMBER</td>
+            <td>{{ doc.name }}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">DELIVERY DATE</td>
+            <td>
+              {{ frappe.format_value(doc.schedule_date, {"fieldtype":"Date"}) }}
+            </td>
+          </tr>
+          <tr>
+            <td class="meta-label">PAYMENT TERMS</td>
+            <td>{{ doc.payment_terms or '30 DAYS' }}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">VENDOR CODE</td>
+            <td>{{ doc.supplier or '—' }}</td>
+          </tr>
+        </table>
       </div>
     </div>
-    <div class="shelf-life delivery">
-      <div class="title">Product Delivery Terms
-      </div>
-      <div class="body">
-        {{ doc.custom_shelf_life_note or '' }}
-      </div>
-    </div>
-    <div class="shelf-life delivery transfer">
-      <div class="title">Product Transfer Terms  
-      </div>
-      <div class="body">
-        {{ doc.custom_shelf_life_note or '' }}
-      </div>
-    </div>
-  
-    <div class="signature-grid">
-      <div>
-        <div class="line"></div>
-        <strong>EXECUTED / CHECKED BY</strong>
-        <span>DATE&nbsp;:&nbsp;......................</span>
-      </div>
-      <div>
-        <div class="line"></div>
-        <strong>APPROVED BY</strong>
-        <span>DATE&nbsp;:&nbsp;......................</span>
-      </div>
-      <div>
-        <div class="line"></div>
-        <strong>RECEIVED BY</strong>
-        <span>DATE&nbsp;:&nbsp;......................</span>
-      </div>
-    </div>
-  
-    <div class="note">
-      <div>If you have any questions about this sales order, please contact</div>					
-      <div>K.Wimolwan (GiF) / Purchasing / Tel.082-168-8984 / e-mail : Wimolwan.n@wallacethailand.com</div>								
-      <div>K.Henry, K.Adam / Accounting  / Tel.063-412-0672 / e-mail : henry@wallacethailand.com, adam@wallacethailand.com</div>								
-    </div>    
-  
+    <div class="header-divider"></div>
   </div>
-  <style>
+
+  <div class="info-row">
+    <div class="info-block">
+      <div class="title">CUSTOMER</div>
+      <div class="body">
+        <strong>{{ doc.customer_name or doc.get('customer_name', '') }}</strong><br />
+        {{ doc.customer_address or doc.get('customer_address', '') }}<br />
+        {{ doc.contact_person or doc.get('contact_person', '') }}<br />
+      </div>
+    </div>
+    <div class="info-block">
+      <div class="title">SHIP TO</div>
+      <div class="body">
+        {{ doc.shipping_address_name or 'WAREHOUSE BANG PLA' }}<br />
+        {{ doc.shipping_address_display or "" }}<br />
+        ATTENTION&nbsp;:&nbsp;{{ doc.contact_person or 'RECEIVING' }}
+      </div>
+    </div>
+  </div>
+
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th class="col-no">NO.</th>
+        <th class="col-code">CODE</th>
+        <th class="col-description">DESCRIPTION</th>
+        <th class="col-qty">QUANTITY</th>
+        <th class="col-unit">UNIT</th>
+        <th class="col-price">PRICE / UNIT</th>
+        <th class="col-total">TOTAL</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in doc.items %}
+      <tr>
+        <td class="col-no">{{ row.idx }}</td>
+        <td class="col-code">{{ row.custom_internal_code or row.item_code }}</td>
+        <td class="col-description">{{ row.description or row.item_name }}</td>
+        <td class="col-qty">
+          {{ frappe.format_value(row.qty, {"fieldtype":"Float"}) }}
+        </td>
+        <td class="col-unit">{{ row.uom }}</td>
+        <td class="col-price">
+          {{ frappe.format_value(row.rate, {"fieldtype":"Currency", "currency":
+          currency}) }}
+        </td>
+        <td class="col-total">
+          {{ frappe.format_value(row.amount or row.base_amount,
+          {"fieldtype":"Currency", "currency": currency}) }}
+        </td>
+      </tr>
+      {% endfor %} {% set max_rows = 12 %} {% set blank_rows = max_rows -
+      (doc.items|length or 0) %} {% for i in range(blank_rows if blank_rows > 0
+      else 0) %}
+      <tr>
+        <td class="col-no">&nbsp;</td>
+        <td class="col-code"></td>
+        <td class="col-description"></td>
+        <td class="col-qty"></td>
+        <td class="col-unit"></td>
+        <td class="col-price"></td>
+        <td class="col-total"></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="comments-grid">
+    <div class="comments-block">
+      <div class="title">COMMENTS OR SPECIAL INSTRUCTIONS</div>
+      <div class="body">{{ (doc.remarks or '&nbsp;') | safe }}</div>
+    </div>
+    <table class="summary-table">
+      <tr>
+        <td>SUBTOTAL</td>
+        <td>
+          {{ frappe.format_value(subtotal, {"fieldtype":"Currency", "currency":
+          currency}) }}
+        </td>
+      </tr>
+      <tr>
+        <td>VAT 7%</td>
+        <td>
+          {{ frappe.format_value(vat.value, {"fieldtype":"Currency", "currency":
+          currency}) }}
+        </td>
+      </tr>
+      <tr>
+        <td>DISCOUNT</td>
+        <td>
+          {{ frappe.format_value(discount_amount, {"fieldtype":"Currency",
+          "currency": currency}) }}
+        </td>
+      </tr>
+      <tr>
+        <td>OTHER</td>
+        <td>
+          {{ frappe.format_value(other_charges, {"fieldtype":"Currency",
+          "currency": currency}) }}
+        </td>
+      </tr>
+      <tr>
+        <td>TOTAL</td>
+        <td>
+          {{ frappe.format_value(grand_total, {"fieldtype":"Currency",
+          "currency": currency}) }}
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="shelf-life">
+    <div class="title">SHELF LIFE</div>
+    <div class="body">
+      {{ doc.custom_shelf_life_note or '' }}
+    </div>
+  </div>
+  <div class="shelf-life delivery">
+    <div class="title">Product Delivery Terms
+    </div>
+    <div class="body">
+      {{ doc.custom_shelf_life_note or '' }}
+    </div>
+  </div>
+  <div class="shelf-life delivery transfer">
+    <div class="title">Product Transfer Terms  
+    </div>
+    <div class="body">
+      {{ doc.custom_shelf_life_note or '' }}
+    </div>
+  </div>
+
+  <div class="signature-grid">
+    <div>
+      <div class="line"></div>
+      <strong>EXECUTED / CHECKED BY</strong>
+      <span>DATE&nbsp;:&nbsp;......................</span>
+    </div>
+    <div>
+      <div class="line"></div>
+      <strong>APPROVED BY</strong>
+      <span>DATE&nbsp;:&nbsp;......................</span>
+    </div>
+    <div>
+      <div class="line"></div>
+      <strong>RECEIVED BY</strong>
+      <span>DATE&nbsp;:&nbsp;......................</span>
+    </div>
+  </div>
+
+  <div class="note">
+    <div>If you have any questions about this sales order, please contact</div>					
+    <div>K.Wimolwan (GiF) / Purchasing / Tel.082-168-8984 / e-mail : Wimolwan.n@wallacethailand.com</div>								
+    <div>K.Henry, K.Adam / Accounting  / Tel.063-412-0672 / e-mail : henry@wallacethailand.com, adam@wallacethailand.com</div>								
+  </div>    
+
+</div>
+<style>
     @page {
       size: A4;
       margin: 12mm 10mm;
@@ -509,6 +509,5 @@
       display: block;
       margin-top: 6px;
     }
-  </style>
-  
-  
+</style>
+

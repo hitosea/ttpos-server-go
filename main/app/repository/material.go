@@ -33,10 +33,11 @@ type IMaterialRepo interface {
 	UpdateMaterial(material model.Material) error
 	UpdateMaterialData(data map[string]any, opts ...DBOption) error
 	UpdateMaterialStatus(uuid uint64, status bool) error
-	ClearMaterialBarcodeValue(uuid uint64) error // 清空物品条形码值
-	ClearMaterialValuation(uuid uint64) error    // 清空物品估值率
-	ClearMaterialInternalCode(uuid uint64) error // 清空物品内部编码
-	ClearMaterialSafetyStock(uuid uint64) error  // 清空物品安全库存
+	UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error // 更新物品子店可见性
+	UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error    // 更新物品负库存设置
+	ClearMaterialBarcodeValue(uuid uint64) error                                    // 清空物品条形码值
+	ClearMaterialInternalCode(uuid uint64) error                                    // 清空物品内部编码
+	ClearMaterialSafetyStock(uuid uint64) error                                     // 清空物品安全库存
 	DeleteMaterial(uuid uint64) error
 	GetMaterialCategory(opts ...DBOption) (*model.MaterialCategory, error)
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
@@ -46,7 +47,8 @@ type IMaterialRepo interface {
 	UpdateMaterialCategory(materialCategory model.MaterialCategory) error
 	DeleteMaterialCategory(uuid uint64, multiLanguageNameUuid uint64) error
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
-	GetMaterialCategoryList() ([]model.MaterialCategory, error)
+	GetMaterialCategoryList(opts ...DBOption) ([]model.MaterialCategory, error)
+	GetMaterialCategoryListWithDeleted(opts ...DBOption) ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error                       // 批量修改物品状态
 	UpdateMaterialVisibleBatch(uuids []uint64, visible int) error                     // 批量更新物品可见性
 	UpdateMaterialStockNum(materials []*model.Material) error                         // 更新物品库存数量
@@ -55,7 +57,6 @@ type IMaterialRepo interface {
 	GetMaterialDetailByErpCode(erpCode string) (*model.Material, error)               // 根据erp_code获取物品详情
 	UpdateMaterialWarehouseUuid(uuid uint64, warehouseUuid uint64) error              // 更新物品仓库uuid
 	UpdateAllMaterialWarehouseUuid(warehouseUuid uint64) error                        // 将所有物品的仓库uuid设置为指定仓库uuid
-	UpdateRelatedMaterialStock(relatedMaterialUuids []uint64) error                   // 更新规格/加料关联材料库存
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse // 检查多语言名称是否存在
 	GetCategoryUuidByNameOptimized(name string) (uint64, error)                       // 根据名称获取分类UUID
 	CheckBarcodeExist(barcode string, uuid uint64) bool                               // 检查条形码是否存在
@@ -72,7 +73,8 @@ type IMaterialRepo interface {
 	WithUnit() DBOption
 	WithMultiLanguageName(opts ...DBOption) DBOption
 	WithNotBaseUnitList(opts ...DBOption) DBOption
-	WhereAllowSubstoreVisible(visible int) DBOption // 可见性过滤选项方法
+	WhereAllowSubstoreVisible(visible int) DBOption         // 可见性过滤选项方法
+	WhereUuidInWarehouseItem(warehouseUuid uint64) DBOption // 物品UUID必须在仓库物品列表中
 }
 
 // NewMaterialRepo 创建新的物品仓库
@@ -130,13 +132,20 @@ func (r *MaterialRepoImpl) WhereAllowSubstoreVisible(visible int) DBOption {
 	}
 }
 
+func (r *MaterialRepoImpl) WhereUuidInWarehouseItem(warehouseUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid in (?)",
+			r.db.Model(&model.WarehouseItem{}).Select("material_uuid").Where("warehouse_uuid = ?", warehouseUuid).Scopes(NotDeleted))
+	}
+}
+
 // GetMaterialListWithPagination 获取物品列表（分页）
 func (r *MaterialRepoImpl) GetMaterialListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Material, int64, error) {
 	var materials []model.Material
 	var total int64
 
 	// 构建查询
-	query := r.db.Model(&model.Material{}).Where("delete_time = ?", 0)
+	query := r.db.Model(&model.Material{}).Where("delete_time = ?", 0).Debug()
 
 	// 应用查询选项
 	for _, opt := range opts {
@@ -450,6 +459,26 @@ func (r *MaterialRepoImpl) UpdateMaterialStatus(uuid uint64, status bool) error 
 	return nil
 }
 
+// UpdateMaterialAllowSubstoreVisible 更新物品子店可见性
+func (r *MaterialRepoImpl) UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("allow_substore_visible", allowSubstoreVisible).Error; err != nil {
+		return errors.WithMessage(err, "更新物品子店可见性失败")
+	}
+	return nil
+}
+
+// UpdateMaterialAllowNegativeStock 更新物品负库存设置
+func (r *MaterialRepoImpl) UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error {
+	value := 0
+	if allowNegativeStock {
+		value = 1
+	}
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("allow_negative_stock", value).Error; err != nil {
+		return errors.WithMessage(err, "更新物品负库存设置失败")
+	}
+	return nil
+}
+
 // DeleteMaterial 删除物品（软删除）
 func (r *MaterialRepoImpl) DeleteMaterial(uuid uint64) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error; err != nil {
@@ -477,10 +506,28 @@ func (r *MaterialRepoImpl) CreateMaterialCategory(materialCategory model.Materia
 	return materialCategory.Uuid, nil
 }
 
-func (r *MaterialRepoImpl) GetMaterialCategoryList() ([]model.MaterialCategory, error) {
+func (r *MaterialRepoImpl) GetMaterialCategoryList(opts ...DBOption) ([]model.MaterialCategory, error) {
 	var materialCategories []model.MaterialCategory
 
-	if err := r.db.Model(&model.MaterialCategory{}).Where("delete_time = ?", 0).Preload("MultiLanguageName").Order("sort ASC").Find(&materialCategories).Error; err != nil {
+	db := r.db.Model(&model.MaterialCategory{}).Where("delete_time = ?", 0).Preload("MultiLanguageName").Order("sort ASC")
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.Find(&materialCategories).Error; err != nil {
+		return nil, errors.WithMessage(err, "获取物品类别列表失败")
+	}
+
+	return materialCategories, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialCategoryListWithDeleted(opts ...DBOption) ([]model.MaterialCategory, error) {
+	var materialCategories []model.MaterialCategory
+
+	db := r.db.Model(&model.MaterialCategory{}).Preload("MultiLanguageName").Order("sort ASC")
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.Find(&materialCategories).Error; err != nil {
 		return nil, errors.WithMessage(err, "获取物品类别列表失败")
 	}
 
@@ -505,13 +552,6 @@ func (r *MaterialRepoImpl) UpdateMaterialVisibleBatch(uuids []uint64, visible in
 func (r *MaterialRepoImpl) ClearMaterialBarcodeValue(uuid uint64) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("barcode_value", "").Error; err != nil {
 		return errors.WithMessage(err, "清空物品条形码值失败")
-	}
-	return nil
-}
-
-func (r *MaterialRepoImpl) ClearMaterialValuation(uuid uint64) error {
-	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("valuation", 0).Error; err != nil {
-		return errors.WithMessage(err, "清空物品估值率失败")
 	}
 	return nil
 }
@@ -702,8 +742,9 @@ func (r *MaterialRepoImpl) CheckMaterialCategoryCodeExist(code string, uuid uint
 
 func (r *MaterialRepoImpl) UpdateMaterialCategory(materialCategory model.MaterialCategory) error {
 	if err := r.db.Model(&model.MaterialCategory{}).Where("uuid = ?", materialCategory.Uuid).Updates(map[string]any{
-		"name": materialCategory.Name,
-		"code": materialCategory.Code,
+		"name":        materialCategory.Name,
+		"code":        materialCategory.Code,
+		"delete_time": materialCategory.DeleteTime,
 	}).Error; err != nil {
 		return errors.WithMessage(err, "更新物品类别失败")
 	}
@@ -831,55 +872,4 @@ func (r *MaterialRepoImpl) GetMaterialByCode(code string, opts ...DBOption) (mod
 		return model.Material{}, errors.WithMessage(err, "根据编码获取物品失败")
 	}
 	return material, nil
-}
-
-// UpdateRelatedMaterialStock 更新规格/加料关联材料库存
-func (r *MaterialRepoImpl) UpdateRelatedMaterialStock(relatedMaterialUuids []uint64) error {
-	// 如果材料UUID列表为空，直接返回
-	if len(relatedMaterialUuids) == 0 {
-		return nil
-	}
-
-	// 使用事务确保数据一致性
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		// 构建复杂SQL查询来按成本卡更新产品BOM的库存数量
-		sql := `
-			UPDATE ttpos_product_bom AS pb 
-			JOIN (
-				SELECT 
-					rm.related_uuid, 
-					LEAST(IFNULL(
-						FLOOR(
-							MIN(
-								wi.stock / rm.num
-							)
-						)
-					, 0), 99999999) AS min_stock_num
-				FROM ttpos_related_material AS rm
-				JOIN ttpos_warehouse_item AS wi ON rm.material_uuid = wi.material_uuid
-				JOIN ttpos_warehouse AS w ON wi.warehouse_uuid = w.uuid
-				WHERE rm.uuid IN (?) 
-				  AND rm.delete_time = 0 
-				  AND rm.unit_uuid > 0
-				  AND w.is_default = 1
-				GROUP BY rm.related_uuid
-			) AS sub ON pb.product_bom_card_uuid = sub.related_uuid
-			SET pb.stock_num = sub.min_stock_num
-			WHERE pb.product_bom_card_uuid IN (
-				SELECT DISTINCT related_uuid 
-				FROM ttpos_related_material 
-				WHERE uuid IN (?) 
-				AND delete_time = 0 
-				AND unit_uuid > 0
-			)
-		`
-
-		// 执行SQL更新
-		err := tx.Exec(sql, relatedMaterialUuids, relatedMaterialUuids).Error
-		if err != nil {
-			return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
-		}
-
-		return nil
-	})
 }

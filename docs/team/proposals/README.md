@@ -4,6 +4,21 @@
 
 ---
 
+## 📂 目录结构
+
+```
+docs/team/proposals/
+├── 2025-11/                    # 按月份组织
+│   ├── quick-payment.md
+│   ├── member-integration.md
+│   └── ...
+├── 2025-12/
+│   └── ...
+└── README.md
+```
+
+---
+
 ## 📋 说明
 
 本目录存放需求提案文档，记录从想法到需求确认的过程。
@@ -14,23 +29,31 @@
 
 ### 格式
 ```
-{YYYY-MM-DD}-{feature-name}.md
+docs/team/proposals/{YYYY-MM}/{feature-name}.md
 ```
 
 ### 示例
 ```
-2025-11-16-quick-payment.md
-2025-11-16-member-integration.md
+2025-11/quick-payment.md
+2025-11/member-integration.md
 ```
+
+> 文件名不再包含日期前缀，因为已按月份目录组织。
 
 ---
 
 ## 🔄 提案流程
 
 ```
-想法 → 创建提案 → 需求评审 → 
-  ├─ 批准 → 创建 Spec → 进入开发
-  └─ 拒绝 → 归档（标注原因）
+想法 → /propose → 需求评审 → 
+  ├─ 批准 → /spec-create → 产品审核 → /spec-design → 开发 → 上线 → /archive-spec
+  └─ 拒绝/取消 → 归档（标注原因）或 /spec-deprecate
+
+详细流程:
+/propose         → 创建提案文档
+/spec-create     → 创建 requirements.md（审核状态: ✅ 已完成 - 已发布 v2.12
+产品审核         → 更新审核状态为「已通过」
+/spec-design     → 创建 design.md + tasks.md
 ```
 
 ---
@@ -44,8 +67,8 @@
 
 ### 手动创建
 ```bash
-cd docs/team/proposals
-touch 2025-11-16-quick-payment.md
+mkdir -p docs/team/proposals/2025-11
+touch docs/team/proposals/2025-11/quick-payment.md
 ```
 
 ---
@@ -64,7 +87,8 @@ touch 2025-11-16-quick-payment.md
 ## 🔗 相关资源
 
 ### 工作流
-- [需求管理工作流](../../agent/workflows/requirement-management.md)
+- [需求管理工作流](../../agent/workflows/requirement/management.md)
+- [Proposal-Spec 链接](../../agent/workflows/requirement/linking.md)
 
 ### 模板
 - [提案模板](../../agent/templates/proposal-template.md)
@@ -74,5 +98,5 @@ touch 2025-11-16-quick-payment.md
 
 ---
 
-**最后更新**: 2025-11-16
+**最后更新**: 2025-11-25
 

@@ -27,7 +27,7 @@ type FullReductionActivityHandler struct {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.FullReductionActivityCreateReq true "创建活动"
-// @Success 200 {object} dto.Response{data=resp.FullReductionActivityResp}
+// @Success 200 {object} dto.Response
 // @Router /shop/full_reduction_activity/create [post]
 func (h *FullReductionActivityHandler) Create(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -81,7 +81,7 @@ func (h *FullReductionActivityHandler) Update(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param uuid query int true "活动UUID"
+// @Param uuid query uint64 true "活动UUID"
 // @Success 200 {object} dto.Response{data=resp.FullReductionActivityResp}
 // @Router /shop/full_reduction_activity/get [get]
 func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
@@ -125,6 +125,7 @@ func (h *FullReductionActivityHandler) GetList(c *gin.Context) {
 		return
 	}
 
+	// 获取满减活动列表
 	result, err := h.fullReductionActivitySrv.GetList(ctx, &params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -141,7 +142,7 @@ func (h *FullReductionActivityHandler) GetList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param uuid query int true "活动UUID"
+// @Param uuid query uint64 true "活动UUID"
 // @Success 200 {object} dto.Response
 // @Router /shop/full_reduction_activity/delete [delete]
 func (h *FullReductionActivityHandler) Delete(c *gin.Context) {

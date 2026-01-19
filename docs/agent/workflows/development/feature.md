@@ -7,7 +7,7 @@
 ## 流程概览
 
 ```
-历史搜索 → SP评估 → 创建Spec → 选择技术栈 → 代码实现 → 测试 → 提测 → 验收 → 上线
+历史搜索 → SP评估 → 创建Spec → 选择技术栈 → 代码实现 → 测试 → 提测 → 验收 → 上线 → 归档
 ```
 
 **时间**: SP1-3: 1-2 天, SP5: 2-3 天
@@ -77,7 +77,7 @@ ELSE 继续 Step 3
 ### 创建文件
 
 ```bash
-docs/shared/specs/story-{module}-{feature}/
+docs/shared/specs/active/story-{module}-{feature}/
 ├── requirements.md  # 需求+AC
 ├── design.md        # 设计+架构
 └── tasks.md         # 任务清单 ⭐
@@ -285,6 +285,29 @@ git push origin feature/story-{module}-{feature}
 - [ ] 数据库迁移文件已创建
 - [ ] Go model 已同步更新
 - [ ] 代码审查通过
+
+---
+
+## Step 8: 归档 Spec (发布后)
+
+功能上线后，执行归档：
+
+```bash
+/spec-archive @story-{module}-{feature} --version v2.10
+```
+
+### 归档条件
+
+- [ ] `tasks.md` 中所有任务已完成 `[x]`
+- [ ] 功能已上线并验证通过
+
+### 归档效果
+
+- 移动 Spec 到 `archived/{version}/`
+- 更新关联 Proposal 状态为"已完成 - 已发布"
+- 添加归档标记到 `requirements.md`
+
+**详见**: `.cursor/commands/spec-archive.md`
 
 ---
 

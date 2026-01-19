@@ -2105,7 +2105,7 @@
     "分组名称": "Gruppnamn",
     "请填写分组名称": "Vänligen ange gruppnamnet",
     "请输入分组名称": "Ange gruppnamn",
-    "翻译": "Översätt <content>",
+    "翻译": "Översätt",
     "此名称与其他分组重复": "Detta namn är dubblerat med andra grupper",
     "套餐价格：": "Paketpris:",
     "请输入套餐价格": "Ange paketpriset",
@@ -2184,5 +2184,15 @@
     "退款操作权限验证": "Verifiering av behörighet för återbetalningsåtgärder",
     "开启后，进行退款操作时需要密码验证或授权员工验证": "När den är aktiverad kräver återbetalningsåtgärder lösenordsverifiering eller auktorisering av en behörig anställd",
     "退款授权员工": "Behörig personal för återbetalningar",
-    "选择授权员工后，这些员工可以进行退款操作的授权验证": "Efter att ha valt behörig personal kan dessa anställda utföra auktoriseringsverifiering för återbetalningsåtgärder"
+    "选择授权员工后，这些员工可以进行退款操作的授权验证": "Efter att ha valt behörig personal kan dessa anställda utföra auktoriseringsverifiering för återbetalningsåtgärder",
+    "(外卖)": "(Takeaway)",
+    "店内": "I butiken",
+    "外卖": "Takeaway",
+    "优惠券抵扣": "Kupongavdrag",
+    "活动抵扣": "Aktivitetavdrag",
+    "黑色": "svart",
+    "选择分钟": "Välj minuter",
+    "可选": "Valfri",
+    "商品卖点": "Produktens säljargument",
+    "固定": "Fast"
 }

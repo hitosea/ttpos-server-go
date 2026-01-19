@@ -4,7 +4,8 @@
     "**/dist": true,
     "**/node_modules": false,
     "**/node_modules/**": true,
-    "**/vendor": true
+    "**/vendor": true,
+    "**/ttpos-flutter/**": true,
   },
 
   // ===== Todo Tree 插件配置 =====
@@ -31,63 +32,60 @@
   },
 
   // ===== 拼写检查 =====
-  "cSpell.words": [
-    "biginteger",
-    "Boms",
-    "Codesoft",
-    "Compax",
-    "cryptor",
-    "CSSH",
-    "CSSQ",
-    "delayqueue",
-    "destek",
-    "ederiz",
-    "Erpnext",
-    "eventbus",
-    "gonic",
-    "gorm",
-    "gormio",
-    "Graphiti",
-    "grpcx",
-    "Howbest",
-    "için",
-    "IFNULL",
-    "IMIN",
-    "Immin",
-    "iptal",
-    "jinzhu",
-    "lianlian",
-    "mağaza",
-    "Phinx",
-    "Printnr",
-    "Qrcode",
-    "repassword",
-    "sağlar",
-    "shopspring",
-    "SHRK",
-    "Sistem",
-    "skootar",
-    "Sunmi",
-    "tarafından",
-    "teşekkür",
-    "tinyint",
-    "TPHY",
-    "Tpls",
-    "ttpos",
-    "uoms",
-    "Uoms",
-    "varchar",
-    "Wechat",
-    "Xprinter",
-    "zhtw",
-    "Zhuhai",
-    "Ziyaretiniz",
-    "ขอบคุณที่แวะมาหากัน",
-    "สนับสนุนโดย",
-    "ကုန်စည်",
-    "ပမာဏ",
-    "apikey"
+  "cSpell.language": "en",  // 只检查英语
+  "cSpell.allowCompoundWords": true,  // 允许复合词
+  "cSpell.ignorePaths": [
+    "node_modules",
+    "vendor",
+    "*.json",
+    "*.lock",
+    "*.mod",
+    "*.sum",
+    "*.mk",
+    "*.dart",
+    "*.sh",
+    "*.md",
+    "*.txt",
+    "*.log",
+    "*.yaml",
+    "*.yml",
+    "*.json",
+    "*.jsonl",
+    "**/ttpos-flutter/**"
   ],
+  "cSpell.ignoreRegExpList": [
+    "/([\u4e00-\u9fa5])+/g",           // 忽略中文
+    "/([\u0E00-\u0E7F])+/g",           // 忽略泰文
+    "/([\u1000-\u109F])+/g",           // 忽略缅甸文
+    "/([\u0600-\u06FF])+/g",           // 忽略阿拉伯文
+    "/([\u0080-\u024F])+/g",           // 忽略拉丁扩展字符(土耳其语、瑞典语等)
+    "/\"[^\"]*[\\u0080-\\uFFFF][^\"]*\"/g"  // 忽略包含非ASCII字符的字符串
+  ],
+  "cSpell.words": [
+    "Adat","Adet","Antal","apikey","betalningar","Betalningsmetod","biginteger","Boms","Bord","Bordsorderbelopp",
+    "BUILDKIT","buildx","Codesoft","Compax","cryptor","CSSH","CSSQ","delayqueue","destek","Detaljerad","Detaylar","Dilimi",
+    "ederiz","elif","Erpnext","eventbus","excelize","Genomsnittlig","gerror","ghttp","GOARCH","gogf","gonic","gorm","gormio",
+    "gpath","Graphiti","grpcx","hitosea","Howbest","için","IFNULL","IMIN","Immin","iptal","jinzhu","Kategori","Konsumerade","letme",
+    "lianlian","lianlianpay","lista","LOCAL_IP","mağaza","Matleveranstid","Maträttsdetaljer","matråttsutbud","maträttsutbud","Miktar",
+    "mottagna","NACOS","Namn","nobackup","över","Phinx","Printnr","Produktionstid","Qrcode","Rapor","repassword","reqs","ROCKETMQ",
+    "rsdag","sağlar","Sammanfattning","sdesk","shopspring","SHRK","Sistem","skootar","specifikation","ssale","Sunmi","Sunumu",
+    "swaggo","Tamamlanan","tarafından","teşekkür","Tidsperiod","tinyint","TPHY","Tpls","ttpos","unagent","uoms",
+    "Uoms","upgrader","Upgrader","varchar","Wechat","xiezhihuan","Xprinter","xuri","Yemek","Zaman","zhtw","Zhuhai",
+    "Ziyaretiniz","ZZCJZ", "Resipi","Makanan","Kassafaktura","Keluaran","Tiramisu","Tunai","Cacl","rmqnamesrv","rmqbroker",
+    "mqnamesrv","NAMESRV","namesrv","mqbroker","BROKER","broker","apacherocketmq","mqproxy","Drocketmq","rmqproxy",
+    "gctx","tuln","gcmd","Debugf","Warningf","Errorf","Infof","gjson","Comstomer","Println","gtime","Wrapf","Newf",
+    "categorys", "cust", "gcat", "Sonra", "Strs", "Cmdable", "Hediye"
+  ],
+  
+  // ===== 文件监听排除（减少 gopls 文件监听负担）=====
+  "files.watcherExclude": {
+    "**/ttpos-flutter/**": true,
+    "**/node_modules/**": true,
+    "**/vendor/**": true,
+    "**/tmp/**": true,
+    "**/dist/**": true,
+    "**/.git/**": true
+  },
 
   // ===== Go语言配置 =====
   "gopls": {

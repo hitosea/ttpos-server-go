@@ -69,7 +69,7 @@ docs/agent/workflows/
    - Step 1: `/propose {feature-name}` 创建提案
    - Step 2: 填写提案
    - Step 3-4: 需求评审会议 → 评审决策
-   - Step 5: `/create-spec story-{module}-{feature}` 创建 Spec
+   - Step 5: `/spec-create story-{module}-{feature}` 创建 Spec
    - Step 6: 编写 User Story + AC (requirements.md)
    - Step 7: 技术方案设计 (design.md)
    - Step 8: SP 评估 (≤5 进入开发，>5 拆分)
@@ -79,7 +79,7 @@ docs/agent/workflows/
    - `/propose` - 创建需求提案
    - `proposal-template.md` - 提案模板
    - `specs.mdc` - Spec 命名规范
-   - `/create-spec` - 创建 Spec 文档
+   - `/spec-create` - 创建 Spec 文档
 5. 输出产物:
    - `docs/team/proposals/{YYYY-MM-DD}-{feature-name}.md`
    - `docs/shared/specs/story-{module}-{feature}/requirements.md`
@@ -126,6 +126,17 @@ docs/agent/workflows/
    - `knowledge_management.mdc` - 4 层检索 (查历史问题)
    - `golang.mdc` / `php.mdc` - 代码修复规范
    - `knowledge_management.mdc` - 记录到 Graphiti
+
+**⚠️ 技术栈识别优先级**（重要）
+
+在分析 Bug 或制定修复方案时，必须先确定正确的技术栈：
+
+1. **优先查找 Go Main 模块** (`main/app/`) - 核心业务
+2. **其次查找 PHP Admin 模块** (`admin/app/`) - 仅当 Go 找不到
+3. **最后查找 Go BMP 模块** (`ttpos-bmp/`) - 微服务相关
+
+**详细识别方法和常见误区**，请查阅:
+→ [Bug 修复工作流 - Step 2 技术栈识别](../../docs/agent/workflows/development/bug-fixing.md#⚠️-技术栈识别优先级重要)
 
 ---
 

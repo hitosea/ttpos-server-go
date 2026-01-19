@@ -81,6 +81,14 @@ type IProductRepo interface {
 	WhereAttributeGroupUuid(uuid uint64) DBOption        // 查询条件 商品属性分组uuid
 	WhereProductAttributeGroupUuid(uuid uint64) DBOption // 查询条件 商品属性分组uuid
 	WithProductPackageAttributes() DBOption              // 预加载商品属性关联的产品包属性
+
+	// 总店删除资源时检查子店使用情况
+	CheckFlavorUsageInShop(flavorUuid uint64) (bool, error)                 // 检查当前子店是否使用了指定规格
+	CheckAttributeGroupUsageInShop(attributeGroupUuid uint64) (bool, error) // 检查当前子店是否使用了指定属性组
+	CheckAttributeUsageInShop(attributeUuid uint64) (bool, error)           // 检查当前子店是否使用了指定属性
+	CheckSauceUsageInShop(sauceUuid uint64) (bool, error)                   // 检查当前子店是否使用了指定加料
+	CheckUnitUsageInShop(unitUuid uint64) (bool, error)                     // 检查当前子店是否使用了指定单位
+	CheckProductUsageInPackage(productUuid uint64) (bool, error)            // 检查当前子店的套餐是否使用了指定商品
 }
 
 // IProductQueryRepo 商品查询仓库接口
@@ -115,6 +123,7 @@ type IProductQueryRepo interface {
 	PaginateGetProductSauceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) // 分页获取商品加料列表
 	GetProductSauceList(opts ...DBOption) ([]model.ProductSauce, error)                                          // 获取商品加料列表
 	GetProductSauce(opts ...DBOption) (model.ProductSauce, error)                                                // 获取商品加料详情
+	GetProductSauceWithoutScope(opts ...DBOption) (model.ProductSauce, error)                                    // 获取商品加料详情（不使用软删除）
 	GetProductSauceCount(opts ...DBOption) (int64, error)                                                        // 获取商品加料数量
 
 	PaginateGetProductAttributeGroupList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductAttributeGroup, int64, error) // 分页获取商品属性分组列表
@@ -140,6 +149,8 @@ type IProductQueryRepo interface {
 	GetProductBomUuidsByInternalCode(internalCode string) ([]uint64, error)     // 根据内部编码查询所有商品的product_bom_uuid
 
 	GetProductListByKeywordAndCategory(keyword string, categoryUuids []uint64) ([]*model.ProductPackage, error) // 根据name进行模糊查询、根据分类进行查询商品列表
+
+	GetProductSingleCount(opts ...DBOption) (int64, error) // 查询有多少个规格商品
 
 	BatchUpdateSort(table any, sorts map[uint64]int) error // 批量更新排序
 }
@@ -202,6 +213,8 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 					Query: "ProductPackageGroups",
 					Args: []any{
 						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+						CommonRepo.DBOption(CommonRepo.SortWithSort("ASC")),
+						CommonRepo.DBOption(CommonRepo.SortWithID("ASC")),
 					},
 				},
 			)),
@@ -222,26 +235,61 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductBom.ProductFlavor.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
+				},
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ImageFile",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
+				},
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.DescribeMultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductUnit.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
+				},
+			)),
+			CommonRepo.DBOption(CommonRepo.Preload(
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductPackageAttributeGroups",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 		}
@@ -427,6 +475,9 @@ func (r *productRepo) GetProductDetail(uuid uint64) (*model.ProductPackage, erro
 				Query: "MultiLanguageName",
 			},
 			WithPreload{
+				Query: "DescribeMultiLanguageName",
+			},
+			WithPreload{
 				Query: "ProductCategory.MultiLanguageName",
 			},
 			WithPreload{
@@ -461,6 +512,10 @@ func (r *productRepo) GetProductDetail(uuid uint64) (*model.ProductPackage, erro
 			},
 			WithPreload{
 				Query: "ProductPackageGroups",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.SortWithSort("ASC")),
+					CommonRepo.DBOption(CommonRepo.SortWithID("ASC")),
+				},
 			},
 			WithPreload{
 				Query: "ProductPackageGroups.MultiLanguageName",
@@ -1037,6 +1092,17 @@ func (r *productRepo) GetProductSauce(opts ...DBOption) (model.ProductSauce, err
 	return sauce, errors.WithMessage(err)
 }
 
+// GetProductSauce 获取商品加料详情
+func (r *productRepo) GetProductSauceWithoutScope(opts ...DBOption) (model.ProductSauce, error) {
+	var sauce model.ProductSauce
+	db := r.db.Model(&model.ProductSauce{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.First(&sauce).Error
+	return sauce, errors.WithMessage(err)
+}
+
 // GetProductSauceCount 获取商品加料数量
 func (r *productRepo) GetProductSauceCount(opts ...DBOption) (int64, error) {
 	var total int64
@@ -1114,7 +1180,7 @@ func (r *productRepo) GetProductAttributeGroup(opts ...DBOption) (model.ProductA
 		db = opt(db)
 	}
 	err := db.First(&attributeGroup).Error
-	return attributeGroup, errors.WithMessage(err)
+	return attributeGroup, err
 }
 
 func (r *productRepo) WithProductAttributesProductPackageAttributes() DBOption {
@@ -1168,7 +1234,7 @@ func (r *productRepo) GetProductAttribute(opts ...DBOption) (model.ProductAttrib
 		db = opt(db)
 	}
 	err := db.First(&attribute).Error
-	return attribute, errors.WithMessage(err)
+	return attribute, err
 }
 
 // GetProductPackageAttributeGroups 获取产品包属性组列表
@@ -1433,7 +1499,7 @@ func (r *productRepo) BatchUpdateSort(table any, sorts map[uint64]int) error {
 
 func (r *productRepo) GetProductFlavorList(opts ...DBOption) ([]model.ProductFlavor, error) {
 	var flavors []model.ProductFlavor
-	db := r.db.Model(&model.ProductFlavor{}).Scopes(NotDeleted)
+	db := r.db.Model(&model.ProductFlavor{})
 	for _, opt := range opts {
 		db = opt(db)
 	}
@@ -1538,4 +1604,121 @@ func (r *productRepo) GetProductListByKeywordAndCategory(keyword string, categor
 		return nil, errors.WithMessage(err)
 	}
 	return products, nil
+}
+
+// 查询有多少个规格商品
+func (r *productRepo) GetProductSingleCount(opts ...DBOption) (int64, error) {
+	var count int64
+	db := r.db.Model(&model.ProductBom{}).Where("delete_time = ?", constant.NotDeleted).Where("product_flavor_uuid > 0")
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&count).Error
+	return count, errors.WithMessage(err)
+}
+
+// ========== 总店删除资源时检查子店使用情况 ==========
+
+// CheckFlavorUsageInShop 检查当前子店是否使用了指定规格
+func (r *productRepo) CheckFlavorUsageInShop(flavorUuid uint64) (bool, error) {
+	var count int64
+
+	err := r.db.Table("ttpos_product_bom pb").
+		Joins("INNER JOIN ttpos_product_package p ON pb.product_package_uuid = p.uuid AND p.delete_time = 0 and p.headquarter_uuid = 0").
+		Where("pb.product_flavor_uuid = ?", flavorUuid).
+		Where("pb.delete_time = 0").
+		Count(&count).Error
+
+	if err != nil {
+		return false, errors.WithMessage(err)
+	}
+
+	return count > 0, nil
+}
+
+// CheckAttributeGroupUsageInShop 检查当前子店是否使用了指定属性组
+func (r *productRepo) CheckAttributeGroupUsageInShop(attributeGroupUuid uint64) (bool, error) {
+	var count int64
+
+	err := r.db.Table("ttpos_product_package_attribute_group pag").
+		Joins("INNER JOIN ttpos_product_package p ON pag.product_package_uuid = p.uuid AND p.delete_time = 0 and p.headquarter_uuid = 0").
+		Where("pag.product_attribute_group_uuid = ?", attributeGroupUuid).
+		Where("pag.delete_time = 0").
+		Count(&count).Error
+
+	if err != nil {
+		return false, errors.WithMessage(err)
+	}
+
+	return count > 0, nil
+}
+
+// CheckAttributeUsageInShop 检查当前子店是否使用了指定属性
+func (r *productRepo) CheckAttributeUsageInShop(attributeUuid uint64) (bool, error) {
+	var count int64
+
+	err := r.db.Table("ttpos_product_package_attribute ppa").
+		Joins("INNER JOIN ttpos_product_package_attribute_group pag ON ppa.product_package_attribute_group_uuid = pag.uuid AND pag.delete_time = 0").
+		Joins("INNER JOIN ttpos_product_package p ON pag.product_package_uuid = p.uuid AND p.delete_time = 0 and p.headquarter_uuid = 0").
+		Where("ppa.attribute_uuid = ?", attributeUuid).
+		Where("ppa.delete_time = 0").
+		Count(&count).Error
+
+	if err != nil {
+		return false, errors.WithMessage(err)
+	}
+
+	return count > 0, nil
+}
+
+// CheckSauceUsageInShop 检查当前子店是否使用了指定加料
+func (r *productRepo) CheckSauceUsageInShop(sauceUuid uint64) (bool, error) {
+	var count int64
+
+	err := r.db.Table("ttpos_product_bom pb").
+		Joins("INNER JOIN ttpos_product_package p ON pb.product_package_uuid = p.uuid AND p.delete_time = 0 and p.headquarter_uuid = 0").
+		Where("pb.product_sauce_uuid = ?", sauceUuid).
+		Where("pb.delete_time = 0").
+		Count(&count).Error
+
+	if err != nil {
+		return false, errors.WithMessage(err)
+	}
+
+	return count > 0, nil
+}
+
+// CheckUnitUsageInShop 检查当前子店是否使用了指定单位
+func (r *productRepo) CheckUnitUsageInShop(unitUuid uint64) (bool, error) {
+	var count int64
+
+	err := r.db.Table("ttpos_product_package p").
+		Where("p.unit_uuid = ?", unitUuid).
+		Where("p.delete_time = 0").
+		Where("p.headquarter_uuid = 0").
+		Count(&count).Error
+
+	if err != nil {
+		return false, errors.WithMessage(err)
+	}
+
+	return count > 0, nil
+}
+
+// CheckProductUsageInPackage 检查当前子店的套餐是否使用了指定商品
+func (r *productRepo) CheckProductUsageInPackage(productUuid uint64) (bool, error) {
+	var count int64
+
+	err := r.db.Table("ttpos_product_package_group_item pgi").
+		Joins("INNER JOIN ttpos_product_package_group pg ON pgi.product_package_group_uuid = pg.uuid AND pg.delete_time = 0").
+		Joins("INNER JOIN ttpos_product_package p ON pg.product_package_uuid = p.uuid AND p.delete_time = 0 AND p.product_type = 1 and p.headquarter_uuid = 0").
+		Where("pgi.related_uuid = ?", productUuid).
+		Where("pgi.delete_time = 0").
+		Count(&count).Error
+
+	if err != nil {
+		return false, errors.WithMessage(err)
+	}
+
+	return count > 0, nil
 }

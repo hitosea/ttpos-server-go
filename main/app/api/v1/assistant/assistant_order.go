@@ -18,8 +18,9 @@ import (
 )
 
 type OrderHandler struct {
-	orderSrv service.IOrderSrv // 订单服务
-	deskSrv  service.IDeskSrv  // 桌台服务
+	orderSrv     service.IOrderSrv     // 订单服务
+	deskSrv      service.IDeskSrv      // 桌台服务
+	saasStaffSrv service.ISaasStaffSrv // 统一账号服务
 }
 
 // IsCellClose 判断订单是否可关闭
@@ -105,13 +106,20 @@ func (h *OrderHandler) GetProductPackageDetail(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @param data body req.CheckAuthorizationReq true "检查授权参数"
 // @Success 200 {object} dto.Response{data=resp.CheckAuthorizationResp}
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/order/check_authorization [post]
 func (h *OrderHandler) CheckAuthorization(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	// 检查授权（折扣操作）
-	hasPermission, err := h.orderSrv.CheckAuthorization(ctx)
+	// 绑定请求参数
+	req := req.CheckAuthorizationReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	// 调用 Service 检查授权
+	hasPermission, err := h.orderSrv.CheckAuthorization(ctx, req.OperationType)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -153,6 +161,33 @@ func (h *OrderHandler) VerifyPassword(c *gin.Context) {
 	})
 }
 
+// QueryStaffByContact 根据邮箱或手机号查询员工
+// @Summary 根据邮箱或手机号查询员工
+// @Description 根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示
+// @Tags 点餐助手端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param keyword query string false "搜索关键词（邮箱或手机号，支持模糊匹配）"
+// @Success 200 {object} dto.Response{data=resp.QueryStaffByContactResp}
+// @Router /assistant/order/query_staff [get]
+func (h *OrderHandler) QueryStaffByContact(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var queryReq req.QueryStaffByContactReq
+	if err := c.ShouldBindQuery(&queryReq); err != nil {
+		helper.HandleValidationError(c, err, queryReq, nil)
+		return
+	}
+
+	res, err := h.saasStaffSrv.QueryStaffByContact(ctx, queryReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
+		return
+	}
+
+	helper.Success(c, res)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -170,8 +205,9 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 
 	// 初始化处理器
 	wrapper := OrderHandler{
-		orderSrv: orderSrv,
-		deskSrv:  service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv, mustPlanSrv),
+		orderSrv:     orderSrv,
+		deskSrv:      service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv, mustPlanSrv),
+		saasStaffSrv: service.NewSaasStaffSrv(dbm),
 	}
 
 	// 需要认证
@@ -181,5 +217,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/product/package/detail", wrapper.GetProductPackageDetail) // 获取商品选购详情
 		privateApi.POST("/order/check_authorization", wrapper.CheckAuthorization)        // 检查授权
 		privateApi.POST("/order/verify_password", wrapper.VerifyPassword)                // 密码验证
+		privateApi.GET("/order/query_staff", wrapper.QueryStaffByContact)                // 根据邮箱或手机号查询员工
 	}
 }

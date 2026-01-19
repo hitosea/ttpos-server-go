@@ -2,11 +2,17 @@ package erpnext
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 const printFormatDocType = "Print Format"
@@ -212,4 +218,119 @@ func (s *sPrintFormat) Count(ctx context.Context, req *erp.PrintFormatListReq) (
 	}
 
 	return count, nil
+}
+
+// SyncToLocalResult 同步到本地的结果
+type SyncToLocalResult struct {
+	Total   int      // 总数量
+	Success int      // 成功数量
+	Failed  int      // 失败数量
+	Errors  []string // 失败详情
+}
+
+// SyncToLocal 从 ERP 同步指定前缀的打印格式到本地 JSON 文件
+// 参数：
+//   - ctx: 上下文对象
+//   - dirBase: 输出目录
+//   - prefix: 打印格式名称前缀，如 "Wallace"
+//
+// 返回：
+//   - *SyncToLocalResult: 同步结果统计
+//   - error: 错误信息
+func (s *sPrintFormat) SyncToLocal(ctx context.Context, dirBase string, prefix string) (*SyncToLocalResult, error) {
+	result := &SyncToLocalResult{
+		Errors: make([]string, 0),
+	}
+
+	// 1. 检查并创建目标目录
+	if err := os.MkdirAll(dirBase, 0755); err != nil {
+		return nil, gerror.Wrapf(err, "创建目录失败: %s", dirBase)
+	}
+
+	// 2. 获取所有 Print Format 列表
+	g.Log().Infof(ctx, "开始获取 Print Format 列表，前缀: %s", prefix)
+
+	// 查询列表，使用 like 过滤
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: printFormatDocType,
+	}, &erp.RequestParams{
+		Fields:  []string{"name"},
+		Filters: [][]string{{"name", "like", prefix + "%"}},
+		Limit:   0, // 获取所有
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取 Print Format 列表失败")
+	}
+
+	// 解析列表
+	dataArray := resp.GetJsons("data")
+	if len(dataArray) == 0 {
+		g.Log().Infof(ctx, "未找到 %s 开头的 Print Format", prefix)
+		return result, nil
+	}
+
+	result.Total = len(dataArray)
+	g.Log().Infof(ctx, "找到 %d 个 %s 开头的 Print Format", result.Total, prefix)
+
+	// 3. 遍历获取每个文档详情并保存
+	for _, data := range dataArray {
+		name := data.Get("name").String()
+		if name == "" {
+			continue
+		}
+
+		g.Log().Infof(ctx, "正在同步: %s", name)
+
+		// 获取文档详情（完整 JSON）
+		detailResp, err := service.Document().Get(ctx, &erp.ErpReq{
+			DocType: printFormatDocType,
+			Name:    name,
+		}, nil)
+		if err != nil {
+			errMsg := fmt.Sprintf("%s: 获取详情失败 - %v", name, err)
+			result.Errors = append(result.Errors, errMsg)
+			result.Failed++
+			g.Log().Errorf(ctx, errMsg)
+			continue
+		}
+
+		// 获取 data 字段内容
+		docData := detailResp.Get("data")
+		if docData == nil {
+			errMsg := fmt.Sprintf("%s: 响应数据为空", name)
+			result.Errors = append(result.Errors, errMsg)
+			result.Failed++
+			g.Log().Errorf(ctx, errMsg)
+			continue
+		}
+
+		// 格式化 JSON
+		jsonBytes, err := json.MarshalIndent(docData, "", "  ")
+		if err != nil {
+			errMsg := fmt.Sprintf("%s: JSON 序列化失败 - %v", name, err)
+			result.Errors = append(result.Errors, errMsg)
+			result.Failed++
+			g.Log().Errorf(ctx, errMsg)
+			continue
+		}
+
+		// 构建文件名（清理特殊字符）
+		safeFileName := strings.ReplaceAll(name, "/", "_")
+		safeFileName = strings.ReplaceAll(safeFileName, "\\", "_")
+		filePath := filepath.Join(dirBase, safeFileName+".json")
+
+		// 写入文件
+		if err := os.WriteFile(filePath, jsonBytes, 0644); err != nil {
+			errMsg := fmt.Sprintf("%s: 写入文件失败 - %v", name, err)
+			result.Errors = append(result.Errors, errMsg)
+			result.Failed++
+			g.Log().Errorf(ctx, errMsg)
+			continue
+		}
+
+		result.Success++
+		g.Log().Infof(ctx, "  - %s: 保存成功 -> %s", name, filePath)
+	}
+
+	return result, nil
 }

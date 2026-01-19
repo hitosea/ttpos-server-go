@@ -9,10 +9,12 @@ import (
 // IPrinterTemplateRepo 打印机模板
 type IPrinterTemplateRepo interface {
 	GetPrinterTemplateInfo(id uint64) (model.PrinterTemplate, error)
+	GetPrinterTemplateBasicInfo(id uint64) (template int, tmpUuid uint64, err error) // 只获取 Template 和 TmpUuid，不获取 TmpData
 	CreatePrinterTemplate(printerTemplate model.PrinterTemplate) error
 	// 获取打印菜单列表
 	GetPrinterTemplates() ([]model.PrinterTemplate, error)             // 获取所有打印模版列表
 	UpdatePrinterTemplate(printerTemplate model.PrinterTemplate) error // 更新打印机模板
+	GetPrinterTemplateName(id uint64) (string, error)                  // 根据id获取打印机模板名称
 }
 
 func NewPrinterTemplateRepo(db *gorm.DB) IPrinterTemplateRepo {
@@ -28,12 +30,35 @@ type PrinterTemplateRepoImpl struct {
 	db *gorm.DB
 }
 
+// GetPrinterTemplateName 获取打印机模板名称
+func (r *PrinterTemplateRepoImpl) GetPrinterTemplateName(id uint64) (string, error) {
+	var name string
+	err := r.db.Model(&model.PrinterTemplate{}).Where("id = ?", id).Pluck("name", &name).Error
+	return name, err
+}
+
 // GetPrinterTemplateInfo 获取打印机模板详情
 func (r *PrinterTemplateRepoImpl) GetPrinterTemplateInfo(id uint64) (model.PrinterTemplate, error) {
 	var printerTemplate model.PrinterTemplate
 	db := r.db.Model(&model.PrinterTemplate{}).Where("id = ?", id)
 	err := db.First(&printerTemplate).Error
 	return printerTemplate, err
+}
+
+// GetPrinterTemplateBasicInfo 只获取 Template 和 TmpUuid，不获取大字段 TmpData
+func (r *PrinterTemplateRepoImpl) GetPrinterTemplateBasicInfo(id uint64) (template int, tmpUuid uint64, err error) {
+	var result struct {
+		Template int    `gorm:"column:template"`
+		TmpUuid  uint64 `gorm:"column:tmp_uuid"`
+	}
+	err = r.db.Model(&model.PrinterTemplate{}).
+		Select("template, tmp_uuid").
+		Where("id = ?", id).
+		First(&result).Error
+	if err != nil {
+		return 0, 0, err
+	}
+	return result.Template, result.TmpUuid, nil
 }
 
 // CreatePrinterTemplate 创建打印机模板

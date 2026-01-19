@@ -51,8 +51,8 @@
             ></el-input>
             <el-button class="ml8" type="primary" @click="translate(groupIndex)">{{ $t('翻译') }}</el-button>
             <el-select v-model="form.model.package_group[groupIndex].group_type" class="max-w230 ml16" :disabled="erp_is_open == 1">
-              <el-option :value="0" :label="$t('固定套餐')"></el-option>
-              <el-option :value="1" :label="$t('可选套餐')"></el-option>
+              <el-option :value="0" :label="$t('固定')"></el-option>
+              <el-option :value="1" :label="$t('可选')"></el-option>
             </el-select>
 
             <el-icon class="delete-icon" :class="{ 'is-disabled': form.model.package_group.length === 1 }" @click="handleDelete(groupIndex)">
@@ -68,7 +68,9 @@
           label-position="left"
           v-if="form.model.package_group[groupIndex].group_type == 1"
         >
-          <numInput class="max-w80" v-model="form.model.package_group[groupIndex].optional_count" :min="0" :max="999" :precision="0" :disabled="erp_is_open == 1" />
+        <numInput class="max-w80" v-model="form.model.package_group[groupIndex].optional_min_count" :min="0" :max="99999999" :precision="0" :disabled="erp_is_open == 1" />
+        <span>-</span>
+        <numInput class="max-w80" v-model="form.model.package_group[groupIndex].optional_count" :min="0" :max="99999999" :precision="0" :disabled="erp_is_open == 1" />
         </el-form-item>
 
         <el-form-item :prop="`model.package_group.${groupIndex}.product_list`" :rules="[{ required: true, validator: validatePackageGroup, message: $t('请添加套餐商品') }]">
@@ -101,11 +103,11 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="stock_num" :label="$t('商品库存')" width="160">
+            <!-- <el-table-column prop="stock_num" :label="$t('商品库存')" width="160">
               <template #default="scope">
                 {{ scope.row.stock_num }}
               </template>
-            </el-table-column>
+            </el-table-column> -->
 
             <el-table-column prop="is_required" :label="$t('必选')" width="80" v-if="form.model.package_group[groupIndex].group_type == 1">
               <template #default="scope">
@@ -131,14 +133,14 @@
       </el-card>
     </div>
 
-    <el-button :disabled="form.model.package_group.length >= 5" class="mt16" type="primary" @click="addGroup">{{ $t('添加分组') }}</el-button>
+    <el-button :disabled="form.model.package_group.length >= 100" class="mt16" type="primary" @click="addGroup">{{ $t('添加分组') }}</el-button>
 
     <div class="common-form mt50">{{ $t('库存') }}</div>
 
-    <el-form-item for="no_click" :label="$t('可售量')">
+    <!--  <el-form-item for="no_click" :label="$t('可售量')">
       <numInput type="text" :placeholder="$t('请输入库存')" disabled v-model="nowStock" :maxlength="50" class="max-w460"></numInput>
       <div class="gray9">{{ $t('根据子商品库存动态计算，库存变化自动更新') }}</div>
-    </el-form-item>
+    </el-form-item> -->
     <!-- TODO: 是否开启库存,2025年08月07日09:55:45，需求暂时隐藏 -->
     <!-- <el-form-item for="no_click" :label="$t('是否开启库存')">
       <el-radio-group v-model="form.model.is_open_stock">
@@ -147,10 +149,10 @@
       </el-radio-group>
     </el-form-item> -->
 
-    <el-form-item v-if="form.model.is_open_stock" for="no_click" :prop="`model.package_stock`" :label="$t('套餐可售总量')" :rules="[{ required: true, message: $t('请输入库存') }]">
+    <!-- <el-form-item v-if="form.model.is_open_stock" for="no_click" :prop="`model.package_stock`" :label="$t('套餐可售总量')" :rules="[{ required: true, message: $t('请输入库存') }]">
       <numInput type="text" :placeholder="$t('请输入库存')" :precision="0" v-model="form.model.package_stock" :min="0" :max="99999999" class="max-w460"></numInput>
       <div class="gray9">{{ $t('库存为0时套餐自动售罄') }}</div>
-    </el-form-item>
+    </el-form-item> -->
 
     <el-form-item for="no_click" :label="$t('库存计算方式：')">
       <el-radio-group v-model="form.model.deduct_stock_type" :disabled="erp_is_open == 1">
@@ -358,6 +360,9 @@
   const addGroup = () => {
     form.model.package_group.push({
       group_name: JSON.parse(languageData),
+      group_type: 0,
+      optional_min_count: 0,
+      optional_count: 1,
       product_list: [],
     });
   };
@@ -444,8 +449,8 @@
         sort: maxSort + index + 1, // 递增排序
         num: 1, // 保持原有num值，如果没有则为null
         add_price: 0, // 加价
-        is_required: 1, // 是否必选  0-否 1-是
-        is_default: 1, // 是否默认 0-否 1-是
+        is_required: 0, // 是否必选  0-否 1-是
+        is_default: 0, // 是否默认 0-否 1-是
       };
       form.model.package_group[selectIndex.value].product_list.push(newProduct);
     });
@@ -521,6 +526,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+  .justify-end {
+    justify-content: flex-end;
   }
 
   .w-full {

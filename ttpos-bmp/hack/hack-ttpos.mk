@@ -31,9 +31,24 @@ create_db:
 up:
 	@# 指定项目名 -p ttpos-bmp
 	@set -o allexport; \
-	. ../.env && docker compose  -p ttpos-bmp -f ./docker-compose-dev.yml up -d --build;\
+	. ../.env && docker compose  -p ttpos-bmp -f ./docker-compose.dev.yml up -d --build;\
 	set +o allexport;
 
+
+# 重新启动所有应用
+.PHONY: restart
+restart:
+	@# 指定项目名 -p ttpos-bmp
+	@set -o allexport; \
+	. ../.env && docker compose  -p ttpos-bmp -f ./docker-compose.dev.yml restart;\
+	set +o allexport;
+
+# 卸载docker 应用服务
+.PHONY: down
+down:
+	@set -o allexport; \
+	. ../.env && docker compose -p ttpos-bmp -f ./docker-compose.dev.yml down ;\
+	set +o allexport;
 
 # 仅启动中间件
 .PHONY: mid
@@ -48,7 +63,7 @@ mid:
 run:
 	@# 指定项目名 -p ttpos-bmp
 	@set -o allexport; \
-	. ../.env && docker compose -f ./docker-compose-dev.yml -f ./docker-compose.mid.yml up -d ;\
+	. ../.env && docker compose -f ./docker-compose.dev.yml -f ./docker-compose.mid.yml up -d ;\
 	set +o allexport;
 
 # 构建并运行 ttpos-manager 服务

@@ -508,8 +508,10 @@ func (model *SaleOrderProduct) calcLastestSaucePrice() float64 {
 // 当商品改价时，ProductPrice= ProductPrice 。 改价后不会修改这个字段的值，只会修改salePrice的值
 func (model *SaleOrderProduct) calcProductPrice() float64 {
 	productPrice := decimal.NewFromFloat(model.GetFlavorPrice()).Add(decimal.NewFromFloat(model.SaucePrice))
-	// 加上加价金额（套餐主商品或子商品的加价）
-	productPrice = productPrice.Add(decimal.NewFromFloat(model.AddPrice))
+	// 加上加价金额（套餐主商品,只有套餐主商品才需要加上加价金额作为套餐单价）
+	if model.IsPackageProduct() {
+		productPrice = productPrice.Add(decimal.NewFromFloat(model.AddPrice))
+	}
 	return productPrice.InexactFloat64()
 }
 
@@ -528,8 +530,10 @@ func (model *SaleOrderProduct) calcLastestProductPrice() float64 {
 	}
 	// 如果规格价格大于0，则使用规格价格
 	productPrice := decimal.NewFromFloat(flavorPrice).Add(decimal.NewFromFloat(model.calcLastestSaucePrice()))
-	// 加上加价金额（套餐主商品或子商品的加价）
-	productPrice = productPrice.Add(decimal.NewFromFloat(model.AddPrice))
+	// 加上加价金额（套餐主商品,只有套餐主商品才需要加上加价金额作为套餐单价）
+	if model.IsPackageProduct() {
+		productPrice = productPrice.Add(decimal.NewFromFloat(model.AddPrice))
+	}
 	return productPrice.InexactFloat64()
 }
 

@@ -292,6 +292,7 @@ type PurchaseOrder struct {
 	RepresentsCompany    string `json:"represents_company,omitempty"`     // 代表公司
 	PartyAccountCurrency string `json:"party_account_currency,omitempty"` // 对方账户货币
 	TaxCategory          string `json:"tax_category,omitempty"`           // 税类别
+	TaxesAndCharges      string `json:"taxes_and_charges,omitempty"`      // 采购税费模板名称 (Purchase Taxes and Charges Template)
 
 	// 金额大写
 	BaseInWords string `json:"base_in_words,omitempty"` // 基础金额大写
@@ -398,6 +399,7 @@ type SaleOrderItem struct {
 	// 父级关联
 	Parentfield string `json:"parentfield,omitempty"` // 父级字段
 	Parenttype  string `json:"parenttype,omitempty"`  // 父级类型
+	Supplier    string `json:"supplier,omitempty"`    //供应商
 }
 
 // SaleOrder 结构体，表示销售订单
@@ -490,6 +492,9 @@ type SaleOrder struct {
 	// 金额大写
 	BaseInWords string `json:"base_in_words,omitempty"` // 基础金额大写
 	InWords     string `json:"in_words,omitempty"`      // 金额大写
+
+	// 税费模板
+	TaxesAndCharges string `json:"taxes_and_charges,omitempty"` // 销售税费模板名称 (Sales Taxes and Charges Template)
 
 	// 关联数据
 	PricingRules    []interface{}      `json:"pricing_rules,omitempty"`    // 定价规则

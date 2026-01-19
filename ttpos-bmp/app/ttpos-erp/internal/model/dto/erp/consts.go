@@ -48,6 +48,9 @@ const (
 	//DocTypeUom 商品单位
 	DocTypeUom = "UOM"
 
+	// DocTypeBin Bin 表（物品仓库库存记录）
+	DocTypeBin = "Bin"
+
 	// DocTypeStockReconciliation 库存盘点单据类型
 	DocTypeStockReconciliation = "Stock Reconciliation"
 	// DocTypeStockReconciliationItem 库存盘点明细类型
@@ -88,4 +91,12 @@ const (
 
 const (
 	WarehouseTypeTransit = "Transit"
+)
+
+// 税费模板文档类型
+const (
+	// DocTypePurchaseTaxesTemplate 采购税费模板
+	DocTypePurchaseTaxesTemplate = "Purchase Taxes and Charges Template"
+	// DocTypeSalesTaxesTemplate 销售税费模板
+	DocTypeSalesTaxesTemplate = "Sales Taxes and Charges Template"
 )

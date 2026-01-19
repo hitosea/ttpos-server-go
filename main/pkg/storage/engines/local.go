@@ -51,21 +51,6 @@ func (l *Local) Upload(thumb int) (string, error) {
 	return relativePath, nil
 }
 
-// Delete 删除文件
-func (l *Local) Delete(fileName string) error {
-	// 构建完整文件路径
-	fullPath := filepath.Join(l.config.UploadPath, fileName)
-
-	// 检查文件是否存在
-	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		// 文件不存在，认为删除成功
-		return nil
-	}
-
-	// 删除文件
-	return os.Remove(fullPath)
-}
-
 // GetUrlParam 获取URL参数（本地存储不需要参数）
 func (l *Local) GetUrlParam() string {
 	return ""

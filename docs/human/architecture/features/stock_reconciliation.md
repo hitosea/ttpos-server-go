@@ -1068,12 +1068,12 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 **请求参数**:
 ```go
 type StockReconciliationCheckMaterialsReq struct {
-    Uuid          uint64                                    // 盘点单UUID
-    WarehouseUuid uint64                                    // 仓库UUID
-    Items         []StockReconciliationCheckMaterialsItem   // 物品列表
+    Uuid          uint64              // 盘点单UUID
+    WarehouseUuid uint64              // 仓库UUID
+    Items         []CheckMaterialsItem // 物品列表
 }
 
-type StockReconciliationCheckMaterialsItem struct {
+type CheckMaterialsItem struct {
     MaterialUuid    uint64          // 物品UUID
     CountedQuantity decimal.Decimal // 实盘数量
 }

@@ -20,14 +20,14 @@
           <el-col :span="6" v-if="detail.member_uuids">
             <div class="pb16">
               <span class="gray9">{{ $t('会员：') }}</span>
-              <span>{{ $t('会员ID') }}&nbsp;({{ detail?.member_uuids }})</span>
+              <span>{{ detail?.member_uuids }}</span>
             </div>
           </el-col>
 
           <el-col :span="6" v-if="detail.nationality_uuid">
             <div class="pb16">
               <span class="gray9">{{ $t('国籍：') }}</span>
-              <span>{{ $t('国籍') }}&nbsp;{{ detail?.nationality_name }}</span>
+              <span>{{ detail?.nationality_name !== '' ? detail?.nationality_name : '-' }}</span>
             </div>
           </el-col>
           <el-col :span="6">
@@ -71,9 +71,9 @@
               </span>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.order_source_uuid">
+          <el-col :span="6" >
             <div class="pb16">
-              <span class="gray9">{{ $t('来源：') }}</span> {{ detail.order_source_name }}
+              <span class="gray9">{{ $t('来源：') }}</span> {{ detail.order_source_name !== '' ? detail.order_source_name : $t('店内') }}
             </div>
           </el-col>
           <el-col :span="6">
@@ -159,7 +159,7 @@
         </p>
         <p class="sub-order-item">
           {{ $t('会员：') }}
-          <span v-if="detail?.sale_orders[activeName].member_uuid">{{ $t('会员ID') }}({{ detail?.sale_orders[activeName].member_uuid }})</span>
+          <span v-if="detail?.sale_orders[activeName].member_uuid">{{ detail?.sale_orders[activeName].member_name }}</span>
           <span v-else>-</span>
         </p>
       </div>

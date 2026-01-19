@@ -21,15 +21,18 @@ description: 创建新功能或改进的需求提案
 
 ## 参数
 
-- `feature_name`: 必填，提案的功能名称（kebab-case）
+- `feature_name`: 必填，提案的功能名称（英文 kebab-case，如以其他语言传入时必须转换为英文）
 - `task_id`: 可选，DooTask 任务编号（格式：`编号:36917` 或 `DooTask #36917`）
+- `version`: 可选，版本号（格式：`v2.10.0` 或 `v 2.10.0`）
 
 ## 功能特点
 
 - ✅ 自动使用 `proposal-template.md` 创建文件
 - ✅ 自动填充日期和提案人（从 Git 配置读取）
-- ✅ 创建路径: `docs/team/proposals/{YYYY-MM-DD}-{feature_name}.md`
+- ✅ 创建路径: `docs/team/proposals/{YYYY-MM}/{version}-{feature_name}.md`
+- ✅ 自动创建月份目录（如不存在）
 - ✅ 提供 Scrum 评审清单
+- ✅ 命名与 Spec 格式对齐，便于自动关联
 - ✅ **自动读取 DooTask 任务**（当提供任务编号时）
   - 自动获取任务标题、描述、需求详情
   - 将任务内容填充到提案的"背景和动机"、"解决方案概述"等章节

@@ -52,3 +52,22 @@ type SyncTaskListPaginationResp struct {
 	List []SyncTaskListResp `json:"list"`
 	Meta dto.PageResponse   `json:"meta"`
 }
+
+// HeadquartersDataListResp 总部可同步数据列表响应
+type HeadquartersDataListResp struct {
+	Groups []DataGroupResp `json:"groups"` // 数据分组列表
+}
+
+// DataGroupResp 数据分组响应（简化：只返回组级别信息）
+type DataGroupResp struct {
+	Group        string   `json:"group"`        // 分组标识: product_data - 商品数据, activity_data - 活动数据, other_data - 其他数据
+	GroupName    string   `json:"group_name"`   // 分组名称（中文）
+	Synced       bool     `json:"synced"`       // 该分组是否已同步过（组级别）
+	Dependencies []string `json:"dependencies"` // 依赖的分组列表（group标识）
+}
+
+// GranularSyncResp 颗粒化同步响应
+type GranularSyncResp struct {
+	TaskUuid uint64 `json:"task_uuid"` // 同步任务uuid
+	Message  string `json:"message"`   // 提示信息
+}

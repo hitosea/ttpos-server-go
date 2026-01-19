@@ -15,6 +15,13 @@ description: Go Main 核心约束
 | 接口        | I 开头          | `IOrderRepo`, `IUserSrv` |
 | 实现        | Impl 结尾       | `OrderRepoImpl`          |
 
+### 类型使用规范
+
+- ✅ **使用 `any` 替代 `interface{}`**（Go 1.18+）
+- ❌ **禁止使用 `interface{}`**
+
+完整代码示例请参考：`docs/agent/workflows/development/type-usage-examples.md`
+
 ### API 响应格式
 
 **data 必须是对象，不能是 null 或数组**
@@ -46,6 +53,20 @@ description: Go Main 核心约束
 
 完整代码示例请参考：`docs/agent/workflows/development/error-handling-examples.md`
 
+### 日志记录规范
+
+- ✅ **所有日志记录必须包含 `company_uuid` 字段**
+- ✅ **通过上下文（context）获取 `company_uuid` 并记录到日志中**
+- ❌ **禁止记录不包含 `company_uuid` 的日志**
+
+**关键点：**
+
+- **多租户隔离**：通过 `company_uuid` 可以快速定位和过滤特定商户的日志
+- **问题排查**：在排查问题时，可以根据 `company_uuid` 快速定位相关日志
+- **日志分析**：便于按商户维度进行日志分析和统计
+
+完整代码示例请参考：`docs/agent/workflows/development/logging-examples.md`
+
 ### 协程使用规范
 
 - ✅ **所有 go func 协程都必须使用 `utils.Go` 方法**
@@ -76,7 +97,7 @@ description: Go Main 核心约束
 
 ### Service 层
 
-- ✅ **接口定义（IxxxSrv）和实现（xxxSrv）必须放在同一个文件中**
+- ✅ **接口定义（`I{Name}Srv`）和实现（`{Name}Srv`）必须放在同一个文件中**
 - ✅ **接口第一个参数必须使用 `ctx context.Context`**
 - ✅ **通过 `db := ctx.GetDB()` 获取数据库连接**
 - ✅ **只能依赖其他 Service 接口**
@@ -170,9 +191,10 @@ description: Go Main 核心约束
 
 ### 编码时
 
+- [ ] 使用 any 而不是 interface{}
 - [ ] URL 使用 snake_case
 - [ ] 结构体 ID 字段大写
-- [ ] **Service 接口定义（IxxxSrv）和实现（xxxSrv）必须放在同一个文件中**
+- [ ] **Service 接口定义（`I{Name}Srv`）和实现（`{Name}Srv`）必须放在同一个文件中**
 - [ ] Service 接口第一个参数必须是 ctx context.Context
 - [ ] Service 方法内使用 ctx.GetDB() 获取数据库连接
 - [ ] Service 只依赖自己领域的 Repository
@@ -220,6 +242,7 @@ description: Go Main 核心约束
 
 | 禁止                                | 原因                        |
 | ----------------------------------- | --------------------------- |
+| ❌ 使用 interface{}                 | 必须使用 any（Go 1.18+）    |
 | ❌ URL 用 kebab-case                | 项目统一用 snake_case       |
 | ❌ data 返回 null                   | 前端无法统一处理            |
 | ❌ data 返回数组                    | 必须是对象                  |

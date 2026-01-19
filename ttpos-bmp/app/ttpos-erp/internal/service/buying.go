@@ -17,6 +17,13 @@ type (
 		// CreatePurchaseFromMq 根据材料请求创建采购订单
 		CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurchaseFromMqReq) (res *erp.PurchaseOrder, err error)
 		// CreateInnerSaleOrderFromPurchaseOrder 创建内部销售订单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 创建内部销售订单请求参数
+		//
+		// 返回：
+		//   - res: 创建后的销售订单信息
+		//   - err: 错误信息
 		CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *dto.CreateInnerSaleOrderFromPurchaseOrderReq) (res *erp.SaleOrder, err error)
 		CreateDeliveryNoteFromInnerSaleOrder(ctx context.Context, req *dto.CreateDeliveryNoteFromInnerSaleOrderReq) (res *erp.DeliveryNote, err error)
 		// GetPurchaseOrder 获取采购订单
@@ -43,6 +50,17 @@ type (
 		//   - res: 采购订单数量响应
 		//   - err: 错误信息
 		GetPurchaseOrderCount(ctx context.Context, req *buying.GetPurchaseOrderCountReq) (res *buying.GetPurchaseOrderCountResp, err error)
+		// MustSelectFirstSupplier 从商品中选择第一个供应商，获取不到时返回默认供应商
+		// 解析商品的SupplierItems字段，获取第一个供应商名称
+		// 如果获取不到供应商信息，则返回指定的默认供应商
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - itemDetail: 商品详细信息
+		//   - defaultSupplier: 默认供应商名称，当获取不到供应商时返回此值
+		//
+		// 返回：
+		//   - string: 供应商名称
+		MustSelectFirstSupplier(ctx context.Context, itemDetail *erp.Item, defaultSupplier string) string
 		// CreatePurchaseOrder 创建采购订单
 		// 参数：
 		//   - ctx: 上下文对象

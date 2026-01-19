@@ -29,6 +29,7 @@ const (
 	CodeLoginFailed         = -106 // 登录失败
 	CodeCashierNotLogin     = -107 // 点餐助手绑定的收银机未登录
 	CodeCashierHandedOver   = -108 // 已交班
+	CodeNeedCompanyUuid     = -109 // 需要绑定门店UUID
 
 	CodeCashierOrderMethodNotOpen = -110 //
 	CodeCashierLoginLimit         = -111 // 收银机登录已达上限
@@ -111,6 +112,12 @@ const (
 // 调拨订单业务错误码
 const (
 	CodeTransferOrderItemUnitNumZero = -805 // 调拨单明细单位数量为0，提交后将移除对应物品
+)
+
+// 盘点单业务错误码
+const (
+	CodeWarehouseDisabled = -806 // 仓库状态已关闭，请修改仓库状态
+	CodeItemDisabled      = -807 // 物品状态已关闭，请修改物品状态
 )
 
 type ParseCodeOrderCheckOption struct {

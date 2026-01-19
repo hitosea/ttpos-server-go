@@ -29,7 +29,7 @@
               <el-button
                 @click="deleteClick(scope.row)"
                 type="primary"
-                :disabled="scope.row.is_use == 1 || scope.row.is_usb == 1"
+                :disabled="scope.row.is_use == 1"
                 link
                 size="small"
                 v-auth="'/supplier/printing/printer/delete'"

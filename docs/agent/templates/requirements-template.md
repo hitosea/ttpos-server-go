@@ -6,11 +6,20 @@
 
 | 项目              | 内容                                                                                                         |
 | ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| **来源 Proposal** | [docs/team/proposals/{YYYY-MM-DD}-{feature-name}.md](../../../team/proposals/{YYYY-MM-DD}-{feature-name}.md) |
+| **来源 Proposal** | [docs/team/proposals/{YYYY-MM}/{feature-name}.md](../../../../team/proposals/{YYYY-MM}/{feature-name}.md) |
 | **创建日期**      | {YYYY-MM-DD}                                                                                                 |
 | **负责人**        | {姓名}                                                                                                       |
 | **目标 Sprint**   | Sprint {N}                                                                                                   |
 | **涉及技术栈**    | [ ] Go (main/) [ ] Go (ttpos-bmp/) [ ] PHP (admin/) [ ] Vue (admin/views/)                                   |
+
+## 📋 审核状态
+
+| 项目         | 内容                     |
+| ------------ | ------------------------ |
+| **审核状态** | 待审核 / 已通过 / 需修改 |
+| **审核人**   | {审核人姓名}             |
+| **审核日期** | {YYYY-MM-DD}             |
+| **审核意见** | {审核意见，如有}         |
 
 ---
 

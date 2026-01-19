@@ -4,7 +4,6 @@ package image
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -212,48 +211,4 @@ func (h *ImageHelp) DownloadImage(imageURL string) (image.Image, error) {
 	}
 
 	return img, nil
-}
-
-// DownloadFile 从URL下载文件到本地
-func (h *ImageHelp) DownloadFile(url string, destPath string) error {
-	// 创建HTTP客户端，设置超时
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{
-		Timeout:   10 * time.Second,
-		Transport: tr,
-	}
-
-	// 发送GET请求
-	resp, err := client.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// 检查响应状态码
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("下载文件失败，HTTP状态码：" + resp.Status)
-	}
-
-	// 确保目录存在
-	dir := filepath.Dir(destPath)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err = os.MkdirAll(dir, 0777)
-		if err != nil {
-			return err
-		}
-	}
-
-	// 创建文件
-	out, err := os.Create(destPath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	// 写入文件
-	_, err = io.Copy(out, resp.Body)
-	return err
 }

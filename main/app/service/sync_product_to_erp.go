@@ -152,48 +152,14 @@ func (s *SyncProductToErpSrv) Sync(ctx context.Context) error {
 			}
 		}
 		for _, bom := range productPackage.ProductBoms {
-			var bomErpCode string
 			if productPackage.IsPackage() {
-				// 套餐
-				productPackage, err := productPackageRepo.GetProductPackage(
-					commonRepo.WhereByUuid(productPackage.Uuid),
-					commonRepo.Preload(
-						repository.WithPreload{
-							Query: "ProductUnit",
-						},
-						repository.WithPreload{
-							Query: "ProductCategory.MultiLanguageName",
-						},
-					),
-				)
-				if err != nil {
-					return errors.WithMessage(err, "获取商品包失败")
-				}
-
-				multiLanguageName := model.NewMultiLanguageName(productPackage.Name)
-				enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-				if err != nil {
-					return errors.WithMessage(err, "翻译失败")
-				}
-				productUnit, errGetUnit := repository.NewProductUnitRepo(tx).GetProductUnit(commonRepo.WhereByUuid(productPackage.UnitUuid))
-				if errGetUnit != nil {
-					return errors.WithMessage(errGetUnit, "获取商品单位失败")
-				}
-				stockUom := productUnit.ErpnextUom
-
-				params := req.PackageAddErpReq{
-					ItemName:           enName,
-					StockUom:           stockUom,
-					InternalCode:       bom.InternalCode,
-					Classification:     getEnClassification,
-					ClassificationCode: productPackage.ProductCategory.Code,
-				}
-				itemInfo, errErp := erpSrv.AddPackage(ctx, params)
-				if errErp != nil {
-					return errors.WithMessage(errErp)
-				}
-				bomErpCode = itemInfo.ItemCode
-			} else {
+				// 套餐：跳过ERP同步，不再调用ERP接口
+				// 不更新 erp_code，保持原有值或为空
+				continue
+			}
+			// 普通商品：继续调用ERP接口（不受影响）
+			var bomErpCode string
+			if ctx.GetCompany().IsOpenErp() {
 				// 商品-规格
 				itemInfo, errErp := erpSrv.AddProductBom(ctx, req.ProductBomAddErpReq{
 					VariantsOf:   productErpCode,

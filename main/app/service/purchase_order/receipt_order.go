@@ -1,6 +1,7 @@
 package purchase_order
 
 import (
+	"fmt"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-server-go/app/constant"
@@ -89,6 +90,42 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			headquarterInfo = hqInfo
 		}
 
+		// 获取 saas 数据库连接
+		saasDB := s.dbm.GetDB(constant.DefaultDB)
+		if saasDB == nil {
+			return errors.New("saas 数据库连接失败")
+		}
+
+		// 获取公司 UUID（使用总部 UUID 或当前公司 UUID）
+		companyUuid := ctx.GetCompanySetting().HeadquarterUuid
+		if companyUuid == 0 {
+			companyUuid = ctx.GetCompanyUuid()
+		}
+
+		// 确定前缀和编号类型
+		var prefix, numberType string
+		if purchaseOrder.PurchaseType == 2 {
+			// 品采收货（内部）
+			prefix = "TPHY"
+			numberType = constant.NumberTypeBrandReceipt
+		} else {
+			// 采购收货（外部）
+			prefix = "PRC"
+			numberType = constant.NumberTypePurchaseReceipt
+		}
+
+		// 生成收货单编号
+		receiptNo, err := s.helper.generateReceiptNo(
+			saasDB,
+			companyUuid,
+			prefix,
+			numberType,
+			ctx.GetCompanySetting().Timezone,
+		)
+		if err != nil {
+			return errors.WithMessage(err, "生成收货单编号失败")
+		}
+
 		// 创建收货单
 		receiptOrderUuid, err := utils.GetID()
 		if err != nil {
@@ -99,7 +136,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			BaseModel: model.BaseModel{
 				Uuid: receiptOrderUuid,
 			},
-			OrderNo:                s.helper.generateReceiptNo(tx, ctx.GetCompanySetting().Timezone),
+			OrderNo:                receiptNo,
 			Status:                 utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending),
 			PurchaseOrderUuid:      req.PurchaseOrderUuid,
 			PurchaseOrderNo:        purchaseOrder.OrderNo,
@@ -132,7 +169,10 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			)
 			if err != nil {
 				logger.Logger.Error("CreatePurchaseReceiptOrder-GetByUuid", zap.Any("purchaseOrderItemUuid", itemReq.PurchaseOrderItemUuid), zap.Any("err", err))
-				return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
+				if err == gorm.ErrRecordNotFound {
+					return errors.New(fmt.Sprintf("采购申请明细不存在，物品UUID: %d", itemReq.PurchaseOrderItemUuid))
+				}
+				return errors.New(fmt.Sprintf("查询采购申请明细失败: %s", err.Error()))
 			}
 
 			// 计算收货数量
@@ -174,7 +214,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 								PurchaseReceiptOrderUuid: receiptOrder.Uuid,
 								Num:                      unit.Num,
 								UnitUuid:                 unit.Uuid,
-								UnitName:                 orderItem.UnitName,
+								UnitName:                 orderItemUnit.UnitName,
 								UnitConversionRate:       orderItemUnit.UnitConversionRate,
 								BaseUnitUuid:             orderItemUnit.BaseUnitUuid,
 								BaseUnitName:             orderItemUnit.BaseUnitName,
@@ -378,13 +418,19 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 			// 查询收货单明细
 			receiptOrderItem, err := receiptOrderItemRepo.GetByUuid(itemReq.Uuid)
 			if err != nil {
-				return errors.WithMessage(errors.New("查询收货单明细失败"), err.Error())
+				if err == gorm.ErrRecordNotFound {
+					return errors.New(fmt.Sprintf("收货单明细不存在，明细UUID: %d", itemReq.Uuid))
+				}
+				return errors.New(fmt.Sprintf("查询收货单明细失败: %s", err.Error()))
 			}
 
 			// 查询采购申请明细
 			purchaseOrderItem, err := purchaseOrderItemRepo.GetByUuid(receiptOrderItem.PurchaseOrderItemUuid, purchaseOrderItemRepo.WithPreloadUnits())
 			if err != nil {
-				return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
+				if err == gorm.ErrRecordNotFound {
+					return errors.New(fmt.Sprintf("采购申请明细不存在，明细UUID: %d", receiptOrderItem.PurchaseOrderItemUuid))
+				}
+				return errors.New(fmt.Sprintf("查询采购申请明细失败: %s", err.Error()))
 			}
 
 			// 验证收货数量
@@ -602,7 +648,7 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderList(
 	// 查询数据
 	receipts, total, err := receiptOrderRepo.GetListWithPagination(reqs.PageNo, reqs.PageSize, opts...)
 	if err != nil {
-		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询收货单列表失败"), err.Error())
+		return resp.PurchaseReceiptOrderListResp{}, errors.New(fmt.Sprintf("查询收货单列表失败: %s", err.Error()))
 	}
 
 	// 转换响应数据
@@ -637,9 +683,9 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 	receipt, err := receiptOrderRepo.GetByUuid(req.Uuid, receiptOrderRepo.WithItems())
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return resp.PurchaseReceiptOrderDetailResp{}, errors.New("收货单不存在")
+			return resp.PurchaseReceiptOrderDetailResp{}, errors.New(fmt.Sprintf("收货单不存在，收货单UUID: %d", req.Uuid))
 		}
-		return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(errors.New("查询收货单详情失败"), err.Error())
+		return resp.PurchaseReceiptOrderDetailResp{}, errors.New(fmt.Sprintf("查询收货单详情失败: %s", err.Error()))
 	}
 
 	// 转换响应数据
@@ -716,19 +762,8 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 						PurchaseNum: purchaseNum,
 						UnitUuid:    unit.UnitUuid,
 						LocaleName: func() dto.LocaleResponse {
-							if item.Material == nil {
-								return *language.JsonToLocaleResponse(unit.UnitName)
-							}
-							if len(item.Material.NotBaseUnitList) == 0 {
-								return *language.JsonToLocaleResponse(unit.UnitName)
-							}
-							for _, materialUnit := range item.Material.NotBaseUnitList {
-								if materialUnit.Uuid == unit.UnitUuid {
-									if materialUnit.Unit == nil {
-										return *language.JsonToLocaleResponse(materialUnit.Name)
-									}
-									return materialUnit.Unit.MultiLanguageName.GetNames()
-								}
+							if unit.UnitName == "" && unit.MaterialUnit != nil {
+								return *language.JsonToLocaleResponse(unit.MaterialUnit.Name)
 							}
 							return *language.JsonToLocaleResponse(unit.UnitName)
 						}(),

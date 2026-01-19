@@ -25,23 +25,40 @@ const (
 	PaymentMethodCodeLianLianWechatPay   = 90111 // LianLianWechatPay
 	PaymentMethodCodeLianLianAliPay      = 90222 // LianLianAliPay
 	PaymentMethodCodeLianLianQRPromptPay = 90333 // LianLianQRPromptPay
+	PaymentMethodCodeGrab                = 91100 // Grab
+	PaymentMethodCodeLineMan             = 91200 // LINE MAN
+	PaymentMethodCodeFreeMealForErp      = 92000 // Free Meal for ERP（用于ERP同步的免单支付方式）
+	PaymentMethodCodeKbankAlipay         = 93000 // Alipay（Kbank）
+	PaymentMethodCodeKbankWechat         = 93100 // WeChatPay（Kbank）
+	PaymentMethodCodeKbankCreditQR       = 93200 // Credit QR（Kbank）
+	PaymentMethodCodeKbankThaiQR         = 93300 // Thai QR（Kbank）
+	PaymentMethodCodeKbankCreditCard     = 93400 // Credit Card（Kbank）
+)
+
+// 支付方式名称常量
+const (
+	PaymentMethodNameGrab    = "Grab"     // Grab 支付方式名称
+	PaymentMethodNameLineMan = "LINE MAN" // LINE MAN 支付方式名称
 )
 
 const (
-	PaymentMethodStatusEnable  = 1 // 启用
 	PaymentMethodStatusDisable = 0 // 禁用
+	PaymentMethodStatusEnable  = 1 // 启用
+	PaymentMethodStatusDraft   = 2 // 草稿
 )
 
 const (
 	PaymentMethodSourceSystem      = 0 // 系统默认
 	PaymentMethodSourceDefault     = 1 // 自行添加
 	PaymentMethodSourceLianLianPay = 2 // LianLianPay
+	PaymentMethodSourceKbank       = 3 // Kbank
 )
 
 var PaymentMethodSourceTextMap = map[int]string{
 	PaymentMethodSourceSystem:      "系统默认",
 	PaymentMethodSourceDefault:     "自行添加",
 	PaymentMethodSourceLianLianPay: "LianLianPay",
+	PaymentMethodSourceKbank:       "Kbank",
 }
 
 const (

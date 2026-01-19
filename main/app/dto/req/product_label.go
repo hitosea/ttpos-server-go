@@ -16,6 +16,7 @@ type ProductLabelAddReq struct {
 	IsShowH5            uint     `json:"is_show_h5"`            // 是否在H5显示, 0-否 1-是
 	IsShowDelivery      uint     `json:"is_show_delivery"`      // 是否在外送显示, 0-否 1-是
 	IsShowMenu          uint     `json:"is_show_menu"`          // 是否在电子菜单显示, 0-否 1-是
+	IsShowKiosk         uint     `json:"is_show_kiosk"`         // 是否在自助点餐机显示, 0-否 1-是
 	ProductPackageUuids []uint64 `json:"product_package_uuids"` // 关联商品包UUID列表
 }
 
@@ -37,6 +38,7 @@ type ProductLabelEditReq struct {
 	IsShowH5            uint     `json:"is_show_h5"`            // 是否在H5显示, 0-否 1-是
 	IsShowDelivery      uint     `json:"is_show_delivery"`      // 是否在外送显示, 0-否 1-是
 	IsShowMenu          uint     `json:"is_show_menu"`          // 是否在电子菜单显示, 0-否 1-是
+	IsShowKiosk         uint     `json:"is_show_kiosk"`         // 是否在自助点餐机显示, 0-否 1-是
 	ProductPackageUuids []uint64 `json:"product_package_uuids"` // 关联商品包UUID列表
 }
 

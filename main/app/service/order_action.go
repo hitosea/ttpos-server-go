@@ -1,7 +1,9 @@
 package service
 
 import (
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -10,8 +12,12 @@ import (
 	"ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
@@ -76,6 +82,12 @@ func (s *orderSrv) convertToEventOrderProductPre(saleOrderProduct *model.SaleOrd
 		IsPackage:             saleOrderProduct.IsPackageProduct(),
 		IsSubProduct:          saleOrderProduct.IsPackageSubProduct(),
 		Remark:                saleOrderProduct.Remark,
+		RemarkLocale: func() dto.LocaleResponse {
+			// 构建备注信息（包含预设备注和自定义备注）
+			orderItemRemarkList := saleOrderProduct.GetOrderItemRemark()
+			remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
+			return remarkInfo.Remark
+		}(),
 	}
 
 	return orderProduct
@@ -102,7 +114,14 @@ func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderP
 		IsPackage:             saleOrderProduct.IsPackageProduct(),
 		IsSubProduct:          saleOrderProduct.IsPackageSubProduct(),
 		Remark:                saleOrderProduct.Remark,
-		IsBatch:               saleOrderProduct.IsBatchBool(),
+		RemarkLocale: func() dto.LocaleResponse {
+			// 构建备注信息（包含预设备注和自定义备注）
+			orderItemRemarkList := saleOrderProduct.GetOrderItemRemark()
+			remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
+			return remarkInfo.Remark
+		}(),
+		IsBatch:      saleOrderProduct.IsBatchBool(),
+		BatchTagUuid: saleOrderProduct.BatchTagUuid,
 	}
 
 	// 如果是套餐主商品，添加子商品
@@ -141,6 +160,13 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 	saleOrderUuid := unCookingSaleOrderProducts[0].SaleOrderUuid
 
 	noBatchProductUuids := make([]uint64, 0)
+	noBatchProduct := make([]*model.SaleOrderProduct, 0) // 要合并跟unCookingSaleOrderProducts一起打印的预送厨商品
+
+	// 从销售账单设置中获取分批送厨模式（快照值）
+	batchCookingMode := constant.BatchCookingModePost // 默认值
+	if saleBill.SaleBillSetting != nil && saleBill.SaleBillSetting.BatchCookingMode != "" {
+		batchCookingMode = saleBill.SaleBillSetting.BatchCookingMode
+	}
 
 	// 送厨相关
 	{
@@ -204,19 +230,16 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		// 如果不是收银机点击送厨、助手端点击送厨时，需要将未送厨和预送厨的商品都修改is_batch为0
 		notBatch := !option.IsBatch
 		if ignoreMust { // 只有点击结账时弹出是否送厨并点击送厨时，会忽略必点，这个情况下，需要都修改is_batch为0
-			notBatch = true
+			if ctx.GetSource() != constant.SourceAssistant { // 助手端开启下单密码时ignoreMust为true. 修复 任务:38009 v2.11 -生产反馈 - 点餐助手 开启分批送厨 前置+下单密码- 后送厨菜品未标记：D
+				notBatch = true
+			}
 		}
 		if notBatch {
-			// 遍历所有未送厨的商品，将is_batch为0
-			for _, product := range unCookingSaleOrderProducts {
-				product.IsBatch = 0
-				noBatchProductUuids = append(noBatchProductUuids, product.Uuid)
-			}
 			// 遍历所有预送厨的商品，将is_batch为0
 			preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
 			for _, product := range preCookingSaleOrderProducts {
-				product.IsBatch = 0
 				noBatchProductUuids = append(noBatchProductUuids, product.Uuid)
+				noBatchProduct = append(noBatchProduct, product)
 			}
 		}
 
@@ -256,7 +279,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			}
 		}
 		// 构建出库单
-		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid)
+		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid, 0)
 	}
 
 	ctx.Log().Debug("准备开始更新")
@@ -316,13 +339,9 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}
 		// 将未送厨和预送厨的商品编辑未分批商品
 		if len(noBatchProductUuids) > 0 {
-			if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", noBatchProductUuids).Update("is_batch", 0).Error; err != nil {
+			if err := s.updateProductBatchFlagToZero(tx, noBatchProductUuids, batchCookingMode); err != nil {
 				return errors.WithMessage(err)
 			}
-			if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", noBatchProductUuids).Update("is_batch", 0).Error; err != nil {
-				return errors.WithMessage(err)
-			}
-
 		}
 		return nil
 	}); err != nil {
@@ -368,6 +387,15 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					H5OrderUuid:   h5OrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
 				},
+				BatchMode: batchCookingMode,
+				BatchPrintMode: func() string {
+					settingSrv := setting.NewSrvImpl(s.dbm, cache.Global)
+					businessSetting, err := settingSrv.GetBusinessSetting(ctx)
+					if err != nil {
+						return constant.BatchPrintModeDefault
+					}
+					return businessSetting.BatchPrintMode
+				}(),
 				Products: func() event.Products {
 					products := make(event.Products, 0)
 					for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
@@ -375,12 +403,30 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 						if unCookingSaleOrderProduct.IsPackageSubProduct() {
 							continue
 						}
+						// 如果是结账送厨,需要将所有未送厨商品都打印出来,故要临时将is_batch为0
+						if ignoreMust { // 只有结账送厨才会忽略必点
+							unCookingSaleOrderProduct.IsBatch = 0
+						}
 						products = append(products, s.convertToEventOrderProduct(
 							unCookingSaleOrderProduct,
 							saleBill,
 							saleBill.GetSaleOrder(saleOrderUuid),
 						))
 					}
+					// 如果有预送厨的商品跟未送厨的商品一起结账送厨,则需要将预送厨的商品也打印出来
+					for _, noBatchProduct := range noBatchProduct {
+						noBatchProduct.IsBatch = 0 // 临时在内存中将该商品的is_batch设置为0,让打印出该商品的送厨单
+						products = append(products, s.convertToEventOrderProduct(
+							noBatchProduct,
+							saleBill,
+							saleBill.GetSaleOrder(saleOrderUuid),
+						))
+					}
+					// 基于uuid进行去重,避免重复打印
+					products = utils.RemoveDuplicatesByKey(products, func(product event.OrderProduct) uint64 {
+						return product.OrderProductId
+					})
+
 					return products
 				}(),
 			})
@@ -393,6 +439,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			})
 		})
 	}
+
 	return nil, nil
 }
 
@@ -439,7 +486,7 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		if selectedMustPlanProducts[product.MustPlanUuid] == nil {
 			selectedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]float64)
 		}
-		flavorProductBom, err := repository.NewProductBomRepo(ctx.GetDB()).GetFlavorProductBomByUuid(product.FlavorProductBomUuid)
+		flavorProductBom, err := repository.NewProductBomRepo(ctx.GetDB()).GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), product.FlavorProductBomUuid)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -500,7 +547,20 @@ func (s *orderSrv) getInfo(ctx context.Context, product req.ProductParams, db *g
 	uuids := make([]uint64, 0)
 	uuids = append(uuids, product.FlavorProductBomUuid)
 	uuids = append(uuids, product.SauceProductBomUuidList...)
-	productBoms, err := repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+
+	var productBoms []*model.ProductBom
+	var err error
+
+	// 检查是否启用对象存储缓存
+	companyUuid := ctx.GetCompanyUuid()
+	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 使用对象存储模块缓存查询
+		productBoms, err = s.getProductBomsWithCache(ctx, uuids, db)
+	} else {
+		// 直接查询数据库
+		productBoms, err = repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+	}
+
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -524,7 +584,7 @@ func (s *orderSrv) getInfo(ctx context.Context, product req.ProductParams, db *g
 		// 如果是自助餐商品，则价格改为0元
 		if product.IsBuffet != nil && *product.IsBuffet {
 			productInfo.Price = 0
-			for index, _ := range productInfo.Flavors.List {
+			for index := range productInfo.Flavors.List {
 				productInfo.Flavors.List[index].Price = 0
 			}
 		}
@@ -539,6 +599,29 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 		s.lock.LockUuid(request.SaleBillUuid)
 		defer s.lock.UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
+	}
+
+	// 兼容2.10.0之后的版本. 通过product_package_uuid查询套餐product_bom_uuid
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		for i := range request.Products {
+			product := &request.Products[i]
+			if product.ProductType == constant.ProductTypePackage {
+				// 通过product_package_uuid查询套餐product_bom_uuid
+				productBomUuid, err := repository.NewProductBomRepo(ctx.GetDB()).GetProductBomUuidByProductPackageUuid(product.ProductPackageUuid)
+				if err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				product.FlavorProductBomUuid = productBomUuid
+				product.ProductPackageUuid = productBomUuid
+			}
+		}
+	} else {
+		for i := range request.Products {
+			product := &request.Products[i]
+			if product.ProductType == constant.ProductTypePackage {
+				product.FlavorProductBomUuid = product.ProductPackageUuid // 前端没有传这个参数，所以需要手动设置
+			}
+		}
 	}
 
 	// 判断商品价格是否与后台设置的最新价格不一致
@@ -663,19 +746,19 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 	}
 
 	// 暂时不使用这两个字段
-	for index, _ := range request.Products {
+	for index := range request.Products {
 		request.Products[index].Price = nil
 		request.Products[index].IsBuffet = nil
 	}
 
-	for index, _ := range request.Products {
+	for index := range request.Products {
 		if request.Products[index].ProductType == constant.ProductTypePackage {
 			request.Products[index].FlavorProductBomUuid = request.Products[index].ProductPackageUuid // 套餐商品规格uuid改为套餐商品uuid
 		}
 	}
 
 	// 记录相关的子商品。
-	for index, _ := range request.Products {
+	for index := range request.Products {
 		productReq := request.Products[index]
 		// 如果该商品是套餐的话,添加子商品的属性
 		if productReq.ProductType == 1 {
@@ -688,6 +771,7 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 					ProductPackageAttributeUuidList: subProductParam.EditProductReq.AttributeUuidList,
 					ProductPackageGroupUuid:         subProductParam.ProductPackageGroupUuid,
 					Operation:                       "add",
+					AddPrice:                        subProductParam.AddPrice,
 				}
 				subProductParams = append(subProductParams, params)
 			}
@@ -789,6 +873,65 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 	return saleBill, nil
 }
 
+// actionAddSimple 加购（无校验版本）。内部方法复用
+func (s *orderSrv) actionAddSimple(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, options ...func(option *ActionAddOption)) (*model.SaleBill, error) {
+	option := &ActionAddOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+
+	// 获取当前销售订单信息
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+	// 录入订单商品数据
+	saleOrderProducts, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
+		IsH5Product: request.IsH5Product,
+		Setting:     *saleBill.SaleBillSetting,
+		SaleBill:    saleBill,
+		SaleOrder:   saleOrder,
+		Products:    request.Products,
+	}, options...)
+	if err != nil {
+		return nil, errors.WithMessage(err, "构建商品失败")
+	}
+
+	// 跳过所有校验：商品数量校验、限购校验、超时加购校验
+	_ = saleOrderProducts
+
+	// saleBill已经加入了新的商品，并且重新计算了价格
+	return saleBill, nil
+}
+
+// ActionAddSimple 加购（无校验版本）
+func (s *orderSrv) ActionAddSimple(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) error {
+	db := ctx.GetDB()
+
+	var err error
+	if request.IsMemberAdd {
+		saleBill, err = s.actionAddSimple(ctx, request, saleBill, WithIsMemberAdd())
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	} else {
+		saleBill, err = s.actionAddSimple(ctx, request, saleBill)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
 // 检查限制购 checkLimitPurchase
 func (s *orderSrv) checkLimitPurchase(ctx context.Context, saleBill *model.SaleBill, saleOrderProducts []*model.SaleOrderProduct, options ...func(option *model.CalcOption)) error {
 	option := &model.CalcOption{}
@@ -857,4 +1000,366 @@ func (s *orderSrv) checkTimeoutAndCannotAddPurchase(ctx context.Context, saleBil
 		}
 	}
 	return nil
+}
+
+// updateProductBatchFlagToZero 将指定商品的 is_batch 标志更新为 0
+// 同时更新 SaleOrderProduct 和 ProductionOrderProduct 表中的 is_batch 字段
+// modeType: pre 前置模式,post 后置模式
+func (s *orderSrv) updateProductBatchFlagToZero(tx *gorm.DB, productUuids []uint64, modeType string) error {
+	if len(productUuids) == 0 {
+		return nil
+	}
+	now := time.Now().Unix()
+	// 后置模式下，取消分批类型
+	if modeType == constant.BatchCookingModePost {
+		if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", productUuids).Updates(map[string]interface{}{"is_batch": 0, "batch_time": now}).Error; err != nil {
+			return errors.WithMessage(err, "更新销售订单商品 is_batch 失败")
+		}
+		if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", productUuids).Updates(map[string]interface{}{
+			"is_batch":    0,
+			"batch_time":  now,
+			"create_time": now,
+		}).Error; err != nil {
+			return errors.WithMessage(err, "更新生产订单商品 is_batch 失败")
+		}
+	}
+	// 前置模式下，只更新 batch_time 字段. 不取消分批类型
+	if modeType == constant.BatchCookingModePre {
+		if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", productUuids).Updates(map[string]interface{}{"batch_time": now}).Error; err != nil {
+			return errors.WithMessage(err, "更新销售订单商品 is_batch 失败")
+		}
+		if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", productUuids).Updates(map[string]interface{}{"batch_time": now}).Error; err != nil {
+			return errors.WithMessage(err, "更新生产订单商品 is_batch 失败")
+		}
+	}
+	return nil
+}
+
+// checkMaterialStock 检查材料库存是否充足
+func (s *orderSrv) checkMaterialStock(ctx context.Context, db *gorm.DB, decreaseStockList []*model.Product) error {
+	// 收集所有需要检查的材料信息（按材料UUID和仓库UUID分组）
+	type materialKey struct {
+		MaterialUuid  uint64
+		WarehouseUuid uint64
+	}
+	materialMap := make(map[materialKey]*model.ProductBomMaterials)
+	for _, product := range decreaseStockList {
+		for _, material := range product.ProductBomMaterials {
+			key := materialKey{
+				MaterialUuid:  material.MaterialUuid,
+				WarehouseUuid: material.WarehouseUuid,
+			}
+			if existing, exists := materialMap[key]; exists {
+				// 如果同一个材料在同一个仓库多次出现，累加所需数量
+				existing.Num += material.Num
+			} else {
+				// 创建副本避免修改原始数据
+				materialCopy := *material
+				materialMap[key] = &materialCopy
+			}
+		}
+	}
+
+	if len(materialMap) == 0 {
+		return nil
+	}
+
+	// 批量查询材料信息
+	materialUuids := make([]uint64, 0, len(materialMap))
+	materialUuidSet := make(map[uint64]bool)
+	for key := range materialMap {
+		if !materialUuidSet[key.MaterialUuid] {
+			materialUuids = append(materialUuids, key.MaterialUuid)
+			materialUuidSet[key.MaterialUuid] = true
+		}
+	}
+
+	materialRepo := repository.NewMaterialRepo(db)
+	materials, err := materialRepo.GetMaterialByUuids(materialUuids, materialRepo.WithMultiLanguageName())
+	if err != nil {
+		return errors.WithMessage(err, "查询材料信息失败")
+	}
+
+	// 构建材料UUID到材料信息的映射
+	materialInfoMap := make(map[uint64]*model.Material)
+	for i := range materials {
+		materialInfoMap[materials[i].Uuid] = materials[i]
+	}
+
+	// 检查每个材料的库存
+	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+	insufficientMaterials := make([]string, 0)
+
+	for key, bomMaterial := range materialMap {
+		material, exists := materialInfoMap[key.MaterialUuid]
+		if !exists {
+			ctx.Log().Warn("材料不存在", zap.Uint64("materialUuid", key.MaterialUuid))
+			continue
+		}
+
+		// 如果材料允许负库存，跳过检查
+		if material.AllowNegativeStock == constant.Yes {
+			continue
+		}
+
+		// 查询材料在指定仓库的库存
+		warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(key.WarehouseUuid, key.MaterialUuid)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				// 如果仓库中没有该材料的库存记录，说明库存为0
+				materialName := material.MultiLanguageName.GetNameByLangWithFallback(ctx.GetLanguage())
+				if materialName == "" {
+					materialName = material.Code
+				}
+				insufficientMaterials = append(insufficientMaterials, materialName)
+				continue
+			}
+			ctx.Log().Error("查询材料库存失败", zap.Uint64("materialUuid", key.MaterialUuid), zap.Uint64("warehouseUuid", key.WarehouseUuid), zap.Error(err))
+			continue
+		}
+
+		// 检查库存是否充足
+		if warehouseItem.Stock < bomMaterial.Num {
+			materialName := material.MultiLanguageName.GetNameByLangWithFallback(ctx.GetLanguage())
+			if materialName == "" {
+				materialName = material.Code
+			}
+			insufficientMaterials = append(insufficientMaterials, materialName)
+		}
+	}
+
+	// 如果有材料库存不足，返回错误
+	if len(insufficientMaterials) > 0 {
+		return errors.NewWithCode(
+			constant.CodeWarehouseStockNotEnough,
+			"材料库存不足: "+strings.Join(insufficientMaterials, ", "),
+		)
+	}
+
+	return nil
+}
+
+// checkMaterialStockByProductOrder 按订单商品顺序检查材料库存是否充足
+// 从上往下检查，模拟扣减过程，返回库存不足的商品列表
+func (s *orderSrv) checkMaterialStockByProductOrder(ctx context.Context, db *gorm.DB, decreaseStockList []*model.Product) ([]*model.SaleOrderProduct, error) {
+	if len(decreaseStockList) == 0 {
+		return nil, nil
+	}
+
+	// 收集所有商品的UUID
+	productUuids := make([]uint64, 0, len(decreaseStockList))
+	productUuidSet := make(map[uint64]bool)
+	for _, product := range decreaseStockList {
+		if product.SaleOrderProductUuid > 0 && !productUuidSet[product.SaleOrderProductUuid] {
+			productUuids = append(productUuids, product.SaleOrderProductUuid)
+			productUuidSet[product.SaleOrderProductUuid] = true
+		}
+	}
+
+	if len(productUuids) == 0 {
+		return nil, nil
+	}
+
+	// 查询商品信息（包括创建时间，用于排序）
+	saleOrderProductRepo := repository.NewSaleOrderProductRepo(db)
+	saleOrderProducts, err := saleOrderProductRepo.GetSaleOrderProductsByUuids(productUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询商品信息失败")
+	}
+
+	// 按创建时间排序（订单从上往下的顺序）
+	sort.Slice(saleOrderProducts, func(i, j int) bool {
+		return saleOrderProducts[i].CreateTime < saleOrderProducts[j].CreateTime
+	})
+
+	// 构建商品UUID到商品的映射（暂时不需要使用，但保留以备后用）
+	_ = make(map[uint64]*model.SaleOrderProduct)
+
+	// 构建商品UUID到材料列表的映射
+	type materialKey struct {
+		MaterialUuid  uint64
+		WarehouseUuid uint64
+	}
+	productMaterialsMap := make(map[uint64][]*model.ProductBomMaterials) // saleOrderProductUuid -> materials
+	for _, product := range decreaseStockList {
+		if product.SaleOrderProductUuid > 0 {
+			productMaterialsMap[product.SaleOrderProductUuid] = append(
+				productMaterialsMap[product.SaleOrderProductUuid],
+				product.ProductBomMaterials...,
+			)
+		}
+	}
+
+	// 收集所有材料UUID
+	materialUuidSet := make(map[uint64]bool)
+	for _, materials := range productMaterialsMap {
+		for _, material := range materials {
+			materialUuidSet[material.MaterialUuid] = true
+		}
+	}
+
+	materialUuids := make([]uint64, 0, len(materialUuidSet))
+	for uuid := range materialUuidSet {
+		materialUuids = append(materialUuids, uuid)
+	}
+
+	// 批量查询材料信息
+	materialRepo := repository.NewMaterialRepo(db)
+	materials, err := materialRepo.GetMaterialByUuids(materialUuids, materialRepo.WithMultiLanguageName())
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询材料信息失败")
+	}
+
+	// 构建材料UUID到材料信息的映射
+	materialInfoMap := make(map[uint64]*model.Material)
+	for i := range materials {
+		materialInfoMap[materials[i].Uuid] = materials[i]
+	}
+
+	// 初始化库存状态（模拟当前库存）
+	type stockKey struct {
+		MaterialUuid  uint64
+		WarehouseUuid uint64
+	}
+	stockMap := make(map[stockKey]float64) // 当前可用库存
+
+	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+
+	// 收集所有需要查询的库存键（去重）
+	stockKeys := make(map[stockKey]bool)
+	for _, materials := range productMaterialsMap {
+		for _, bomMaterial := range materials {
+			material, exists := materialInfoMap[bomMaterial.MaterialUuid]
+			if !exists {
+				continue
+			}
+			// 如果材料允许负库存，跳过检查
+			if material.AllowNegativeStock == constant.Yes {
+				continue
+			}
+			key := stockKey{
+				MaterialUuid:  bomMaterial.MaterialUuid,
+				WarehouseUuid: bomMaterial.WarehouseUuid,
+			}
+			stockKeys[key] = true
+		}
+	}
+
+	// 初始化所有材料的库存状态
+	for key := range stockKeys {
+		// 查询材料在指定仓库的库存
+		warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(key.WarehouseUuid, key.MaterialUuid)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				stockMap[key] = 0
+			} else {
+				ctx.Log().Error("查询材料库存失败", zap.Uint64("materialUuid", key.MaterialUuid), zap.Uint64("warehouseUuid", key.WarehouseUuid), zap.Error(err))
+				stockMap[key] = 0
+			}
+		} else {
+			stockMap[key] = warehouseItem.Stock
+		}
+	}
+
+	// 按商品顺序检查库存（模拟扣减过程）
+	insufficientProducts := make([]*model.SaleOrderProduct, 0)
+	for _, saleOrderProduct := range saleOrderProducts {
+		materials := productMaterialsMap[saleOrderProduct.Uuid]
+		if len(materials) == 0 {
+			continue
+		}
+
+		// 检查该商品的所有材料库存是否充足
+		hasInsufficient := false
+		for _, bomMaterial := range materials {
+			material, exists := materialInfoMap[bomMaterial.MaterialUuid]
+			if !exists {
+				ctx.Log().Warn("材料不存在", zap.Uint64("materialUuid", bomMaterial.MaterialUuid))
+				continue
+			}
+
+			// 如果材料允许负库存，跳过检查
+			if material.AllowNegativeStock == constant.Yes {
+				continue
+			}
+
+			key := stockKey{
+				MaterialUuid:  bomMaterial.MaterialUuid,
+				WarehouseUuid: bomMaterial.WarehouseUuid,
+			}
+
+			// 检查库存是否充足
+			currentStock := stockMap[key]
+			if currentStock < bomMaterial.Num {
+				hasInsufficient = true
+				break
+			}
+		}
+
+		// 如果该商品的材料库存不足，记录商品对象
+		if hasInsufficient {
+			insufficientProducts = append(insufficientProducts, saleOrderProduct)
+		} else {
+			// 如果库存充足，模拟扣减（更新库存状态）
+			for _, bomMaterial := range materials {
+				material, exists := materialInfoMap[bomMaterial.MaterialUuid]
+				if !exists {
+					continue
+				}
+
+				// 如果材料允许负库存，跳过扣减
+				if material.AllowNegativeStock == constant.Yes {
+					continue
+				}
+
+				key := stockKey{
+					MaterialUuid:  bomMaterial.MaterialUuid,
+					WarehouseUuid: bomMaterial.WarehouseUuid,
+				}
+				stockMap[key] -= bomMaterial.Num
+			}
+		}
+	}
+
+	// 返回库存不足的商品列表
+	return insufficientProducts, nil
+}
+
+// getProductBomsWithCache 使用对象存储模块缓存查询 ProductBom 列表
+func (s *orderSrv) getProductBomsWithCache(ctx context.Context, uuids []uint64, db *gorm.DB) ([]*model.ProductBom, error) {
+	if len(uuids) == 0 {
+		return []*model.ProductBom{}, nil
+	}
+
+	// 过滤掉 0 值
+	validUuids := make([]uint64, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			validUuids = append(validUuids, uuid)
+		}
+	}
+
+	if len(validUuids) == 0 {
+		return []*model.ProductBom{}, nil
+	}
+
+	// 使用 ProductBom 控制器批量查询（统一管理缓存）
+	batchResult, err := objectStorageController.GetProductBomController().BatchGetByUuids(ctx, db, validUuids)
+
+	if err != nil {
+		// 缓存查询失败，降级到直接查询数据库
+		return repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+	}
+
+	// 将批量查询结果转换为列表，保持原有顺序
+	result := make([]*model.ProductBom, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			if bom, ok := batchResult[uuid]; ok {
+				result = append(result, bom)
+			}
+		}
+	}
+
+	return result, nil
 }

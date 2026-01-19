@@ -1,14 +1,12 @@
 package utils
 
 import (
-	"bytes"
+	"net"
 	"net/http"
 	"net/url"
-	"os/exec"
 	"strconv"
 	"strings"
 	"ttpos-server-go/config"
-	"ttpos-server-go/version"
 
 	"github.com/shopspring/decimal"
 )
@@ -17,26 +15,13 @@ type VersionInfo struct {
 	Version string `json:"version"`
 }
 
-// GetLocalIP 获取本机IP地址（排除127.0.0.1）
 func GetLocalIP() (string, error) {
-	// 执行命令
-	cmd := exec.Command("sh", "-c", "ifconfig | grep 'inet ' | grep -v 127.0.0.1 | awk '{print $2}'")
-
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	err := cmd.Run()
+	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
 		return "", err
 	}
-
-	// 处理输出结果
-	ip := strings.TrimSpace(out.String())
-	if ip == "" {
-		return "", nil
-	}
-
-	return ip, nil
+	defer conn.Close()
+	return conn.LocalAddr().(*net.UDPAddr).IP.String(), nil
 }
 
 func GetBaseURL(r *http.Request) string {
@@ -167,7 +152,7 @@ func RemoveDomain(fileUrl string) string {
 
 // GetVersion 并返回版本号
 func GetVersion() string {
-	return version.Version
+	return config.Version
 }
 
 func DecimalAdd(f1 float64, fs ...float64) float64 {
@@ -204,4 +189,11 @@ func ParseFloat(numStr string) (float64, error) {
 		return 0, nil
 	}
 	return strconv.ParseFloat(numStr, 64)
+}
+
+// Round 保留指定位数的小数（四舍五入）
+// value: 需要处理的浮点数
+// places: 保留的小数位数
+func Round(value float64, places int32) float64 {
+	return decimal.NewFromFloat(value).Round(places).InexactFloat64()
 }

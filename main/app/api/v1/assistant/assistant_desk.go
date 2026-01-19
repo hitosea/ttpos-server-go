@@ -12,13 +12,18 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -31,6 +36,18 @@ type DeskHandler struct {
 	orderSrv   service.IOrderSrv
 	memberSrv  service.IMemberSrv
 	otherSrv   service.IOtherSrv
+}
+
+// InvalidateSaleBillSettingCache 失效销售单设置缓存（辅助函数）
+// 参数：
+//   - ctx: 上下文, 用于提取 companyUuid
+func (h *DeskHandler) InvalidateSaleBillSettingCache(ctx context.Context) {
+	if !adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		return
+	}
+	if err := controller.GetSaleBillSettingController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Logger.Error("失效销售单设置缓存失败", zap.Error(err))
+	}
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -195,11 +212,12 @@ func (h *DeskHandler) SetNationality(c *gin.Context) {
 		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
 		return
 	}
-	if err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid); err != nil {
+	shopCart, err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid)
+	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{})
+	helper.Success(c, shopCart)
 }
 
 // OrderProductRemark 处理桌台订单商品备注
@@ -227,6 +245,11 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -235,6 +258,7 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderRemark 处理桌台订单整单备注
@@ -262,6 +286,11 @@ func (h *DeskHandler) OrderRemark(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -270,6 +299,7 @@ func (h *DeskHandler) OrderRemark(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderRemarkList 处理获取整单备注列表
@@ -285,6 +315,27 @@ func (h *DeskHandler) OrderRemark(c *gin.Context) {
 func (h *DeskHandler) OrderRemarkList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	info, err := h.otherSrv.GetOrderRemarkList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
+// OrderItemRemarkList 处理获取单品备注列表
+// @Summary 获取单品备注列表
+// @Description 获取单品备注列表
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.OrderItemRemarkResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/item/remark/list [get]
+func (h *DeskHandler) OrderItemRemarkList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.otherSrv.GetOrderItemRemarkList(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -360,6 +411,10 @@ func (h *DeskHandler) OrderCheck(c *gin.Context) {
 		return
 	}
 	if checkRes != nil {
+
+		// 如果开启缓存,要失效sale_bill_setting的缓存
+		h.InvalidateSaleBillSettingCache(ctx)
+
 		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
 		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
@@ -657,6 +712,11 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -665,6 +725,7 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderCartProductPackageAdd 向购物车添加套餐
@@ -699,6 +760,11 @@ func (h *DeskHandler) OrderCartProductPackageAdd(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -707,6 +773,7 @@ func (h *DeskHandler) OrderCartProductPackageAdd(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderCartProductFlavorAndAttribute 查询购物车商品“规格/属性”
@@ -770,6 +837,11 @@ func (h *DeskHandler) OrderCartProductFlavorAndAttributeChange(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -778,6 +850,7 @@ func (h *DeskHandler) OrderCartProductFlavorAndAttributeChange(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderCartProductNum 修改购物车商品数量
@@ -808,6 +881,10 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 		return
 	}
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -816,6 +893,7 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderCartProductCooking 送厨购物车商品
@@ -845,6 +923,8 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 		return
 	}
 	if checkRes != nil {
+		// 如果开启缓存,要失效sale_bill_setting的缓存
+		h.InvalidateSaleBillSettingCache(ctx)
 		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
 		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
@@ -977,6 +1057,11 @@ func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 		return
 	}
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -985,6 +1070,7 @@ func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderDiscountCancel 处理桌台订单取消打折
@@ -1013,6 +1099,11 @@ func (h *DeskHandler) OrderDiscountCancel(c *gin.Context) {
 		return
 	}
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -1022,6 +1113,7 @@ func (h *DeskHandler) OrderDiscountCancel(c *gin.Context) {
 
 	// 返回结果
 	helper.Success(c, res, "操作成功")
+	// }
 }
 
 // OrderProductChangePrice 处理桌台订单商品改价
@@ -1050,6 +1142,11 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 		return
 	}
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -1058,6 +1155,7 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderCartProductReturning 退菜购物车商品
@@ -1087,6 +1185,11 @@ func (h *DeskHandler) OrderCartProductReturning(c *gin.Context) {
 	}
 	ctx.Log().Debug("退菜购物车商品成功", zap.Any("res", shopCart))
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -1095,6 +1198,7 @@ func (h *DeskHandler) OrderCartProductReturning(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderCartProductCancelReturning 取消退菜购物车商品
@@ -1124,6 +1228,11 @@ func (h *DeskHandler) OrderCartProductCancelReturning(c *gin.Context) {
 	}
 	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", shopCart))
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -1132,6 +1241,7 @@ func (h *DeskHandler) OrderCartProductCancelReturning(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderCartProductChangeDesk 转菜购物车商品
@@ -1160,6 +1270,11 @@ func (h *DeskHandler) OrderCartProductChangeDesk(c *gin.Context) {
 		return
 	}
 	ctx.Log().Debug("转菜购物车商品成功", zap.Any("res", shopCart))
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -1168,6 +1283,7 @@ func (h *DeskHandler) OrderCartProductChangeDesk(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderCartProductWrap 打包单商品
@@ -1256,6 +1372,11 @@ func (h *DeskHandler) OrderCartProductGiving(c *gin.Context) {
 		return
 	}
 	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", shopCart))
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -1264,6 +1385,7 @@ func (h *DeskHandler) OrderCartProductGiving(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // OrderCartProductCancelGiving 取消赠菜购物车商品
@@ -1293,6 +1415,11 @@ func (h *DeskHandler) OrderCartProductCancelGiving(c *gin.Context) {
 	}
 	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", shopCart))
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -1301,6 +1428,7 @@ func (h *DeskHandler) OrderCartProductCancelGiving(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // GetMemberDiscount 获取订单会员优惠
@@ -1464,6 +1592,11 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 		return
 	}
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -1472,6 +1605,7 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // GetOrderChangeBuffet 获取订单自助餐信息
@@ -1525,6 +1659,11 @@ func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -1533,6 +1672,7 @@ func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // GetUnsentKitchen 获取未送厨商品
@@ -1552,7 +1692,7 @@ func (h *DeskHandler) GetUnsentKitchen(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	info, err := h.orderSrv.GetUnsentKitchen(ctx, params.SaleBillUuid, nil)
+	info, err := h.orderSrv.GetUnsentKitchen(ctx, params.SaleBillUuid, nil, nil)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1580,7 +1720,7 @@ func (h *DeskHandler) GetSentKitchen(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderSrv.GetSentKitchen(ctx, params.SaleBillUuid, nil)
+	info, err := h.orderSrv.GetSentKitchen(ctx, params.SaleBillUuid, nil, nil)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1827,6 +1967,11 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	helper.Success(c, nil)
+	// 	return
+	// } else {
+	// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
 	if err != nil {
@@ -1835,6 +1980,7 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+	// }
 }
 
 // CompleteDesk 处理清台
@@ -2038,6 +2184,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                                          // 桌台订单商品备注
 		privateApi.POST("/desk/order/remark", wrapper.OrderRemark)                                                         // 整单备注
 		privateApi.GET("/desk/order/remark/list", wrapper.OrderRemarkList)                                                 // 获取整单备注列表
+		privateApi.GET("/desk/order/item/remark/list", wrapper.OrderItemRemarkList)                                        // 获取单品备注列表
 		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                                                     // 查询点餐购物车信息
 		privateApi.GET("/desk/order/check", wrapper.OrderCheck)                                                            // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                               // 获取结账页面信息

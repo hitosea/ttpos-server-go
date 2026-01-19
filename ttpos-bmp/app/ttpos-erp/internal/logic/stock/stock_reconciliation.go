@@ -104,10 +104,26 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 
 		// 设置估值价格
 		if item.ValuationRate > 0 {
+			// 用户提供了估值率，直接使用
 			itemData.ValuationRate = item.ValuationRate
+			g.Log().Infof(ctx, "使用用户提供的估值率: item_code=%s, valuation_rate=%.2f",
+				item.ItemCode, item.ValuationRate)
 		} else {
-			//默认估值率1
-			itemData.ValuationRate = consts.DefaultValuationRate
+			// 估值率为 0，从 Bin 表查询
+			binResp, err := s.GetBin(ctx, &stock.GetBinReq{
+				ItemCode:  item.ItemCode,
+				Warehouse: itemData.Warehouse,
+			})
+
+			if err == nil && binResp != nil && len(binResp.Items) > 0 {
+				// 使用 Bin 表中的估值率（因为指定了 item_code 和 warehouse，应该只有一条记录）
+				itemData.ValuationRate = binResp.Items[0].ValuationRate
+				g.Log().Infof(ctx, "从 Bin 表获取估值率: item_code=%s, warehouse=%s, valuation_rate=%.2f",
+					item.ItemCode, itemData.Warehouse, binResp.Items[0].ValuationRate)
+			} else {
+				// Bin 表中没有估值率，返回异常
+				return nil, gerror.New("缺少对应仓库的入库记录,无估值率!")
+			}
 		}
 
 		itemList = append(itemList, itemData)
@@ -271,6 +287,8 @@ func (s *sStock) SubmitStockReconciliation(ctx context.Context, req *stock.Submi
 			Message: "库存盘点使用默认单据号提交成功",
 		}, nil
 	}
+	//不校验估值率，都可以盘点
+
 	// 提交库存盘点单据
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeStockReconciliation, req.StockReconciliationName, erp.DocstatusSubmitted)
 	if err != nil {

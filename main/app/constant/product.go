@@ -19,7 +19,7 @@ const (
 
 // 库存相关常量
 const (
-	ProductBomInfiniteStock = 999999 // 无限库存（关闭库存检查时使用）
+	ProductBomInfiniteStock = 99999999 // 无限库存（关闭库存检查时使用）
 )
 
 const (
@@ -184,8 +184,9 @@ const (
 )
 
 const (
-	ProductionOrderProductColumnSaleBill = "sale_bill_uuid"
-	ProductionOrderProductColumnCategory = "first_category_uuid"
+	ProductionOrderProductColumnSaleBill     = "sale_bill_uuid"
+	ProductionOrderProductColumnCategory     = "first_category_uuid"
+	ProductionOrderProductColumnTakeoutOrder = "takeout_order_uuid"
 )
 
 // 服务费计算基准
@@ -198,4 +199,11 @@ const (
 const (
 	ProductNumTypeInteger = 0 // 整数
 	ProductNumTypeDecimal = 1 // 小数
+)
+
+// 外卖类型
+const (
+	TakeoutTypeGrab    = 1 // Grab
+	TakeoutTypeLINEMAN = 2 // LINE MAN
+	TakeoutTypeOther   = 3 // 其他（预留扩展）
 )

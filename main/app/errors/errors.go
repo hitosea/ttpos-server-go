@@ -7,10 +7,10 @@ import (
 )
 
 type AppError struct {
-	Code    int         // 响应码
-	Message string      // 错误信息
-	Replace []string    // 替换信息
-	data    interface{} // 附加数据
+	Code    int      // 响应码
+	Message string   // 错误信息
+	Replace []string // 替换信息
+	data    any      // 附加数据
 }
 
 func (e AppError) Error() string {
@@ -21,7 +21,7 @@ func (e AppError) GetCode() int {
 	return e.Code
 }
 
-func (e AppError) GetData() interface{} {
+func (e AppError) GetData() any {
 	return e.data
 }
 
@@ -42,7 +42,7 @@ func NewWithCodeAndReplace(code int, message string, replace []string) AppError 
 	return AppError{Code: code, Message: message, Replace: replace}
 }
 
-func NewWithCodeAndData(code int, data interface{}, message string) AppError {
+func NewWithCodeAndData(code int, data any, message string) AppError {
 	return AppError{Code: code, Message: message, data: data}
 }
 

@@ -55,12 +55,15 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			return errors.WithMessage(err, "订单序号生成失败")
 		}
 		// 创建销售账单
+		// ⚠️ 重要：source 和 client_version 必须一起设置，确保数据一致性
 		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
-			OrderNo:      orderNo,
-			SerialNo:     serialNo,
-			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
-			DiningMethod: constant.SaleBillDiningMethodDineIn,
-			DeviceUuid:   ctx.GetDeviceUuid(),
+			OrderNo:       orderNo,
+			SerialNo:      serialNo,
+			BillType:      constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
+			DiningMethod:  constant.SaleBillDiningMethodDineIn,
+			DeviceUuid:    ctx.GetDeviceUuid(),
+			Source:        constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
+			ClientVersion: constant.NormalizeClientVersion(ctx.GetVersion()),
 		})
 		if err != nil {
 			return errors.WithMessage(err)
@@ -148,6 +151,29 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 		return resp.CreateDeskOrderResp{}, nil
 	}
 
+	// 设置自助餐名称快照（JSON 方案）
+	// Requirement: story-main-buffet-package-name-snapshot-fix
+	// 创建 map 确保按照 req.BuffetUuids 的顺序匹配
+	buffetMap := make(map[uint64]*model.BuffetPackage)
+	for _, buffet := range buffetList {
+		buffetMap[buffet.Uuid] = buffet
+	}
+	// 按照 req.BuffetUuids 的顺序设置快照
+	if len(req.BuffetUuids) >= 1 {
+		if buffet1, ok := buffetMap[req.BuffetUuids[0]]; ok && !buffet1.MultiLanguageName.IsNullName() {
+			if err := saleBill.SetBuffetPackage1NameSnapshot(buffet1.MultiLanguageName); err != nil {
+				ctx.Log().Error("保存自助餐套餐1名称快照失败", zap.Error(err))
+			}
+		}
+	}
+	if len(req.BuffetUuids) >= 2 {
+		if buffet2, ok := buffetMap[req.BuffetUuids[1]]; ok && !buffet2.MultiLanguageName.IsNullName() {
+			if err := saleBill.SetBuffetPackage2NameSnapshot(buffet2.MultiLanguageName); err != nil {
+				ctx.Log().Error("保存自助餐套餐2名称快照失败", zap.Error(err))
+			}
+		}
+	}
+
 	// 构建自助餐顾客列表
 	buffetCustomerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
 	copier.Copy(&buffetCustomerTypes, req.BuffetCustomerTypes)
@@ -175,13 +201,18 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 			}
 		}
 
+		// ⚠️ 重要：source 和 client_version 必须一起设置，确保数据一致性
+		// 设置订单来源和客户端版本
+		saleBill.Source = constant.MapJwtSourceToSaleBillSource(ctx.GetSource())
+		saleBill.ClientVersion = constant.NormalizeClientVersion(ctx.GetVersion())
+
 		// 创建销售账单
 		if _, errCreateSaleBill := repository.NewOrderRepo(tx).CreateSaleBill(*saleBill); errCreateSaleBill != nil {
 			return errCreateSaleBill
 		}
 
 		// 创建销售账单设置
-		if _, errCreateSaleBillSetting := repository.NewOrderRepo(db).CreateSaleBillSetting(*saleBillSetting); errCreateSaleBillSetting != nil {
+		if _, errCreateSaleBillSetting := repository.NewOrderRepo(tx).CreateSaleBillSetting(*saleBillSetting); errCreateSaleBillSetting != nil {
 			return errCreateSaleBillSetting
 		}
 
@@ -219,9 +250,9 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 }
 
 // SetOrderSource 设置销售账单订单来源
-func (s *orderSrv) SetOrderSource(ctx context.Context, saleBillUuid uint64, orderSourceUuid uint64) error {
+func (s *orderSrv) SetOrderSource(ctx context.Context, saleBillUuid uint64, orderSourceUuid uint64) (resp.ShopCart, error) {
 	if saleBillUuid == 0 {
-		return errors.New("销售账单 UUID 不能为空")
+		return resp.ShopCart{}, errors.New("销售账单 UUID 不能为空")
 	}
 	// 禁止并发操作
 	if ctx.NoLock() {
@@ -230,13 +261,21 @@ func (s *orderSrv) SetOrderSource(ctx context.Context, saleBillUuid uint64, orde
 		ctx.AddLock()
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
-	return repository.NewSaleBillRepo(db).UpdateOrderSource(saleBillUuid, orderSourceUuid)
+	err := repository.NewSaleBillRepo(db).UpdateOrderSource(saleBillUuid, orderSourceUuid)
+	if err != nil {
+		return resp.ShopCart{}, errors.WithMessage(err)
+	}
+	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid)
+	if err != nil {
+		return resp.ShopCart{}, errors.WithMessage(err)
+	}
+	return *shopCart, nil
 }
 
 // SetNationality 设置销售账单国籍
-func (s *orderSrv) SetNationality(ctx context.Context, saleBillUuid uint64, nationalityUuid uint64) error {
+func (s *orderSrv) SetNationality(ctx context.Context, saleBillUuid uint64, nationalityUuid uint64) (resp.ShopCart, error) {
 	if saleBillUuid == 0 {
-		return errors.New("销售账单 UUID 不能为空")
+		return resp.ShopCart{}, errors.New("销售账单 UUID 不能为空")
 	}
 	// 禁止并发操作
 	if ctx.NoLock() {
@@ -245,7 +284,15 @@ func (s *orderSrv) SetNationality(ctx context.Context, saleBillUuid uint64, nati
 		ctx.AddLock()
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
-	return repository.NewSaleBillRepo(db).UpdateNationality(saleBillUuid, nationalityUuid)
+	err := repository.NewSaleBillRepo(db).UpdateNationality(saleBillUuid, nationalityUuid)
+	if err != nil {
+		return resp.ShopCart{}, errors.WithMessage(err)
+	}
+	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid)
+	if err != nil {
+		return resp.ShopCart{}, errors.WithMessage(err)
+	}
+	return *shopCart, nil
 }
 
 // IsCellCancelOrder 判断订单是否可以取消
@@ -441,7 +488,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 								Uuid:       subProduct.Uuid,
 								LocaleName: subProduct.MultiLanguageName.GetNames(),
 								Num:        subProduct.Num,
-								UnitNum:    subProduct.UnitNum,
+								UnitNum:    subProduct.GetProductNum(),
 								AddPrice:   subProduct.AddPrice, // 子商品加价金额
 							})
 						}
@@ -458,8 +505,8 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 					product.DiscountPrice = price
 					// 如果是套餐商品，则更新套餐商品列表
 					if saleOrderProduct.IsPackageProduct() {
-						for index, _ := range product.PackageProductList.List {
-							unitNum := decimal.NewFromFloat(saleOrderProduct.UnitNum)                       // 每份套餐的子商品数量
+						for index := range product.PackageProductList.List {
+							unitNum := decimal.NewFromFloat(saleOrderProduct.GetUnitNum())                  // 每份套餐的子商品数量
 							num := decimal.NewFromFloat(product.Num).Mul(unitNum).Round(3).InexactFloat64() // 套餐数量*每份套餐的子商品数量= 子商品的数量
 							product.PackageProductList.List[index].Num = num
 						}
@@ -468,7 +515,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 			}
 		}
 		list := make([]resp.Product, 0)
-		for sign, _ := range listMap {
+		for sign := range listMap {
 			list = append(list, listMap[sign])
 		}
 		productList := resp.InstantHideSaleProductList{List: list}
@@ -658,6 +705,12 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 			"update_time": time.Now().Unix(),
 		})
 	})
+
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -904,7 +957,7 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 		}
 
 		// 更新账单
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+		if errUpdateSaleBill := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 			return errUpdateSaleBill
 		}
 		return nil
@@ -975,9 +1028,9 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 		}
 	}
 
-	// 如果第一个销售订单已经结账且要删除的订单没有商品且销售订单数量等于2时，则删除该拆单并完成该销售账单
-	if firstSaleOrder.IsSettled() && len(moveProductList) == 0 && len(saleBill.SaleOrders) == 2 {
-		// 如果销售订单中没有商品，则直接删除订单
+	// 如果要删除的订单没有商品，且删除后剩余订单全部已结账，则删除该拆单并完成该销售账单
+	if len(moveProductList) == 0 && saleBill.ShouldFinishBillAfterDelete(saleOrderFrom.Uuid) {
+		// 如果销售订单中没有商品，且剩余订单全部已结账，则直接删除订单并完成账单
 		saleOrderFrom.SetDelete()
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderSoftDeleteByUuid(saleOrderFrom.Uuid); err != nil {
@@ -1269,6 +1322,17 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 		if res == nil {
 			return nil, nil
 		}
+		if res.BatchCookingMode == "" {
+			// 获取门店业务设置
+			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			// 没开启分批时，才返回 BatchCookingMode
+			if businessSetting.OpenIsBatch() {
+				res.BatchCookingMode = businessSetting.BatchCookingMode
+			}
+		}
 		return res, nil
 	}
 	// 查询购物车信息
@@ -1305,6 +1369,10 @@ func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProdu
 	productPackageDetailList := make([]resp.ProductPackageDetail, 0)
 
 	for _, saleOrderProduct := range saleOrderProducts {
+		// 过滤掉已经送厨的商品
+		if saleOrderProduct.IsCookingProduct() {
+			continue
+		}
 		productPackageDetail := saleOrderProduct.GetProductPackageDetail()
 		productPackageDetailList = append(productPackageDetailList, productPackageDetail)
 	}

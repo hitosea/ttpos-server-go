@@ -208,7 +208,7 @@ func (h *DeskHandler) GetSentKitchen(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderSrv.GetSentKitchen(ctx, params.SaleBillUuid, nil)
+	info, err := h.orderSrv.GetSentKitchen(ctx, params.SaleBillUuid, nil, nil)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -338,6 +338,27 @@ func (h *DeskHandler) OrderRemarkList(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// OrderItemRemarkList 处理获取单品备注列表
+// @Summary 获取单品备注列表
+// @Description 获取单品备注列表
+// @Tags 平板端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.OrderItemRemarkResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /tablet/desk/order/item/remark/list [get]
+func (h *DeskHandler) OrderItemRemarkList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.otherSrv.GetOrderItemRemarkList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // OrderMustPlanConfirm 确认必点商品
 // @Summary 确认必点商品
 // @Description 确认必点商品
@@ -412,6 +433,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                          // 桌台订单商品备注
 		privateApi.POST("/desk/order/remark", wrapper.OrderRemark)                                         // 整单备注
 		privateApi.GET("/desk/order/remark/list", wrapper.OrderRemarkList)                                 // 获取整单备注列表
+		privateApi.GET("/desk/order/item/remark/list", wrapper.OrderItemRemarkList)                        // 获取单品备注列表
 		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                     // 确认必点商品
 	}
 }

@@ -33,7 +33,7 @@ func (t *CheckMaterialStockTask) Execute() {
 			logger.Logger.Error("检查物品库存发生panic", zap.Any("error", err))
 		}
 	}()
-	logger.Logger.Info("开始执行检查物品库存任务")
+	// logger.Logger.Info("开始执行检查物品库存任务")
 	settingSrv := setting.NewSrv(t.dbm, t.cache)
 	translateSrv := service.NewTranslateSrv(t.dbm, t.cache)
 	messageSrv := message.NewIMessageSrv(t.dbm)

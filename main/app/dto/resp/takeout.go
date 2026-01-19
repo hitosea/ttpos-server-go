@@ -21,3 +21,31 @@ type GetDriverInfoResp struct {
 	Lat    float64 // 骑手纬度
 	Lng    float64 // 骑手经度
 }
+
+// TakeoutMenuExportResp 外卖菜单导出响应
+type TakeoutMenuExportResp struct {
+	Platform string      `json:"platform"` // 平台名称
+	MenuData interface{} `json:"menuData"` // 平台格式的菜单数据
+}
+
+// GrabProductImportFailure 失败明细
+type GrabProductImportFailure struct {
+	GrabProductId string `json:"grabProductId"`
+	Message       string `json:"message"`
+}
+
+// ProductImportError 商品导入错误详情
+type ProductImportError struct {
+	ProductID   string `json:"product_id"`   // 商品ID
+	ProductName string `json:"product_name"` // 商品名称
+	CategoryID  string `json:"category_id"`  // 分类ID
+	Error       string `json:"error"`        // 错误信息
+}
+
+// GrabMenuImportResp Grab 商品导入响应
+type GrabMenuImportResp struct {
+	SuccessCount int                        `json:"successCount"`
+	FailureCount int                        `json:"failureCount"`
+	Failures     []GrabProductImportFailure `json:"failures"`
+	ErrorList    []ProductImportError       `json:"error_list"` // 详细错误列表
+}

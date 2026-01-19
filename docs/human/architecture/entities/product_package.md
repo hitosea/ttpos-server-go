@@ -35,6 +35,9 @@
 | MaxDailyLimit | int | 每日限购 | 0表示不限 |
 | MaxUserLimit | int | 每人限购 | 0表示不限 |
 | SaleCount | int | 销售数量 | 累计销售统计 |
+| SauceRequired | int | 是否必选小料 | 0-否 1-是（废弃字段，v2.12+） |
+| SauceMinSelection | int | 小料最小选择数量 | v2.12新增，替代SauceRequired |
+| SauceMaxSelection | int | 小料最大选择数量 | |
 | Remark | string | 备注 | |
 
 ## 关联关系

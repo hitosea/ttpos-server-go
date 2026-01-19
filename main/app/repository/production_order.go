@@ -3,6 +3,8 @@ package repository
 import (
 	"fmt"
 	"slices"
+	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -13,21 +15,23 @@ import (
 
 type IProductionOrderRepo interface {
 	IProductionOrderQueryRepo
-	CreateProductionOrder(order *model.ProductionOrder) error // 创建生产订单
-	WhereProductStatus(status uint) DBOption                  // 生产商品状态
-	WhereUuid(uuid uint64) DBOption                           // Uuid 条件
-	WhereProductFinishedTime(finishedTime int64) DBOption     // 生产商品完成时间条件
-	WhereProductMadeTime(madeTime int64) DBOption             // 生产商品制作时间条件
-	WhereProductMakeStatus(finishStatus []uint) DBOption      // 制作状态
-	WhereProductUuid(uuid uint64) DBOption                    // 生产商品Uuid条件
-	WhereProductUuidIn(uuids []uint64) DBOption               // 生产商品Uuid条件列表
-	WhereSaleOrderProductUuid(uuid uint64) DBOption           // 生产商品销售订单uuid条件
-	WhereSaleBillUuidIn(uuids []uint64) DBOption              // 销售账单uuid条件
-	WhereSaleBillUuid(uuid uint64) DBOption                   // 销售账单uuid条件
-	WhereSource(source string) DBOption                       // 来源条件
-	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption  // 生产商品分类Uuid条件
-	WhereProductNumGT0() DBOption                             // 送厨商品数量大于0
-	WhereIsNotBatchOrBatchTimeGT0() DBOption                  // 非分批商品、或者分批已送厨商品
+	CreateProductionOrder(order *model.ProductionOrder) error              // 创建生产订单
+	DeleteProductionOrderByTakeoutOrderUuid(takeoutOrderUuid uint64) error // 根据外卖订单UUID删除生产订单
+	WhereProductStatus(status uint) DBOption                               // 生产商品状态
+	WhereUuid(uuid uint64) DBOption                                        // Uuid 条件
+	WhereProductFinishedTime(finishedTime int64) DBOption                  // 生产商品完成时间条件
+	WhereProductMadeTime(madeTime int64) DBOption                          // 生产商品制作时间条件
+	WhereProductMakeStatus(finishStatus []uint) DBOption                   // 制作状态
+	WhereProductUuid(uuid uint64) DBOption                                 // 生产商品Uuid条件
+	WhereProductUuidIn(uuids []uint64) DBOption                            // 生产商品Uuid条件列表
+	WhereSaleOrderProductUuid(uuid uint64) DBOption                        // 生产商品销售订单uuid条件
+	WhereSaleBillUuidIn(uuids []uint64) DBOption                           // 销售账单uuid条件
+	WhereSaleBillUuid(uuid uint64) DBOption                                // 销售账单uuid条件
+	WhereTakeoutOrderUuid(uuid uint64) DBOption                            // 外卖订单uuid条件
+	WhereSource(source string) DBOption                                    // 来源条件
+	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption               // 生产商品分类Uuid条件
+	WhereProductNumGT0() DBOption                                          // 送厨商品数量大于0
+	WhereIsNotBatchOrBatchTimeGT0() DBOption                               // 非分批商品、或者分批已送厨商品
 
 	WhereProductPackageInPrinter(productPrinterUuid uint64) DBOption                      // 商品在打印机关联中（子查询优化）
 	WhereSaleBillInPrinterRegions(productPrinterUuid uint64, versionGte240 bool) DBOption // 销售账单在打印机关联区域中（子查询优化）
@@ -124,8 +128,8 @@ func (r *productionRepo) GetProducts(limit int, orderBy string, statusOpt DBOpti
 	}
 	db.Preload("SaleBill").
 		Preload("BatchTag.MultiLanguageName").
-		Preload("SaleOrderProduct").
 		Preload("SaleOrderProduct.MultiLanguageName").
+		Preload("SaleOrderProduct.OrderItemRemarks").
 		Preload("SaleOrderProduct.SaleOrderProductBoms", NotDeleted).
 		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom").
 		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor").
@@ -134,7 +138,10 @@ func (r *productionRepo) GetProducts(limit int, orderBy string, statusOpt DBOpti
 		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName").
 		Preload("SaleOrderProduct.SaleOrderProductAttributes", NotDeleted).
 		Preload("SaleOrderProduct.SaleOrderProductAttributes.ProductAttribute").
-		Preload("SaleOrderProduct.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName").Order(orderBy)
+		Preload("SaleOrderProduct.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName").
+		Preload("TakeoutOrder").
+		Preload("TakeoutOrderItem").Order(orderBy)
+
 	if limit > 0 {
 		db.Limit(limit)
 	}
@@ -162,7 +169,28 @@ func (r *productionRepo) GetLimitedProducts(column string, pageNo, pageSize int,
 		db = opt(db)
 	}
 	// 获取总数
-	err := db.Select(fmt.Sprintf("count(distinct `%s`) as total", column)).Scan(&total).Error
+	// 如果 column 包含逗号，说明是多个列，需要使用 CONCAT_WS 或者分别处理
+	var countSQL string
+	if strings.Contains(column, ",") {
+		// 多个列的情况，使用 CONCAT_WS 合并后去重
+		columns := strings.Split(column, ",")
+		trimmedColumns := make([]string, 0, len(columns))
+		for _, col := range columns {
+			trimmedCol := strings.TrimSpace(col)
+			if trimmedCol != "" {
+				trimmedColumns = append(trimmedColumns, fmt.Sprintf("`%s`", trimmedCol))
+			}
+		}
+		if len(trimmedColumns) > 0 {
+			countSQL = fmt.Sprintf("count(distinct CONCAT_WS(',', %s)) as total", strings.Join(trimmedColumns, ", "))
+		} else {
+			countSQL = "count(*) as total"
+		}
+	} else {
+		// 单个列的情况
+		countSQL = fmt.Sprintf("count(distinct `%s`) as total", column)
+	}
+	err := db.Select(countSQL).Scan(&total).Error
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
@@ -183,7 +211,7 @@ func (r *productionRepo) GetLimitedHistoryProducts(orderField string, opts ...DB
 		db = opt(db)
 	}
 
-	err := db.Model(&model.ProductionOrderProduct{}).Select(fmt.Sprintf("sale_bill_uuid, MAX(%s) as finished_time", orderField)).Group("sale_bill_uuid").Order(orderField + " desc").Find(&productionOrderProducts).Error
+	err := db.Model(&model.ProductionOrderProduct{}).Select(fmt.Sprintf("sale_bill_uuid, takeout_order_uuid, MAX(%s) as finished_time", orderField)).Group("sale_bill_uuid, takeout_order_uuid").Order(orderField + " desc").Find(&productionOrderProducts).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -309,7 +337,7 @@ func (r *productionRepo) WhereSaleBillInPrinterRegions(productPrinterUuid uint64
 			// 2.4.0 之前版本：未被删除的，未整单取消的
 			billSubQuery = billSubQuery.Scopes(NotDeleted).Where("status <> ?", constant.SaleBillStatusCanceled)
 		}
-		return db.Where("sale_bill_uuid IN (?)", billSubQuery)
+		return db.Where("(sale_bill_uuid IN (?) OR takeout_order_uuid > 0)", billSubQuery)
 	}
 }
 
@@ -317,6 +345,13 @@ func (r *productionRepo) WhereSaleBillInPrinterRegions(productPrinterUuid uint64
 func (r *productionRepo) WhereSaleBillUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("sale_bill_uuid = ?", uuid)
+	}
+}
+
+// WhereTakeoutOrderUuid 外卖订单uuid条件
+func (r *productionRepo) WhereTakeoutOrderUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("takeout_order_uuid = ?", uuid)
 	}
 }
 
@@ -352,6 +387,8 @@ func (r *productionRepo) WithSaleBill() DBOption {
 func (r *productionRepo) WithSaleOrderProductAll() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleOrderProduct.MultiLanguageName").
+			Preload("SaleOrderProduct.OrderItemRemarks").
+			Preload("SaleOrderProduct.OrderItemRemarks.MultiLanguageName").
 			Preload("SaleOrderProduct.SaleOrderProductBoms", NotDeleted).
 			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom").
 			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor").
@@ -445,9 +482,14 @@ func (r *productionRepo) GetProductionOrderList(pageNo, pageSize int, productBom
 	if len(productBomUuids) > 0 {
 		db = db.Where("product_bom_uuid in (?)", productBomUuids)
 	}
+	// 如果没有传时间范围
+	if startTime == 0 && endTime == 0 {
+
+	} else {
+		db.Where("finished_time BETWEEN ? AND ?", startTime, endTime) // 选择时间区间
+	}
 	err := db.
 		Where("status = ?", constant.ProductionOrderProductStatusFinished). // 已经完成出餐的商品
-		Where("finished_time BETWEEN ? AND ?", startTime, endTime).         // 选择时间区间
 		Order("finished_time desc").                                        // 按照完成时间最新的在前
 		Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&productionOrderProducts).Error
 	if err != nil {
@@ -467,9 +509,13 @@ func (r *productionRepo) GetProductionOrderListCount(productBomUuids []uint64, s
 	if len(productBomUuids) > 0 {
 		db = db.Where("product_bom_uuid in (?)", productBomUuids)
 	}
+	if startTime == 0 && endTime == 0 {
+
+	} else {
+		db.Where("finished_time BETWEEN ? AND ?", startTime, endTime) // 选择时间区间
+	}
 	err := db.
 		Where("status = ?", constant.ProductionOrderProductStatusFinished). // 已经完成出餐的商品
-		Where("finished_time BETWEEN ? AND ?", startTime, endTime).         // 选择时间区间
 		Count(&count).Error
 	if err != nil {
 		return 0, errors.WithMessage(err)
@@ -489,4 +535,27 @@ func (r *productionRepo) GetProductsByUuids(uuids []uint64, opts ...DBOption) ([
 		return nil, errors.WithMessage(err)
 	}
 	return productionOrderProducts, nil
+}
+
+// DeleteProductionOrderByTakeoutOrderUuid 根据外卖订单UUID软删除生产订单及其商品
+func (r *productionRepo) DeleteProductionOrderByTakeoutOrderUuid(takeoutOrderUuid uint64) error {
+	currentTime := time.Now().Unix()
+
+	// 1. 设置送厨商品数量为0
+	if err := r.db.Model(&model.ProductionOrderProduct{}).
+		Where("takeout_order_uuid = ?", takeoutOrderUuid).
+		Where("num > 0"). // 只更新送厨商品数量大于0的记录
+		Update("num", 0).Error; err != nil {
+		return errors.WithMessage(err, "设置送厨商品数量为0失败")
+	}
+
+	// 2. 再软删除生产订单（ttpos_production_order）
+	if err := r.db.Model(&model.ProductionOrder{}).
+		Where("takeout_order_uuid = ?", takeoutOrderUuid).
+		Where("delete_time = ?", 0). // 只更新未删除的记录
+		Update("delete_time", currentTime).Error; err != nil {
+		return errors.WithMessage(err, "软删除外卖订单关联的生产订单失败")
+	}
+
+	return nil
 }

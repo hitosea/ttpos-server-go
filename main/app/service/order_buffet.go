@@ -11,9 +11,11 @@ import (
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/lock"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
@@ -115,7 +117,9 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	// 修改
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 删除原来的 CustomerType
-		repository.NewOrderRepo(tx).DeleteSaleOrderBuffetCustomerType(saleOrder.Uuid)
+		if err := repository.NewOrderRepo(tx).DeleteSaleOrderBuffetCustomerType(saleOrder.Uuid); err != nil {
+			return errors.WithMessage(err)
+		}
 		saleBill.DeleteSaleOrderBuffetCustomerTypeAll(saleOrder.Uuid)
 
 		// 创建新的顾客
@@ -154,6 +158,29 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 		saleBill.SetBuffetPackage(buffetUuids)
 		saleBill.SetDelayProductMealNum(mealNum)
 
+		// 设置自助餐名称快照（JSON 方案）
+		// Requirement: story-main-buffet-package-name-snapshot-fix
+		// 创建 map 确保按照 buffetUuids 的顺序匹配（buffetUuids 是从 GetSaleOrderBuffetCustomerTypes 返回的，已去重且保持顺序）
+		buffetMap := make(map[uint64]*model.BuffetPackage)
+		for _, buffet := range buffetList {
+			buffetMap[buffet.Uuid] = buffet
+		}
+		// 按照 buffetUuids 的顺序设置快照
+		if len(buffetUuids) >= 1 {
+			if buffet1, ok := buffetMap[buffetUuids[0]]; ok && !buffet1.MultiLanguageName.IsNullName() {
+				if err := saleBill.SetBuffetPackage1NameSnapshot(buffet1.MultiLanguageName); err != nil {
+					logger.Logger.Error("保存自助餐套餐1名称快照失败", zap.Error(err))
+				}
+			}
+		}
+		if len(buffetUuids) >= 2 {
+			if buffet2, ok := buffetMap[buffetUuids[1]]; ok && !buffet2.MultiLanguageName.IsNullName() {
+				if err := saleBill.SetBuffetPackage2NameSnapshot(buffet2.MultiLanguageName); err != nil {
+					logger.Logger.Error("保存自助餐套餐2名称快照失败", zap.Error(err))
+				}
+			}
+		}
+
 		//
 		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
@@ -173,6 +200,12 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 			return nil, errors.WithMessage(err)
 		}
 	}
+
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)

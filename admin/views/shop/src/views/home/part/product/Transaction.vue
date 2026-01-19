@@ -96,7 +96,7 @@
 
   // 格式化数据
   const createOption = () => {
-    if (!loading.value) {
+    if (!loading.value && myChart) {
       let names = [];
       let xAxis = dataList.value.days;
       let series1 = [];
@@ -154,8 +154,12 @@
         },
       ];
 
-      myChart.setOption(option.value);
-      myChart.resize();
+      try {
+        myChart.setOption(option.value);
+        myChart.resize();
+      } catch (error) {
+        console.error('设置图表选项失败:', error);
+      }
     }
   };
 

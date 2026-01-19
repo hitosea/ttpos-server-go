@@ -19,7 +19,7 @@
         <Ingredients ref="IngredientsRef" v-if="form.model.type == 10" @validateField="validateField"></Ingredients>
 
         <!--高级设置-->
-        <Buyset></Buyset>
+        <Buyset ref="BuysetRef" ></Buyset>
       </div>
       <!--提交-->
       <div class="common-button-wrapper">
@@ -29,8 +29,8 @@
         </el-tooltip>
       </div>
     </el-form>
-    <!-- 调整库存弹窗 -->
-    <el-dialog v-if="dialogVisible" v-model="dialogVisible" :title="$t('调整库存')" width="700" align-center append-to-body>
+    <!-- 调整库存弹窗 2025年12月12日13:49:13 任务37468 -->
+    <!-- <el-dialog v-if="dialogVisible" v-model="dialogVisible" :title="$t('调整库存')" width="700" align-center append-to-body>
       <el-form size="small" :inline="true" ref="tiaoRef" :model="tiao" label-position="top">
         <el-table size="small" ref="multipleTable" :data="form.model.sku" border style="width: 100%" v-loading="loading">
           <el-table-column prop="product.type" width="300" :label="$t('规格名称')" v-if="form.model.type == '10'">
@@ -59,12 +59,12 @@
           <el-button type="primary" @click="() => onSubmit(1)" :loading="save_loading"> {{ $t('确定') }}</el-button>
         </div>
       </template>
-    </el-dialog>
+    </el-dialog> -->
   </div>
 </template>
 
 <script setup>
-  import { ref, reactive, provide, onMounted, getCurrentInstance } from 'vue';
+  import { ref, reactive, provide, onMounted, getCurrentInstance, nextTick } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
   import { ElMessage } from 'element-plus';
   import ProductApi from '@/api/product.js';
@@ -105,7 +105,7 @@
   const loading = ref(true);
   const save_loading = ref(false);
   const stockNumChange = ref(false);
-  const dialogVisible = ref(false);
+//   const dialogVisible = ref(false);
   const languageKey_ref = ref(languageKey);
   const pageParams = ref({});
 
@@ -156,8 +156,7 @@
     stock_remark: '',
     product_attr: [],
     product_feed: [],
-    feed_required: 0,
-    feed_open_max_select: 0,
+    feed_min_select: 0,
     feed_max_select: 0,
     min_buy: 1,
     product_unit: '',
@@ -186,13 +185,14 @@
     label_id: '',
     open_overall_discount: 0,
     package_price: null,
-    is_open_stock: 1,
+    is_open_stock: 0,
     package_stock: null,
     package_group: [
       {
         group_name: JSON.parse(languageData),
         group_type: 0, // 0-固定套餐 1-可选套餐
-        optional_count :0, // 可选套餐数量
+        optional_count: 1, // 可选套餐数量
+        optional_min_count: 0,
         product_list: [],
       },
     ],
@@ -210,7 +210,7 @@
   const AttrRef = ref(null);
   const IngredientsRef = ref(null);
   const tiaoRef = ref(null);
-
+  const BuysetRef = ref(null);
   // 提供form给子组件
   provide('form', form);
 
@@ -252,6 +252,7 @@
         try {
           form.model.product_name = JSON.parse(form.model.product_name || '{}');
         } catch (e) {}
+
 
         form.category.map((item) => {
           if (form.model.category_id == item.category_id && item.child.length > 0) {
@@ -315,16 +316,6 @@
 
         //处理属性
         (form.model.product_attr || []).map((item) => {
-          //处理旧数据向下兼容
-          if (item.attribute_open_max_select === undefined) {
-            item.attribute_open_max_select = 0;
-          }
-          if (item.attribute_required === undefined) {
-            item.attribute_required = 0;
-          }
-          if (item.attribute_max_select === undefined) {
-            item.attribute_required = 0;
-          }
           if (item.parent_id === undefined) {
             form.attribute.map((items) => {
               if (item.attribute_name_text == items.parent_attribute_name_text) {
@@ -378,12 +369,20 @@
           form.model.package_group.forEach((group) => {
             group.group_name = JSON.parse(group.group_name || '{}');
             group.group_type = group.group_type || 0;
-            group.optional_count = group.optional_count || 0;
+            group.optional_count = group.optional_count || 1;
+            group.optional_min_count = group.optional_min_count || 0;
           });
           form.model.package_price = form.model.package.package_price;
           form.model.package_stock = form.model.package.package_stock;
-          form.model.is_open_stock = form.model.package.is_open_stock;
+          form.model.is_open_stock = form.model.package.is_open_stock || 0;
         }
+        
+        try {
+            form.model.selling_point_i18n = JSON.parse(form.model.selling_point_i18n);
+        } catch (e) {
+          console.log(e);
+        }
+
       } catch (error) {
         console.log(error);
       }
@@ -505,7 +504,8 @@
         params.package_group.forEach((group) => {
           group.group_name = JSON.stringify(group.group_name);
           group.group_type = group.group_type || 0;
-          group.optional_count = group.optional_count || 0;
+          group.optional_count = group.optional_count || 1;
+          group.optional_min_count = group.optional_min_count || 0;
           // group.product_list 只需要保留product_id、num、sort，其他字段删除
           let productList = [];
           group.product_list.forEach((product) => {
@@ -515,8 +515,8 @@
               sort: product.sort,
               item_id: product.item_id || 0,
               add_price: product.add_price, // 加价
-              is_required :product.is_required, // 是否必选
-              is_default :product.is_default, // 是否默认
+              is_required: product.is_required, // 是否必选
+              is_default: product.is_default, // 是否默认
             });
           });
           group.product_list = productList;
@@ -525,6 +525,11 @@
         params.sku = [];
         // 套餐类型不显示外送
         params.is_show_delivery = 0;
+      }
+
+      // 处理商品卖点
+      if (BuysetRef.value && BuysetRef.value.uniqueNameFormAreaTextRef && BuysetRef.value.uniqueNameFormAreaTextRef.data) {
+        params.selling_point_i18n = JSON.stringify(BuysetRef.value.uniqueNameFormAreaTextRef.data);
       }
 
       //库存变动的时候
@@ -549,12 +554,12 @@
           stockNumChange.value = true;
         }
       }
-      // 如果库存数量发生变化且e不等于1，则显示对话框
-      if (stockNumChange.value && e != 1) {
-        dialogVisible.value = true;
-        save_loading.value = false;
-        return;
-      }
+    //   // 如果库存数量发生变化且e不等于1，则显示对话框
+    //   if (stockNumChange.value && e != 1) {
+    //     dialogVisible.value = true;
+    //     save_loading.value = false;
+    //     return;
+    //   }
       // 如果库存数量发生变化且e等于1，则调用tiao的validate方法
       if (stockNumChange.value && e == 1) {
         tiaoRef.value.validate(() => {});
@@ -582,7 +587,7 @@
         cancelFunc();
       } catch (res) {
         save_loading.value = false;
-        dialogVisible.value = false;
+        // dialogVisible.value = false;
         if ((res.data || []).length > 0) {
           await res.data.map((item, index) => {
             form.model.sku[index].barcodeUniqueness = item;

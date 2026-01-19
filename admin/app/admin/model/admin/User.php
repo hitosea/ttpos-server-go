@@ -18,11 +18,30 @@ class User extends UserModel
     {
         // 验证用户名密码是否正确
         $user = self::withTrashed()->whereRaw('BINARY username = :username', ['username' => $data['username'] ?? ''])->order('admin_user_id', 'desc')->order('delete_time')->find();
-        if (!$user || $user->password != salt_hash($data['password'] ?? '')) {
+        if (!$user) {
             LoginLog::add($data['username'] ?? '', \request()->ip(), '登录失败', 0);
             $this->error = '账号或密码错误';
             return false;
         }
+        
+        // 验证密码（支持 MD5 和 bcrypt）
+        list($isValid, $needUpgrade) = verify_password($data['password'] ?? '', $user->password);
+
+        if (!$isValid) {
+            LoginLog::add($data['username'] ?? '', \request()->ip(), '登录失败', 0);
+            $this->error = '账号或密码错误';
+            return false;
+        }
+        
+        // 如果需要升级，异步升级为 bcrypt
+        // 注意：超管表在 saas 库中
+        if ($needUpgrade) {
+            $newHash = upgrade_password_async($user['admin_user_id'], 'ttpos_admin_user', 'admin_user_id', 'password', $data['password'] ?? '', 0);
+            if ($newHash) {
+                $user->password = $newHash;
+            }
+        }
+        
         if ($user->delete_time) {
             LoginLog::add($data['username'] ?? '', \request()->ip(), '登录失败', 0);
             $this->error = '账号已删除, 请联系管理员';
@@ -55,17 +74,23 @@ class User extends UserModel
      */
     public function renew($data)
     {
-        if (salt_hash($data['oldPass'] ?? '') !== $this->password) {
+        // 验证旧密码（支持 MD5 和 bcrypt）
+        list($isValid, $needUpgrade) = verify_password($data['oldPass'] ?? '', $this->password);
+        if (!$isValid) {
             $this->error = '原密码不正确';
             return false;
         }
-        //
-        if (salt_hash($data['pass']) == $this->password) {
+        
+        // 检查新密码是否与旧密码相同
+        list($isSame, $_) = verify_password($data['pass'], $this->password);
+        if ($isSame) {
             $this->error = '新密码不能与旧密码相同';
             return false;
         }
+        
+        // 使用 bcrypt 加密新密码
         return $this->save([
-            'password' => salt_hash($data['pass']),
+            'password' => hash_password_bcrypt($data['pass'])
         ]);
     }
 
@@ -107,10 +132,11 @@ class User extends UserModel
     {
         $this->startTrans();
         try {
+            // 使用 bcrypt 加密密码
             $res = self::create([
                 'username' => trim($data['user_name']),
                 'phone' => trim($data['phone']),
-                'password' => salt_hash($data['password']),
+                'password' => hash_password_bcrypt($data['password']),
                 'real_name' => trim($data['real_name']),
                 'is_super' => 0,
             ]);
@@ -144,11 +170,12 @@ class User extends UserModel
             $arr = [
                 'username' => $data['user_name'],
                 'phone' => trim($data['phone']),
-                'password' => salt_hash($data['password']),
                 'real_name' => $data['real_name'],
             ];
-            if (empty($data['password'])) {
-                unset($arr['password']);
+            
+            // 如果提供了新密码，使用 bcrypt 加密
+            if (!empty($data['password'])) {
+                $arr['password'] = hash_password_bcrypt($data['password']);
             }
             self::update($arr, $where);
             //

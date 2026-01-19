@@ -57,9 +57,11 @@ app/ttpos-erp/
 - **model/do/**: 数据对象，**由框架自动生成，禁止手动修改**
 - **model/entity/**: 数据实体，**由框架自动生成，禁止手动修改**
 - **model/dto/**: 数据传输对象，手动定义的数据结构
-- **service/**: 服务接口，**由框架自动生成，禁止手动修改**
+- **internal/service/**: 服务接口，**由框架自动生成，禁止手动修改**
 - **manifest/sql/**: 数据库迁移脚本
 - **manifest/config/**: 配置文件模板
+- **manifest/protobuf/**: protobuf文件
+
 
 
 ## 2. 依赖管理规范
@@ -90,6 +92,8 @@ app/ttpos-erp/
 - **数据库操作**：必须使用 DAO 层服务，通过 `dao.TableName.Ctx(ctx)` 调用
 - **自动生成文件**：`dao/`、`service/`、`entity/`、`do/` 目录下的文件由框架自动生成，**严禁手动修改**
 - **框架生成标识**：包含 `"Code generated and maintained by GoFrame CLI tool. DO NOT EDIT."` 注释的文件不要优化或修改
+- **服务修改** `internal/service` 下的代码不要修改，当 `intenal/logic/`目录下有文件修改是，应在模块下执行 `gf gen service` 重新生成 `service`
+- **protobuf 修改** 各子模块下的 `manifest/protobuf/` 内的文件有修改时，应在模块下执行 `gf gen pb ` 重新生成对应的api文件
 
 ### 3.3 服务层设计
 ```go
@@ -295,6 +299,7 @@ g.Log().Infof(ctx, "用户 %d 执行了 %s 操作", userId, action)
 - 错误日志包含完整的错误信息
 - 使用结构化日志记录关键业务操作
 - 敏感信息不要记录到日志中
+- **日志描述的文本应该使用中文**
 
 ## 10. 数据库迁移规范
 

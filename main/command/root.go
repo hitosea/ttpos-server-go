@@ -11,7 +11,10 @@ import (
 	"syscall"
 	"time"
 	"ttpos-server-go/app/cloud"
+	"ttpos-server-go/app/constant"
+	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/queue"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
@@ -36,6 +39,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 var rootCommand = &cobra.Command{
@@ -77,6 +81,7 @@ var rootCommand = &cobra.Command{
 			fmt.Printf("[FATAL] Failed to check SMS client config: %v\n", err)
 			logger.Logger.Info("Failed to check SMS client config", zap.Error(err))
 		}
+
 		//初始化服务发现
 		cloud.Init()
 
@@ -91,6 +96,24 @@ var rootCommand = &cobra.Command{
 
 		// 初始化数据库管理器
 		var dbm *database.DBManager = database.GetDBManager(config.Database)
+
+		// 初始化对象存储缓存配置的缓存层（使用三级缓存基础设施）
+		objectStorageAdapter.InitObjectStorageCacheConfigCache(
+			cache.Global,
+			func() *gorm.DB {
+				return dbm.GetDB(constant.DefaultDB)
+			},
+		)
+
+		// 初始化缓存对象控制器（单例模式）
+		repository.InitCacheObjectController(cache.Global, 5*time.Minute)
+
+		// 初始化并启动缓存命中率快照保存器（每30分钟保存一次）
+		objectStorageAdapter.InitSnapshotReporter(
+			dbm.GetDB,
+			utils.GetInstanceID(),
+			1*time.Minute,
+		)
 
 		// 初始化系统事件总线
 		event.NewSystemBus()
@@ -235,7 +258,7 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	_, _ = c.AddFunc("0 0 * * * *", func() {
 		// 每5分钟执行一次
 		// _, _ = c.AddFunc("*/5 * * * * *", func() {
-		//_, _ = c.AddFunc("0 * * * * *", func() {
+		// _, _ = c.AddFunc("0 * * * * *", func() {
 		tasks.NewDailySalesOutboundSummaryTask(dbm, cache).Execute()
 	})
 

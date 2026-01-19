@@ -1863,7 +1863,7 @@
     "分组名称": "Grup Adı",
     "请填写分组名称": "Lütfen grup adını girin",
     "请输入分组名称": "Lütfen grup adını girin",
-    "翻译": "Çevir <content>",
+    "翻译": "Çevir",
     "此名称与其他分组重复": "Bu ad diğer gruplarla aynı.",
     "套餐价格：": "Paket fiyatı:",
     "请输入套餐价格": "Lütfen paket fiyatını girin",
@@ -1943,5 +1943,15 @@
     "退款操作权限验证": "退款 işlemi yetki doğrulaması",
     "开启后，进行退款操作时需要密码验证或授权员工验证": "Etkinleştirildiğinde, geri ödeme işlemi sırasında parola doğrulaması veya yetkilendirilmiş personel doğrulaması gereklidir",
     "退款授权员工": "Geri ödeme yetkili personel",
-    "选择授权员工后，这些员工可以进行退款操作的授权验证": "Yetkili personel seçildikten sonra, bu personel geri ödeme işlemleri için yetkilendirme doğrulaması yapabilir"
+    "选择授权员工后，这些员工可以进行退款操作的授权验证": "Yetkili personel seçildikten sonra, bu personel geri ödeme işlemleri için yetkilendirme doğrulaması yapabilir",
+    "(外卖)": "(Paket Servis)",
+    "店内": "Mağaza içi",
+    "外卖": "Paket Servis",
+    "优惠券抵扣": "Kupon İndirimi",
+    "活动抵扣": "Etkinlik indir",
+    "黑色": "siyah",
+    "选择分钟": "Dakika seçin",
+    "可选": "İsteğe bağlı",
+    "商品卖点": "Ürün satış noktası",
+    "固定": "고정"
 }

@@ -164,6 +164,7 @@ func NewProductPackageAttributeGroup(db *gorm.DB, productAttrJson string, produc
 				DefaultSelect:          defaultSelect,
 				AttributeIDs:           attributeIDs,
 				AttributeMaxSelect:     int(attrGroup.AttributeMaxSelect),
+				AttributeMinSelect:     int(attrGroup.AttributeMinSelect),
 				AttributeOpenMaxSelect: int(attrGroup.AttributeOpenMaxSelect),
 				AttributeRequired:      int(attrGroup.AttributeRequired),
 			})

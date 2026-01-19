@@ -7,6 +7,7 @@ import (
 
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/model/entity"
 	"ttpos-bmp/internal/pkg/cache"
 	"ttpos-bmp/internal/pkg/crypto"
@@ -19,14 +20,9 @@ const (
 	TokenKeyPrefix = "erpnext_token:"
 )
 
-type SiteAuthorization struct {
-	SiteUrl       string
-	Authorization string
-}
-
 // GetAndProcessSiteApiSecret 获取并处理 api_secret
 // 如果 api_secret 不是 base64 编码，则先使用 gaes.Encrypt 加密，再用 gbase64.Encode 编码后保存并返回
-func (s *sRpc) GetAndProcessSiteAuthorization(ctx context.Context, siteCode string) (*SiteAuthorization, error) {
+func (s *sRpc) GetAndProcessSiteAuthorization(ctx context.Context, siteCode string) (*erp.SiteAuthorization, error) {
 	cacheKey := fmt.Sprintf("%s%s", TokenKeyPrefix, siteCode)
 	value, err := cache.Instance().GetOrSetFunc(ctx, cacheKey, func(ctx context.Context) (any, error) {
 		var site *entity.Site
@@ -50,7 +46,7 @@ func (s *sRpc) GetAndProcessSiteAuthorization(ctx context.Context, siteCode stri
 				return nil, gerror.Wrapf(err, "解密 api_secret 失败: %s", site.SiteCode)
 			}
 			// 已经是 base64 编码，直接返回
-			return &SiteAuthorization{
+			return &erp.SiteAuthorization{
 				SiteUrl:       site.SiteUrl,
 				Authorization: fmt.Sprintf("token %s:%s", site.ApiKey, apiSecret),
 			}, nil
@@ -68,7 +64,7 @@ func (s *sRpc) GetAndProcessSiteAuthorization(ctx context.Context, siteCode stri
 		if err != nil {
 			return nil, gerror.Wrapf(err, "保存加密后的 api_secret 失败")
 		}
-		return &SiteAuthorization{
+		return &erp.SiteAuthorization{
 			SiteUrl:       site.SiteUrl,
 			Authorization: fmt.Sprintf("token %s:%s", site.ApiKey, site.ApiSecret),
 		}, nil
@@ -81,7 +77,7 @@ func (s *sRpc) GetAndProcessSiteAuthorization(ctx context.Context, siteCode stri
 	if value == nil || value.IsNil() {
 		return nil, gerror.New("获取到的 api_secret 为空")
 	}
-	return value.Val().(*SiteAuthorization), nil
+	return value.Val().(*erp.SiteAuthorization), nil
 }
 
 // GetAndProcessCashierApiSecret 获取并处理收银员的 api_secret

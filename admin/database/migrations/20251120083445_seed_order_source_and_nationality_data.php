@@ -77,8 +77,8 @@ class SeedOrderSourceAndNationalityData extends Migrator
             
             if (!$exists) {
                 // 生成 UUID
-                $multiLangUuid = $this->generateUuid();
-                $orderSourceUuid = $this->generateUuid();
+                $multiLangUuid = createUuid();
+                $orderSourceUuid = createUuid();
                 $currentTime = time();
                 
                 // 插入多语言名称
@@ -200,8 +200,8 @@ class SeedOrderSourceAndNationalityData extends Migrator
             
             if (!$exists) {
                 // 生成 UUID
-                $multiLangUuid = $this->generateUuid();
-                $nationalityUuid = $this->generateUuid();
+                $multiLangUuid = createUuid();
+                $nationalityUuid = createUuid();
                 $currentTime = time();
                 
                 // 插入多语言名称
@@ -213,12 +213,5 @@ class SeedOrderSourceAndNationalityData extends Migrator
         }
     }
 
-    /**
-     * 生成 UUID（使用雪花算法，这里简化为时间戳+随机数）
-     */
-    private function generateUuid()
-    {
-        return (int)(microtime(true) * 10000) + rand(1000, 9999);
-    }
 }
 

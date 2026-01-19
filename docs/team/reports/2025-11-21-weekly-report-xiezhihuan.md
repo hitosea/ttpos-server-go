@@ -10,8 +10,8 @@
 #### 工作内容
 
 - **需求分析** (11-21)
-  - 创建需求提案：`docs/team/proposals/2025-11-21-新管理端-满减营销功能.md`
-  - 创建功能规格文档：`docs/shared/specs/story-shop-full-reduction-marketing/`
+  - 创建需求提案：`docs/team/proposals/2025-11/新管理端-满减营销功能.md`
+  - 创建功能规格文档：`docs/shared/specs/active/story-shop-full-reduction-marketing/`
     - requirements.md - 需求文档
     - design.md - 设计文档
     - tasks.md - 任务分解
@@ -177,6 +177,8 @@
 
 **报告生成时间**: 2025-11-21  
 **报告周期**: 2025-11-18 至 2025-11-24
+
+
 
 
 

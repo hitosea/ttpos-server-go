@@ -7,7 +7,9 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/modules/printer"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
+	printer_request "ttpos-server-go/app/modules/printer/tyeps/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/utils"
@@ -60,19 +62,23 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq, ne
 	}
 
 	// 判断是否已支付
-	printType := constant.PrinterTemplatePreBilling
+	printType := printerConstant.PrinterTemplatePreBilling
 	if saleOrder.IsPaid() {
-		printType = constant.PrinterTemplateBilling
+		printType = printerConstant.PrinterTemplateBilling
+	} else if saleOrder.FullReductionActivityUuid > 0 {
+		discountAmount, _, _ := s.calculateActivityDiscount(ctx, saleOrder, saleOrder.FullReductionActivityUuid)
+		saleOrder.ActivityAmount = discountAmount
 	}
 
 	// 打印
-	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingStatementOrder(
-		printType,
-		saleBill,
-		saleOrder.Uuid,
-		utils.IfInt(ctx.GetSource() == constant.SourceAssistant, 0, 1),
-		request.PayMethodUuid,
-	)
+	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingStatementOrder(&printer_request.PrintingStatementOrderReq{
+		PrintType:      printType,
+		SaleBill:       saleBill,
+		SaleOrderUuid:  saleOrder.Uuid,
+		FirstExecution: utils.IfInt(ctx.GetSource() == constant.SourceAssistant, 0, 1),
+		PayMethodUuid:  request.PayMethodUuid,
+		PayQrcode:      request.PayQrcode,
+	})
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -134,6 +140,10 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvo
 
 	// 设置发票信息
 	if req.CompanyName != "" {
+		invoiceNumber, err := s.generateInvoiceNumber(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(err, "生成发票编号失败")
+		}
 		// 创建发票信息对象
 		invoiceInfo := model.SaleOrderInvoiceInfo{
 			SaleOrderUuid:    saleOrder.Uuid,
@@ -141,6 +151,7 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvo
 			CompanyAddr:      req.CompanyAddr,
 			CompanyTaxNumber: req.CompanyTaxNumber,
 			CompanyPhone:     req.CompanyPhone,
+			InvoiceNumber:    invoiceNumber,
 		}
 		// 保存发票信息（不存在则创建，存在则更新）
 		invoiceInfos, err := repository.NewOrderRepo(db).SaveOrUpdateInvoiceInfo(saleOrder.Uuid, invoiceInfo)
@@ -158,8 +169,17 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvo
 		}
 		// 更新打印次数
 		saleOrder.InvoiceInfo.PrintNum = saleOrder.InvoiceInfo.PrintNum + 1
+		// 更新发票编号
+		if saleOrder.InvoiceInfo.InvoiceNumber == "" {
+			invoiceNumber, err := s.generateInvoiceNumber(ctx)
+			if err != nil {
+				return nil, errors.WithMessage(err, "生成发票编号失败")
+			}
+			saleOrder.InvoiceInfo.InvoiceNumber = invoiceNumber
+		}
 		repository.NewOrderRepo(db).SaveOrUpdateInvoiceInfo(saleOrder.Uuid, model.SaleOrderInvoiceInfo{
 			SaleOrderUuid: saleOrder.Uuid,
+			InvoiceNumber: saleOrder.InvoiceInfo.InvoiceNumber,
 			PrintNum:      saleOrder.InvoiceInfo.PrintNum,
 		})
 	}
@@ -190,9 +210,11 @@ func (s *orderSrv) OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoi
 		return resp.SaleOrderInvoiceInfo{}
 	}
 	return resp.SaleOrderInvoiceInfo{
+		InvoiceNumber:    invoiceInfo.InvoiceNumber,
 		CompanyName:      invoiceInfo.CompanyName,
 		CompanyAddr:      invoiceInfo.CompanyAddr,
 		CompanyTaxNumber: invoiceInfo.CompanyTaxNumber,
 		CompanyPhone:     invoiceInfo.CompanyPhone,
+		PrintNum:         invoiceInfo.PrintNum,
 	}
 }

@@ -2109,7 +2109,7 @@
     "分组名称": "Group Name",
     "请填写分组名称": "Please enter the group name",
     "请输入分组名称": "Please enter the group name",
-    "翻译": "Translate <content>",
+    "翻译": "Translate",
     "此名称与其他分组重复": "This name is duplicated with other groups",
     "套餐价格：": "Package price:",
     "请输入套餐价格": "Please enter the package price",
@@ -2188,5 +2188,15 @@
     "退款操作权限验证": "Refund operation permission verification",
     "开启后，进行退款操作时需要密码验证或授权员工验证": "When enabled, refund operations require password verification or authorization by an authorized employee",
     "退款授权员工": "Refund authorized staff",
-    "选择授权员工后，这些员工可以进行退款操作的授权验证": "After selecting authorized staff, these employees can perform authorization verification for refund operations"
+    "选择授权员工后，这些员工可以进行退款操作的授权验证": "After selecting authorized staff, these employees can perform authorization verification for refund operations",
+    "(外卖)": "(Food Delivery)",
+    "店内": "In-store",
+    "外卖": "Takeout",
+    "优惠券抵扣": "Coupon Deduction",
+    "活动抵扣": "Activity Deduction",
+    "黑色": "black",
+    "选择分钟": "Select minutes",
+    "可选": "Optional",
+    "商品卖点": "Product selling points",
+    "固定": "Fixed"
 }

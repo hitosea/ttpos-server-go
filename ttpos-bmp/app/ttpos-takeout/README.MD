@@ -47,6 +47,10 @@ TAKEOUT_SERVICE_URL=http://localhost:14031
 #外送服务调用点餐系统回调的加密密钥，目前和 JWT_SECRET 一致
 TAKEOUT_CALLBACK_SECRET=$JWT_SECRET  
 
+#TTPOS 主模块地址，用于 Grab 菜单回退调用（当本地快照为空时）
+#本地调试用 http://localhost:8080 ,部署时使用 main 服务的内网地址
+TTPOS_MAIN_ENDPOINT=http://${SERVER_IP}
+
 #SKOOTAR API KEY
 SKOOTAR_API_KEY=$SKOOTAR_API_KEY
 SKOOTAR_ENDPOINT=https://hw.skootar.com/skootar_api_dev
@@ -55,3 +59,11 @@ SKOOTAR_USERNAME=victor@diylink.net
 
 
 ```
+
+### 配置说明
+
+| 配置项 | 说明 | 示例 |
+|--------|------|------|
+| app.serviceUrl | 外送服务 HTTP 接入点 | http://localhost:14031 |
+| app.callbackSecret | 回调加密密钥 | 与 JWT_SECRET 一致 |
+| app.ttposEndpoint | TTPOS 主模块地址，用于 Grab 菜单回退调用 | http://main-service:8080 |

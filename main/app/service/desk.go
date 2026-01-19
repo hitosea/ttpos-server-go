@@ -194,6 +194,8 @@ func (s *deskSrv) GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error) {
 
 // GetDeskPing 获取桌台详情-用于定时轮询
 func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.DeskPing, error) {
+
+	// 初始化响应对象
 	res := resp.DeskPing{
 		SentKitchen: resp.SentKitchen{
 			Groups: resp.GroupList{
@@ -215,11 +217,21 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 			return nil
 		}(),
 	}
+
 	// 获取桌台详情
-	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskInfo(deskUuid)
+	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskRecord(deskUuid)
 	if err != nil {
 		return res, errors.WithMessage(errors.New("桌台不存在"), "获取桌台详情失败")
 	}
+
+	// 获取销售账单信息并计算未送厨商品总金额
+	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(desk.SaleBillUuid)
+	if err != nil {
+		return res, errors.WithMessage(err)
+	}
+
+	// 设置桌台信息
+	desk.SaleBill = saleBill
 	res.DeskInfo = desk.GetDeskResp()
 
 	// 如果没有销售账单,直接返回
@@ -234,23 +246,32 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 		if ctx.GetSource() == constant.SourceTablet { // 平板端查询购物车必点信息时，不自动加购
 			opts = append(opts, repository.WithNoAutoAdd())
 		}
+		opts = append(opts, repository.WithCompanyUuid(ctx.GetCompanyUuid()))
+		if ctx.GetSource() == constant.SourceAssistant {
+			opts = append(opts, repository.WithSaleBill(desk.SaleBill)) // 助手端ping接口时，传入销售账单，避免两次查询销售账单信息
+		}
 		shopCart, err = s.orderSrv.GetOrderCartInfo(ctx, desk.SaleBillUuid, opts...)
 		if err != nil {
 			return res, errors.WithMessage(errors.New("订单不存在"), fmt.Sprintf("获取销售账单信息失败,SaleBillUuid: %d", desk.SaleBillUuid))
 		}
 	}
+
 	// 未送厨商品信息
-	res.UnsentKitchen, _ = s.orderSrv.GetUnsentKitchen(ctx, desk.SaleBillUuid, shopCart)
+	res.UnsentKitchen, _ = s.orderSrv.GetUnsentKitchen(ctx, desk.SaleBillUuid, shopCart, saleBill)
+
 	// 已送厨商品信息
-	res.SentKitchen, _ = s.orderSrv.GetSentKitchen(ctx, desk.SaleBill.Uuid, shopCart)
+	res.SentKitchen, _ = s.orderSrv.GetSentKitchen(ctx, desk.SaleBill.Uuid, shopCart, saleBill)
+
 	// 自助餐信息
 	if shopCart.Buffet != nil {
 		res.Buffet = *shopCart.Buffet
 	}
+
 	// 必点方案列表
 	if shopCart.MustPlans != nil {
 		res.MustPlans = *shopCart.MustPlans
 	}
+
 	// 订单列表，拆单时，会有多个
 	res.SaleOrderList = shopCart.SaleOrderList
 
@@ -282,11 +303,12 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 	for _, product := range productPackageUuidMap {
 		sentKitchenProducts = append(sentKitchenProducts, product)
 	}
-
 	res.SentKitchenProducts = resp.SentKitchenProductList{
 		List: sentKitchenProducts,
 	}
+
 	res.OrderRemark = shopCart.OrderRemark
+
 	return res, nil
 }
 
@@ -693,14 +715,38 @@ func (s *deskSrv) CompleteDesk(ctx context.Context, reqs req.DeskJsonUuidReq) er
 
 // ChangeDesk 切换桌台
 func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp.ShopCart, error) {
-	// 禁止并发操作
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+
+	// 禁止并发操作：在方法开头就加锁，确保获取目标桌台的订单UUID时使用的是最新数据
 	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(reqs.SaleBillUuid)
-		defer lock.NewSystemLock().UnlockUuid(reqs.SaleBillUuid)
+		systemLock := lock.NewSystemLock()
+
+		// 收集需要锁定的资源：源订单 + 目标资源（目标桌台或目标订单）
+		lockUuids := []uint64{reqs.SaleBillUuid}
+
+		// 获取目标桌台的订单UUID（在锁内获取，确保数据一致性）
+		// 如果目标桌台有订单，则锁定目标订单；否则锁定目标桌台
+		targetSaleBillUuid, err := repository.NewDeskRepo(db).GetSaleBillUuidByDeskUuid(reqs.DeskUuid)
+		if err == nil && targetSaleBillUuid != 0 {
+			// 目标桌台有订单，锁定目标订单
+			lockUuids = append(lockUuids, targetSaleBillUuid)
+		} else {
+			// 目标桌台没有订单，锁定目标桌台
+			lockUuids = append(lockUuids, reqs.DeskUuid)
+		}
+
+		// 锁定源订单和目标资源（按 UUID 排序）
+		// LockMultipleUuids 会自动去重和排序，返回排序后的 UUID 列表
+		lockedUuids := lock.LockMultipleUuids(systemLock, lockUuids)
+
+		// 按相反顺序释放锁（UnlockMultipleUuids 内部会使用相同的排序策略）
+		defer func() {
+			lock.UnlockMultipleUuids(systemLock, lockedUuids)
+		}()
+
 		ctx.AddLock()
 	}
 
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(reqs.SaleBillUuid)
 	if errSaleBill != nil {
@@ -722,7 +768,7 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 		return nil, errors.New("旧桌台待清台，不允许转台")
 	}
 
-	// 获取桌台信息
+	// 获取桌台信息（在锁内获取，确保数据一致性）
 	desk, errDesk := repository.NewDeskRepo(db).GetDeskRecord(reqs.DeskUuid)
 	if errDesk != nil {
 		return nil, errors.WithMessage(errDesk, "获取桌台信息失败")
@@ -798,28 +844,39 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 
 // MergeDesk 合并桌台
 func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) {
-	companyUuid := ctx.GetCompanyUuid()
-	systemLock := lock.NewSystemLock()
-	// 禁止并发操作
-	if ctx.NoLock() {
-		// 禁止并发操作
-		systemLock.LockUuid(req.SaleBillUuid)
-		systemLock.LockUuid(companyUuid)
-		// 按相反顺序解锁
-		defer func() {
-			systemLock.UnlockUuid(companyUuid)
-			systemLock.UnlockUuid(req.SaleBillUuid)
-		}()
-		ctx.AddLock()
-	}
-
 	if err := req.Validate(); err != nil {
 		return nil, nil, errors.WithMessage(err)
 	}
 
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 
-	// 获取销售账单信息
+	// 禁止并发操作：在方法开头就加锁，确保获取被合并桌台的订单UUID时使用的是最新数据
+	if ctx.NoLock() {
+		systemLock := lock.NewSystemLock()
+		// 收集所有需要锁定的订单 UUID（主订单 + 所有被合并的订单）
+		orderUuids := []uint64{req.SaleBillUuid}
+
+		// 收集被合并桌台的订单 UUID（在锁内获取，确保数据一致性）
+		for _, deskUuid := range req.DeskUuids {
+			// 通过桌台UUID获取订单UUID（在锁内获取）
+			targetSaleBillUuid, err := repository.NewDeskRepo(db).GetSaleBillUuidByDeskUuid(deskUuid)
+			if err == nil && targetSaleBillUuid != 0 {
+				orderUuids = append(orderUuids, targetSaleBillUuid)
+			}
+		}
+
+		// 锁定所有涉及的订单（按 UUID 排序）
+		// LockMultipleUuids 会自动去重和排序，返回排序后的 UUID 列表
+		lockedUuids := lock.LockMultipleUuids(systemLock, orderUuids)
+
+		// 按相反顺序释放锁（UnlockMultipleUuids 内部会使用相同的排序策略）
+		defer func() {
+			lock.UnlockMultipleUuids(systemLock, lockedUuids)
+		}()
+		ctx.AddLock()
+	}
+
+	// 获取销售账单信息（用于后续业务逻辑）
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")

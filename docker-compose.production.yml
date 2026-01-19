@@ -49,6 +49,9 @@ services:
     networks:
       saas-network:
         ipv4_address: 10.0.0.11
+    extra_hosts:
+      ttpos-takeout: ${SERVER_IP}
+      ttpos-websocket: ${SERVER_IP}
 
   db:
     container_name: "saas-db-${APP_ID}"
@@ -131,6 +134,29 @@ services:
     networks:
       saas-network:
         ipv4_address: 10.0.0.17
+
+  reconciliation_templates:
+    container_name: "saas-reconciliation-templates-${APP_ID}"
+    image: hub.hitosea.com/ttpos-server/ttpos-server-reconciliation-templates:1.1.0
+    environment:
+      - PORT=3000
+      - GCS_BUCKET=ttpos-stock-reconciliation
+      - GCS_ENV=${GCS_ENV:-dev}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-/app/credentials/gcs-key.json}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - CACHE_TTL_SEC=${CACHE_TTL_SEC:-60}
+    volumes:
+      - ./docker/certificate/${GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME}:/app/credentials/gcs-key.json:ro
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.19
       
 networks:
   saas-network:
@@ -139,7 +165,3 @@ networks:
       config:
         - subnet: 10.0.0.0/24
           gateway: 10.0.0.1
-
-  bmp-network:
-    external: true
-    name: ttpos-bmp_bmp-network
