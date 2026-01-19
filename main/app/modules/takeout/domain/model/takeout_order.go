@@ -69,6 +69,9 @@ type TakeoutOrder struct {
 	// 完整原始数据（JSON 格式）
 	RawData string `gorm:"column:raw_data;type:mediumtext" json:"raw_data"`
 
+	// 订单额外属性信息（JSON 格式）
+	AdditionalProperties string `gorm:"column:additional_properties" json:"additional_properties"`
+
 	// 操作信息
 	AcceptedBy        uint64 `gorm:"column:accepted_by" json:"accepted_by"`
 	StaffShiftLogUuid uint64 `gorm:"column:staff_shift_log_uuid" json:"staff_shift_log_uuid"`

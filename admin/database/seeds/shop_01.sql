@@ -3957,6 +3957,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order` (
     `membership_id` varchar(50) NOT NULL DEFAULT '' COMMENT '会员ID (membershipID)',
     `driver_eta` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '司机预计到达时间 (driverETA)',
     `raw_data` mediumtext COMMENT '平台原始订单数据(JSON)',
+    `additional_properties` varchar(1000) NOT NULL DEFAULT '' COMMENT '订单额外属性信息',
     `accepted_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '接单人UUID',
     `staff_shift_log_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '员工班次日志UUID',
     `erp_pos_invoice_resp` text COMMENT 'ERP POS Invoice响应数据(JSON)',

@@ -586,6 +586,54 @@
         ],
         [
             {
+                "group_block_id": "additional_properties",
+                "block_id": "order.additional_properties",
+                "block_type": "label:value",
+                "block_label": {
+                    "de": "Zusätzliche Artikel: ",
+                    "en": "Additional Items: ",
+                    "ja": "追加項目: ",
+                    "ko": "추가 항목: ",
+                    "my": "နောက်ထပ်ပစ္စည်းများ: ",
+                    "sv": "Ytterligare artiklar: ",
+                    "th": "รายการเพิ่มเติม: ",
+                    "tr": "Ek Öğeler: ",
+                    "zh": "附加项目: ",
+                    "zhtw": "附加項目: "
+                },
+                "block_name": {
+                    "en": "Additional Items",
+                    "ja": "追加項目",
+                    "ko": "추가 항목",
+                    "my": "နောက်ထပ်ပစ္စည်းများ",
+                    "th": "รายการเพิ่มเติม",
+                    "tr": "Ek Öğeler",
+                    "zh": "附加项目",
+                    "zhtw": "附加項目",
+                    "de": "Zusätzliche Artikel",
+                    "sv": "Ytterligare artiklar"
+                },
+                "block_attr": {
+                    "font_size": 18,
+                    "align": "left",
+                    "font_bold": false,
+                    "dividing_line": true,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 1,
+                    "line_height": 32,
+                    "width": 100
+                },
+                "conditions": [
+                    {
+                        "field": "order.additional_properties",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+        [
+            {
                 "group_block_id": "commodity",
                 "block_id": "title_commodity",
                 "block_column_id": "column_commodity_name",

@@ -170,6 +170,19 @@ func (c *LineManConverter) ConvertOrderToTakeoutOrder(
 	order.OrderTime = c.parseISO8601Time(placeOrderReq.OrderAcceptedTime)
 	order.SubmitTime = order.OrderTime
 
+	// 附加项目映射 (additionalItems -> additional_properties)
+	if len(placeOrderReq.AdditionalItems) > 0 {
+		additionalItemNames := make([]string, 0, len(placeOrderReq.AdditionalItems))
+		for _, item := range placeOrderReq.AdditionalItems {
+			if item.Name != "" {
+				additionalItemNames = append(additionalItemNames, item.Name)
+			}
+		}
+		if len(additionalItemNames) > 0 {
+			order.AdditionalProperties = strings.Join(additionalItemNames, ",")
+		}
+	}
+
 	// 解析商品数据
 	if len(placeOrderReq.Items) > 0 {
 		order.TakeoutOrderItems = make([]takeoutModel.TakeoutOrderItem, 0, len(placeOrderReq.Items))

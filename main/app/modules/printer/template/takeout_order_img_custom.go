@@ -245,6 +245,9 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	orderData.PaymentName = order.PaymentType
 	orderData.PaidAmount = t.base.Amount(order.EaterPayment)
 
+	// 附加属性
+	orderData.AdditionalProperties = order.AdditionalProperties
+
 	// 收货人信息
 	if order.TakeoutOrderReceiver != nil {
 		orderData.CustomerName = order.TakeoutOrderReceiver.ReceiverName
