@@ -64,6 +64,15 @@ func (s *takeoutSrv) ToggleTakeoutStatus(ctx context.Context, req request.Toggle
 
 // SyncMenuChanges 同步菜单变更
 func (s *takeoutSrv) SyncMenuChanges(ctx context.Context, platform string) (*response.MenuSyncResult, error) {
+	// 判断是否开启外卖平台
+	status, err := s.takeoutAppSrv.GetTakeoutStatus(ctx, platform)
+	if err != nil {
+		return nil, errors.WithMessage(errors.New("获取外卖平台状态失败"), err.Error())
+	}
+	if !status.Enabled {
+		return nil, nil
+	}
+	// 同步菜单变更
 	return s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
 		Platform:    platform,
 		CompanyUuid: ctx.GetCompanyUuid(),

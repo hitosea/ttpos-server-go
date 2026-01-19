@@ -397,8 +397,8 @@ func (s *takeoutAppService) PushMenu(ctx context.Context, platform string, curre
 
 	// 判断是否开发模式，如果是开发模式，则使用 6293997752320000
 	if config.Server.Mode == "debug" && platform == value_object.TakeoutPlatformLineman {
-		if companyUuid == 8609817471094784 {
-			companyUuid = 6293997752320000
+		if config.Takeout.TakeoutLinemanStoreId != 0 {
+			companyUuid = config.Takeout.TakeoutLinemanStoreId
 		}
 	}
 
@@ -759,6 +759,13 @@ func (s *takeoutAppService) compareAndSyncMenu(
 
 	// 获取商户 ID
 	shopUuidStr := strconv.FormatUint(companyUuid, 10)
+
+	// 判断是否开发模式，如果是开发模式，则使用 6293997752320000
+	if config.Server.Mode == "debug" && platform == value_object.TakeoutPlatformLineman {
+		if config.Takeout.TakeoutLinemanStoreId != 0 {
+			shopUuidStr = strconv.FormatUint(config.Takeout.TakeoutLinemanStoreId, 10)
+		}
+	}
 
 	// 批量更新商品（每批最多 100 个）
 	if len(changedItems) > 0 {
