@@ -285,3 +285,53 @@
     "data": null
 }
 ```
+
+-----
+## 新增 默认销售单位支持 sales_uom
+
+
+```json
+{
+    "item_code": "WPR3685909115568129",
+    "item_name": "Bread dough",
+    "item_group": "RawMaterial",
+    "stock_uom": "个ชิ้น",
+     "sales_uom": "Nos"
+}
+```
+
+```json
+{
+    "code": "0",
+    "message": "保存物品成功",
+    "data": {
+        "uoms": [],
+        "attributes": [],
+        "item_name": "Bread dough",
+        "item_group": "RawMaterial",
+        "stock_uom": "个ชิ้น",
+        "item_code": "WPR3685909115568129",
+        "valuation_rate": 0,
+        "barcode": "",
+        "opening_stock": 0,
+        "is_stock_item": false,
+        "template_item_code": "",
+        "branch": "",
+        "company_abbr": "",
+        "company": "",
+        "item_specification": "",
+        "disabled": false,
+        "classification": "",
+        "classification_code": "",
+        "internal_code": "",
+        "not_for_sale": false,
+        "purchase_uom": "",
+        "has_variants": false,
+        "item_group_name": "",
+        "variant_of": "",
+        "allow_negative_stock": true,
+        "sales_uom": "Nos",
+        "@type": "type.googleapis.com/item.ItemInfo"
+    }
+}
+```
