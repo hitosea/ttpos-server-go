@@ -272,8 +272,8 @@ func (s *sLineman) convertGrabItemToLinemanItem(ctx context.Context, grabItem gr
 	nameTrans := s.buildNameTranslationFromGrab(ctx, grabItem.GetName(), grabItem.GetNameTranslation())
 	descTrans := s.buildDescTranslationFromGrab(ctx, grabItem.GetDescription(), grabItem.GetDescriptionTranslation())
 
-	// 价格转换：Grab SDK 的 GetPrice() 返回 int64（单位：分），直接转换
-	price := float64(grabItem.GetPrice())
+	// 价格转换：Grab SDK 的 GetPrice() 返回 int64（单位：分），转换为元
+	price := float64(grabItem.GetPrice()) / 100
 
 	// 状态转换
 	menuStatus := s.convertGrabAvailabilityToLinemanStatus(ctx, grabItem.GetAvailableStatus())
