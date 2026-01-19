@@ -256,7 +256,7 @@ func (c *BMPTakeoutClient) UpdateMenuItem(ctx context.Context, req *menuApi.Upda
 	if err != nil {
 		logger.Logger.Error("调用 UpdateMenuItem 接口失败",
 			zap.Error(err),
-			zap.String("merchantId", req.MerchantId),
+			zap.String("shopUuid", req.ShopUuid),
 			zap.String("itemId", req.ItemId))
 		return errors.WithMessage(err, "调用更新菜单项接口失败")
 	}
@@ -265,7 +265,7 @@ func (c *BMPTakeoutClient) UpdateMenuItem(ctx context.Context, req *menuApi.Upda
 		logger.Logger.Warn("UpdateMenuItem 返回错误",
 			zap.String("code", resp.Code),
 			zap.String("message", resp.Message),
-			zap.String("merchantId", req.MerchantId),
+			zap.String("shopUuid", req.ShopUuid),
 			zap.String("itemId", req.ItemId))
 		return errors.New(resp.Message)
 	}
@@ -279,7 +279,7 @@ func (c *BMPTakeoutClient) UpdateMenuModifier(ctx context.Context, req *menuApi.
 	if err != nil {
 		logger.Logger.Error("调用 UpdateMenuModifier 接口失败",
 			zap.Error(err),
-			zap.String("merchantId", req.MerchantId),
+			zap.String("shopUuid", req.ShopUuid),
 			zap.String("modifierId", req.ModifierId))
 		return errors.WithMessage(err, "调用更新菜单修饰符接口失败")
 	}
@@ -288,7 +288,7 @@ func (c *BMPTakeoutClient) UpdateMenuModifier(ctx context.Context, req *menuApi.
 		logger.Logger.Warn("UpdateMenuModifier 返回错误",
 			zap.String("code", resp.Code),
 			zap.String("message", resp.Message),
-			zap.String("merchantId", req.MerchantId),
+			zap.String("shopUuid", req.ShopUuid),
 			zap.String("modifierId", req.ModifierId))
 		return errors.New(resp.Message)
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -315,7 +316,7 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	var platformData interface{}
 	if grabConverter, ok := converter.(*grab.GrabConverter); ok {
 		// Grab 平台使用专用的加载方法（直接返回 Grab 格式）
-		platformData, err = grabConverter.LoadMenuFromDatabase(ctx, companyUuid, req.CurrencyUnit, []uint64{})
+		platformData, err = grabConverter.LoadMenuFromDatabase(ctx, req.Platform, companyUuid, req.CurrencyUnit, []uint64{})
 		if err != nil {
 			return nil, errors.New("加载菜单数据失败")
 		}
@@ -749,17 +750,11 @@ func (s *takeoutAppService) compareAndSyncMenu(
 	}
 
 	// 获取商户 ID
-	_, _, merchantID, _, err := s.rpcService.CheckBindingStatusWithMerchantId(ctx, platform, companyUuid)
-	if err != nil {
-		return fmt.Errorf("获取商户ID失败: %w", err)
-	}
-	if merchantID == "" {
-		return fmt.Errorf("商户ID为空，请检查平台绑定状态")
-	}
+	shopUuidStr := strconv.FormatUint(companyUuid, 10)
 
 	// 批量更新商品（每批最多 100 个）
 	if len(changedItems) > 0 {
-		err := s.batchUpdateItems(ctx, merchantID, changedItems, result)
+		err := s.batchUpdateItems(ctx, shopUuidStr, changedItems, result)
 		if err != nil {
 			logger.Logger.Error("批量更新商品失败", zap.Error(err))
 		}
@@ -767,7 +762,7 @@ func (s *takeoutAppService) compareAndSyncMenu(
 
 	// 逐个更新修饰符（Grab API 暂不支持批量更新修饰符）
 	if len(changedModifiers) > 0 {
-		s.updateModifiersOneByOne(ctx, merchantID, changedModifiers, result)
+		s.updateModifiersOneByOne(ctx, shopUuidStr, changedModifiers, result)
 	}
 
 	return nil
@@ -776,7 +771,7 @@ func (s *takeoutAppService) compareAndSyncMenu(
 // batchUpdateItems 批量更新商品
 func (s *takeoutAppService) batchUpdateItems(
 	ctx context.Context,
-	merchantID string,
+	shopUuid string,
 	items []struct {
 		old *grabfood.MenuItem
 		new *grabfood.MenuItem
@@ -837,7 +832,7 @@ func (s *takeoutAppService) batchUpdateItems(
 
 		// 调用 RPC 批量更新接口
 		req := &menuApi.BatchUpdateMenuReq{
-			MerchantId:   merchantID,
+			ShopUuid:     shopUuid,
 			Field:        "ITEM",
 			MenuEntities: entities,
 			RequestId:    uuid.New().String(),

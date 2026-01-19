@@ -10,6 +10,7 @@ import (
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/domain/service"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
 	rpcAdapter "ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
@@ -31,7 +32,7 @@ type ITakeoutOrderAppService interface {
 	// 处理订单状态变更
 	HandlePushOrderState(ctx context.Context, takeoutOrderEvent request.TakeoutOrderEvent) error
 	// 订单同步（从 RPC 接收新订单）
-	SyncNewOrder(ctx context.Context, platform string, takeoutOrderUuid string, rawData map[string]interface{}) error
+	SyncNewOrder(ctx context.Context, platform string, takeoutOrderUuid string, rawData map[string]interface{}, orderDataMap map[string]interface{}) error
 	// 接单
 	AcceptOrder(ctx context.Context, req *request.TakeoutOrderAcceptReq) error
 	// 检查订单库存
@@ -85,23 +86,23 @@ func (s *takeoutOrderAppService) HandlePushOrderState(ctx context.Context, takeo
 	switch takeoutOrderEvent.Action {
 	case "create":
 		// 通过 RPC 查询订单信息
-		orderInfo, err := s.rpcService.GetOrderInfo(ctx, takeoutOrderEvent.ShopUuid, takeoutOrderEvent.OrderUuid)
+		orderInfo, orderDataMap, err := s.rpcService.GetOrderInfo(ctx, takeoutOrderEvent.ShopUuid, takeoutOrderEvent.OrderUuid)
 		if err != nil {
 			logger.Logger.Error("RPC查询订单失败", zap.Error(err))
 			return fmt.Errorf("RPC查询订单失败: %w", err)
 		}
-		return s.SyncNewOrder(ctx, takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid, orderInfo)
+		return s.SyncNewOrder(ctx, takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid, orderInfo, orderDataMap)
 	case "status_update", "cancel":
 		// 查询订单是否存在
 		order, err := persistence.NewTakeoutOrderRepo(ctx.GetDB()).GetByTakeoutOrderUuid(takeoutOrderEvent.OrderUuid)
 		if err != nil || order == nil {
 			// 订单不存在，通过 RPC 查询订单信息
-			orderInfo, err := s.rpcService.GetOrderInfo(ctx, takeoutOrderEvent.ShopUuid, takeoutOrderEvent.OrderUuid)
+			orderInfo, orderDataMap, err := s.rpcService.GetOrderInfo(ctx, takeoutOrderEvent.ShopUuid, takeoutOrderEvent.OrderUuid)
 			if err != nil {
 				logger.Logger.Error("RPC查询订单失败", zap.Error(err))
 				return fmt.Errorf("RPC查询订单失败: %w", err)
 			}
-			if err := s.SyncNewOrder(ctx, takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid, orderInfo); err != nil {
+			if err := s.SyncNewOrder(ctx, takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid, orderInfo, orderDataMap); err != nil {
 				logger.Logger.Error("同步订单失败", zap.Error(err))
 				return fmt.Errorf("同步订单失败: %w", err)
 			}
@@ -113,7 +114,7 @@ func (s *takeoutOrderAppService) HandlePushOrderState(ctx context.Context, takeo
 }
 
 // SyncNewOrder 同步新订单（从 RPC 接收）
-func (s *takeoutOrderAppService) SyncNewOrder(ctx context.Context, platform string, takeoutOrderUuid string, rawData map[string]interface{}) error {
+func (s *takeoutOrderAppService) SyncNewOrder(ctx context.Context, platform string, takeoutOrderUuid string, rawData map[string]interface{}, orderDataMap map[string]interface{}) error {
 	// 1. 获取平台转换器
 	converter, ok := s.converters[platform]
 	if !ok {
@@ -122,10 +123,22 @@ func (s *takeoutOrderAppService) SyncNewOrder(ctx context.Context, platform stri
 	}
 
 	// 2. 将原始数据转为 JSON
-	rawDataJSON, err := json.Marshal(rawData)
-	if err != nil {
-		logger.Logger.Error("序列化订单数据失败", zap.Error(err))
-		return fmt.Errorf("序列化订单数据失败: %w", err)
+	rawDataJSON := []byte("")
+	if platform == value_object.TakeoutPlatformGrab {
+		dataJSON, err := json.Marshal(rawData)
+		if err != nil {
+			logger.Logger.Error("序列化订单数据失败", zap.Error(err))
+			return fmt.Errorf("序列化订单数据失败: %w", err)
+		}
+		rawDataJSON = dataJSON
+	} else if platform == value_object.TakeoutPlatformLineman {
+		// 将 orderData 转为 JSON
+		dataJSON, err := json.Marshal(orderDataMap)
+		if err != nil {
+			logger.Logger.Error("序列化订单数据失败", zap.Error(err))
+			return fmt.Errorf("序列化订单数据失败: %w", err)
+		}
+		rawDataJSON = dataJSON
 	}
 
 	// 3. 使用转换器解析 Webhook

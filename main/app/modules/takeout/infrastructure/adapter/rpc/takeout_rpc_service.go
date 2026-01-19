@@ -165,7 +165,7 @@ func (s *TakeoutRPCService) SaveMenuSnapshot(ctx context.Context, providerName s
 }
 
 // UpdateMenuItem 更新菜单项（商品）
-func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, merchantId string, itemId string, price *int64, availableStatus string, maxStock *int64) error {
+func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, shopUuid string, itemId string, price *int64, availableStatus string, maxStock *int64) error {
 	// 创建客户端
 	client, err := NewBMPTakeoutClient()
 	if err != nil {
@@ -180,7 +180,7 @@ func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, merchantId strin
 
 	// 构造请求
 	req := &menuApi.UpdateMenuItemReq{
-		MerchantId:      merchantId,
+		ShopUuid:        shopUuid,
 		ItemId:          itemId,
 		Price:           price,
 		AvailableStatus: &availableStatus,
@@ -193,7 +193,7 @@ func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, merchantId strin
 	if err != nil {
 		logger.Logger.Error("更新菜单项失败",
 			zap.Error(err),
-			zap.String("merchantId", merchantId),
+			zap.String("shopUuid", shopUuid),
 			zap.String("itemId", itemId))
 		return errors.WithMessage(err, "更新菜单项失败")
 	}
@@ -202,7 +202,7 @@ func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, merchantId strin
 }
 
 // UpdateMenuModifier 更新菜单修饰符
-func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, merchantId string, modifierId string, modifierName string, price *int64, availableStatus string) error {
+func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, shopUuid string, modifierId string, modifierName string, price *int64, availableStatus string) error {
 	// 创建客户端
 	client, err := NewBMPTakeoutClient()
 	if err != nil {
@@ -217,7 +217,7 @@ func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, merchantId s
 
 	// 构造请求
 	req := &menuApi.UpdateMenuModifierReq{
-		MerchantId:      merchantId,
+		ShopUuid:        shopUuid,
 		ModifierId:      modifierId,
 		ModifierName:    modifierName,
 		Price:           price,
