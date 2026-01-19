@@ -8,4 +8,6 @@ const (
 	// ClientVersionV2110 客户端版本 v2.11.0
 	// 此版本引入了统一账号员工管理功能
 	ClientVersionV2110 = "2.11.0"
+	// 品牌采购驳回理由
+	ClientVersionV2140 = "2.14.0"
 )

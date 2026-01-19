@@ -8,6 +8,7 @@ const (
 	PurchaseOrderStatusRejected           = 3 // 已驳回
 	PurchaseOrderStatusCompleted          = 4 // 已完成 - 全部收货 - 已收货
 	PurchaseOrderStatusHeadquarterPending = 5 // 待总部审核
+	PurchaseOrderStatusRecommitted        = 6 // 驳回后已重新提交
 )
 
 // 采购类型常量

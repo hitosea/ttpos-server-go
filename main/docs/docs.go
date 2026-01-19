@@ -48709,6 +48709,10 @@ const docTemplate = `{
                     "description": "驳回备注，可以为空最大100个字符",
                     "type": "string"
                 },
+                "remark": {
+                    "description": "批注, 可以为空最大100个字符",
+                    "type": "string"
+                },
                 "uuid": {
                     "description": "采购订单ID",
                     "type": "integer",
@@ -48961,6 +48965,10 @@ const docTemplate = `{
                     "description": "期望到货时间(时间戳)",
                     "type": "integer",
                     "minimum": 0
+                },
+                "is_recommit": {
+                    "description": "是否重新提交",
+                    "type": "boolean"
                 },
                 "items": {
                     "description": "采购商品明细",
@@ -59219,6 +59227,10 @@ const docTemplate = `{
         "resp.PurchaseOrderDetailResp": {
             "type": "object",
             "properties": {
+                "can_recommit": {
+                    "description": "是否可重新提交",
+                    "type": "boolean"
+                },
                 "company_name": {
                     "description": "V2.6 公司名称",
                     "type": "string"
@@ -59278,6 +59290,13 @@ const docTemplate = `{
                     "description": "驳回原因",
                     "type": "string"
                 },
+                "remarks": {
+                    "description": "批注",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PurchaseOrderRemark"
+                    }
+                },
                 "status": {
                     "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核",
                     "type": "integer"
@@ -59311,6 +59330,10 @@ const docTemplate = `{
         "resp.PurchaseOrderInfo": {
             "type": "object",
             "properties": {
+                "can_recommit": {
+                    "description": "是否可重新提交",
+                    "type": "boolean"
+                },
                 "company_name": {
                     "description": "V2.6 公司名称",
                     "type": "string"
@@ -59547,6 +59570,27 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.PageResponse"
                         }
                     ]
+                }
+            }
+        },
+        "resp.PurchaseOrderRemark": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "批注",
+                    "type": "string"
+                },
+                "source": {
+                    "description": "来源 headquarters-总部 或 store-门店",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态 2-已通过 3-已驳回 6-重新提交",
+                    "type": "integer"
                 }
             }
         },
