@@ -26,6 +26,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -180,6 +181,38 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		return resp.PurchaseOrderDetailResp{}, errors.WithMessage(errors.New("数据转换失败"), err.Error())
 	}
 
+	// 获取子店所有仓库物品库存（门店数量）\ 总店指定仓库物品库存（可采购数量）
+	avaliableQuantityMap := make(map[uint64]float64)
+	storeQuantityMap := make(map[uint64]float64)
+	companySetting := ctx.GetCompanySetting()
+
+	var hqUuid, subUuid uint64
+	if companySetting.IsHeadquarter() { // 总店
+		hqUuid = companySetting.CompanyUuid
+		subUuid = purchaseOrder.CompanyUuid
+	} else if companySetting.IsSubShop() { // 子店
+		hqUuid = companySetting.HeadquarterUuid
+		subUuid = companySetting.CompanyUuid
+	}
+	// 获取子店所有仓库物品库存（门店数量）
+	if subUuid != 0 {
+		var warehouseItems []model.WarehouseItem
+		subDb := s.dbm.GetDB(subUuid)
+		subDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid in (?)", subDb.Model(&model.Warehouse{}).Select("uuid").Where("delete_time = 0")).Find(&warehouseItems)
+		for _, warehouseItem := range warehouseItems {
+			storeQuantityMap[warehouseItem.MaterialUuid] += warehouseItem.Stock
+		}
+	}
+	// 总店指定仓库物品库存（可采购数量）
+	if hqUuid != 0 {
+		var warehouseItems []model.WarehouseItem
+		hqDb := s.dbm.GetDB(hqUuid)
+		hqDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid = (?)", hqDb.Model(&model.Warehouse{}).Select("uuid").Where("erp_code = ? AND delete_time = 0", purchaseOrder.WarehouseErpCode)).Find(&warehouseItems)
+		for _, warehouseItem := range warehouseItems {
+			avaliableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
+		}
+	}
+
 	// 转换仓库名称
 	detailResp.WarehouseName = *language.JsonToLocaleResponse(purchaseOrder.WarehouseName)
 
@@ -193,7 +226,13 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		copier.Copy(&itemInfo, &item)
 		itemInfo.LocaleName = *language.JsonToLocaleResponse(item.MaterialName)
 		itemInfo.LocaleUnitName = *language.JsonToLocaleResponse(item.UnitName)
-		itemInfo.LocaleBaseUnitName = *language.JsonToLocaleResponse(item.BaseUnitName)
+		itemInfo.LocaleBaseUnitName = func() dto.LocaleResponse {
+			if item.Material == nil {
+				return dto.LocaleResponse{}
+			}
+			unitName := item.Material.GetBaseUnit().Name
+			return *language.JsonToLocaleResponse(unitName)
+		}()
 		itemInfo.InternalCode = func(item model.PurchaseOrderItem) string {
 			if item.Material == nil {
 				return ""
@@ -255,6 +294,8 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 
 			return unitList
 		}(item)
+		itemInfo.AvailableQuantity = decimal.NewFromFloat(avaliableQuantityMap[item.MaterialUuid]).Round(3).InexactFloat64()
+		itemInfo.StoreQuantity = decimal.NewFromFloat(storeQuantityMap[item.MaterialUuid]).Round(3).InexactFloat64()
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 

@@ -23998,6 +23998,30 @@ const docTemplate = `{
                         "description": "状态 0-全部 1-启用 2-停用",
                         "name": "status",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "仓库ERP编码",
+                        "name": "warehouse_erp_code",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "采购类型 0-全部 1-门店 2-总部",
+                        "name": "purchase_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "供应商ERP编码",
+                        "name": "supplier_erp_code",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "出库仓库ERP编码",
+                        "name": "out_warehouse_erp_code",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -38876,6 +38900,10 @@ const docTemplate = `{
                     "description": "可用库存数量",
                     "type": "number"
                 },
+                "available_quantity": {
+                    "description": "可采购数量",
+                    "type": "number"
+                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -38963,6 +38991,10 @@ const docTemplate = `{
                 "status": {
                     "description": "状态 1-启用 0-停用",
                     "type": "integer"
+                },
+                "store_quantity": {
+                    "description": "门店数量",
+                    "type": "number"
                 },
                 "transit_num": {
                     "description": "在途库存数量",
@@ -57983,6 +58015,10 @@ const docTemplate = `{
                     "description": "手续费",
                     "type": "number"
                 },
+                "payment_info": {
+                    "description": "支付信息.json格式,存储第三方支付返回的详细信息,kbank的信息",
+                    "type": "string"
+                },
                 "payment_method_code": {
                     "description": "支付方式代号",
                     "type": "integer"
@@ -59364,6 +59400,10 @@ const docTemplate = `{
                     "description": "到货数量",
                     "type": "number"
                 },
+                "available_quantity": {
+                    "description": "可采购数量",
+                    "type": "number"
+                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -59410,6 +59450,10 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "申请数量",
+                    "type": "number"
+                },
+                "store_quantity": {
+                    "description": "门店数量",
                     "type": "number"
                 },
                 "unit_conversion_rate": {

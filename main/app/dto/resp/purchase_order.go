@@ -67,6 +67,9 @@ type PurchaseOrderItemInfo struct {
 	BarcodeValue       string                          `json:"barcode_value"`         // 条形码值
 	UnitList           []PurchaseOrderItemMaterialUnit `json:"unit_list"`             // 基准单位列表
 	Units              []PurchaseOrderItemUnit         `json:"units"`                 // 单位列表
+
+	AvailableQuantity float64 `json:"available_quantity"` // 可采购数量
+	StoreQuantity     float64 `json:"store_quantity"`     // 门店数量
 }
 
 // PurchaseOrderLogInfo 采购订单操作日志信息

@@ -34,6 +34,9 @@ type Material struct {
 	UnitLocaleName         dto.LocaleResponse `json:"unit_locale_name"`          // 基准单位名称
 	CostUnitLocaleName     dto.LocaleResponse `json:"cost_unit_locale_name"`     // 成本单位名称
 	PurchaseUnitLocaleName dto.LocaleResponse `json:"purchase_unit_locale_name"` // 采购单位名称
+
+	AvailableQuantity float64 `json:"available_quantity"` // 可采购数量
+	StoreQuantity     float64 `json:"store_quantity"`     // 门店数量
 }
 
 type NotBasicUnitStockList struct {

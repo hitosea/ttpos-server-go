@@ -33,6 +33,10 @@ type MaterialHandler struct {
 // @Param keyword query string false "关键字"
 // @Param category_uuid query int false "分类UUID"
 // @Param status query int false "状态 0-全部 1-启用 2-停用"
+// @Param warehouse_erp_code query string false "仓库ERP编码"
+// @Param purchase_type query int false "采购类型 0-全部 1-门店 2-总部"
+// @Param supplier_erp_code query string false "供应商ERP编码"
+// @Param out_warehouse_erp_code query string false "出库仓库ERP编码"
 // @Success 200 {object} material_resp.MaterialListWithPaginationResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/material/list [get]
