@@ -2320,27 +2320,50 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 	var mainQuery string
 	var args []any
 
+	// 判断是否有店内订单查询条件
+	hasStoreOrderFilter := req.IsDesk || req.IsInstant || req.IsTakeout
+
 	if req.IsDelivery && takeoutOrderQuery != "" {
-		// 合并店内订单和外卖订单
-		mainQuery = fmt.Sprintf(`
-			SELECT 
-				period_start_time,
-				SUM(order_amount) AS order_amount,
-				SUM(pay_amount) AS pay_amount,
-				SUM(refund_amount) AS refund_amount,
-				COUNT(DISTINCT sale_bill_uuid) AS order_num,
-				SUM(meal_num) AS meal_num
-			FROM (
-				(%s)
-				UNION ALL
-				(%s)
-			) AS combined_orders
-			GROUP BY period_start_time
-			ORDER BY period_start_time ASC
-			LIMIT ? OFFSET ?
-		`, storeOrderQuery, takeoutOrderQuery)
-		args = append(storeOrderArgs, takeoutOrderArgs...)
-		args = append(args, req.PageSize, (req.PageNo-1)*req.PageSize)
+		if hasStoreOrderFilter {
+			// 合并店内订单和外卖订单
+			mainQuery = fmt.Sprintf(`
+				SELECT 
+					period_start_time,
+					SUM(order_amount) AS order_amount,
+					SUM(pay_amount) AS pay_amount,
+					SUM(refund_amount) AS refund_amount,
+					COUNT(DISTINCT sale_bill_uuid) AS order_num,
+					SUM(meal_num) AS meal_num
+				FROM (
+					(%s)
+					UNION ALL
+					(%s)
+				) AS combined_orders
+				GROUP BY period_start_time
+				ORDER BY period_start_time ASC
+				LIMIT ? OFFSET ?
+			`, storeOrderQuery, takeoutOrderQuery)
+			args = append(storeOrderArgs, takeoutOrderArgs...)
+			args = append(args, req.PageSize, (req.PageNo-1)*req.PageSize)
+		} else {
+			// 仅外卖订单（当 IsDelivery=1 且其他三个都是0时）
+			mainQuery = fmt.Sprintf(`
+				SELECT 
+					period_start_time,
+					SUM(order_amount) AS order_amount,
+					SUM(pay_amount) AS pay_amount,
+					SUM(refund_amount) AS refund_amount,
+					COUNT(DISTINCT sale_bill_uuid) AS order_num,
+					SUM(meal_num) AS meal_num
+				FROM (
+					%s
+				) AS subquery
+				GROUP BY period_start_time
+				ORDER BY period_start_time ASC
+				LIMIT ? OFFSET ?
+			`, takeoutOrderQuery)
+			args = append(takeoutOrderArgs, req.PageSize, (req.PageNo-1)*req.PageSize)
+		}
 	} else {
 		// 仅店内订单
 		mainQuery = fmt.Sprintf(`
@@ -2367,24 +2390,28 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 
 	// 计算总时段数（需要考虑合并后的时段）
 	var total int64
+
 	if req.IsDelivery {
-		// 计算合并后的总时段数
-		// 注意：timeField 包含表别名（sb.finish_time 或 sb.create_time），需要提取字段名
-		timeFieldName := "finish_time"
-		if req.IsCreateTime {
-			timeFieldName = "create_time"
-		}
-		countQuery := fmt.Sprintf(`
-			SELECT COUNT(DISTINCT period_start_time) FROM (
-				SELECT FLOOR(%s / %d) * %d AS period_start_time FROM ttpos_sale_bill WHERE delete_time = ? AND status = ? AND %s >= ? AND %s <= ?
-		`, timeFieldName, req.PeriodSeconds, req.PeriodSeconds, timeFieldName, timeFieldName)
-		countArgs := []any{constant.NotDeleted, constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
+		// 使用 statistics_takeout.go 中定义的变量，保持代码一致性
+		takeoutValidStatesStr := buildStateInCondition(validOrderStates)
 
-		if len(opts) > 0 {
-			countQuery += " AND uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)"
-		}
+		if hasStoreOrderFilter {
+			// 计算合并后的总时段数（店内订单 + 外卖订单）
+			// 注意：timeField 包含表别名（sb.finish_time 或 sb.create_time），需要提取字段名
+			timeFieldName := "finish_time"
+			if req.IsCreateTime {
+				timeFieldName = "create_time"
+			}
+			countQuery := fmt.Sprintf(`
+				SELECT COUNT(DISTINCT period_start_time) FROM (
+					SELECT FLOOR(%s / %d) * %d AS period_start_time FROM ttpos_sale_bill WHERE delete_time = ? AND status = ? AND %s >= ? AND %s <= ?
+			`, timeFieldName, req.PeriodSeconds, req.PeriodSeconds, timeFieldName, timeFieldName)
+			countArgs := []any{constant.NotDeleted, constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
 
-		if req.IsDesk || req.IsInstant || req.IsTakeout {
+			if len(opts) > 0 {
+				countQuery += " AND uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)"
+			}
+
 			var billTypeList []uint
 			if req.IsDesk {
 				billTypeList = append(billTypeList, constant.SaleBillTypeDesk)
@@ -2397,17 +2424,24 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 			}
 			countQuery += " AND bill_type IN (?)"
 			countArgs = append(countArgs, billTypeList)
-		}
 
-		// 使用 statistics_takeout.go 中定义的变量，保持代码一致性
-		takeoutValidStatesStr := buildStateInCondition(validOrderStates)
-		countQuery += fmt.Sprintf(`
-			UNION
-			SELECT FLOOR(accepted_time / ?) * ? AS period_start_time FROM ttpos_takeout_order WHERE delete_time = ? AND order_state IN %s AND accepted_time > 0 AND accepted_time >= ? AND accepted_time <= ?
-			) AS all_periods
-		`, takeoutValidStatesStr)
-		countArgs = append(countArgs, req.PeriodSeconds, req.PeriodSeconds, constant.NotDeleted, req.StartTime, req.EndTime)
-		r.db.Raw(countQuery, countArgs...).Scan(&total)
+			countQuery += fmt.Sprintf(`
+				UNION
+				SELECT FLOOR(accepted_time / ?) * ? AS period_start_time FROM ttpos_takeout_order WHERE delete_time = ? AND order_state IN %s AND accepted_time > 0 AND accepted_time >= ? AND accepted_time <= ?
+				) AS all_periods
+			`, takeoutValidStatesStr)
+			countArgs = append(countArgs, req.PeriodSeconds, req.PeriodSeconds, constant.NotDeleted, req.StartTime, req.EndTime)
+			r.db.Raw(countQuery, countArgs...).Scan(&total)
+		} else {
+			// 仅外卖订单的总时段数（当 IsDelivery=1 且其他三个都是0时）
+			countQuery := fmt.Sprintf(`
+				SELECT COUNT(DISTINCT period_start_time) FROM (
+					SELECT FLOOR(accepted_time / ?) * ? AS period_start_time FROM ttpos_takeout_order WHERE delete_time = ? AND order_state IN %s AND accepted_time > 0 AND accepted_time >= ? AND accepted_time <= ?
+				) AS all_periods
+			`, takeoutValidStatesStr)
+			countArgs := []any{req.PeriodSeconds, req.PeriodSeconds, constant.NotDeleted, req.StartTime, req.EndTime}
+			r.db.Raw(countQuery, countArgs...).Scan(&total)
+		}
 	} else {
 		// 仅店内订单的总时段数
 		countQuery := baseQuery.
