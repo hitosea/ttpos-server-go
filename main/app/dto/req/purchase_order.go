@@ -108,8 +108,9 @@ type PurchaseOrderDeleteReq struct {
 
 // PurchaseOrderApproveReq 审核采购订单请求
 type PurchaseOrderApproveReq struct {
-	Uuid   uint64 `json:"uuid" binding:"required,min=1"`                  // 采购订单ID
-	Action string `json:"action" binding:"required,oneof=approve reject"` // 审核动作：approve-通过，reject-驳回
+	Uuid         uint64 `json:"uuid" binding:"required,min=1"`                  // 采购订单ID
+	Action       string `json:"action" binding:"required,oneof=approve reject"` // 审核动作：approve-通过，reject-驳回
+	RejectReason string `json:"reject_reason"`                                  // 驳回备注，可以为空最大100个字符
 }
 
 // PurchaseOrderSubmitReq 提交采购订单请求

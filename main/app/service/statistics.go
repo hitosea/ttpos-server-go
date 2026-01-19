@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"fmt"
 	"sort"
 	"strconv"
@@ -101,6 +102,7 @@ type CountSaleResp struct {
 	TotalInstantOrderTakeawayAmount float64 `json:"total_instant_order_takeaway_amount"` // 即时订单金额（外卖）
 	TotalTakeoutOrderNum            int64   `json:"total_takeout_order_num"`             // 总外送订单数
 	TotalTakeoutOrderAmount         float64 `json:"total_takeout_order_amount"`          // 总外送订单金额
+	TotalRechargeAmount             float64 `json:"total_recharge_amount"`               // 总充值金额
 	MinOrderAmount                  float64 `json:"min_order_amount"`                    // 最小订单金额
 	MaxOrderAmount                  float64 `json:"max_order_amount"`                    // 最大订单金额
 	AvgOrderAmount                  float64 `json:"avg_order_amount"`                    // 平均订单金额
@@ -213,6 +215,7 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		MinTakeoutOrderAmount:           saleData.MinTakeoutOrderAmount.Float64,
 		MaxTakeoutOrderAmount:           saleData.MaxTakeoutOrderAmount.Float64,
 		AvgTakeoutOrderAmount:           saleData.AvgTakeoutOrderAmount.Float64,
+		TotalRechargeAmount:             memberData.TotalRechargeAmount,
 	}
 }
 
@@ -226,8 +229,9 @@ type CountSaleDaysResp struct {
 func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []string) []CountSaleDaysResp {
 	repo := repository.NewStatisticsRepo(ctx.GetDB())
 	opts := s.buildCountOpts(ctx, req)
-	saleData := repo.CountSaleDays(opts...)
-	memberData := repo.CountMemberDays(opts...)
+	timezone := ctx.GetCompanySetting().Timezone
+	saleData := repo.CountSaleDays(timezone, opts...)
+	memberData := repo.CountMemberDays(timezone, opts...)
 
 	list := make([]CountSaleDaysResp, 0, len(days))
 	for _, day := range days {
@@ -251,6 +255,7 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			totalTakeoutDeliveryFee         decimal.Decimal
 			totalInstantOrderAmount         decimal.Decimal
 			totalInstantOrderTakeawayAmount decimal.Decimal
+			totalRechargeAmount             decimal.Decimal
 			avgInstantOrderTakeawayAmount   decimal.Decimal
 			minOrderAmount                  decimal.Decimal
 			maxOrderAmount                  decimal.Decimal
@@ -334,6 +339,7 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			totalBusinessAmount = totalBusinessAmount.Add(decimal.NewFromFloat(memberResult.TotalPaymentAmount.Float64))
 			totalPaymentFee = totalPaymentFee.Add(decimal.NewFromFloat(memberResult.TotalPaymentFee.Float64))
 			totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(memberResult.TotalRefundAmount.Float64))
+			totalRechargeAmount = totalRechargeAmount.Add(decimal.NewFromFloat(memberResult.TotalRechargeAmount.Float64))
 		}
 		list = append(list, CountSaleDaysResp{
 			CountSaleResp: CountSaleResp{
@@ -359,6 +365,7 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 				TotalInstantOrderNum:            totalInstantOrderNum,
 				TotalInstantOrderAmount:         totalInstantOrderAmount.InexactFloat64(),
 				TotalInstantOrderTakeawayAmount: totalInstantOrderTakeawayAmount.InexactFloat64(),
+				TotalRechargeAmount:             totalRechargeAmount.InexactFloat64(),
 				AvgInstantOrderTakeawayAmount:   avgInstantOrderTakeawayAmount.InexactFloat64(),
 				TotalTakeoutOrderNum:            totalTakeoutOrderNum,
 				TotalTakeoutSaleAmount:          totalTakeoutSaleAmount.InexactFloat64(),
@@ -589,7 +596,8 @@ type CountPaymentDaysResp struct {
 // CountPaymentDays 统计支付天数
 func (s *statisticsSrv) CountPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp {
 	opts := s.buildCountOpts(ctx, req)
-	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPaymentDays(opts...)
+	timezone := ctx.GetCompanySetting().Timezone
+	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPaymentDays(timezone, opts...)
 
 	list := make([]CountPaymentDaysResp, 0)
 	for _, day := range days {
@@ -662,7 +670,8 @@ func (s *statisticsSrv) CountMemberPayment(ctx context.Context, req CountReq) Co
 // CountMemberPaymentDays 统计会员支付天数
 func (s *statisticsSrv) CountMemberPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp {
 	opts := s.buildCountOpts(ctx, req)
-	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberPaymentDays(opts...)
+	timezone := ctx.GetCompanySetting().Timezone
+	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberPaymentDays(timezone, opts...)
 
 	list := make([]CountPaymentDaysResp, 0)
 	for _, day := range days {
@@ -904,6 +913,12 @@ type CountProductResp struct {
 	SalePrice   float64 `json:"sale_price"`   // 销售单价
 	SaleNum     float64 `json:"sale_num"`     // 销售数量
 	SaleAmount  float64 `json:"sale_amount"`  // 销售金额
+	// 排序字段（不返回给前端，仅用于排序）
+	PpcSort       sql.NullInt64 `json:"-"` // 父分类排序
+	PpcCreateTime sql.NullInt64 `json:"-"` // 父分类创建时间
+	PcSort        sql.NullInt64 `json:"-"` // 子分类排序
+	PcCreateTime  sql.NullInt64 `json:"-"` // 子分类创建时间
+	PpCreateTime  sql.NullInt64 `json:"-"` // 商品创建时间
 }
 
 // CountProduct 统计商品
@@ -941,27 +956,31 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 		ctx.GetLanguage(),
 	)
 
-	// 合并商品数据：使用 map 按商品名称+规格名称合并
-	// 店内商品按 product_bom_uuid 分组（有规格），外卖订单商品按 product_package_uuid 分组（没有规格）
-	productMap := make(map[string]*CountProductResp)
-	// 用于记录商品基础名称（不含规格）到商品列表的映射，用于合并外卖订单商品
-	baseNameMap := make(map[string][]*CountProductResp)
+	// 合并商品数据：使用 map 按 product_bom_uuid 合并
+	// 店内商品和外卖订单商品都按 product_bom_uuid 分组，使用相同的 key 进行合并
+	productMap := make(map[uint64]*CountProductResp)
 	for _, product := range productData {
 		productName := product.ProductName.String
-		baseProductName := product.ProductName.String // 基础商品名称（不含规格）
 		if product.ProductType.Int64 != constant.ProductTypePackage {
 			productName = product.ProductName.String + "（" + product.FlavorName.String + "）"
 		}
-		key := productName
-		productResp := &CountProductResp{
-			ProductName: productName,
-			SalePrice:   product.SalePrice.Float64,
-			SaleNum:     product.SaleNum.Float64,
-			SaleAmount:  product.SaleAmount.Float64,
+		// 使用 product_bom_uuid 作为 key（如果为 0 或无效，则跳过）
+		if !product.ProductBomUuid.Valid || product.ProductBomUuid.Int64 == 0 {
+			continue
 		}
-		productMap[key] = productResp
-		// 记录基础商品名称到商品列表的映射
-		baseNameMap[baseProductName] = append(baseNameMap[baseProductName], productResp)
+		productBomUuid := uint64(product.ProductBomUuid.Int64)
+		productResp := &CountProductResp{
+			ProductName:   productName,
+			SalePrice:     product.SalePrice.Float64,
+			SaleNum:       product.SaleNum.Float64,
+			SaleAmount:    product.SaleAmount.Float64,
+			PpcSort:       product.PpcSort,
+			PpcCreateTime: product.PpcCreateTime,
+			PcSort:        product.PcSort,
+			PcCreateTime:  product.PcCreateTime,
+			PpCreateTime:  product.PpCreateTime,
+		}
+		productMap[productBomUuid] = productResp
 	}
 
 	// 合并外卖订单商品的统计
@@ -970,14 +989,21 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 		takeoutProductName := takeoutProduct.ProductName.String
 		// 规格名称：从 ttpos_takeout_order_item_modifier 表的 ttpos_modifier_name 获取
 		takeoutFlavorName := takeoutProduct.FlavorName.String
-		// 构建完整的商品名称（如果有规格，则添加规格名称）
+		// 构建完整的商品名称（如果是套餐，则不拼接规格名称；普通商品如果有规格，则添加规格名称）
 		takeoutFullProductName := takeoutProductName
-		if takeoutFlavorName != "" {
+		if takeoutProduct.ProductType.Int64 != constant.ProductTypePackage && takeoutFlavorName != "" {
 			takeoutFullProductName = takeoutProductName + "（" + takeoutFlavorName + "）"
 		}
-		// 查找是否有匹配的店内商品（按完整商品名称匹配，包括规格）
-		key := takeoutFullProductName
-		if existing, exists := productMap[key]; exists {
+		// 使用 product_bom_uuid 作为 key（如果为 0 或无效，则使用商品名称作为 fallback）
+		var takeoutProductBomUuid uint64
+		if takeoutProduct.ProductBomUuid.Valid && takeoutProduct.ProductBomUuid.Int64 > 0 {
+			takeoutProductBomUuid = uint64(takeoutProduct.ProductBomUuid.Int64)
+		} else {
+			// 如果没有有效的 product_bom_uuid，使用商品名称作为 key（fallback）
+			// 这种情况应该很少见，但为了健壮性需要处理
+			continue
+		}
+		if existing, exists := productMap[takeoutProductBomUuid]; exists {
 			// 如果有匹配的店内商品，合并到该商品
 			// 使用 decimal 进行运算，避免精度问题
 			existingSaleNum := decimal.NewFromFloat(existing.SaleNum)
@@ -992,18 +1018,19 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 			// 更新结构体字段
 			existing.SaleNum = existingSaleNum.InexactFloat64()
 			existing.SaleAmount = existingSaleAmount.InexactFloat64()
-
-			// 单价：使用加权平均
-			if existingSaleNum.GreaterThan(decimal.Zero) {
-				existing.SalePrice = existingSaleAmount.Div(existingSaleNum).Round(2).InexactFloat64()
-			}
+			existing.SalePrice = takeoutProduct.SalePrice.Float64
 		} else {
 			// 如果没有匹配的店内商品，单独显示为一个商品
-			productMap[key] = &CountProductResp{
-				ProductName: takeoutFullProductName,
-				SalePrice:   takeoutProduct.SalePrice.Float64,
-				SaleNum:     takeoutProduct.SaleNum.Float64,
-				SaleAmount:  takeoutProduct.SaleAmount.Float64,
+			productMap[takeoutProductBomUuid] = &CountProductResp{
+				ProductName:   takeoutFullProductName,
+				SalePrice:     takeoutProduct.SalePrice.Float64,
+				SaleNum:       takeoutProduct.SaleNum.Float64,
+				SaleAmount:    takeoutProduct.SaleAmount.Float64,
+				PpcSort:       takeoutProduct.PpcSort,
+				PpcCreateTime: takeoutProduct.PpcCreateTime,
+				PcSort:        takeoutProduct.PcSort,
+				PcCreateTime:  takeoutProduct.PcCreateTime,
+				PpCreateTime:  takeoutProduct.PpCreateTime,
 			}
 		}
 	}
@@ -1013,6 +1040,39 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 	for _, product := range productMap {
 		list = append(list, *product)
 	}
+
+	// 排序：和 CountProduct 的排序逻辑一致
+	sort.Slice(list, func(i, j int) bool {
+		// 1. 按父分类排序（升序）
+		if list[i].PpcSort.Valid && list[j].PpcSort.Valid {
+			if list[i].PpcSort.Int64 != list[j].PpcSort.Int64 {
+				return list[i].PpcSort.Int64 < list[j].PpcSort.Int64
+			}
+		}
+		// 2. 按父分类创建时间（降序）
+		if list[i].PpcCreateTime.Valid && list[j].PpcCreateTime.Valid {
+			if list[i].PpcCreateTime.Int64 != list[j].PpcCreateTime.Int64 {
+				return list[i].PpcCreateTime.Int64 > list[j].PpcCreateTime.Int64
+			}
+		}
+		// 3. 按子分类排序（升序）
+		if list[i].PcSort.Valid && list[j].PcSort.Valid {
+			if list[i].PcSort.Int64 != list[j].PcSort.Int64 {
+				return list[i].PcSort.Int64 < list[j].PcSort.Int64
+			}
+		}
+		// 4. 按子分类创建时间（降序）
+		if list[i].PcCreateTime.Valid && list[j].PcCreateTime.Valid {
+			if list[i].PcCreateTime.Int64 != list[j].PcCreateTime.Int64 {
+				return list[i].PcCreateTime.Int64 > list[j].PcCreateTime.Int64
+			}
+		}
+		// 5. 按商品创建时间（降序）
+		if list[i].PpCreateTime.Valid && list[j].PpCreateTime.Valid {
+			return list[i].PpCreateTime.Int64 > list[j].PpCreateTime.Int64
+		}
+		return false
+	})
 
 	return list
 }
@@ -1059,7 +1119,8 @@ type CountAreaDaysResp struct {
 // CountAreaDays 统计区域天数
 func (s *statisticsSrv) CountAreaDays(ctx context.Context, req CountReq, days []string) []CountAreaDaysResp {
 	opts := s.buildCountOpts(ctx, req)
-	areaData := repository.NewStatisticsRepo(ctx.GetDB()).CountAreaDays(opts...)
+	timezone := ctx.GetCompanySetting().Timezone
+	areaData := repository.NewStatisticsRepo(ctx.GetDB()).CountAreaDays(timezone, opts...)
 
 	var list []CountAreaDaysResp
 
@@ -1242,7 +1303,8 @@ func (s *statisticsSrv) CountMemberNumDays(ctx context.Context, req CountReq, da
 	opts := s.buildCountOpts(ctx, req)
 	opts = append(opts, commonRepo.WhereBySoftDelete())
 	opts = append(opts, commonRepo.WhereByIsVisitor(0))
-	memberNumData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNumDays(opts...)
+	timezone := ctx.GetCompanySetting().Timezone
+	memberNumData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNumDays(timezone, opts...)
 
 	var list []CountMemberNumDaysResp
 	for _, day := range days {
@@ -2286,6 +2348,7 @@ type CountExportData struct {
 	TotalTakeoutBusinessAmount float64                  `json:"total_takeout_business_amount"`
 	TotalTakeoutRefundAmount   float64                  `json:"total_takeout_refund_amount"`
 	TotalTakeoutDeliveryFee    float64                  `json:"total_takeout_delivery_fee"`
+	TotalRechargeAmount        float64                  `json:"total_recharge_amount"`
 	MinOrderAmount             float64                  `json:"min_order_amount"`
 	MaxOrderAmount             float64                  `json:"max_order_amount"`
 	AvgOrderAmount             float64                  `json:"avg_order_amount"`
@@ -2430,6 +2493,7 @@ func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExp
 			TotalTakeoutRefundAmount:   sale.TotalTakeoutRefundAmount,
 			TotalTakeoutDeliveryFee:    sale.TotalTakeoutDeliveryFee,
 			TotalReceivedAmount:        sale.TotalReceivedAmount,
+			TotalRechargeAmount:        sale.TotalRechargeAmount,
 			TotalOrderNum:              sale.TotalOrderNum,
 			MinOrderAmount:             sale.MinOrderAmount,
 			MaxOrderAmount:             sale.MaxOrderAmount,
@@ -2590,7 +2654,7 @@ func (s *statisticsSrv) CountBusinessTimePeriod(ctx context.Context, req req.Bus
 	if req.ExcludeDataManage {
 		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
 			ctx.GetDB(),
-			"sale_bill_uuid",
+			"sb.uuid",
 			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
 			repository.CommonRepo.WhereBySoftDelete(),
 		))

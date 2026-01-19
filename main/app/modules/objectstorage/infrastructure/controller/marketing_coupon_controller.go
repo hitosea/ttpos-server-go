@@ -21,7 +21,6 @@ type MarketingCouponBatchQueryFunc func(db *gorm.DB, uuids []uint64) ([]*model.M
 var (
 	marketingCouponControllerInstance *CacheObjectController[*model.MarketingCoupon]
 	marketingCouponControllerOnce     sync.Once
-	marketingCouponControllerMutex    sync.RWMutex
 )
 
 // InitMarketingCouponController 初始化 MarketingCoupon 对象的缓存控制器（单例模式）
@@ -36,23 +35,22 @@ func InitMarketingCouponController(
 	queryFunc MarketingCouponQueryFunc,
 	batchQueryFunc MarketingCouponBatchQueryFunc,
 ) {
-	InitCacheObjectController[*model.MarketingCoupon](
-		underlyingCache,
-		ttl,
-		func(db *gorm.DB, uuid uint64) (*model.MarketingCoupon, error) {
-			return queryFunc(db, uuid)
-		},
-		func(db *gorm.DB, uuids []uint64) ([]*model.MarketingCoupon, error) {
-			return batchQueryFunc(db, uuids)
-		},
-		func(obj *model.MarketingCoupon) uint64 {
-			return obj.Uuid
-		},
-		persistence.ObjectTypeMarketingCoupon,
-		&marketingCouponControllerInstance,
-		&marketingCouponControllerOnce,
-		&marketingCouponControllerMutex,
-	)
+	marketingCouponControllerOnce.Do(func() {
+		marketingCouponControllerInstance = InitCacheObjectController[*model.MarketingCoupon](
+			underlyingCache,
+			ttl,
+			func(db *gorm.DB, uuid uint64) (*model.MarketingCoupon, error) {
+				return queryFunc(db, uuid)
+			},
+			func(db *gorm.DB, uuids []uint64) ([]*model.MarketingCoupon, error) {
+				return batchQueryFunc(db, uuids)
+			},
+			func(obj *model.MarketingCoupon) uint64 {
+				return obj.Uuid
+			},
+			persistence.ObjectTypeMarketingCoupon,
+		)
+	})
 }
 
 // GetMarketingCouponController 获取 MarketingCoupon 对象的缓存控制器单例实例
@@ -60,9 +58,5 @@ func InitMarketingCouponController(
 // 返回：
 //   - *CacheObjectController[*model.MarketingCoupon]: MarketingCoupon 缓存对象控制器实例（保证非 nil）
 func GetMarketingCouponController() *CacheObjectController[*model.MarketingCoupon] {
-	return GetCacheObjectController[*model.MarketingCoupon](
-		&marketingCouponControllerInstance,
-		&marketingCouponControllerMutex,
-		"MarketingCoupon 缓存控制器未初始化，请先调用 InitMarketingCouponController",
-	)
+	return marketingCouponControllerInstance
 }

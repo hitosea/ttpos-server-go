@@ -1,7 +1,6 @@
 package controller
 
 import (
-	goCtx "context"
 	"sync"
 	"time"
 
@@ -22,7 +21,6 @@ type DeskBatchQueryFunc func(db *gorm.DB, uuids []uint64) ([]*model.Desk, error)
 var (
 	deskControllerInstance *CacheObjectController[*model.Desk]
 	deskControllerOnce     sync.Once
-	deskControllerMutex    sync.RWMutex
 )
 
 // InitDeskController 初始化 Desk 对象的缓存控制器（单例模式）
@@ -37,23 +35,22 @@ func InitDeskController(
 	queryFunc DeskQueryFunc,
 	batchQueryFunc DeskBatchQueryFunc,
 ) {
-	InitCacheObjectController[*model.Desk](
-		underlyingCache,
-		ttl,
-		func(db *gorm.DB, uuid uint64) (*model.Desk, error) {
-			return queryFunc(db, uuid)
-		},
-		func(db *gorm.DB, uuids []uint64) ([]*model.Desk, error) {
-			return batchQueryFunc(db, uuids)
-		},
-		func(obj *model.Desk) uint64 {
-			return obj.Uuid
-		},
-		persistence.ObjectTypeDesk,
-		&deskControllerInstance,
-		&deskControllerOnce,
-		&deskControllerMutex,
-	)
+	deskControllerOnce.Do(func() {
+		deskControllerInstance = InitCacheObjectController[*model.Desk](
+			underlyingCache,
+			ttl,
+			func(db *gorm.DB, uuid uint64) (*model.Desk, error) {
+				return queryFunc(db, uuid)
+			},
+			func(db *gorm.DB, uuids []uint64) ([]*model.Desk, error) {
+				return batchQueryFunc(db, uuids)
+			},
+			func(obj *model.Desk) uint64 {
+				return obj.Uuid
+			},
+			persistence.ObjectTypeDesk,
+		)
+	})
 }
 
 // GetDeskController 获取 Desk 对象的缓存控制器单例实例
@@ -61,29 +58,7 @@ func InitDeskController(
 // 返回：
 //   - *CacheObjectController[*model.Desk]: Desk 缓存对象控制器实例（保证非 nil）
 func GetDeskController() *CacheObjectController[*model.Desk] {
-	return GetCacheObjectController[*model.Desk](
-		&deskControllerInstance,
-		&deskControllerMutex,
-		"Desk 缓存控制器未初始化，请先调用 InitDeskController",
-	)
-}
-
-// ICacheObjectController Desk 对象缓存控制器接口（向后兼容）
-// 统一管理对象的缓存查询和更新，支持观察者模式更新缓存
-type ICacheObjectController interface {
-	// GetByUuid 根据 UUID 获取对象（带缓存）
-	GetByUuid(ctx goCtx.Context, db *gorm.DB, uuid uint64) (*model.Desk, error)
-
-	// BatchGetByUuids 批量根据 UUID 列表获取对象（带缓存）
-	BatchGetByUuids(ctx goCtx.Context, db *gorm.DB, uuids []uint64, opts ...func(*BatchGetByUuidsOption)) (map[uint64]*model.Desk, error)
-
-	// Update 更新对象的缓存（用于观察者模式）
-	// 参数：
-	//   - ctx: 上下文（用于提取 companyUuid）
-	//   - db: 数据库连接
-	//   - uuids: 对象 UUID 列表
-	//   - opts: 选项函数（可选），如 WithUpdateValue() 直接提供值更新缓存
-	Update(ctx goCtx.Context, db *gorm.DB, uuids []uint64, opts ...func(*UpdateOption)) error
+	return deskControllerInstance
 }
 
 // 确保 CacheObjectController 实现了 ICacheObjectController 接口

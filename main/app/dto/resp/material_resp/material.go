@@ -54,32 +54,38 @@ type MaterialListWithPaginationResp struct {
 
 // MaterialDetailResp 物品详情响应
 type MaterialDetailResp struct {
-	Uuid                   uint64               `json:"uuid"`                      // 物品UUID
-	LocaleName             dto.LocaleResponse   `json:"locale_name"`               // 物品名称
-	Code                   string               `json:"code"`                      // 物品编码
-	CategoryUuid           uint64               `json:"category_uuid"`             // 分类UUID
-	CategoryName           string               `json:"category_name"`             // 分类名称
-	Status                 int                  `json:"status"`                    // 状态 1-启用 0-停用
-	AllowSubstoreVisible   int                  `json:"allow_substore_visible"`    // 允许子店可见：1-允许，0-不允许（仅总店可用）
-	AllowNegativeStock     bool                 `json:"allow_negative_stock"`      // 是否允许负库存：true-允许，false-不允许
-	BarcodeValue           string               `json:"barcode_value"`             // 条形码值
-	InternalCode           string               `json:"internal_code"`             // 内部编码
-	SafetyStock            *float64             `json:"safety_stock"`              // 安全库存数量
-	UnitName               string               `json:"unit_name"`                 // 单位名称
-	UnitUuid               uint64               `json:"unit_uuid"`                 // 单位UUID
-	FromUnitUuid           uint64               `json:"from_unit_uuid"`            // 来源单位UUID
-	UnitLocaleName         dto.LocaleResponse   `json:"unit_locale_name"`          // 单位名称
-	UnitList               MaterialUnitListResp `json:"unit_list"`                 // 单位列表
-	PurchaseUnitName       string               `json:"purchase_unit_name"`        // 采购单位名称
-	PurchaseUnitLocaleName dto.LocaleResponse   `json:"purchase_unit_locale_name"` // 采购单位名称
-	PurchaseUnitUuid       uint64               `json:"purchase_unit_uuid"`        // 采购单位UUID
-	FromPurchaseUnitUuid   uint64               `json:"from_purchase_unit_uuid"`   // 来源采购单位UUID
-	CostUnitName           string               `json:"cost_unit_name"`            // 成本单位名称
-	CostUnitLocaleName     dto.LocaleResponse   `json:"cost_unit_locale_name"`     // 成本单位名称
-	CostUnitUuid           uint64               `json:"cost_unit_uuid"`            // 成本单位UUID
-	FromCostUnitUuid       uint64               `json:"from_cost_unit_uuid"`       // 来源成本单位UUID
-	OriginCountry          *CountryItem         `json:"origin_country"`            // 原产地国家信息（可选）
-	IsEditable             bool                 `json:"is_editable"`               // 是否可编辑
+	Uuid                       uint64               `json:"uuid"`                           // 物品UUID
+	LocaleName                 dto.LocaleResponse   `json:"locale_name"`                    // 物品名称
+	Code                       string               `json:"code"`                           // 物品编码
+	CategoryUuid               uint64               `json:"category_uuid"`                  // 分类UUID
+	CategoryName               string               `json:"category_name"`                  // 分类名称
+	Status                     int                  `json:"status"`                         // 状态 1-启用 0-停用
+	AllowSubstoreVisible       int                  `json:"allow_substore_visible"`         // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	AllowNegativeStock         bool                 `json:"allow_negative_stock"`           // 是否允许负库存：true-允许，false-不允许
+	BarcodeValue               string               `json:"barcode_value"`                  // 条形码值
+	InternalCode               string               `json:"internal_code"`                  // 内部编码
+	SafetyStock                *float64             `json:"safety_stock"`                   // 安全库存数量
+	UnitName                   string               `json:"unit_name"`                      // 单位名称
+	UnitUuid                   uint64               `json:"unit_uuid"`                      // 单位UUID
+	FromUnitUuid               uint64               `json:"from_unit_uuid"`                 // 来源单位UUID
+	UnitLocaleName             dto.LocaleResponse   `json:"unit_locale_name"`               // 单位名称
+	UnitList                   MaterialUnitListResp `json:"unit_list"`                      // 单位列表
+	PurchaseUnitName           string               `json:"purchase_unit_name"`             // 采购单位名称
+	PurchaseUnitLocaleName     dto.LocaleResponse   `json:"purchase_unit_locale_name"`      // 采购单位名称
+	PurchaseUnitUuid           uint64               `json:"purchase_unit_uuid"`             // 采购单位UUID
+	FromPurchaseUnitUuid       uint64               `json:"from_purchase_unit_uuid"`        // 来源采购单位UUID
+	CostUnitName               string               `json:"cost_unit_name"`                 // 成本单位名称
+	CostUnitLocaleName         dto.LocaleResponse   `json:"cost_unit_locale_name"`          // 成本单位名称
+	CostUnitUuid               uint64               `json:"cost_unit_uuid"`                 // 成本单位UUID
+	FromCostUnitUuid           uint64               `json:"from_cost_unit_uuid"`            // 来源成本单位UUID
+	DefaultSalesUnitUuid       uint64               `json:"default_sales_unit_uuid"`        // 默认销售单位UUID（ProductUnit UUID，与采购单位、成本单位一致）
+	DefaultSalesUnitLocaleName dto.LocaleResponse   `json:"default_sales_unit_locale_name"` // 默认销售单位多语言名称
+	OriginCountry              *CountryItem         `json:"origin_country"`                 // 原产地国家信息（可选）
+	IsEditable                 bool                 `json:"is_editable"`                    // 是否可编辑
+
+	// 兼容旧版本客户端
+	// 估值率,字段名称为 valuation, 兼容旧版本客户端, 2.12.0 版本后不再使用 valuation_rate 字段
+	Valuation float64 `json:"valuation"` // 估值率
 }
 
 // MaterialStockDetailResp 物品库存详情响应

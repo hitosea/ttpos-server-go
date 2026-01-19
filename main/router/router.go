@@ -2,9 +2,6 @@ package router
 
 import (
 	"net/http"
-	"slices"
-	"strconv"
-	"strings"
 	"ttpos-server-go/app/api/v1/admin"
 	"ttpos-server-go/app/api/v1/assistant"
 	"ttpos-server-go/app/api/v1/callboard"
@@ -20,8 +17,6 @@ import (
 	"ttpos-server-go/app/api/v1/takeout"
 	_ "ttpos-server-go/app/event"                                // 注册事件
 	_ "ttpos-server-go/app/modules/takeout/infrastructure/event" // 注册 takeout 模块事件处理器
-	"ttpos-server-go/app/service"
-	"ttpos-server-go/app/service/rpc"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -33,29 +28,6 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	// 判活接口
 	r.GET("api/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "healthy")
-	})
-	r.GET("api/v1/testrpc", middleware.Internal(), func(c *gin.Context) {
-		rpc.TestCompanyList(c.Request.Context())
-		rpc.TestEstimateDistance(c.Request.Context())
-		c.String(http.StatusOK, "Success")
-	})
-	r.GET("api/add_multi_language_name_uuid", func(c *gin.Context) {
-		uuids := strings.Split(c.Query("uuids"), ",")
-		var uuidUint64s []uint64
-		for _, uuid := range uuids {
-			uuidUint64, _ := strconv.ParseUint(strings.TrimSpace(uuid), 10, 64)
-			if uuidUint64 > 0 && !slices.Contains(uuidUint64s, uuidUint64) {
-				uuidUint64s = append(uuidUint64s, uuidUint64)
-			}
-		}
-		companyUuid, _ := strconv.ParseUint(c.Query("company_uuid"), 10, 64)
-		if companyUuid > 0 && len(uuidUint64s) > 0 && dbm.GetDB(companyUuid) != nil {
-			translateSrv := service.NewTranslateSrv(dbm, cache)
-			translateSrv.AddMultiLanguageNameUuidToSet(companyUuid, uuidUint64s...)
-		} else {
-			c.String(http.StatusBadRequest, "参数错误")
-		}
-		c.String(http.StatusOK, "ok")
 	})
 
 	// 认证中间件下放给子路由组
@@ -79,6 +51,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		{
 			internalGroup.Use(middleware.Internal())
 			passport.RegisterInternalHandlers(internalGroup, dbm, cache)
+			shop.RegisterProductInternalHandlers(internalGroup, dbm, cache) // 商品内部接口
 		}
 
 		// 商家端/移动管理端

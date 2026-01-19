@@ -363,12 +363,12 @@ func (h *OrderHandler) OrderPaymentInfo(c *gin.Context) {
 // @param payment_amount query float64 true "支付金额"
 // @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentQrcodeInfoResp} "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /kiosk/order/pay/info [get]
-func (h *OrderHandler) PayOrderInfo(c *gin.Context) {
+// @Router /kiosk/order/pay [post]
+func (h *OrderHandler) PayOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.InstantOrderPaymentQrcodeReq{}
-	if err := c.ShouldBindQuery(&params); err != nil {
+	if err := c.ShouldBindJSON(&params); err != nil {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
@@ -449,7 +449,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/check", wrapper.OrderCheck)                               // 订单检查
 		privateApi.POST("/order/takeout", wrapper.OrderTakeout)                          // 打包
 		privateApi.GET("/order/payment/info", wrapper.OrderPaymentInfo)                  // 获取结账页面信息
-		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)                          // 获取支付信息
+		privateApi.POST("/order/pay", wrapper.PayOrder)                                  // 发起支付
 		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                      // 获取支付状态
 	}
 }

@@ -21,7 +21,6 @@ type MemberCouponBatchQueryFunc func(db *gorm.DB, uuids []uint64) ([]*model.Memb
 var (
 	memberCouponControllerInstance *CacheObjectController[*model.MemberCoupon]
 	memberCouponControllerOnce     sync.Once
-	memberCouponControllerMutex    sync.RWMutex
 )
 
 // InitMemberCouponController 初始化 MemberCoupon 对象的缓存控制器（单例模式）
@@ -36,23 +35,22 @@ func InitMemberCouponController(
 	queryFunc MemberCouponQueryFunc,
 	batchQueryFunc MemberCouponBatchQueryFunc,
 ) {
-	InitCacheObjectController[*model.MemberCoupon](
-		underlyingCache,
-		ttl,
-		func(db *gorm.DB, uuid uint64) (*model.MemberCoupon, error) {
-			return queryFunc(db, uuid)
-		},
-		func(db *gorm.DB, uuids []uint64) ([]*model.MemberCoupon, error) {
-			return batchQueryFunc(db, uuids)
-		},
-		func(obj *model.MemberCoupon) uint64 {
-			return obj.Uuid
-		},
-		persistence.ObjectTypeMemberCoupon,
-		&memberCouponControllerInstance,
-		&memberCouponControllerOnce,
-		&memberCouponControllerMutex,
-	)
+	memberCouponControllerOnce.Do(func() {
+		memberCouponControllerInstance = InitCacheObjectController[*model.MemberCoupon](
+			underlyingCache,
+			ttl,
+			func(db *gorm.DB, uuid uint64) (*model.MemberCoupon, error) {
+				return queryFunc(db, uuid)
+			},
+			func(db *gorm.DB, uuids []uint64) ([]*model.MemberCoupon, error) {
+				return batchQueryFunc(db, uuids)
+			},
+			func(obj *model.MemberCoupon) uint64 {
+				return obj.Uuid
+			},
+			persistence.ObjectTypeMemberCoupon,
+		)
+	})
 }
 
 // GetMemberCouponController 获取 MemberCoupon 对象的缓存控制器单例实例
@@ -60,10 +58,5 @@ func InitMemberCouponController(
 // 返回：
 //   - *CacheObjectController[*model.MemberCoupon]: MemberCoupon 缓存对象控制器实例（保证非 nil）
 func GetMemberCouponController() *CacheObjectController[*model.MemberCoupon] {
-	return GetCacheObjectController[*model.MemberCoupon](
-		&memberCouponControllerInstance,
-		&memberCouponControllerMutex,
-		"MemberCoupon 缓存控制器未初始化，请先调用 InitMemberCouponController",
-	)
+	return memberCouponControllerInstance
 }
-

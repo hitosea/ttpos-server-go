@@ -7,6 +7,9 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/modules/printer"
 	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
@@ -16,6 +19,7 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
@@ -234,6 +238,24 @@ func CheckoutSaleOrderEventHandler() {
 			}
 		})
 
+		// 失效桌台缓存（桌台订单完成后）
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			// 如果订单未完成，不处理
+			if !payload.SaleBill.IsFinish() {
+				return
+			}
+			if adapter.IsObjectStorageCacheEnabled(payload.CompanyUuid) {
+				// 如果是桌台订单，失效桌台缓存
+				if payload.SaleBill.IsDeskSaleBill() {
+					deskUuid := payload.SaleBill.DeskUuid
+					deskUuid = persistence.GlobalObjectUuid // 还没有失效单个桌台缓存,全局失效桌台缓存
+					if err := controller.GetDeskController().Invalidate(payload.Ctx, deskUuid); err != nil {
+						logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, Invalidate desk cache failed", zap.Uint64("deskUuid", payload.SaleBill.DeskUuid), zap.Error(err))
+					}
+				}
+			}
+		})
+
 		// 邀请有礼活动-统计获奖
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			HandleActivityConsumption(payload)
@@ -257,30 +279,7 @@ func CheckoutSaleOrderEventHandler() {
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			payload.Ctx.SetDB(db)
-
-			saleOrder := payload.SaleBill.GetSaleOrder(payload.SaleOrderUuid)
-			if saleOrder == nil {
-				return
-			}
-			materialStocks := saleOrder.GetValidSaleOrderProductMaterialList()
-			saleOrderMaterials := make([]*model.SaleOrderMaterial, 0)
-			for _, materialStock := range materialStocks {
-				saleOrderMaterials = append(saleOrderMaterials, &model.SaleOrderMaterial{
-					BaseModel: model.BaseModel{
-						CreateTime: saleOrder.FinishTime, // 原料使用时间=销售订单完成时间
-					},
-					SaleOrderUuid:     saleOrder.Uuid,
-					SaleBillUuid:      payload.SaleBillUuid,
-					MaterialUuid:      materialStock.MaterialUuid,
-					WarehouseUuid:     materialStock.WarehouseUuid,
-					Num:               materialStock.StockNum,
-					StaffShiftLogUuid: saleOrder.StaffShiftLogUuid,
-				})
-			}
-			if err := repository.NewSaleOrderMaterialRepo(db).BatchInsertSaleOrderMaterial(saleOrderMaterials); err != nil {
-				logger.Logger.Error("HandleAddMaterialSalesVolume process, BatchInsertSaleOrderMaterial failed", zap.Any("saleOrderMaterials", saleOrderMaterials), zap.Error(err))
-				return
-			}
+			HandleRecordOrderMaterialUsage(payload.Ctx, db, payload.SaleBill, payload.SaleBillUuid, payload.SaleOrderUuid)
 		})
 	})
 }
@@ -345,6 +344,33 @@ func GetMaterialSalesVolume(companyUuid uint64, saleOrderUuid uint64) map[uint64
 		MaterialSalesVolume[warehouseOutFormItem.MaterialUuid] = decimal.NewFromFloat(MaterialSalesVolume[warehouseOutFormItem.MaterialUuid]).Add(decimal.NewFromFloat(warehouseOutFormItem.Num)).Round(4).InexactFloat64()
 	}
 	return MaterialSalesVolume
+}
+
+// HandleRecordOrderMaterialUsage 统计订单原料用量（公共函数，供结账和免单事件复用）
+func HandleRecordOrderMaterialUsage(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, saleBillUuid, saleOrderUuid uint64) {
+	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
+	if saleOrder == nil {
+		return
+	}
+	materialStocks := saleOrder.GetValidSaleOrderProductMaterialList()
+	saleOrderMaterials := make([]*model.SaleOrderMaterial, 0)
+	for _, materialStock := range materialStocks {
+		saleOrderMaterials = append(saleOrderMaterials, &model.SaleOrderMaterial{
+			BaseModel: model.BaseModel{
+				CreateTime: saleOrder.FinishTime, // 原料使用时间=销售订单完成时间
+			},
+			SaleOrderUuid:     saleOrder.Uuid,
+			SaleBillUuid:      saleBillUuid,
+			MaterialUuid:      materialStock.MaterialUuid,
+			WarehouseUuid:     materialStock.WarehouseUuid,
+			Num:               materialStock.StockNum,
+			StaffShiftLogUuid: saleOrder.StaffShiftLogUuid,
+		})
+	}
+	if err := repository.NewSaleOrderMaterialRepo(db).BatchInsertSaleOrderMaterial(saleOrderMaterials); err != nil {
+		logger.Logger.Error("HandleRecordOrderMaterialUsage process, BatchInsertSaleOrderMaterial failed", zap.Any("saleOrderMaterials", saleOrderMaterials), zap.Error(err))
+		return
+	}
 }
 
 // 处理积分变动
@@ -752,7 +778,6 @@ func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.D
 			utils.Go(func() {
 				err := service.NewSMSSrv(dbm).SendMemberCouponSMS(payload.Ctx, member.Phone, &sms.MemberCouponRequest{CouponNum: uint64(rewardCountToGive)})
 				if err != nil {
-					fmt.Println("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 					logger.Logger.Info("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 				}
 			})
@@ -816,7 +841,6 @@ func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.D
 			utils.Go(func() {
 				err := service.NewSMSSrv(dbm).SendMemberPointsSMS(payload.Ctx, member.Phone, &sms.MemberPointsRequest{Points: points})
 				if err != nil {
-					fmt.Println("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 					logger.Logger.Info("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 				}
 			})

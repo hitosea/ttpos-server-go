@@ -208,6 +208,7 @@ build-web:
 			echo "🚀 正在构建前端项目..."; \
 			cd admin && ./build && echo "✅ 前端构建完成" || (echo "❌ 前端构建失败" && exit 1); \
 			cd ..; \
+			mkdir -p $$(dirname $$BUILD_MARKER); \
 			git rev-parse HEAD > $$BUILD_MARKER 2>/dev/null || echo "unknown" > $$BUILD_MARKER; \
 		fi; \
 	else \
@@ -238,7 +239,7 @@ redis-clear-data-node-conf:
 	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh down redis-node-2
 	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh down redis-node-3
 	@sudo chown -R coder:coder /home/coder/workspaces/ttpos-server-go/docker > /dev/null 2>&1 || true
-	@rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1 
+	@rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1 || true
 	@sudo rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1 || true
 
 # 检查env的DB_HOST是否等于 LOCAL_IP。等于的话 就执行 make mysql-open;

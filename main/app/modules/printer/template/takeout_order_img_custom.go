@@ -235,12 +235,11 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	// 价格信息
 	orderData.ProductAmount = t.base.Amount(order.Subtotal)
 	orderData.DeliveryFee = t.base.Amount(order.DeliveryFee)
+	orderData.SmallOrderFee = t.base.Amount(order.SmallOrderFee)
+	orderData.ActualReceivePrice = t.base.Amount(order.EaterPayment)
 
 	// 计算优惠金额
-	totalDiscount := order.PlatformDiscount + order.MerchantDiscount + order.BasketPromo
-	orderData.DiscountFee = t.base.Amount(totalDiscount)
-
-	orderData.ActualReceivePrice = t.base.Amount(order.EaterPayment)
+	orderData.DiscountFee = t.base.Amount(order.PlatformDiscount + order.MerchantDiscount + order.BasketPromo)
 
 	// 支付信息
 	orderData.PaymentName = order.PaymentType

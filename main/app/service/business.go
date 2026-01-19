@@ -98,21 +98,19 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	storeSetting, err := setting.GetStoreSetting(ctx)
 	if err != nil {
 		logger.Logger.Error("获取门店设置失败", zap.Error(err))
-		fmt.Println("获取门店设置失败", zap.Error(err))
+		// 业务逻辑错误后继续执行（可能导致 nil 指针）-- 不会导致，storeSetting是结构体，不会为 nil, printerSetting \ businessSetting 同理
 	}
 
 	// 获取打印机设置
 	printerSetting, err := setting.GetPrinterSetting(ctx, nil)
 	if err != nil {
 		logger.Logger.Error("获取打印机设置失败", zap.Error(err))
-		fmt.Println("获取打印机设置失败", zap.Error(err))
 	}
 
 	// 获取门店业务设置
 	businessSetting, err := setting.GetBusinessSetting(ctx)
 	if err != nil {
 		logger.Logger.Error("获取门店业务设置失败", zap.Error(err))
-		fmt.Println("获取门店业务设置失败", zap.Error(err))
 	}
 
 	// 获取数据管理设置
@@ -1192,12 +1190,6 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 			})
 		}
 
-		memberData := s.statisticsSrv.CountMember(ctx, CountReq{
-			QueryStartTime: req.QueryStartTime,
-			QueryEndTime:   req.QueryEndTime,
-			Timezone:       ctx.GetCompany().CompanySetting.Timezone,
-		})
-
 		exportDataList = append(exportDataList, business_data_resp.BusinessDataExportItem{
 			Day:                        export.Day,
 			TotalSaleAmount:            export.TotalSaleAmount,
@@ -1239,7 +1231,7 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 			AvgTakeoutOrderAmount:      export.AvgTakeoutOrderAmount,
 			AreaList:                   areaList,
 			PaymentList:                paymentList,
-			TotalRechargeAmount:        memberData.TotalRechargeAmount,
+			TotalRechargeAmount:        export.TotalRechargeAmount,
 		})
 	}
 
@@ -3907,17 +3899,29 @@ func (s *businessSrv) GetCompanyPaymentMethods(ctx context.Context) (*resp.Compa
 					paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable),
 				)
 
+				lianLianPayAvailable := true
+				if err := NewPaymentRepo(ctx, dbm).ValidateConfigError(companyUuid); err != nil {
+					lianLianPayAvailable = false
+				}
+
 				// 收集支付方式信息（包含名称、排序、创建时间、ID）
 				paymentMethodInfos := make([]paymentMethodInfo, 0, len(paymentMethods))
 				for _, method := range paymentMethods {
-					if method.PaymentName != "" {
-						paymentMethodInfos = append(paymentMethodInfos, paymentMethodInfo{
-							PaymentName: method.PaymentName,
-							Sort:        method.Sort,
-							CreateTime:  method.CreateTime,
-							ID:          method.ID,
-						})
+					if method.PaymentName == "" {
+						continue
 					}
+					if method.Code == constant.PaymentMethodCodeFreePay || method.Code == constant.PaymentMethodCodeFreeMealForErp {
+						continue
+					}
+					if !lianLianPayAvailable && method.IsLianLianPay() {
+						continue
+					}
+					paymentMethodInfos = append(paymentMethodInfos, paymentMethodInfo{
+						PaymentName: method.PaymentName,
+						Sort:        method.Sort,
+						CreateTime:  method.CreateTime,
+						ID:          method.ID,
+					})
 				}
 
 				resultChan <- resultItem{paymentMethods: paymentMethodInfos, err: nil}
@@ -3926,10 +3930,10 @@ func (s *businessSrv) GetCompanyPaymentMethods(ctx context.Context) (*resp.Compa
 	}
 
 	// 等待所有 goroutine 完成
-	go func() {
+	utils.Go(func() {
 		wg.Wait()
 		close(resultChan)
-	}()
+	})
 
 	// 4. 收集所有门店的支付方式（用于去重）
 	// 使用 map 存储支付方式信息，key 为支付方式名称
@@ -4155,10 +4159,10 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 	}
 
 	// 等待所有 goroutine 完成
-	go func() {
+	utils.Go(func() {
 		wg.Wait()
 		close(resultChan)
-	}()
+	})
 
 	// 收集所有门店的统计数据
 	allItems := make([]resp.CompanyBusinessSummaryItem, 0)
@@ -4528,10 +4532,10 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 	}
 
 	// 等待所有 goroutine 完成
-	go func() {
+	utils.Go(func() {
 		wg.Wait()
 		close(resultChan)
-	}()
+	})
 
 	// 收集所有门店的统计数据
 	allItems := make([]resp.CompanyPaymentMethodSummaryItem, 0)
@@ -4957,10 +4961,10 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 	}
 
 	// 等待所有 goroutine 完成
-	go func() {
+	utils.Go(func() {
 		wg.Wait()
 		close(resultChan)
-	}()
+	})
 
 	// 收集所有门店的统计数据，同时收集订单数信息
 	allItems := make([]resp.CompanyRefundSummaryItem, 0)

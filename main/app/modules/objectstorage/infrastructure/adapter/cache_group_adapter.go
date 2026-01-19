@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ttpos-server-go/app/modules/objectstorage/domain/repository"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/logger"
 
@@ -36,19 +37,26 @@ func (t *cacheTask[T]) TTL() time.Duration {
 // CacheGroupAdapter 使用 ICacheGroup 实现的缓存适配器（泛型版本）
 // 同时保留对底层 cache.Cache 的引用，用于 DEL 操作
 type CacheGroupAdapter[T any] struct {
-	group      cache.ICacheGroup[T]
-	underlying cache.Cache // 底层缓存，用于 DEL 操作
-	defaultTTL time.Duration
+	group          cache.ICacheGroup[T]
+	underlying     cache.Cache // 底层缓存，用于 DEL 操作
+	defaultTTL     time.Duration
+	objectType     string                           // 对象类型（用于版本时间戳检查，必选）
+	versionManager *persistence.CacheVersionManager // 缓存版本时间戳管理器
 }
 
 // NewCacheGroupAdapterWithGroup 使用已有的 cacheGroup 实例创建适配器
 // 用于单例模式，复用 cacheGroup 实例以共享 L1 缓存
-func NewCacheGroupAdapterWithGroup[T any](group cache.ICacheGroup[T], underlyingCache cache.Cache, defaultTTL time.Duration) repository.CacheLayer[T] {
-	return &CacheGroupAdapter[T]{
-		group:      group,
-		underlying: underlyingCache,
-		defaultTTL: defaultTTL,
+func NewCacheGroupAdapterWithGroup[T any](group cache.ICacheGroup[T], underlyingCache cache.Cache, defaultTTL time.Duration, objectType ...string) repository.CacheLayer[T] {
+	adapter := &CacheGroupAdapter[T]{
+		group:          group,
+		underlying:     underlyingCache,
+		defaultTTL:     defaultTTL,
+		versionManager: persistence.NewCacheVersionManager(underlyingCache),
 	}
+	if len(objectType) > 0 {
+		adapter.objectType = objectType[0]
+	}
+	return adapter
 }
 
 // cacheGroupSingletonManager 缓存组单例管理器
@@ -74,6 +82,9 @@ type CacheLayerOption struct {
 
 	// EnableL1Cache 是否开启 L1 本地缓存，默认为 true
 	EnableL1Cache bool
+
+	// EnableL2Cache 是否开启 L2 Redis 缓存，默认为 true
+	EnableL2Cache bool
 }
 
 // WithSingletonKey 设置单例 key
@@ -109,6 +120,17 @@ func WithL2TTL(ttl time.Duration) func(*CacheLayerOption) {
 func WithEnableL1Cache(enable bool) func(*CacheLayerOption) {
 	return func(opt *CacheLayerOption) {
 		opt.EnableL1Cache = enable
+	}
+}
+
+// WithEnableL2Cache 设置是否开启 L2 Redis 缓存
+// 参数：
+//   - enable: true 开启 L2 缓存（默认），false 禁用 L2 缓存
+//
+// 示例：WithEnableL2Cache(false) // 禁用 L2 缓存，只使用 L1 本地缓存
+func WithEnableL2Cache(enable bool) func(*CacheLayerOption) {
+	return func(opt *CacheLayerOption) {
+		opt.EnableL2Cache = enable
 	}
 }
 
@@ -152,18 +174,18 @@ func GetOrCreateCacheLayer[T any](groupConfig cache.GroupConfig, underlyingCache
 		opt(option)
 	}
 
-	// 确定单例 key
-	var key string
+	// 确定单例 objectType
+	var objectType string
 	if option.SingletonKey != "" {
-		key = option.SingletonKey
+		objectType = option.SingletonKey
 	} else {
 		// 使用类型名称作为 key
-		key = reflect.TypeOf((*T)(nil)).Elem().String()
+		objectType = reflect.TypeOf((*T)(nil)).Elem().String()
 	}
 
 	// 尝试从单例池中获取 cacheGroup 实例
 	var group cache.ICacheGroup[T]
-	if cached, ok := cacheGroupSingletons.Load(key); ok {
+	if cached, ok := cacheGroupSingletons.Load(objectType); ok {
 		// 使用类型断言获取实例
 		if cachedGroup, ok := cached.(cache.ICacheGroup[T]); ok {
 			group = cachedGroup
@@ -174,13 +196,13 @@ func GetOrCreateCacheLayer[T any](groupConfig cache.GroupConfig, underlyingCache
 	if group == nil {
 		cacheGroupMutex.Lock()
 		// Double check
-		if cached, ok := cacheGroupSingletons.Load(key); ok {
+		if cached, ok := cacheGroupSingletons.Load(objectType); ok {
 			if cachedGroup, ok := cached.(cache.ICacheGroup[T]); ok {
 				group = cachedGroup
 			}
 		}
 		if group == nil {
-			groupConfig.Name = groupConfig.Name + ":" + key
+			groupConfig.Name = groupConfig.Name + ":" + objectType
 			// 应用选项中的 L1/L2 TTL 配置
 			if option.L1TTL > 0 {
 				groupConfig.L1TTL = option.L1TTL
@@ -188,6 +210,8 @@ func GetOrCreateCacheLayer[T any](groupConfig cache.GroupConfig, underlyingCache
 			if option.L2TTL > 0 {
 				groupConfig.L2TTL = option.L2TTL
 			}
+			// 注意：EnableL1Cache 和 EnableL2Cache 选项由调用方在创建 groupConfig 时应用
+			// 例如 GetOrderObjectCache 函数中会使用 option.EnableL1Cache 和 option.EnableL2Cache
 			// 设置统计回调函数（使用全局统计管理器）
 			globalStats := GetGlobalStatsManager()
 			groupConfig.HitStatsCallback = func(key string, hit bool, level string) {
@@ -199,16 +223,17 @@ func GetOrCreateCacheLayer[T any](groupConfig cache.GroupConfig, underlyingCache
 			}
 			group = cache.NewCacheGroup[T](groupConfig)
 			// 直接存储实例（作为 L1CacheClearable 接口类型）
-			cacheGroupSingletons.Store(key, group)
+			cacheGroupSingletons.Store(objectType, group)
 		}
 		cacheGroupMutex.Unlock()
 	}
 
 	// 使用已有的 cacheGroup 实例创建 adapter
-	return NewCacheGroupAdapterWithGroup[T](group, underlyingCache, defaultTTL)
+	return NewCacheGroupAdapterWithGroup[T](group, underlyingCache, defaultTTL, objectType)
 }
 
 // GET 从缓存获取，未命中时调用 query 函数查询并写入缓存
+// 如果配置了 objectType，会检查对象的 UpdateTime 字段是否小于最新版本时间戳
 func (a *CacheGroupAdapter[T]) GET(key string, query func() (T, error), opts ...func(*repository.GetOption)) (T, error) {
 	// 解析选项
 	option := &repository.GetOption{
@@ -225,13 +250,24 @@ func (a *CacheGroupAdapter[T]) GET(key string, query func() (T, error), opts ...
 		ttl:   a.defaultTTL,
 	}
 
-	// 如果配置了跳过缓存，使用 Do 方法并传入 SkipCache 选项
+	// 如果配置了跳过缓存，直接执行查询
 	if option.SkipCache {
 		return a.group.Do(context.Background(), task, cache.WithSkipCache())
 	}
 
-	// 默认行为：正常检查缓存（L1 -> L2 -> L3）
-	return a.group.Do(context.Background(), task)
+	// 正常检查缓存（L1 -> L2 -> L3）
+	result, err := a.group.Do(context.Background(), task)
+	if err != nil {
+		var zero T
+		return zero, err
+	}
+
+	// 如果配置了 objectType，需要检查版本时间戳
+	if a.objectType != "" {
+		result = a.checkAndRefreshIfNeeded(key, result, query)
+	}
+
+	return result, nil
 }
 
 // SET 设置缓存
@@ -261,6 +297,7 @@ func (a *CacheGroupAdapter[T]) DEL(keys ...string) error {
 }
 
 // BATCH_GET 批量获取缓存
+// 如果配置了 objectType，会检查对象的 UpdateTime 字段是否小于最新版本时间戳
 func (a *CacheGroupAdapter[T]) BATCH_GET(keys []string, query func([]string) (map[string]T, error), opts ...func(*repository.GetOption)) (map[string]T, error) {
 	if len(keys) == 0 {
 		return make(map[string]T), nil
@@ -279,18 +316,19 @@ func (a *CacheGroupAdapter[T]) BATCH_GET(keys []string, query func([]string) (ma
 	missCount := 0
 
 	for _, key := range keys {
+		querySingleKey := func() (T, error) {
+			// 从批量查询结果中提取单个 key 的值
+			batchResult, err := query([]string{key})
+			if err != nil {
+				var zero T
+				return zero, err
+			}
+			return batchResult[key], nil
+		}
 		task := &cacheTask[T]{
-			key: key,
-			query: func() (T, error) {
-				// 从批量查询结果中提取单个 key 的值
-				batchResult, err := query([]string{key})
-				if err != nil {
-					var zero T
-					return zero, err
-				}
-				return batchResult[key], nil
-			},
-			ttl: a.defaultTTL,
+			key:   key,
+			query: querySingleKey,
+			ttl:   a.defaultTTL,
 		}
 
 		// 根据选项决定是否跳过缓存
@@ -306,6 +344,12 @@ func (a *CacheGroupAdapter[T]) BATCH_GET(keys []string, query func([]string) (ma
 			missCount++
 			continue // 单个失败不影响其他
 		}
+
+		// 如果配置了 objectType，需要检查版本时间戳
+		if a.objectType != "" {
+			val = a.checkAndRefreshIfNeeded(key, val, querySingleKey)
+		}
+
 		result[key] = val
 	}
 
@@ -350,4 +394,105 @@ func ClearL1CacheByPattern(pattern string) int {
 	// L1 缓存是内存缓存，无法按模式匹配，直接清空所有
 	// 这是合理的，因为 L1 缓存通常数据量不大，且清空后会自动从 L2 回填
 	return ClearAllL1Cache()
+}
+
+// checkAndRefreshIfNeeded 检查版本时间戳，如果需要则刷新缓存
+// 参数：
+//   - key: 缓存 key
+//   - result: 当前缓存结果
+//   - query: 查询函数
+//
+// 返回：
+//   - T: 更新后的结果（如果需要刷新则返回新查询的结果，否则返回原结果）
+func (a *CacheGroupAdapter[T]) checkAndRefreshIfNeeded(key string, result T, query func() (T, error)) T {
+	if key == cache.ObjectStorageCacheConfigKey { // 特殊处理，不检查版本时间戳
+		return result
+	}
+	// 从 key 中提取 companyUuid
+	ck, err := persistence.NewCacheKey(key)
+	if err != nil {
+		logger.Logger.Error("解析缓存 key 失败", zap.Error(err), zap.String("key", key))
+		// 如果无法提取 companyUuid，直接返回原结果
+		return result
+	}
+	companyUuid := ck.CompanyUuid
+	objectType := ck.ObjectType
+	objectUuid, _ := ck.GetObjectUuid() // 如果是product_list 对象，objectUuid 为 0. 这是特性,表示全局版本时间戳,要更新所有的product_list缓存. 其他对象的objectUuid不为0,表示具体对象的版本时间戳,要更新具体对象的缓存.
+
+	a.versionManager.SetCompanyWide(true) // 设置为公司范围内使对象失效. 暂时没有实现针对性的缓存失效,只能实现某个对象在公司范围内失效.
+
+	// 获取最新版本时间戳
+	versionTimestamp, versionExists := a.versionManager.GetCacheVersionTimestamp(companyUuid, objectType, objectUuid)
+
+	// 如果版本时间戳不存在（versionExists=false），说明版本时间戳已过期，
+	// 此时应该认为缓存也已过期，需要重新查询并设置新的版本时间戳
+	needRefresh := false
+	if !versionExists {
+		needRefresh = true
+		if err := a.versionManager.UpdateCacheVersionTimestamp(companyUuid, objectType, objectUuid); err != nil {
+			logger.Logger.Error("更新缓存版本时间戳失败", zap.Error(err))
+		}
+	} else if versionExists && versionTimestamp == 0 {
+		// 如果版本时间戳存在但为0，说明版本时间戳已过期，
+		needRefresh = true
+		if err := a.versionManager.UpdateCacheVersionTimestamp(companyUuid, objectType, objectUuid); err != nil {
+			logger.Logger.Error("更新缓存版本时间戳失败", zap.Error(err))
+		}
+	} else {
+		// 如果存在版本时间戳，检查对象的 UpdateTime 字段
+		updateTime := persistence.GetUpdateTime(result)
+		// 版本时间戳和 UpdateTime 都是秒
+		if updateTime < versionTimestamp {
+			needRefresh = true
+		}
+	}
+
+	if needRefresh {
+		// 缓存已失效，重新查询
+		newResult, err := query()
+		if err != nil {
+			// 查询失败，返回原结果
+			return result
+		}
+		// 更新对象的 UpdateTime 字段为当前时间戳（秒）
+		// 使用反射判断 T 是否是指针类型，如果是则直接传入，否则传入指针
+		setUpdateTimeForGeneric(newResult, time.Now().Unix())
+		// 更新缓存
+		updateTask := &cacheTask[T]{
+			key: key,
+			query: func() (T, error) {
+				return newResult, nil
+			},
+			ttl: a.defaultTTL,
+		}
+		_, _ = a.group.Do(context.Background(), updateTask, cache.WithSkipCache())
+		return newResult
+	}
+
+	return result
+}
+
+// setUpdateTimeForGeneric 设置泛型值的 UpdateTime 字段
+// 自动处理指针类型和值类型
+func setUpdateTimeForGeneric[T any](val T, updateTime int64) {
+	valReflect := reflect.ValueOf(val)
+	// 如果 val 本身是指针类型（如 *model.Staff），需要解引用
+	for valReflect.Kind() == reflect.Ptr {
+		if valReflect.IsNil() {
+			return
+		}
+		valReflect = valReflect.Elem()
+	}
+	// 现在 valReflect 应该是结构体类型
+	if valReflect.Kind() == reflect.Struct {
+		field := valReflect.FieldByName("UpdateTime")
+		if field.IsValid() && field.CanSet() {
+			switch field.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				field.SetInt(updateTime)
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				field.SetUint(uint64(updateTime))
+			}
+		}
+	}
 }

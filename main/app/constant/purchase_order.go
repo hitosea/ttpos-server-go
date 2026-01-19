@@ -10,6 +10,12 @@ const (
 	PurchaseOrderStatusHeadquarterPending = 5 // 待总部审核
 )
 
+// 采购类型常量
+const (
+	PurchaseTypeExternal = 1 // 外部采购
+	PurchaseTypeBrand    = 2 // 内部采购（品牌采购）
+)
+
 // 总部状态常量
 const (
 	HeadquarterStatusDraft     = 0 // 待提交

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"ttpos-server-go/app/modules/objectstorage/domain/repository"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
 )
 
@@ -17,7 +18,7 @@ import (
 func GetAuthStaffCache[T any](underlyingCache cache.Cache) repository.CacheLayer[T] {
 	// 创建缓存组配置（使用阶梯式 TTL）
 	groupConfig := cache.GroupConfig{
-		Name:             "object-storage-auth",
+		Name:             persistence.ObjectTypeStaff,
 		EnableLocalCache: true,
 		EnableRedisCache: true,
 		NegativeTTL:      30 * time.Second,
@@ -30,7 +31,7 @@ func GetAuthStaffCache[T any](underlyingCache cache.Cache) repository.CacheLayer
 		groupConfig,
 		underlyingCache,
 		5*time.Minute, // 默认 TTL 5 分钟
-		WithSingletonKey("auth_staff_cache_group"),
+		WithSingletonKey(persistence.ObjectTypeStaff),
 		WithL1TTL(1*time.Minute),
 		WithL2TTL(5*time.Minute),
 	)
@@ -46,7 +47,7 @@ func GetAuthStaffCache[T any](underlyingCache cache.Cache) repository.CacheLayer
 func GetApiPermissionCache[T any](underlyingCache cache.Cache) repository.CacheLayer[T] {
 	// 创建缓存组配置（使用阶梯式 TTL）
 	groupConfig := cache.GroupConfig{
-		Name:             "object-storage-api-permission",
+		Name:             persistence.ObjectTypeApiPermission,
 		EnableLocalCache: true,
 		EnableRedisCache: true,
 		NegativeTTL:      30 * time.Second,
@@ -59,7 +60,7 @@ func GetApiPermissionCache[T any](underlyingCache cache.Cache) repository.CacheL
 		groupConfig,
 		underlyingCache,
 		5*time.Minute, // 默认 TTL 5 分钟
-		WithSingletonKey("api_permission_cache_group"),
+		WithSingletonKey(persistence.ObjectTypeApiPermission),
 		WithL1TTL(1*time.Minute),
 		WithL2TTL(5*time.Minute),
 	)
@@ -72,10 +73,11 @@ func GetApiPermissionCache[T any](underlyingCache cache.Cache) repository.CacheL
 // GetProductListCache 获取商品列表缓存层
 // 使用阶梯式 TTL：L1 缓存 1 分钟，L2 缓存 5 分钟
 // 返回配置好的缓存层，service 层只需要调用 GET 方法并传入 query 函数
+// 该缓存层支持版本时间戳检查，查询时会判断对象的 UpdateTime 字段是否小于最新版本时间戳
 func GetProductListCache[T any](underlyingCache cache.Cache) repository.CacheLayer[T] {
 	// 创建缓存组配置（使用阶梯式 TTL）
 	groupConfig := cache.GroupConfig{
-		Name:             "object-storage-product-list",
+		Name:             persistence.ObjectTypeProductList,
 		EnableLocalCache: true,
 		EnableRedisCache: true,
 		NegativeTTL:      30 * time.Second,
@@ -84,13 +86,14 @@ func GetProductListCache[T any](underlyingCache cache.Cache) repository.CacheLay
 	}
 
 	// 获取缓存层（使用单例模式，确保 L1 缓存可以跨请求共享）
+	// 注意：对象类型 T 需要有 UpdateTime 字段（int64 类型）
 	return GetOrCreateCacheLayer[T](
 		groupConfig,
 		underlyingCache,
 		2*time.Minute, // 默认 TTL（用于负缓存等场景）
-		WithSingletonKey("product_list_cache_group"), // 使用自定义 key
-		WithL1TTL(1*time.Minute),                     // L1 缓存 1 分钟
-		WithL2TTL(5*time.Minute),                     // L2 缓存 5 分钟
+		WithSingletonKey(persistence.ObjectTypeProductList), // 使用自定义 key
+		WithL1TTL(1*time.Minute),                            // L1 缓存 1 分钟
+		WithL2TTL(5*time.Minute),                            // L2 缓存 5 分钟
 	)
 }
 
@@ -103,13 +106,14 @@ func GetProductListCache[T any](underlyingCache cache.Cache) repository.CacheLay
 // 参数：
 //   - underlyingCache: 底层缓存实例
 //   - defaultTTL: 默认 TTL（用于负缓存等场景，不同对象类型可以设置不同的 TTL）
-//   - opts: 可选参数，如 WithEnableL1Cache(false) 禁用 L1 缓存
+//   - opts: 可选参数，如 WithEnableL1Cache(false) 禁用 L1 缓存，WithEnableL2Cache(false) 禁用 L2 缓存
 //
 // 返回配置好的缓存层，repository 层只需要调用 GET 方法并传入 query 函数
 func GetOrderObjectCache[T any](underlyingCache cache.Cache, defaultTTL time.Duration, opts ...func(*CacheLayerOption)) repository.CacheLayer[T] {
 	// 解析选项
 	option := &CacheLayerOption{
 		EnableL1Cache: true, // 默认开启 L1 缓存
+		EnableL2Cache: true, // 默认开启 L2 缓存
 	}
 	for _, opt := range opts {
 		opt(option)
@@ -119,7 +123,7 @@ func GetOrderObjectCache[T any](underlyingCache cache.Cache, defaultTTL time.Dur
 	groupConfig := cache.GroupConfig{
 		Name:             "object-storage",
 		EnableLocalCache: option.EnableL1Cache, // 根据选项决定是否开启 L1 本地缓存
-		EnableRedisCache: true,                 // 开启 L2 Redis 缓存
+		EnableRedisCache: option.EnableL2Cache, // 根据选项决定是否开启 L2 Redis 缓存
 		NegativeTTL:      30 * time.Second,     // 负缓存 30 秒
 		L1TTL:            1 * time.Minute,      // L1 缓存 1 分钟（减少内存占用）
 		L2TTL:            5 * time.Minute,      // L2 缓存 5 分钟（保持缓存命中率）

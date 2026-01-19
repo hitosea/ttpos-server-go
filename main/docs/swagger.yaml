@@ -1155,6 +1155,11 @@ definitions:
       uuid:
         description: 物品UUID
         type: integer
+      valuation:
+        description: |-
+          兼容旧版本客户端
+          估值率,字段名称为 valuation, 兼容旧版本客户端, 2.12.0 版本后不再使用 valuation_rate 字段
+        type: number
     type: object
   material_resp.MaterialInfo:
     properties:
@@ -2644,6 +2649,9 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+      update_time:
+        description: 更新时间戳,用于判断缓存是否过期. 在缓存层通过反射维护这个字段的值
+        type: integer
     type: object
   product_resp.ProductPackageGroup:
     properties:
@@ -4636,6 +4644,14 @@ definitions:
       to:
         description: 目标销售订单UUID, 必填
         type: integer
+    type: object
+  req.InvalidateProductListCacheReq:
+    properties:
+      company_uuid:
+        description: 商户UUID
+        type: integer
+    required:
+    - company_uuid
     type: object
   req.KitchenBindReq:
     properties:
@@ -6894,6 +6910,9 @@ definitions:
       is_default_selected:
         description: 是否默认选中 0-否 1-是
         type: integer
+      price:
+        description: 商品加料价格，可不传递，兼容旧版客户端
+        type: number
       uuid:
         description: 商品加料UUID
         type: integer
@@ -7290,6 +7309,9 @@ definitions:
       is_delete:
         description: 是否删除, 如果是新增/编辑，则传false，删除时传true
         type: boolean
+      price:
+        description: 商品加料价格，可不传递，兼容旧版客户端
+        type: number
       uuid:
         description: 商品加料UUID
         type: integer
@@ -7636,6 +7658,9 @@ definitions:
         enum:
         - approve
         - reject
+        type: string
+      reject_reason:
+        description: 驳回备注，可以为空最大100个字符
         type: string
       uuid:
         description: 采购订单ID
@@ -9153,6 +9178,26 @@ definitions:
     - company_uuid
     - site_code
     - supplier_name
+    type: object
+  req.UpdateHeadquartersProductReq:
+    properties:
+      product_printer_uuids:
+        description: 商品打印档口UUID列表（可选）
+        items:
+          type: integer
+        type: array
+      status:
+        description: 商品状态 0-下架 1-上架（可选）
+        enum:
+        - 0
+        - 1
+        type: integer
+      uuid:
+        description: 商品UUID
+        type: integer
+    required:
+    - status
+    - uuid
     type: object
   req.UpdatePrintSettingReq:
     properties:
@@ -12233,6 +12278,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Business'
         description: 门店业务设置
+      client_version:
+        description: 客户端版本
+        type: string
       company:
         allOf:
         - $ref: '#/definitions/resp.Company'
@@ -12256,6 +12304,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.KioskResp'
         description: 自助点餐机设置（包含语言列表、轮播广告）
+      system_version:
+        description: 服务端版本
+        type: string
       update_time:
         description: 更新时间
         type: integer
@@ -14829,6 +14880,9 @@ definitions:
       receipt_progress:
         description: 收货进度（百分比0.00%）前端直接显示
         type: string
+      reject_reason:
+        description: 驳回原因
+        type: string
       status:
         description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核
         type: integer
@@ -14886,6 +14940,9 @@ definitions:
         type: integer
       receipt_progress:
         description: 收货进度（百分比0.00%）前端直接显示
+        type: string
+      reject_reason:
+        description: 驳回原因
         type: string
       status:
         description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核
@@ -29840,6 +29897,34 @@ paths:
       summary: 桌台订单商品备注
       tags:
       - 扫码点餐
+  /internal/shop/product/cache/invalidate:
+    post:
+      consumes:
+      - application/json
+      description: 供PHP后端服务调用，用于在修改商品数据时失效相关缓存
+      parameters:
+      - description: 失效缓存请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InvalidateProductListCacheReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - InternalToken: []
+      summary: 失效商品列表缓存（内部接口）
+      tags:
+      - 商家端.商品（内部接口）
   /kiosk/base:
     get:
       consumes:
@@ -30122,8 +30207,8 @@ paths:
       summary: 订单检查
       tags:
       - 自助点餐机.订单
-  /kiosk/order/pay/info:
-    get:
+  /kiosk/order/pay:
+    post:
       consumes:
       - application/json
       description: 获取支付信息（创建支付订单，返回二维码和支付信息，可轮询此接口查询支付状态）
@@ -30399,6 +30484,30 @@ paths:
       summary: 刷新token
       tags:
       - 自助点餐机.认证
+  /kiosk/setting:
+    post:
+      consumes:
+      - application/json
+      description: 保存设置，目前仅支持修改机器备注
+      parameters:
+      - description: 修改设置参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.EditDeviceRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 保存设置
+      tags:
+      - 自助点餐机.设置
   /kiosk/store_switch:
     post:
       consumes:
@@ -30428,6 +30537,30 @@ paths:
       summary: 门店切换
       tags:
       - 自助点餐机.认证
+  /kiosk/verify_advanced_password:
+    post:
+      consumes:
+      - application/json
+      description: 验证高级密码
+      parameters:
+      - description: 验证密码参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VerifyPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 验证高级密码
+      tags:
+      - 自助点餐机.基础信息
   /kitchen/base:
     get:
       consumes:
@@ -36076,6 +36209,30 @@ paths:
       summary: 排序商品单位
       tags:
       - 商家端.商品单位
+  /shop/product/update_headquarters_product:
+    post:
+      consumes:
+      - application/json
+      description: 修改总部商品的上下架状态和打印档口，支持单独或同时修改
+      parameters:
+      - description: 修改总部商品请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateHeadquartersProductReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 修改总部商品
+      tags:
+      - 商家端.商品
   /shop/product/upload_image:
     post:
       consumes:

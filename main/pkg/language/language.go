@@ -24,6 +24,7 @@ func JsonToLocaleResponse(jsonStr string) *dto.LocaleResponse {
 	}
 }
 
+// MapToLocaleResponse 将 map[string]string 转换为 LocaleResponse
 func MapToLocaleResponse(translations map[string]string, names ...string) dto.LocaleResponse {
 	locale := dto.LocaleResponse{}
 	if translations != nil && len(translations) > 0 {
