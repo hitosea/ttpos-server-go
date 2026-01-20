@@ -23,9 +23,7 @@ import (
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/repository"
-	"ttpos-server-go/app/repository/saas"
 	"ttpos-server-go/app/service/rpc/erp"
-	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -2498,40 +2496,8 @@ func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodLis
 		commonRepo.SortWithCreateTime("desc"),
 	)
 
-	lianLianPayAvailable := true
-	payServiceUrl := viper.GetString("PAY_SERVICE_URL")
-	payCallbackUrl := func() string {
-		if viper.GetString("PAY_SERVICE_LIANLIAN_CALLBACK_URL") == "" {
-			if config.Server.Domain != "" {
-				return config.Server.Domain + "/api/v1/passport/lianlian/callback"
-			} else {
-				return ""
-			}
-		}
-		return viper.GetString("PAY_SERVICE_LIANLIAN_CALLBACK_URL")
-	}()
-	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(s.dbm.GetDB(0)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
-	if paymentAppErr != nil || paymentApp == nil || paymentApp.ID == 0 {
-		lianLianPayAvailable = false
-	}
-	if payServiceUrl == "" {
-		lianLianPayAvailable = false
-	}
-	if payCallbackUrl == "" {
-		lianLianPayAvailable = false
-	}
-
 	list := make([]setting.PaymentMethod, 0, len(paymentMethodList))
 	for _, paymentMethod := range paymentMethodList {
-		if paymentMethod.PaymentName == "" {
-			continue
-		}
-		if paymentMethod.Code == constant.PaymentMethodCodeFreePay || paymentMethod.Code == constant.PaymentMethodCodeFreeMealForErp {
-			continue
-		}
-		if !lianLianPayAvailable && paymentMethod.IsLianLianPay() {
-			continue
-		}
 		list = append(list, setting.PaymentMethod{
 			Uuid:        paymentMethod.Uuid,
 			Name:        paymentMethod.Name,
