@@ -252,6 +252,10 @@ type BusinessDataExportItem struct {
 	MinTakeoutOrderAmount      float64                     `json:"min_takeout_order_amount"`      // 外送点餐-最小订单金额
 	MaxTakeoutOrderAmount      float64                     `json:"max_takeout_order_amount"`      // 外送点餐-最大订单金额
 	AvgTakeoutOrderAmount      float64                     `json:"avg_takeout_order_amount"`      // 外送点餐-平均订单金额
+	TotalGrabOrderNum          int64                       `json:"total_grab_order_num"`          // Grab订单数
+	MinGrabOrderAmount         float64                     `json:"min_grab_order_amount"`         // Grab最小订单金额
+	MaxGrabOrderAmount         float64                     `json:"max_grab_order_amount"`         // Grab最大订单金额
+	AvgGrabOrderAmount         float64                     `json:"avg_grab_order_amount"`         // Grab平均订单金额
 	AreaList                   []BusinessDataExportArea    `json:"area_list"`                     // 区域列表
 	PaymentList                []BusinessDataExportPayment `json:"payment_list"`                  // 支付列表
 }
