@@ -106,21 +106,22 @@ type MaterialCategoryEditReq struct {
 
 // MaterialAddReq 添加物品请求
 type MaterialAddReq struct {
-	LocaleName           dto.LocaleResponse `json:"locale_name"`            // 物品名称
-	CategoryUuid         uint64             `json:"category_uuid"`          // 分类UUID
-	Status               int                `json:"status"`                 // 状态，1-启用 0-停用
-	InitStock            float64            `json:"init_stock"`             // 期初库存
-	Valuation            float64            `json:"valuation"`              // 估值率
-	BarcodeValue         string             `json:"barcode_value"`          // 条形码值
-	UnitUuid             uint64             `json:"unit_uuid"`              // 基准单位UUID
-	UnitList             []MaterialUnitReq  `json:"unit_list"`              // 单位列表
-	PurchaseUnitUuid     uint64             `json:"purchase_unit_uuid"`     // 采购单位UUID
-	CostUnitUuid         uint64             `json:"cost_unit_uuid"`         // 成本单位UUID
-	InternalCode         string             `json:"internal_code"`          // 内部编码
-	SafetyStock          *float64           `json:"safety_stock"`           // 安全库存数量
-	AllowSubstoreVisible int                `json:"allow_substore_visible"` // 允许子店可见：1-允许，0-不允许（仅总店可用）
-	OriginCountryCode    string             `json:"origin_country_code"`    // 原产地国家编码（可选）
-	AllowNegativeStock   *bool              `json:"allow_negative_stock"`   // 是否允许负库存
+	LocaleName           dto.LocaleResponse `json:"locale_name"`             // 物品名称
+	CategoryUuid         uint64             `json:"category_uuid"`           // 分类UUID
+	Status               int                `json:"status"`                  // 状态，1-启用 0-停用
+	InitStock            float64            `json:"init_stock"`              // 期初库存
+	Valuation            float64            `json:"valuation"`               // 估值率
+	BarcodeValue         string             `json:"barcode_value"`           // 条形码值
+	UnitUuid             uint64             `json:"unit_uuid"`               // 基准单位UUID
+	UnitList             []MaterialUnitReq  `json:"unit_list"`               // 单位列表
+	PurchaseUnitUuid     uint64             `json:"purchase_unit_uuid"`      // 采购单位UUID
+	CostUnitUuid         uint64             `json:"cost_unit_uuid"`          // 成本单位UUID
+	DefaultSalesUnitUuid uint64             `json:"default_sales_unit_uuid"` // 默认销售单位UUID（MaterialUnit UUID，与采购单位、成本单位一致）
+	InternalCode         string             `json:"internal_code"`           // 内部编码
+	SafetyStock          *float64           `json:"safety_stock"`            // 安全库存数量
+	AllowSubstoreVisible int                `json:"allow_substore_visible"`  // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	OriginCountryCode    string             `json:"origin_country_code"`     // 原产地国家编码（可选）
+	AllowNegativeStock   *bool              `json:"allow_negative_stock"`    // 是否允许负库存
 
 	headquarterUuid uint64 // 总部uuid。 内部调用使用，同步总部物品时
 	warehouseUuid   uint64 // 仓库uuid。 内部调用使用，同步总部物品时
@@ -219,6 +220,7 @@ type MaterialAddErpReq struct {
 	ClassificationCode string           `json:"classification_code" `  // 分类编码
 	Uoms               []MaterialUomReq `json:"uoms" `                 // 单位列表
 	PurchaseUom        string           `json:"purchase_uom" `         // 采购单位, 英文
+	DefaultSalesUnit   string           `json:"default_sales_unit" `   // 默认销售单位（ERPNext UOM）
 }
 
 type MaterialEditErpReq struct {
@@ -235,6 +237,7 @@ type MaterialEditErpReq struct {
 	ClassificationCode string           `json:"classification_code" ` // 分类编码
 	Uoms               []MaterialUomReq `json:"uoms" `                // 单位列表
 	PurchaseUom        string           `json:"purchase_uom" `        // 采购单位, 英文
+	DefaultSalesUnit   string           `json:"default_sales_unit"`   // 默认销售单位（ERPNext UOM）
 	NotForSale         bool             `json:"not_for_sale" `        // 是否禁售-对应ttpos的删除
 	AllowNegativeStock *bool            `json:"allow_negative_stock"` // 是否允许负库存-对应ttpos的允许负库存
 }
@@ -289,19 +292,20 @@ type MaterialUnitReq struct {
 
 // MaterialEditReq 编辑物品请求
 type MaterialEditReq struct {
-	Uuid                 uint64             `json:"uuid"`                   // 物品UUID
-	LocaleName           dto.LocaleResponse `json:"locale_name"`            // 物品名称
-	CategoryUuid         uint64             `json:"category_uuid"`          // 分类UUID
-	Status               int                `json:"status"`                 // 状态，1-启用 0-停用
-	BarcodeValue         string             `json:"barcode_value"`          // 条形码值
-	UnitList             []MaterialUnitReq  `json:"unit_list"`              // 单位列表,新增的非基准单位
-	PurchaseUnitUuid     uint64             `json:"purchase_unit_uuid"`     // 采购单位UUID
-	CostUnitUuid         uint64             `json:"cost_unit_uuid"`         // 成本单位UUID
-	InternalCode         string             `json:"internal_code"`          // 内部编码
-	SafetyStock          *float64           `json:"safety_stock"`           // 安全库存数量
-	AllowSubstoreVisible int                `json:"allow_substore_visible"` // 允许子店可见：1-允许，0-不允许（仅总店可用）
-	OriginCountryCode    string             `json:"origin_country_code"`    // 原产地国家编码（可选）
-	AllowNegativeStock   bool               `json:"allow_negative_stock"`   // 是否允许负库存
+	Uuid                 uint64             `json:"uuid"`                    // 物品UUID
+	LocaleName           dto.LocaleResponse `json:"locale_name"`             // 物品名称
+	CategoryUuid         uint64             `json:"category_uuid"`           // 分类UUID
+	Status               int                `json:"status"`                  // 状态，1-启用 0-停用
+	BarcodeValue         string             `json:"barcode_value"`           // 条形码值
+	UnitList             []MaterialUnitReq  `json:"unit_list"`               // 单位列表,新增的非基准单位
+	PurchaseUnitUuid     uint64             `json:"purchase_unit_uuid"`      // 采购单位UUID
+	CostUnitUuid         uint64             `json:"cost_unit_uuid"`          // 成本单位UUID
+	DefaultSalesUnitUuid uint64             `json:"default_sales_unit_uuid"` // 默认销售单位UUID（MaterialUnit UUID，与采购单位、成本单位一致）
+	InternalCode         string             `json:"internal_code"`           // 内部编码
+	SafetyStock          *float64           `json:"safety_stock"`            // 安全库存数量
+	AllowSubstoreVisible int                `json:"allow_substore_visible"`  // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	OriginCountryCode    string             `json:"origin_country_code"`     // 原产地国家编码（可选）
+	AllowNegativeStock   bool               `json:"allow_negative_stock"`    // 是否允许负库存
 }
 
 func (r *MaterialEditReq) Validate() error {

@@ -1039,6 +1039,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
     `purchase_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购单位ID',
     `cost_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '成本单位ID',
+    `default_sales_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '默认销售单位ID（MaterialUnit UUID）',
     `price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '采购单价',
     `stock_num`  DECIMAL(22, 4) UNSIGNED NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
     `safety_stock` DECIMAL(14, 4) DEFAULT NULL COMMENT '安全库存数量',
@@ -3099,7 +3100,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     INDEX idx_duty_no (duty_no),
     INDEX idx_desk_uuid (desk_uuid),
     INDEX idx_complete_time (complete_time),
-    INDEX `idx_is_takeout` (`is_takeout`)
+    INDEX `idx_is_takeout` (`is_takeout`),
+    INDEX `idx_refund_time_product_package_uuid` (`refund_time`, `product_package_uuid`),
+    INDEX `idx_refund_time_product_package_uuid_covering` (`refund_time`, `product_package_uuid`, `product_sale_price`, `product_num`, `free_num`, `give_num`, `product_final_price`, `refund_num`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品统计表';
 
 

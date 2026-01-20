@@ -19,6 +19,7 @@ type Material struct {
 	UnitUuid              uint64   `gorm:"default:0;column:unit_uuid;comment:'单位ID'"`
 	PurchaseUnitUuid      uint64   `gorm:"default:0;column:purchase_unit_uuid;comment:'采购单位ID'"`
 	CostUnitUuid          uint64   `gorm:"default:0;column:cost_unit_uuid;comment:'成本单位ID'"`
+	DefaultSalesUnitUuid  uint64   `gorm:"default:0;column:default_sales_unit_uuid;comment:'默认销售单位ID（MaterialUnit UUID）'"`
 	Price                 float64  `gorm:"default:0;column:price;comment:'采购单价'"`
 	StockNum              float64  `gorm:"default:0;column:stock_num;comment:'库存数量'"`
 	SafetyStock           *float64 `gorm:"column:safety_stock;comment:'安全库存数量'"`

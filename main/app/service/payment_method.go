@@ -193,6 +193,7 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 	excludeCodes := []int{
 		constant.PaymentMethodCodeGrab,
 		constant.PaymentMethodCodeLineMan,
+		constant.PaymentMethodCodeFreePay,
 		constant.PaymentMethodCodeFreeMealForErp, // 过滤 Free Meal for ERP
 	}
 	if companySetting.IsOpenMember == 0 {
