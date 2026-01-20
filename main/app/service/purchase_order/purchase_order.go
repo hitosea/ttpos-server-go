@@ -928,7 +928,11 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 			newStatus = constant.PurchaseOrderStatusRejected
 			actionDesc = "审核驳回"
 			purchaseOrder.RejectTime = time.Now().Unix()
-			purchaseOrder.RejectReason = req.RejectReason
+			rejectReason := req.RejectReason
+			if rejectReason == "" {
+				rejectReason = req.Remark
+			}
+			purchaseOrder.RejectReason = rejectReason
 		} else {
 			return errors.New("无效的审核动作")
 		}
