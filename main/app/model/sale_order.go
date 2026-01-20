@@ -1269,9 +1269,14 @@ func (model *SaleOrder) ValidateOrderStatus() error {
 }
 
 func NewSaleOrder(deviceId string, saleBillUuid uint64, saleBillOrderNo string, setting SaleBillSetting) *SaleOrder {
-	uuid, _ := utils.GetID()
+	uuid := utils.MustGetID()
 	saleOrder := &SaleOrder{
-		BaseModel:    BaseModel{Uuid: uuid},
+		BaseModel: BaseModel{
+			Uuid:       uuid,
+			CreateTime: time.Now().Unix(),
+			UpdateTime: time.Now().Unix(),
+			DeleteTime: 0,
+		},
 		SaleBillUuid: saleBillUuid,
 		OrderNo:      saleBillOrderNo,
 		DeviceId:     deviceId,

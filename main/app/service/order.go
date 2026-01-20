@@ -724,7 +724,10 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 
 	saleBillSetting := model.SaleBillSetting{
 		BaseModel: model.BaseModel{
-			Uuid: utils.MustGetID(),
+			Uuid:       utils.MustGetID(),
+			CreateTime: time.Now().Unix(),
+			UpdateTime: time.Now().Unix(),
+			DeleteTime: 0,
 		},
 		SaleBillUuid:       saleBillUuid,
 		ServiceFeeType:     serviceFeeType,

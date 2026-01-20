@@ -4,6 +4,7 @@ const (
 	ServerModeRelease = "release"
 	ServerModeDebug   = "debug"
 	ServerModeTest    = "test"
+	ServerModeStop    = "stop" // 停止服务, 不用关闭某些特性功能
 )
 
 const (
