@@ -39,8 +39,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/duke-git/lancet/v2/convertor"
+	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
+
+	"ttpos-server-go/config"
 )
 
 // IOrderSrv 定义订单服务接口
@@ -273,7 +276,25 @@ func (s *orderSrv) createMemberSaleOrderSerialNo(db *gorm.DB, timezone string) (
 	return serialNo, nil
 }
 
+// createInstantOrderSerialNo 创建点餐订单序号
+// 优先使用 Redis INCR 原子操作，失败时降级到原数据库方案
 func (s *orderSrv) createInstantOrderSerialNo(ctx context.Context, db *gorm.DB) (string, error) {
+	// 仅在 debug 模式下尝试 Redis INCR 方案,充分测试后再应用到生产环境
+	if config.Server.Mode == constant.ServerModeDebug {
+		serialNo, err := s.createInstantOrderSerialNoWithRedis(ctx, db)
+		if err != nil {
+			ctx.Log().Warn("Redis 发号失败，降级到数据库方案", zap.Error(err))
+		} else {
+			return serialNo, nil
+		}
+	}
+
+	// Redis 失败时降级到原数据库方案（原逻辑不变）
+	return s.createInstantOrderSerialNoOriginal(ctx, db)
+}
+
+// createInstantOrderSerialNoOriginal 创建点餐订单序号（原逻辑，保持不变）
+func (s *orderSrv) createInstantOrderSerialNoOriginal(ctx context.Context, db *gorm.DB) (string, error) {
 	var serialNo string
 	saleBillRepo := repository.NewSaleBillRepo(db)
 	saleBill, err := saleBillRepo.GetInstantSaleBillLatest()
@@ -326,6 +347,182 @@ func (s *orderSrv) createInstantOrderSerialNo(ctx context.Context, db *gorm.DB) 
 			serialNo = strings.Repeat("0", 4-len(serialNo)) + serialNo
 		}
 	}
+	return serialNo, nil
+}
+
+// Lua 脚本：原子性地生成序列号，确保流水号只能增加不能减小
+// KEYS[1]: Redis key (serial_no:instant:{company_uuid}:{date})
+// ARGV[1]: 起始序列号（数字）
+// ARGV[2]: 过期时间（秒）
+// 返回：最终的序列号（数字）
+// 逻辑：
+// 1. 获取当前值（如果不存在返回0）
+// 2. 如果当前值 < 起始序列号，设置为起始序列号
+// 3. 否则，当前值加1
+// 4. 设置过期时间
+// 5. 返回最终值
+const LuaScriptGenerateSerialNo = `
+local key = KEYS[1]
+local startSerialNo = tonumber(ARGV[1])
+local expireSeconds = tonumber(ARGV[2])
+
+-- 1. 获取当前值（如果 key 不存在，返回 nil，转换为 0）
+local currentNum = tonumber(redis.call('GET', key) or 0)
+
+-- 2. 如果当前值小于起始序列号，设置为起始序列号（确保流水号只能增加）
+--    否则，当前值加1
+if currentNum < startSerialNo then
+    currentNum = startSerialNo
+    redis.call('SET', key, currentNum)
+else
+    currentNum = currentNum + 1
+    redis.call('SET', key, currentNum)
+end
+
+-- 3. 设置过期时间
+redis.call('EXPIRE', key, expireSeconds)
+
+-- 4. 返回最终序列号
+return currentNum
+`
+
+// createInstantOrderSerialNoWithRedis 使用 Redis INCR + Lua 脚本原子操作生成序列号
+// 确保流水号只能增加不能减小，支持管理员随时修改起始序列号
+// 如果 Redis key 丢失，会从数据库恢复当天最新的序列号，避免重复
+func (s *orderSrv) createInstantOrderSerialNoWithRedis(ctx context.Context, db *gorm.DB) (string, error) {
+	if cache.Global == nil {
+		return "", errors.New("Redis 未初始化")
+	}
+
+	// 获取业务设置（起始序列号）
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return "", errors.WithMessage(err, "获取业务设置失败")
+	}
+	startSerialNo := businessSetting.StartSerialNo
+	if startSerialNo == "" {
+		startSerialNo = "0001"
+	}
+
+	// 解析起始序列号为数字
+	startSerialNoNum, err := strconv.Atoi(startSerialNo)
+	if err != nil {
+		return "", errors.WithMessage(err, "起始序列号格式错误")
+	}
+
+	// 按商家时区计算日期
+	companySetting := ctx.GetCompanySetting()
+	timezone := companySetting.GetTimezone()
+	dateStr := utils.SetTimezone(timezone).Now().Format("20060102")
+
+	// 构建 Redis Key: serial_no:instant:{company_uuid}:{date}
+	companyUuid := ctx.GetCompanyUuid()
+	redisKey := fmt.Sprintf("serial_no:instant:%d:%s", companyUuid, dateStr)
+
+	// 获取 Redis 客户端
+	var redisClient redis.Cmdable
+	if clusterClient := cache.Global.GetClusterClient(); clusterClient != nil {
+		redisClient = clusterClient
+	} else if client := cache.Global.GetClient(); client != nil {
+		redisClient = client
+	} else {
+		return "", errors.New("无法获取 Redis 客户端")
+	}
+
+	redisCtx := contexts.Background()
+
+	// 在执行脚本前，先获取当前值，用于检测起始流水号是否改变
+	var oldValue int64 = 0
+	oldValueStr, err := redisClient.Get(redisCtx, redisKey).Result()
+	if err != nil {
+		// Redis key 不存在或获取失败，需要从数据库恢复
+		if err == redis.Nil {
+			// Key 不存在，从数据库查询当天最新的序列号
+			ctx.Log().Warn("Redis key 不存在，从数据库恢复序列号",
+				zap.String("redisKey", redisKey),
+				zap.String("date", dateStr),
+			)
+
+			// 从数据库查询当天最新的序列号
+			recoveredValueStr, recoverErr := s.createInstantOrderSerialNoOriginal(ctx, db)
+			if recoverErr != nil {
+				return "", errors.WithMessage(recoverErr, "从数据库恢复序列号失败")
+			}
+			recoveredValue, err := strconv.ParseInt(recoveredValueStr, 10, 64)
+			if err != nil {
+				return "", errors.WithMessage(err, "从数据库恢复序列号Atoi失败")
+			}
+
+			// 初始化 Redis key（使用 SETNX 确保并发安全）
+			setResult, setErr := redisClient.SetNX(redisCtx, redisKey, recoveredValue, 48*time.Hour).Result()
+			if setErr != nil {
+				return "", errors.WithMessage(setErr, "初始化 Redis key 失败")
+			}
+
+			if setResult {
+				// 成功设置，记录日志
+				ctx.Log().Info("从数据库恢复序列号成功",
+					zap.String("redisKey", redisKey),
+					zap.Int64("recoveredValue", recoveredValue),
+				)
+				oldValue = recoveredValue
+			} else {
+				// 并发情况下，其他请求已经设置了，重新获取
+				oldValue, err = redisClient.Get(redisCtx, redisKey).Int64()
+				if err != nil {
+					return "", errors.WithMessage(err, "重新获取 Redis key 失败")
+				}
+			}
+		} else {
+			return "", errors.WithMessage(err, "获取 Redis key 失败")
+		}
+	} else {
+		// 成功获取到值
+		if parsedOldValue, parseErr := strconv.ParseInt(oldValueStr, 10, 64); parseErr == nil {
+			oldValue = parsedOldValue
+		}
+	}
+
+	// 使用 Lua 脚本原子性地生成序列号
+	// 脚本会：1. GET 当前值 2. 比较并调整起始序列号 3. 设置过期时间 4. 返回最终值
+	script := redis.NewScript(LuaScriptGenerateSerialNo)
+	expireSeconds := int64(48 * 60 * 60) // 48小时, 避免当天内过期，导致流水号重复
+
+	result, err := script.Run(redisCtx, redisClient, []string{redisKey}, startSerialNoNum, expireSeconds).Result()
+	if err != nil {
+		return "", errors.WithMessage(err, "Redis Lua 脚本执行失败")
+	}
+
+	// 解析返回的序列号
+	currentNum, ok := result.(int64)
+	if !ok {
+		return "", errors.New("Redis 返回的序列号类型错误")
+	}
+
+	// 检测起始流水号是否改变：如果返回的值等于起始序列号，且之前的旧值小于起始序列号，说明发生了调整
+	if currentNum == int64(startSerialNoNum) && oldValue > 0 && oldValue < int64(startSerialNoNum) {
+		ctx.Log().Info("起始流水号已调整",
+			zap.Uint64("companyUuid", companyUuid),
+			zap.String("date", dateStr),
+			zap.Int64("oldValue", oldValue),
+			zap.Int("newStartSerialNo", startSerialNoNum),
+			zap.String("startSerialNo", startSerialNo),
+		)
+	}
+
+	// 格式化序列号：如果小于10000则补零到4位，否则直接返回
+	var serialNo string
+	if currentNum < 10000 {
+		// 小于10000时，补零到4位（例如：1 -> 0001, 24 -> 0024, 200 -> 0200）
+		serialNo = strconv.FormatInt(currentNum, 10)
+		if len(serialNo) < 4 {
+			serialNo = strings.Repeat("0", 4-len(serialNo)) + serialNo
+		}
+	} else {
+		// 大于等于10000时，直接返回（例如：10000 -> "10000", 12345 -> "12345"）
+		serialNo = strconv.FormatInt(currentNum, 10)
+	}
+
 	return serialNo, nil
 }
 
