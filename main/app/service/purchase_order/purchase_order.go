@@ -324,7 +324,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		}
 		for _, log := range subLogs {
 			if (log.OldStatus != constant.PurchaseOrderStatusApproved && log.NewStatus == constant.PurchaseOrderStatusApproved) ||
-				(log.OldStatus == constant.PurchaseOrderStatusRejected && log.NewStatus == constant.PurchaseOrderStatusRejected) ||
+				(log.OldStatus != constant.PurchaseOrderStatusRejected && log.NewStatus == constant.PurchaseOrderStatusRejected) ||
 				log.NewStatus == constant.PurchaseOrderStatusRecommitted {
 				remarks = append(remarks, resp.PurchaseOrderRemark{
 					Source:     "store",
