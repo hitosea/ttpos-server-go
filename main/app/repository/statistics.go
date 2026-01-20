@@ -2716,7 +2716,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		args = append(args, req.PaymentMethodList)
 	} else if len(req.PaymentMethodNames) > 0 {
 		// 使用支付方式名称筛选（因为不同商家的同一支付方式UUID可能不同）
-		baseQuery += " AND pm.payment_name IN (?)"
+		baseQuery += " AND pm.name IN (?)"
 		args = append(args, req.PaymentMethodNames)
 	}
 

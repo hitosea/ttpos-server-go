@@ -3917,7 +3917,7 @@ func (s *businessSrv) GetCompanyPaymentMethods(ctx context.Context) (*resp.Compa
 						continue
 					}
 					paymentMethodInfos = append(paymentMethodInfos, paymentMethodInfo{
-						PaymentName: method.PaymentName,
+						PaymentName: method.Name,
 						Sort:        method.Sort,
 						CreateTime:  method.CreateTime,
 						ID:          method.ID,

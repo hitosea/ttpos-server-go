@@ -656,7 +656,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 		"pm.uuid AS payment_method_uuid",
 		"pm.sort AS payment_method_sort",
 		"pm.create_time AS payment_method_create_time",
-		"pm.payment_name",
+		"pm.name AS payment_name",
 		// 计算每个订单的支付金额：如果状态是营业收入状态(10,20,30,40)，则取 eater_payment；如果状态是取消状态(60)，则取 0
 		fmt.Sprintf("IF(t.order_state IN %s, t.eater_payment, 0) AS payment_amount", businessStatesStr),
 	}
