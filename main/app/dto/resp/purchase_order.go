@@ -29,12 +29,23 @@ type PurchaseOrderInfo struct {
 	CompanyUuid       uint64             `json:"company_uuid"`        // V2.6 公司UUID
 	CompanyName       string             `json:"company_name"`        // V2.6 公司名称
 	CompanyStoreCode  string             `json:"company_store_code"`  // 公司店铺编码
+
+	CanRecommit bool `json:"can_recommit"` // 是否可重新提交
 }
 
 // PurchaseOrderDetailResp 采购订单详情响应
 type PurchaseOrderDetailResp struct {
 	PurchaseOrderInfo
-	Items []PurchaseOrderItemInfo `json:"items"` // 采购明细
+	Items   []PurchaseOrderItemInfo `json:"items"`   // 采购明细
+	Remarks []PurchaseOrderRemark   `json:"remarks"` // 批注
+}
+
+// 批注
+type PurchaseOrderRemark struct {
+	Source     string `json:"source"`      // 来源 headquarters-总部 或 store-门店
+	Status     int    `json:"status"`      // 状态 2-已通过 3-已驳回 6-重新提交
+	Remark     string `json:"remark"`      // 批注
+	CreateTime int64  `json:"create_time"` // 创建时间
 }
 
 type PurchaseOrderItemMaterialUnit struct {
@@ -67,6 +78,9 @@ type PurchaseOrderItemInfo struct {
 	BarcodeValue       string                          `json:"barcode_value"`         // 条形码值
 	UnitList           []PurchaseOrderItemMaterialUnit `json:"unit_list"`             // 基准单位列表
 	Units              []PurchaseOrderItemUnit         `json:"units"`                 // 单位列表
+
+	AvailableQuantity float64 `json:"available_quantity"` // 可采购数量
+	StoreQuantity     float64 `json:"store_quantity"`     // 门店数量
 }
 
 // PurchaseOrderLogInfo 采购订单操作日志信息

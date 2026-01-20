@@ -181,6 +181,19 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		dbOptions = append(dbOptions, commonRepo.WhereInUuids(req.MaterialUuids))
 	}
 
+	availableQuantityMap := make(map[uint64]float64)
+	hqUuid := companySetting.HeadquarterUuid
+	if companySetting.IsHeadquarter() {
+		hqUuid = companySetting.CompanyUuid
+	}
+	// 查询总店指定仓库物品数量
+	hqDb := s.dbm.GetDB(hqUuid)
+	var warehouseItems []model.WarehouseItem
+	hqDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid = (?)", hqDb.Model(&model.Warehouse{}).Select("uuid").Where("erp_code = ?", req.WarehouseErpCode).Limit(1)).Find(&warehouseItems)
+	for _, warehouseItem := range warehouseItems {
+		availableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
+	}
+
 	// 子店查询时自动过滤不可见物品
 	if companySetting.IsSubShop() {
 		dbOptions = append(dbOptions, materialRepo.WhereAllowSubstoreVisible(1))
@@ -364,6 +377,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			UnitList:               unitList,
 			AllowSubstoreVisible:   material.AllowSubstoreVisible,
 			AllowNegativeStock:     material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
+
+			AvailableQuantity: decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
+			StoreQuantity:     stockNum,
 		}
 		materialList = append(materialList, respMaterial)
 	}

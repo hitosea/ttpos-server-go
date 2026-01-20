@@ -14,8 +14,10 @@ type IPurchaseOrderRepo interface {
 	Create(purchaseOrder *model.PurchaseOrder) error
 	Update(purchaseOrder *model.PurchaseOrder) error
 	Delete(uuid uint64) error
+	ForceDelete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.PurchaseOrder, error)
 	GetBySubUuid(subUuid uint64, opts ...DBOption) (*model.PurchaseOrder, error)
+	GetBySubUuidWithoutDeleted(subUuid uint64, opts ...DBOption) (*model.PurchaseOrder, error)
 	GetByOrderNo(orderNo string, opts ...DBOption) (*model.PurchaseOrder, error)
 
 	// 查询操作
@@ -98,6 +100,20 @@ func (r *PurchaseOrderRepoImpl) Delete(uuid uint64) error {
 	return r.db.Model(&model.PurchaseOrder{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error
 }
 
+// Delete 删除采购订单
+func (r *PurchaseOrderRepoImpl) ForceDelete(uuid uint64) error {
+	if err := r.db.Model(&model.PurchaseOrder{}).Where("uuid = ?", uuid).Delete(&model.PurchaseOrder{}).Error; err != nil {
+		return err
+	}
+	if err := r.db.Model(&model.PurchaseOrderItem{}).Where("purchase_order_uuid = ?", uuid).Delete(&model.PurchaseOrderItem{}).Error; err != nil {
+		return err
+	}
+	if err := r.db.Model(&model.PurchaseOrderItemUnit{}).Where("purchase_order_uuid = ?", uuid).Delete(&model.PurchaseOrderItemUnit{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 // GetByUuid 根据UUID获取采购订单
 func (r *PurchaseOrderRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.PurchaseOrder, error) {
 	var purchaseOrder model.PurchaseOrder
@@ -114,6 +130,17 @@ func (r *PurchaseOrderRepoImpl) GetBySubUuid(subUuid uint64, opts ...DBOption) (
 	var purchaseOrder model.PurchaseOrder
 	db := r.applyOptions(r.db, opts...)
 	err := db.Model(&model.PurchaseOrder{}).Where("sub_uuid = ?", subUuid).Where("delete_time = ?", constant.NotDeleted).First(&purchaseOrder).Error
+	if err != nil {
+		return nil, err
+	}
+	return &purchaseOrder, nil
+}
+
+// GetBySubUuid 根据子订单UUID获取采购订单
+func (r *PurchaseOrderRepoImpl) GetBySubUuidWithoutDeleted(subUuid uint64, opts ...DBOption) (*model.PurchaseOrder, error) {
+	var purchaseOrder model.PurchaseOrder
+	db := r.applyOptions(r.db, opts...)
+	err := db.Model(&model.PurchaseOrder{}).Where("sub_uuid = ?", subUuid).First(&purchaseOrder).Error
 	if err != nil {
 		return nil, err
 	}

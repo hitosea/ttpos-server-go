@@ -70,6 +70,7 @@ type PurchaseOrderUpdateReq struct {
 	SupplierErpCode      string                       `json:"supplier_erp_code" binding:"omitempty,max=255"`    // V2.6 供应商编码
 	WarehouseErpCode     string                       `json:"warehouse_erp_code" binding:"omitempty,max=255"`   // V2.6 仓库编码
 	Items                []PurchaseOrderItemUpdateReq `json:"items" binding:"omitempty,min=1,max=200,dive"`     // 采购商品明细
+	IsRecommit           bool                         `json:"is_recommit"`                                      // 是否重新提交
 }
 
 func (r *PurchaseOrderUpdateReq) Validate() error {
@@ -111,6 +112,7 @@ type PurchaseOrderApproveReq struct {
 	Uuid         uint64 `json:"uuid" binding:"required,min=1"`                  // 采购订单ID
 	Action       string `json:"action" binding:"required,oneof=approve reject"` // 审核动作：approve-通过，reject-驳回
 	RejectReason string `json:"reject_reason"`                                  // 驳回备注，可以为空最大100个字符
+	Remark       string `json:"remark"`                                         // 批注, 可以为空最大100个字符
 }
 
 // PurchaseOrderSubmitReq 提交采购订单请求
