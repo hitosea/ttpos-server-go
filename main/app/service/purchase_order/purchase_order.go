@@ -323,7 +323,9 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 			return resp.PurchaseOrderDetailResp{}, errors.WithMessage(errors.New("查询门店操作日志失败"), err.Error())
 		}
 		for _, log := range subLogs {
-			if log.NewStatus == constant.PurchaseOrderStatusApproved || log.NewStatus == constant.PurchaseOrderStatusRejected || log.NewStatus == constant.PurchaseOrderStatusRecommitted {
+			if (log.OldStatus != constant.PurchaseOrderStatusApproved && log.NewStatus == constant.PurchaseOrderStatusApproved) ||
+				log.NewStatus == constant.PurchaseOrderStatusRejected ||
+				log.NewStatus == constant.PurchaseOrderStatusRecommitted {
 				remarks = append(remarks, resp.PurchaseOrderRemark{
 					Source:     "store",
 					Status:     log.NewStatus,
@@ -341,7 +343,9 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 			return resp.PurchaseOrderDetailResp{}, errors.WithMessage(errors.New("查询总店操作日志失败"), err.Error())
 		}
 		for _, log := range hqLogs {
-			if log.NewStatus == constant.PurchaseOrderStatusApproved || log.NewStatus == constant.PurchaseOrderStatusRejected || log.NewStatus == constant.PurchaseOrderStatusRecommitted {
+			if (log.OldStatus != constant.PurchaseOrderStatusApproved && log.NewStatus == constant.PurchaseOrderStatusApproved) ||
+				log.NewStatus == constant.PurchaseOrderStatusRejected ||
+				log.NewStatus == constant.PurchaseOrderStatusRecommitted {
 				remarks = append(remarks, resp.PurchaseOrderRemark{
 					Source:     "headquarters",
 					Status:     log.NewStatus,
