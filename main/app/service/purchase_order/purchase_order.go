@@ -735,7 +735,6 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 	defer s.lock.UnlockUuid(req.Uuid)
 
 	db := ctx.GetDB()
-	companyUuid := ctx.GetCompanyUuid()
 
 	return db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
@@ -825,14 +824,10 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 			}
 		}
 
-		// 🔥 新增：品牌采购三维度限额校验
+		// 🔥 新增：品牌采购限购校验（基于新的限购方案表）
 		if purchaseOrder.IsHeadquarterPurchase() {
-			// ① 检查申请次数限制
-			if err := s.checkDailySubmitLimit(ctx, companyUuid); err != nil {
-				return err
-			}
-			// ② 检查物品限购
-			if err := s.checkPurchaseQuota(ctx, purchaseOrder); err != nil {
+			// 检查限购方案（包含每日申请次数限制和物品数量限制）
+			if err := s.checkPurchaseLimit(ctx, purchaseOrder); err != nil {
 				return err
 			}
 		}

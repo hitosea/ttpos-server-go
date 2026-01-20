@@ -38,7 +38,7 @@ class MigratePurchaseQuotaToLimitScheme extends Migrator
             $this->createNewTables();
 
             // Step 2: 迁移数据
-            $this->migrateData($db);
+            // $this->migrateData($db);
 
             // Step 3: 删除旧表
             $this->dropOldTables();
