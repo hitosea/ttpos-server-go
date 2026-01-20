@@ -49011,7 +49011,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "items",
-                "name_locale",
+                "locale_name",
                 "weekdays"
             ],
             "properties": {
@@ -49036,8 +49036,8 @@ const docTemplate = `{
                         "$ref": "#/definitions/req.PurchaseLimitSchemeItemReq"
                     }
                 },
-                "name_locale": {
-                    "description": "方案名称",
+                "locale_name": {
+                    "description": "多语言名称",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocaleResponse"
@@ -49091,7 +49091,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "items",
-                "name_locale",
+                "locale_name",
                 "uuid",
                 "weekdays"
             ],
@@ -49117,8 +49117,8 @@ const docTemplate = `{
                         "$ref": "#/definitions/req.PurchaseLimitSchemeItemReq"
                     }
                 },
-                "name_locale": {
-                    "description": "方案名称",
+                "locale_name": {
+                    "description": "多语言名称",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocaleResponse"
@@ -59719,7 +59719,7 @@ const docTemplate = `{
                         "$ref": "#/definitions/resp.PurchaseLimitSchemeItemResp"
                     }
                 },
-                "name_locale": {
+                "locale_name": {
                     "$ref": "#/definitions/dto.LocaleResponse"
                 },
                 "shops": {
@@ -59758,7 +59758,7 @@ const docTemplate = `{
                     "description": "物品数量",
                     "type": "integer"
                 },
-                "name_locale": {
+                "locale_name": {
                     "$ref": "#/definitions/dto.LocaleResponse"
                 },
                 "shop_count": {

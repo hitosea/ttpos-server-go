@@ -93,7 +93,7 @@ func (s *purchaseLimitSchemeSrv) Create(ctx context.Context, req req.PurchaseLim
 
 		// 4.1 创建限购方案主记录
 		scheme := &model.PurchaseLimitScheme{
-			Name:            req.NameLocale.ToJson(),
+			Name:            req.LocaleName.ToJson(),
 			Status:          req.Status,
 			ApplyToAllShops: req.ApplyToAllShops,
 			DailyLimit:      req.DailyLimit,
@@ -150,7 +150,6 @@ func (s *purchaseLimitSchemeSrv) Create(ctx context.Context, req req.PurchaseLim
 		return 0, err
 	}
 
-	logger.Logger.Info("创建限购方案成功", zap.Uint64("scheme_uuid", schemeUuid), zap.String("name", req.NameLocale.ToJson()))
 	return schemeUuid, nil
 }
 
@@ -205,7 +204,7 @@ func (s *purchaseLimitSchemeSrv) Update(ctx context.Context, req req.PurchaseLim
 		currentTime := time.Now().Unix()
 
 		// 5.1 更新限购方案主记录
-		scheme.Name = req.NameLocale.ToJson()
+		scheme.Name = req.LocaleName.ToJson()
 		scheme.Status = req.Status
 		scheme.ApplyToAllShops = req.ApplyToAllShops
 		scheme.DailyLimit = req.DailyLimit
@@ -273,7 +272,6 @@ func (s *purchaseLimitSchemeSrv) Update(ctx context.Context, req req.PurchaseLim
 		return err
 	}
 
-	logger.Logger.Info("更新限购方案成功", zap.Uint64("scheme_uuid", req.Uuid), zap.String("name", req.NameLocale.ToJson()))
 	return nil
 }
 
@@ -316,7 +314,7 @@ func (s *purchaseLimitSchemeSrv) GetByUuid(ctx context.Context, uuid uint64) (*r
 	// 4. 组装响应数据 - 需要将 Code 转换为 Uuid
 	result := &resp.PurchaseLimitSchemeResp{
 		Uuid:            scheme.Uuid,
-		NameLocale:      *language.JsonToLocaleResponse(scheme.Name),
+		LocaleName:      *language.JsonToLocaleResponse(scheme.Name),
 		Status:          scheme.Status,
 		ApplyToAllShops: scheme.ApplyToAllShops,
 		DailyLimit:      scheme.DailyLimit,
@@ -393,7 +391,7 @@ func (s *purchaseLimitSchemeSrv) GetList(ctx context.Context, req req.PurchaseLi
 
 		list = append(list, resp.PurchaseLimitSchemeSummaryResp{
 			Uuid:       scheme.Uuid,
-			NameLocale: *language.JsonToLocaleResponse(scheme.Name),
+			LocaleName: *language.JsonToLocaleResponse(scheme.Name),
 			Status:     scheme.Status,
 			WeekdayStr: weekdayStr,
 			ShopCount:  shopCount,
@@ -455,7 +453,6 @@ func (s *purchaseLimitSchemeSrv) Delete(ctx context.Context, uuid uint64) error 
 		return err
 	}
 
-	logger.Logger.Info("删除限购方案成功", zap.Uint64("scheme_uuid", uuid), zap.String("name", scheme.Name))
 	return nil
 }
 

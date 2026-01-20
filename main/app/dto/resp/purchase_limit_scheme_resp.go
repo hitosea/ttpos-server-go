@@ -5,7 +5,7 @@ import "ttpos-server-go/app/dto"
 // PurchaseLimitSchemeResp 限购方案响应
 type PurchaseLimitSchemeResp struct {
 	Uuid            uint64                        `json:"uuid"`
-	NameLocale      dto.LocaleResponse            `json:"name_locale"`
+	LocaleName      dto.LocaleResponse            `json:"locale_name"`
 	Status          int8                          `json:"status"`
 	ApplyToAllShops int8                          `json:"apply_to_all_shops"`
 	DailyLimit      int                           `json:"daily_limit"`
@@ -31,7 +31,7 @@ type PurchaseLimitSchemeListResp struct {
 // PurchaseLimitSchemeSummaryResp 限购方案摘要响应（列表用）
 type PurchaseLimitSchemeSummaryResp struct {
 	Uuid       uint64             `json:"uuid"`
-	NameLocale dto.LocaleResponse `json:"name_locale"`
+	LocaleName dto.LocaleResponse `json:"locale_name"`
 	Status     int8               `json:"status"`
 	WeekdayStr string             `json:"weekday_str"` // 例如: "周一、周三、周五"
 	ShopCount  int                `json:"shop_count"`  // 门店数量

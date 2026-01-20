@@ -7716,10 +7716,10 @@ definitions:
           $ref: '#/definitions/req.PurchaseLimitSchemeItemReq'
         minItems: 1
         type: array
-      name_locale:
+      locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
-        description: 方案名称
+        description: 多语言名称
       shops:
         description: 门店UUID列表
         items:
@@ -7740,7 +7740,7 @@ definitions:
         type: array
     required:
     - items
-    - name_locale
+    - locale_name
     - weekdays
     type: object
   req.PurchaseLimitSchemeItemReq:
@@ -7773,10 +7773,10 @@ definitions:
           $ref: '#/definitions/req.PurchaseLimitSchemeItemReq'
         minItems: 1
         type: array
-      name_locale:
+      locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
-        description: 方案名称
+        description: 多语言名称
       shops:
         description: 门店UUID列表
         items:
@@ -7800,7 +7800,7 @@ definitions:
         type: array
     required:
     - items
-    - name_locale
+    - locale_name
     - uuid
     - weekdays
     type: object
@@ -15018,7 +15018,7 @@ definitions:
         items:
           $ref: '#/definitions/resp.PurchaseLimitSchemeItemResp'
         type: array
-      name_locale:
+      locale_name:
         $ref: '#/definitions/dto.LocaleResponse'
       shops:
         items:
@@ -15044,7 +15044,7 @@ definitions:
       item_count:
         description: 物品数量
         type: integer
-      name_locale:
+      locale_name:
         $ref: '#/definitions/dto.LocaleResponse'
       shop_count:
         description: 门店数量

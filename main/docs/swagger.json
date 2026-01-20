@@ -49005,7 +49005,7 @@
             "type": "object",
             "required": [
                 "items",
-                "name_locale",
+                "locale_name",
                 "weekdays"
             ],
             "properties": {
@@ -49030,8 +49030,8 @@
                         "$ref": "#/definitions/req.PurchaseLimitSchemeItemReq"
                     }
                 },
-                "name_locale": {
-                    "description": "方案名称",
+                "locale_name": {
+                    "description": "多语言名称",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocaleResponse"
@@ -49085,7 +49085,7 @@
             "type": "object",
             "required": [
                 "items",
-                "name_locale",
+                "locale_name",
                 "uuid",
                 "weekdays"
             ],
@@ -49111,8 +49111,8 @@
                         "$ref": "#/definitions/req.PurchaseLimitSchemeItemReq"
                     }
                 },
-                "name_locale": {
-                    "description": "方案名称",
+                "locale_name": {
+                    "description": "多语言名称",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocaleResponse"
@@ -59713,7 +59713,7 @@
                         "$ref": "#/definitions/resp.PurchaseLimitSchemeItemResp"
                     }
                 },
-                "name_locale": {
+                "locale_name": {
                     "$ref": "#/definitions/dto.LocaleResponse"
                 },
                 "shops": {
@@ -59752,7 +59752,7 @@
                     "description": "物品数量",
                     "type": "integer"
                 },
-                "name_locale": {
+                "locale_name": {
                     "$ref": "#/definitions/dto.LocaleResponse"
                 },
                 "shop_count": {
