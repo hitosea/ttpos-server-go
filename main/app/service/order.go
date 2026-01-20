@@ -816,7 +816,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	ctxCopy := ctx.Copy()
 	db := ctx.GetDB()
 	// 创建订单编号
-	orderNo, err := s.createOrderNo(db, constant.OrderSourceMember)
+	orderNo, err := s.createOrderNo(ctx, db, constant.OrderSourceMember)
 	if err != nil {
 		ctx.Log().Error("会员端订单编号生成失败", zap.Error(err))
 		return nil, errors.WithMessage(err, "会员端订单编号生成失败")
@@ -1251,7 +1251,24 @@ func getMemberOrderDetail(ctx context.Context, memberSaleOrderUuid uint64) (*mod
 }
 
 // createOrderNo 创建订单编号
-func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error) {
+// 优先使用 Redis Set 保证随机数唯一性，失败时降级到原随机数方案
+func (s *orderSrv) createOrderNo(ctx context.Context, db *gorm.DB, orderSource string) (string, error) {
+	// 仅在 debug 模式下尝试 Redis Set 方案，充分测试后再应用到生产环境
+	if config.Server.Mode == constant.ServerModeDebug {
+		orderNo, err := s.createOrderNoWithRedis(ctx, db, orderSource)
+		if err != nil {
+			// Redis 失败时降级到原方案
+		} else {
+			return orderNo, nil
+		}
+	}
+
+	// 使用原随机数方案（原逻辑不变）
+	return s.createOrderNoOriginal(db, orderSource)
+}
+
+// createOrderNoOriginal 创建订单编号（原逻辑，保持不变）
+func (s *orderSrv) createOrderNoOriginal(db *gorm.DB, orderSource string) (string, error) {
 	var orderNo string
 
 	// 前八位是年月日
@@ -1282,6 +1299,211 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error
 		return "", errors.New("订单编号生成失败")
 	}
 	return orderNo, nil
+}
+
+// Lua 脚本：原子性地生成唯一的随机数
+// KEYS[1]: Redis Set key (order_no_set:{date}:{orderSourceType})
+// ARGV[1]: 随机数
+// ARGV[2]: 过期时间（秒）
+// 返回：1 表示成功添加（随机数唯一），0 表示已存在（需要重新生成）
+const LuaScriptAddOrderNoRandom = `
+local setKey = KEYS[1]
+local randomNum = ARGV[1]
+local expireSeconds = tonumber(ARGV[2])
+
+-- 检查随机数是否已存在
+if redis.call('SISMEMBER', setKey, randomNum) == 1 then
+    return 0  -- 已存在，需要重新生成
+end
+
+-- 添加随机数到 Set
+redis.call('SADD', setKey, randomNum)
+
+-- 设置过期时间
+redis.call('EXPIRE', setKey, expireSeconds)
+
+return 1  -- 成功添加
+`
+
+// createOrderNoWithRedis 使用 Redis Set 保证随机数唯一性生成订单编号
+// 订单编号格式：日期(8位) + 订单来源类型(1位) + 随机数(9位)
+// Redis Set Key: order_no_set:{date}:{orderSourceType}
+// 如果 Redis Set 丢失，会从数据库恢复当天已使用的订单编号，避免重复
+func (s *orderSrv) createOrderNoWithRedis(ctx context.Context, db *gorm.DB, orderSource string) (string, error) {
+	if cache.Global == nil {
+		return "", errors.New("Redis 未初始化")
+	}
+
+	// 使用商家时区获取当前日期
+	companySetting := ctx.GetCompanySetting()
+	timezone := companySetting.GetTimezone()
+	datePart := utils.SetTimezone(timezone).Now().Format("20060102")
+	// 第九位是订单来源
+	orderSourceType := constant.OrderSourceMapToOrderNoType[orderSource]
+	if orderSourceType == "" {
+		return "", errors.New("订单来源类型不存在")
+	}
+
+	// 构建 Redis Set Key: order_no_set:{date}:{orderSourceType}
+	setKey := fmt.Sprintf("order_no_set:%s:%s", datePart, orderSourceType)
+
+	// 获取 Redis 客户端
+	var redisClient redis.Cmdable
+	if clusterClient := cache.Global.GetClusterClient(); clusterClient != nil {
+		redisClient = clusterClient
+	} else if client := cache.Global.GetClient(); client != nil {
+		redisClient = client
+	} else {
+		return "", errors.New("无法获取 Redis 客户端")
+	}
+
+	redisCtx := contexts.Background()
+
+	// 检测 Redis Set 是否存在，如果不存在则从数据库恢复
+	exists, err := redisClient.Exists(redisCtx, setKey).Result()
+	if err != nil {
+		return "", errors.WithMessage(err, "检查 Redis Set 是否存在失败")
+	}
+
+	if exists == 0 {
+		// Redis Set 不存在，从数据库恢复当天已使用的订单编号
+		err := s.recoverOrderNoSetFromDB(db, redisClient, redisCtx, setKey, datePart, orderSourceType, timezone)
+		if err != nil {
+			return "", errors.WithMessage(err, "从数据库恢复订单编号 Set 失败")
+		}
+	}
+
+	script := redis.NewScript(LuaScriptAddOrderNoRandom)
+	expireSeconds := int64(48 * 60 * 60) // 48小时
+
+	// 使用10位Unix时间戳的前6位作为时间戳部分
+	// 10位时间戳（秒级）从2001年开始，前6位不会有前导零，且保持时序性
+	// 使用商家时区获取当前时间
+	now := utils.SetTimezone(timezone).Now()
+	currentUnix := now.Unix()
+	timeStampStr := strconv.FormatInt(currentUnix, 10)
+	timePartStr := timeStampStr[:6] // 取前6位
+
+	// 最多重试10次生成唯一的随机数
+	var orderNo string
+	for i := 0; i < 10; i++ {
+		// 生成与时间序列相关的9位随机数
+		// 格式：时间戳部分(6位) + 随机数(3位)
+		// 时间戳部分：使用10位Unix时间戳的前6位，保证时序性和唯一性
+		// 随机数部分：3位随机数，保证唯一性
+
+		// 生成3位随机数
+		randomPart := utils.RandomNumber(3)
+
+		// 组合：时间戳部分(6位) + 随机数(3位) = 9位
+		randomNum := timePartStr + randomPart
+
+		// 使用 Lua 脚本原子性地检查并添加随机数
+		result, err := script.Run(redisCtx, redisClient, []string{setKey}, randomNum, expireSeconds).Result()
+		if err != nil {
+			return "", errors.WithMessage(err, "Redis Lua 脚本执行失败")
+		}
+
+		// 解析返回结果
+		added, ok := result.(int64)
+		if !ok {
+			return "", errors.New("Redis 返回结果类型错误")
+		}
+
+		if added == 1 {
+			// 成功添加，随机数唯一
+			orderNo = datePart + orderSourceType + randomNum
+			break
+		}
+		// added == 0，随机数已存在，继续重试
+	}
+
+	if orderNo == "" {
+		return "", errors.New("订单编号生成失败：无法生成唯一的订单编号")
+	}
+
+	return orderNo, nil
+}
+
+// recoverOrderNoSetFromDB 从数据库恢复当天已使用的订单编号到 Redis Set
+// 查询当天所有订单编号，提取后9位数字，添加到 Redis Set 中
+func (s *orderSrv) recoverOrderNoSetFromDB(db *gorm.DB, redisClient redis.Cmdable, redisCtx contexts.Context, setKey, datePart, orderSourceType, timezone string) error {
+	// 使用商家时区计算当天的开始和结束时间戳
+	now := utils.SetTimezone(timezone).Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	todayEnd := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location())
+	startTime := todayStart.Unix()
+	endTime := todayEnd.Unix()
+
+	// 构建订单编号前缀：日期(8位) + 订单来源类型(1位)
+	orderNoPrefix := datePart + orderSourceType
+
+	// 查询当天所有订单编号（从 sale_bill 和 sale_order 表）
+	var orderNos []string
+
+	// 查询 sale_bill 表中的订单编号
+	var saleBillOrderNos []string
+	err := db.Model(&model.SaleBill{}).
+		Where("order_no LIKE ?", orderNoPrefix+"%").
+		Where("create_time >= ? AND create_time <= ?", startTime, endTime).
+		// Where("delete_time = 0").  // 查询所有订单编号，包括已删除的订单
+		Pluck("order_no", &saleBillOrderNos).Error
+	if err != nil {
+		return errors.WithMessage(err, "查询 sale_bill 订单编号失败")
+	}
+	orderNos = append(orderNos, saleBillOrderNos...)
+
+	// 查询 sale_order 表中的订单编号
+	var saleOrderOrderNos []string
+	err = db.Model(&model.SaleOrder{}).
+		Where("order_no LIKE ?", orderNoPrefix+"%").
+		Where("create_time >= ? AND create_time <= ?", startTime, endTime).
+		// Where("delete_time = 0").  // 查询所有订单编号，包括已删除的订单
+		Pluck("order_no", &saleOrderOrderNos).Error
+	if err != nil {
+		return errors.WithMessage(err, "查询 sale_order 订单编号失败")
+	}
+	orderNos = append(orderNos, saleOrderOrderNos...)
+
+	// 去重
+	orderNoMap := make(map[string]bool)
+	for _, orderNo := range orderNos {
+		orderNoMap[orderNo] = true
+	}
+
+	// 提取后9位数字，添加到 Redis Set
+	if len(orderNoMap) > 0 {
+		// 将订单编号的后9位提取出来
+		var last9Digits []string
+		for orderNo := range orderNoMap {
+			if len(orderNo) >= 9 {
+				// 提取后9位
+				last9 := orderNo[len(orderNo)-9:]
+				last9Digits = append(last9Digits, last9)
+			}
+		}
+
+		// 批量添加到 Redis Set（使用 SADD）
+		if len(last9Digits) > 0 {
+			// 转换为 []interface{} 供 Redis 使用
+			members := make([]interface{}, len(last9Digits))
+			for i, digit := range last9Digits {
+				members[i] = digit
+			}
+
+			// 批量添加到 Set
+			err := redisClient.SAdd(redisCtx, setKey, members...).Err()
+			if err != nil {
+				return errors.WithMessage(err, "批量添加订单编号到 Redis Set 失败")
+			}
+
+			// 设置过期时间
+			expireSeconds := int64(48 * 60 * 60) // 48小时
+			redisClient.Expire(redisCtx, setKey, time.Duration(expireSeconds)*time.Second)
+		}
+	}
+
+	return nil
 }
 
 // GetCurrentStaffShiftLog 获取当前员工班次信息

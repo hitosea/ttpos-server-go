@@ -43,7 +43,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	}
 	if err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 创建订单编号
-		orderNo, err := s.createOrderNo(tx, constant.OrderSourceInstant)
+		orderNo, err := s.createOrderNo(ctx, tx, constant.OrderSourceInstant)
 		if err != nil {
 			ctx.Log().Error("订单编号生成失败", zap.Error(err))
 			return errors.WithMessage(err, "订单编号生成失败")
@@ -117,7 +117,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	desk.SetOpenDesk(saleBillUuid)
 
 	// 创建订单编号
-	orderNo, err := s.createOrderNo(db, constant.OrderSourceDesk)
+	orderNo, err := s.createOrderNo(ctx, db, constant.OrderSourceDesk)
 	if err != nil {
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "订单编号生成失败")
 	}
@@ -767,7 +767,7 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	} else {
 		orderSourceType = constant.OrderSourceInstant
 	}
-	orderNo, err := s.createOrderNo(db, orderSourceType)
+	orderNo, err := s.createOrderNo(ctx, db, orderSourceType)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
