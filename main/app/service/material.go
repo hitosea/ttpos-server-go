@@ -262,8 +262,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		}
 		purchaseUnit := material.GetUnit(material.PurchaseUnitUuid)
 		costUnit := material.GetUnit(material.CostUnitUuid)
+		defaultSalesUnit := material.GetUnit(material.DefaultSalesUnitUuid)
 		baseUnit := material.GetBaseUnit()
-		var purchaseUnitLocaleName, costUnitLocaleName, baseUnitLocaleName dto.LocaleResponse
+		var purchaseUnitLocaleName, costUnitLocaleName, baseUnitLocaleName, defaultSalesUnitLocaleName dto.LocaleResponse
 		if costUnit != nil {
 			costUnitLocaleName = *language.JsonToLocaleResponse(costUnit.Name)
 		}
@@ -272,6 +273,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		}
 		if baseUnit != nil {
 			baseUnitLocaleName = *language.JsonToLocaleResponse(baseUnit.Name)
+		}
+		if defaultSalesUnit != nil {
+			defaultSalesUnitLocaleName = *language.JsonToLocaleResponse(defaultSalesUnit.Name)
 		}
 
 		// 库存数量、可用库存数量、在途库存数量
@@ -344,7 +348,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 				return ""
 			}(),
-			UnitUuid: material.UnitUuid,
+			UnitUuid:       material.UnitUuid,
+			UnitLocaleName: baseUnitLocaleName,
 			PurchaseUnitName: func() string {
 				if material.PurchaseUnit == nil {
 					return ""
@@ -372,14 +377,26 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			}(),
 			CostUnitUuid:           material.CostUnitUuid,
 			PurchaseUnitLocaleName: purchaseUnitLocaleName,
-			CostUnitLocaleName:     costUnitLocaleName,
-			UnitLocaleName:         baseUnitLocaleName,
-			UnitList:               unitList,
-			AllowSubstoreVisible:   material.AllowSubstoreVisible,
-			AllowNegativeStock:     material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
-
-			AvailableQuantity: decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
-			StoreQuantity:     stockNum,
+			DefaultSalesUnitName: func() string {
+				if defaultSalesUnit == nil {
+					return ""
+				}
+				if defaultSalesUnit.Unit == nil {
+					return ""
+				}
+				if defaultSalesUnit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
+					return ""
+				}
+				return defaultSalesUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+			}(),
+			DefaultSalesUnitUuid:       material.DefaultSalesUnitUuid,
+			DefaultSalesUnitLocaleName: defaultSalesUnitLocaleName,
+			CostUnitLocaleName:         costUnitLocaleName,
+			UnitList:                   unitList,
+			AllowSubstoreVisible:       material.AllowSubstoreVisible,
+			AllowNegativeStock:         material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
+			AvailableQuantity:          decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
+			StoreQuantity:              stockNum,
 		}
 		materialList = append(materialList, respMaterial)
 	}

@@ -3203,7 +3203,7 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 }
 
 // calculateChannelSaleFromRawData 从原始数据计算渠道统计
-func calculateChannelSaleFromRawData(rawData []takeoutChannelSaleRawData) *model.ChannelSaleRepoResult {
+func calculateChannelSaleFromRawData(rawData []TakeoutChannelSaleRawData) *model.ChannelSaleRepoResult {
 	result := &model.ChannelSaleRepoResult{}
 	if len(rawData) == 0 {
 		return result

@@ -316,20 +316,21 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 			hqPurchaseOrderUuid = hqPurchaseOrder.Uuid
 		}
 	}
-
-	subLogRepo := repository.NewPurchaseOrderLogRepo(s.dbm.GetDB(subUuid))
-	subLogs, err := subLogRepo.GetList(subLogRepo.WherePurchaseOrderUuid(subPurchaseOrderUuid))
-	if err != nil {
-		return resp.PurchaseOrderDetailResp{}, errors.WithMessage(errors.New("查询门店操作日志失败"), err.Error())
-	}
-	for _, log := range subLogs {
-		if log.NewStatus == constant.PurchaseOrderStatusApproved || log.NewStatus == constant.PurchaseOrderStatusRejected || log.NewStatus == constant.PurchaseOrderStatusRecommitted {
-			remarks = append(remarks, resp.PurchaseOrderRemark{
-				Source:     "store",
-				Status:     log.NewStatus,
-				Remark:     log.Remark,
-				CreateTime: log.CreateTime,
-			})
+	if subPurchaseOrderUuid != 0 {
+		subLogRepo := repository.NewPurchaseOrderLogRepo(s.dbm.GetDB(subUuid))
+		subLogs, err := subLogRepo.GetList(subLogRepo.WherePurchaseOrderUuid(subPurchaseOrderUuid))
+		if err != nil {
+			return resp.PurchaseOrderDetailResp{}, errors.WithMessage(errors.New("查询门店操作日志失败"), err.Error())
+		}
+		for _, log := range subLogs {
+			if log.NewStatus == constant.PurchaseOrderStatusApproved || log.NewStatus == constant.PurchaseOrderStatusRejected || log.NewStatus == constant.PurchaseOrderStatusRecommitted {
+				remarks = append(remarks, resp.PurchaseOrderRemark{
+					Source:     "store",
+					Status:     log.NewStatus,
+					Remark:     log.Remark,
+					CreateTime: log.CreateTime,
+				})
+			}
 		}
 	}
 
