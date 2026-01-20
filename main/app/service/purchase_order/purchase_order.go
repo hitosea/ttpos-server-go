@@ -548,7 +548,6 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 	}
 
 	db := ctx.GetDB()
-	companySetting := ctx.GetCompanySetting()
 
 	return db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
@@ -568,18 +567,14 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 			return errors.New("当前状态不允许编辑")
 		}
 
-		// 重新提交
-		if req.IsRecommit && (purchaseOrder.Status != constant.PurchaseOrderStatusRejected || purchaseOrder.ApplicantUuid != ctx.GetStaffUuid() || !companySetting.IsSubShop()) {
-			return errors.New("当前状态不允许重新提交")
-		}
-
 		// 检查是否需要更新（优化：避免不必要的数据库操作）
 		needUpdate, err := s.helper.checkPurchaseOrderNeedUpdate(purchaseOrder, &req, purchaseOrderItemRepo)
 		if err != nil {
 			return err
 		}
+
 		// 如果没有任何变动，直接返回
-		if !needUpdate && !req.IsRecommit {
+		if !needUpdate {
 			return nil
 		}
 
@@ -654,23 +649,6 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 			}
 		}
 
-		// 操作日志记录的状态
-		logStatus := purchaseOrder.Status
-		if req.IsRecommit {
-			logStatus = constant.PurchaseOrderStatusRecommitted
-
-			// 子店采购单驳回理由清空
-			tx.Model(&model.PurchaseOrder{}).Where("uuid = ?", req.Uuid).Updates(map[string]any{
-				"reject_reason":      "",
-				"headquarter_status": constant.HeadquarterStatusDraft,
-			})
-			// 总店子店采购单标记删除、清空驳回理由
-			s.dbm.GetDB(companySetting.HeadquarterUuid).Model(&model.PurchaseOrder{}).Where("sub_uuid = ?", req.Uuid).Updates(map[string]any{
-				"delete_time":   time.Now().Unix(),
-				"reject_reason": "",
-			})
-		}
-
 		// 记录操作日志
 		err = s.helper.createPurchaseOrderLog(
 			tx,
@@ -679,7 +657,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 			"update",
 			"更新采购申请",
 			purchaseOrder.Status,
-			logStatus,
+			purchaseOrder.Status,
 			"",
 		)
 		if err != nil {
@@ -736,6 +714,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 
 	db := ctx.GetDB()
 	companyUuid := ctx.GetCompanyUuid()
+	companySetting := ctx.GetCompanySetting()
 
 	return db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
@@ -849,6 +828,23 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 			return errors.WithMessage(errors.New("更新采购申请状态失败"), err.Error())
 		}
 
+		// 操作日志记录的状态
+		logStatus := purchaseOrder.Status
+		if req.IsResubmit {
+			logStatus = constant.PurchaseOrderStatusRecommitted
+
+			// 子店采购单驳回理由清空
+			tx.Model(&model.PurchaseOrder{}).Where("uuid = ?", req.Uuid).Updates(map[string]any{
+				"reject_reason":      "",
+				"headquarter_status": constant.HeadquarterStatusDraft,
+			})
+			// 总店子店采购单标记删除、清空驳回理由
+			s.dbm.GetDB(companySetting.HeadquarterUuid).Model(&model.PurchaseOrder{}).Where("sub_uuid = ?", req.Uuid).Updates(map[string]any{
+				"delete_time":   time.Now().Unix(),
+				"reject_reason": "",
+			})
+		}
+
 		// 记录操作日志
 		statusText := purchaseOrder.GetStatusText()
 		err = s.helper.createPurchaseOrderLog(
@@ -858,7 +854,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 			"status_update",
 			"更新状态为"+statusText,
 			oldStatus,
-			purchaseOrder.Status,
+			logStatus,
 			"",
 		)
 		if err != nil {
