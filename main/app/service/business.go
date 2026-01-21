@@ -3903,29 +3903,17 @@ func (s *businessSrv) GetCompanyPaymentMethods(ctx context.Context) (*resp.Compa
 					paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable),
 				)
 
-				lianLianPayAvailable := true
-				if err := NewPaymentRepo(ctx, dbm).ValidateConfigError(companyUuid); err != nil {
-					lianLianPayAvailable = false
-				}
-
 				// 收集支付方式信息（包含名称、排序、创建时间、ID）
 				paymentMethodInfos := make([]paymentMethodInfo, 0, len(paymentMethods))
 				for _, method := range paymentMethods {
-					if method.PaymentName == "" {
-						continue
+					if method.PaymentName != "" {
+						paymentMethodInfos = append(paymentMethodInfos, paymentMethodInfo{
+							PaymentName: method.PaymentName,
+							Sort:        method.Sort,
+							CreateTime:  method.CreateTime,
+							ID:          method.ID,
+						})
 					}
-					if method.Code == constant.PaymentMethodCodeFreePay || method.Code == constant.PaymentMethodCodeFreeMealForErp {
-						continue
-					}
-					if !lianLianPayAvailable && method.IsLianLianPay() {
-						continue
-					}
-					paymentMethodInfos = append(paymentMethodInfos, paymentMethodInfo{
-						PaymentName: method.PaymentName,
-						Sort:        method.Sort,
-						CreateTime:  method.CreateTime,
-						ID:          method.ID,
-					})
 				}
 
 				resultChan <- resultItem{paymentMethods: paymentMethodInfos, err: nil}

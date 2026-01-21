@@ -4,31 +4,31 @@ import "ttpos-server-go/app/dto"
 
 // PurchaseLimitSchemeCreateReq 创建限购方案请求
 type PurchaseLimitSchemeCreateReq struct {
-	LocaleName      dto.LocaleResponse           `json:"locale_name" binding:"required"`                           // 多语言名称
-	Status          int8                         `json:"status" binding:"oneof=0 1"`                               // 0-关闭 1-开启
-	ApplyToAllShops int8                         `json:"apply_to_all_shops" binding:"oneof=0 1"`                   // 0-否 1-是
-	DailyLimit      int                          `json:"daily_limit" binding:"min=0"`                              // 0-不限制
-	Weekdays        []int8                       `json:"weekdays" binding:"required,min=1,max=7,dive,min=1,max=7"` // 星期配置 1-7 表示周一到周日，逗号分隔
-	Items           []PurchaseLimitSchemeItemReq `json:"items" binding:"required,min=1,dive"`                      // 物品配置
-	Shops           []uint64                     `json:"shops"`                                                    // 门店UUID列表
+	LocaleName      dto.LocaleResponse           `json:"locale_name" binding:"required"` // 多语言名称
+	Status          int8                         `json:"status"`                         // 0-关闭 1-开启
+	ApplyToAllShops int8                         `json:"apply_to_all_shops"`             // 0-否 1-是
+	DailyLimit      int                          `json:"daily_limit"`                    // 0-不限制
+	Weekdays        []int8                       `json:"weekdays"`                       // 星期配置 1-7 表示周一到周日，逗号分隔
+	Items           []PurchaseLimitSchemeItemReq `json:"items"`                          // 物品配置
+	Shops           []uint64                     `json:"shops"`                          // 门店UUID列表
 }
 
 // PurchaseLimitSchemeItemReq 限购方案物品配置请求
 type PurchaseLimitSchemeItemReq struct {
 	MaterialUuid uint64  `json:"material_uuid" binding:"required"` // 物品UUID
-	QuotaLimit   float64 `json:"quota_limit" binding:"min=0"`      // 限购数量
+	QuotaLimit   float64 `json:"quota_limit"`                      // 限购数量
 }
 
 // PurchaseLimitSchemeUpdateReq 更新限购方案请求
 type PurchaseLimitSchemeUpdateReq struct {
-	Uuid            uint64                       `json:"uuid" binding:"required"`                                  // 方案UUID
-	LocaleName      dto.LocaleResponse           `json:"locale_name" binding:"required"`                           // 多语言名称
-	Status          int8                         `json:"status" binding:"oneof=0 1"`                               // 0-关闭 1-开启
-	ApplyToAllShops int8                         `json:"apply_to_all_shops" binding:"oneof=0 1"`                   // 0-否 1-是
-	DailyLimit      int                          `json:"daily_limit" binding:"min=0"`                              // 0-不限制
-	Weekdays        []int8                       `json:"weekdays" binding:"required,min=1,max=7,dive,min=1,max=7"` // 星期配置 1-7 表示周一到周日，逗号分隔
-	Items           []PurchaseLimitSchemeItemReq `json:"items" binding:"required,min=1,dive"`                      // 物品配置
-	Shops           []uint64                     `json:"shops"`                                                    // 门店UUID列表
+	Uuid            uint64                       `json:"uuid" binding:"required"`        // 方案UUID
+	LocaleName      dto.LocaleResponse           `json:"locale_name" binding:"required"` // 多语言名称
+	Status          int8                         `json:"status"`                         // 0-关闭 1-开启
+	ApplyToAllShops int8                         `json:"apply_to_all_shops"`             // 0-否 1-是
+	DailyLimit      int                          `json:"daily_limit"`                    // 0-不限制
+	Weekdays        []int8                       `json:"weekdays"`                       // 星期配置 1-7 表示周一到周日，逗号分隔
+	Items           []PurchaseLimitSchemeItemReq `json:"items"`                          // 物品配置
+	Shops           []uint64                     `json:"shops"`                          // 门店UUID列表
 }
 
 // PurchaseLimitSchemeDetailReq 限购方案详情请求
