@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"regexp"
 	"slices"
 	"sort"
@@ -27,6 +28,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/otel"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -1039,6 +1041,9 @@ func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
 
 // Auth 鉴权
 func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, model.Desk, error) {
+	// 使用传入的 context（包含 otelgin 创建的 span）
+	stdCtx := ctx.GetContext()
+
 	var (
 		company        model.Company
 		companySetting model.CompanySetting
@@ -1048,6 +1053,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	)
 	// 如果使用旧的token，但是商家已被删除，优化提示
 	if db == nil {
+		otel.RecordSpanError(stdCtx, errors.New("未找到绑定的商家，请确认登录信息"), "数据库连接失败")
 		return company, companySetting, staff, desk, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
@@ -1068,29 +1074,37 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	var staffPtr *model.Staff
 	var err error
 
+	otel.AddSpanEvent(stdCtx, "查询员工信息")
 	if enableCache {
+		otel.AddSpanEvent(stdCtx, "使用缓存查询员工信息")
 		// 使用缓存（缓存配置和初始化已在 objectstorage 模块中完成）
 		cacheLayer := objectStorageAdapter.GetAuthStaffCache[*model.Staff](cache.Global)
 		cacheKey := objectStoragePersistence.BuildAuthStaffKey(ctx, auth.StaffUuid)
 		staffPtr, err = cacheLayer.GET(cacheKey, queryStaffFunc)
 	} else {
+		otel.AddSpanEvent(stdCtx, "直接从数据库查询员工信息")
 		// 不使用缓存，直接查询数据库
 		staffPtr, err = queryStaffFunc()
 	}
 
 	if err != nil {
 		logger.Logger.Error("获取员工信息失败", zap.Error(err))
+		otel.RecordSpanError(stdCtx, err, "获取员工信息失败")
 		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenInvalid, "没有找到用户信息")
 	}
 	staff = *staffPtr
 	if staff.Uuid == 0 {
+		otel.RecordSpanError(stdCtx, errors.New("用户不存在"), "用户不存在")
 		return company, companySetting, staff, desk, errors.New("用户不存在")
 	}
 	// 修改密码后，token失效
+	otel.AddSpanEvent(stdCtx, "验证员工状态")
 	if staff.PasswordChangeTime > auth.TokenIssuedAt {
+		otel.RecordSpanError(stdCtx, errors.New("登录失效，请重新登录"), "密码已修改，token失效")
 		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenInvalid, "登录失效，请重新登录")
 	}
 	if staff.DeleteTime != 0 {
+		otel.RecordSpanError(stdCtx, errors.New("用户被删除"), "用户已被删除")
 		return company, companySetting, staff, desk, errors.New("用户被删除")
 	}
 	if staff.Company != nil {
@@ -1100,123 +1114,160 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		}
 	}
 	if company.Uuid == 0 || companySetting.Uuid == 0 {
+		otel.RecordSpanError(stdCtx, errors.New("未找到绑定的商家，请确认登录信息"), "商家信息缺失")
 		return company, companySetting, staff, desk, errors.New("未找到绑定的商家，请确认登录信息")
 	}
+	otel.AddSpanEvent(stdCtx, "验证商家状态")
 	if company.IsExpired() {
+		otel.RecordSpanError(stdCtx, errors.New("店铺状态已到期"), "商家许可证已过期")
 		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
 	}
 	if company.IsException() {
+		otel.RecordSpanError(stdCtx, errors.New("店铺状态异常"), "商家状态异常")
 		return company, companySetting, staff, desk, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
 	}
 	// 验证设备是否绑定
+	otel.AddSpanEvent(stdCtx, "验证设备绑定状态")
 	deviceId := auth.DeviceId
 	if auth.Source == constant.SourceAssistant && auth.Assistant.DeviceId != "" { // 登录了点餐助手，且绑定了收银机
 		deviceId = auth.Assistant.DeviceId
+		otel.AddSpanEvent(stdCtx, "点餐助手使用收银机设备ID")
 	}
 	if auth.Source != constant.SourceShop && !s.deviceSrv.IsDeviceBind(ctx, auth.CompanyUuid, auth.Source, deviceId) {
 		if printerData := repository.NewPrinterLogRepo(db).GetShiftPrinterData(auth.CompanyUuid, deviceId); printerData != nil {
+			otel.RecordSpanError(stdCtx, errors.New("设备已解绑，请重新绑定"), "设备已解绑（有打印数据）")
 			return company, companySetting, staff, desk, errors.NewWithCodeAndData(constant.CodeTokenInvalid, map[string]any{
 				"printer_data": printerData,
 			}, "设备已解绑，请重新绑定")
 		}
+		otel.RecordSpanError(stdCtx, errors.New("设备已解绑，请重新绑定"), "设备已解绑")
 		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenInvalid, "设备已解绑，请重新绑定")
 	}
 	if slices.Contains(s.memberFunctionRoutes, auth.UrlPath) && companySetting.IsOpenMember != 1 {
+		otel.RecordSpanError(stdCtx, errors.New("当前尚未开启会员功能"), "会员功能未开启")
 		return company, companySetting, staff, desk, errors.New("当前尚未开启会员功能，如有需要，请联系销售代表")
 	}
 	if slices.Contains(s.h5AcceptOrderFunctionRoutes, auth.UrlPath) && companySetting.IsOpenH5Order != 1 {
+		otel.RecordSpanError(stdCtx, errors.New("当前尚未开启扫码点餐接单功能"), "扫码点餐接单功能未开启")
 		return company, companySetting, staff, desk, errors.New("当前尚未开启扫码点餐接单功能，如有需要，请联系销售代表")
 	}
+	otel.AddSpanEvent(stdCtx, fmt.Sprintf("开始验证来源特定规则：%s", auth.Source))
 	switch auth.Source {
 	case constant.SourceCashier: // 收银端
 		{
+			otel.AddSpanEvent(stdCtx, "验证收银端特定规则")
 			cashierSetting, err := s.GetCashierSetting(ctx)
 			if err != nil {
+				otel.RecordSpanError(stdCtx, err, "获取收银机设置失败")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeSystemError, "系统错误，请稍候再试")
 			}
 			// 检查收银机设置-收银用餐是否开启
 			if !s.isCashierOpen(cashierSetting, auth.UrlPath) {
+				otel.RecordSpanError(stdCtx, errors.New("收银用餐已关闭"), "收银用餐功能未开启")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "收银用餐已关闭，请选择其他用餐方式")
 			}
 			// 检查收银机设置-桌台用餐是否开启
 			if !s.isTableOpen(ctx, cashierSetting, auth.UrlPath) {
+				otel.RecordSpanError(stdCtx, errors.New("桌台用餐已关闭"), "桌台用餐功能未开启")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 			// 判断权限
-			permissions, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, auth.CompanyUuid)
+			otel.AddSpanEvent(stdCtx, "验证收银端权限")
+			permissions, err := s.roleAccessSrv.GetApiPermission(ctx, staff.Uuid, auth.CompanyUuid)
 			if err != nil {
+				otel.RecordSpanError(stdCtx, err, "获取权限失败")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			}
 			permission := constant.CashierPermissions[auth.UrlPath]
 			if permission != "" && !slices.Contains(permissions, permission) {
+				otel.RecordSpanError(stdCtx, errors.New("当前无权限"), "权限不足")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			}
 			// 已交班，只能打印交班单、退出登录、获取基本信息、轮询打印数据，轮询未处理消息、获取广告
 			if staff.DutyNo == "" && !slices.Contains([]string{"/api/v1/cashier/shift/printer", "/api/v1/cashier/logout"}, auth.UrlPath) {
+				otel.AddSpanEvent(stdCtx, "检查交班状态")
 				// 判断客户端版本，低于 2.3 的就返回 -101，直接退出
 				// 高于等于的就返-108，能弹出来交班弹窗
 				if ctx.Version(context.GTE, "2.3.0") { // 高于等于 2.3.0
 					// 获取缓存
 					if cachedSubmitShift, err := s.shiftSrv.GetCachedSubmitShift(ctx); err != nil || cachedSubmitShift == nil {
+						otel.RecordSpanError(stdCtx, err, "已交班：当前班次不存在")
 						return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenExpired, "当前班次不存在")
 					} else {
+						otel.RecordSpanError(stdCtx, errors.New("已交班"), "已交班")
 						return company, companySetting, staff, desk, errors.NewWithCodeAndData(constant.CodeCashierHandedOver, *cachedSubmitShift, "已交班")
 					}
 				} else { // 低于 2.3.0
+					otel.RecordSpanError(stdCtx, errors.New("当前班次不存在"), "已交班：客户端版本过低")
 					return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenExpired, "当前班次不存在")
 				}
 			}
 		}
 	case constant.SourceAssistant: // 点餐助手端
 		{
+			otel.AddSpanEvent(stdCtx, "验证点餐助手端特定规则")
 			cashierSetting, err := s.GetCashierSetting(ctx)
 			if err != nil {
+				otel.RecordSpanError(stdCtx, err, "获取收银机设置失败")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeSystemError, "系统错误，请稍候再试")
 			}
 			if companySetting.IsOpenAssistant != 1 {
+				otel.RecordSpanError(stdCtx, errors.New("当前尚未开启点餐助手功能"), "点餐助手功能未开启")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "当前尚未开启点餐助手功能，如有需要，请联系销售代表")
 			}
 			if !slices.Contains(s.assistantRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断收银机状态
+				otel.AddSpanEvent(stdCtx, "验证收银机状态")
 				deviceRepo := repository.NewDeviceRepo(db)
 				cashierDevice, _ := deviceRepo.GetDevice(deviceRepo.WhereSource(constant.SourceCashier), deviceRepo.WhereSn(auth.DeviceId))
 				if cashierDevice.Uuid == 0 {
+					otel.RecordSpanError(stdCtx, errors.New("收银员设备已解绑"), "收银机设备未找到")
 					return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierNotLogin, "收银员设备已解绑，请重新绑定")
 				}
 				if staff.DutyNo == "" || auth.Assistant.StaffUuid == 0 {
+					otel.RecordSpanError(stdCtx, errors.New("收银员登录信息错误"), "收银员登录信息缺失")
 					return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierNotLogin, "收银员登录信息错误，请重新登录")
 				}
 			}
 			// 检查收银机设置-桌台用餐是否开启
 			if !s.isTableOpen(ctx, cashierSetting, auth.UrlPath) {
+				otel.RecordSpanError(stdCtx, errors.New("桌台用餐已关闭"), "桌台用餐功能未开启")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 		}
 	case constant.SourceTablet: // 平板端
 		{
+			otel.AddSpanEvent(stdCtx, "验证平板端特定规则")
 			cashierSetting, err := s.GetCashierSetting(ctx)
 			if err != nil {
+				otel.RecordSpanError(stdCtx, err, "获取收银机设置失败")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeSystemError, "系统错误，请稍候再试")
 			}
 			if companySetting.IsOpenTablet != 1 {
+				otel.RecordSpanError(stdCtx, errors.New("当前尚未开启平板点餐功能"), "平板点餐功能未开启")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "当前尚未开启平板点餐功能，如有需要，请联系销售代表")
 			}
 			if !slices.Contains(s.tabletRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断是否绑定了桌台
+				otel.AddSpanEvent(stdCtx, "验证桌台绑定状态")
 				deskRepo := repository.NewDeskRepo(db)
 				var err error
 				desk, err = deskRepo.GetDesk(deskRepo.WhereDeviceUuid(ctx.GetDeviceUuid()))
 				if err != nil {
+					otel.RecordSpanError(stdCtx, err, "桌台未绑定")
 					return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTabletNotBindDesk, "桌台未绑定")
 				}
 			}
 			// 检查收银机设置-桌台用餐是否开启
 			if !s.isTableOpen(ctx, cashierSetting, auth.UrlPath) {
+				otel.RecordSpanError(stdCtx, errors.New("桌台用餐已关闭"), "桌台用餐功能未开启")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 		}
 	case constant.SourceKitchen: // 厨显端
 		{
+			otel.AddSpanEvent(stdCtx, "验证厨显端特定规则")
 			kitchenSetting, _ := s.settingSrv.GetKitchenSetting(ctx, companySetting, []dto.LanguageItem{})
 			if kitchenSetting.IsOpen != "1" || companySetting.IsOpenKitchenKds != 1 {
+				otel.RecordSpanError(stdCtx, errors.New("当前尚未开启厨显功能"), "厨显功能未开启")
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "当前尚未开启厨显功能，如有需要，请联系销售代表")
 			}
 		}

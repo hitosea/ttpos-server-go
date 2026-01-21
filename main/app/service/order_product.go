@@ -21,9 +21,11 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
+	"ttpos-server-go/pkg/otel"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 
 	"github.com/shopspring/decimal"
@@ -190,7 +192,11 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 
 // OrderCartProductAdd 向购物车添加商品
 func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	// 使用传入的 context（包含 otelgin 创建的 span）
+	stdCtx := ctx.GetContext()
+
 	if ctx.NoLock() {
+		otel.AddSpanEvent(stdCtx, "获取分布式锁")
 		s.lock.LockUuid(request.SaleBillUuid)
 		defer s.lock.UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
@@ -199,17 +205,23 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	// 获取销售账单信息
+	otel.AddSpanEvent(stdCtx, "获取销售账单信息")
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid, repository.WithUseSaleBillCache())
 	if errSaleBill != nil {
+		otel.RecordSpanError(stdCtx, errSaleBill, "获取销售账单信息失败")
 		return nil, errors.WithMessage(errSaleBill)
 	}
+
 	// 判断订单状态
+	otel.AddSpanEvent(stdCtx, "验证订单状态")
 	if ctx.GetSource() == constant.SourceAssistant {
 		if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid, model.WithIsAssistant()); err != nil {
+			otel.RecordSpanError(stdCtx, err, "订单状态验证失败")
 			return nil, errors.WithMessage(err)
 		}
 	} else {
 		if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
+			otel.RecordSpanError(stdCtx, err, "订单状态验证失败")
 			return nil, errors.WithMessage(err)
 		}
 	}
@@ -218,17 +230,22 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	saleBill.SetOperateSource(ctx.GetSource())
 
 	// 加购
+	otel.AddSpanEvent(stdCtx, "执行加购操作")
 	if err := s.ActionAdd(ctx, request, saleBill); err != nil {
+		otel.RecordSpanError(stdCtx, err, "加购操作失败")
 		return nil, errors.WithMessage(err)
 	}
 
 	// 更新缓存的salebill信息
+	otel.AddSpanEvent(stdCtx, "判断是否需要更新对象存储缓存")
 	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		otel.AddSpanEvent(stdCtx, "更新对象存储缓存")
 		saleBillController := controller.GetSaleBillController()
 		if err := saleBillController.Update(ctx, ctx.GetDB(),
 			[]uint64{request.SaleBillUuid},
 			controller.WithUpdateValue(map[uint64]interface{}{request.SaleBillUuid: saleBill}),
 		); err != nil {
+			otel.RecordSpanError(stdCtx, err, "更新对象存储缓存失败")
 			return nil, errors.WithMessage(err)
 		}
 	}
@@ -240,8 +257,10 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	// }
 
 	// 获取新的购物车商品数据
+	otel.AddSpanEvent(stdCtx, "获取购物车信息")
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
+		otel.RecordSpanError(stdCtx, err, "获取购物车信息失败")
 		return nil, errors.WithMessage(err)
 	}
 	return info, nil
@@ -1902,10 +1921,14 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 
 // GetOrderCartInfo 获取点餐购物车信息
 func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	// 使用传入的 context（包含 otelgin 创建的 span）
+	stdCtx := ctx.GetContext()
+
 	// 追加请求头参数，从http的header中获取h5_order_uuid
 	h5OrderUuid := context.GetH5OrderUuid(ctx)
 	if h5OrderUuid != 0 {
 		opts = append(opts, repository.WithH5OrderUuid(h5OrderUuid))
+		otel.AddSpanEvent(stdCtx, "检测到 H5 订单", attribute.String("h5_order_uuid", fmt.Sprintf("%d", h5OrderUuid)))
 	}
 
 	option := &repository.OrderCartInfoOption{}
@@ -1917,35 +1940,44 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 通过销售订单ID得到订单商品列表、订单金额信息、账单的销售订单列表
+	otel.AddSpanEvent(stdCtx, "从数据库获取订单购物车信息")
 	opts = append(opts, repository.WithCompanyUuid(ctx.GetCompanyUuid())) // 传入公司UUID，用于判断是否使用缓存
 	shopCart, err := orderRepo.GetOrderCartInfo(saleBillUuid, opts...)
 	if err != nil {
+		otel.RecordSpanError(stdCtx, err, "获取订单购物车信息失败")
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
 	}
 	if !option.FilterEndStatus && shopCart.SaleBill.IsEndStatus() {
+		otel.RecordSpanError(stdCtx, errors.New("桌台订单结束"), "订单已结束")
 		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
 	}
 	// 重新计算金额
+	otel.AddSpanEvent(stdCtx, "重新计算订单金额")
 	if option.H5OrderUuid == 0 {
 		shopCart.SaleBill.CalcAll()
 	} else {
 		// 如果从待接单进入桌台时，要把h5订单商品计算在内
 		shopCart.SaleBill.CalcAll(model.WithAllAndOneH5Order(option.H5OrderUuid))
+		otel.AddSpanEvent(stdCtx, "包含 H5 订单商品计算")
 	}
 
 	// 获取门店业务设置（使用对象存储模块缓存）
+	otel.AddSpanEvent(stdCtx, "获取门店业务设置")
 	var businessSetting *setting.Business
 
 	// 检查是否启用对象存储缓存
 	companyUuid := ctx.GetCompanyUuid()
 	if !adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		otel.AddSpanEvent(stdCtx, "直接从数据库获取业务设置")
 		// 未启用缓存，直接查询
 		bs, err := s.settingSrv.GetBusinessSetting(ctx)
 		if err != nil {
+			otel.RecordSpanError(stdCtx, err, "获取业务设置失败")
 			return nil, errors.WithMessage(err)
 		}
 		businessSetting = &bs
 	} else {
+		otel.AddSpanEvent(stdCtx, "使用缓存获取业务设置")
 		// 使用对象存储模块缓存查询（复用订单对象缓存层）
 		cacheLayer := adapter.GetOrderObjectCache[setting.Business](cache.Global, 5*time.Minute)
 		cacheKey := objectStoragePersistence.BuildKey(ctx, objectStoragePersistence.ObjectTypeBusinessSetting, ctx.GetCompanyUuid())
@@ -1955,12 +1987,14 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		})
 
 		if err != nil {
+			otel.RecordSpanError(stdCtx, err, "从缓存获取业务设置失败")
 			return nil, errors.WithMessage(err)
 		}
 		businessSetting = &bs
 	}
 
 	// 给订单列表添加订单
+	otel.AddSpanEvent(stdCtx, "构建订单列表", attribute.Int("order_count", len(shopCart.SaleBill.SaleOrders)))
 	saleOrderList := make([]resp.SaleOrder, 0)
 	for _, saleOrder := range shopCart.SaleBill.SaleOrders {
 		productList := make([]resp.Product, 0)
@@ -2043,6 +2077,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	}
 	// 如果是桌台购物车
 	if shopCart.IsDeskShopCart() {
+		otel.AddSpanEvent(stdCtx, "处理桌台购物车信息")
 		deskInfo := resp.DeskInfo{
 			Uuid:      shopCart.SaleBill.Desk.Uuid,
 			DeskNo:    shopCart.SaleBill.Desk.DeskNo,
@@ -2053,6 +2088,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		shopCartInfo.Desk = &deskInfo
 		// 如果是自助餐桌台
 		if shopCart.SaleBill.IsBuffetSaleBill() {
+			otel.AddSpanEvent(stdCtx, "处理自助餐信息")
 			shopCartInfo.Buffet = &resp.BuffetInfo{
 				RemainingSeconds:      shopCart.SaleBill.GetTotalRemainingSeconds(),
 				IsTimeLimited:         shopCart.SaleBill.IsTimeLimited(),
@@ -2065,36 +2101,45 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	}
 	// 先判断商户是否有生效的必点方案（仅在对象存储缓存开启时执行）
 	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		otel.AddSpanEvent(stdCtx, "检查是否有生效的必点方案")
 		hasActiveMustPlan, err := repository.NewProductMustPlanRepo(db).HasActiveProductMustPlan(ctx)
 		if err != nil {
 			ctx.Log().Error("判断商户是否有生效的必点方案失败", zap.Error(err))
+			otel.RecordSpanError(stdCtx, err, "检查必点方案失败")
 		}
 		if !hasActiveMustPlan {
 			option.NoQueryMustPlan = true // 如果商户无生效的必点方案，则不查询必点方案
+			otel.AddSpanEvent(stdCtx, "商户无生效的必点方案，跳过查询")
 		}
 	}
 
 	// 获取必点方案
 	if !option.NoQueryMustPlan {
+		otel.AddSpanEvent(stdCtx, "获取必点方案")
 		saleOrder := shopCart.SaleBill.GetFirstSaleOrder()
 		var productMustPlanList *resp.ProductMustPlanList
 		// 如果销售账单需要显示必点方案
 		if shopCart.SaleBill.IsShowMustPlan() {
+			otel.AddSpanEvent(stdCtx, "销售账单需要显示必点方案")
 			// 获取必点方案列表
 			var mustPlan *resp.InstantProductMustPlanResp
 			var isAutoAdd bool
 			if shopCart.SaleBill.IsDeskSaleBill() {
+				otel.AddSpanEvent(stdCtx, "获取桌台必点方案")
 				mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd, option.NoAutoAdd)
 				if err != nil {
 					ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
+					otel.RecordSpanError(stdCtx, err, "获取桌台必点方案失败")
 					if !shopCart.SaleBill.IsEndStatus() {
 						return nil, errors.WithMessage(errors.New("获取桌台必点方案列表失败"), err.Error())
 					}
 				}
 			} else {
+				otel.AddSpanEvent(stdCtx, "获取点餐必点方案")
 				mustPlan, isAutoAdd, err = s.InstantOrderMustPlan(ctx, ctx.GetDeviceSn())
 				if err != nil {
 					ctx.Log().Info("获取点餐必点方案列表失败", zap.Error(errors.WithMessage(err)))
+					otel.RecordSpanError(stdCtx, err, "获取点餐必点方案失败")
 					if !shopCart.SaleBill.IsEndStatus() {
 						return nil, errors.WithMessage(errors.New("获取点餐必点方案列表失败"), err.Error())
 					}
@@ -2111,6 +2156,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 					}
 				}
 				if isAutoAdd {
+					otel.AddSpanEvent(stdCtx, "必点方案已自动加购，递归获取购物车信息")
 					opts = append(opts, repository.WithCanCloseMustPlanView()) // 设置可以关闭必点弹窗
 					return s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
 				} else {
@@ -2120,9 +2166,11 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 
 					// 如果在可以关闭必点弹窗的场景下，且已经自动加购完成
 					if option.CanCloseMustPlanView && finish {
+						otel.AddSpanEvent(stdCtx, "必点方案已完成，更新销售账单状态")
 						// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
 						err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(saleBillUuid)
 						if err != nil {
+							otel.RecordSpanError(stdCtx, err, "更新销售账单必点状态失败")
 							return nil, errors.WithMessage(err)
 						}
 						// 清空必点方案, 不给前端返回必点数据
@@ -2134,22 +2182,28 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		}
 		// 如果要显示必点信息
 		if productMustPlanList != nil {
+			otel.AddSpanEvent(stdCtx, "添加必点方案到购物车信息")
 			shopCartInfo.MustPlans = productMustPlanList
 		}
 	}
 	// 判断是否需要弹出分批送厨弹窗。只有收银机和助手端需要判断
 	if ctx.GetSource() == constant.SourceAssistant || ctx.GetSource() == constant.SourceCashier {
+		otel.AddSpanEvent(stdCtx, "检查是否需要弹出分批送厨弹窗")
 		// 获取门店业务设置
 		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 		if err != nil {
+			otel.RecordSpanError(stdCtx, err, "获取业务设置失败（分批送厨检查）")
 			return nil, errors.WithMessage(err)
 		}
 		if businessSetting.OpenIsBatch() {
 			if shopCart.SaleBill.IsNeedBatchSendCooking() {
+				otel.AddSpanEvent(stdCtx, "需要弹出分批送厨弹窗")
 				shopCartInfo.SetCode(constant.CodeOrderCheckProductBatch)
 			}
 		}
 	}
+
+	otel.AddSpanEvent(stdCtx, "获取购物车信息成功")
 	return shopCartInfo, nil
 }
 
@@ -2530,25 +2584,35 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 
 // InstantOrderCartProductAdd 点餐页面，往购物车添加商品。
 func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	// 使用传入的 context（如果已有 span 则复用，否则创建新的）
+	// startTime := time.Now()
+	stdCtx := ctx.GetContext()
+
 	// 当不填销售账单ID时，表示要新建一个销售账单
 	if request.SaleBillUuid == 0 {
+		otel.AddSpanEvent(stdCtx, "检查待支付订单")
 		// 判断是否有待支付、未挂单的订单
 		billInfo, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
 		if err != nil {
+			otel.RecordSpanError(stdCtx, err, "检查待支付订单失败")
 			return nil, err
 		}
 		if billInfo != nil && hasInstantOrder {
 			request.SaleBillUuid = billInfo.Uuid
 			request.SaleOrderUuid = billInfo.SaleOrders[0].Uuid
+			otel.AddSpanEvent(stdCtx, "使用现有订单", attribute.String("sale_bill_uuid", fmt.Sprintf("%d", billInfo.Uuid)))
 		} else {
+			otel.AddSpanEvent(stdCtx, "创建新订单")
 			order, err := s.CreateInstantOrder(ctx)
 			if err != nil {
 				ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
+				otel.RecordSpanError(stdCtx, err, "创建点餐订单失败")
 				return nil, errors.WithMessage(err)
 			}
 			ctx.Log().Debug("添加商品时点餐订单创建成功", zap.Any("order info", order))
 			request.SaleBillUuid = order.SaleBillUuid
 			request.SaleOrderUuid = order.SaleOrderUuid
+			otel.AddSpanEvent(stdCtx, "订单创建成功", attribute.String("sale_bill_uuid", fmt.Sprintf("%d", order.SaleBillUuid)))
 		}
 	}
 
@@ -2558,6 +2622,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	if request.Price != nil {
+		otel.AddSpanEvent(stdCtx, "校验商品价格")
 		productInfo, err := s.getInfo(ctx, req.ProductParams{
 			FlavorProductBomUuid:    request.FlavorUuid,
 			Price:                   request.Price,
@@ -2565,9 +2630,11 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 			SauceProductBomUuidList: request.SauceUuidList,
 		}, db)
 		if err != nil {
+			otel.RecordSpanError(stdCtx, err, "获取商品信息失败")
 			return nil, errors.WithMessage(err)
 		}
 		if productInfo != nil {
+			otel.AddSpanEvent(stdCtx, "商品价格已变更", attribute.String("error.type", "product_price_changed"))
 			return &resp.ShopCart{
 				Product: productInfo,
 			}, errors.ErrProductPriceChanged
@@ -2580,6 +2647,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 	}
 
 	// 往销售账单里添加商品
+	otel.AddSpanEvent(stdCtx, "添加商品到购物车", attribute.Float64("product.num", num))
 	shopCart, err := s.OrderCartProductAdd(ctx, req.ProductAddReq{
 		SaleBillUuid:  request.SaleBillUuid,
 		SaleOrderUuid: request.SaleOrderUuid,
@@ -2598,6 +2666,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 	}, opts...)
 	if err != nil {
 		ctx.Log().Info("往点餐账单里添加商品失败", zap.Any("req", request), zap.Any("error", err))
+		otel.RecordSpanError(stdCtx, err, "添加商品到购物车失败")
 		return nil, errors.WithMessage(err)
 	}
 	return shopCart, nil
