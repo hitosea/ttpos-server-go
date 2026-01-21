@@ -22,6 +22,9 @@ type IPurchaseLimitSchemeRepo interface {
 	// GetList 查询限购方案列表
 	GetList(options ...DBOption) ([]*model.PurchaseLimitScheme, int64, error)
 
+	// GetActiveSchemes 查询所有启用的限购方案（按门店过滤）
+	GetActiveSchemes(companyUuid uint64) ([]*model.PurchaseLimitScheme, error)
+
 	// Delete 软删除限购方案
 	Delete(uuid uint64) error
 
@@ -94,6 +97,30 @@ func (r *purchaseLimitSchemeRepoImpl) Delete(uuid uint64) error {
 	return r.db.Model(&model.PurchaseLimitScheme{}).
 		Where("uuid = ?", uuid).
 		Update("delete_time", time.Now().Unix()).Error
+}
+
+// GetActiveSchemes 查询所有启用的限购方案（按门店过滤）
+func (r *purchaseLimitSchemeRepoImpl) GetActiveSchemes(companyUuid uint64) ([]*model.PurchaseLimitScheme, error) {
+	var schemes []*model.PurchaseLimitScheme
+
+	// 查询启用状态的方案
+	query := r.db.Where("delete_time = ?", 0).Where("status = ?", 1)
+
+	// 子查询：查找应用到该门店的方案UUID
+	// 1. 应用到全部门店的方案（apply_to_all_shops = 1）
+	// 2. 或者在 purchase_limit_scheme_shop 表中关联到该门店的方案
+	subQuery := r.db.Table("ttpos_purchase_limit_scheme_shop").
+		Select("scheme_uuid").
+		Where("company_uuid = ?", companyUuid).
+		Where("delete_time = ?", 0)
+
+	query = query.Where("apply_to_all_shops = 1 OR uuid IN (?)", subQuery)
+
+	if err := query.Find(&schemes).Error; err != nil {
+		return nil, err
+	}
+
+	return schemes, nil
 }
 
 // 选项方法

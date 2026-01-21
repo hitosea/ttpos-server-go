@@ -70,7 +70,6 @@ type PurchaseOrderUpdateReq struct {
 	SupplierErpCode      string                       `json:"supplier_erp_code" binding:"omitempty,max=255"`    // V2.6 供应商编码
 	WarehouseErpCode     string                       `json:"warehouse_erp_code" binding:"omitempty,max=255"`   // V2.6 仓库编码
 	Items                []PurchaseOrderItemUpdateReq `json:"items" binding:"omitempty,min=1,max=200,dive"`     // 采购商品明细
-	IsRecommit           bool                         `json:"is_recommit"`                                      // 是否重新提交
 }
 
 func (r *PurchaseOrderUpdateReq) Validate() error {
@@ -117,8 +116,9 @@ type PurchaseOrderApproveReq struct {
 
 // PurchaseOrderSubmitReq 提交采购订单请求
 type PurchaseOrderSubmitReq struct {
-	Uuid      uint64 `json:"uuid" binding:"required,min=1"` // 采购订单ID
-	IsConfirm bool   `json:"is_confirm"`                    // 是否确认提交（移除禁用物品）
+	Uuid       uint64 `json:"uuid" binding:"required,min=1"` // 采购订单ID
+	IsConfirm  bool   `json:"is_confirm"`                    // 是否确认提交（移除禁用物品）
+	IsResubmit bool   `json:"is_resubmit"`                   // 是否重新提交
 }
 
 // PurchaseOrderSupplierSyncReq 供应商同步确认请求

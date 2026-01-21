@@ -30,13 +30,14 @@ type PurchaseLimitSchemeListResp struct {
 
 // PurchaseLimitSchemeSummaryResp 限购方案摘要响应（列表用）
 type PurchaseLimitSchemeSummaryResp struct {
-	Uuid       uint64             `json:"uuid"`
-	LocaleName dto.LocaleResponse `json:"locale_name"`
-	Status     int8               `json:"status"`
-	WeekdayStr string             `json:"weekday_str"` // 例如: "周一、周三、周五"
-	ShopCount  int                `json:"shop_count"`  // 门店数量
-	ItemCount  int                `json:"item_count"`  // 物品数量
-	DailyLimit int                `json:"daily_limit"`
-	CreateTime int64              `json:"create_time"`
-	UpdateTime int64              `json:"update_time"`
+	Uuid            uint64             `json:"uuid"`
+	LocaleName      dto.LocaleResponse `json:"locale_name"`
+	Status          int8               `json:"status"`
+	WeekdayStr      string             `json:"weekday_str"` // 例如: "周一、周三、周五"
+	ApplyToAllShops int8               `json:"apply_to_all_shops"`
+	ShopCount       int                `json:"shop_count"` // 门店数量
+	ItemCount       int                `json:"item_count"` // 物品数量
+	DailyLimit      int                `json:"daily_limit"`
+	CreateTime      int64              `json:"create_time"`
+	UpdateTime      int64              `json:"update_time"`
 }

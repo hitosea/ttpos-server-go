@@ -2,515 +2,231 @@ package purchase_order
 
 import (
 	"fmt"
+	"sort"
 	"strings"
-	"time"
 
-	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
-	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
-	"ttpos-server-go/pkg/logger"
-
-	"go.uber.org/zap"
-	"gorm.io/gorm"
+	"ttpos-server-go/pkg/utils"
 )
 
-// IPurchaseLimitSchemeSrv 限购方案服务接口
-type IPurchaseLimitSchemeSrv interface {
-	// Create 创建限购方案
-	Create(ctx context.Context, req req.PurchaseLimitSchemeCreateReq) (uint64, error)
+// ====================================================================================
+// 品牌采购限购校验方法（基于新的限购方案表）
+// ====================================================================================
 
-	// Update 更新限购方案
-	Update(ctx context.Context, req req.PurchaseLimitSchemeUpdateReq) error
+// checkPurchaseLimit 检查品牌采购限购（新方案）
+//
+// 逻辑：
+//   - 查询所有启用的限购方案
+//   - 校验当前星期是否在限购周期内
+//   - 校验每日申请次数限制
+//   - 校验物品数量限制
+func (s *purchaseOrderSrv) checkPurchaseLimit(ctx context.Context, order *model.PurchaseOrder) error {
+	lang := ctx.GetLanguage()
+	companyUuid := ctx.GetCompanyUuid()
+	companySetting := ctx.GetCompanySetting()
+	headquarterUuid := companySetting.HeadquarterUuid
 
-	// GetByUuid 根据UUID获取限购方案详情
-	GetByUuid(ctx context.Context, uuid uint64) (*resp.PurchaseLimitSchemeResp, error)
-
-	// GetList 获取限购方案列表
-	GetList(ctx context.Context, req req.PurchaseLimitSchemeListReq) (*resp.PurchaseLimitSchemeListResp, error)
-
-	// Delete 删除限购方案
-	Delete(ctx context.Context, uuid uint64) error
-}
-
-// purchaseLimitSchemeSrv 限购方案服务实现
-type purchaseLimitSchemeSrv struct {
-	dbm *database.DBManager
-}
-
-// NewPurchaseLimitSchemeSrv 创建限购方案服务
-func NewPurchaseLimitSchemeSrv(dbm *database.DBManager) IPurchaseLimitSchemeSrv {
-	return &purchaseLimitSchemeSrv{
-		dbm: dbm,
-	}
-}
-
-// Create 创建限购方案
-func (s *purchaseLimitSchemeSrv) Create(ctx context.Context, req req.PurchaseLimitSchemeCreateReq) (uint64, error) {
-	db := ctx.GetDB()
-
-	// 1. 校验周期和物品配置
-	if len(req.Weekdays) == 0 {
-		return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个星期"))
-	}
-	if len(req.Items) == 0 {
-		return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个物品"))
-	}
-
-	// 2. 如果不是应用到全部门店，则必须选择门店
-	if req.ApplyToAllShops == 0 && len(req.Shops) == 0 {
-		return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "请选择适用的门店"))
-	}
-
-	// 3. 验证物品是否存在并获取 Code
-	materialRepo := repository.NewMaterialRepo(db)
-
-	itemCodes := make(map[uint64]string) // materialUuid -> materialCode
-
-	for _, item := range req.Items {
-		// 验证物品是否存在并获取 Code
-		if _, exists := itemCodes[item.MaterialUuid]; !exists {
-			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
-			if err != nil {
-				if err == gorm.ErrRecordNotFound {
-					return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "物品不存在"))
-				}
-				return 0, errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "查询物品失败"))
-			}
-			itemCodes[item.MaterialUuid] = material.Code
-		}
-	}
-
-	// 4. 开启事务
-	var schemeUuid uint64
-	err := db.Transaction(func(tx *gorm.DB) error {
-		currentTime := time.Now().Unix()
-
-		// 4.1 创建限购方案主记录
-		scheme := &model.PurchaseLimitScheme{
-			Name:            req.LocaleName.ToJson(),
-			Status:          req.Status,
-			ApplyToAllShops: req.ApplyToAllShops,
-			DailyLimit:      req.DailyLimit,
-			Weekdays:        s.weekdaysToString(req.Weekdays),
-		}
-		scheme.CreateTime = currentTime
-		scheme.UpdateTime = currentTime
-
-		if err := repository.NewPurchaseLimitSchemeRepo(tx).Create(scheme); err != nil {
-			logger.Logger.Error("创建限购方案失败", zap.Error(err))
-			return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "创建限购方案失败"))
-		}
-		schemeUuid = scheme.Uuid
-
-		// 4.2 批量插入物品配置
-		items := make([]*model.PurchaseLimitSchemeItem, 0, len(req.Items))
-		for _, item := range req.Items {
-			itemModel := &model.PurchaseLimitSchemeItem{
-				SchemeUuid:   scheme.Uuid,
-				MaterialCode: itemCodes[item.MaterialUuid],
-				QuotaLimit:   item.QuotaLimit,
-			}
-			itemModel.CreateTime = currentTime
-			itemModel.UpdateTime = currentTime
-			items = append(items, itemModel)
-		}
-		if err := repository.NewPurchaseLimitSchemeItemRepo(tx).BatchCreate(items); err != nil {
-			logger.Logger.Error("创建物品配置失败", zap.Error(err))
-			return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "创建物品配置失败"))
-		}
-
-		// 4.3 插入门店配置（如果不是全部门店）
-		if req.ApplyToAllShops == 0 && len(req.Shops) > 0 {
-			shops := make([]*model.PurchaseLimitSchemeShop, 0, len(req.Shops))
-			for _, shopUuid := range req.Shops {
-				shopModel := &model.PurchaseLimitSchemeShop{
-					SchemeUuid:  scheme.Uuid,
-					CompanyUuid: shopUuid,
-				}
-				shopModel.CreateTime = currentTime
-				shopModel.UpdateTime = currentTime
-				shops = append(shops, shopModel)
-			}
-			if err := repository.NewPurchaseLimitSchemeShopRepo(tx).BatchCreate(shops); err != nil {
-				logger.Logger.Error("创建门店配置失败", zap.Error(err))
-				return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "创建门店配置失败"))
-			}
-		}
-
+	// 如果没有总部，跳过限购检查
+	if headquarterUuid == 0 {
 		return nil
-	})
+	}
 
+	headquarterDb := s.dbm.GetDB(headquarterUuid)
+
+	// 1. 查询所有启用的限购方案（状态=1）
+	schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
+	schemes, err := schemeRepo.GetActiveSchemes(companyUuid)
 	if err != nil {
-		return 0, err
+		return errors.WithMessage(errors.New("查询限购方案失败"), err.Error())
 	}
 
-	return schemeUuid, nil
-}
-
-// Update 更新限购方案
-func (s *purchaseLimitSchemeSrv) Update(ctx context.Context, req req.PurchaseLimitSchemeUpdateReq) error {
-	db := ctx.GetDB()
-
-	// 1. 检查方案是否存在
-	schemeRepo := repository.NewPurchaseLimitSchemeRepo(db)
-	scheme, err := schemeRepo.GetByUuid(req.Uuid)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return errors.New(i18n.Translate(ctx.GetLanguage(), "限购方案不存在"))
-		}
-		return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "查询限购方案失败"))
-	}
-
-	// 2. 校验周期和物品配置
-	if len(req.Weekdays) == 0 {
-		return errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个星期"))
-	}
-	if len(req.Items) == 0 {
-		return errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个物品"))
-	}
-
-	// 3. 如果不是应用到全部门店，则必须选择门店
-	if req.ApplyToAllShops == 0 && len(req.Shops) == 0 {
-		return errors.New(i18n.Translate(ctx.GetLanguage(), "请选择适用的门店"))
-	}
-
-	// 4. 验证物品是否存在并获取 Code
-	materialRepo := repository.NewMaterialRepo(db)
-
-	itemCodes := make(map[uint64]string) // materialUuid -> materialCode
-
-	for _, item := range req.Items {
-		// 验证物品是否存在并获取 Code
-		if _, exists := itemCodes[item.MaterialUuid]; !exists {
-			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
-			if err != nil {
-				if err == gorm.ErrRecordNotFound {
-					return errors.New(i18n.Translate(ctx.GetLanguage(), "物品不存在"))
-				}
-				return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "查询物品失败"))
-			}
-			itemCodes[item.MaterialUuid] = material.Code
-		}
-	}
-
-	// 5. 开启事务
-	err = db.Transaction(func(tx *gorm.DB) error {
-		currentTime := time.Now().Unix()
-
-		// 5.1 更新限购方案主记录
-		scheme.Name = req.LocaleName.ToJson()
-		scheme.Status = req.Status
-		scheme.ApplyToAllShops = req.ApplyToAllShops
-		scheme.DailyLimit = req.DailyLimit
-		scheme.Weekdays = s.weekdaysToString(req.Weekdays)
-		scheme.UpdateTime = currentTime
-
-		if err := repository.NewPurchaseLimitSchemeRepo(tx).Update(scheme); err != nil {
-			logger.Logger.Error("更新限购方案失败", zap.Error(err))
-			return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "更新限购方案失败"))
-		}
-
-		// 5.2 删除旧的物品配置
-		itemRepo := repository.NewPurchaseLimitSchemeItemRepo(tx)
-		if err := itemRepo.DeleteBySchemeUuid(scheme.Uuid); err != nil {
-			logger.Logger.Error("删除旧物品配置失败", zap.Error(err))
-			return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "删除旧物品配置失败"))
-		}
-
-		// 5.3 插入新的物品配置
-		items := make([]*model.PurchaseLimitSchemeItem, 0, len(req.Items))
-		for _, item := range req.Items {
-			itemModel := &model.PurchaseLimitSchemeItem{
-				SchemeUuid:   scheme.Uuid,
-				MaterialCode: itemCodes[item.MaterialUuid],
-				QuotaLimit:   item.QuotaLimit,
-			}
-			itemModel.CreateTime = currentTime
-			itemModel.UpdateTime = currentTime
-			items = append(items, itemModel)
-		}
-		if err := itemRepo.BatchCreate(items); err != nil {
-			logger.Logger.Error("创建物品配置失败", zap.Error(err))
-			return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "创建物品配置失败"))
-		}
-
-		// 4.4 删除旧的门店配置
-		shopRepo := repository.NewPurchaseLimitSchemeShopRepo(tx)
-		if err := shopRepo.DeleteBySchemeUuid(scheme.Uuid); err != nil {
-			logger.Logger.Error("删除旧门店配置失败", zap.Error(err))
-			return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "删除旧门店配置失败"))
-		}
-
-		// 4.5 插入新的门店配置（如果不是全部门店）
-		if req.ApplyToAllShops == 0 && len(req.Shops) > 0 {
-			shops := make([]*model.PurchaseLimitSchemeShop, 0, len(req.Shops))
-			for _, shopUuid := range req.Shops {
-				shopModel := &model.PurchaseLimitSchemeShop{
-					SchemeUuid:  scheme.Uuid,
-					CompanyUuid: shopUuid,
-				}
-				shopModel.CreateTime = currentTime
-				shopModel.UpdateTime = currentTime
-				shops = append(shops, shopModel)
-			}
-			if err := shopRepo.BatchCreate(shops); err != nil {
-				logger.Logger.Error("创建门店配置失败", zap.Error(err))
-				return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "创建门店配置失败"))
-			}
-		}
-
+	// 如果没有限购方案，跳过检查
+	if len(schemes) == 0 {
 		return nil
-	})
+	}
 
-	if err != nil {
-		return err
+	// 2. 获取当前星期几（1=周一, 7=周日）
+	currentWeekday := int8(utils.SetTimezone(companySetting.GetTimezone()).Now().Weekday())
+	if currentWeekday == 0 {
+		currentWeekday = 7 // 将周日从 0 转换为 7
+	}
+
+	// 3. 遍历所有方案，执行检查
+	for _, scheme := range schemes {
+		// 3.1 检查当前星期是否在限购周期内
+		if !s.isWeekdayInScheme(currentWeekday, scheme.Weekdays) {
+			continue // 不在限购周期内，跳过此方案
+		}
+
+		// 3.2 检查每日申请次数限制
+		if scheme.DailyLimit > 0 {
+			if err := s.checkDailyLimitByScheme(ctx, scheme.DailyLimit); err != nil {
+				return err
+			}
+		}
+
+		// 3.3 检查物品数量限制
+		if err := s.checkItemLimitByScheme(ctx, order, scheme); err != nil {
+			// 获取方案名称
+			schemeName := language.JsonToLocaleResponse(scheme.Name).GetLocale(lang)
+			return errors.New(fmt.Sprintf(
+				i18n.Translate(lang, "限购方案【%s】：%s"),
+				schemeName, err.Error(),
+			))
+		}
 	}
 
 	return nil
 }
 
-// GetByUuid 根据UUID获取限购方案详情
-func (s *purchaseLimitSchemeSrv) GetByUuid(ctx context.Context, uuid uint64) (*resp.PurchaseLimitSchemeResp, error) {
-	db := ctx.GetDB()
+// isWeekdayInScheme 检查当前星期是否在方案的限购周期内
+func (s *purchaseOrderSrv) isWeekdayInScheme(currentWeekday int8, weekdaysStr string) bool {
+	if weekdaysStr == "" {
+		return false
+	}
 
-	// 1. 查询限购方案主记录
-	schemeRepo := repository.NewPurchaseLimitSchemeRepo(db)
-	scheme, err := schemeRepo.GetByUuid(uuid)
+	// 解析星期配置（逗号分隔，如 "1,3,5"）
+	weekdayParts := strings.Split(weekdaysStr, ",")
+	for _, part := range weekdayParts {
+		var weekday int8
+		if _, err := fmt.Sscanf(strings.TrimSpace(part), "%d", &weekday); err == nil {
+			if weekday == currentWeekday {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// checkDailyLimitByScheme 检查每日申请次数限制（按方案）
+func (s *purchaseOrderSrv) checkDailyLimitByScheme(ctx context.Context, dailyLimit int) error {
+	lang := ctx.GetLanguage()
+	companySetting := ctx.GetCompanySetting()
+
+	// 使用系统时区计算当天的起止时间戳
+	todayStart, todayEnd := utils.SetTimezone(companySetting.GetTimezone()).TodayStartEndUnix()
+
+	// 通过 Repository 统计当天已提交的申请次数
+	count, err := repository.NewPurchaseOrderRepo(ctx.GetDB()).CountBrandPurchaseByTimeRange(todayStart, todayEnd)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, errors.New(i18n.Translate(ctx.GetLanguage(), "限购方案不存在"))
-		}
-		return nil, errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "查询限购方案失败"))
+		return errors.WithMessage(errors.New("查询每日申请次数失败"), err.Error())
 	}
 
-	// 2. 查询物品配置
-	itemRepo := repository.NewPurchaseLimitSchemeItemRepo(db)
-	items, err := itemRepo.GetBySchemeUuid(scheme.Uuid)
+	// 校验是否超限
+	if count >= int64(dailyLimit) {
+		return errors.New(i18n.Translate(lang, "今日申请次数已达上限（%s次），请明天再试", fmt.Sprintf("%d", dailyLimit)))
+	}
+
+	return nil
+}
+
+// checkItemLimitByScheme 检查物品数量限制（按方案）
+func (s *purchaseOrderSrv) checkItemLimitByScheme(
+	ctx context.Context,
+	order *model.PurchaseOrder,
+	scheme *model.PurchaseLimitScheme,
+) error {
+	lang := ctx.GetLanguage()
+	companySetting := ctx.GetCompanySetting()
+	headquarterUuid := companySetting.HeadquarterUuid
+	headquarterDb := s.dbm.GetDB(headquarterUuid)
+
+	// 1. 查询方案的物品配置
+	itemRepo := repository.NewPurchaseLimitSchemeItemRepo(headquarterDb)
+	schemeItems, err := itemRepo.GetBySchemeUuid(scheme.Uuid)
 	if err != nil {
-		logger.Logger.Error("查询物品配置失败", zap.Error(err))
-		return nil, errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "查询物品配置失败"))
+		return errors.WithMessage(errors.New("查询限购物品配置失败"), err.Error())
 	}
 
-	// 3. 查询门店配置（如果不是应用到全部门店）
-	var shopUuids = make([]uint64, 0)
-	if scheme.ApplyToAllShops == 0 {
-		shopRepo := repository.NewPurchaseLimitSchemeShopRepo(db)
-		shops, err := shopRepo.GetBySchemeUuid(scheme.Uuid)
-		if err != nil {
-			logger.Logger.Error("查询门店配置失败", zap.Error(err))
-			return nil, errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "查询门店配置失败"))
+	// 如果方案没有物品配置，跳过检查
+	if len(schemeItems) == 0 {
+		return nil
+	}
+
+	// 2. 构建限购物品映射表（MaterialCode -> QuotaLimit）
+	quotaMap := make(map[string]float64)
+	for _, item := range schemeItems {
+		quotaMap[item.MaterialCode] = item.QuotaLimit
+	}
+
+	// 3. 汇总订单中的物品数量（按 MaterialCode 分组）
+	type MaterialSummary struct {
+		MaterialCode string
+		MaterialName string
+		TotalQty     float64
+	}
+
+	materialSummaryMap := make(map[string]*MaterialSummary)
+
+	// 遍历订单明细
+	for _, orderItem := range order.Items {
+		materialName := language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(lang)
+
+		// 如果有多单位，累加所有单位的数量
+		if len(orderItem.Units) > 0 {
+			for _, unit := range orderItem.Units {
+				key := orderItem.MaterialCode
+				if summary, exists := materialSummaryMap[key]; exists {
+					summary.TotalQty += unit.Num
+				} else {
+					materialSummaryMap[key] = &MaterialSummary{
+						MaterialCode: orderItem.MaterialCode,
+						MaterialName: materialName,
+						TotalQty:     unit.Num,
+					}
+				}
+			}
+		} else {
+			// 没有多单位，使用主单位
+			key := orderItem.MaterialCode
+			if summary, exists := materialSummaryMap[key]; exists {
+				summary.TotalQty += orderItem.Num
+			} else {
+				materialSummaryMap[key] = &MaterialSummary{
+					MaterialCode: orderItem.MaterialCode,
+					MaterialName: materialName,
+					TotalQty:     orderItem.Num,
+				}
+			}
 		}
-		for _, shop := range shops {
-			shopUuids = append(shopUuids, shop.CompanyUuid)
+	}
+
+	// 4. 将 map 转换为切片并排序
+	summaries := make([]*MaterialSummary, 0, len(materialSummaryMap))
+	for _, summary := range materialSummaryMap {
+		summaries = append(summaries, summary)
+	}
+	sort.Slice(summaries, func(i, j int) bool {
+		return summaries[i].MaterialCode < summaries[j].MaterialCode
+	})
+
+	// 5. 逐个检查物品是否超限
+	for _, summary := range summaries {
+		// 检查是否在限购配置中
+		quotaLimit, inQuota := quotaMap[summary.MaterialCode]
+		if !inQuota {
+			continue // 不在限购配置中，跳过
 		}
-	}
 
-	// 4. 组装响应数据 - 需要将 Code 转换为 Uuid
-	result := &resp.PurchaseLimitSchemeResp{
-		Uuid:            scheme.Uuid,
-		LocaleName:      *language.JsonToLocaleResponse(scheme.Name),
-		Status:          scheme.Status,
-		ApplyToAllShops: scheme.ApplyToAllShops,
-		DailyLimit:      scheme.DailyLimit,
-		Weekdays:        s.stringToWeekdays(scheme.Weekdays),
-		Items:           make([]resp.PurchaseLimitSchemeItemResp, 0, len(items)),
-		Shops:           shopUuids,
-		CreateTime:      scheme.CreateTime,
-		UpdateTime:      scheme.UpdateTime,
-	}
-
-	// 填充物品配置 - 需要通过 MaterialCode 查询对应的 MaterialUuid
-	materialRepo := repository.NewMaterialRepo(db)
-
-	for _, item := range items {
-		// 通过 MaterialCode 获取 MaterialUuid
-		material, err := materialRepo.GetMaterialByCode(item.MaterialCode)
-		if err != nil {
-			logger.Logger.Error("查询物品失败", zap.Error(err), zap.String("material_code", item.MaterialCode))
+		// 如果限购数量为 0，表示不限制
+		if quotaLimit == 0 {
 			continue
 		}
 
-		result.Items = append(result.Items, resp.PurchaseLimitSchemeItemResp{
-			MaterialUuid: material.Uuid,
-			QuotaLimit:   item.QuotaLimit,
-		})
-	}
-
-	return result, nil
-}
-
-// GetList 获取限购方案列表
-func (s *purchaseLimitSchemeSrv) GetList(ctx context.Context, req req.PurchaseLimitSchemeListReq) (*resp.PurchaseLimitSchemeListResp, error) {
-	db := ctx.GetDB()
-	lang := ctx.GetLanguage()
-
-	// 1. 构建查询条件
-	schemeRepo := repository.NewPurchaseLimitSchemeRepo(db)
-	options := []repository.DBOption{
-		schemeRepo.Paginate(req.PageNo, req.PageSize),
-	}
-
-	if req.Status != nil {
-		options = append(options, schemeRepo.WhereStatus(*req.Status))
-	}
-
-	if req.Name != "" {
-		options = append(options, schemeRepo.WhereNameLike(req.Name))
-	}
-
-	// 2. 查询限购方案列表
-	schemes, total, err := schemeRepo.GetList(options...)
-	if err != nil {
-		logger.Logger.Error("查询限购方案列表失败", zap.Error(err))
-		return nil, errors.WithMessage(err, i18n.Translate(lang, "查询限购方案列表失败"))
-	}
-
-	// 3. 组装响应数据
-	list := make([]resp.PurchaseLimitSchemeSummaryResp, 0, len(schemes))
-	for _, scheme := range schemes {
-		// 3.1 查询物品配置数量
-		itemRepo := repository.NewPurchaseLimitSchemeItemRepo(db)
-		items, _ := itemRepo.GetBySchemeUuid(scheme.Uuid)
-
-		// 3.2 查询门店配置数量
-		shopCount := 0
-		if scheme.ApplyToAllShops == 0 {
-			shopRepo := repository.NewPurchaseLimitSchemeShopRepo(db)
-			shops, _ := shopRepo.GetBySchemeUuid(scheme.Uuid)
-			shopCount = len(shops)
+		// 校验是否超限
+		if summary.TotalQty > quotaLimit {
+			return errors.New(fmt.Sprintf(
+				i18n.Translate(lang, "物品【%s】本次申请数量 %.2f 已超限（最多 %.2f），请减少数量后重试"),
+				summary.MaterialName, summary.TotalQty, quotaLimit,
+			))
 		}
-
-		// 3.3 生成星期字符串
-		weekdayStr := s.formatWeekdaysFromString(lang, scheme.Weekdays)
-
-		list = append(list, resp.PurchaseLimitSchemeSummaryResp{
-			Uuid:       scheme.Uuid,
-			LocaleName: *language.JsonToLocaleResponse(scheme.Name),
-			Status:     scheme.Status,
-			WeekdayStr: weekdayStr,
-			ShopCount:  shopCount,
-			ItemCount:  len(items),
-			DailyLimit: scheme.DailyLimit,
-			CreateTime: scheme.CreateTime,
-			UpdateTime: scheme.UpdateTime,
-		})
-	}
-
-	return &resp.PurchaseLimitSchemeListResp{
-		List: list,
-		Meta: resp.PageMeta{
-			PageNo:   req.PageNo,
-			PageSize: req.PageSize,
-			Total:    total,
-		},
-	}, nil
-}
-
-// Delete 删除限购方案
-func (s *purchaseLimitSchemeSrv) Delete(ctx context.Context, uuid uint64) error {
-	db := ctx.GetDB()
-
-	// 1. 检查方案是否存在
-	schemeRepo := repository.NewPurchaseLimitSchemeRepo(db)
-	scheme, err := schemeRepo.GetByUuid(uuid)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return errors.New(i18n.Translate(ctx.GetLanguage(), "限购方案不存在"))
-		}
-		return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "查询限购方案失败"))
-	}
-
-	// 2. 开启事务删除主表和关联表
-	err = db.Transaction(func(tx *gorm.DB) error {
-		// 2.1 软删除限购方案主记录
-		if err := repository.NewPurchaseLimitSchemeRepo(tx).Delete(uuid); err != nil {
-			logger.Logger.Error("删除限购方案失败", zap.Error(err))
-			return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "删除限购方案失败"))
-		}
-
-		// 2.2 软删除物品配置
-		if err := repository.NewPurchaseLimitSchemeItemRepo(tx).DeleteBySchemeUuid(scheme.Uuid); err != nil {
-			logger.Logger.Error("删除物品配置失败", zap.Error(err))
-			return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "删除物品配置失败"))
-		}
-
-		// 2.3 软删除门店配置
-		if err := repository.NewPurchaseLimitSchemeShopRepo(tx).DeleteBySchemeUuid(scheme.Uuid); err != nil {
-			logger.Logger.Error("删除门店配置失败", zap.Error(err))
-			return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "删除门店配置失败"))
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return err
 	}
 
 	return nil
-}
-
-// weekdaysToString 将星期数组转换为逗号分隔的字符串
-func (s *purchaseLimitSchemeSrv) weekdaysToString(weekdays []int8) string {
-	if len(weekdays) == 0 {
-		return ""
-	}
-
-	strs := make([]string, 0, len(weekdays))
-	for _, w := range weekdays {
-		strs = append(strs, fmt.Sprintf("%d", w))
-	}
-	return strings.Join(strs, ",")
-}
-
-// stringToWeekdays 将逗号分隔的字符串转换为星期数组
-func (s *purchaseLimitSchemeSrv) stringToWeekdays(weekdaysStr string) []int8 {
-	if weekdaysStr == "" {
-		return []int8{}
-	}
-
-	parts := strings.Split(weekdaysStr, ",")
-	weekdays := make([]int8, 0, len(parts))
-	for _, part := range parts {
-		var weekday int8
-		if _, err := fmt.Sscanf(strings.TrimSpace(part), "%d", &weekday); err == nil {
-			if weekday >= 1 && weekday <= 7 {
-				weekdays = append(weekdays, weekday)
-			}
-		}
-	}
-	return weekdays
-}
-
-// formatWeekdaysFromString 格式化星期字符串为可读格式
-func (s *purchaseLimitSchemeSrv) formatWeekdaysFromString(language string, weekdaysStr string) string {
-	weekdays := s.stringToWeekdays(weekdaysStr)
-	if len(weekdays) == 0 {
-		return ""
-	}
-
-	weekdayMap := map[int8]string{
-		1: i18n.Translate(language, "周一"),
-		2: i18n.Translate(language, "周二"),
-		3: i18n.Translate(language, "周三"),
-		4: i18n.Translate(language, "周四"),
-		5: i18n.Translate(language, "周五"),
-		6: i18n.Translate(language, "周六"),
-		7: i18n.Translate(language, "周日"),
-	}
-
-	weekdayStrs := make([]string, 0, len(weekdays))
-	for _, w := range weekdays {
-		if str, ok := weekdayMap[w]; ok {
-			weekdayStrs = append(weekdayStrs, str)
-		}
-	}
-
-	return strings.Join(weekdayStrs, "、")
 }

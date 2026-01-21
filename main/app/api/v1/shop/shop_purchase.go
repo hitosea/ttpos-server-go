@@ -577,14 +577,14 @@ func (h *PurchaseHandler) UpdateLimitScheme(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param uuid query int true "方案UUID"
+// @Param data body req.PurchaseLimitSchemeDeleteReq true "删除限购方案请求参数"
 // @Success 200 {object} dto.Response{} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /shop/purchase/limit/scheme/delete [delete]
 func (h *PurchaseHandler) DeleteLimitScheme(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var deleteReq req.PurchaseLimitSchemeDeleteReq
-	if err := c.ShouldBindQuery(&deleteReq); err != nil {
+	if err := c.ShouldBindJSON(&deleteReq); err != nil {
 		helper.HandleValidationError(c, err, deleteReq, nil)
 		return
 	}
