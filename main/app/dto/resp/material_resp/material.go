@@ -40,6 +40,17 @@ type Material struct {
 
 	AvailableQuantity float64 `json:"available_quantity"` // 可采购数量
 	StoreQuantity     float64 `json:"store_quantity"`     // 门店数量
+
+	// 限购配置
+	QuotaConfig MaterialQuotaConfig `json:"quota_config"` // 限购配置
+}
+
+// MaterialQuotaConfig 限购配置
+type MaterialQuotaConfig struct {
+	QuotaLimit          float64            `json:"quota_limit"`            // 限购数量
+	QuotaUnitUuid       uint64             `json:"quota_unit_uuid"`        // 限购单位UUID
+	QuotaUnitName       string             `json:"quota_unit_name"`        // 限购单位名称
+	QuotaUnitLocaleName dto.LocaleResponse `json:"quota_unit_locale_name"` // 限购单位名称
 }
 
 type NotBasicUnitStockList struct {

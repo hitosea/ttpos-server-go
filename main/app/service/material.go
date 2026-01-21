@@ -397,6 +397,39 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			AllowNegativeStock:         material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
 			AvailableQuantity:          decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
 			StoreQuantity:              stockNum,
+			QuotaConfig: func() material_resp.MaterialQuotaConfig {
+				if req.PurchaseType == 2 {
+					// 从 PurchaseQuotaConfig 表查询限购配置
+					quotaConfigRepo := repository.NewPurchaseQuotaConfigRepo(s.dbm.GetDB(dbId))
+					quotaConfig, err := quotaConfigRepo.GetByMaterialCodeAndShop(material.Code, ctx.GetCompanyUuid())
+					if err != nil {
+						// 没有限购配置，返回空配置
+						return material_resp.MaterialQuotaConfig{}
+					}
+
+					// 查找限购单位信息
+					var quotaUnit *model.MaterialUnit
+					for _, unit := range material.NotBaseUnitList {
+						if unit.Unit != nil && unit.Unit.ErpnextUom == quotaConfig.UnitCode {
+							quotaUnit = unit
+							break
+						}
+					}
+
+					if quotaUnit == nil || quotaUnit.Unit == nil {
+						// 限购单位不存在，返回空配置
+						return material_resp.MaterialQuotaConfig{}
+					}
+
+					return material_resp.MaterialQuotaConfig{
+						QuotaLimit:          quotaConfig.QuotaLimit,
+						QuotaUnitUuid:       quotaUnit.Uuid,
+						QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+						QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
+					}
+				}
+				return material_resp.MaterialQuotaConfig{}
+			}(),
 		}
 		for _, unit := range material.NotBaseUnitList {
 			if unit.Uuid == material.DefaultSalesUnitUuid {
