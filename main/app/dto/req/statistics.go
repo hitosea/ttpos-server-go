@@ -246,6 +246,7 @@ type StatisticsPaymentMethodReq struct {
 	PaymentMethodList  string   `form:"payment_method_list" json:"payment_method_list"`   // 支付方式UUID列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割（优先使用）
 	PaymentMethodNames []string `form:"payment_method_names" json:"payment_method_names"` // 支付方式名称列表: 空=全部（PaymentMethodList为空时使用）
 	ExcludeDataManage  bool     `form:"exclude_data_manage" json:"exclude_data_manage"`   // 是否排除数据管理订单
+	Source             int      `form:"source" json:"source"`                             // 查询来源：0-营业收款统计、1-门店汇总统计
 }
 
 // StatisticsCompanySummaryReq 门店汇总统计请求

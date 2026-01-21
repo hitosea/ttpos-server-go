@@ -120,6 +120,7 @@ type TakeoutPaymentMethodRawData struct {
 	PaymentMethodSort       int     // 支付方式排序
 	PaymentMethodCreateTime int64   // 支付方式创建时间戳
 	PaymentName             string  // 支付方式名称
+	Name                    string  // 名称
 	PaymentAmount           float64 // 支付金额（营业收入状态的 eater_payment，取消状态为0）
 }
 
@@ -657,6 +658,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 		"pm.sort AS payment_method_sort",
 		"pm.create_time AS payment_method_create_time",
 		"pm.payment_name",
+		"pm.name",
 		// 计算每个订单的支付金额：如果状态是营业收入状态(10,20,30,40)，则取 eater_payment；如果状态是取消状态(60)，则取 0
 		fmt.Sprintf("IF(t.order_state IN %s, t.eater_payment, 0) AS payment_amount", businessStatesStr),
 	}
