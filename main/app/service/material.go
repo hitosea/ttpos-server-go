@@ -1388,7 +1388,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			// 获取默认销售单位
 			var defaultSalesUom string
 			if request.DefaultSalesUnitUuid != 0 {
-				defaultSalesUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(request.DefaultSalesUnitUuid)
+				defaultSalesUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.DefaultSalesUnitUuid)
 				if err != nil {
 					return errors.WithMessage(err, "获取默认销售单位失败")
 				}
@@ -1496,6 +1496,8 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 				return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
 			}
 			purchaseUnitUuid = purchaseUnit.Uuid
+		} else {
+			updateData["purchase_unit_uuid"] = 0
 		}
 
 		// 同步单位

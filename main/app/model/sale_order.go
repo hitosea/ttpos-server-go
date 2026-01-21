@@ -1277,6 +1277,12 @@ func NewSaleOrder(deviceId string, saleBillUuid uint64, saleBillOrderNo string, 
 			UpdateTime: time.Now().Unix(),
 			DeleteTime: 0,
 		},
+		// 设置默认值.会员折扣、会员卡折扣、自定义折扣、整单改价
+		MemberDiscountRate:     1,
+		MemberCardDiscountRate: 1,
+		CustomDiscountRate:     1,
+		CustomAmount:           -1,
+
 		SaleBillUuid: saleBillUuid,
 		OrderNo:      saleBillOrderNo,
 		DeviceId:     deviceId,

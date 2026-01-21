@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"time"
 
 	"ttpos-server-go/pkg/logger"
 
@@ -187,19 +188,27 @@ func (g *cacheGroup[T]) executeTask(ctx context.Context, key string, task Task[T
 			l2TTL = g.config.L2TTL
 		}
 
+		// L2 Redis 缓存写入：根据配置决定同步或异步
 		if g.config.EnableRedisCache {
-			// 写入 L2 缓存（大小监控和日志记录在 l2.set 方法中完成）
-			if err := g.l2.set(ctx, key, val, l2TTL); err != nil {
-				logger.Logger.Error("缓存写入 L2 失败",
-					zap.String("key", key),
-					zap.String("level", "L2"),
-					zap.String("type", "SET"),
-					zap.Duration("ttl", l2TTL),
-					zap.Error(err),
-				)
+			if g.config.AsyncL2Write {
+				// 异步写入 L2：使用独立的 context，避免原 context 取消影响写入
+				go g.asyncWriteL2(key, val, l2TTL)
+			} else {
+				// 同步写入 L2：保证数据一致性（默认）
+				if err := g.l2.set(ctx, key, val, l2TTL); err != nil {
+					logger.Logger.Error("缓存写入 L2 失败",
+						zap.String("key", key),
+						zap.String("level", "L2"),
+						zap.String("type", "SET"),
+						zap.Duration("ttl", l2TTL),
+						zap.Error(err),
+					)
+				}
+				// 注意：成功写入的日志（包括大小信息）在 l2.set 方法中记录
 			}
-			// 注意：成功写入的日志（包括大小信息）在 l2.set 方法中记录
 		}
+
+		// L1 本地缓存始终同步写入（内存操作延迟低）
 		if g.config.EnableLocalCache {
 			g.l1.set(key, val, l1TTL)
 			logger.Logger.Debug("缓存写入 L1",
@@ -227,4 +236,31 @@ func (g *cacheGroup[T]) DeleteL1(key string) {
 	if g.config.EnableLocalCache && g.l1 != nil {
 		g.l1.delete(key)
 	}
+}
+
+// asyncWriteL2 异步写入 L2 Redis 缓存
+// 使用独立的 context，避免原 context 取消影响写入
+func (g *cacheGroup[T]) asyncWriteL2(key string, val T, ttl time.Duration) {
+	// 使用独立的 context，设置合理的超时时间（避免原 context 取消）
+	// 超时时间设置为 TTL 的 1/10，但至少 1 秒，最多 10 秒
+	timeout := ttl / 10
+	if timeout < time.Second {
+		timeout = time.Second
+	}
+	if timeout > 10*time.Second {
+		timeout = 10 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	if err := g.l2.set(ctx, key, val, ttl); err != nil {
+		logger.Logger.Error("异步缓存写入 L2 失败",
+			zap.String("key", key),
+			zap.String("level", "L2"),
+			zap.String("type", "SET"),
+			zap.Duration("ttl", ttl),
+			zap.Error(err),
+		)
+	}
+	// 注意：成功写入的日志（包括大小信息）在 l2.set 方法中记录
 }

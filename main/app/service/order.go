@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
+	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
@@ -5489,6 +5490,86 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 		ctx.Log().Error("更新金额失败", zap.Error(err))
 		return errors.WithMessage(err)
 	}
+	return nil
+}
+
+// CalcAndCacheSaleBillAsync 计算并缓存 SaleBill，然后异步保存到数据库
+// 参数：
+//   - ctx: 上下文
+//   - db: 数据库连接
+//   - saleBill: 要处理的 SaleBill 对象
+//   - options: 计算选项
+//
+// 返回：
+//   - error: 错误信息（仅缓存失败时返回，异步保存的错误会记录日志）
+//
+// 说明：
+//  1. 先同步计算并缓存 SaleBill（保证缓存立即可用）
+//  2. 然后异步调用 CalcAndSaveSaleBill 保存到数据库
+//  3. 如果缓存失败会立即返回错误，异步保存失败只记录日志
+func CalcAndCacheSaleBillAsync(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error {
+	if saleBill == nil {
+		return errors.New("saleBill 不能为 nil")
+	}
+
+	// 准备计算选项
+	option := &model.CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+
+	// 计算订单商品、订单、账单
+	saleBill.CalcAll(options...)
+
+	// 设置收银员信息
+	staff := ctx.GetStaff()
+	saleBill.SetCashier(staff.DutyNo, staff.Uuid, staff.GetUserName())
+
+	// 同步更新缓存（保证缓存立即可用）
+	if err := objectStorageController.GetSaleBillController().Update(ctx, db,
+		[]uint64{saleBill.Uuid},
+		objectStorageController.WithUpdateValue(map[uint64]interface{}{
+			saleBill.Uuid: saleBill,
+		}),
+	); err != nil {
+		ctx.Log().Error("更新 SaleBill 缓存失败", zap.Error(err), zap.Uint64("saleBillUuid", saleBill.Uuid))
+		return errors.WithMessage(err, "更新缓存失败")
+	}
+
+	// 异步保存到数据库
+	// 注意：需要在 goroutine 中创建新的 context，避免原 context 取消影响异步保存
+	utils.Go(func() {
+		// 创建新的 context，使用独立的数据库连接
+		asyncCtx := context.NewContext(
+			context.WithCompanyUuid(ctx.GetCompanyUuid()),
+			context.WithContext(contexts.Background()),
+			context.WithStaff(staff),
+		)
+		db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetDbId())
+		asyncCtx.SetDB(db)
+
+		// 异步调用原方法保存到数据库
+		if err := CalcAndSaveSaleBill(asyncCtx, db, saleBill, options...); err != nil {
+			logger.Logger.Error("异步保存 SaleBill 到数据库失败",
+				zap.Error(err),
+				zap.Uint64("saleBillUuid", saleBill.Uuid),
+			)
+		} else {
+			// 保存成功后，再次更新缓存（确保缓存与数据库一致）
+			if err := objectStorageController.GetSaleBillController().Update(asyncCtx, db,
+				[]uint64{saleBill.Uuid},
+				objectStorageController.WithUpdateValue(map[uint64]interface{}{
+					saleBill.Uuid: saleBill,
+				}),
+			); err != nil {
+				logger.Logger.Error("异步保存后更新 SaleBill 缓存失败",
+					zap.Error(err),
+					zap.Uint64("saleBillUuid", saleBill.Uuid),
+				)
+			}
+		}
+	})
+
 	return nil
 }
 

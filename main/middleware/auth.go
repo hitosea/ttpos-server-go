@@ -17,6 +17,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/otel"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -33,36 +34,54 @@ var (
 
 func Auth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 使用 otelgin 中间件自动创建的 span
+		stdCtx := c.Request.Context()
+
 		authHeader := c.GetHeader("Authorization")
 
 		if authHeader == "" {
+			otel.RecordSpanError(stdCtx, fmt.Errorf("token is required"), "认证失败：缺少 token")
 			helper.Fail(c, constant.CodeTokenInvalid, "token is required")
 			c.Abort()
 			return
 		}
+
+		// 记录认证开始
+		otel.AddSpanEvent(stdCtx, "开始认证验证")
+
 		ParseJwt(c, authHeader, authSrv, dbm)
+
+		otel.AddSpanEvent(stdCtx, "认证验证成功")
+
 		c.Next()
 	}
 }
 
 func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *database.DBManager) {
+	stdCtx := c.Request.Context()
 
 	parts := strings.SplitN(authHeader, " ", 2)
 	if !(len(parts) == 2 && parts[0] == "Bearer") {
+		otel.RecordSpanError(stdCtx, fmt.Errorf("invalid token format"), "认证失败：token 格式错误")
 		helper.Fail(c, constant.CodeTokenInvalid, "登录失效，请重新登录")
 		c.Abort()
 		return
 	}
 
 	// 验证token
+	otel.AddSpanEvent(stdCtx, "解析并验证 token")
 	claims, err := auth.ParseToken(parts[1], config.JWT.Secret)
 	if err != nil {
+		otel.RecordSpanError(stdCtx, err, "认证失败：token 解析失败")
 		helper.Fail(c, constant.CodeTokenInvalid, "登录失效，请重新登录")
 		c.Abort()
 		return
 	}
 
+	otel.AddSpanEvent(stdCtx, "验证 token 信息")
+
 	if !slices.Contains([]string{constant.SourceShop, constant.SourceCashier, constant.SourceAssistant, constant.SourceKitchen, constant.SourceTablet, constant.SourceKiosk}, claims.Source) {
+		otel.RecordSpanError(stdCtx, fmt.Errorf("invalid source: %s", claims.Source), "认证失败：无效的来源")
 		helper.Fail(c, constant.CodeAccessDenied, "用户信息错误")
 		c.Abort()
 		return
@@ -70,16 +89,19 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 
 	urlPath := c.Request.URL.Path
 	if !slices.Contains(authWhiteList, urlPath) && !regexp.MustCompile(`^/api/v\d+/`+claims.Source).Match([]byte(urlPath)) {
+		otel.RecordSpanError(stdCtx, fmt.Errorf("path not allowed for source: %s", claims.Source), "认证失败：路径不匹配来源")
 		helper.Fail(c, constant.CodeAccessDenied, "用户信息错误")
 		c.Abort()
 		return
 	}
 
 	if strings.HasSuffix(urlPath, "/refresh_token") && !claims.IsRefreshToken {
+		otel.RecordSpanError(stdCtx, fmt.Errorf("invalid refresh token"), "认证失败：无效的 refresh_token")
 		helper.Fail(c, constant.CodeTokenInvalid, "无效的refresh_token")
 		c.Abort()
 		return
 	} else if !strings.HasSuffix(urlPath, "/refresh_token") && claims.IsRefreshToken {
+		otel.RecordSpanError(stdCtx, fmt.Errorf("refresh token used as access token"), "认证失败：refresh_token 被用作 access_token")
 		helper.Fail(c, constant.CodeTokenInvalid, "无效的token")
 		c.Abort()
 		return
@@ -87,6 +109,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 
 	// 如果 company_uuid 为 0，只允许访问 base 接口和切换门店接口
 	if claims.CompanyUuid == 0 {
+		otel.AddSpanEvent(stdCtx, "company_uuid 为 0，检查白名单路径")
 		// 定义允许访问的接口列表
 		allowedPaths := []string{
 			fmt.Sprintf("/api/v1/%s/base", claims.Source),
@@ -98,6 +121,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 		isAllowed := slices.Contains(allowedPaths, urlPath)
 
 		if !isAllowed {
+			otel.RecordSpanError(stdCtx, fmt.Errorf("path not in allowed list for company_uuid=0"), "认证失败：路径不在允许列表中")
 			helper.Fail(c, constant.CodeNeedCompanyUuid, "请先选择门店")
 			c.Abort()
 			return
@@ -105,6 +129,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 
 		// 允许访问，但跳过 Auth 验证（因为 company_uuid 为 0）
 		// 设置基本的上下文信息
+		otel.AddSpanEvent(stdCtx, "认证通过（company_uuid=0，跳过完整验证）")
 		c.Set(jwt.Source, claims.Source)
 		c.Set(jwt.CompanyUuid, 0)
 		c.Set(jwt.StaffUuid, claims.StaffUuid)
@@ -119,8 +144,10 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 
 	// company_uuid 不为 0，走原有逻辑
 	// 用户鉴权
+	otel.AddSpanEvent(stdCtx, "开始执行完整用户鉴权")
 	ctx := context.NewContext(
 		context.WithGinContext(c.Copy()),
+		context.WithContext(c.Request.Context()), // 包含 otelgin 创建的 span
 		context.WithSource(claims.Source),
 		context.WithCompanyUuid(claims.CompanyUuid),
 		context.WithDeviceUuid(claims.DeviceUuid),
@@ -139,6 +166,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 		TokenIssuedAt: claims.IssuedAt.Unix(),
 	})
 	if err != nil {
+		otel.RecordSpanError(stdCtx, err, "用户鉴权失败")
 		var appErr errors.AppError
 		if builtinerrors.As(err, &appErr) {
 			code := appErr.GetCode()
@@ -157,6 +185,9 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 		c.Abort()
 		return
 	}
+
+	// 记录认证成功信息
+	otel.AddSpanEvent(stdCtx, "记录认证成功信息")
 
 	// 将用户信息存储到上下文
 	c.Set(jwt.Source, claims.Source)
@@ -180,6 +211,8 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 
 	c.Set(jwt.DB, dbm.GetDB(claims.CompanyUuid)) // 数据库连接
 	c.Set(jwt.Brand, claims.Brand)               // 品牌名称
+
+	otel.AddSpanEvent(stdCtx, "用户鉴权成功")
 }
 
 func DeskAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {

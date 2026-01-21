@@ -21,6 +21,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/otel"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
@@ -445,23 +446,32 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 
 // ActionAdd 加购
 func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) error {
+	// 使用传入的 context（包含 otelgin 创建的 span）
+	stdCtx := ctx.GetContext()
+
 	db := ctx.GetDB()
 
 	var err error
 	if request.IsMemberAdd {
+		otel.AddSpanEvent(stdCtx, "执行会员加购")
 		saleBill, err = s.actionAdd(ctx, request, saleBill, WithIsMemberAdd())
 		if err != nil {
+			otel.RecordSpanError(stdCtx, err, "会员加购失败")
 			return errors.WithMessage(err)
 		}
 	} else {
+		otel.AddSpanEvent(stdCtx, "执行普通加购")
 		saleBill, err = s.actionAdd(ctx, request, saleBill)
 		if err != nil {
+			otel.RecordSpanError(stdCtx, err, "普通加购失败")
 			return errors.WithMessage(err)
 		}
 	}
 
+	otel.AddSpanEvent(stdCtx, "开始事务：计算并保存销售账单")
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			otel.RecordSpanError(stdCtx, err, "计算并保存销售账单失败")
 			return errors.WithMessage(err)
 		}
 		return nil

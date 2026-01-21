@@ -3,24 +3,16 @@ package event
 import (
 	"context"
 	"sync"
-	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/model"
 	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/takeout/domain/event"
-	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
-	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
-	"ttpos-server-go/app/repository"
-	"ttpos-server-go/app/service/setting"
 	takeoutService "ttpos-server-go/app/service/takeout"
 	"ttpos-server-go/config"
-	"ttpos-server-go/pkg/cache"
 	appContext "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 var once_takeout_order_accept_event_handler sync.Once
@@ -98,7 +90,7 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 		sendUpdateKitchenWebSocketNotification(orderAcceptedEvent.CompanyUuid)
 
 		// 记录高峰期
-		if err := recordTakeoutOrderPeakTime(db, orderAcceptedEvent.CompanyUuid, orderAcceptedEvent.OrderUuid, "inc"); err != nil {
+		if err := takeoutSrv.RecordTakeoutOrderPeakTime(ctx, orderAcceptedEvent.OrderUuid, orderAcceptedEvent.CompanyUuid); err != nil {
 			logger.Logger.Error("记录外卖订单高峰期失败",
 				zap.Uint64("orderUuid", orderAcceptedEvent.OrderUuid),
 				zap.String("takeoutOrderUuid", orderAcceptedEvent.TakeoutOrderUuid),
@@ -122,82 +114,4 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 	})
 
 	return nil
-}
-
-// recordTakeoutOrderPeakTime 记录外卖订单高峰期
-// recordType: "inc" - 增加, "dec" - 减少
-func recordTakeoutOrderPeakTime(db *gorm.DB, companyUuid uint64, orderUuid uint64, recordType string) error {
-	// 1. 查询外卖订单信息
-	orderRepo := persistence.NewTakeoutOrderRepo(db)
-	order, err := orderRepo.GetByUuid(orderUuid)
-	if err != nil {
-		return err
-	}
-	if order == nil {
-		return nil
-	}
-
-	// 2. 构建 SaleBill
-	saleBill := buildSaleBillFromTakeoutOrder(order, recordType)
-	if saleBill == nil {
-		return nil
-	}
-
-	// 3. 获取门店设置（时区）
-	settingSrv := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
-	ctx := appContext.NewContext(
-		appContext.WithContext(context.Background()),
-		appContext.WithCompanyUuid(companyUuid),
-	)
-	ctx.SetDB(db)
-	storeSetting, err := settingSrv.GetStoreSetting(ctx)
-	if err != nil {
-		logger.Logger.Info("获取门店设置失败", zap.Error(err))
-		return err
-	}
-
-	// 4. 记录高峰期
-	peakTimeRepo := repository.NewSaleOrderPeakTimeRepo(db)
-	return peakTimeRepo.Record(recordType, saleBill, utils.IfFloat64(recordType == "dec", order.EaterPayment, 0.0), storeSetting.TimeZone)
-}
-
-// buildSaleBillFromTakeoutOrder 从外卖订单构建 SaleBill
-// recordType: "inc" - 接单时使用 AcceptedTime, "dec" - 取消时使用 RejectedTime
-func buildSaleBillFromTakeoutOrder(order *takeoutModel.TakeoutOrder, recordType string) *model.SaleBill {
-	saleBill := &model.SaleBill{
-		Status:        constant.SaleBillStatusComplete, // 设置为已完成状态，IsFinish() 才能返回 true
-		PaymentAmount: order.EaterPayment,              // 顾客实付金额（单位：元）
-		CashierUuid:   0,                               // 默认值
-		FinishTime:    0,                               // 默认值
-	}
-
-	// 根据 recordType 设置不同的时间和收银员
-	if recordType == "inc" {
-		// 接单时：使用接单时间和接单人
-		if order.AcceptedTime > 0 {
-			saleBill.FinishTime = order.AcceptedTime
-			saleBill.CashierUuid = order.AcceptedBy
-		} else {
-			// 如果没有接单时间，使用订单时间
-			saleBill.FinishTime = order.OrderTime
-			saleBill.CashierUuid = order.AcceptedBy
-		}
-	} else if recordType == "dec" {
-		// 取消时：使用取消时间和取消人
-		if order.RejectedTime > 0 {
-			saleBill.FinishTime = order.RejectedTime
-			saleBill.CashierUuid = order.RejectedBy
-		} else {
-			// 如果没有取消时间，使用订单时间
-			saleBill.FinishTime = order.OrderTime
-			saleBill.CashierUuid = order.RejectedBy
-		}
-	}
-
-	// 如果 FinishTime 为 0，无法记录高峰期
-	if saleBill.FinishTime == 0 {
-		return nil
-	}
-
-	return saleBill
 }

@@ -1,11 +1,11 @@
-# 采购与调拨完整调用链路
+# 门店调拨流程
 
-> 本文档详细描述外部采购、品牌采购（内部采购）、门店调拨三种业务场景的完整技术实现，包括 TTPOS Main、BMP、ERPNext 之间的交互细节。
+> 门店之间物资转移的完整技术实现，包括 TTPOS Main、BMP、ERPNext 之间的交互细节。
 
-**独立文档索引（按业务流程拆分）：**
-- [外部采购及收货流程](./external-purchase-flow.md) - 向外部供应商采购物资
-- [品牌采购（内部采购）流程](./internal-purchase-flow.md) - 子门店向总部采购物资
-- [门店调拨流程](./store-transfer-flow.md) - 门店之间的物资转移
+**相关文档：**
+- [采购与调拨完整合集](./purchase-transfer-flow.md)
+- [外部采购流程](./external-purchase-flow.md)
+- [品牌采购（内部采购）流程](./internal-purchase-flow.md)
 
 ---
 
@@ -13,11 +13,12 @@
 
 1. [系统架构总览](#系统架构总览)
 2. [BMP 与 ERPNext 交互机制](#bmp-与-erpnext-交互机制)
-3. [外部采购及收货](#一外部采购及收货)
-4. [品牌采购（内部采购）及收货](#二品牌采购内部采购及收货)
-5. [门店调拨](#三门店调拨)
-6. [三种场景对比总结](#四三种场景对比总结)
-7. [关键文件索引](#五关键文件索引)
+3. [调拨场景分类](#调拨场景分类)
+4. [业务流程图](#业务流程图)
+5. [审批通过调用链路](#审批通过调用链路)
+6. [收货调用链路](#收货调用链路)
+7. [Case 3 单据流向示意图](#case-3-单据流向示意图)
+8. [关键文件索引](#关键文件索引)
 
 ---
 
@@ -88,191 +89,7 @@ const (
 
 ---
 
-## 一、外部采购及收货
-
-> 向外部供应商采购物资
-
-### 1.1 业务流程图
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              外部采购完整流程                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  创建 ──► 提交 ──► 审批 ──► 收货                                              │
-│   │        │        │        │                                              │
-│   ▼        ▼        ▼        ▼                                              │
-│ Draft → Pending → Approved → PartialReceived/AllReceived                    │
-│                      │                │                                     │
-│                      ▼                ▼                                     │
-│               [调用 BMP]        [调用 BMP]                                   │
-│                      │                │                                     │
-│                      ▼                ▼                                     │
-│               Purchase Order   Purchase Receipt                             │
-│               (ERPNext)        (ERPNext)                                    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 1.2 采购审批调用链路
-
-#### TTPOS Main 处理
-
-| 步骤  | 方法                                      | 说明                             | 同步/异步     |
-| ----- | ----------------------------------------- | -------------------------------- | ------------- |
-| 1     | `purchaseOrderSrv.CreatePurchaseOrder()`  | 创建采购申请单（PurchaseType=1） | 同步-本地DB   |
-| 2     | `purchaseOrderSrv.SubmitPurchaseOrder()`  | 提交采购申请，状态 Draft→Pending | 同步-本地DB   |
-| 3     | `purchaseOrderSrv.ApprovePurchaseOrder()` | 审批通过                         | 同步          |
-| 3.1   | `└─ handleExternalPurchaseErp()`          | 处理外部采购 ERP 逻辑            | 同步          |
-| 3.1.1 | `    └─ helper.AddToTransitWarehouse()`   | 添加物品到本店在途仓库           | 同步-本地DB   |
-| 3.1.2 | `    └─ erp.CreatePurchaseOrder()`        | **gRPC 调用 BMP**                | **同步-gRPC** |
-
-#### BMP 处理 (gRPC: CreatePurchaseOrder)
-
-| 步骤 | 方法                            | ERPNext API                                  | 说明                            | 同步/异步     |
-| ---- | ------------------------------- | -------------------------------------------- | ------------------------------- | ------------- |
-| 1    | `Buying.CreatePurchaseOrder()`  | -                                            | 入口方法                        | 同步          |
-| 2    | `└─ Document.Create()`          | `POST /api/v2/document/Purchase Order`       | 创建采购订单                    | **同步-HTTP** |
-| 3    | `└─ Document.ChangeDocStatus()` | `PUT /api/v2/document/Purchase Order/{name}` | 提交采购订单（Draft→Submitted） | **同步-HTTP** |
-
-#### ERPNext 单据生成
-
-| 步骤 | DocType          | 状态      | 说明               |
-| ---- | ---------------- | --------- | ------------------ |
-| 1    | `Purchase Order` | Draft     | 创建采购订单草稿   |
-| 2    | `Purchase Order` | Submitted | 提交采购订单，生效 |
-
-### 1.3 收货调用链路
-
-#### TTPOS Main 处理
-
-| 步骤  | 方法                                            | 说明                 | 同步/异步     |
-| ----- | ----------------------------------------------- | -------------------- | ------------- |
-| 1     | `purchaseOrderSrv.CreatePurchaseReceiptOrder()` | 创建收货单           | 同步          |
-| 1.1   | `└─ receiptSrv.CreatePurchaseReceiptOrder()`    | 实际创建逻辑         | 同步          |
-| 1.1.1 | `    └─ 创建收货单记录`                         | 保存到本地数据库     | 同步-本地DB   |
-| 1.1.2 | `    └─ 更新采购申请明细到货数量`               | 更新 ArrivalNum      | 同步-本地DB   |
-| 1.1.3 | `    └─ erp.SavePurchaseReceipt()`              | **gRPC 调用 BMP**    | **同步-gRPC** |
-| 1.2   | `└─ helper.checkAndUpdatePurchaseOrderStatus()` | 检查并更新采购单状态 | 同步-本地DB   |
-
-#### BMP 处理 (gRPC: SavePurchaseReceipt)
-
-| 步骤 | 方法                                      | ERPNext API                                               | 说明               | 同步/异步     |
-| ---- | ----------------------------------------- | --------------------------------------------------------- | ------------------ | ------------- |
-| 1    | `Buying.CreatePurchaseReceiptFromOrder()` | -                                                         | 入口方法           | 同步          |
-| 2    | `└─ Rpc.Execute()`                        | `POST /api/v2/method/frappe.model.mapper.make_mapped_doc` | 从 PO 生成 PR 模板 | **同步-HTTP** |
-| 3    | `└─ 设置 PR 字段`                         | -                                                         | 设置仓库、数量等   | 内存操作      |
-| 4    | `└─ Document.Create()`                    | `POST /api/v2/document/Purchase Receipt`                  | 创建收货单         | **同步-HTTP** |
-| 5    | `└─ Document.ChangeDocStatus()`           | `PUT /api/v2/document/Purchase Receipt/{name}`            | 提交收货单         | **同步-HTTP** |
-
-#### ERPNext 单据生成
-
-| 步骤 | DocType            | 状态      | 说明                 |
-| ---- | ------------------ | --------- | -------------------- |
-| 1    | `Purchase Receipt` | Draft     | 从 PO 创建收货单草稿 |
-| 2    | `Purchase Receipt` | Submitted | 提交收货单，更新库存 |
-
----
-
-## 二、品牌采购（内部采购）及收货
-
-> 子门店向总部采购物资
-
-### 2.1 业务流程图
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           品牌采购（内部采购）完整流程                         │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  子门店                              总部                                    │
-│  ┌──────────────────────────┐       ┌──────────────────────────┐           │
-│  │ 创建 → 提交 → 门店审批    │──────►│ 总部审批                  │           │
-│  │ Draft → Pending → HQPending │      │ HQPending → Approved     │           │
-│  └──────────────────────────┘       └──────────────────────────┘           │
-│                                              │                              │
-│                                              ▼                              │
-│                                       [调用 BMP]                            │
-│                                              │                              │
-│                                              ▼                              │
-│                                     ┌────────────────┐                     │
-│                                     │ Material Request │                    │
-│                                     │       ↓          │                    │
-│                                     │ Purchase Order   │                    │
-│                                     │       ↓          │                    │
-│                                     │ Sales Order      │  (ERPNext)        │
-│                                     └────────────────┘                     │
-│                                                                             │
-│  子门店收货                                                                  │
-│  ┌──────────────────────────┐                                              │
-│  │ 创建收货单 → 确认收货     │ ──────► [调用 BMP] → Purchase Receipt        │
-│  │ Approved → AllReceived   │                                              │
-│  └──────────────────────────┘                                              │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 2.2 采购审批调用链路
-
-#### TTPOS Main 处理（子门店）
-
-| 步骤 | 方法                                      | 说明                             | 同步/异步   |
-| ---- | ----------------------------------------- | -------------------------------- | ----------- |
-| 1    | `purchaseOrderSrv.CreatePurchaseOrder()`  | 创建采购申请单（PurchaseType=2） | 同步-本地DB |
-| 2    | `purchaseOrderSrv.SubmitPurchaseOrder()`  | 提交采购申请                     | 同步-本地DB |
-| 3    | `purchaseOrderSrv.ApprovePurchaseOrder()` | 子门店审批通过                   | 同步        |
-| 3.1  | `└─ 状态变更`                             | Pending → HeadquarterPending     | 同步-本地DB |
-
-#### TTPOS Main 处理（总部）
-
-| 步骤  | 方法                                           | 说明                     | 同步/异步     |
-| ----- | ---------------------------------------------- | ------------------------ | ------------- |
-| 4     | `purchaseOrderSrv.ApprovePurchaseOrder()`      | 总部审批通过             | 同步          |
-| 4.1   | `└─ handleInternalPurchaseErp()`               | 处理内部采购 ERP 逻辑    | 同步          |
-| 4.1.1 | `    └─ helper.reduceHeadquarterStockAndLog()` | 减总部库存，记录出库日志 | 同步-本地DB   |
-| 4.1.2 | `    └─ erp.SaveMaterialRequest()`             | **gRPC 调用 BMP**        | **同步-gRPC** |
-
-#### BMP 处理 (gRPC: SaveMaterialRequest)
-
-| 步骤 | 方法                                                | ERPNext API                                               | 说明                       | 同步/异步     |
-| ---- | --------------------------------------------------- | --------------------------------------------------------- | -------------------------- | ------------- |
-| 1    | `StockController.SaveMaterialRequest()`             | -                                                         | gRPC 入口（Controller 层） | 同步          |
-| 2    | `└─ Stock.CreateMaterialRequest()`                  | -                                                         | Service 层处理             | 同步          |
-| 2.1  | `    └─ Document.Create()`                          | `POST /api/v2/document/Material Request`                  | 创建物料申请               | **同步-HTTP** |
-| 2.2  | `    └─ Document.ChangeDocStatus()`                 | `PUT /api/v2/document/Material Request/{name}`            | 提交物料申请               | **同步-HTTP** |
-| 3    | `└─ Buying.CreatePurchaseFromMq()`                  | -                                                         | 从 MR 创建 PO              | 同步          |
-| 3.1  | `    └─ Rpc.Execute()`                              | `POST make_mapped_doc` + `make_purchase_order`            | 从 MR 生成 PO 模板         | **同步-HTTP** |
-| 3.2  | `    └─ Document.Create()`                          | `POST /api/v2/document/Purchase Order`                    | 创建采购订单               | **同步-HTTP** |
-| 3.3  | `    └─ Document.ChangeDocStatus()`                 | `PUT /api/v2/document/Purchase Order/{name}`              | 提交采购订单               | **同步-HTTP** |
-| 4    | `└─ Buying.CreateInnerSaleOrderFromPurchaseOrder()` | -                                                         | 从 PO 创建内部 SO          | 同步          |
-| 4.1  | `    └─ Rpc.Execute()`                              | `POST make_mapped_doc` + `make_inter_company_sales_order` | 从 PO 生成 SO 模板         | **同步-HTTP** |
-| 4.2  | `    └─ Document.Create()`                          | `POST /api/v2/document/Sales Order`                       | 创建内部销售订单           | **同步-HTTP** |
-| 4.3  | `    └─ Document.ChangeDocStatus()`                 | `PUT /api/v2/document/Sales Order/{name}`                 | 提交销售订单               | **同步-HTTP** |
-
-#### ERPNext 单据生成
-
-| 步骤 | DocType            | 公司视角 | 状态      | 说明                                   |
-| ---- | ------------------ | -------- | --------- | -------------------------------------- |
-| 1    | `Material Request` | 子门店   | Submitted | 物料申请单                             |
-| 2    | `Purchase Order`   | 子门店   | Submitted | 内部采购订单（关联 MR）                |
-| 3    | `Sales Order`      | 总部     | Submitted | 内部销售订单（Inter-Company，关联 PO） |
-
-### 2.3 收货调用链路
-
-收货流程与外部采购基本一致，差异点：
-
-| 差异项         | 外部采购 | 品牌采购                 |
-| -------------- | -------- | ------------------------ |
-| 收货单编号前缀 | `PRC`    | `TPHY`                   |
-| 总部同步       | 无       | 同步更新总部采购申请明细 |
-
----
-
-## 三、门店调拨
-
-> 门店之间的物资转移
-
-### 3.1 调拨场景分类
+## 调拨场景分类
 
 根据门店组织架构，调拨分为三种场景：
 
@@ -282,7 +99,9 @@ const (
 | **Case 2** | 任一方有父级       | A → 上级 → B          | 2 组             |
 | **Case 3** | 父级不同           | A → A上级 → B上级 → B | 3 组             |
 
-### 3.2 业务流程图
+---
+
+## 业务流程图
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -315,9 +134,11 @@ const (
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.3 审批通过调用链路（以 Case 3 为例）
+---
 
-#### TTPOS Main 处理
+## 审批通过调用链路（以 Case 3 为例）
+
+### TTPOS Main 处理
 
 | 步骤 | 方法                                      | 说明                 | 同步/异步     |
 | ---- | ----------------------------------------- | -------------------- | ------------- |
@@ -326,7 +147,7 @@ const (
 | 1.2  | `└─ helper.SaveMaterialTransfer()`        | **gRPC 调用 BMP**    | **同步-gRPC** |
 | 2    | `└─ 状态变更`                             | Pending → Receiving  | 同步-本地DB   |
 
-#### BMP 处理 (gRPC: MaterialTransfer)
+### BMP 处理 (gRPC: MaterialTransfer)
 
 **Controller 层入口：**
 
@@ -349,7 +170,7 @@ const (
 | 4    | **Step 3: B上级 → 门店B**                          |                                    |             |
 | 4.1  | `└─ CreateInnerTransferReceipt(autoReceipt=false)` | 创建调拨单据（最终节点不自动收货） | 同步        |
 
-**CreateInnerTransferReceipt 详细流程：**
+### CreateInnerTransferReceipt 详细流程
 
 | 步骤  | 方法                                             | ERPNext API                                                  | 说明                   | 同步/异步     |
 | ----- | ------------------------------------------------ | ------------------------------------------------------------ | ---------------------- | ------------- |
@@ -379,7 +200,7 @@ const (
 | 5.1.2 | `└─ Document.Create()`                           | `POST /api/v2/document/Purchase Receipt`                     | 创建收货单             | **同步-HTTP** |
 | 5.1.3 | `└─ Document.ChangeDocStatus()`                  | `PUT /api/v2/document/Purchase Receipt/{name}`               | 提交收货单             | **同步-HTTP** |
 
-#### ERPNext 单据生成（Case 3 示例）
+### ERPNext 单据生成（Case 3 示例）
 
 | 节点                      | 调出方单据 | 调入方单据 | 自动收货 |
 | ------------------------- | ---------- | ---------- | -------- |
@@ -387,9 +208,11 @@ const (
 | **Step 2: A上级 → B上级** | SO₂ + DN₂  | PO₂ + PR₂  | ✅        |
 | **Step 3: B上级 → B**     | SO₃ + DN₃  | PO₃        | ❌        |
 
-### 3.4 收货调用链路
+---
 
-#### TTPOS Main 处理
+## 收货调用链路
+
+### TTPOS Main 处理
 
 | 步骤 | 方法                                      | 说明                          | 同步/异步     |
 | ---- | ----------------------------------------- | ----------------------------- | ------------- |
@@ -399,7 +222,7 @@ const (
 | 1.3  | `└─ helper.SavePurchaseReceipt()`         | **gRPC 调用 BMP**             | **同步-gRPC** |
 | 2    | `└─ 状态变更`                             | Receiving → Completed         | 同步-本地DB   |
 
-#### BMP 处理 (gRPC: SavePurchaseReceipt)
+### BMP 处理 (gRPC: SavePurchaseReceipt)
 
 | 步骤 | 方法                            | ERPNext API                                      | 说明                      | 同步/异步     |
 | ---- | ------------------------------- | ------------------------------------------------ | ------------------------- | ------------- |
@@ -408,7 +231,9 @@ const (
 | 3    | `└─ Document.Create()`          | `POST /api/v2/document/Purchase Receipt`         | 创建收货单                | **同步-HTTP** |
 | 4    | `└─ Document.ChangeDocStatus()` | `PUT /api/v2/document/Purchase Receipt/{name}`   | 提交收货单                | **同步-HTTP** |
 
-### 3.5 Case 3 单据流向示意图
+---
+
+## Case 3 单据流向示意图
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -452,86 +277,41 @@ const (
 
 ---
 
-## 四、三种场景对比总结
+## 关键文件索引
 
-### 4.1 业务维度对比
-
-| 维度         | 外部采购         | 品牌采购（内部采购） | 门店调拨               |
-| ------------ | ---------------- | -------------------- | ---------------------- |
-| **业务场景** | 向外部供应商采购 | 子门店向总部采购     | 门店之间物资转移       |
-| **采购类型** | `PurchaseType=1` | `PurchaseType=2`     | `TransferOrder`        |
-| **供应商**   | 外部供应商       | 总部（内部供应商）   | 发送门店（内部供应商） |
-| **库存来源** | 外部             | 总部仓库             | 发送门店仓库           |
-
-### 4.2 技术维度对比
-
-| 维度              | 外部采购              | 品牌采购              | 门店调拨               |
-| ----------------- | --------------------- | --------------------- | ---------------------- |
-| **审批流程**      | 本店审批              | 本店 → 总部           | 多级审批（最多4级）    |
-| **BMP 入口**      | `CreatePurchaseOrder` | `SaveMaterialRequest` | `MaterialTransfer`     |
-| **ERPNext 起点**  | Purchase Order        | Material Request      | Sales Order            |
-| **Inter-Company** | ❌                     | ✅ (PO → Inner SO)     | ✅ (SO → PO)            |
-| **收货方式**      | 手动创建收货单        | 手动创建收货单        | 中间节点自动，最终手动 |
-
-### 4.3 ERPNext 单据对比
-
-| 场景                  | 生成的 DocType    | 数量        |
-| --------------------- | ----------------- | ----------- |
-| **外部采购**          | PO → PR           | 2 种        |
-| **品牌采购**          | MR → PO → SO → PR | 4 种        |
-| **门店调拨 (Case 1)** | SO + DN → PO + PR | 4 种 × 1 组 |
-| **门店调拨 (Case 2)** | SO + DN → PO + PR | 4 种 × 2 组 |
-| **门店调拨 (Case 3)** | SO + DN → PO + PR | 4 种 × 3 组 |
-
----
-
-## 五、关键文件索引
-
-### 5.1 TTPOS Main
+### TTPOS Main
 
 | 模块     | 文件路径                                            | 说明               |
 | -------- | --------------------------------------------------- | ------------------ |
-| 采购服务 | `main/app/service/purchase_order/purchase_order.go` | 采购申请主逻辑     |
-| 收货服务 | `main/app/service/purchase_order/receipt_order.go`  | 收货单逻辑         |
-| 采购辅助 | `main/app/service/purchase_order/helper.go`         | 辅助方法           |
 | 调拨服务 | `main/app/service/transfer_order/transfer_order.go` | 调拨单主逻辑       |
 | 调拨辅助 | `main/app/service/transfer_order/helper.go`         | 辅助方法、ERP 调用 |
-| ERP-采购 | `main/app/service/rpc/erp/buying.go`                | gRPC 客户端-采购   |
-| ERP-库存 | `main/app/service/rpc/erp/stock.go`                 | gRPC 客户端-库存   |
 | ERP-调拨 | `main/app/service/rpc/erp/material_transfer.go`     | gRPC 客户端-调拨   |
 
-### 5.2 BMP
+### BMP
 
 | 模块        | 文件路径                                                             | 说明           |
 | ----------- | -------------------------------------------------------------------- | -------------- |
-| gRPC-采购   | `ttpos-bmp/app/ttpos-erp/internal/controller/rpc/buying/`            | 采购 gRPC 服务 |
-| gRPC-库存   | `ttpos-bmp/app/ttpos-erp/internal/controller/rpc/stock/`             | 库存 gRPC 服务 |
 | gRPC-调拨   | `ttpos-bmp/app/ttpos-erp/internal/controller/rpc/material_transfer/` | 调拨 gRPC 服务 |
-| 采购逻辑    | `ttpos-bmp/app/ttpos-erp/internal/logic/buying/`                     | 采购业务逻辑   |
-| 销售逻辑    | `ttpos-bmp/app/ttpos-erp/internal/logic/selling/`                    | 销售业务逻辑   |
-| 库存逻辑    | `ttpos-bmp/app/ttpos-erp/internal/logic/stock/`                      | 库存业务逻辑   |
 | 调拨逻辑    | `ttpos-bmp/app/ttpos-erp/internal/logic/stock/material_transfer.go`  | 调拨核心逻辑   |
+| 销售逻辑    | `ttpos-bmp/app/ttpos-erp/internal/logic/selling/`                    | 销售业务逻辑   |
+| 采购逻辑    | `ttpos-bmp/app/ttpos-erp/internal/logic/buying/`                     | 采购业务逻辑   |
 | ERPNext通信 | `ttpos-bmp/app/ttpos-erp/internal/logic/erpnext/`                    | HTTP 客户端    |
 
-### 5.3 ERPNext DocType
+### ERPNext DocType
 
 | DocType            | 中文名     | 用途                        |
 | ------------------ | ---------- | --------------------------- |
-| `Material Request` | 物料申请   | 品牌采购起点                |
-| `Purchase Order`   | 采购订单   | 采购/调入方采购             |
-| `Purchase Receipt` | 采购收货单 | 确认收货、更新库存          |
-| `Sales Order`      | 销售订单   | 调出方销售/内部销售         |
+| `Sales Order`      | 销售订单   | 调出方销售                  |
 | `Delivery Note`    | 送货单     | 调出方发货                  |
+| `Purchase Order`   | 采购订单   | 调入方采购                  |
+| `Purchase Receipt` | 采购收货单 | 确认收货、更新库存          |
 | `Customer`         | 客户       | 内部客户（调拨）            |
-| `Supplier`         | 供应商     | 内部供应商（调拨/品牌采购） |
+| `Supplier`         | 供应商     | 内部供应商（调拨）          |
 
 ---
 
 ## 变更记录
 
-| 日期       | 版本 | 变更说明                           | 作者     |
-| ---------- | ---- | ---------------------------------- | -------- |
-| 2025-12-25 | 1.0  | 初始版本                           | AI Agent |
-| 2026-01-21 | 1.1  | 添加独立文档索引链接，拆分三个流程 | AI Agent |
-
-
+| 日期       | 版本 | 变更说明       | 作者     |
+| ---------- | ---- | -------------- | -------- |
+| 2025-12-25 | 1.0  | 从合集文档拆分 | AI Agent |
