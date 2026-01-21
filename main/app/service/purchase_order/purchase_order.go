@@ -300,6 +300,23 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		}(item)
 		itemInfo.AvailableQuantity = decimal.NewFromFloat(avaliableQuantityMap[item.MaterialUuid]).Round(3).InexactFloat64()
 		itemInfo.StoreQuantity = decimal.NewFromFloat(storeQuantityMap[item.MaterialUuid]).Round(3).InexactFloat64()
+
+		if item.Material != nil {
+			// 销售单位UUID
+			itemInfo.DefaultSalesUnitUuid = item.Material.DefaultSalesUnitUuid
+			for _, unit := range item.Material.NotBaseUnitList {
+				if unit.Uuid == item.Material.DefaultSalesUnitUuid {
+					// 销售单位名称
+					itemInfo.DefaultSalesUnitLocaleName = *language.JsonToLocaleResponse(unit.Name)
+					// 转成销售单位数量
+					if unit.ConversionRate != 0 {
+						itemInfo.AvailableQuantity = decimal.NewFromFloat(avaliableQuantityMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+						itemInfo.StoreQuantity = decimal.NewFromFloat(storeQuantityMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+					}
+				}
+			}
+		}
+
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 

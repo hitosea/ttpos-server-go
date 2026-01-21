@@ -6,7 +6,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "8080--main--gold-moose-23--zzhheverywhere.coder.hitosea.com",
+    "host": "192.168.100.69:8080",
     "basePath": "/",
     "paths": {
         "/admin/erpnext/lianlian/payment/add": {
@@ -28897,11 +28897,13 @@
                 "summary": "删除限购方案",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "方案UUID",
-                        "name": "uuid",
-                        "in": "query",
-                        "required": true
+                        "description": "删除限购方案请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PurchaseLimitSchemeDeleteReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -49064,6 +49066,15 @@
                 }
             }
         },
+        "req.PurchaseLimitSchemeDeleteReq": {
+            "type": "object",
+            "properties": {
+                "uuid": {
+                    "description": "方案UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.PurchaseLimitSchemeItemReq": {
             "type": "object",
             "required": [
@@ -49407,6 +49418,10 @@
                     "description": "是否确认提交（移除禁用物品）",
                     "type": "boolean"
                 },
+                "is_resubmit": {
+                    "description": "是否重新提交",
+                    "type": "boolean"
+                },
                 "uuid": {
                     "description": "采购订单ID",
                     "type": "integer",
@@ -49424,10 +49439,6 @@
                     "description": "期望到货时间(时间戳)",
                     "type": "integer",
                     "minimum": 0
-                },
-                "is_recommit": {
-                    "description": "是否重新提交",
-                    "type": "boolean"
                 },
                 "items": {
                     "description": "采购商品明细",
@@ -59742,6 +59753,9 @@
         "resp.PurchaseLimitSchemeSummaryResp": {
             "type": "object",
             "properties": {
+                "apply_to_all_shops": {
+                    "type": "integer"
+                },
                 "create_time": {
                     "type": "integer"
                 },
@@ -59997,6 +60011,18 @@
                 "base_unit_name": {
                     "description": "基准单位名称",
                     "type": "string"
+                },
+                "default_sales_unit_locale_name": {
+                    "description": "默认销售单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "default_sales_unit_uuid": {
+                    "description": "默认销售单位UUID",
+                    "type": "integer"
                 },
                 "internal_code": {
                     "description": "内部编码",

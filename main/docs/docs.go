@@ -28903,11 +28903,13 @@ const docTemplate = `{
                 "summary": "删除限购方案",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "方案UUID",
-                        "name": "uuid",
-                        "in": "query",
-                        "required": true
+                        "description": "删除限购方案请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PurchaseLimitSchemeDeleteReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -49070,6 +49072,15 @@ const docTemplate = `{
                 }
             }
         },
+        "req.PurchaseLimitSchemeDeleteReq": {
+            "type": "object",
+            "properties": {
+                "uuid": {
+                    "description": "方案UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.PurchaseLimitSchemeItemReq": {
             "type": "object",
             "required": [
@@ -49413,6 +49424,10 @@ const docTemplate = `{
                     "description": "是否确认提交（移除禁用物品）",
                     "type": "boolean"
                 },
+                "is_resubmit": {
+                    "description": "是否重新提交",
+                    "type": "boolean"
+                },
                 "uuid": {
                     "description": "采购订单ID",
                     "type": "integer",
@@ -49430,10 +49445,6 @@ const docTemplate = `{
                     "description": "期望到货时间(时间戳)",
                     "type": "integer",
                     "minimum": 0
-                },
-                "is_recommit": {
-                    "description": "是否重新提交",
-                    "type": "boolean"
                 },
                 "items": {
                     "description": "采购商品明细",
@@ -59748,6 +59759,9 @@ const docTemplate = `{
         "resp.PurchaseLimitSchemeSummaryResp": {
             "type": "object",
             "properties": {
+                "apply_to_all_shops": {
+                    "type": "integer"
+                },
                 "create_time": {
                     "type": "integer"
                 },
@@ -60003,6 +60017,18 @@ const docTemplate = `{
                 "base_unit_name": {
                     "description": "基准单位名称",
                     "type": "string"
+                },
+                "default_sales_unit_locale_name": {
+                    "description": "默认销售单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "default_sales_unit_uuid": {
+                    "description": "默认销售单位UUID",
+                    "type": "integer"
                 },
                 "internal_code": {
                     "description": "内部编码",
@@ -66334,7 +66360,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "8080--main--gold-moose-23--zzhheverywhere.coder.hitosea.com",
+	Host:             "192.168.100.69:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "ttpos-server-go API",

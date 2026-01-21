@@ -81,6 +81,9 @@ type PurchaseOrderItemInfo struct {
 
 	AvailableQuantity float64 `json:"available_quantity"` // 可采购数量
 	StoreQuantity     float64 `json:"store_quantity"`     // 门店数量
+
+	DefaultSalesUnitUuid       uint64             `json:"default_sales_unit_uuid"`        // 默认销售单位UUID
+	DefaultSalesUnitLocaleName dto.LocaleResponse `json:"default_sales_unit_locale_name"` // 默认销售单位名称
 }
 
 // PurchaseOrderLogInfo 采购订单操作日志信息

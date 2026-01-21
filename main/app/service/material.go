@@ -398,6 +398,16 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			AvailableQuantity:          decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
 			StoreQuantity:              stockNum,
 		}
+		for _, unit := range material.NotBaseUnitList {
+			if unit.Uuid == material.DefaultSalesUnitUuid {
+				// 转成销售单位数量
+				if unit.ConversionRate != 0 {
+					respMaterial.AvailableQuantity = decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+					respMaterial.StoreQuantity = decimal.NewFromFloat(stockNum).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+				}
+			}
+		}
+
 		materialList = append(materialList, respMaterial)
 	}
 
@@ -3226,6 +3236,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					InternalCode:          material.InternalCode,
 					Status:                material.Status,
 					HeadquarterUuid:       companySetting.HeadquarterUuid,
+					DefaultSalesUnitUuid:  material.DefaultSalesUnitUuid,
 					WarehouseUuid:         material.WarehouseUuid,
 					AllowSubstoreVisible:  material.AllowSubstoreVisible, // 同步可见性字段
 					AllowNegativeStock:    material.AllowNegativeStock,
