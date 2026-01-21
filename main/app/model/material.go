@@ -141,6 +141,15 @@ func (model *Material) GetBaseUnit() *MaterialUnit {
 	return nil
 }
 
+// 获取限购配置中的单位信息
+func (model *Material) GetUnitByUuidForQuotaConfig() *MaterialUnit {
+	if model.DefaultSalesUnitUuid > 0 {
+		return model.GetUnit(model.DefaultSalesUnitUuid)
+	}
+	return model.GetUnit(model.UnitUuid)
+}
+
+// 获取图片URL
 func (model *Material) GetImage(baseUrl string) string {
 	if model.ImageFile != nil {
 		return model.ImageFile.GetUrl(baseUrl)

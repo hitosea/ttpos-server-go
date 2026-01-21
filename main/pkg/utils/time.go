@@ -14,6 +14,7 @@ type TimeUtil interface {
 	NowUnix() int64                                                                                   // 获取当前时间戳,10位，1739283862
 	NowUnixMilli() int64                                                                              // 获取当前时间戳（毫秒）13位，1739283862825
 	NowUnixMicro() int64                                                                              // 获取当前时间戳（微秒）,16位，1739283862825531
+	CurrentWeekday() int8                                                                             // 获取当前星期几（1-7，1=周一，7=周日）
 	TodayStartEnd() (time.Time, time.Time)                                                            // 获取今天的开始时间和结束时间
 	YesterdayStartEnd() (time.Time, time.Time)                                                        // 获取昨天的开始时间和结束时间
 	WeekStartEnd() (time.Time, time.Time)                                                             // 获取本周的开始时间和结束时间
@@ -80,6 +81,17 @@ func (t Timezone) NowUnixMilli() int64 {
 
 func (t Timezone) NowUnixMicro() int64 {
 	return t.Now().UnixMicro()
+}
+
+// CurrentWeekday 获取当前星期几（1-7，1=周一，7=周日）
+func (t Timezone) CurrentWeekday() int8 {
+	now := t.Now()
+	weekday := int8(now.Weekday())
+	// Go 的 Weekday() 返回 0-6（0=Sunday），需要转换为 1-7（1=Monday）
+	if weekday == 0 {
+		weekday = 7 // 将周日从 0 转换为 7
+	}
+	return weekday
 }
 
 func (t Timezone) TodayStartEnd() (time.Time, time.Time) {
@@ -309,6 +321,7 @@ func (t Timezone) FormatTimeToTime(timeStr string) (time.Time, error) {
 // timeStr: 日期时间字符串，支持两种格式：
 //   - "YYYY-MM-DD HH:mm:ss" - 完整日期时间格式，如 "2025-12-30 11:42:00"
 //   - "YYYY-MM-DD" - 仅日期格式，如 "2025-12-30"（时间默认为 00:00:00）
+//
 // 返回：时间戳（Unix 时间戳，10位）
 func (t Timezone) FormatDateTimeToUnix(timeStr string) (int64, error) {
 	loc, err := time.LoadLocation(string(t))
@@ -339,6 +352,7 @@ func (t Timezone) FormatDateTimeToUnix(timeStr string) (int64, error) {
 // timeStr: 日期时间字符串，支持两种格式：
 //   - "YYYY-MM-DD HH:mm:ss" - 完整日期时间格式，如 "2025-12-30 11:42:00"
 //   - "YYYY-MM-DD" - 仅日期格式，如 "2025-12-30"（时间默认为 00:00:00）
+//
 // 返回：time.Time 对象（使用商户时区）
 func (t Timezone) FormatDateTimeToTime(timeStr string) (time.Time, error) {
 	loc, err := time.LoadLocation(string(t))

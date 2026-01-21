@@ -29280,6 +29280,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/purchase/order/item/units/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更新采购订单物品单位",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.采购管理"
+                ],
+                "summary": "更新采购订单物品单位",
+                "parameters": [
+                    {
+                        "description": "更新采购订单物品单位请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PurchaseOrderDetailReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PurchaseOrderDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/purchase/order/list": {
             "get": {
                 "security": [
@@ -39275,6 +39326,14 @@ const docTemplate = `{
                     "description": "采购单位UUID",
                     "type": "integer"
                 },
+                "quota_config": {
+                    "description": "限购配置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/material_resp.MaterialQuotaConfig"
+                        }
+                    ]
+                },
                 "safety_stock": {
                     "description": "安全库存数量",
                     "type": "number"
@@ -39549,6 +39608,31 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "material_resp.MaterialQuotaConfig": {
+            "type": "object",
+            "properties": {
+                "quota_limit": {
+                    "description": "限购数量",
+                    "type": "number"
+                },
+                "quota_unit_locale_name": {
+                    "description": "限购单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "quota_unit_name": {
+                    "description": "限购单位名称",
+                    "type": "string"
+                },
+                "quota_unit_uuid": {
+                    "description": "限购单位UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -49012,28 +49096,20 @@ const docTemplate = `{
         "req.PurchaseLimitSchemeCreateReq": {
             "type": "object",
             "required": [
-                "items",
-                "locale_name",
-                "weekdays"
+                "locale_name"
             ],
             "properties": {
                 "apply_to_all_shops": {
                     "description": "0-否 1-是",
-                    "type": "integer",
-                    "enum": [
-                        0,
-                        1
-                    ]
+                    "type": "integer"
                 },
                 "daily_limit": {
                     "description": "0-不限制",
-                    "type": "integer",
-                    "minimum": 0
+                    "type": "integer"
                 },
                 "items": {
                     "description": "物品配置",
                     "type": "array",
-                    "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/req.PurchaseLimitSchemeItemReq"
                     }
@@ -49055,17 +49131,11 @@ const docTemplate = `{
                 },
                 "status": {
                     "description": "0-关闭 1-开启",
-                    "type": "integer",
-                    "enum": [
-                        0,
-                        1
-                    ]
+                    "type": "integer"
                 },
                 "weekdays": {
                     "description": "星期配置 1-7 表示周一到周日，逗号分隔",
                     "type": "array",
-                    "maxItems": 7,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -49093,37 +49163,28 @@ const docTemplate = `{
                 },
                 "quota_limit": {
                     "description": "限购数量",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 }
             }
         },
         "req.PurchaseLimitSchemeUpdateReq": {
             "type": "object",
             "required": [
-                "items",
                 "locale_name",
-                "uuid",
-                "weekdays"
+                "uuid"
             ],
             "properties": {
                 "apply_to_all_shops": {
                     "description": "0-否 1-是",
-                    "type": "integer",
-                    "enum": [
-                        0,
-                        1
-                    ]
+                    "type": "integer"
                 },
                 "daily_limit": {
                     "description": "0-不限制",
-                    "type": "integer",
-                    "minimum": 0
+                    "type": "integer"
                 },
                 "items": {
                     "description": "物品配置",
                     "type": "array",
-                    "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/req.PurchaseLimitSchemeItemReq"
                     }
@@ -49145,11 +49206,7 @@ const docTemplate = `{
                 },
                 "status": {
                     "description": "0-关闭 1-开启",
-                    "type": "integer",
-                    "enum": [
-                        0,
-                        1
-                    ]
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "方案UUID",
@@ -49158,8 +49215,6 @@ const docTemplate = `{
                 "weekdays": {
                     "description": "星期配置 1-7 表示周一到周日，逗号分隔",
                     "type": "array",
-                    "maxItems": 7,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -49247,6 +49302,19 @@ const docTemplate = `{
             }
         },
         "req.PurchaseOrderDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "采购订单ID",
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "req.PurchaseOrderDetailReq": {
             "type": "object",
             "required": [
                 "uuid"
@@ -59838,6 +59906,10 @@ const docTemplate = `{
                     "description": "V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
                     "type": "integer"
                 },
+                "is_update_quota_scheme": {
+                    "description": "是否更新限购方案",
+                    "type": "boolean"
+                },
                 "items": {
                     "description": "采购明细",
                     "type": "array",
@@ -60070,6 +60142,14 @@ const docTemplate = `{
                     "description": "申请数量",
                     "type": "number"
                 },
+                "quota_config": {
+                    "description": "限购配置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PurchaseOrderItemQuotaConfig"
+                        }
+                    ]
+                },
                 "store_quantity": {
                     "description": "门店数量",
                     "type": "number"
@@ -60090,7 +60170,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "units": {
-                    "description": "单位列表",
+                    "description": "已经选中的采购单位列表",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.PurchaseOrderItemUnit"
@@ -60115,6 +60195,35 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PurchaseOrderItemQuotaConfig": {
+            "type": "object",
+            "properties": {
+                "is_update_quota_scheme": {
+                    "description": "是否更新限购方案",
+                    "type": "boolean"
+                },
+                "quota_limit": {
+                    "description": "限购数量",
+                    "type": "number"
+                },
+                "quota_unit_locale_name": {
+                    "description": "限购单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "quota_unit_name": {
+                    "description": "限购单位名称",
+                    "type": "string"
+                },
+                "quota_unit_uuid": {
+                    "description": "限购单位UUID",
                     "type": "integer"
                 }
             }
