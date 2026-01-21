@@ -1496,6 +1496,8 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 				return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
 			}
 			purchaseUnitUuid = purchaseUnit.Uuid
+		} else {
+			updateData["purchase_unit_uuid"] = 0
 		}
 
 		// 同步单位
