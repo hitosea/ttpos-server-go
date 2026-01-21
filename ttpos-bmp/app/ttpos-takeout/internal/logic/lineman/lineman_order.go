@@ -125,6 +125,7 @@ func (s *sLineman) saveOrder(ctx context.Context, req *v1.PlaceOrderReq) (string
 			OrderStatus:        string(consts.OrderStatusAccepted), // LINE MAN 订单固定为 ACCEPTED
 			TotalAmount:        req.RestaurantRevenue,
 			Subtotal:           req.RestaurantRevenue, // LINE MAN 只提供 restaurantRevenue
+			PaymentType:        "LINEMAN",             // LINE MAN 平台支付，固定为 LINEMAN
 			// Note:               additionalItemsJSON,   // 附加项序列化
 			RawData: rawData,
 		}
@@ -314,25 +315,56 @@ func (s *sLineman) HandleOrderStatusUpdate(ctx context.Context, req *v1.OrderSta
 	// 1. 状态映射
 	ttposStatus := mapLinemanStatusToTTPOS(req.OrderStatus)
 
-	// 2. 查询现有订单
+	// 2. 序列化原始请求（用于状态日志）
+	rawData, _ := gjson.EncodeString(req)
+
+	// 3. 查询现有订单
 	existingOrder, err := dao.Order.Ctx(ctx).
 		Where(dao.Order.Columns().ProviderName, ProviderNameLineman).
 		Where(dao.Order.Columns().ProviderOrderId, req.OrderId).
 		Where(dao.Order.Columns().DeletedAt, 0). // 使用正确的软删除字段
 		One()
 	if err != nil || existingOrder.IsEmpty() {
+		// 订单不存在时也记录状态日志（便于排查问题）
+		logDo := &do.OrderStatusLog{
+			Uuid:         guid.S(),
+			OrderUuid:    "",
+			ProviderName: ProviderNameLineman,
+			StatusBefore: "",
+			StatusAfter:  ttposStatus,
+			ChangeSource: "WEBHOOK",
+			Remark:       "[订单不存在] orderId=" + req.OrderId,
+			RawData:      rawData,
+		}
+		if _, logErr := dao.OrderStatusLog.Ctx(ctx).Data(logDo).Insert(); logErr != nil {
+			g.Log().Errorf(ctx, "插入状态日志失败: %v", logErr)
+		}
 		return gerror.New("订单不存在")
 	}
 
-	// 3. 幂等性检查
-	currentStatus := existingOrder[dao.Order.Columns().OrderStatus].String() // 使用正确的字段名
+	// 4. 幂等性检查
+	orderUUID := existingOrder[dao.Order.Columns().Uuid].String()
+	currentStatus := existingOrder[dao.Order.Columns().OrderStatus].String()
 	if currentStatus == ttposStatus {
 		g.Log().Infof(ctx, "订单状态未变化，跳过: orderId=%s, status=%s", req.OrderId, ttposStatus)
 		return nil
 	}
 
-	// 4. 更新订单状态
-	orderUUID := existingOrder[dao.Order.Columns().Uuid].String()
+	// 5. 记录状态变更日志
+	logDo := &do.OrderStatusLog{
+		Uuid:         guid.S(),
+		OrderUuid:    orderUUID,
+		ProviderName: ProviderNameLineman,
+		StatusBefore: currentStatus,
+		StatusAfter:  ttposStatus,
+		ChangeSource: "WEBHOOK",
+		RawData:      rawData,
+	}
+	if _, logErr := dao.OrderStatusLog.Ctx(ctx).Data(logDo).Insert(); logErr != nil {
+		g.Log().Errorf(ctx, "插入状态日志失败: %v", logErr)
+	}
+
+	// 6. 更新订单状态
 	_, err = dao.Order.Ctx(ctx).Where("uuid", orderUUID).Update(&do.Order{
 		OrderStatus: ttposStatus,
 		UpdatedAt:   gtime.Now().Unix(),
