@@ -136,6 +136,23 @@ services:
       saas-network:
         ipv4_address: 10.0.0.19
 
+  # Envoy 流量镜像服务
+  # 用于将 /api/v1/lmwn 请求镜像到多个开发环境， 默认不启用在dev环境
+  # envoy-mirror:
+  #   container_name: "saas-envoy-mirror-${APP_ID}"
+  #   image: envoyproxy/envoy:v1.31-latest
+  #   volumes:
+  #     - ./docker/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+  #   restart: unless-stopped
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "5m"
+  #       max-file: "3"
+  #   networks:
+  #     saas-network:
+  #       ipv4_address: 10.0.0.20
+
 networks:
   saas-network:
     driver: bridge
