@@ -7743,6 +7743,12 @@ definitions:
     - locale_name
     - weekdays
     type: object
+  req.PurchaseLimitSchemeDeleteReq:
+    properties:
+      uuid:
+        description: 方案UUID
+        type: integer
+    type: object
   req.PurchaseLimitSchemeItemReq:
     properties:
       material_uuid:
@@ -7996,6 +8002,9 @@ definitions:
       is_confirm:
         description: 是否确认提交（移除禁用物品）
         type: boolean
+      is_resubmit:
+        description: 是否重新提交
+        type: boolean
       uuid:
         description: 采购订单ID
         minimum: 1
@@ -8009,9 +8018,6 @@ definitions:
         description: 期望到货时间(时间戳)
         minimum: 0
         type: integer
-      is_recommit:
-        description: 是否重新提交
-        type: boolean
       items:
         description: 采购商品明细
         items:
@@ -15037,6 +15043,8 @@ definitions:
     type: object
   resp.PurchaseLimitSchemeSummaryResp:
     properties:
+      apply_to_all_shops:
+        type: integer
       create_time:
         type: integer
       daily_limit:
@@ -15220,6 +15228,13 @@ definitions:
       base_unit_name:
         description: 基准单位名称
         type: string
+      default_sales_unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 默认销售单位名称
+      default_sales_unit_uuid:
+        description: 默认销售单位UUID
+        type: integer
       internal_code:
         description: 内部编码
         type: string
@@ -19573,7 +19588,7 @@ definitions:
         description: 翻译后的中文繁体
         type: string
     type: object
-host: 8080--main--gold-moose-23--zzhheverywhere.coder.hitosea.com
+host: 192.168.100.69:8080
 info:
   contact: {}
   description: 点餐系统服务端接口文档
@@ -36696,11 +36711,12 @@ paths:
       - application/json
       description: 软删除限购方案及其关联配置
       parameters:
-      - description: 方案UUID
-        in: query
-        name: uuid
+      - description: 删除限购方案请求参数
+        in: body
+        name: data
         required: true
-        type: integer
+        schema:
+          $ref: '#/definitions/req.PurchaseLimitSchemeDeleteReq'
       produces:
       - application/json
       responses:

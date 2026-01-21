@@ -147,7 +147,7 @@ type PurchaseOrderItem struct {
 	BaseErpnextUom     string  `gorm:"column:base_erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext基准单位" json:"base_erpnext_uom"`
 
 	// 关联关系
-	PurchaseOrder PurchaseOrder           `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`
+	PurchaseOrder *PurchaseOrder          `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`
 	Material      *Material               `gorm:"foreignKey:MaterialUuid;references:Uuid" json:"material,omitempty"`
 	Units         []PurchaseOrderItemUnit `gorm:"foreignKey:ItemUuid;references:Uuid" json:"units,omitempty"`
 }
@@ -159,7 +159,7 @@ func (PurchaseOrderItem) TableName() string {
 
 // SetNil 设置为空
 func (poi *PurchaseOrderItem) SetNil() {
-	poi.PurchaseOrder = PurchaseOrder{}
+	poi.PurchaseOrder = nil
 	poi.Material = nil
 	poi.Units = []PurchaseOrderItemUnit{}
 }
@@ -347,7 +347,7 @@ type PurchaseOrderItemUnit struct {
 	ErpnextUom         string  `gorm:"column:erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext单位" json:"erpnext_uom"`
 
 	// 关联关系
-	PurchaseOrderItem PurchaseOrderItem `gorm:"foreignKey:ItemUuid;references:Uuid" json:"purchase_order_item,omitempty"`
+	PurchaseOrderItem *PurchaseOrderItem `gorm:"foreignKey:ItemUuid;references:Uuid" json:"purchase_order_item,omitempty"`
 }
 
 // TableName 指定表名

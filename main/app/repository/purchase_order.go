@@ -46,6 +46,7 @@ type IPurchaseOrderRepo interface {
 	WhereWarehouseErpCode(warehouseErpCode string) DBOption
 	WhereCompanyUuid(companyUuid uint64) DBOption
 	WithItems() DBOption
+	WithSimpleItems() DBOption
 	WithWarehouse() DBOption
 	WithLogs() DBOption
 	WithReceipts() DBOption
@@ -346,6 +347,13 @@ func (r *PurchaseOrderRepoImpl) WithItems() DBOption {
 		return db.Preload("Items.Material", func(db *gorm.DB) *gorm.DB {
 			return db.Order("create_time ASC")
 		}).Preload("Items.Material.NotBaseUnitList.Unit.MultiLanguageName").Preload("Items.Units")
+	}
+}
+
+// WithItems 预加载明细
+func (r *PurchaseOrderRepoImpl) WithSimpleItems() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Items.Units")
 	}
 }
 
