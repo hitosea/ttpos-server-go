@@ -11,6 +11,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/utils"
@@ -479,6 +480,9 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 	// 保存到数据库
 	if db == nil {
 		db = s.dbm.GetDB(ctx.GetDbId())
+	}
+	if config.Server.Mode == constant.ServerModeStop { // 暂时关闭特性功能
+		return CalcAndCacheSaleBillAsync(ctx, db, saleBill, options...)
 	}
 	return CalcAndSaveSaleBill(ctx, db, saleBill, options...)
 }
