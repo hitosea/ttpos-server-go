@@ -96,6 +96,7 @@ func (h *purchaseOrderHelper) createPurchaseOrderLog(
 	action, actionDesc string,
 	oldStatus, newStatus int,
 	remark string,
+	content string,
 ) error {
 	logRepo := repository.NewPurchaseOrderLogRepo(db)
 
@@ -108,6 +109,7 @@ func (h *purchaseOrderHelper) createPurchaseOrderLog(
 		OldStatus:         oldStatus,
 		NewStatus:         newStatus,
 		Remark:            remark,
+		Content:           content,
 	}
 
 	return logRepo.Create(log)
@@ -166,7 +168,7 @@ func (h *purchaseOrderHelper) checkAndUpdatePurchaseOrderStatus(
 	}
 
 	// 创建采购单操作日志
-	err = h.createPurchaseOrderLog(db, purchaseOrderUuid, ctx, "update_status", "更新采购申请状态", oldStatus, purchaseOrder.Status, "")
+	err = h.createPurchaseOrderLog(db, purchaseOrderUuid, ctx, "update_status", "更新采购申请状态", oldStatus, purchaseOrder.Status, "", "{}")
 	if err != nil {
 		return err
 	}

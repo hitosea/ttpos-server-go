@@ -1,0 +1,178 @@
+# Envoy Traffic Mirror 配置
+# 用于将测试环境请求镜像到多个开发环境
+# 创建日期: 2026-01-20
+# 维护者: rikugun
+#
+# 架构说明:
+#   Nginx -> Envoy (10000) -> Primary (ttpos-test1.ttpos.com)
+#                          -> Mirror 1 (weifashi.coder.hitosea.com)
+#                          -> Mirror 2 (v5rikugun.coder.tc.5ok.co)
+
+admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901
+
+static_resources:
+  listeners:
+    - name: listener_lmwn
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 10000
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ingress_http
+                access_log:
+                  - name: envoy.access_loggers.stdout
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                route_config:
+                  name: lmwn_route
+                  virtual_hosts:
+                    - name: lmwn_service
+                      domains: ["*"]
+                      routes:
+                        # /lmwn_staging 路径 - 主请求到远程 + 流量镜像
+                        - match:
+                            prefix: "/lmwn_staging"
+                          route:
+                            cluster: local_cluster
+                            timeout: 60s
+                            prefix_rewrite: "/"
+                            auto_host_rewrite: true
+                            # 流量镜像配置
+                            request_mirror_policies:
+                              - cluster: mirror_cluster_weifashi
+                                runtime_fraction:
+                                  default_value:
+                                    numerator: 100
+                                    denominator: HUNDRED
+                              - cluster: mirror_cluster_rikugun
+                                runtime_fraction:
+                                  default_value:
+                                    numerator: 100
+                                    denominator: HUNDRED
+                        # /grab_staging 路径 - 主请求到本地 + 流量镜像
+                        - match:
+                            prefix: "/grab_staging"
+                          route:
+                            cluster: local_cluster
+                            timeout: 60s
+                            prefix_rewrite: "/"
+                            # 流量镜像配置
+                            request_mirror_policies:
+                              - cluster: mirror_cluster_weifashi
+                                runtime_fraction:
+                                  default_value:
+                                    numerator: 100
+                                    denominator: HUNDRED
+                              - cluster: mirror_cluster_rikugun
+                                runtime_fraction:
+                                  default_value:
+                                    numerator: 100
+                                    denominator: HUNDRED
+                        # 其他路径直接转发到主集群
+                        - match:
+                            prefix: "/"
+                          route:
+                            cluster: primary_cluster
+                            timeout: 60s
+                            auto_host_rewrite: true
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+    # 本地集群 - ttpos-main (用于 /grab_staging)
+    - name: local_cluster
+      connect_timeout: 30s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: local_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ttpos-main
+                      port_value: 8080
+
+    # 主集群 - ttpos-test1.ttpos.com
+    - name: primary_cluster
+      connect_timeout: 30s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          sni: ttpos-test1.ttpos.com
+          common_tls_context:
+            validation_context:
+              trust_chain_verification: ACCEPT_UNTRUSTED
+      load_assignment:
+        cluster_name: primary_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ttpos-test1.ttpos.com
+                      port_value: 443
+
+    # 镜像集群 1 - weifashi 开发环境
+    - name: mirror_cluster_weifashi
+      connect_timeout: 30s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          sni: 14031--main--ttpos-go--weifashi.coder.hitosea.com
+          common_tls_context:
+            validation_context:
+              trust_chain_verification: ACCEPT_UNTRUSTED
+      load_assignment:
+        cluster_name: mirror_cluster_weifashi
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 14031--main--ttpos-go--weifashi.coder.hitosea.com
+                      port_value: 443
+
+    # 镜像集群 2 - rikugun 开发环境
+    - name: mirror_cluster_rikugun
+      connect_timeout: 30s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          sni: 14031--main--main--v5rikugun.coder.tc.5ok.co
+          common_tls_context:
+            validation_context:
+              trust_chain_verification: ACCEPT_UNTRUSTED
+      load_assignment:
+        cluster_name: mirror_cluster_rikugun
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 14031--main--main--v5rikugun.coder.tc.5ok.co
+                      port_value: 443

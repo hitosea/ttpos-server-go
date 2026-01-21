@@ -397,7 +397,50 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			AllowNegativeStock:         material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
 			AvailableQuantity:          decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
 			StoreQuantity:              stockNum,
+			QuotaConfig: func() material_resp.MaterialQuotaConfig {
+				if req.PurchaseType == 2 {
+					// 从 PurchaseQuotaConfig 表查询限购配置
+					quotaConfigRepo := repository.NewPurchaseQuotaConfigRepo(s.dbm.GetDB(dbId))
+					quotaConfig, err := quotaConfigRepo.GetByMaterialCodeAndShop(material.Code, ctx.GetCompanyUuid())
+					if err != nil {
+						// 没有限购配置，返回空配置
+						return material_resp.MaterialQuotaConfig{}
+					}
+
+					// 查找限购单位信息
+					var quotaUnit *model.MaterialUnit
+					for _, unit := range material.NotBaseUnitList {
+						if unit.Unit != nil && unit.Unit.ErpnextUom == quotaConfig.UnitCode {
+							quotaUnit = unit
+							break
+						}
+					}
+
+					if quotaUnit == nil || quotaUnit.Unit == nil {
+						// 限购单位不存在，返回空配置
+						return material_resp.MaterialQuotaConfig{}
+					}
+
+					return material_resp.MaterialQuotaConfig{
+						QuotaLimit:          quotaConfig.QuotaLimit,
+						QuotaUnitUuid:       quotaUnit.Uuid,
+						QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+						QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
+					}
+				}
+				return material_resp.MaterialQuotaConfig{}
+			}(),
 		}
+		for _, unit := range material.NotBaseUnitList {
+			if unit.Uuid == material.DefaultSalesUnitUuid {
+				// 转成销售单位数量
+				if unit.ConversionRate != 0 {
+					respMaterial.AvailableQuantity = decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+					respMaterial.StoreQuantity = decimal.NewFromFloat(stockNum).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+				}
+			}
+		}
+
 		materialList = append(materialList, respMaterial)
 	}
 
@@ -1564,6 +1607,8 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			if defaultSalesUnitMaterialUnitUuid > 0 {
 				updateData["default_sales_unit_uuid"] = defaultSalesUnitMaterialUnitUuid
 			}
+		} else {
+			updateData["default_sales_unit_uuid"] = 0
 		}
 
 		// 根据NotForSale设置删除时间，物品下架时设置为当前时间，上架时重置为0
@@ -3226,6 +3271,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					InternalCode:          material.InternalCode,
 					Status:                material.Status,
 					HeadquarterUuid:       companySetting.HeadquarterUuid,
+					DefaultSalesUnitUuid:  material.DefaultSalesUnitUuid,
 					WarehouseUuid:         material.WarehouseUuid,
 					AllowSubstoreVisible:  material.AllowSubstoreVisible, // 同步可见性字段
 					AllowNegativeStock:    material.AllowNegativeStock,

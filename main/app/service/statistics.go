@@ -3080,6 +3080,7 @@ func (s *statisticsSrv) CountBusinessPaymentMethod(ctx context.Context, req req.
 		PaymentMethodNames: req.PaymentMethodNames, // 如果PaymentMethodList为空，使用名称列表
 		ExcludeDataManage:  req.ExcludeDataManage,
 		Timezone:           timezone,
+		Source:             req.Source,
 	})
 
 	// 构建返回列表

@@ -3865,6 +3865,7 @@ func (s *businessSrv) GetCompanyPaymentMethods(ctx context.Context) (*resp.Compa
 
 	// 使用 channel 收集结果，避免竞态条件
 	type paymentMethodInfo struct {
+		Name        string
 		PaymentName string
 		Sort        int
 		CreateTime  int64
@@ -3899,33 +3900,30 @@ func (s *businessSrv) GetCompanyPaymentMethods(ctx context.Context) (*resp.Compa
 
 				// 获取支付方式列表（只获取启用的支付方式）
 				paymentMethodRepo := repository.NewPaymentMethodRepo(shopDB)
+				paymentRepo := NewPaymentRepo(ctx, dbm)
 				paymentMethods := paymentMethodRepo.GetPaymentMethodList(
 					paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable),
 				)
-
 				lianLianPayAvailable := true
-				if err := NewPaymentRepo(ctx, dbm).ValidateConfigError(companyUuid); err != nil {
+				err := paymentRepo.ValidateConfigError(companyUuid)
+				if err != nil {
 					lianLianPayAvailable = false
 				}
 
 				// 收集支付方式信息（包含名称、排序、创建时间、ID）
 				paymentMethodInfos := make([]paymentMethodInfo, 0, len(paymentMethods))
 				for _, method := range paymentMethods {
-					if method.PaymentName == "" {
-						continue
+					if method != nil {
+						if method.PaymentName != "" && paymentMethodRepo.FilterPaymentMethod(*method, lianLianPayAvailable) {
+							paymentMethodInfos = append(paymentMethodInfos, paymentMethodInfo{
+								Name:        method.Name,
+								PaymentName: method.PaymentName,
+								Sort:        method.Sort,
+								CreateTime:  method.CreateTime,
+								ID:          method.ID,
+							})
+						}
 					}
-					if method.Code == constant.PaymentMethodCodeFreePay || method.Code == constant.PaymentMethodCodeFreeMealForErp {
-						continue
-					}
-					if !lianLianPayAvailable && method.IsLianLianPay() {
-						continue
-					}
-					paymentMethodInfos = append(paymentMethodInfos, paymentMethodInfo{
-						PaymentName: method.PaymentName,
-						Sort:        method.Sort,
-						CreateTime:  method.CreateTime,
-						ID:          method.ID,
-					})
 				}
 
 				resultChan <- resultItem{paymentMethods: paymentMethodInfos, err: nil}
@@ -3949,20 +3947,20 @@ func (s *businessSrv) GetCompanyPaymentMethods(ctx context.Context) (*resp.Compa
 			continue
 		}
 		for _, pmInfo := range result.paymentMethods {
-			existing, exists := paymentMethodMap[pmInfo.PaymentName]
+			existing, exists := paymentMethodMap[pmInfo.Name]
 			if !exists {
 				// 如果不存在，直接添加
-				paymentMethodMap[pmInfo.PaymentName] = pmInfo
+				paymentMethodMap[pmInfo.Name] = pmInfo
 			} else {
 				// 如果存在，比较 Sort、CreateTime 和 ID
 				// 优先按 Sort 升序，如果 Sort 相同则按 CreateTime 倒序，如果都相同则按 ID 倒序
 				if pmInfo.Sort < existing.Sort {
-					paymentMethodMap[pmInfo.PaymentName] = pmInfo
+					paymentMethodMap[pmInfo.Name] = pmInfo
 				} else if pmInfo.Sort == existing.Sort {
 					if pmInfo.CreateTime > existing.CreateTime {
-						paymentMethodMap[pmInfo.PaymentName] = pmInfo
+						paymentMethodMap[pmInfo.Name] = pmInfo
 					} else if pmInfo.CreateTime == existing.CreateTime && pmInfo.ID > existing.ID {
-						paymentMethodMap[pmInfo.PaymentName] = pmInfo
+						paymentMethodMap[pmInfo.Name] = pmInfo
 					}
 				}
 			}
@@ -3973,7 +3971,7 @@ func (s *businessSrv) GetCompanyPaymentMethods(ctx context.Context) (*resp.Compa
 	paymentMethodList := make([]resp.CompanyPaymentMethodItem, 0, len(paymentMethodMap))
 	for _, pmInfo := range paymentMethodMap {
 		paymentMethodList = append(paymentMethodList, resp.CompanyPaymentMethodItem{
-			PaymentName: pmInfo.PaymentName,
+			PaymentName: pmInfo.Name,
 		})
 	}
 
@@ -4507,6 +4505,7 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 					Cycle:             request.Cycle, // 使用请求参数中的周期设置
 					ExcludeDataManage: excludeDataManage,
 					OrderDelivery:     1,
+					Source:            1,
 				}
 
 				// 处理支付方式筛选：使用支付方式名称（因为不同商家的同一支付方式UUID可能不同）

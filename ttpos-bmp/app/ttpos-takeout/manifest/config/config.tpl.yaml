@@ -115,4 +115,4 @@ otlp:
   serviceName: "ttpos-takeout"
   endpoint: "${OTLP_ENDPOINT}"
   path: "${OTLP_PATH}"
-  token: "${OTEL_TOKEN}"
+  token: "${OTLP_TOKEN}"

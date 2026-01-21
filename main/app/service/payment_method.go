@@ -191,9 +191,9 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 	paymentRepo := NewPaymentRepo(ctx, s.dbm)
 
 	excludeCodes := []int{
-		constant.PaymentMethodCodeGrab,
-		constant.PaymentMethodCodeLineMan,
-		constant.PaymentMethodCodeFreePay,
+		constant.PaymentMethodCodeGrab,           // 过滤 Grab for 系统默认
+		constant.PaymentMethodCodeLineMan,        // 过滤 LIAN MAN for 系统默认
+		constant.PaymentMethodCodeFreePay,        // 过滤 Free Meal
 		constant.PaymentMethodCodeFreeMealForErp, // 过滤 Free Meal for ERP
 	}
 	if companySetting.IsOpenMember == 0 {

@@ -54,18 +54,18 @@ func NewPurchaseLimitSchemeSrv(dbm *database.DBManager) IPurchaseLimitSchemeSrv 
 func (s *purchaseLimitSchemeSrv) Create(ctx context.Context, req req.PurchaseLimitSchemeCreateReq) (uint64, error) {
 	db := ctx.GetDB()
 
-	// 1. 校验周期和物品配置
-	if len(req.Weekdays) == 0 {
-		return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个星期"))
-	}
-	if len(req.Items) == 0 {
-		return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个物品"))
-	}
+	// // 1. 校验周期和物品配置
+	// if len(req.Weekdays) == 0 {
+	// 	return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个星期"))
+	// }
+	// if len(req.Items) == 0 {
+	// 	return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个物品"))
+	// }
 
-	// 2. 如果不是应用到全部门店，则必须选择门店
-	if req.ApplyToAllShops == 0 && len(req.Shops) == 0 {
-		return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "请选择适用的门店"))
-	}
+	// // 2. 如果不是应用到全部门店，则必须选择门店
+	// if req.ApplyToAllShops == 0 && len(req.Shops) == 0 {
+	// 	return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "请选择适用的门店"))
+	// }
 
 	// 3. 验证物品是否存在并获取 Code
 	materialRepo := repository.NewMaterialRepo(db)
@@ -168,17 +168,17 @@ func (s *purchaseLimitSchemeSrv) Update(ctx context.Context, req req.PurchaseLim
 	}
 
 	// 2. 校验周期和物品配置
-	if len(req.Weekdays) == 0 {
-		return errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个星期"))
-	}
-	if len(req.Items) == 0 {
-		return errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个物品"))
-	}
+	// if len(req.Weekdays) == 0 {
+	// 	return errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个星期"))
+	// }
+	// if len(req.Items) == 0 {
+	// 	return errors.New(i18n.Translate(ctx.GetLanguage(), "至少需选择一个物品"))
+	// }
 
-	// 3. 如果不是应用到全部门店，则必须选择门店
-	if req.ApplyToAllShops == 0 && len(req.Shops) == 0 {
-		return errors.New(i18n.Translate(ctx.GetLanguage(), "请选择适用的门店"))
-	}
+	// // 3. 如果不是应用到全部门店，则必须选择门店
+	// if req.ApplyToAllShops == 0 && len(req.Shops) == 0 {
+	// 	return errors.New(i18n.Translate(ctx.GetLanguage(), "请选择适用的门店"))
+	// }
 
 	// 4. 验证物品是否存在并获取 Code
 	materialRepo := repository.NewMaterialRepo(db)
