@@ -385,6 +385,10 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 		return res, nil
 	}
 
+	// 如果是自助点餐机,不检查是否有未送厨,自助点餐机在结账完成后才进行送厨.
+	if ctx.GetSource() == constant.SourceKiosk {
+		return nil, nil
+	}
 	// 检查是否有未送厨的商品
 	if len(unCookingSaleOrderProducts) > 0 || len(h5OrderProductUnAccept) > 0 {
 		products := make([]resp.Product, 0)

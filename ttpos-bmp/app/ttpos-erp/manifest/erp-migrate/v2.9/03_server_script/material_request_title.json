@@ -1,0 +1,28 @@
+{
+  "doctype": "Server Script",
+  "name": "Material Request Auto Title",
+  "script_type": "DocType Event",
+  "reference_doctype": "Material Request",
+  "event_frequency": "On Save",
+  "script": "// Material Request Title 自动生成脚本\n// 根据 items 的商品信息自动生成 Title\n\n// 触发时机：保存 Material Request 时\n// 如果 title 已存在且不为空，则不覆盖\nif (doc.title && doc.title.trim() !== '') {\n    return;\n}\n\n// 获取 items 列表\nlet items = doc.items || [];\nif (items.length === 0) {\n    return;\n}\n\n// 限制显示的物品数量，避免 title 过长\nconst maxItems = 3;\nlet displayItems = items.slice(0, maxItems);\n\n// 收集商品名称（优先使用 item_name，如果没有则使用 item_code）\nlet itemNames = [];\nfor (let i = 0; i < displayItems.length; i++) {\n    let item = displayItems[i];\n    let itemName = item.item_name || item.item_code || '';\n    \n    // 限制每个商品名称的长度\n    if (itemName.length > 20) {\n        itemName = itemName.substring(0, 20);\n    }\n    \n    if (itemName) {\n        itemNames.push(itemName);\n    }\n}\n\nif (itemNames.length === 0) {\n    return;\n}\n\n// 生成 title 格式: \"Purchase Request for {item1}, {item2}, {item3}\"\nlet title = \"Purchase Request for \" + itemNames[0];\nfor (let i = 1; i < itemNames.length; i++) {\n    title += \", \" + itemNames[i];\n}\n\n// 如果还有更多物品，添加省略号\nif (items.length > maxItems) {\n    title += \"...\";\n}\n\n// 设置 title\ncur_frm.set_value('title', title);\n",
+  "enabled": 1,
+  "docstatus": 0
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

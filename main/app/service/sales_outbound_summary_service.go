@@ -670,9 +670,12 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 
 		// 4.2 软删除原记录
 		if len(materialItems) > 0 {
+			uuids := make([]uint64, 0)
+			for _, item := range materialItems {
+				uuids = append(uuids, item.Uuid)
+			}
 			result := tx.Model(&model.WarehouseOutFormItem{}).
-				Where("sale_order_uuid = ? AND scene = ? AND revoke_time = ? AND material_uuid != ? AND delete_time = ?",
-					saleOrderUuid, constant.WarehouseOutFormSceneSales, 0, 0, constant.NotDeleted).
+				Where("uuid in (?)", uuids).
 				Update("delete_time", time.Now().Unix())
 			if result.Error != nil {
 				return errors.WithMessage(result.Error, "软删除原记录失败")
@@ -1101,8 +1104,8 @@ func (s *salesOutboundSummarySrv) reduceStock(tx *gorm.DB, reduceStockMap map[st
 			return errors.WithMessage(err, fmt.Sprintf("获取仓库物品库存失败: material_uuid=%d, warehouse_uuid=%d", reduceInfo.MaterialUuid, reduceInfo.WarehouseUuid))
 		}
 
-		// 检查库存是否充足
-		if warehouseItem.Stock < reduceInfo.ReduceNum {
+		// 检查库存是否充足（如果材料开启负库存，认为是无限库存，不会材料不足）
+		if reduceInfo.Material.AllowNegativeStock != constant.Yes && warehouseItem.Stock < reduceInfo.ReduceNum {
 			return errors.New(fmt.Sprintf("材料库存不足: material_uuid=%d, warehouse_uuid=%d, 需要=%f, 当前=%f",
 				reduceInfo.MaterialUuid, reduceInfo.WarehouseUuid, reduceInfo.ReduceNum, warehouseItem.Stock))
 		}

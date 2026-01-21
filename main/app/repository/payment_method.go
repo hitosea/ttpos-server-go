@@ -228,6 +228,8 @@ func (r *paymentMethodRepo) GetPaymentMethodsByCtx(ctx context.Context) []*model
 		opts = append(opts, r.WhereCashier())
 	} else if ctx.GetSource() == constant.SourceAssistant {
 		opts = append(opts, r.WhereAssistant())
+	} else if ctx.GetSource() == constant.SourceKiosk {
+		opts = append(opts, r.WhereKiosk())
 	}
 	opts = append(opts, r.WithLogoFile(), r.WithQrcodeFile())
 	paymentMethods := r.GetPaymentMethodList(opts...)

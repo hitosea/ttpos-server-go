@@ -538,14 +538,18 @@ func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
-	// Kbank支付不支持撤销
-	if paymentOrder.PaymentMethod != nil && paymentOrder.PaymentMethod.IsKbankPay() {
-		return nil, errors.New("Kbank支付不支持撤销")
-	}
+	// 任务38334:收银机-结账/反结账/退款-Kbank（Kbank相关） 允许撤销
+	// // Kbank支付不支持撤销
+	// if paymentOrder.PaymentMethod != nil && paymentOrder.PaymentMethod.IsKbankPay() {
+	// 	return nil, errors.New("Kbank支付不支持撤销")
+	// }
 
 	// 撤销支付单
 	paymentOrder.Cancel()
 	paymentOrder.SetNil()
+	if req.PaymentInfo != "" { // 如果撤销原因不为空，则保存撤销原因
+		paymentOrder.CancelInfo = req.PaymentInfo
+	}
 	// 更新支付单
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {

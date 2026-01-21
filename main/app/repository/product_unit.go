@@ -12,6 +12,7 @@ type IProductUnitRepo interface {
 	// 基础CRUD操作
 	GetProductUnit(opts ...DBOption) (*model.ProductUnit, error)
 	GetProductUnitByErpnextUom(erpnextUom string) (*model.ProductUnit, error)
+	GetProductUnitByErpnextUomWithMultiLanguageName(erpnextUom string) (*model.ProductUnit, error)
 	GetProductUnitList(opts ...DBOption) ([]*model.ProductUnit, error)
 	WhereByUuids(uuids []uint64) DBOption
 	WhereByErpnextUom(erpnextUom string) DBOption
@@ -51,6 +52,17 @@ func (r *ProductUnitRepoImpl) GetProductUnitByErpnextUom(erpnextUom string) (*mo
 	var productUnit model.ProductUnit
 
 	query := r.db.Model(&model.ProductUnit{}).Where("delete_time = ?", 0).Where("erpnext_uom = ?", erpnextUom)
+	if err := query.First(&productUnit).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &productUnit, nil
+}
+
+func (r *ProductUnitRepoImpl) GetProductUnitByErpnextUomWithMultiLanguageName(erpnextUom string) (*model.ProductUnit, error) {
+	var productUnit model.ProductUnit
+
+	query := r.db.Model(&model.ProductUnit{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Where("erpnext_uom = ?", erpnextUom)
 	if err := query.First(&productUnit).Error; err != nil {
 		return nil, errors.WithMessage(err)
 	}

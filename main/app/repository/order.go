@@ -93,6 +93,7 @@ func NewOrderRepoImpl(db *gorm.DB) IOrderRepo {
 
 // CreateSaleBill 创建销售单
 func (r *orderRepo) CreateSaleBill(model model.SaleBill) (model.SaleBill, error) {
+	model.SetNil()
 	err := r.db.Create(&model).Error
 	if err != nil {
 		return model, fmt.Errorf("CreateSaleBill: %v", err)
@@ -205,6 +206,7 @@ func (r *orderRepo) GetInstantSaleBill(deviceUuid uint64) (*model.SaleBill, erro
 
 // CreateSaleOrder 创建销售订单
 func (r *orderRepo) CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error) {
+	model.SetNil()
 	err := r.db.Create(&model).Error
 	if err != nil {
 		return model, fmt.Errorf("CreateSaleOrder: %v", err)

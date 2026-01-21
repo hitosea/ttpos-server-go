@@ -103,6 +103,7 @@ type InstantOrderPaymentCancelReq struct {
 	SaleBillUuid     uint64 `json:"sale_bill_uuid"`     // 销售账单UUID, 必填
 	SaleOrderUuid    uint64 `json:"sale_order_uuid"`    // 销售订单UUID, 必填
 	PaymentOrderUuid uint64 `json:"payment_order_uuid"` // 支付单UUID, 必填
+	PaymentInfo      string `json:"payment_info"`       // 撤销原因, 非必填. 用于保存 kbank 设备返回的撤单消息
 }
 
 // InstantOrderPaymentFinishReq 完成销售订单的付款结账请求

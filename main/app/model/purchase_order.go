@@ -88,6 +88,7 @@ func (po *PurchaseOrder) GetStatusText() string {
 		3: "已驳回",
 		4: "部分收货",
 		5: "全部收货",
+		6: "重新提交",
 	}
 	if text, exists := statusMap[po.Status]; exists {
 		return text
