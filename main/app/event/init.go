@@ -147,4 +147,6 @@ func init() {
 	takeout.TakeoutOrderRiderProcessingEventHandler()
 	// 自动注册"外卖订单完成"事件处理器
 	takeout.TakeoutOrderCompletedEventHandler()
+	// 自动注册"外卖订单高峰期记录"事件处理器
+	takeout.TakeoutOrderPeakTimeEventHandler()
 }
