@@ -1574,6 +1574,8 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			if defaultSalesUnitMaterialUnitUuid > 0 {
 				updateData["default_sales_unit_uuid"] = defaultSalesUnitMaterialUnitUuid
 			}
+		} else {
+			updateData["default_sales_unit_uuid"] = 0
 		}
 
 		// 根据NotForSale设置删除时间，物品下架时设置为当前时间，上架时重置为0
