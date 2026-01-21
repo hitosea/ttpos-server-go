@@ -38,6 +38,7 @@ type IPaymentMethodRepo interface {
 	GetMaxSort() (int, error)                                                                                         // 获取最大排序值
 	BatchUpdateSort(items []model.PaymentMethod) error                                                                // 批量更新排序
 	GetPaymentMethodListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]*model.PaymentMethod, int64, error) // 分页查询支付方式列表
+	FilterPaymentMethod(paymentMethod model.PaymentMethod, lianLianPayAvailable bool) bool                            // 过滤支付方式：用于过滤LIANLIAN PAY未配置、免单
 }
 
 // IPaymentMethodQueryRepo 定义仓库查询接口
@@ -480,4 +481,22 @@ func (r *paymentMethodRepo) GetPaymentMethodListWithPagination(pageNo, pageSize 
 	}
 
 	return list, total, nil
+}
+
+// FilterPaymentMethod 过滤支付方式：用于过滤LIANLIAN PAY未配置、免单
+func (r *paymentMethodRepo) FilterPaymentMethod(paymentMethod model.PaymentMethod, lianLianPayAvailable bool) bool {
+	// 不显示免单
+	if paymentMethod.Code == constant.PaymentMethodCodeFreePay {
+		return false
+	}
+	// 不显示免单 FOR ERP
+	if paymentMethod.Code == constant.PaymentMethodCodeFreeMealForErp {
+		return false
+	}
+	// 不显示未配置的LIANLIAN PAY
+	if !lianLianPayAvailable && paymentMethod.IsLianLianPay() {
+		return false
+	}
+
+	return true
 }

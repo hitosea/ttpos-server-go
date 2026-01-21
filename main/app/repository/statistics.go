@@ -2665,6 +2665,7 @@ type CountBusinessPaymentMethodReq struct {
 	PaymentMethodNames           []string // 支付方式名称列表: 空=全部（PaymentMethodList为空时使用）
 	ExcludeDataManage            bool     // 是否排除数据管理订单
 	Timezone                     string   // 业务时区，如 "Asia/Shanghai"
+	Source                       int      // 查询来源：0-营业收款统计、1-门店汇总统计
 }
 
 // businessPaymentMethodRawData 支付方式统计原始数据
@@ -2673,6 +2674,7 @@ type businessPaymentMethodRawData struct {
 	PaymentMethodUuid       uint64  // 支付方式UUID
 	PaymentMethodSort       int     // 支付方式排序
 	PaymentMethodCreateTime int64   // 支付方式创建时间戳
+	Name                    string  // 名称
 	PaymentName             string  // 支付方式名称
 	PaymentAmount           float64 // 支付金额（已扣除退款）
 }
@@ -2684,6 +2686,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		SELECT 
 			sb.finish_time AS create_time,
 			po.payment_method_uuid,
+			pm.name,
 			pm.payment_name,
 			pm.sort AS payment_method_sort,
 			pm.create_time AS payment_method_create_time,
@@ -2750,7 +2753,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		args = append(args, req.PaymentMethodList)
 	} else if len(req.PaymentMethodNames) > 0 {
 		// 使用支付方式名称筛选（因为不同商家的同一支付方式UUID可能不同）
-		baseQuery += " AND pm.payment_name IN (?)"
+		baseQuery += " AND pm.name IN (?)"
 		args = append(args, req.PaymentMethodNames)
 	}
 
@@ -2828,7 +2831,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 				// 如果使用 PaymentMethodNames，检查是否匹配（当 IsDelivery=false 时）
 				found := false
 				for _, name := range req.PaymentMethodNames {
-					if name == takeoutItem.PaymentName {
+					if name == takeoutItem.Name {
 						found = true
 						break
 					}
@@ -2844,6 +2847,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 				PaymentMethodUuid:       takeoutItem.PaymentMethodUuid,
 				PaymentMethodSort:       takeoutItem.PaymentMethodSort,
 				PaymentMethodCreateTime: takeoutItem.PaymentMethodCreateTime,
+				Name:                    takeoutItem.Name,
 				PaymentName:             takeoutItem.PaymentName,
 				PaymentAmount:           takeoutItem.PaymentAmount,
 			})
@@ -2853,11 +2857,17 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	// 2. 在应用层按业务时区分组、统计
 	timeUtil := utils.SetTimezone(req.Timezone)
 
+	useUuid := true
+	if req.Source == 1 {
+		useUuid = false
+	}
+
 	// 按日期和支付方式分组统计
 	// 使用 decimal 进行精确计算
 	type groupKey struct {
 		Date              string
 		PaymentMethodUuid uint64
+		PaymentName       string
 	}
 	type paymentGroupData struct {
 		PaymentName             string
@@ -2879,15 +2889,27 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 			dateKey = timeUtil.FormatUnixTime(item.CreateTime, "2006-01-02")
 		}
 
-		key := groupKey{
-			Date:              dateKey,
-			PaymentMethodUuid: item.PaymentMethodUuid,
+		key := groupKey{}
+		if useUuid {
+			key = groupKey{
+				Date:              dateKey,
+				PaymentMethodUuid: item.PaymentMethodUuid,
+			}
+		} else {
+			key = groupKey{
+				Date:        dateKey,
+				PaymentName: item.Name,
+			}
 		}
 
 		// 初始化分组数据
 		if groupedData[key] == nil {
+			paymentName := item.PaymentName
+			if !useUuid {
+				paymentName = item.Name
+			}
 			groupedData[key] = &paymentGroupData{
-				PaymentName:             item.PaymentName,
+				PaymentName:             paymentName,
 				PaymentMethodSort:       item.PaymentMethodSort,
 				PaymentMethodCreateTime: item.PaymentMethodCreateTime,
 			}
