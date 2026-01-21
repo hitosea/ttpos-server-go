@@ -1388,7 +1388,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			// 获取默认销售单位
 			var defaultSalesUom string
 			if request.DefaultSalesUnitUuid != 0 {
-				defaultSalesUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(request.DefaultSalesUnitUuid)
+				defaultSalesUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.DefaultSalesUnitUuid)
 				if err != nil {
 					return errors.WithMessage(err, "获取默认销售单位失败")
 				}
