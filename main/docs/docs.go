@@ -39275,6 +39275,14 @@ const docTemplate = `{
                     "description": "采购单位UUID",
                     "type": "integer"
                 },
+                "quota_config": {
+                    "description": "限购配置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/material_resp.MaterialQuotaConfig"
+                        }
+                    ]
+                },
                 "safety_stock": {
                     "description": "安全库存数量",
                     "type": "number"
@@ -39549,6 +39557,31 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "material_resp.MaterialQuotaConfig": {
+            "type": "object",
+            "properties": {
+                "quota_limit": {
+                    "description": "限购数量",
+                    "type": "number"
+                },
+                "quota_unit_locale_name": {
+                    "description": "限购单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "quota_unit_name": {
+                    "description": "限购单位名称",
+                    "type": "string"
+                },
+                "quota_unit_uuid": {
+                    "description": "限购单位UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -49012,28 +49045,20 @@ const docTemplate = `{
         "req.PurchaseLimitSchemeCreateReq": {
             "type": "object",
             "required": [
-                "items",
-                "locale_name",
-                "weekdays"
+                "locale_name"
             ],
             "properties": {
                 "apply_to_all_shops": {
                     "description": "0-否 1-是",
-                    "type": "integer",
-                    "enum": [
-                        0,
-                        1
-                    ]
+                    "type": "integer"
                 },
                 "daily_limit": {
                     "description": "0-不限制",
-                    "type": "integer",
-                    "minimum": 0
+                    "type": "integer"
                 },
                 "items": {
                     "description": "物品配置",
                     "type": "array",
-                    "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/req.PurchaseLimitSchemeItemReq"
                     }
@@ -49055,17 +49080,11 @@ const docTemplate = `{
                 },
                 "status": {
                     "description": "0-关闭 1-开启",
-                    "type": "integer",
-                    "enum": [
-                        0,
-                        1
-                    ]
+                    "type": "integer"
                 },
                 "weekdays": {
                     "description": "星期配置 1-7 表示周一到周日，逗号分隔",
                     "type": "array",
-                    "maxItems": 7,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -49093,37 +49112,28 @@ const docTemplate = `{
                 },
                 "quota_limit": {
                     "description": "限购数量",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 }
             }
         },
         "req.PurchaseLimitSchemeUpdateReq": {
             "type": "object",
             "required": [
-                "items",
                 "locale_name",
-                "uuid",
-                "weekdays"
+                "uuid"
             ],
             "properties": {
                 "apply_to_all_shops": {
                     "description": "0-否 1-是",
-                    "type": "integer",
-                    "enum": [
-                        0,
-                        1
-                    ]
+                    "type": "integer"
                 },
                 "daily_limit": {
                     "description": "0-不限制",
-                    "type": "integer",
-                    "minimum": 0
+                    "type": "integer"
                 },
                 "items": {
                     "description": "物品配置",
                     "type": "array",
-                    "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/req.PurchaseLimitSchemeItemReq"
                     }
@@ -49145,11 +49155,7 @@ const docTemplate = `{
                 },
                 "status": {
                     "description": "0-关闭 1-开启",
-                    "type": "integer",
-                    "enum": [
-                        0,
-                        1
-                    ]
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "方案UUID",
@@ -49158,8 +49164,6 @@ const docTemplate = `{
                 "weekdays": {
                     "description": "星期配置 1-7 表示周一到周日，逗号分隔",
                     "type": "array",
-                    "maxItems": 7,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -50187,6 +50191,10 @@ const docTemplate = `{
                 },
                 "query_start_time": {
                     "description": "查询开始时间戳",
+                    "type": "integer"
+                },
+                "source": {
+                    "description": "查询来源：0-营业收款统计、1-门店汇总统计",
                     "type": "integer"
                 }
             }

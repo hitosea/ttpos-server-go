@@ -1034,6 +1034,10 @@ definitions:
       purchase_unit_uuid:
         description: 采购单位UUID
         type: integer
+      quota_config:
+        allOf:
+        - $ref: '#/definitions/material_resp.MaterialQuotaConfig'
+        description: 限购配置
       safety_stock:
         description: 安全库存数量
         type: number
@@ -1219,6 +1223,22 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  material_resp.MaterialQuotaConfig:
+    properties:
+      quota_limit:
+        description: 限购数量
+        type: number
+      quota_unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 限购单位名称
+      quota_unit_name:
+        description: 限购单位名称
+        type: string
+      quota_unit_uuid:
+        description: 限购单位UUID
+        type: integer
     type: object
   material_resp.MaterialStockDetailResp:
     properties:
@@ -7702,19 +7722,14 @@ definitions:
     properties:
       apply_to_all_shops:
         description: 0-否 1-是
-        enum:
-        - 0
-        - 1
         type: integer
       daily_limit:
         description: 0-不限制
-        minimum: 0
         type: integer
       items:
         description: 物品配置
         items:
           $ref: '#/definitions/req.PurchaseLimitSchemeItemReq'
-        minItems: 1
         type: array
       locale_name:
         allOf:
@@ -7727,21 +7742,14 @@ definitions:
         type: array
       status:
         description: 0-关闭 1-开启
-        enum:
-        - 0
-        - 1
         type: integer
       weekdays:
         description: 星期配置 1-7 表示周一到周日，逗号分隔
         items:
           type: integer
-        maxItems: 7
-        minItems: 1
         type: array
     required:
-    - items
     - locale_name
-    - weekdays
     type: object
   req.PurchaseLimitSchemeDeleteReq:
     properties:
@@ -7756,7 +7764,6 @@ definitions:
         type: integer
       quota_limit:
         description: 限购数量
-        minimum: 0
         type: number
     required:
     - material_uuid
@@ -7765,19 +7772,14 @@ definitions:
     properties:
       apply_to_all_shops:
         description: 0-否 1-是
-        enum:
-        - 0
-        - 1
         type: integer
       daily_limit:
         description: 0-不限制
-        minimum: 0
         type: integer
       items:
         description: 物品配置
         items:
           $ref: '#/definitions/req.PurchaseLimitSchemeItemReq'
-        minItems: 1
         type: array
       locale_name:
         allOf:
@@ -7790,9 +7792,6 @@ definitions:
         type: array
       status:
         description: 0-关闭 1-开启
-        enum:
-        - 0
-        - 1
         type: integer
       uuid:
         description: 方案UUID
@@ -7801,14 +7800,10 @@ definitions:
         description: 星期配置 1-7 表示周一到周日，逗号分隔
         items:
           type: integer
-        maxItems: 7
-        minItems: 1
         type: array
     required:
-    - items
     - locale_name
     - uuid
-    - weekdays
     type: object
   req.PurchaseOrderApproveReq:
     properties:
@@ -8554,6 +8549,9 @@ definitions:
         type: string
       query_start_time:
         description: 查询开始时间戳
+        type: integer
+      source:
+        description: 查询来源：0-营业收款统计、1-门店汇总统计
         type: integer
     type: object
   req.StatisticsSummaryReq:
