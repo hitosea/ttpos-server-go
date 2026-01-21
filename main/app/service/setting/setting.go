@@ -88,7 +88,7 @@ type ISrv interface {
 	EditBusinessSetting(ctx context.Context, businessSetting req.UpdateBusinessSetting) error                                             // 修改业务设置
 	GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness, error)                                                             // 获取商家业务设置
 	GetMenuQrcode(ctx context.Context) (string, error)                                                                                    // 获取电子菜单二维码
-	GetPaymentMethodList(ctx context.Context) setting.PaymentMethodListResp                                                               // 获取支付方式列表
+	GetPaymentMethodList(ctx context.Context, opts ...bool) setting.PaymentMethodListResp                                                 // 获取支付方式列表
 	GetDataManageSetting(ctx context.Context) model.DataManageSetting                                                                     // 获取数据管理设置
 }
 
@@ -2488,16 +2488,26 @@ func (s *Srv) getMenuQrcodeToken(ctx context.Context, businessSetting setting.Bu
 }
 
 // GetPaymentMethodList 获取支付方式列表
-func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodListResp {
+func (s *Srv) GetPaymentMethodList(ctx context.Context, opts ...bool) setting.PaymentMethodListResp {
 	commonRepo := repository.NewCommonRepo()
-	paymentRepo := repository.NewPaymentMethodRepo(ctx.GetDB())
-	paymentMethodList := paymentRepo.GetAllPaymentMethodList(
+	paymentMethodRepo := repository.NewPaymentMethodRepo(ctx.GetDB())
+	paymentMethodList := paymentMethodRepo.GetAllPaymentMethodList(
 		commonRepo.SortWithSort("asc"),
 		commonRepo.SortWithCreateTime("desc"),
 	)
+	lianLianPayAvailable := false
+	if len(opts) > 0 {
+		lianLianPayAvailable = opts[0]
+	}
 
 	list := make([]setting.PaymentMethod, 0, len(paymentMethodList))
 	for _, paymentMethod := range paymentMethodList {
+		if paymentMethod == nil {
+			continue
+		}
+		if !paymentMethodRepo.FilterPaymentMethod(*paymentMethod, lianLianPayAvailable) {
+			continue
+		}
 		list = append(list, setting.PaymentMethod{
 			Uuid:        paymentMethod.Uuid,
 			Name:        paymentMethod.Name,

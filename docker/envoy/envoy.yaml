@@ -37,12 +37,13 @@ static_resources:
                     - name: lmwn_service
                       domains: ["*"]
                       routes:
-                        # /api/v1/lmwn 路径 - 主请求到远程 + 流量镜像
+                        # /lmwn_staging 路径 - 主请求到远程 + 流量镜像
                         - match:
-                            prefix: "/api/v1/lmwn"
+                            prefix: "/lmwn_staging"
                           route:
                             cluster: local_cluster
                             timeout: 60s
+                            prefix_rewrite: "/"
                             auto_host_rewrite: true
                             # 流量镜像配置
                             request_mirror_policies:
