@@ -161,6 +161,10 @@ func (s *orderSrv) CreateInstantOrderInCache(ctx context.Context, orderNo string
 		DeviceUuid:    ctx.GetDeviceUuid(),
 		Source:        constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
 		ClientVersion: constant.NormalizeClientVersion(ctx.GetVersion()),
+
+		// 设置默认值的必点方案、自动加购必点商品
+		ShowMustPlan:       constant.SaleBillShowMustPlanYes,
+		AutoAddMustProduct: 1,
 	}
 
 	// 创建销售账单设置（不保存到数据库）
