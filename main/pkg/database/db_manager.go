@@ -130,6 +130,13 @@ func (m *DBManager) GetDBWithContext(ctx bizctx.Context) *gorm.DB {
 	if db == nil {
 		return nil
 	}
+	// 如果gin上下文存在，则使用gin上下文中的context
+	if ginCtx := ctx.GetGin(); ginCtx != nil && ginCtx.Request != nil {
+		if stdCtx := ginCtx.Request.Context(); stdCtx != nil {
+			return db.WithContext(stdCtx)
+		}
+	}
+	// 如果上下文存在，则使用上下文中的context
 	if stdCtx := ctx.GetContext(); stdCtx != nil {
 		return db.WithContext(stdCtx)
 	}

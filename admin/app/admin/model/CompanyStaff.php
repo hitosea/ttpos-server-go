@@ -86,6 +86,14 @@ class CompanyStaff extends BaseModel
             return false;
         }
 
+        // 检查ttpos_staff表中邮箱是否已存在
+        if (SaasStaffModel::where('email', $data['user_name'])
+            ->where('delete_time', 0)
+            ->find()) {
+            $this->error = '该邮箱已在平台注册';
+            return false;
+        }
+
         $uuid = createUuid();
         $password = hash_password_bcrypt($data['password']);
 

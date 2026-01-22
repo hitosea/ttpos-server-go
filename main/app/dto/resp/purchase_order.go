@@ -52,8 +52,9 @@ type PurchaseOrderRemark struct {
 }
 
 type PurchaseOrderItemMaterialUnit struct {
-	Uuid       uint64             `json:"uuid"`        // 单位UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 单位名称
+	Uuid           uint64             `json:"uuid"`            // 单位UUID
+	ConversionRate float64            `json:"conversion_rate"` // 转换率
+	LocaleName     dto.LocaleResponse `json:"locale_name"`     // 单位名称
 }
 
 type PurchaseOrderItemUnit struct {
