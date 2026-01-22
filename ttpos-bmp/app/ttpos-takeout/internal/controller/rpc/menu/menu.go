@@ -228,7 +228,7 @@ func (c *Controller) handleLinemanUpdate(ctx context.Context, req *api.UpdateMen
 		}, nil
 	}
 
-	linemanStatus, err := c.mapToLinemanStatus(*req.AvailableStatus)
+	linemanStatus, err := utility.MapStatusToLineman(*req.AvailableStatus)
 	if err != nil {
 		g.Log().Warningf(ctx, "[Menu] 状态映射失败: %v", err)
 		return &takeout.ApiResponse{
@@ -290,22 +290,6 @@ func (c *Controller) validateLinemanRequest(req *api.UpdateMenuItemReq) error {
 		return gerror.New("available_status 字段为必填")
 	}
 	return nil
-}
-
-// mapToLinemanStatus 映射状态到 Lineman
-func (c *Controller) mapToLinemanStatus(status string) (string, error) {
-	switch status {
-	case "AVAILABLE":
-		return "AVAILABLE", nil
-	case "UNAVAILABLE":
-		return "SUSPENDED", nil
-	case "SOLD_OUT_TODAY":
-		return "SOLD_OUT_TODAY", nil
-	case "UNAVAILABLEHIDE":
-		return "", gerror.New("Lineman 平台不支持 UNAVAILABLEHIDE 状态")
-	default:
-		return "", gerror.New("不支持的状态: " + status)
-	}
 }
 
 // UpdateMenuModifier 更新菜单修饰符（支持多平台）

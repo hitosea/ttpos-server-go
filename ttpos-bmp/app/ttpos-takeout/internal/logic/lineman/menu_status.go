@@ -8,6 +8,7 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	lineman_dto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/lineman"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
+	"ttpos-bmp/app/ttpos-takeout/utility"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -17,31 +18,6 @@ import (
 // IMenuStatusClient 菜单状态客户端接口（用于测试 Mock）
 type IMenuStatusClient interface {
 	UpdateMenuStatusWithRetry(ctx context.Context, storeId string, req *lineman_dto.MenuStatusUpdateReq) (*lineman_dto.MenuStatusUpdateResp, error)
-}
-
-// MapStatusToLineman 将 TTPOS 状态映射为 Lineman 状态
-// TTPOS 状态 -> Lineman 状态:
-// AVAILABLE -> AVAILABLE
-// UNAVAILABLE -> SUSPENDED
-// SOLD_OUT_TODAY -> SOLD_OUT_TODAY
-// UNAVAILABLEHIDE -> 不支持（返回错误）
-//
-// 参考: https://docs.google.com/spreadsheets/d/1CKRl7tRLtp6dCAcXQqWhPvS_0M378-vdKpucR6ZtNbg/edit?gid=585076633#gid=585076633
-func MapStatusToLineman(ttposStatus string) (string, error) {
-	switch ttposStatus {
-	case "AVAILABLE":
-		return "AVAILABLE", nil
-	case "UNAVAILABLE":
-		return "SUSPENDED", nil
-	case "SOLD_OUT_TODAY":
-		return "SOLD_OUT_TODAY", nil
-	case "UNAVAILABLEHIDE":
-		return "", gerror.New("Lineman 平台不支持 UNAVAILABLEHIDE 状态")
-	case "":
-		return "", gerror.New("available_status 不能为空")
-	default:
-		return "", gerror.Newf("不支持的状态: %s", ttposStatus)
-	}
 }
 
 // UpdateMenuItemStatus 更新菜单商品状态（单个商品）
@@ -213,7 +189,7 @@ func convertProtoToLinemanDTO(ctx context.Context, protoReq *api.BatchUpdateMenu
 	// 转换 MenuEntities
 	for _, protoEntity := range protoReq.MenuEntities {
 		// 映射状态到 Lineman
-		linemanStatus, err := MapStatusToLineman(*protoEntity.AvailableStatus)
+		linemanStatus, err := utility.MapStatusToLineman(*protoEntity.AvailableStatus)
 		if err != nil {
 			return nil, gerror.Wrapf(err, "映射状态失败 (entity id=%s)", protoEntity.Id)
 		}

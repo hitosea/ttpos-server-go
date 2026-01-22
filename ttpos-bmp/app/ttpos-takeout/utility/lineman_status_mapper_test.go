@@ -6,7 +6,38 @@ import (
 	"github.com/gogf/gf/v2/test/gtest"
 )
 
-// TestMapStatusToLinemanModifier 测试 TTPOS 状态到 Lineman 修饰符状态的映射
+// TestMapStatusToLineman 测试 TTPOS 状态到 Lineman 菜单状态的映射（string）
+func TestMapStatusToLineman(t *testing.T) {
+	gtest.C(t, func(t *gtest.T) {
+		// 测试 AVAILABLE
+		status, err := MapStatusToLineman("AVAILABLE")
+		t.AssertNil(err)
+		t.Assert(status, "AVAILABLE")
+
+		// 测试 UNAVAILABLE -> SUSPENDED
+		status, err = MapStatusToLineman("UNAVAILABLE")
+		t.AssertNil(err)
+		t.Assert(status, "SUSPENDED")
+
+		// 测试 HIDE -> SUSPENDED
+		status, err = MapStatusToLineman("HIDE")
+		t.AssertNil(err)
+		t.Assert(status, "SUSPENDED")
+
+		// 测试 UNAVAILABLETODAY -> SOLD_OUT_TODAY
+		status, err = MapStatusToLineman("UNAVAILABLETODAY")
+		t.AssertNil(err)
+		t.Assert(status, "SOLD_OUT_TODAY")
+
+		// 测试不支持的状态
+		status, err = MapStatusToLineman("INVALID_STATUS")
+		t.AssertNE(err, nil)
+		t.Assert(status, "")
+		t.AssertIN("不支持的状态", err.Error())
+	})
+}
+
+// TestMapStatusToLinemanModifier 测试 TTPOS 状态到 Lineman 修饰符状态的映射（int）
 func TestMapStatusToLinemanModifier(t *testing.T) {
 	gtest.C(t, func(t *gtest.T) {
 		// 测试 AVAILABLE
@@ -19,8 +50,8 @@ func TestMapStatusToLinemanModifier(t *testing.T) {
 		t.AssertNil(err)
 		t.Assert(status, 3)
 
-		// 测试 SOLD_OUT_TODAY
-		status, err = MapStatusToLinemanModifier("SOLD_OUT_TODAY")
+		// 测试 UNAVAILABLETODAY -> SOLD_OUT_TODAY (2)
+		status, err = MapStatusToLinemanModifier("UNAVAILABLETODAY")
 		t.AssertNil(err)
 		t.Assert(status, 2)
 
