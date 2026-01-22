@@ -265,7 +265,8 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 			}
 			for _, unit := range item.Material.NotBaseUnitList {
 				unitList = append(unitList, resp.PurchaseOrderItemMaterialUnit{
-					Uuid: unit.Uuid,
+					Uuid:           unit.Uuid,
+					ConversionRate: unit.ConversionRate,
 					LocaleName: func() dto.LocaleResponse {
 						if unit.Unit == nil {
 							return dto.LocaleResponse{}
