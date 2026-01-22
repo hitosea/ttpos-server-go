@@ -1128,8 +1128,8 @@ func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, orderUuid u
 // determineRecordType 根据订单状态判断记录类型
 // 返回: "inc" - 增加, "dec" - 减少, "" - 不记录
 func determineRecordType(order *takeoutModel.TakeoutOrder) string {
-	// 必须要有接单时间
-	if order.AcceptedTime <= 0 {
+	// 必须要有接单人和接单时间
+	if order.AcceptedBy <= 0 || order.AcceptedTime <= 0 {
 		return ""
 	}
 
@@ -1169,13 +1169,17 @@ func buildSaleBillFromTakeoutOrder(order *takeoutModel.TakeoutOrder, recordType 
 		}
 	} else if recordType == "dec" {
 		// 取消时：使用取消时间和取消人
+		rejectedBy := order.RejectedBy
+		if rejectedBy == 0 {
+			rejectedBy = order.AcceptedBy
+		}
 		if order.RejectedTime > 0 {
 			saleBill.FinishTime = order.RejectedTime
-			saleBill.CashierUuid = order.RejectedBy
+			saleBill.CashierUuid = rejectedBy
 		} else {
 			// 如果没有取消时间，使用订单时间
 			saleBill.FinishTime = order.OrderTime
-			saleBill.CashierUuid = order.RejectedBy
+			saleBill.CashierUuid = rejectedBy
 		}
 	}
 
