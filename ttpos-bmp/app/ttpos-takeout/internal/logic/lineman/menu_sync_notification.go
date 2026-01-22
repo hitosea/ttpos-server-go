@@ -43,7 +43,7 @@ func (s *sLineman) HandleMenuSyncNotification(ctx context.Context, req *v1.MenuS
 		string(consts.MenuSyncTypeNotify),
 		req.MenuSyncRequestId,
 		success,
-		"",
+		"{}",
 		req.ErrorMsg,
 	)
 	if err != nil {

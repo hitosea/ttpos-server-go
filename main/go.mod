@@ -23,7 +23,7 @@ require (
 	github.com/hdt3213/delayqueue v1.1.2
 	github.com/jinzhu/copier v0.4.0
 	github.com/joho/godotenv v1.5.1
-	github.com/nacos-group/nacos-sdk-go/v2 v2.3.2
+	github.com/nacos-group/nacos-sdk-go/v2 v2.3.3
 	github.com/nahid/gohttp v0.0.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/patrickmn/go-cache v2.1.0+incompatible

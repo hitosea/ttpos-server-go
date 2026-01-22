@@ -2,10 +2,14 @@ package lineman
 
 import (
 	"context"
+	"fmt"
 
 	api "ttpos-bmp/app/ttpos-takeout/api/menu"
+	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	lineman_dto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/lineman"
+	"ttpos-bmp/app/ttpos-takeout/internal/service"
 
+	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -75,13 +79,23 @@ func (s *sLineman) UpdateMenuItemStatus(ctx context.Context, shopUuid string, it
 	// 3. 调用 Lineman Client（shopUuid 对应 Lineman 的 storeId）
 	resp, err := s.menuStatusClient.UpdateMenuStatusWithRetry(ctx, shopUuid, req)
 	if err != nil {
+		// 记录失败日志
+		s.logMenuItemStatusUpdate(ctx, shopUuid, req, false, err.Error())
 		return gerror.Wrap(err, "调用 Lineman API 失败")
 	}
 
 	// 检查响应
 	if resp.Status != "ok" {
-		return gerror.Newf("Lineman API 返回错误: %s - %s", resp.Code, resp.Message)
+		errMsg := fmt.Sprintf("Lineman API 返回错误: %s - %s", resp.Code, resp.Message)
+		// 记录失败日志
+		s.logMenuItemStatusUpdate(ctx, shopUuid, req, false, errMsg)
+		return gerror.New(errMsg)
 	}
+
+	// 记录成功日志
+	s.logMenuItemStatusUpdate(ctx, shopUuid, req, true, "")
+
+	g.Log().Infof(ctx, "[Lineman] 更新菜单商品状态成功: shopUuid=%s, itemId=%s, menuStatus=%s", shopUuid, itemId, menuStatus)
 
 	return nil
 }
@@ -203,4 +217,29 @@ func convertProtoToLinemanDTO(ctx context.Context, protoReq *api.BatchUpdateMenu
 	}
 
 	return linemanReq, nil
+}
+
+// logMenuItemStatusUpdate 记录菜单商品状态更新日志
+// 内部方法，记录到 menu_log 表
+func (s *sLineman) logMenuItemStatusUpdate(ctx context.Context, storeId string, req *lineman_dto.MenuStatusUpdateReq, success bool, errMsg string) {
+	// 将请求参数转为 JSON 作为快照
+	menuSnapshot, _ := gjson.EncodeString(req)
+
+	err := service.ChannelMenu().LogMenuSync(
+		ctx,
+		storeId,
+		string(consts.ProviderLineman),
+		"UPDATE_ITEM", // 参考 grab 的命名: UPDATE_ITEM, UPDATE_MODIFIER
+		"",            // requestId 为空，Lineman 更新接口不返回 requestId
+		success,
+		menuSnapshot,
+		errMsg,
+	)
+	if err != nil {
+		g.Log().Errorf(ctx, "[Lineman] 插入菜单商品状态更新日志失败: storeId=%s, error=%v",
+			storeId, err)
+	} else {
+		g.Log().Debugf(ctx, "[Lineman] 菜单商品状态更新日志已插入: storeId=%s, success=%v",
+			storeId, success)
+	}
 }

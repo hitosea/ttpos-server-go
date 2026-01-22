@@ -79,8 +79,8 @@ func (c *ModifierStatusClient) UpdateModifierStatus(
 	g.Log().Debugf(ctx, "[ModifierStatusClient] 响应: status=%d, body=%s",
 		resp.StatusCode, string(respBytes))
 
-	// 5. 检查 HTTP 状态码
-	if resp.StatusCode != 200 {
+	// 5. 检查 HTTP 状态码（2xx 都视为成功，如 200 OK、201 Created）
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, gerror.Newf("[ModifierStatusClient] API 返回错误: status=%d, body=%s",
 			resp.StatusCode, string(respBytes))
 	}

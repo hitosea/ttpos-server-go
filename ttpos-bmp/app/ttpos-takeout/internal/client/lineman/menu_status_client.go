@@ -91,8 +91,8 @@ func (c *MenuStatusClient) UpdateMenuStatus(
 	respBytes := resp.ReadAll()
 	g.Log().Debugf(ctx, "[LinemanMenuStatusClient] 响应: status=%d, body=%s", resp.StatusCode, string(respBytes))
 
-	// 6. 检查 HTTP 状态码
-	if resp.StatusCode != 200 {
+	// 6. 检查 HTTP 状态码（2xx 都视为成功，如 200 OK、201 Created）
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, gerror.Newf("[LinemanMenuStatusClient] API 返回错误: status=%d, body=%s",
 			resp.StatusCode, string(respBytes))
 	}
