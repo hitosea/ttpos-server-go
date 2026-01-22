@@ -26,6 +26,13 @@ const (
 	ProviderNameLineman = string(consts.ProviderLineman) // "lineman"
 )
 
+// convertBahtToCent 将泰铢金额转换为分
+// Lineman API 返回的金额单位是泰铢（元），TTPOS 系统使用分
+// 转换公式: 分 = 泰铢 × 100
+func convertBahtToCent(baht float64) int64 {
+	return int64(baht * 100)
+}
+
 // HandlePlaceOrder 处理 LINE MAN 提交订单 Webhook
 // 参数验证已由 GoFrame 自动完成，此处只处理业务逻辑
 func (s *sLineman) HandlePlaceOrder(ctx context.Context, req *v1.PlaceOrderReq) error {
@@ -123,9 +130,9 @@ func (s *sLineman) saveOrder(ctx context.Context, req *v1.PlaceOrderReq) (string
 			OrderType:          orderType,
 			OrderTime:          orderTime,
 			OrderStatus:        string(consts.OrderStatusAccepted), // LINE MAN 订单固定为 ACCEPTED
-			TotalAmount:        req.RestaurantRevenue,
-			Subtotal:           req.RestaurantRevenue, // LINE MAN 只提供 restaurantRevenue
-			PaymentType:        "LINEMAN",             // LINE MAN 平台支付，固定为 LINEMAN
+			TotalAmount:        convertBahtToCent(req.RestaurantRevenue),
+			Subtotal:           convertBahtToCent(req.RestaurantRevenue), // LINE MAN 只提供 restaurantRevenue
+			PaymentType:        "LINEMAN",                                // LINE MAN 平台支付，固定为 LINEMAN
 			// Note:               additionalItemsJSON,   // 附加项序列化
 			RawData: rawData,
 		}
@@ -150,8 +157,8 @@ func (s *sLineman) saveOrder(ctx context.Context, req *v1.PlaceOrderReq) (string
 				ProviderItemId: item.Id,
 				ItemName:       item.Id, // LINE MAN 没有单独的商品名称字段，使用 ID
 				Quantity:       item.Quantity,
-				Price:          item.UnitPrice,
-				TotalPrice:     item.UnitPrice * float64(item.Quantity),
+				Price:          convertBahtToCent(item.UnitPrice),
+				TotalPrice:     convertBahtToCent(item.UnitPrice) * int64(item.Quantity),
 				Modifiers:      propertiesJSON, // properties 序列化为 modifiers
 				Note:           item.Memo,
 			}
@@ -246,8 +253,8 @@ func (s *sLineman) updateOrder(ctx context.Context, orderUUID string, req *v1.Or
 		}
 
 		_, err = dao.Order.Ctx(ctx).Where(dao.Order.Columns().Uuid, orderUUID).Update(&do.Order{
-			TotalAmount: req.RestaurantRevenue,
-			Subtotal:    req.RestaurantRevenue,
+			TotalAmount: convertBahtToCent(req.RestaurantRevenue),
+			Subtotal:    convertBahtToCent(req.RestaurantRevenue),
 			OrderTime:   orderTime,
 			RawData:     rawDataJSON,
 			// UpdatedAt:   gtime.Now().Unix(),
@@ -275,8 +282,8 @@ func (s *sLineman) updateOrder(ctx context.Context, orderUUID string, req *v1.Or
 				ProviderItemId: item.Id,
 				ItemName:       item.Id, // LINE MAN 只提供 ID，商品名称可能需要从菜单数据查询
 				Quantity:       item.Quantity,
-				Price:          item.UnitPrice,
-				TotalPrice:     item.UnitPrice * float64(item.Quantity),
+				Price:          convertBahtToCent(item.UnitPrice),
+				TotalPrice:     convertBahtToCent(item.UnitPrice) * int64(item.Quantity),
 				Modifiers:      propertiesJSON,
 				Note:           item.Memo,
 				// CreatedAt:      gtime.Now().Unix(),

@@ -116,6 +116,30 @@ func TestProviderNameConstant(t *testing.T) {
 	})
 }
 
+// TestConvertBahtToCent 测试泰铢转分金额转换函数
+func TestConvertBahtToCent(t *testing.T) {
+	gtest.C(t, func(t *gtest.T) {
+		// 测试整数金额
+		t.AssertEQ(convertBahtToCent(100.00), int64(10000))
+
+		// 测试带小数金额
+		t.AssertEQ(convertBahtToCent(99.50), int64(9950))
+
+		// 测试零金额
+		t.AssertEQ(convertBahtToCent(0.00), int64(0))
+
+		// 测试最小金额 (1分)
+		t.AssertEQ(convertBahtToCent(0.01), int64(1))
+
+		// 测试大金额
+		t.AssertEQ(convertBahtToCent(9999.99), int64(999999))
+
+		// 测试常见订单金额
+		t.AssertEQ(convertBahtToCent(150.50), int64(15050))
+		t.AssertEQ(convertBahtToCent(50.25), int64(5025))
+	})
+}
+
 // 注意：完整的集成测试（包含数据库操作和 MQ 发送）应该在测试环境中运行
 // 这些测试需要：
 // 1. 测试数据库连接
