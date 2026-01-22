@@ -3,6 +3,7 @@ package application
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -15,6 +16,7 @@ import (
 	rpcAdapter "ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -81,6 +83,13 @@ func (s *takeoutOrderAppService) HandlePushOrderState(ctx context.Context, takeo
 	lockKey := fmt.Sprintf("takeout_order:%s:%s", takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid)
 	s.systemLock.LockUuidString(lockKey)
 	defer s.systemLock.UnlockUuidString(lockKey)
+
+	// 判断是否开发模式，如果是开发模式，则使用 6293997752320000
+	if config.Server.Mode == "debug" && takeoutOrderEvent.ProviderName == value_object.TakeoutPlatformLineman {
+		if config.Takeout.TakeoutLinemanStoreId != 0 {
+			takeoutOrderEvent.ShopUuid = strconv.FormatUint(config.Takeout.TakeoutLinemanStoreId, 10)
+		}
+	}
 
 	// 根据 Action 处理订单
 	switch takeoutOrderEvent.Action {
