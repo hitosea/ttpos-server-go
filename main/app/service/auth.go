@@ -1133,7 +1133,9 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		deviceId = auth.Assistant.DeviceId
 		otel.AddSpanEvent(stdCtx, "点餐助手使用收银机设备ID")
 	}
+	otel.AddSpanEvent(stdCtx, "从数据库查询设备绑定状态")
 	if auth.Source != constant.SourceShop && !s.deviceSrv.IsDeviceBind(ctx, auth.CompanyUuid, auth.Source, deviceId) {
+		otel.AddSpanEvent(stdCtx, "从数据库查询打印数据")
 		if printerData := repository.NewPrinterLogRepo(db).GetShiftPrinterData(auth.CompanyUuid, deviceId); printerData != nil {
 			otel.RecordSpanError(stdCtx, errors.New("设备已解绑，请重新绑定"), "设备已解绑（有打印数据）")
 			return company, companySetting, staff, desk, errors.NewWithCodeAndData(constant.CodeTokenInvalid, map[string]any{
@@ -1143,6 +1145,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		otel.RecordSpanError(stdCtx, errors.New("设备已解绑，请重新绑定"), "设备已解绑")
 		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenInvalid, "设备已解绑，请重新绑定")
 	}
+	otel.AddSpanEvent(stdCtx, "验证会员功能")
 	if slices.Contains(s.memberFunctionRoutes, auth.UrlPath) && companySetting.IsOpenMember != 1 {
 		otel.RecordSpanError(stdCtx, errors.New("当前尚未开启会员功能"), "会员功能未开启")
 		return company, companySetting, staff, desk, errors.New("当前尚未开启会员功能，如有需要，请联系销售代表")

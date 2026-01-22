@@ -1983,7 +1983,13 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		cacheKey := objectStoragePersistence.BuildKey(ctx, objectStoragePersistence.ObjectTypeBusinessSetting, ctx.GetCompanyUuid())
 
 		bs, err := cacheLayer.GET(cacheKey, func() (setting.Business, error) {
-			return s.settingSrv.GetBusinessSetting(ctx)
+			otel.AddSpanEvent(stdCtx, "从数据库获取业务设置")
+			bs, err := s.settingSrv.GetBusinessSetting(ctx)
+			if err != nil {
+				otel.RecordSpanError(stdCtx, err, "获取业务设置失败")
+				return setting.Business{}, errors.WithMessage(err)
+			}
+			return bs, nil
 		})
 
 		if err != nil {
