@@ -2,6 +2,7 @@ package purchase_order
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -33,13 +35,14 @@ import (
 // IPurchaseOrderSrv 采购申请服务接口
 type IPurchaseOrderSrv interface {
 	// 采购申请管理
-	GetPurchaseOrderList(ctx context.Context, req req.PurchaseOrderListReq) (resp.PurchaseOrderListResp, error)       // 获取采购申请列表
-	GetPurchaseOrderDetail(ctx context.Context, req req.PurchaseOrderDetailReq) (resp.PurchaseOrderDetailResp, error) // 获取采购申请详情
-	CreatePurchaseOrder(ctx context.Context, req req.PurchaseOrderCreateReq) (resp.PurchaseOrderCreateResp, error)    // 创建采购申请
-	UpdatePurchaseOrder(ctx context.Context, req req.PurchaseOrderUpdateReq) error                                    // 更新采购申请
-	DeletePurchaseOrder(ctx context.Context, req req.PurchaseOrderDeleteReq) error                                    // 删除采购申请
-	SubmitPurchaseOrder(ctx context.Context, req req.PurchaseOrderSubmitReq) error                                    // 提交采购申请
-	ApprovePurchaseOrder(ctx context.Context, req req.PurchaseOrderApproveReq) error                                  // 审核采购申请
+	GetPurchaseOrderList(ctx context.Context, req req.PurchaseOrderListReq) (resp.PurchaseOrderListResp, error)            // 获取采购申请列表
+	GetPurchaseOrderDetail(ctx context.Context, req req.PurchaseOrderDetailReq) (resp.PurchaseOrderDetailResp, error)      // 获取采购申请详情
+	CreatePurchaseOrder(ctx context.Context, req req.PurchaseOrderCreateReq) (resp.PurchaseOrderCreateResp, error)         // 创建采购申请
+	UpdatePurchaseOrder(ctx context.Context, req req.PurchaseOrderUpdateReq) error                                         // 更新采购申请
+	UpdatePurchaseOrderItemUnit(ctx context.Context, req req.PurchaseOrderDetailReq) (resp.PurchaseOrderDetailResp, error) // 更新采购订单物品单位
+	DeletePurchaseOrder(ctx context.Context, req req.PurchaseOrderDeleteReq) error                                         // 删除采购申请
+	SubmitPurchaseOrder(ctx context.Context, req req.PurchaseOrderSubmitReq) error                                         // 提交采购申请
+	ApprovePurchaseOrder(ctx context.Context, req req.PurchaseOrderApproveReq) error                                       // 审核采购申请
 
 	// 收货管理
 	CreatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error)         // 创建收货单
@@ -180,20 +183,68 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		return resp.PurchaseOrderDetailResp{}, errors.WithMessage(errors.New("数据转换失败"), err.Error())
 	}
 
+	// 获取子店所有仓库物品库存（门店数量）\ 总店指定仓库物品库存（可采购数量）
+	avaliableQuantityMap := make(map[uint64]float64)
+	storeQuantityMap := make(map[uint64]float64)
+	companySetting := ctx.GetCompanySetting()
+
+	var hqUuid, subUuid uint64
+	if companySetting.IsHeadquarter() { // 总店
+		hqUuid = companySetting.CompanyUuid
+		subUuid = purchaseOrder.CompanyUuid
+	} else if companySetting.IsSubShop() { // 子店
+		hqUuid = companySetting.HeadquarterUuid
+		subUuid = companySetting.CompanyUuid
+	}
+	// 获取子店所有仓库物品库存（门店数量）
+	if subUuid != 0 {
+		var warehouseItems []model.WarehouseItem
+		subDb := s.dbm.GetDB(subUuid)
+		subDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid in (?)", subDb.Model(&model.Warehouse{}).Select("uuid").Where("delete_time = 0")).Find(&warehouseItems)
+		for _, warehouseItem := range warehouseItems {
+			storeQuantityMap[warehouseItem.MaterialUuid] += warehouseItem.Stock
+		}
+	}
+	// 总店指定仓库物品库存（可采购数量）
+	if hqUuid != 0 {
+		var warehouseItems []model.WarehouseItem
+		hqDb := s.dbm.GetDB(hqUuid)
+		hqDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid = (?)", hqDb.Model(&model.Warehouse{}).Select("uuid").Where("erp_code = ? AND delete_time = 0", purchaseOrder.WarehouseErpCode)).Find(&warehouseItems)
+		for _, warehouseItem := range warehouseItems {
+			avaliableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
+		}
+	}
+
 	// 转换仓库名称
 	detailResp.WarehouseName = *language.JsonToLocaleResponse(purchaseOrder.WarehouseName)
+
+	// 是否可重新提交
+	detailResp.CanRecommit = purchaseOrder.Status == constant.PurchaseOrderStatusRejected && purchaseOrder.ApplicantUuid == ctx.GetStaffUuid() && companySetting.IsSubShop()
+
+	// 是否更新限购方案
+	detailResp.IsUpdateQuotaScheme = false
 
 	// 初始化数组字段
 	detailResp.Items = make([]resp.PurchaseOrderItemInfo, 0, len(purchaseOrder.Items))
 	detailResp.ReceiptProgress = fmt.Sprintf("%.0f%%", purchaseOrder.GetReceiptProgress())
 
+	// 品牌采购：批量查询限购配置（避免 N+1 查询问题）
+	quotaLimitMap := s.helper.getQuotaLimitMap(ctx, s.dbm, purchaseOrder)
+
+	lang := ctx.GetLanguage()
 	// 转换明细数据
 	for _, item := range purchaseOrder.Items {
 		itemInfo := resp.PurchaseOrderItemInfo{}
 		copier.Copy(&itemInfo, &item)
 		itemInfo.LocaleName = *language.JsonToLocaleResponse(item.MaterialName)
 		itemInfo.LocaleUnitName = *language.JsonToLocaleResponse(item.UnitName)
-		itemInfo.LocaleBaseUnitName = *language.JsonToLocaleResponse(item.BaseUnitName)
+		itemInfo.LocaleBaseUnitName = func() dto.LocaleResponse {
+			if item.Material == nil {
+				return dto.LocaleResponse{}
+			}
+			unitName := item.Material.GetBaseUnit().Name
+			return *language.JsonToLocaleResponse(unitName)
+		}()
 		itemInfo.InternalCode = func(item model.PurchaseOrderItem) string {
 			if item.Material == nil {
 				return ""
@@ -228,7 +279,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 			}
 			return unitList
 		}(item)
-		// 单位列表
+		// 已经选中的采购单位列表
 		itemInfo.Units = func(item model.PurchaseOrderItem) []resp.PurchaseOrderItemUnit {
 			unitList := []resp.PurchaseOrderItemUnit{}
 			if len(item.Units) == 0 && item.BaseUnitUuid != 0 {
@@ -255,8 +306,122 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 
 			return unitList
 		}(item)
+		itemInfo.AvailableQuantity = decimal.NewFromFloat(avaliableQuantityMap[item.MaterialUuid]).Round(3).InexactFloat64()
+		itemInfo.StoreQuantity = decimal.NewFromFloat(storeQuantityMap[item.MaterialUuid]).Round(3).InexactFloat64()
+
+		if item.Material != nil {
+			// 销售单位UUID
+			itemInfo.DefaultSalesUnitUuid = item.Material.DefaultSalesUnitUuid
+			for _, unit := range item.Material.NotBaseUnitList {
+				if unit.Uuid == item.Material.DefaultSalesUnitUuid {
+					// 销售单位名称
+					itemInfo.DefaultSalesUnitLocaleName = *language.JsonToLocaleResponse(unit.Name)
+					// 转成销售单位数量
+					if unit.ConversionRate != 0 {
+						itemInfo.AvailableQuantity = decimal.NewFromFloat(avaliableQuantityMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+						itemInfo.StoreQuantity = decimal.NewFromFloat(storeQuantityMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+					}
+				}
+			}
+			// 限购配置
+			if quotaLimitMap[item.MaterialCode] > 0 {
+				quotaUnit := item.Material.GetUnitByUuidForQuotaConfig()
+				if quotaUnit == nil || quotaUnit.Unit == nil {
+					logger.Logger.Warn("未找到目标单位", zap.Uint64("material_uuid", item.MaterialUuid), zap.Uint64("default_sales_unit_uuid", item.Material.DefaultSalesUnitUuid))
+					continue
+				}
+				itemInfo.QuotaConfig = resp.PurchaseOrderItemQuotaConfig{
+					QuotaLimit:          quotaLimitMap[item.MaterialCode],
+					QuotaUnitUuid:       quotaUnit.Uuid,
+					QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+					QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
+				}
+				// 是否更新限购方案
+				if purchaseOrder.IsStorePending() {
+					// 检查是否使用限购单位
+					materialName := language.JsonToLocaleResponse(item.Material.Name).GetLocale(lang)
+					for _, unit := range item.Units {
+						if unit.UnitUuid != itemInfo.QuotaConfig.QuotaUnitUuid {
+							detailResp.IsUpdateQuotaScheme = true
+							itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(
+								i18n.Translate(lang, "物品%s的单位限制已变更，当前使用的单位（%s）不在允许范围内，请修改。"),
+								materialName, language.JsonToLocaleResponse(unit.UnitName).GetLocale(lang),
+							)
+							break
+						}
+						if unit.Num > itemInfo.QuotaConfig.QuotaLimit {
+							detailResp.IsUpdateQuotaScheme = true
+							itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(
+								i18n.Translate(lang, "物品%s申请总数（%.2f）已超过限购数（%.2f），请调整数量后提交。"),
+								materialName, item.Num, itemInfo.QuotaConfig.QuotaLimit,
+							)
+							break
+						}
+					}
+				}
+			}
+		}
+
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
+
+	remarks := make([]resp.PurchaseOrderRemark, 0)
+	var hqPurchaseOrderUuid, subPurchaseOrderUuid uint64
+	if companySetting.IsHeadquarter() {
+		subPurchaseOrderUuid = purchaseOrder.SubUuid
+		hqPurchaseOrderUuid = purchaseOrder.Uuid
+	} else if companySetting.IsSubShop() {
+		subPurchaseOrderUuid = purchaseOrder.Uuid
+		// 根据sub_uuid查询总店采购单UUID
+		hqPurchaseOrder, _ := repository.NewPurchaseOrderRepo(s.dbm.GetDB(hqUuid)).GetBySubUuidWithoutDeleted(subPurchaseOrderUuid)
+		if hqPurchaseOrder != nil {
+			hqPurchaseOrderUuid = hqPurchaseOrder.Uuid
+		}
+	}
+	if subPurchaseOrderUuid != 0 {
+		subLogRepo := repository.NewPurchaseOrderLogRepo(s.dbm.GetDB(subUuid))
+		subLogs, err := subLogRepo.GetList(subLogRepo.WherePurchaseOrderUuid(subPurchaseOrderUuid))
+		if err != nil {
+			return resp.PurchaseOrderDetailResp{}, errors.WithMessage(errors.New("查询门店操作日志失败"), err.Error())
+		}
+		for _, log := range subLogs {
+			if (log.OldStatus != constant.PurchaseOrderStatusApproved && log.NewStatus == constant.PurchaseOrderStatusApproved) ||
+				(log.OldStatus != constant.PurchaseOrderStatusRejected && log.NewStatus == constant.PurchaseOrderStatusRejected) ||
+				log.NewStatus == constant.PurchaseOrderStatusRecommitted {
+				remarks = append(remarks, resp.PurchaseOrderRemark{
+					Source:     "store",
+					Status:     log.NewStatus,
+					Remark:     log.Remark,
+					CreateTime: log.CreateTime,
+				})
+			}
+		}
+	}
+
+	if hqPurchaseOrderUuid != 0 {
+		hqLogRepo := repository.NewPurchaseOrderLogRepo(s.dbm.GetDB(hqUuid))
+		hqLogs, err := hqLogRepo.GetList(hqLogRepo.WherePurchaseOrderUuid(hqPurchaseOrderUuid))
+		if err != nil {
+			return resp.PurchaseOrderDetailResp{}, errors.WithMessage(errors.New("查询总店操作日志失败"), err.Error())
+		}
+		for _, log := range hqLogs {
+			if (log.OldStatus != constant.PurchaseOrderStatusApproved && log.NewStatus == constant.PurchaseOrderStatusApproved) ||
+				(log.OldStatus != constant.PurchaseOrderStatusRejected && log.NewStatus == constant.PurchaseOrderStatusRejected) ||
+				log.NewStatus == constant.PurchaseOrderStatusRecommitted {
+				remarks = append(remarks, resp.PurchaseOrderRemark{
+					Source:     "headquarters",
+					Status:     log.NewStatus,
+					Remark:     log.Remark,
+					CreateTime: log.CreateTime,
+				})
+			}
+		}
+	}
+
+	sort.Slice(remarks, func(i, j int) bool {
+		return remarks[i].CreateTime > remarks[j].CreateTime
+	})
+	detailResp.Remarks = remarks
 
 	return detailResp, nil
 }
@@ -413,6 +578,11 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 			0,
 			constant.PurchaseOrderStatusPending,
 			"",
+			// 记录操作日志内容
+			func(order *model.PurchaseOrder, items []model.PurchaseOrderItem) string {
+				order.Items = items
+				return utils.ToJson(order)
+			}(purchaseOrder, items),
 		)
 		if err != nil {
 			return err
@@ -459,8 +629,8 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 			return errors.WithMessage(errors.New("查询采购申请失败"), err.Error())
 		}
 
-		// 检查是否可编辑
-		if !purchaseOrder.IsEditable() && purchaseOrder.Status != constant.PurchaseOrderStatusPending {
+		// 检查是否可编辑，草稿状态、待审核、已驳回状态可以编辑
+		if !purchaseOrder.IsEditable() && purchaseOrder.Status != constant.PurchaseOrderStatusPending && purchaseOrder.Status != constant.PurchaseOrderStatusRejected {
 			return errors.New("当前状态不允许编辑")
 		}
 
@@ -469,6 +639,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 		if err != nil {
 			return err
 		}
+
 		// 如果没有任何变动，直接返回
 		if !needUpdate {
 			return nil
@@ -555,6 +726,18 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 			purchaseOrder.Status,
 			purchaseOrder.Status,
 			"",
+			// 记录操作日志内容
+			func() string {
+				// 查询现有采购申请
+				purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid, purchaseOrderRepo.WithSimpleItems())
+				if err != nil {
+					if err == gorm.ErrRecordNotFound {
+						return ""
+					}
+					return ""
+				}
+				return utils.ToJson(purchaseOrder)
+			}(),
 		)
 		if err != nil {
 			return err
@@ -562,6 +745,137 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 
 		return nil
 	})
+}
+
+// UpdatePurchaseOrderItemUnit 更新采购订单物品单位
+//
+// 功能：根据最新规则更新订单中所有物品的单位
+// 规则：当物品设置了销售单位时用销售单位，没有设置则使用基准单位
+func (s *purchaseOrderSrv) UpdatePurchaseOrderItemUnit(
+	ctx context.Context,
+	req req.PurchaseOrderDetailReq,
+) (resp.PurchaseOrderDetailResp, error) {
+	// 加锁
+	s.lock.LockUuid(req.Uuid)
+	defer s.lock.UnlockUuid(req.Uuid)
+
+	db := ctx.GetDB()
+
+	var result resp.PurchaseOrderDetailResp
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
+		purchaseOrderItemUnitRepo := repository.NewPurchaseOrderItemUnitRepo(tx)
+		materialRepo := repository.NewMaterialRepo(tx)
+
+		// 1. 查询采购申请及其明细
+		purchaseOrder, err := purchaseOrderRepo.GetByUuid(
+			req.Uuid,
+			purchaseOrderRepo.WithItems(),
+		)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return errors.New("采购申请不存在")
+			}
+			return errors.WithMessage(errors.New("查询采购申请失败"), err.Error())
+		}
+
+		// 2. 检查是否可编辑（待提交或待审核状态）
+		if !purchaseOrder.IsStorePending() {
+			return errors.New("当前状态不允许修改")
+		}
+
+		// 品牌采购：批量查询限购配置（避免 N+1 查询问题）
+		quotaLimitMap := s.helper.getQuotaLimitMap(ctx, s.dbm, purchaseOrder)
+
+		// 3. 遍历所有物品，更新单位
+		for _, item := range purchaseOrder.Items {
+			// 查询物品完整信息（包括单位列表）
+			material, err := materialRepo.GetMaterialByUuid(
+				item.MaterialUuid,
+				materialRepo.WithUnit(),
+				materialRepo.WithNotBaseUnitList(),
+			)
+			if err != nil {
+				logger.Logger.Warn("查询物品失败", zap.Uint64("material_uuid", item.MaterialUuid), zap.Error(err))
+				continue // 跳过无法查询的物品
+			}
+
+			// 品牌采购：检查是否超过限购数量
+			quotaLimit := quotaLimitMap[item.MaterialCode]
+			if quotaLimit > 0 && item.Num > quotaLimit {
+				return errors.New("当前物品数量超过限购数量，请检查物品单位是否正确")
+			}
+
+			// 4. 确定应该使用的单位（销售单位优先，否则使用基准单位）
+			targetUnit := material.GetUnitByUuidForQuotaConfig()
+			if targetUnit == nil || targetUnit.Unit == nil {
+				logger.Logger.Warn("未找到目标单位", zap.Uint64("material_uuid", item.MaterialUuid), zap.Uint64("default_sales_unit_uuid", material.DefaultSalesUnitUuid))
+				continue
+			}
+
+			// 更新单位记录
+			for index, unit := range item.Units {
+				if index > 0 {
+					// 删除旧单位记录
+					err = purchaseOrderItemUnitRepo.DeleteByItemUuidAndUnitUuid(item.Uuid, unit.Uuid)
+					if err != nil {
+						logger.Logger.Error("删除旧单位记录失败", zap.Uint64("item_uuid", unit.Uuid), zap.Error(err))
+						return errors.WithMessage(errors.New("删除旧单位记录失败"), err.Error())
+					}
+				} else if unit.UnitUuid != targetUnit.Uuid {
+					// 如果单位不一致，则更新单位记录
+					unit.UnitUuid = targetUnit.Uuid
+					unit.UnitName = utils.ToJson(targetUnit.Unit.MultiLanguageName.GetNames())
+					unit.UnitConversionRate = targetUnit.ConversionRate
+					err = purchaseOrderItemUnitRepo.Update(unit)
+					if err != nil {
+						logger.Logger.Error("更新单位记录失败", zap.Uint64("item_uuid", unit.Uuid), zap.Error(err))
+						return errors.WithMessage(errors.New("更新单位记录失败"), err.Error())
+					}
+				}
+			}
+		}
+
+		// 记录日志 更新单位记录
+		err = s.helper.createPurchaseOrderLog(
+			tx,
+			req.Uuid,
+			ctx,
+			"update_item_unit",
+			"更新采购申请明细单位",
+			purchaseOrder.Status,
+			purchaseOrder.Status,
+			"",
+			func() string {
+				purchaseOrder, err := purchaseOrderRepo.GetByUuid(
+					req.Uuid,
+					purchaseOrderRepo.WithSimpleItems(),
+				)
+				if err != nil {
+					return ""
+				}
+				return utils.ToJson(purchaseOrder)
+			}(),
+		)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return resp.PurchaseOrderDetailResp{}, err
+	}
+
+	// 重新查询采购申请详情
+	result, err = s.GetPurchaseOrderDetail(ctx, req)
+	if err != nil {
+		return resp.PurchaseOrderDetailResp{}, err
+	}
+
+	return result, nil
 }
 
 // DeletePurchaseOrder 删除采购申请
@@ -609,7 +923,8 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 	defer s.lock.UnlockUuid(req.Uuid)
 
 	db := ctx.GetDB()
-	companyUuid := ctx.GetCompanyUuid()
+
+	companySetting := ctx.GetCompanySetting()
 
 	return db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
@@ -699,14 +1014,10 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 			}
 		}
 
-		// 🔥 新增：品牌采购三维度限额校验
+		// 🔥 新增：品牌采购限购校验（基于新的限购方案表）
 		if purchaseOrder.IsHeadquarterPurchase() {
-			// ① 检查申请次数限制
-			if err := s.checkDailySubmitLimit(ctx, companyUuid); err != nil {
-				return err
-			}
-			// ② 检查物品限购
-			if err := s.checkPurchaseQuota(ctx, purchaseOrder); err != nil {
+			// 检查限购方案（包含每日申请次数限制和物品数量限制）
+			if err := s.checkPurchaseLimit(ctx, purchaseOrder); err != nil {
 				return err
 			}
 		}
@@ -723,6 +1034,23 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 			return errors.WithMessage(errors.New("更新采购申请状态失败"), err.Error())
 		}
 
+		// 操作日志记录的状态
+		logStatus := purchaseOrder.Status
+		if req.IsResubmit {
+			logStatus = constant.PurchaseOrderStatusRecommitted
+
+			// 子店采购单驳回理由清空
+			tx.Model(&model.PurchaseOrder{}).Where("uuid = ?", req.Uuid).Updates(map[string]any{
+				"reject_reason":      "",
+				"headquarter_status": constant.HeadquarterStatusDraft,
+			})
+			// 总店子店采购单标记删除、清空驳回理由
+			s.dbm.GetDB(companySetting.HeadquarterUuid).Model(&model.PurchaseOrder{}).Where("sub_uuid = ?", req.Uuid).Updates(map[string]any{
+				"delete_time":   time.Now().Unix(),
+				"reject_reason": "",
+			})
+		}
+
 		// 记录操作日志
 		statusText := purchaseOrder.GetStatusText()
 		err = s.helper.createPurchaseOrderLog(
@@ -732,8 +1060,9 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 			"status_update",
 			"更新状态为"+statusText,
 			oldStatus,
-			purchaseOrder.Status,
+			logStatus,
 			"",
+			"{}",
 		)
 		if err != nil {
 			return err
@@ -755,7 +1084,13 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 	db := ctx.GetDB()
 	companySetting := ctx.GetCompanySetting()
 
-	if req.Action == "reject" && utf8.RuneCountInString(req.RejectReason) > 100 {
+	// 2.15.0 批注
+	if utf8.RuneCountInString(req.Remark) > 100 {
+		return errors.New("批注最多100个字符")
+	}
+
+	// 2.14.0 驳回原因
+	if ctx.Version(context.GTE, constant.ClientVersionV2140) && req.Action == "reject" && utf8.RuneCountInString(req.RejectReason) > 100 {
 		return errors.New("驳回原因最多100个字符")
 	}
 	return db.Transaction(func(tx *gorm.DB) error {
@@ -786,6 +1121,13 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 			if err != nil {
 				return err
 			}
+			// 🔥 新增：品牌采购限购校验（基于新的限购方案表）
+			if purchaseOrder.IsHeadquarterPurchase() && purchaseOrder.IsStorePending() {
+				// 检查限购方案（包含每日申请次数限制和物品数量限制）
+				if err := s.checkPurchaseLimit(ctx, purchaseOrder); err != nil {
+					return err
+				}
+			}
 		}
 
 		// 处理审核逻辑
@@ -801,7 +1143,11 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 			newStatus = constant.PurchaseOrderStatusRejected
 			actionDesc = "审核驳回"
 			purchaseOrder.RejectTime = time.Now().Unix()
-			purchaseOrder.RejectReason = req.RejectReason
+			rejectReason := req.RejectReason
+			if rejectReason == "" {
+				rejectReason = req.Remark
+			}
+			purchaseOrder.RejectReason = rejectReason
 		} else {
 			return errors.New("无效的审核动作")
 		}
@@ -824,8 +1170,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 			return errors.WithMessage(errors.New("更新采购申请状态失败"), err.Error())
 		}
 
+		var remark string
+		if req.RejectReason != "" {
+			remark = req.RejectReason
+		} else if req.Remark != "" {
+			remark = req.Remark
+		}
 		// 记录操作日志
-		err = s.helper.createPurchaseOrderLog(tx, req.Uuid, ctx, req.Action, actionDesc, oldStatus, newStatus, "")
+		err = s.helper.createPurchaseOrderLog(tx, req.Uuid, ctx, req.Action, actionDesc, oldStatus, newStatus, remark, "{}")
 		if err != nil {
 			return errors.WithMessage(errors.New("记录操作日志失败"), err.Error())
 		}
@@ -900,6 +1252,16 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 			return errors.WithMessage(errors.New("复制总部采购订单失败"), err.Error())
 		}
 
+		// 判断是否已经有总部采购单
+		hqPurchaseOrder, _ := repository.NewPurchaseOrderRepo(hqTx).GetBySubUuidWithoutDeleted(subUuid)
+		if hqPurchaseOrder != nil {
+			// 删除总部采购单
+			err = repository.NewPurchaseOrderRepo(hqTx).ForceDelete(hqPurchaseOrder.Uuid)
+			if err != nil {
+				return errors.WithMessage(errors.New("删除总部采购申请失败"), err.Error())
+			}
+		}
+
 		// 重置主键字段
 		headquarterPurchaseOrder.BaseModel.ID = 0
 		headquarterPurchaseOrder.BaseModel.Uuid = func() uint64 {
@@ -911,6 +1273,10 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 		headquarterPurchaseOrder.SubUuid = subUuid
 		headquarterPurchaseOrder.Status = constant.PurchaseOrderStatusPending
 		headquarterPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
+		if hqPurchaseOrder != nil {
+			headquarterPurchaseOrder.BaseModel.ID = hqPurchaseOrder.ID
+			headquarterPurchaseOrder.Uuid = hqPurchaseOrder.Uuid
+		}
 		err = repository.NewPurchaseOrderRepo(hqTx).Create(&headquarterPurchaseOrder)
 		if err != nil {
 			logger.Logger.Error("创建总部采购申请失败", zap.Error(err))

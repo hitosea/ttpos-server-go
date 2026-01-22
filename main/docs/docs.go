@@ -23998,6 +23998,30 @@ const docTemplate = `{
                         "description": "状态 0-全部 1-启用 2-停用",
                         "name": "status",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "仓库ERP编码",
+                        "name": "warehouse_erp_code",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "采购类型 0-全部 1-门店 2-总部",
+                        "name": "purchase_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "供应商ERP编码",
+                        "name": "supplier_erp_code",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "出库仓库ERP编码",
+                        "name": "out_warehouse_erp_code",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -28801,6 +28825,265 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/purchase/limit/scheme/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建新的限购方案",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.采购管理"
+                ],
+                "summary": "创建限购方案",
+                "parameters": [
+                    {
+                        "description": "创建限购方案请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PurchaseLimitSchemeCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/purchase/limit/scheme/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "软删除限购方案及其关联配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.采购管理"
+                ],
+                "summary": "删除限购方案",
+                "parameters": [
+                    {
+                        "description": "删除限购方案请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PurchaseLimitSchemeDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/purchase/limit/scheme/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据UUID获取限购方案详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.采购管理"
+                ],
+                "summary": "获取限购方案详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "方案UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PurchaseLimitSchemeResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/purchase/limit/scheme/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "分页获取限购方案列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.采购管理"
+                ],
+                "summary": "获取限购方案列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "状态：0=关闭，1=开启",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "方案名称（模糊搜索）",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PurchaseLimitSchemeListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/purchase/limit/scheme/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更新限购方案信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.采购管理"
+                ],
+                "summary": "更新限购方案",
+                "parameters": [
+                    {
+                        "description": "更新限购方案请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PurchaseLimitSchemeUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/purchase/order/approve": {
             "post": {
                 "security": [
@@ -28973,6 +29256,57 @@ const docTemplate = `{
                         "name": "uuid",
                         "in": "query",
                         "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PurchaseOrderDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/purchase/order/item/units/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更新采购订单物品单位",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.采购管理"
+                ],
+                "summary": "更新采购订单物品单位",
+                "parameters": [
+                    {
+                        "description": "更新采购订单物品单位请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PurchaseOrderDetailReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -37979,6 +38313,10 @@ const docTemplate = `{
                     "description": "桌台方式-平均订单金额",
                     "type": "number"
                 },
+                "avg_grab_order_amount": {
+                    "description": "Grab平均订单金额",
+                    "type": "number"
+                },
                 "avg_instant_order_amount": {
                     "description": "点餐方式-平均订单金额",
                     "type": "number"
@@ -37999,6 +38337,10 @@ const docTemplate = `{
                     "description": "桌台方式-最大订单金额",
                     "type": "number"
                 },
+                "max_grab_order_amount": {
+                    "description": "Grab最大订单金额",
+                    "type": "number"
+                },
                 "max_instant_order_amount": {
                     "description": "点餐方式-最大订单金额",
                     "type": "number"
@@ -38013,6 +38355,10 @@ const docTemplate = `{
                 },
                 "min_desk_order_amount": {
                     "description": "桌台方式-最小订单金额",
+                    "type": "number"
+                },
+                "min_grab_order_amount": {
+                    "description": "Grab最小订单金额",
                     "type": "number"
                 },
                 "min_instant_order_amount": {
@@ -38069,6 +38415,10 @@ const docTemplate = `{
                 "total_gift_num": {
                     "description": "赠菜数量",
                     "type": "number"
+                },
+                "total_grab_order_num": {
+                    "description": "Grab订单数",
+                    "type": "integer"
                 },
                 "total_instant_order_num": {
                     "description": "点餐方式-订单数",
@@ -38876,6 +39226,10 @@ const docTemplate = `{
                     "description": "可用库存数量",
                     "type": "number"
                 },
+                "available_quantity": {
+                    "description": "可采购数量",
+                    "type": "number"
+                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -38898,6 +39252,22 @@ const docTemplate = `{
                 },
                 "cost_unit_uuid": {
                     "description": "成本单位UUID",
+                    "type": "integer"
+                },
+                "default_sales_unit_locale_name": {
+                    "description": "默认销售单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "default_sales_unit_name": {
+                    "description": "默认销售单位名称",
+                    "type": "string"
+                },
+                "default_sales_unit_uuid": {
+                    "description": "默认销售单位UUID",
                     "type": "integer"
                 },
                 "erp_code": {
@@ -38956,6 +39326,14 @@ const docTemplate = `{
                     "description": "采购单位UUID",
                     "type": "integer"
                 },
+                "quota_config": {
+                    "description": "限购配置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/material_resp.MaterialQuotaConfig"
+                        }
+                    ]
+                },
                 "safety_stock": {
                     "description": "安全库存数量",
                     "type": "number"
@@ -38963,6 +39341,10 @@ const docTemplate = `{
                 "status": {
                     "description": "状态 1-启用 0-停用",
                     "type": "integer"
+                },
+                "store_quantity": {
+                    "description": "门店数量",
+                    "type": "number"
                 },
                 "transit_num": {
                     "description": "在途库存数量",
@@ -39086,6 +39468,18 @@ const docTemplate = `{
                 },
                 "cost_unit_uuid": {
                     "description": "成本单位UUID",
+                    "type": "integer"
+                },
+                "default_sales_unit_locale_name": {
+                    "description": "默认销售单位多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "default_sales_unit_uuid": {
+                    "description": "默认销售单位UUID（ProductUnit UUID，与采购单位、成本单位一致）",
                     "type": "integer"
                 },
                 "from_cost_unit_uuid": {
@@ -39214,6 +39608,31 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "material_resp.MaterialQuotaConfig": {
+            "type": "object",
+            "properties": {
+                "quota_limit": {
+                    "description": "限购数量",
+                    "type": "number"
+                },
+                "quota_unit_locale_name": {
+                    "description": "限购单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "quota_unit_name": {
+                    "description": "限购单位名称",
+                    "type": "string"
+                },
+                "quota_unit_uuid": {
+                    "description": "限购单位UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -44162,6 +44581,10 @@ const docTemplate = `{
         "req.InstantOrderPaymentCancelReq": {
             "type": "object",
             "properties": {
+                "payment_info": {
+                    "description": "撤销原因, 非必填. 用于保存 kbank 设备返回的撤单消息",
+                    "type": "string"
+                },
                 "payment_order_uuid": {
                     "description": "支付单UUID, 必填",
                     "type": "integer"
@@ -44563,6 +44986,10 @@ const docTemplate = `{
                     "description": "成本单位UUID",
                     "type": "integer"
                 },
+                "default_sales_unit_uuid": {
+                    "description": "默认销售单位UUID（MaterialUnit UUID，与采购单位、成本单位一致）",
+                    "type": "integer"
+                },
                 "init_stock": {
                     "description": "期初库存",
                     "type": "number"
@@ -44734,6 +45161,10 @@ const docTemplate = `{
                 },
                 "cost_unit_uuid": {
                     "description": "成本单位UUID",
+                    "type": "integer"
+                },
+                "default_sales_unit_uuid": {
+                    "description": "默认销售单位UUID（MaterialUnit UUID，与采购单位、成本单位一致）",
                     "type": "integer"
                 },
                 "internal_code": {
@@ -46465,6 +46896,10 @@ const docTemplate = `{
                 },
                 "cost_unit_uuid": {
                     "description": "成本单位UUID",
+                    "type": "integer"
+                },
+                "default_sales_unit_uuid": {
+                    "description": "默认销售单位UUID（MaterialUnit UUID，与采购单位、成本单位一致）",
                     "type": "integer"
                 },
                 "init_stock": {
@@ -48658,6 +49093,134 @@ const docTemplate = `{
                 }
             }
         },
+        "req.PurchaseLimitSchemeCreateReq": {
+            "type": "object",
+            "required": [
+                "locale_name"
+            ],
+            "properties": {
+                "apply_to_all_shops": {
+                    "description": "0-否 1-是",
+                    "type": "integer"
+                },
+                "daily_limit": {
+                    "description": "0-不限制",
+                    "type": "integer"
+                },
+                "items": {
+                    "description": "物品配置",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.PurchaseLimitSchemeItemReq"
+                    }
+                },
+                "locale_name": {
+                    "description": "多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "shops": {
+                    "description": "门店UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "description": "0-关闭 1-开启",
+                    "type": "integer"
+                },
+                "weekdays": {
+                    "description": "星期配置 1-7 表示周一到周日，逗号分隔",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "req.PurchaseLimitSchemeDeleteReq": {
+            "type": "object",
+            "properties": {
+                "uuid": {
+                    "description": "方案UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.PurchaseLimitSchemeItemReq": {
+            "type": "object",
+            "required": [
+                "material_uuid"
+            ],
+            "properties": {
+                "material_uuid": {
+                    "description": "物品UUID",
+                    "type": "integer"
+                },
+                "quota_limit": {
+                    "description": "限购数量",
+                    "type": "number"
+                }
+            }
+        },
+        "req.PurchaseLimitSchemeUpdateReq": {
+            "type": "object",
+            "required": [
+                "locale_name",
+                "uuid"
+            ],
+            "properties": {
+                "apply_to_all_shops": {
+                    "description": "0-否 1-是",
+                    "type": "integer"
+                },
+                "daily_limit": {
+                    "description": "0-不限制",
+                    "type": "integer"
+                },
+                "items": {
+                    "description": "物品配置",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.PurchaseLimitSchemeItemReq"
+                    }
+                },
+                "locale_name": {
+                    "description": "多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "shops": {
+                    "description": "门店UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "description": "0-关闭 1-开启",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "方案UUID",
+                    "type": "integer"
+                },
+                "weekdays": {
+                    "description": "星期配置 1-7 表示周一到周日，逗号分隔",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "req.PurchaseOrderApproveReq": {
             "type": "object",
             "required": [
@@ -48675,6 +49238,10 @@ const docTemplate = `{
                 },
                 "reject_reason": {
                     "description": "驳回备注，可以为空最大100个字符",
+                    "type": "string"
+                },
+                "remark": {
+                    "description": "批注, 可以为空最大100个字符",
                     "type": "string"
                 },
                 "uuid": {
@@ -48735,6 +49302,19 @@ const docTemplate = `{
             }
         },
         "req.PurchaseOrderDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "采购订单ID",
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "req.PurchaseOrderDetailReq": {
             "type": "object",
             "required": [
                 "uuid"
@@ -48910,6 +49490,10 @@ const docTemplate = `{
             "properties": {
                 "is_confirm": {
                     "description": "是否确认提交（移除禁用物品）",
+                    "type": "boolean"
+                },
+                "is_resubmit": {
+                    "description": "是否重新提交",
                     "type": "boolean"
                 },
                 "uuid": {
@@ -49671,6 +50255,10 @@ const docTemplate = `{
                 },
                 "query_start_time": {
                     "description": "查询开始时间戳",
+                    "type": "integer"
+                },
+                "source": {
+                    "description": "查询来源：0-营业收款统计、1-门店汇总统计",
                     "type": "integer"
                 }
             }
@@ -57987,6 +58575,10 @@ const docTemplate = `{
                     "description": "手续费",
                     "type": "number"
                 },
+                "payment_info": {
+                    "description": "支付信息.json格式,存储第三方支付返回的详细信息,kbank的信息",
+                    "type": "string"
+                },
                 "payment_method_code": {
                     "description": "支付方式代号",
                     "type": "integer"
@@ -59171,6 +59763,113 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.PurchaseLimitSchemeItemResp": {
+            "type": "object",
+            "properties": {
+                "material_uuid": {
+                    "type": "integer"
+                },
+                "quota_limit": {
+                    "type": "number"
+                }
+            }
+        },
+        "resp.PurchaseLimitSchemeListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PurchaseLimitSchemeSummaryResp"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/resp.PageMeta"
+                }
+            }
+        },
+        "resp.PurchaseLimitSchemeResp": {
+            "type": "object",
+            "properties": {
+                "apply_to_all_shops": {
+                    "type": "integer"
+                },
+                "create_time": {
+                    "type": "integer"
+                },
+                "daily_limit": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PurchaseLimitSchemeItemResp"
+                    }
+                },
+                "locale_name": {
+                    "$ref": "#/definitions/dto.LocaleResponse"
+                },
+                "shops": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "update_time": {
+                    "type": "integer"
+                },
+                "uuid": {
+                    "type": "integer"
+                },
+                "weekdays": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "resp.PurchaseLimitSchemeSummaryResp": {
+            "type": "object",
+            "properties": {
+                "apply_to_all_shops": {
+                    "type": "integer"
+                },
+                "create_time": {
+                    "type": "integer"
+                },
+                "daily_limit": {
+                    "type": "integer"
+                },
+                "item_count": {
+                    "description": "物品数量",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "$ref": "#/definitions/dto.LocaleResponse"
+                },
+                "shop_count": {
+                    "description": "门店数量",
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "update_time": {
+                    "type": "integer"
+                },
+                "uuid": {
+                    "type": "integer"
+                },
+                "weekday_str": {
+                    "description": "例如: \"周一、周三、周五\"",
+                    "type": "string"
+                }
+            }
+        },
         "resp.PurchaseOrderCreateResp": {
             "type": "object",
             "properties": {
@@ -59187,6 +59886,10 @@ const docTemplate = `{
         "resp.PurchaseOrderDetailResp": {
             "type": "object",
             "properties": {
+                "can_recommit": {
+                    "description": "是否可重新提交",
+                    "type": "boolean"
+                },
                 "company_name": {
                     "description": "V2.6 公司名称",
                     "type": "string"
@@ -59210,6 +59913,10 @@ const docTemplate = `{
                 "headquarter_status": {
                     "description": "V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
                     "type": "integer"
+                },
+                "is_update_quota_scheme": {
+                    "description": "是否更新限购方案",
+                    "type": "boolean"
                 },
                 "items": {
                     "description": "采购明细",
@@ -59246,6 +59953,13 @@ const docTemplate = `{
                     "description": "驳回原因",
                     "type": "string"
                 },
+                "remarks": {
+                    "description": "批注",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PurchaseOrderRemark"
+                    }
+                },
                 "status": {
                     "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核",
                     "type": "integer"
@@ -59279,6 +59993,10 @@ const docTemplate = `{
         "resp.PurchaseOrderInfo": {
             "type": "object",
             "properties": {
+                "can_recommit": {
+                    "description": "是否可重新提交",
+                    "type": "boolean"
+                },
                 "company_name": {
                     "description": "V2.6 公司名称",
                     "type": "string"
@@ -59368,6 +60086,10 @@ const docTemplate = `{
                     "description": "到货数量",
                     "type": "number"
                 },
+                "available_quantity": {
+                    "description": "可采购数量",
+                    "type": "number"
+                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -59375,6 +60097,18 @@ const docTemplate = `{
                 "base_unit_name": {
                     "description": "基准单位名称",
                     "type": "string"
+                },
+                "default_sales_unit_locale_name": {
+                    "description": "默认销售单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "default_sales_unit_uuid": {
+                    "description": "默认销售单位UUID",
+                    "type": "integer"
                 },
                 "internal_code": {
                     "description": "内部编码",
@@ -59416,6 +60150,18 @@ const docTemplate = `{
                     "description": "申请数量",
                     "type": "number"
                 },
+                "quota_config": {
+                    "description": "限购配置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PurchaseOrderItemQuotaConfig"
+                        }
+                    ]
+                },
+                "store_quantity": {
+                    "description": "门店数量",
+                    "type": "number"
+                },
                 "unit_conversion_rate": {
                     "description": "基准单位转换率",
                     "type": "number"
@@ -59432,7 +60178,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "units": {
-                    "description": "单位列表",
+                    "description": "已经选中的采购单位列表",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.PurchaseOrderItemUnit"
@@ -59457,6 +60203,35 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PurchaseOrderItemQuotaConfig": {
+            "type": "object",
+            "properties": {
+                "is_update_quota_scheme": {
+                    "description": "是否更新限购方案",
+                    "type": "boolean"
+                },
+                "quota_limit": {
+                    "description": "限购数量",
+                    "type": "number"
+                },
+                "quota_unit_locale_name": {
+                    "description": "限购单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "quota_unit_name": {
+                    "description": "限购单位名称",
+                    "type": "string"
+                },
+                "quota_unit_uuid": {
+                    "description": "限购单位UUID",
                     "type": "integer"
                 }
             }
@@ -59507,6 +60282,27 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.PageResponse"
                         }
                     ]
+                }
+            }
+        },
+        "resp.PurchaseOrderRemark": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "批注",
+                    "type": "string"
+                },
+                "source": {
+                    "description": "来源 headquarters-总部 或 store-门店",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态 2-已通过 3-已驳回 6-重新提交",
+                    "type": "integer"
                 }
             }
         },
@@ -65681,7 +66477,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "8080--main--gold-moose-23--zzhheverywhere.coder.hitosea.com",
+	Host:             "192.168.100.69:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "ttpos-server-go API",

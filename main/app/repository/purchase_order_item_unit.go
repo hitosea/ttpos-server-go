@@ -8,8 +8,11 @@ import (
 
 // IPurchaseOrderItemUnitRepo 采购订单明细单位Repository接口
 type IPurchaseOrderItemUnitRepo interface {
+	Create(item *model.PurchaseOrderItemUnit) error
 	CreateBatch(items []model.PurchaseOrderItemUnit) error
 	Update(item model.PurchaseOrderItemUnit) error
+	DeleteByItemUuid(itemUuid uint64) error
+	DeleteByItemUuidAndUnitUuid(itemUuid, unitUuid uint64) error
 	DeleteByItemUuids(itemUuids []uint64) error
 	GetByUuid(uuid uint64) (*model.PurchaseOrderItemUnit, error)
 	GetList(opts ...DBOption) ([]model.PurchaseOrderItemUnit, error)
@@ -26,6 +29,11 @@ func NewPurchaseOrderItemUnitRepo(db *gorm.DB) IPurchaseOrderItemUnitRepo {
 	return &PurchaseOrderItemUnitRepoImpl{db: db}
 }
 
+// Create 创建采购订单明细单位
+func (r *PurchaseOrderItemUnitRepoImpl) Create(item *model.PurchaseOrderItemUnit) error {
+	return r.db.Create(item).Error
+}
+
 // CreateBatch 批量创建采购订单明细单位
 func (r *PurchaseOrderItemUnitRepoImpl) CreateBatch(items []model.PurchaseOrderItemUnit) error {
 	return r.db.CreateInBatches(items, 100).Error
@@ -34,6 +42,16 @@ func (r *PurchaseOrderItemUnitRepoImpl) CreateBatch(items []model.PurchaseOrderI
 // Update 更新采购订单明细单位
 func (r *PurchaseOrderItemUnitRepoImpl) Update(item model.PurchaseOrderItemUnit) error {
 	return r.db.Where("uuid = ?", item.Uuid).Updates(item).Error
+}
+
+// DeleteByItemUuid 根据明细UUID删除单位
+func (r *PurchaseOrderItemUnitRepoImpl) DeleteByItemUuid(itemUuid uint64) error {
+	return r.db.Where("item_uuid = ?", itemUuid).Delete(&model.PurchaseOrderItemUnit{}).Error
+}
+
+// DeleteByItemUuidAndUnitUuid 根据明细UUID和单位UUID删除单位
+func (r *PurchaseOrderItemUnitRepoImpl) DeleteByItemUuidAndUnitUuid(itemUuid, unitUuid uint64) error {
+	return r.db.Where("item_uuid = ? AND unit_uuid = ?", itemUuid, unitUuid).Delete(&model.PurchaseOrderItemUnit{}).Error
 }
 
 // DeleteByItemUuids 根据明细UUID批量删除单位

@@ -119,6 +119,11 @@ type CountSaleResp struct {
 	MinTakeoutOrderAmount           float64 `json:"min_takeout_order_amount"`            // 总外送最小订单金额
 	MaxTakeoutOrderAmount           float64 `json:"max_takeout_order_amount"`            // 总外送最大订单金额
 	AvgTakeoutOrderAmount           float64 `json:"avg_takeout_order_amount"`            // 总外送平均订单金额
+	// Grab 平台统计指标
+	GrabOrderNum       int64   `json:"grab_order_num"`        // Grab 订单数
+	GrabMinOrderAmount float64 `json:"grab_min_order_amount"` // Grab 最小订单金额
+	GrabMaxOrderAmount float64 `json:"grab_max_order_amount"` // Grab 最大订单金额
+	GrabAvgOrderAmount float64 `json:"grab_avg_order_amount"` // Grab 平均订单金额
 }
 
 // CountSale 统计销售
@@ -233,6 +238,12 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 	saleData := repo.CountSaleDays(timezone, opts...)
 	memberData := repo.CountMemberDays(timezone, opts...)
 
+	// 获取 Grab 的统计数据
+	takeoutRepo := repository.NewStatisticsTakeoutRepo(ctx.GetDB())
+	timezoneUtil := utils.SetTimezone(timezone)
+	shopSetting := ctx.GetCompanySetting()
+	enableGrabDelivery := shopSetting.IsOpenGrabDelivery()
+
 	list := make([]CountSaleDaysResp, 0, len(days))
 	for _, day := range days {
 		var (
@@ -278,7 +289,41 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			totalMealNum                    int64
 			totalInstantOrderNum            int64
 			totalTakeoutOrderNum            int64
+			// Grab 统计指标
+			grabOrderNum       int64
+			grabMinOrderAmount decimal.Decimal
+			grabMaxOrderAmount decimal.Decimal
+			grabAvgOrderAmount decimal.Decimal
 		)
+
+		// 计算当天的开始和结束时间
+		dayStartTime, _ := timezoneUtil.FormatTimeToUnix(day)
+		dayEndTime := dayStartTime + 86399 // 23:59:59
+
+		// 使用 CountTakeoutSale 方法获取 Grab 的统计数据（按天分别查询）
+		var grabSaleData model.StatisticsTakeoutSaleData
+		if dayStartTime > 0 && dayEndTime > 0 {
+			if enableGrabDelivery {
+				grabSaleData = takeoutRepo.CountTakeoutSale(repository.CountTakeoutReq{
+					TimeStart: dayStartTime,
+					TimeEnd:   dayEndTime,
+					Platform:  "grab",
+				})
+
+				// 提取 Grab 统计指标
+				grabOrderNum = grabSaleData.TotalOrderNum
+				// 即使 MinOrderAmount 为 0，如果有订单，也应该记录（允许0值作为最小值）
+				if grabOrderNum > 0 {
+					grabMinOrderAmount = decimal.NewFromFloat(grabSaleData.MinOrderAmount)
+				}
+				if grabSaleData.MaxOrderAmount > 0 {
+					grabMaxOrderAmount = decimal.NewFromFloat(grabSaleData.MaxOrderAmount)
+				}
+				if grabOrderNum > 0 && grabSaleData.TotalOrderAmount > 0 {
+					grabAvgOrderAmount = decimal.NewFromFloat(grabSaleData.TotalOrderAmount).Div(decimal.NewFromInt(grabOrderNum)).Round(2)
+				}
+			}
+		}
 
 		saleResult, ok := slice.FindBy(saleData, func(index int, dayData model.StatisticsSaleDaysData) bool {
 			return dayData.Day.String == day
@@ -330,6 +375,86 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			totalInstantOrderNum = saleResult.TotalInstantOrderNum.Int64
 			totalTakeoutOrderNum = saleResult.TotalTakeoutOrderNum.Int64
 		}
+
+		// 累加 Grab 的订单数和金额到总的统计中（参考 MergeTakeoutStatistics 方法）
+		// 使用 CountTakeoutSale 返回的聚合数据
+		var grabTotalSaleAmount, grabTotalPayAmount, grabTotalBusinessAmount, grabTotalOrderAmount decimal.Decimal
+		var grabTotalProductOriginPrice, grabTotalTax, grabTotalRefundAmount, grabTotalDiscount decimal.Decimal
+		var grabTotalProductNum decimal.Decimal
+
+		if enableGrabDelivery {
+			grabTotalSaleAmount = decimal.NewFromFloat(grabSaleData.TotalSaleAmount)
+			grabTotalPayAmount = decimal.NewFromFloat(grabSaleData.TotalPayAmount)
+			grabTotalBusinessAmount = decimal.NewFromFloat(grabSaleData.TotalBusinessAmount)
+			grabTotalOrderAmount = decimal.NewFromFloat(grabSaleData.TotalOrderAmount)
+			grabTotalProductOriginPrice = decimal.NewFromFloat(grabSaleData.TotalProductOriginPrice)
+			grabTotalTax = decimal.NewFromFloat(grabSaleData.TotalTax)
+			grabTotalRefundAmount = decimal.NewFromFloat(grabSaleData.TotalRefundAmount)
+			grabTotalDiscount = decimal.NewFromFloat(grabSaleData.TotalDiscount)
+			grabTotalProductNum = decimal.NewFromInt(grabSaleData.TotalProductNum)
+		}
+
+		// 1. 累加订单数（只累加到总订单数，不累加到外卖订单数）
+		totalOrderNum = totalOrderNum + grabOrderNum
+
+		// 2. 累加销售额（只累加到总销售额，不累加到外卖销售额）
+		totalSaleAmount = totalSaleAmount.Add(grabTotalSaleAmount)
+
+		// 3. 累加实付金额到总实收金额和总营业收入（参考 MergeTakeoutStatistics 方法）
+		totalReceivedAmount = totalReceivedAmount.Add(grabTotalPayAmount)
+		totalBusinessAmount = totalBusinessAmount.Add(grabTotalBusinessAmount)
+
+		// 4. 累加原商品金额
+		totalProductPrice = totalProductPrice.Add(grabTotalProductOriginPrice)
+
+		// 5. 累加其他指标（参考 MergeTakeoutStatistics 方法）
+		totalTax = totalTax.Add(grabTotalTax)
+		totalRefundAmount = totalRefundAmount.Add(grabTotalRefundAmount)
+		totalDiscount = totalDiscount.Add(grabTotalDiscount)
+		totalProductNum = totalProductNum.Add(grabTotalProductNum)
+
+		// 6. 更新最小订单金额（只更新总的最小订单金额，不更新外卖最小订单金额）
+		// 允许0值作为最小值（如果有订单数）
+		if grabOrderNum > 0 {
+			// 如果没有 saleResult（未初始化），直接设置为 Grab 的最小值
+			// 如果有 saleResult，只有当 Grab 的最小值更小或等于时才更新（允许0值）
+			if !ok {
+				minOrderAmount = grabMinOrderAmount
+			} else if grabMinOrderAmount.LessThanOrEqual(minOrderAmount) {
+				minOrderAmount = grabMinOrderAmount
+			}
+		}
+
+		// 7. 更新最大订单金额（只更新总的最大订单金额，不更新外卖最大订单金额）
+		if grabOrderNum > 0 && grabMaxOrderAmount.IsPositive() {
+			// 如果没有 saleResult（未初始化），直接设置为 Grab 的最大值
+			// 如果有 saleResult，只有当 Grab 的最大值更大时才更新
+			if !ok {
+				maxOrderAmount = grabMaxOrderAmount
+			} else if grabMaxOrderAmount.GreaterThan(maxOrderAmount) {
+				maxOrderAmount = grabMaxOrderAmount
+			}
+		}
+
+		// 8. 重新计算总平均订单金额（总订单金额 / 总订单数）
+		if totalOrderNum > 0 {
+			// 总订单金额 = 原有订单金额 + Grab 的 TotalOrderAmount
+			// 注意：这里使用 TotalOrderAmount（与 MergeTakeoutStatistics 中的逻辑一致）
+			var totalOrderAmountForAvg decimal.Decimal
+			if ok {
+				totalOrderAmountForAvg = decimal.NewFromFloat(saleResult.TotalOrderAmount.Float64).Add(grabTotalOrderAmount)
+			} else {
+				totalOrderAmountForAvg = grabTotalOrderAmount
+			}
+			avgOrderAmount = totalOrderAmountForAvg.Div(decimal.NewFromInt(totalOrderNum)).Round(2)
+		}
+
+		// 9. 重新计算总优惠折扣率（参考 MergeTakeoutStatistics 方法）
+		// TotalDiscountRatio = 总优惠折扣 / 总销售额 * 100
+		if totalSaleAmount.GreaterThan(decimal.Zero) {
+			totalDiscountRatio = totalDiscount.Div(totalSaleAmount).Mul(decimal.NewFromInt(100)).Round(2)
+		}
+
 		memberResult, ok := slice.FindBy(memberData, func(index int, dayData model.StatisticsMemberDaysData) bool {
 			return dayData.Day.String == day
 		})
@@ -385,6 +510,11 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 				MinTakeoutOrderAmount:           minTakeoutOrderAmount.InexactFloat64(),
 				MaxTakeoutOrderAmount:           maxTakeoutOrderAmount.InexactFloat64(),
 				AvgTakeoutOrderAmount:           avgTakeoutOrderAmount.InexactFloat64(),
+				// Grab 平台统计指标
+				GrabOrderNum:       grabOrderNum,
+				GrabMinOrderAmount: grabMinOrderAmount.InexactFloat64(),
+				GrabMaxOrderAmount: grabMaxOrderAmount.InexactFloat64(),
+				GrabAvgOrderAmount: grabAvgOrderAmount.InexactFloat64(),
 			},
 			Day: day,
 		})
@@ -599,6 +729,12 @@ func (s *statisticsSrv) CountPaymentDays(ctx context.Context, req CountReq, days
 	timezone := ctx.GetCompanySetting().Timezone
 	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPaymentDays(timezone, opts...)
 
+	// 获取 Grab 的支付统计数据
+	takeoutRepo := repository.NewStatisticsTakeoutRepo(ctx.GetDB())
+	timezoneUtil := utils.SetTimezone(timezone)
+	shopSetting := ctx.GetCompanySetting()
+	enableGrabDelivery := shopSetting.IsOpenGrabDelivery()
+
 	list := make([]CountPaymentDaysResp, 0)
 	for _, day := range days {
 		paymentList := make([]CountPaymentRespList, 0)
@@ -620,6 +756,53 @@ func (s *statisticsSrv) CountPaymentDays(ctx context.Context, req CountReq, days
 				})
 			}
 		}
+
+		// 先按Sort升序排序，再按CreateTime降序排序，ID降序排序
+		if len(paymentList) > 0 {
+			sort.SliceStable(paymentList, func(i, j int) bool {
+				if paymentList[i].Sort == paymentList[j].Sort {
+					if paymentList[i].CreateTime == paymentList[j].CreateTime {
+						return paymentList[i].ID < paymentList[j].ID
+					}
+					return paymentList[i].CreateTime > paymentList[j].CreateTime
+				}
+				return paymentList[i].Sort < paymentList[j].Sort
+			})
+		}
+
+		// 使用 CountTakeoutPayment 方法获取 Grab 的支付统计数据（按天分别查询）
+		if enableGrabDelivery {
+			// 计算当天的开始和结束时间
+			dayStartTime, _ := timezoneUtil.FormatTimeToUnix(day)
+			dayEndTime := dayStartTime + 86399 // 23:59:59
+
+			if dayStartTime > 0 && dayEndTime > 0 {
+				// 获取 Grab 的支付统计数据
+				grabPaymentDataList := takeoutRepo.CountTakeoutPayment(repository.CountTakeoutReq{
+					TimeStart: dayStartTime,
+					TimeEnd:   dayEndTime,
+					Platform:  "grab",
+				})
+
+				// 查找 Grab 的支付数据
+				for _, grabPayment := range grabPaymentDataList {
+					if grabPayment.PaymentName == constant.PaymentMethodNameGrab || grabPayment.PaymentCode == constant.PaymentMethodCodeGrab {
+						// 追加 Grab 支付数据到 PaymentList（在排序后追加，确保排在最后）
+						paymentList = append(paymentList, CountPaymentRespList{
+							ID:                 grabPayment.ID,
+							Sort:               grabPayment.Sort,
+							CreateTime:         grabPayment.CreateTime,
+							PaymentName:        grabPayment.PaymentName,
+							PaymentCode:        grabPayment.PaymentCode,
+							TotalOrderNum:      grabPayment.TotalOrderNum,
+							TotalPaymentAmount: grabPayment.TotalPaymentAmount,
+						})
+						break // 只取第一个匹配的（应该只有一个 Grab）
+					}
+				}
+			}
+		}
+
 		list = append(list, CountPaymentDaysResp{
 			PaymentList: paymentList,
 			Day:         day,
@@ -2365,6 +2548,10 @@ type CountExportData struct {
 	MinTakeoutOrderAmount      float64                  `json:"min_takeout_order_amount"`
 	MaxTakeoutOrderAmount      float64                  `json:"max_takeout_order_amount"`
 	AvgTakeoutOrderAmount      float64                  `json:"avg_takeout_order_amount"`
+	TotalGrabOrderNum          int64                    `json:"total_grab_order_num"`
+	MinGrabOrderAmount         float64                  `json:"min_grab_order_amount"`
+	MaxGrabOrderAmount         float64                  `json:"max_grab_order_amount"`
+	AvgGrabOrderAmount         float64                  `json:"avg_grab_order_amount"`
 	AreaList                   []CountExportAreaData    `json:"area_list"`
 	PaymentList                []CountExportPaymentData `json:"payment_list"`
 }
@@ -2511,6 +2698,10 @@ func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExp
 			MinTakeoutOrderAmount:      sale.MinTakeoutOrderAmount,
 			MaxTakeoutOrderAmount:      sale.MaxTakeoutOrderAmount,
 			AvgTakeoutOrderAmount:      sale.AvgTakeoutOrderAmount,
+			TotalGrabOrderNum:          sale.GrabOrderNum,
+			MinGrabOrderAmount:         sale.GrabMinOrderAmount,
+			MaxGrabOrderAmount:         sale.GrabMaxOrderAmount,
+			AvgGrabOrderAmount:         sale.GrabAvgOrderAmount,
 			AreaList:                   areaList,
 			PaymentList:                paymentList,
 		})
@@ -2884,11 +3075,12 @@ func (s *statisticsSrv) CountBusinessPaymentMethod(ctx context.Context, req req.
 		IsDesk:             req.OrderDesk == 1,
 		IsInstant:          req.OrderInstant == 1,
 		IsTakeout:          req.OrderTakeout == 1,
-		IsDelivery:         req.OrderDelivery == 1, // 外卖订单（Grab/LINE MAN等）
+		IsDelivery:         req.OrderDelivery == 1, // 外卖订单（Grab等）
 		PaymentMethodList:  paymentMethodList,      // 优先使用UUID列表
 		PaymentMethodNames: req.PaymentMethodNames, // 如果PaymentMethodList为空，使用名称列表
 		ExcludeDataManage:  req.ExcludeDataManage,
 		Timezone:           timezone,
+		Source:             req.Source,
 	})
 
 	// 构建返回列表

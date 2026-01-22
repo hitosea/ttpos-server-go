@@ -1269,9 +1269,20 @@ func (model *SaleOrder) ValidateOrderStatus() error {
 }
 
 func NewSaleOrder(deviceId string, saleBillUuid uint64, saleBillOrderNo string, setting SaleBillSetting) *SaleOrder {
-	uuid, _ := utils.GetID()
+	uuid := utils.MustGetID()
 	saleOrder := &SaleOrder{
-		BaseModel:    BaseModel{Uuid: uuid},
+		BaseModel: BaseModel{
+			Uuid:       uuid,
+			CreateTime: time.Now().Unix(),
+			UpdateTime: time.Now().Unix(),
+			DeleteTime: 0,
+		},
+		// 设置默认值.会员折扣、会员卡折扣、自定义折扣、整单改价
+		MemberDiscountRate:     1,
+		MemberCardDiscountRate: 1,
+		CustomDiscountRate:     1,
+		CustomAmount:           -1,
+
 		SaleBillUuid: saleBillUuid,
 		OrderNo:      saleBillOrderNo,
 		DeviceId:     deviceId,

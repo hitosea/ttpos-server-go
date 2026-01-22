@@ -4,6 +4,7 @@ const (
 	ServerModeRelease = "release"
 	ServerModeDebug   = "debug"
 	ServerModeTest    = "test"
+	ServerModeStop    = "stop" // 停止服务, 不用关闭某些特性功能
 )
 
 const (
@@ -19,6 +20,7 @@ const (
 	CodeVersionError        = -6   // 版本错误
 	CodeErrorConfirmClose   = -11  // 需要弹窗提示，点击确定 关闭弹窗
 	CodeErrorConfirmRequest = -12  // 需要弹窗提示，点击确定之后传 is_confirm 为 true 到当前接口再此请求接口
+	CodeErrorConfirmRefresh = -13  // 需要弹窗提示，点击确定后刷新页面
 	UnknownError            = -99  // 未知错误
 	CodeUnauthorized        = -100 // 未授权
 	CodeTokenExpired        = -101 // Token过期

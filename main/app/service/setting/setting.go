@@ -23,9 +23,7 @@ import (
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/repository"
-	"ttpos-server-go/app/repository/saas"
 	"ttpos-server-go/app/service/rpc/erp"
-	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -90,7 +88,7 @@ type ISrv interface {
 	EditBusinessSetting(ctx context.Context, businessSetting req.UpdateBusinessSetting) error                                             // 修改业务设置
 	GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness, error)                                                             // 获取商家业务设置
 	GetMenuQrcode(ctx context.Context) (string, error)                                                                                    // 获取电子菜单二维码
-	GetPaymentMethodList(ctx context.Context) setting.PaymentMethodListResp                                                               // 获取支付方式列表
+	GetPaymentMethodList(ctx context.Context, opts ...bool) setting.PaymentMethodListResp                                                 // 获取支付方式列表
 	GetDataManageSetting(ctx context.Context) model.DataManageSetting                                                                     // 获取数据管理设置
 }
 
@@ -2490,46 +2488,24 @@ func (s *Srv) getMenuQrcodeToken(ctx context.Context, businessSetting setting.Bu
 }
 
 // GetPaymentMethodList 获取支付方式列表
-func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodListResp {
+func (s *Srv) GetPaymentMethodList(ctx context.Context, opts ...bool) setting.PaymentMethodListResp {
 	commonRepo := repository.NewCommonRepo()
-	paymentRepo := repository.NewPaymentMethodRepo(ctx.GetDB())
-	paymentMethodList := paymentRepo.GetAllPaymentMethodList(
+	paymentMethodRepo := repository.NewPaymentMethodRepo(ctx.GetDB())
+	paymentMethodList := paymentMethodRepo.GetAllPaymentMethodList(
 		commonRepo.SortWithSort("asc"),
 		commonRepo.SortWithCreateTime("desc"),
 	)
-
-	lianLianPayAvailable := true
-	payServiceUrl := viper.GetString("PAY_SERVICE_URL")
-	payCallbackUrl := func() string {
-		if viper.GetString("PAY_SERVICE_LIANLIAN_CALLBACK_URL") == "" {
-			if config.Server.Domain != "" {
-				return config.Server.Domain + "/api/v1/passport/lianlian/callback"
-			} else {
-				return ""
-			}
-		}
-		return viper.GetString("PAY_SERVICE_LIANLIAN_CALLBACK_URL")
-	}()
-	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(s.dbm.GetDB(0)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
-	if paymentAppErr != nil || paymentApp == nil || paymentApp.ID == 0 {
-		lianLianPayAvailable = false
-	}
-	if payServiceUrl == "" {
-		lianLianPayAvailable = false
-	}
-	if payCallbackUrl == "" {
-		lianLianPayAvailable = false
+	lianLianPayAvailable := false
+	if len(opts) > 0 {
+		lianLianPayAvailable = opts[0]
 	}
 
 	list := make([]setting.PaymentMethod, 0, len(paymentMethodList))
 	for _, paymentMethod := range paymentMethodList {
-		if paymentMethod.PaymentName == "" {
+		if paymentMethod == nil {
 			continue
 		}
-		if paymentMethod.Code == constant.PaymentMethodCodeFreePay || paymentMethod.Code == constant.PaymentMethodCodeFreeMealForErp {
-			continue
-		}
-		if !lianLianPayAvailable && paymentMethod.IsLianLianPay() {
+		if !paymentMethodRepo.FilterPaymentMethod(*paymentMethod, lianLianPayAvailable) {
 			continue
 		}
 		list = append(list, setting.PaymentMethod{

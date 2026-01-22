@@ -22,6 +22,7 @@ class SurveyService
     {
         // 授权无会员权限
         $isOpenMember = request()->licenses['is_open_member'] ?? 0;
+        $isOpenGrabDelivery = request()->licenses['enable_grab_delivery'] ?? 0;
 
         // 所有区域数据
         $allRegionData = [];
@@ -130,6 +131,14 @@ class SurveyService
             $sheet->setCellValue('A' . ($index = $index + 1), __('最大订单金额'));
             $sheet->setCellValue('A' . ($index = $index + 1), __('平均订单金额'));
         }
+        // v2.15.0新增 Grab 数据
+        if ($isOpenGrabDelivery) {
+            $sheet->setCellValue('A' . ($index = $index + 1), __('Grab'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('订单数'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('最小订单金额'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('最大订单金额'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('平均订单金额'));
+        }
         $sheet->setCellValue('A' . ($index = $payRow = $index + 1), __('支付数据'));
         // 纵向的支付数据
         foreach ($paymentType as $value) {
@@ -213,16 +222,25 @@ class SurveyService
                 $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_takeout_order_amount']); // 外送最大订单金额
                 $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_takeout_order_amount']); // 外送平均订单金额
             }
+            // v2.15.0新增 Grab 数据
+            if ($isOpenGrabDelivery) {
+                $sheet->setCellValue($columnLetter . ($index = $index + 2), $data['total_grab_order_num']); // Grab订单数
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_grab_order_amount']); // Grab最小订单金额
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_grab_order_amount']); // Grab最大订单金额
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_grab_order_amount']); // Grab平均订单金额
+            }
             // 支付数据
-            $payColumnIndex = $index + 1;
+            // 支付金额应该从 $payRow + 1 开始（与支付方式名称的行号对应）
+            $payColumnIndex = $payRow + 1;
             foreach ($paymentType as $value) {
                 $totalPaymentAmount = 0;
                 foreach ($data['payment_list'] as $payment) {
                     if ($value['payment_code'] == $payment['payment_code']) {
                         $totalPaymentAmount = $payment['total_payment_amount'];
+                        break; // 找到匹配的支付方式后跳出循环
                     }
                 }
-                $sheet->setCellValue($columnLetter . ($payColumnIndex + 1), $totalPaymentAmount);
+                $sheet->setCellValue($columnLetter . $payColumnIndex, $totalPaymentAmount);
                 $payColumnIndex++;
             }
             

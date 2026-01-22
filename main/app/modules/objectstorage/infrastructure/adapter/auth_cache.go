@@ -51,8 +51,8 @@ func GetApiPermissionCache[T any](underlyingCache cache.Cache) repository.CacheL
 		EnableLocalCache: true,
 		EnableRedisCache: true,
 		NegativeTTL:      30 * time.Second,
-		L1TTL:            1 * time.Minute, // L1 缓存 1 分钟
-		L2TTL:            5 * time.Minute, // L2 缓存 5 分钟
+		L1TTL:            30 * time.Second, // L1 缓存 30 秒
+		L2TTL:            30 * time.Second, // L2 缓存 30 秒
 	}
 
 	// 使用缓存查询 API 权限

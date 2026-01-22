@@ -99,4 +99,13 @@ type GroupConfig struct {
 	// 当缓存命中或未命中时，会调用此回调函数进行统计
 	// 如果为 nil，则不进行统计
 	HitStatsCallback HitStatsCallback
+
+	// AsyncL2Write 是否异步写入 L2 Redis 缓存
+	// true: 异步写入 L2，提升响应速度（适用于 L2 写入延迟较高的场景）
+	// false: 同步写入 L2，保证数据一致性（默认）
+	// 注意：
+	//   - L1 本地缓存始终同步写入（内存操作延迟低）
+	//   - 负缓存（NegativeTTL）始终同步写入（防止缓存穿透）
+	//   - 异步写入失败时，后续请求可能无法命中缓存，但不会影响当前请求的响应
+	AsyncL2Write bool
 }

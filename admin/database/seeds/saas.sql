@@ -545,4 +545,48 @@ CREATE TABLE `ttpos_cache_hit_rate_snapshot` (
   KEY `idx_instance_restart` (`instance_id`, `is_restart`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='缓存命中率快照表';
 
+
+-- ----------------------------
+-- Table structure for ttpos_number_sequence
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_number_sequence`;
+CREATE TABLE `ttpos_number_sequence` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `company_uuid` bigint unsigned DEFAULT NULL COMMENT '商家UUID',
+  `type` varchar(32) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '编号类型(invoice:发票,order:订单,receipt:收据等)',
+  `date` date DEFAULT NULL COMMENT '日期',
+  `sequence` int unsigned DEFAULT '0' COMMENT '当日序列号',
+  `create_time` bigint unsigned DEFAULT '0' COMMENT '创建时间',
+  `update_time` bigint unsigned DEFAULT '0' COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_company_uuid_type_date` (`company_uuid`,`type`,`date`),
+  KEY `idx_type_date` (`type`,`date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='通用编号序列表';
+
+-- ----------------------------
+-- Table structure for ttpos_staff
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_staff`;
+CREATE TABLE `ttpos_staff` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '员工ID',
+  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '邮箱（全平台唯一）',
+  `phone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '手机号（全平台唯一，允许空字符串）',
+  `real_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '姓名',
+  `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '登录密码（加密）',
+  `password_change_count` int DEFAULT '0' COMMENT '修改密码次数',
+  `password_change_time` int unsigned NOT NULL DEFAULT '0' COMMENT '修改密码时间',
+  `is_disable` int NOT NULL DEFAULT '0' COMMENT '是否禁用1禁用,0未禁用',
+  `last_company_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '上次登录新管理端的商家UUID',
+  `create_time` int unsigned NOT NULL DEFAULT '0' COMMENT '创建时间(时间戳)',
+  `update_time` int unsigned NOT NULL DEFAULT '0' COMMENT '更新时间(时间戳)',
+  `delete_time` int unsigned NOT NULL DEFAULT '0' COMMENT '删除时间(时间戳)',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  UNIQUE KEY `uk_email` (`email`),
+  KEY `idx_phone` (`phone`),
+  KEY `idx_last_company_uuid` (`last_company_uuid`),
+  KEY `idx_delete_time` (`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='员工表（统一账号表）';
+
 SET FOREIGN_KEY_CHECKS = 1;

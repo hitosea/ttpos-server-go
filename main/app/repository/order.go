@@ -15,6 +15,7 @@ import (
 	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/utils"
@@ -93,6 +94,7 @@ func NewOrderRepoImpl(db *gorm.DB) IOrderRepo {
 
 // CreateSaleBill 创建销售单
 func (r *orderRepo) CreateSaleBill(model model.SaleBill) (model.SaleBill, error) {
+	model.SetNil()
 	err := r.db.Create(&model).Error
 	if err != nil {
 		return model, fmt.Errorf("CreateSaleBill: %v", err)
@@ -205,6 +207,7 @@ func (r *orderRepo) GetInstantSaleBill(deviceUuid uint64) (*model.SaleBill, erro
 
 // CreateSaleOrder 创建销售订单
 func (r *orderRepo) CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error) {
+	model.SetNil()
 	err := r.db.Create(&model).Error
 	if err != nil {
 		return model, fmt.Errorf("CreateSaleOrder: %v", err)
@@ -1061,6 +1064,12 @@ func (r *orderRepo) GetOrderCartInfoInDeskSaleBill(saleBillUuid uint64, filterPr
 		var saleBill *model.SaleBill
 		if option.SaleBill != nil {
 			saleBill = option.SaleBill
+		} else if config.Server.Mode == constant.ServerModeStop { // 暂时关闭特性功能，从缓存中获取销售账单
+			cacheSaleBill, err := objectStorageController.GetSaleBillController().GetByUuid(ctx, r.db, saleBillUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			saleBill = cacheSaleBill
 		} else {
 			// 先获取 SaleBill（不使用 Preload）
 			// _ 是原先的购物车信息查询salebill的方法,考虑与allinfo方法合并,所以这里用匿名函数,暂时没用,如果合并成功了,可以删除这个匿名函数
