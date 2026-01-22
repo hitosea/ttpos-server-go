@@ -293,7 +293,7 @@ type PermissionsCache struct {
 
 func (s *roleAccessSrv) GetApiPermission(ctx context.Context, staffUuid, companyUuid uint64) ([]string, error) {
 	// 使用传入的 context（包含 otelgin 创建的 span）
-	stdCtx := ctx.GetContext()
+	stdCtx := ctx.GetGin().Request.Context()
 
 	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
 	enableCache := objectStorageAdapter.IsObjectStorageCacheEnabled(companyUuid)

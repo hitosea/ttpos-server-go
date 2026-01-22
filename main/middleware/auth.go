@@ -147,7 +147,6 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 	otel.AddSpanEvent(stdCtx, "开始执行完整用户鉴权")
 	ctx := context.NewContext(
 		context.WithGinContext(c.Copy()),
-		context.WithContext(c.Request.Context()), // 包含 otelgin 创建的 span
 		context.WithSource(claims.Source),
 		context.WithCompanyUuid(claims.CompanyUuid),
 		context.WithDeviceUuid(claims.DeviceUuid),

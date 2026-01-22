@@ -1042,7 +1042,7 @@ func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
 // Auth 鉴权
 func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, model.Desk, error) {
 	// 使用传入的 context（包含 otelgin 创建的 span）
-	stdCtx := ctx.GetContext()
+	stdCtx := ctx.GetGin().Request.Context()
 
 	var (
 		company        model.Company

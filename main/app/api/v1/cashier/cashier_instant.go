@@ -581,7 +581,7 @@ func (h *InstantHandler) OrderCartProductAdd(c *gin.Context) {
 	// 使用 otelgin 中间件自动创建的 span（通过 c.Request.Context() 获取）
 	// otelgin 已经自动记录了 HTTP 方法、路径、状态码等信息
 	// stdCtx := c.Request.Context()
-	stdCtx := ctx.GetContext()
+	stdCtx := ctx.GetGin().Request.Context()
 	otel.AddSpanEvent(stdCtx, "开始处理点餐页面向购物车添加商品接口请求")
 
 	// 绑定请求参数

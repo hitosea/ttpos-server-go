@@ -447,7 +447,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 // ActionAdd 加购
 func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) error {
 	// 使用传入的 context（包含 otelgin 创建的 span）
-	stdCtx := ctx.GetContext()
+	stdCtx := ctx.GetGin().Request.Context()
 
 	db := ctx.GetDB()
 

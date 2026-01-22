@@ -193,7 +193,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 // OrderCartProductAdd 向购物车添加商品
 func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	// 使用传入的 context（包含 otelgin 创建的 span）
-	stdCtx := ctx.GetContext()
+	stdCtx := ctx.GetGin().Request.Context()
 
 	if ctx.NoLock() {
 		otel.AddSpanEvent(stdCtx, "获取分布式锁")
@@ -1922,7 +1922,7 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 // GetOrderCartInfo 获取点餐购物车信息
 func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	// 使用传入的 context（包含 otelgin 创建的 span）
-	stdCtx := ctx.GetContext()
+	stdCtx := ctx.GetGin().Request.Context()
 
 	// 追加请求头参数，从http的header中获取h5_order_uuid
 	h5OrderUuid := context.GetH5OrderUuid(ctx)
@@ -2592,7 +2592,7 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	// 使用传入的 context（如果已有 span 则复用，否则创建新的）
 	// startTime := time.Now()
-	stdCtx := ctx.GetContext()
+	stdCtx := ctx.GetGin().Request.Context()
 
 	// 当不填销售账单ID时，表示要新建一个销售账单
 	if request.SaleBillUuid == 0 {
