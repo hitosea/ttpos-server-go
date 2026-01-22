@@ -147,17 +147,25 @@ func (s *sLineman) BatchUpdateMenuItems(ctx context.Context, req *api.BatchUpdat
 	if err != nil {
 		g.Log().Errorf(ctx, "[Lineman] 批量更新菜单 API 调用失败: storeId=%s, error=%v",
 			storeId, err)
+		// 记录失败日志
+		s.logMenuItemStatusUpdate(ctx, storeId, linemanReq, false, err.Error())
 		return nil, gerror.Wrap(err, "调用 Lineman API 失败")
 	}
 
 	// 6. 检查响应
 	if resp.Status != "ok" {
+		errMsg := fmt.Sprintf("Lineman API 返回错误: %s - %s", resp.Code, resp.Message)
 		g.Log().Errorf(ctx, "[Lineman] 批量更新菜单失败: storeId=%s, code=%s, message=%s",
 			storeId, resp.Code, resp.Message)
-		return nil, gerror.Newf("Lineman API 返回错误: %s - %s", resp.Code, resp.Message)
+		// 记录失败日志
+		s.logMenuItemStatusUpdate(ctx, storeId, linemanReq, false, errMsg)
+		return nil, gerror.New(errMsg)
 	}
 
-	// 7. 构造成功响应
+	// 7. 记录成功日志
+	s.logMenuItemStatusUpdate(ctx, storeId, linemanReq, true, "")
+
+	// 8. 构造成功响应
 	protoResp := &api.BatchUpdateMenuResp{
 		ShopUuid: req.ShopUuid,
 		Status:   "success",
