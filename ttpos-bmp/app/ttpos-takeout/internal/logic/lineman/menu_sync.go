@@ -318,9 +318,9 @@ func (s *sLineman) convertGrabAvailabilityToLinemanStatus(ctx context.Context, g
 	switch grabStatus {
 	case "AVAILABLE":
 		return "AVAILABLE"
-	case "SOLD_OUT", "UNAVAILABLE":
+	case "UNAVAILABLETODAY":
 		return "SOLD_OUT_TODAY"
-	case "HIDDEN":
+	case "HIDE", "UNAVAILABLE":
 		return "SUSPENDED"
 	default:
 		g.Log().Warningf(ctx, "[Lineman] 未知的 TTPOS 状态: %s, 默认使用 AVAILABLE", grabStatus)
@@ -380,10 +380,10 @@ func (s *sLineman) convertGrabAvailabilityToLinemanPropStatus(ctx context.Contex
 	switch grabStatus {
 	case "AVAILABLE":
 		return 1
-	case "SOLD_OUT", "UNAVAILABLE":
-		return 2
-	case "HIDDEN":
+	case "HIDE", "UNAVAILABLE":
 		return 3
+	case "UNAVAILABLETODAY":
+		return 2
 	default:
 		g.Log().Warningf(ctx, "[Lineman] 未知的 Grab 状态: %s, 默认使用可用", grabStatus)
 		return 1
