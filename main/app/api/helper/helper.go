@@ -364,8 +364,9 @@ func GetH5OrderUuid(cc *gin.Context) string {
 
 func GetContext(c *gin.Context) context.Context {
 	return context.NewContext(
-		context.WithGinContext(c.Copy()),                 // 在上下文中添加gin上下文
-		context.WithContext(c.Request.Context()),         // 使用 gin.Request.Context() 以包含 otelgin 创建的 span
+		context.WithGinContext(c.Copy()), // 在上下文中添加gin上下文
+		// FIXME: 先注释-防止gin.Request.Context() 被取消导致上下文取消，导致上下文传递错误
+		// context.WithContext(c.Request.Context()),         // 使用 gin.Request.Context() 以包含 otelgin 创建的 span
 		context.WithLanguage(GetLanguage(c)),             // 在上下文中添加语言
 		context.WithCompanyUuid(GetCompanyUuid(c)),       // 在上下文中添加公司uuid
 		context.WithSource(GetSource(c)),                 //在上下文中添加来源
