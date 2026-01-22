@@ -6,6 +6,7 @@ import (
 	"strconv"
 	menuApi "ttpos-bmp/app/ttpos-takeout/api/menu"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/pkg/logger"
 
 	"github.com/google/uuid"
@@ -202,7 +203,7 @@ func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, shopUuid string,
 }
 
 // UpdateMenuModifier 更新菜单修饰符
-func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, shopUuid string, modifierId string, modifierName string, price *int64, availableStatus string) error {
+func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, platform string, shopUuid string, modifierId string, modifierName string, price *int64, availableStatus string) error {
 	// 创建客户端
 	client, err := NewBMPTakeoutClient()
 	if err != nil {
@@ -217,12 +218,16 @@ func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, shopUuid str
 
 	// 构造请求
 	req := &menuApi.UpdateMenuModifierReq{
+		ProviderName:    &platform,
 		ShopUuid:        shopUuid,
 		ModifierId:      modifierId,
 		ModifierName:    modifierName,
-		Price:           price,
 		AvailableStatus: &availableStatus,
 		RequestId:       uuid.New().String(),
+	}
+
+	if platform != value_object.TakeoutPlatformLineman {
+		req.Price = price
 	}
 
 	// 调用 RPC 接口

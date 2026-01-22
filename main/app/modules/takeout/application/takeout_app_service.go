@@ -769,7 +769,7 @@ func (s *takeoutAppService) compareAndSyncMenu(
 
 	// 批量更新商品（每批最多 100 个）
 	if len(changedItems) > 0 {
-		err := s.batchUpdateItems(ctx, shopUuidStr, changedItems, result)
+		err := s.batchUpdateItems(ctx, platform, shopUuidStr, changedItems, result)
 		if err != nil {
 			logger.Logger.Error("批量更新商品失败", zap.Error(err))
 		}
@@ -777,7 +777,7 @@ func (s *takeoutAppService) compareAndSyncMenu(
 
 	// 逐个更新修饰符（Grab API 暂不支持批量更新修饰符）
 	if len(changedModifiers) > 0 {
-		s.updateModifiersOneByOne(ctx, shopUuidStr, changedModifiers, result)
+		s.updateModifiersOneByOne(ctx, platform, shopUuidStr, changedModifiers, result)
 	}
 
 	return nil
@@ -786,6 +786,7 @@ func (s *takeoutAppService) compareAndSyncMenu(
 // batchUpdateItems 批量更新商品
 func (s *takeoutAppService) batchUpdateItems(
 	ctx context.Context,
+	platform string,
 	shopUuid string,
 	items []struct {
 		old *grabfood.MenuItem
@@ -830,9 +831,11 @@ func (s *takeoutAppService) batchUpdateItems(
 			}
 			entity := &menuApi.MenuEntity{
 				Id:              item.new.Id,
-				Price:           &item.new.Price,
 				AvailableStatus: &item.new.AvailableStatus,
-				MaxStock:        &maxStock,
+			}
+			if platform != value_object.TakeoutPlatformLineman {
+				entity.Price = &item.new.Price
+				entity.MaxStock = &maxStock
 			}
 			entities = append(entities, entity)
 		}
@@ -851,6 +854,7 @@ func (s *takeoutAppService) batchUpdateItems(
 			Field:        "ITEM",
 			MenuEntities: entities,
 			RequestId:    uuid.New().String(),
+			ProviderName: &platform,
 		}
 
 		resp, err := client.GetMenuClient().BatchUpdateMenu(ctx, req)
@@ -910,6 +914,7 @@ func (s *takeoutAppService) batchUpdateItems(
 // FIXME: 让6哥弄队列处理，6哥说后面时间空了再说
 func (s *takeoutAppService) updateModifiersOneByOne(
 	ctx context.Context,
+	platform string,
 	merchantID string,
 	modifiers []struct {
 		old *grabfood.MenuModifier
@@ -971,6 +976,7 @@ func (s *takeoutAppService) updateModifiersOneByOne(
 			// 调用 RPC 更新单个修饰符
 			err = s.rpcService.UpdateMenuModifier(
 				ctx,
+				platform,
 				merchantID,
 				modifier.new.Id,
 				modifier.new.Name,
