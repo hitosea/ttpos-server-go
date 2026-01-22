@@ -135,6 +135,33 @@ func (h *PurchaseHandler) UpdatePurchaseOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// UpdatePurchaseOrder 更新采购订单
+// @Summary 更新采购订单物品单位
+// @Description 更新采购订单物品单位
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.PurchaseOrderDetailReq true "更新采购订单物品单位请求参数"
+// @Success 200 {object} dto.Response{data=resp.PurchaseOrderDetailResp} "成功"
+// @Router /shop/purchase/order/item/units/update [post]
+func (h *PurchaseHandler) UpdatePurchaseOrderItemUnit(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var updateReq req.PurchaseOrderDetailReq
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.HandleValidationError(c, err, updateReq, nil)
+		return
+	}
+
+	resp, err := h.purchaseOrderSrv.UpdatePurchaseOrderItemUnit(ctx, updateReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
 // DeletePurchaseOrder 删除采购订单
 // @Summary 删除采购订单
 // @Description 删除采购订单
@@ -639,6 +666,7 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.GET("/purchase/receipt/list", wrapper.GetPurchaseReceiptList)
 		privateApi.POST("/purchase/receipt/create", wrapper.CreatePurchaseReceipt)
 		privateApi.POST("/purchase/receipt/update", wrapper.UpdatePurchaseReceipt)
+		privateApi.POST("/purchase/order/item/units/update", wrapper.UpdatePurchaseOrderItemUnit)
 		privateApi.GET("/purchase/receipt/detail", wrapper.GetPurchaseReceiptDetail)
 		privateApi.DELETE("/purchase/receipt/cancel", wrapper.CancelPurchaseReceipt)
 

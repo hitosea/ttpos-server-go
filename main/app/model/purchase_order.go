@@ -65,6 +65,12 @@ func (po *PurchaseOrder) IsHeadquarterPurchase() bool {
 	return po.PurchaseType == 2
 }
 
+// 是否店内未审核状态
+func (po *PurchaseOrder) IsStorePending() bool {
+	return po.Status == constant.PurchaseOrderStatusPending || po.Status == constant.PurchaseOrderStatusDraft
+}
+
+// 获取收货进度
 func (po *PurchaseOrder) GetReceiptProgress() float64 {
 	totalNum := 0
 	receivedNum := 0

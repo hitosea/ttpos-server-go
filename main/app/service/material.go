@@ -232,6 +232,30 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(err, "获取物品列表失败")
 	}
 
+	// 品牌采购：批量查询限购配置（避免 N+1 查询问题）
+	var quotaLimitMap map[string]float64
+	if req.PurchaseType == 2 && len(materials) > 0 {
+		// 提取所有物品编码
+		materialCodes := make([]string, 0, len(materials))
+		for _, material := range materials {
+			materialCodes = append(materialCodes, material.Code)
+		}
+
+		// 获取当前星期几
+		currentWeekday := utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday()
+
+		// 批量查询限购配置
+		headquarterUuid := companySetting.HeadquarterUuid
+		if headquarterUuid > 0 {
+			headquarterDb := s.dbm.GetDB(headquarterUuid)
+			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
+			quotaLimitMap, _ = schemeRepo.GetMinQuotaLimitBatchByMaterialCodes(
+				materialCodes,
+				currentWeekday,
+			)
+		}
+	}
+
 	// 转换为响应格式
 	var materialList []material_resp.Material
 	for _, material := range materials {
@@ -264,6 +288,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		costUnit := material.GetUnit(material.CostUnitUuid)
 		defaultSalesUnit := material.GetUnit(material.DefaultSalesUnitUuid)
 		baseUnit := material.GetBaseUnit()
+		quotaUnit := material.GetUnitByUuidForQuotaConfig()
 		var purchaseUnitLocaleName, costUnitLocaleName, baseUnitLocaleName, defaultSalesUnitLocaleName dto.LocaleResponse
 		if costUnit != nil {
 			costUnitLocaleName = *language.JsonToLocaleResponse(costUnit.Name)
@@ -398,37 +423,32 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			AvailableQuantity:          decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
 			StoreQuantity:              stockNum,
 			QuotaConfig: func() material_resp.MaterialQuotaConfig {
-				if req.PurchaseType == 2 {
-					// 从 PurchaseQuotaConfig 表查询限购配置
-					quotaConfigRepo := repository.NewPurchaseQuotaConfigRepo(s.dbm.GetDB(dbId))
-					quotaConfig, err := quotaConfigRepo.GetByMaterialCodeAndShop(material.Code, ctx.GetCompanyUuid())
-					if err != nil {
-						// 没有限购配置，返回空配置
-						return material_resp.MaterialQuotaConfig{}
-					}
-
-					// 查找限购单位信息
-					var quotaUnit *model.MaterialUnit
-					for _, unit := range material.NotBaseUnitList {
-						if unit.Unit != nil && unit.Unit.ErpnextUom == quotaConfig.UnitCode {
-							quotaUnit = unit
-							break
-						}
-					}
-
-					if quotaUnit == nil || quotaUnit.Unit == nil {
-						// 限购单位不存在，返回空配置
-						return material_resp.MaterialQuotaConfig{}
-					}
-
+				if req.PurchaseType != 2 {
 					return material_resp.MaterialQuotaConfig{
-						QuotaLimit:          quotaConfig.QuotaLimit,
-						QuotaUnitUuid:       quotaUnit.Uuid,
-						QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-						QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
+						QuotaLimit:          0,
+						QuotaUnitUuid:       0,
+						QuotaUnitName:       "",
+						QuotaUnitLocaleName: dto.LocaleResponse{},
 					}
 				}
-				return material_resp.MaterialQuotaConfig{}
+
+				// 从批量查询的结果中获取限购数量（无需再次查询数据库）
+				quotaLimit, exists := quotaLimitMap[material.Code]
+				if !exists || quotaLimit == 0 {
+					return material_resp.MaterialQuotaConfig{
+						QuotaLimit:          0,
+						QuotaUnitUuid:       0,
+						QuotaUnitName:       "",
+						QuotaUnitLocaleName: dto.LocaleResponse{},
+					}
+				}
+
+				return material_resp.MaterialQuotaConfig{
+					QuotaLimit:          quotaLimit,
+					QuotaUnitUuid:       quotaUnit.Uuid,
+					QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+					QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
+				}
 			}(),
 		}
 		for _, unit := range material.NotBaseUnitList {
