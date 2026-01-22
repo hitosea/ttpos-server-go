@@ -319,6 +319,8 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 	if !order.IsExistShiftLog() {
 		if err := orderRepo.SetStaffShiftLogUuid(order); err != nil {
 			logger.Logger.Error("设置员工班次日志UUID失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+		} else {
+			order.AcceptedBy = userUuid
 		}
 	}
 
@@ -328,7 +330,7 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 			"order_state":          valueobject.TakeoutOrderStateAccepted,
 			"accepted_time":        currentTime,
 			"staff_shift_log_uuid": order.StaffShiftLogUuid,
-			"accepted_by":          userUuid,
+			"accepted_by":          order.AcceptedBy,
 			"update_time":          currentTime,
 		}
 		if err := persistence.NewTakeoutOrderRepo(tx).UpdateByMap(order.Uuid, updateData); err != nil {
@@ -1678,9 +1680,26 @@ func (s *takeoutOrderSrv) BatchAssignShiftLogToPendingOrders(ctx context.Context
 		}
 	}
 
+	// 5. 批量记录高峰期（包括已接单和已取消的订单）
+	allProcessedOrders := append(ordersNeedErpInvoice, ordersNoErpInvoice...)
+	// 批量发布高峰期记录事件
+	if len(allProcessedOrders) > 0 {
+		companyUuid := ctx.GetCompanyUuid()
+		// 收集订单UUID列表
+		orderUuids := make([]uint64, 0, len(allProcessedOrders))
+		for _, order := range allProcessedOrders {
+			orderUuids = append(orderUuids, order.Uuid)
+		}
+		// 创建单个批量事件并发布
+		peakTimeEvent := event.NewOrderPeakTimeRecordEvent(orderUuids, companyUuid)
+		event.GetDispatcher().Publish(peakTimeEvent)
+		logger.Logger.Debug("批量发布高峰期记录事件完成", zap.Int("count", len(orderUuids)))
+	}
+
 	logger.Logger.Debug("批量分配班次完成", zap.Int("erpInvoiceSuccessCount", successCount),
 		zap.Int("erpInvoiceTotalCount", len(ordersNeedErpInvoice)),
-		zap.Int("noErpInvoiceCount", len(ordersNoErpInvoice)))
+		zap.Int("noErpInvoiceCount", len(ordersNoErpInvoice)),
+		zap.Int("peakTimeRecordCount", len(allProcessedOrders)))
 
 	return nil
 }

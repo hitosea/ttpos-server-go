@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -26,58 +27,26 @@ import (
 //   - 校验每日申请次数限制
 //   - 校验物品数量限制
 func (s *purchaseOrderSrv) checkPurchaseLimit(ctx context.Context, order *model.PurchaseOrder) error {
-	lang := ctx.GetLanguage()
-	companyUuid := ctx.GetCompanyUuid()
 	companySetting := ctx.GetCompanySetting()
 	headquarterUuid := companySetting.HeadquarterUuid
-
 	// 如果没有总部，跳过限购检查
 	if headquarterUuid == 0 {
 		return nil
 	}
 
-	headquarterDb := s.dbm.GetDB(headquarterUuid)
-
-	// 1. 查询所有启用的限购方案（状态=1）
-	schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
-	schemes, err := schemeRepo.GetActiveSchemes(companyUuid)
-	if err != nil {
-		return errors.WithMessage(errors.New("查询限购方案失败"), err.Error())
-	}
-
-	// 如果没有限购方案，跳过检查
-	if len(schemes) == 0 {
-		return nil
-	}
-
-	// 2. 获取当前星期几（1=周一, 7=周日）
-	currentWeekday := int8(utils.SetTimezone(companySetting.GetTimezone()).Now().Weekday())
-	if currentWeekday == 0 {
-		currentWeekday = 7 // 将周日从 0 转换为 7
-	}
-
-	// 3. 遍历所有方案，执行检查
-	for _, scheme := range schemes {
-		// 3.1 检查当前星期是否在限购周期内
-		if !s.isWeekdayInScheme(currentWeekday, scheme.Weekdays) {
-			continue // 不在限购周期内，跳过此方案
+	// 1 检查每日申请次数限制
+	minDailyLimit := s.helper.getMinDailyLimit(ctx, s.dbm, order)
+	if minDailyLimit > 0 {
+		if err := s.checkDailyLimitByScheme(ctx, minDailyLimit); err != nil {
+			return err
 		}
+	}
 
-		// 3.2 检查每日申请次数限制
-		if scheme.DailyLimit > 0 {
-			if err := s.checkDailyLimitByScheme(ctx, scheme.DailyLimit); err != nil {
-				return err
-			}
-		}
-
-		// 3.3 检查物品数量限制
-		if err := s.checkItemLimitByScheme(ctx, order, scheme); err != nil {
-			// 获取方案名称
-			schemeName := language.JsonToLocaleResponse(scheme.Name).GetLocale(lang)
-			return errors.New(fmt.Sprintf(
-				i18n.Translate(lang, "限购方案【%s】：%s"),
-				schemeName, err.Error(),
-			))
+	// 2 检查物品数量限制
+	quotaMap := s.helper.getQuotaLimitMap(ctx, s.dbm, order)
+	if len(quotaMap) > 0 {
+		if err := s.checkItemLimitByScheme(ctx, order, quotaMap); err != nil {
+			return err
 		}
 	}
 
@@ -130,30 +99,9 @@ func (s *purchaseOrderSrv) checkDailyLimitByScheme(ctx context.Context, dailyLim
 func (s *purchaseOrderSrv) checkItemLimitByScheme(
 	ctx context.Context,
 	order *model.PurchaseOrder,
-	scheme *model.PurchaseLimitScheme,
+	quotaMap map[string]float64,
 ) error {
 	lang := ctx.GetLanguage()
-	companySetting := ctx.GetCompanySetting()
-	headquarterUuid := companySetting.HeadquarterUuid
-	headquarterDb := s.dbm.GetDB(headquarterUuid)
-
-	// 1. 查询方案的物品配置
-	itemRepo := repository.NewPurchaseLimitSchemeItemRepo(headquarterDb)
-	schemeItems, err := itemRepo.GetBySchemeUuid(scheme.Uuid)
-	if err != nil {
-		return errors.WithMessage(errors.New("查询限购物品配置失败"), err.Error())
-	}
-
-	// 如果方案没有物品配置，跳过检查
-	if len(schemeItems) == 0 {
-		return nil
-	}
-
-	// 2. 构建限购物品映射表（MaterialCode -> QuotaLimit）
-	quotaMap := make(map[string]float64)
-	for _, item := range schemeItems {
-		quotaMap[item.MaterialCode] = item.QuotaLimit
-	}
 
 	// 3. 汇总订单中的物品数量（按 MaterialCode 分组）
 	type MaterialSummary struct {
@@ -166,32 +114,37 @@ func (s *purchaseOrderSrv) checkItemLimitByScheme(
 
 	// 遍历订单明细
 	for _, orderItem := range order.Items {
+		// 检查是否在限购配置中
+		_, inQuota := quotaMap[orderItem.MaterialCode]
+		if !inQuota {
+			continue // 不在限购配置中，跳过
+		}
+		// 获取限购配置单位
+		if orderItem.Material == nil {
+			continue // Material 未加载，跳过
+		}
+		quotaUnit := orderItem.Material.GetUnitByUuidForQuotaConfig()
+		if quotaUnit == nil {
+			continue // 未找到限购配置单位，跳过
+		}
+		quotaUnitUuid := quotaUnit.Uuid
+
 		materialName := language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(lang)
 
-		// 如果有多单位，累加所有单位的数量
-		if len(orderItem.Units) > 0 {
-			for _, unit := range orderItem.Units {
-				key := orderItem.MaterialCode
-				if summary, exists := materialSummaryMap[key]; exists {
-					summary.TotalQty += unit.Num
-				} else {
-					materialSummaryMap[key] = &MaterialSummary{
-						MaterialCode: orderItem.MaterialCode,
-						MaterialName: materialName,
-						TotalQty:     unit.Num,
-					}
-				}
+		// 累加单位申请数量
+		for _, unit := range orderItem.Units {
+			// 只累加限购单位的数量
+			if unit.UnitUuid != quotaUnitUuid {
+				return errors.NewWithCode(constant.CodeErrorConfirmRefresh, "订单物品超出限购/单位变动，请检查物品和数量。")
 			}
-		} else {
-			// 没有多单位，使用主单位
 			key := orderItem.MaterialCode
 			if summary, exists := materialSummaryMap[key]; exists {
-				summary.TotalQty += orderItem.Num
+				summary.TotalQty += unit.Num
 			} else {
 				materialSummaryMap[key] = &MaterialSummary{
 					MaterialCode: orderItem.MaterialCode,
 					MaterialName: materialName,
-					TotalQty:     orderItem.Num,
+					TotalQty:     unit.Num,
 				}
 			}
 		}
@@ -208,23 +161,11 @@ func (s *purchaseOrderSrv) checkItemLimitByScheme(
 
 	// 5. 逐个检查物品是否超限
 	for _, summary := range summaries {
-		// 检查是否在限购配置中
-		quotaLimit, inQuota := quotaMap[summary.MaterialCode]
-		if !inQuota {
-			continue // 不在限购配置中，跳过
-		}
-
-		// 如果限购数量为 0，表示不限制
-		if quotaLimit == 0 {
-			continue
-		}
-
+		// 获取限购限制（前面已经过滤，这里肯定存在）
+		quotaLimit := quotaMap[summary.MaterialCode]
 		// 校验是否超限
 		if summary.TotalQty > quotaLimit {
-			return errors.New(fmt.Sprintf(
-				i18n.Translate(lang, "物品【%s】本次申请数量 %.2f 已超限（最多 %.2f），请减少数量后重试"),
-				summary.MaterialName, summary.TotalQty, quotaLimit,
-			))
+			return errors.NewWithCode(constant.CodeErrorConfirmRefresh, "订单物品超出限购/单位变动，请检查物品和数量。")
 		}
 	}
 

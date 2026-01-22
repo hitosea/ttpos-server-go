@@ -868,3 +868,59 @@ func (h *purchaseOrderHelper) checkCompanyShopNeedSync(
 	// 没有变动
 	return false
 }
+
+// 品牌采购：批量查询限购配置（避免 N+1 查询问题）
+func (h *purchaseOrderHelper) getQuotaLimitMap(
+	ctx context.Context,
+	dbm *database.DBManager,
+	purchaseOrder *model.PurchaseOrder,
+) map[string]float64 { // 品牌采购：批量查询限购配置（避免 N+1 查询问题）
+	companySetting := ctx.GetCompanySetting()
+	var quotaLimitMap map[string]float64
+	if purchaseOrder.IsHeadquarterPurchase() && len(purchaseOrder.Items) > 0 {
+		// 提取所有物品编码
+		materialCodes := make([]string, 0, len(purchaseOrder.Items))
+		for _, item := range purchaseOrder.Items {
+			materialCodes = append(materialCodes, item.MaterialCode)
+		}
+		// 批量查询限购配置
+		headquarterUuid := companySetting.HeadquarterUuid
+		if headquarterUuid > 0 {
+			headquarterDb := dbm.GetDB(headquarterUuid)
+			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
+			quotaLimits, _ := schemeRepo.GetMinQuotaLimitBatchByMaterialCodes(
+				materialCodes,
+				utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday(),
+			)
+			quotaLimitMap = quotaLimits
+		}
+	}
+	return quotaLimitMap
+}
+
+// 获取当天最小的每日申请次数限制
+func (h *purchaseOrderHelper) getMinDailyLimit(
+	ctx context.Context,
+	dbm *database.DBManager,
+	purchaseOrder *model.PurchaseOrder,
+) int {
+	companySetting := ctx.GetCompanySetting()
+	if purchaseOrder.IsHeadquarterPurchase() && len(purchaseOrder.Items) > 0 {
+		// 提取所有物品编码
+		materialCodes := make([]string, 0, len(purchaseOrder.Items))
+		for _, item := range purchaseOrder.Items {
+			materialCodes = append(materialCodes, item.MaterialCode)
+		}
+		// 批量查询限购配置
+		headquarterUuid := companySetting.HeadquarterUuid
+		if headquarterUuid > 0 {
+			headquarterDb := dbm.GetDB(headquarterUuid)
+			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
+			minDailyLimit, _ := schemeRepo.GetMinDailyLimit(
+				utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday(),
+			)
+			return minDailyLimit
+		}
+	}
+	return 999999999
+}
