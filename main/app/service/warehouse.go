@@ -847,7 +847,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 			}
 
 			if warehouse.Uuid != 0 { // 如果存在，则更新
-				db.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(map[string]any{
+				tx.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(map[string]any{
 					"type":        warehouseType,
 					"status":      status,
 					"is_default":  isDefault,
