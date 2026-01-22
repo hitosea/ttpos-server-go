@@ -297,7 +297,7 @@ func (s *roleAccessSrv) GetApiPermission(ctx context.Context, staffUuid, company
 
 	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
 	enableCache := objectStorageAdapter.IsObjectStorageCacheEnabled(companyUuid)
-	enableCache = false // 暂时不开启,未进行充分测试. 开启后本地macmini环境快15ms左右.
+	// enableCache = false // 暂时不开启,未进行充分测试. 开启后本地macmini环境快15ms左右.
 
 	// 查询函数（从数据库获取权限）
 	queryFunc := func() (PermissionsCache, error) {
