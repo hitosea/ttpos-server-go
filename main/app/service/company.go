@@ -1,6 +1,8 @@
 package service
 
 import (
+	"sort"
+	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -10,14 +12,16 @@ import (
 	settingSrv "ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
 
 type ICompanySrv interface {
-	GetCompanyList(ctx context.Context) (resp.SaasCompanyListResp, error)                   // 获取本店可看到的所有店列表（包含店铺名称、超管real_name以及超管手机号）
-	GetCompanyInfo(ctx context.Context, companyUuid uint64) (*resp.CompanyStoreResp, error) // 获取门店信息
-	UpdateCompanyInfo(ctx context.Context, updateReq req.UpdateCompanySettingReq) error     // 修改门店信息
+	GetCompanyList(ctx context.Context) (resp.SaasCompanyListResp, error)                           // 获取本店可看到的所有店列表（包含店铺名称、超管real_name以及超管手机号）
+	GetCompanyListWithStoreCode(ctx context.Context) (resp.SaasCompanyListWithStoreCodeResp, error) // 获取本店可看到的所有店列表（包含店铺编码）
+	GetCompanyInfo(ctx context.Context, companyUuid uint64) (*resp.CompanyStoreResp, error)         // 获取门店信息
+	UpdateCompanyInfo(ctx context.Context, updateReq req.UpdateCompanySettingReq) error             // 修改门店信息
 }
 
 type companySrv struct {
@@ -123,6 +127,96 @@ func (s *companySrv) GetCompanyList(ctx context.Context) (resp.SaasCompanyListRe
 
 	return resp.SaasCompanyListResp{
 		List: companyList,
+	}, nil
+}
+
+// GetCompanyListWithStoreCode 获取本店可看到的所有店列表（包含店铺编码）
+func (s *companySrv) GetCompanyListWithStoreCode(ctx context.Context) (resp.SaasCompanyListWithStoreCodeResp, error) {
+	db := s.dbm.GetDB(constant.DefaultDB)
+	companyRepo := repository.NewCompanyRepo(db)
+	currentCompanyUuid := ctx.GetCompanyUuid()
+	companySetting := ctx.GetCompanySetting()
+
+	// 获取总部下的所有门店
+	headquarterUuid := companySetting.HeadquarterUuid
+	if companySetting.IsHeadquarter() {
+		headquarterUuid = currentCompanyUuid
+	}
+
+	companies, err := companyRepo.GetNoDeleteListByHeadquarterUuid(headquarterUuid)
+	if err != nil {
+		return resp.SaasCompanyListWithStoreCodeResp{}, errors.WithMessage(errors.New("获取总部下的所有门店失败"), err.Error())
+	}
+
+	// 转换响应数据
+	list := make([]resp.CompanyInfoRespWithStoreCode, 0)
+	for _, company := range companies {
+		if company.Uuid == currentCompanyUuid {
+			continue
+		}
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetCompanyUuid(company.Uuid)
+		storeSetting, err := s.settingSrv.GetStoreSetting(ctxCopy)
+		if err != nil {
+			return resp.SaasCompanyListWithStoreCodeResp{}, errors.WithMessage(errors.New("获取门店设置失败"), err.Error())
+		}
+		list = append(list, resp.CompanyInfoRespWithStoreCode{
+			Uuid:      company.Uuid,
+			Name:      company.Name,
+			StoreCode: storeSetting.StoreCode,
+			Status:    company.Status,
+		})
+	}
+
+	// 对 list 按 StoreCode 排序
+	// 排序规则：
+	// 1. StoreCode 为空的排在最前面
+	// 2. 空 StoreCode 之间：按 CompanyUuid 升序排序（保证稳定性）
+	// 3. 非空 StoreCode：去掉 "No." 前缀后，纯数字按数字大小排序（去掉前缀0），否则按字符串排序（不区分大小写）
+	sort.Slice(list, func(i, j int) bool {
+		item1 := list[i]
+		item2 := list[j]
+
+		isEmpty1 := item1.StoreCode == ""
+		isEmpty2 := item2.StoreCode == ""
+
+		// 1. StoreCode 为空的排在最前面
+		if isEmpty1 != isEmpty2 {
+			return isEmpty1 // true 排在前面
+		}
+
+		// 2. 如果都是空字符串，按 CompanyUuid 排序
+		if isEmpty1 && isEmpty2 {
+			return item1.Uuid < item2.Uuid
+		}
+
+		// 3. 如果都有 StoreCode，按新规则排序
+		// 去掉 "No." 前缀（如果有）
+		processed1 := utils.ProcessStoreCodeForSort(item1.StoreCode)
+		processed2 := utils.ProcessStoreCodeForSort(item2.StoreCode)
+
+		// 判断处理后的内容是否只有数字
+		isDigits1 := utils.IsOnlyDigits(processed1)
+		isDigits2 := utils.IsOnlyDigits(processed2)
+
+		// 如果都是纯数字，按数字大小排序
+		if isDigits1 && isDigits2 {
+			num1, _ := utils.ParseNumberWithoutLeadingZeros(processed1)
+			num2, _ := utils.ParseNumberWithoutLeadingZeros(processed2)
+			return num1 < num2
+		}
+
+		// 如果一个是数字一个不是，数字排在前面
+		if isDigits1 != isDigits2 {
+			return isDigits1
+		}
+
+		// 否则按不区分大小写的字符串排序
+		return strings.ToLower(processed1) < strings.ToLower(processed2)
+	})
+
+	return resp.SaasCompanyListWithStoreCodeResp{
+		List: list,
 	}, nil
 }
 

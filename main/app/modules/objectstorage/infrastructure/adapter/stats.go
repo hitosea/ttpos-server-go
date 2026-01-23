@@ -619,15 +619,6 @@ func (r *SnapshotReporter) Start(ctx context.Context) {
 				continue
 			}
 
-			// 检查白名单商家数量：必须只有一个
-			if len(config.Whitelist) != 1 {
-				logger.Logger.Debug("白名单商家数量不为1，跳过保存缓存命中率快照",
-					zap.String("instance_id", r.instanceID),
-					zap.Int("whitelist_count", len(config.Whitelist)),
-				)
-				continue
-			}
-
 			stats := r.monitor.GetStats()
 
 			// 检测是否是重启后的第一条快照

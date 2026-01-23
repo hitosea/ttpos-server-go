@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
+	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
@@ -39,8 +40,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/duke-git/lancet/v2/convertor"
+	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
+
+	"ttpos-server-go/config"
 )
 
 // IOrderSrv 定义订单服务接口
@@ -273,7 +277,25 @@ func (s *orderSrv) createMemberSaleOrderSerialNo(db *gorm.DB, timezone string) (
 	return serialNo, nil
 }
 
+// createInstantOrderSerialNo 创建点餐订单序号
+// 优先使用 Redis INCR 原子操作，失败时降级到原数据库方案
 func (s *orderSrv) createInstantOrderSerialNo(ctx context.Context, db *gorm.DB) (string, error) {
+	// 仅在 debug 模式下尝试 Redis INCR 方案,充分测试后再应用到生产环境
+	if config.Server.Mode == constant.ServerModeDebug {
+		serialNo, err := s.createInstantOrderSerialNoWithRedis(ctx, db)
+		if err != nil {
+			ctx.Log().Warn("Redis 发号失败，降级到数据库方案", zap.Error(err))
+		} else {
+			return serialNo, nil
+		}
+	}
+
+	// Redis 失败时降级到原数据库方案（原逻辑不变）
+	return s.createInstantOrderSerialNoOriginal(ctx, db)
+}
+
+// createInstantOrderSerialNoOriginal 创建点餐订单序号（原逻辑，保持不变）
+func (s *orderSrv) createInstantOrderSerialNoOriginal(ctx context.Context, db *gorm.DB) (string, error) {
 	var serialNo string
 	saleBillRepo := repository.NewSaleBillRepo(db)
 	saleBill, err := saleBillRepo.GetInstantSaleBillLatest()
@@ -326,6 +348,182 @@ func (s *orderSrv) createInstantOrderSerialNo(ctx context.Context, db *gorm.DB) 
 			serialNo = strings.Repeat("0", 4-len(serialNo)) + serialNo
 		}
 	}
+	return serialNo, nil
+}
+
+// Lua 脚本：原子性地生成序列号，确保流水号只能增加不能减小
+// KEYS[1]: Redis key (serial_no:instant:{company_uuid}:{date})
+// ARGV[1]: 起始序列号（数字）
+// ARGV[2]: 过期时间（秒）
+// 返回：最终的序列号（数字）
+// 逻辑：
+// 1. 获取当前值（如果不存在返回0）
+// 2. 如果当前值 < 起始序列号，设置为起始序列号
+// 3. 否则，当前值加1
+// 4. 设置过期时间
+// 5. 返回最终值
+const LuaScriptGenerateSerialNo = `
+local key = KEYS[1]
+local startSerialNo = tonumber(ARGV[1])
+local expireSeconds = tonumber(ARGV[2])
+
+-- 1. 获取当前值（如果 key 不存在，返回 nil，转换为 0）
+local currentNum = tonumber(redis.call('GET', key) or 0)
+
+-- 2. 如果当前值小于起始序列号，设置为起始序列号（确保流水号只能增加）
+--    否则，当前值加1
+if currentNum < startSerialNo then
+    currentNum = startSerialNo
+    redis.call('SET', key, currentNum)
+else
+    currentNum = currentNum + 1
+    redis.call('SET', key, currentNum)
+end
+
+-- 3. 设置过期时间
+redis.call('EXPIRE', key, expireSeconds)
+
+-- 4. 返回最终序列号
+return currentNum
+`
+
+// createInstantOrderSerialNoWithRedis 使用 Redis INCR + Lua 脚本原子操作生成序列号
+// 确保流水号只能增加不能减小，支持管理员随时修改起始序列号
+// 如果 Redis key 丢失，会从数据库恢复当天最新的序列号，避免重复
+func (s *orderSrv) createInstantOrderSerialNoWithRedis(ctx context.Context, db *gorm.DB) (string, error) {
+	if cache.Global == nil {
+		return "", errors.New("Redis 未初始化")
+	}
+
+	// 获取业务设置（起始序列号）
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return "", errors.WithMessage(err, "获取业务设置失败")
+	}
+	startSerialNo := businessSetting.StartSerialNo
+	if startSerialNo == "" {
+		startSerialNo = "0001"
+	}
+
+	// 解析起始序列号为数字
+	startSerialNoNum, err := strconv.Atoi(startSerialNo)
+	if err != nil {
+		return "", errors.WithMessage(err, "起始序列号格式错误")
+	}
+
+	// 按商家时区计算日期
+	companySetting := ctx.GetCompanySetting()
+	timezone := companySetting.GetTimezone()
+	dateStr := utils.SetTimezone(timezone).Now().Format("20060102")
+
+	// 构建 Redis Key: serial_no:instant:{company_uuid}:{date}
+	companyUuid := ctx.GetCompanyUuid()
+	redisKey := fmt.Sprintf("serial_no:instant:%d:%s", companyUuid, dateStr)
+
+	// 获取 Redis 客户端
+	var redisClient redis.Cmdable
+	if clusterClient := cache.Global.GetClusterClient(); clusterClient != nil {
+		redisClient = clusterClient
+	} else if client := cache.Global.GetClient(); client != nil {
+		redisClient = client
+	} else {
+		return "", errors.New("无法获取 Redis 客户端")
+	}
+
+	redisCtx := contexts.Background()
+
+	// 在执行脚本前，先获取当前值，用于检测起始流水号是否改变
+	var oldValue int64 = 0
+	oldValueStr, err := redisClient.Get(redisCtx, redisKey).Result()
+	if err != nil {
+		// Redis key 不存在或获取失败，需要从数据库恢复
+		if err == redis.Nil {
+			// Key 不存在，从数据库查询当天最新的序列号
+			ctx.Log().Warn("Redis key 不存在，从数据库恢复序列号",
+				zap.String("redisKey", redisKey),
+				zap.String("date", dateStr),
+			)
+
+			// 从数据库查询当天最新的序列号
+			recoveredValueStr, recoverErr := s.createInstantOrderSerialNoOriginal(ctx, db)
+			if recoverErr != nil {
+				return "", errors.WithMessage(recoverErr, "从数据库恢复序列号失败")
+			}
+			recoveredValue, err := strconv.ParseInt(recoveredValueStr, 10, 64)
+			if err != nil {
+				return "", errors.WithMessage(err, "从数据库恢复序列号Atoi失败")
+			}
+
+			// 初始化 Redis key（使用 SETNX 确保并发安全）
+			setResult, setErr := redisClient.SetNX(redisCtx, redisKey, recoveredValue, 48*time.Hour).Result()
+			if setErr != nil {
+				return "", errors.WithMessage(setErr, "初始化 Redis key 失败")
+			}
+
+			if setResult {
+				// 成功设置，记录日志
+				ctx.Log().Info("从数据库恢复序列号成功",
+					zap.String("redisKey", redisKey),
+					zap.Int64("recoveredValue", recoveredValue),
+				)
+				oldValue = recoveredValue
+			} else {
+				// 并发情况下，其他请求已经设置了，重新获取
+				oldValue, err = redisClient.Get(redisCtx, redisKey).Int64()
+				if err != nil {
+					return "", errors.WithMessage(err, "重新获取 Redis key 失败")
+				}
+			}
+		} else {
+			return "", errors.WithMessage(err, "获取 Redis key 失败")
+		}
+	} else {
+		// 成功获取到值
+		if parsedOldValue, parseErr := strconv.ParseInt(oldValueStr, 10, 64); parseErr == nil {
+			oldValue = parsedOldValue
+		}
+	}
+
+	// 使用 Lua 脚本原子性地生成序列号
+	// 脚本会：1. GET 当前值 2. 比较并调整起始序列号 3. 设置过期时间 4. 返回最终值
+	script := redis.NewScript(LuaScriptGenerateSerialNo)
+	expireSeconds := int64(48 * 60 * 60) // 48小时, 避免当天内过期，导致流水号重复
+
+	result, err := script.Run(redisCtx, redisClient, []string{redisKey}, startSerialNoNum, expireSeconds).Result()
+	if err != nil {
+		return "", errors.WithMessage(err, "Redis Lua 脚本执行失败")
+	}
+
+	// 解析返回的序列号
+	currentNum, ok := result.(int64)
+	if !ok {
+		return "", errors.New("Redis 返回的序列号类型错误")
+	}
+
+	// 检测起始流水号是否改变：如果返回的值等于起始序列号，且之前的旧值小于起始序列号，说明发生了调整
+	if currentNum == int64(startSerialNoNum) && oldValue > 0 && oldValue < int64(startSerialNoNum) {
+		ctx.Log().Info("起始流水号已调整",
+			zap.Uint64("companyUuid", companyUuid),
+			zap.String("date", dateStr),
+			zap.Int64("oldValue", oldValue),
+			zap.Int("newStartSerialNo", startSerialNoNum),
+			zap.String("startSerialNo", startSerialNo),
+		)
+	}
+
+	// 格式化序列号：如果小于10000则补零到4位，否则直接返回
+	var serialNo string
+	if currentNum < 10000 {
+		// 小于10000时，补零到4位（例如：1 -> 0001, 24 -> 0024, 200 -> 0200）
+		serialNo = strconv.FormatInt(currentNum, 10)
+		if len(serialNo) < 4 {
+			serialNo = strings.Repeat("0", 4-len(serialNo)) + serialNo
+		}
+	} else {
+		// 大于等于10000时，直接返回（例如：10000 -> "10000", 12345 -> "12345"）
+		serialNo = strconv.FormatInt(currentNum, 10)
+	}
+
 	return serialNo, nil
 }
 
@@ -526,6 +724,12 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 	}
 
 	saleBillSetting := model.SaleBillSetting{
+		BaseModel: model.BaseModel{
+			Uuid:       utils.MustGetID(),
+			CreateTime: time.Now().Unix(),
+			UpdateTime: time.Now().Unix(),
+			DeleteTime: 0,
+		},
 		SaleBillUuid:       saleBillUuid,
 		ServiceFeeType:     serviceFeeType,
 		ServiceFeeValue:    serviceFeeValue,
@@ -619,7 +823,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	ctxCopy := ctx.Copy()
 	db := ctx.GetDB()
 	// 创建订单编号
-	orderNo, err := s.createOrderNo(db, constant.OrderSourceMember)
+	orderNo, err := s.createOrderNo(ctx, db, constant.OrderSourceMember)
 	if err != nil {
 		ctx.Log().Error("会员端订单编号生成失败", zap.Error(err))
 		return nil, errors.WithMessage(err, "会员端订单编号生成失败")
@@ -1054,7 +1258,24 @@ func getMemberOrderDetail(ctx context.Context, memberSaleOrderUuid uint64) (*mod
 }
 
 // createOrderNo 创建订单编号
-func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error) {
+// 优先使用 Redis Set 保证随机数唯一性，失败时降级到原随机数方案
+func (s *orderSrv) createOrderNo(ctx context.Context, db *gorm.DB, orderSource string) (string, error) {
+	// 仅在 debug 模式下尝试 Redis Set 方案，充分测试后再应用到生产环境
+	if config.Server.Mode == constant.ServerModeDebug {
+		orderNo, err := s.createOrderNoWithRedis(ctx, db, orderSource)
+		if err != nil {
+			// Redis 失败时降级到原方案
+		} else {
+			return orderNo, nil
+		}
+	}
+
+	// 使用原随机数方案（原逻辑不变）
+	return s.createOrderNoOriginal(db, orderSource)
+}
+
+// createOrderNoOriginal 创建订单编号（原逻辑，保持不变）
+func (s *orderSrv) createOrderNoOriginal(db *gorm.DB, orderSource string) (string, error) {
 	var orderNo string
 
 	// 前八位是年月日
@@ -1085,6 +1306,211 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error
 		return "", errors.New("订单编号生成失败")
 	}
 	return orderNo, nil
+}
+
+// Lua 脚本：原子性地生成唯一的随机数
+// KEYS[1]: Redis Set key (order_no_set:{date}:{orderSourceType})
+// ARGV[1]: 随机数
+// ARGV[2]: 过期时间（秒）
+// 返回：1 表示成功添加（随机数唯一），0 表示已存在（需要重新生成）
+const LuaScriptAddOrderNoRandom = `
+local setKey = KEYS[1]
+local randomNum = ARGV[1]
+local expireSeconds = tonumber(ARGV[2])
+
+-- 检查随机数是否已存在
+if redis.call('SISMEMBER', setKey, randomNum) == 1 then
+    return 0  -- 已存在，需要重新生成
+end
+
+-- 添加随机数到 Set
+redis.call('SADD', setKey, randomNum)
+
+-- 设置过期时间
+redis.call('EXPIRE', setKey, expireSeconds)
+
+return 1  -- 成功添加
+`
+
+// createOrderNoWithRedis 使用 Redis Set 保证随机数唯一性生成订单编号
+// 订单编号格式：日期(8位) + 订单来源类型(1位) + 随机数(9位)
+// Redis Set Key: order_no_set:{date}:{orderSourceType}
+// 如果 Redis Set 丢失，会从数据库恢复当天已使用的订单编号，避免重复
+func (s *orderSrv) createOrderNoWithRedis(ctx context.Context, db *gorm.DB, orderSource string) (string, error) {
+	if cache.Global == nil {
+		return "", errors.New("Redis 未初始化")
+	}
+
+	// 使用商家时区获取当前日期
+	companySetting := ctx.GetCompanySetting()
+	timezone := companySetting.GetTimezone()
+	datePart := utils.SetTimezone(timezone).Now().Format("20060102")
+	// 第九位是订单来源
+	orderSourceType := constant.OrderSourceMapToOrderNoType[orderSource]
+	if orderSourceType == "" {
+		return "", errors.New("订单来源类型不存在")
+	}
+
+	// 构建 Redis Set Key: order_no_set:{date}:{orderSourceType}
+	setKey := fmt.Sprintf("order_no_set:%s:%s", datePart, orderSourceType)
+
+	// 获取 Redis 客户端
+	var redisClient redis.Cmdable
+	if clusterClient := cache.Global.GetClusterClient(); clusterClient != nil {
+		redisClient = clusterClient
+	} else if client := cache.Global.GetClient(); client != nil {
+		redisClient = client
+	} else {
+		return "", errors.New("无法获取 Redis 客户端")
+	}
+
+	redisCtx := contexts.Background()
+
+	// 检测 Redis Set 是否存在，如果不存在则从数据库恢复
+	exists, err := redisClient.Exists(redisCtx, setKey).Result()
+	if err != nil {
+		return "", errors.WithMessage(err, "检查 Redis Set 是否存在失败")
+	}
+
+	if exists == 0 {
+		// Redis Set 不存在，从数据库恢复当天已使用的订单编号
+		err := s.recoverOrderNoSetFromDB(db, redisClient, redisCtx, setKey, datePart, orderSourceType, timezone)
+		if err != nil {
+			return "", errors.WithMessage(err, "从数据库恢复订单编号 Set 失败")
+		}
+	}
+
+	script := redis.NewScript(LuaScriptAddOrderNoRandom)
+	expireSeconds := int64(48 * 60 * 60) // 48小时
+
+	// 使用10位Unix时间戳的前6位作为时间戳部分
+	// 10位时间戳（秒级）从2001年开始，前6位不会有前导零，且保持时序性
+	// 使用商家时区获取当前时间
+	now := utils.SetTimezone(timezone).Now()
+	currentUnix := now.Unix()
+	timeStampStr := strconv.FormatInt(currentUnix, 10)
+	timePartStr := timeStampStr[:6] // 取前6位
+
+	// 最多重试10次生成唯一的随机数
+	var orderNo string
+	for i := 0; i < 10; i++ {
+		// 生成与时间序列相关的9位随机数
+		// 格式：时间戳部分(6位) + 随机数(3位)
+		// 时间戳部分：使用10位Unix时间戳的前6位，保证时序性和唯一性
+		// 随机数部分：3位随机数，保证唯一性
+
+		// 生成3位随机数
+		randomPart := utils.RandomNumber(3)
+
+		// 组合：时间戳部分(6位) + 随机数(3位) = 9位
+		randomNum := timePartStr + randomPart
+
+		// 使用 Lua 脚本原子性地检查并添加随机数
+		result, err := script.Run(redisCtx, redisClient, []string{setKey}, randomNum, expireSeconds).Result()
+		if err != nil {
+			return "", errors.WithMessage(err, "Redis Lua 脚本执行失败")
+		}
+
+		// 解析返回结果
+		added, ok := result.(int64)
+		if !ok {
+			return "", errors.New("Redis 返回结果类型错误")
+		}
+
+		if added == 1 {
+			// 成功添加，随机数唯一
+			orderNo = datePart + orderSourceType + randomNum
+			break
+		}
+		// added == 0，随机数已存在，继续重试
+	}
+
+	if orderNo == "" {
+		return "", errors.New("订单编号生成失败：无法生成唯一的订单编号")
+	}
+
+	return orderNo, nil
+}
+
+// recoverOrderNoSetFromDB 从数据库恢复当天已使用的订单编号到 Redis Set
+// 查询当天所有订单编号，提取后9位数字，添加到 Redis Set 中
+func (s *orderSrv) recoverOrderNoSetFromDB(db *gorm.DB, redisClient redis.Cmdable, redisCtx contexts.Context, setKey, datePart, orderSourceType, timezone string) error {
+	// 使用商家时区计算当天的开始和结束时间戳
+	now := utils.SetTimezone(timezone).Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	todayEnd := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location())
+	startTime := todayStart.Unix()
+	endTime := todayEnd.Unix()
+
+	// 构建订单编号前缀：日期(8位) + 订单来源类型(1位)
+	orderNoPrefix := datePart + orderSourceType
+
+	// 查询当天所有订单编号（从 sale_bill 和 sale_order 表）
+	var orderNos []string
+
+	// 查询 sale_bill 表中的订单编号
+	var saleBillOrderNos []string
+	err := db.Model(&model.SaleBill{}).
+		Where("order_no LIKE ?", orderNoPrefix+"%").
+		Where("create_time >= ? AND create_time <= ?", startTime, endTime).
+		// Where("delete_time = 0").  // 查询所有订单编号，包括已删除的订单
+		Pluck("order_no", &saleBillOrderNos).Error
+	if err != nil {
+		return errors.WithMessage(err, "查询 sale_bill 订单编号失败")
+	}
+	orderNos = append(orderNos, saleBillOrderNos...)
+
+	// 查询 sale_order 表中的订单编号
+	var saleOrderOrderNos []string
+	err = db.Model(&model.SaleOrder{}).
+		Where("order_no LIKE ?", orderNoPrefix+"%").
+		Where("create_time >= ? AND create_time <= ?", startTime, endTime).
+		// Where("delete_time = 0").  // 查询所有订单编号，包括已删除的订单
+		Pluck("order_no", &saleOrderOrderNos).Error
+	if err != nil {
+		return errors.WithMessage(err, "查询 sale_order 订单编号失败")
+	}
+	orderNos = append(orderNos, saleOrderOrderNos...)
+
+	// 去重
+	orderNoMap := make(map[string]bool)
+	for _, orderNo := range orderNos {
+		orderNoMap[orderNo] = true
+	}
+
+	// 提取后9位数字，添加到 Redis Set
+	if len(orderNoMap) > 0 {
+		// 将订单编号的后9位提取出来
+		var last9Digits []string
+		for orderNo := range orderNoMap {
+			if len(orderNo) >= 9 {
+				// 提取后9位
+				last9 := orderNo[len(orderNo)-9:]
+				last9Digits = append(last9Digits, last9)
+			}
+		}
+
+		// 批量添加到 Redis Set（使用 SADD）
+		if len(last9Digits) > 0 {
+			// 转换为 []interface{} 供 Redis 使用
+			members := make([]interface{}, len(last9Digits))
+			for i, digit := range last9Digits {
+				members[i] = digit
+			}
+
+			// 批量添加到 Set
+			err := redisClient.SAdd(redisCtx, setKey, members...).Err()
+			if err != nil {
+				return errors.WithMessage(err, "批量添加订单编号到 Redis Set 失败")
+			}
+
+			// 设置过期时间
+			expireSeconds := int64(48 * 60 * 60) // 48小时
+			redisClient.Expire(redisCtx, setKey, time.Duration(expireSeconds)*time.Second)
+		}
+	}
+
+	return nil
 }
 
 // GetCurrentStaffShiftLog 获取当前员工班次信息
@@ -5064,6 +5490,86 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 		ctx.Log().Error("更新金额失败", zap.Error(err))
 		return errors.WithMessage(err)
 	}
+	return nil
+}
+
+// CalcAndCacheSaleBillAsync 计算并缓存 SaleBill，然后异步保存到数据库
+// 参数：
+//   - ctx: 上下文
+//   - db: 数据库连接
+//   - saleBill: 要处理的 SaleBill 对象
+//   - options: 计算选项
+//
+// 返回：
+//   - error: 错误信息（仅缓存失败时返回，异步保存的错误会记录日志）
+//
+// 说明：
+//  1. 先同步计算并缓存 SaleBill（保证缓存立即可用）
+//  2. 然后异步调用 CalcAndSaveSaleBill 保存到数据库
+//  3. 如果缓存失败会立即返回错误，异步保存失败只记录日志
+func CalcAndCacheSaleBillAsync(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error {
+	if saleBill == nil {
+		return errors.New("saleBill 不能为 nil")
+	}
+
+	// 准备计算选项
+	option := &model.CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+
+	// 计算订单商品、订单、账单
+	saleBill.CalcAll(options...)
+
+	// 设置收银员信息
+	staff := ctx.GetStaff()
+	saleBill.SetCashier(staff.DutyNo, staff.Uuid, staff.GetUserName())
+
+	// 同步更新缓存（保证缓存立即可用）
+	if err := objectStorageController.GetSaleBillController().Update(ctx, db,
+		[]uint64{saleBill.Uuid},
+		objectStorageController.WithUpdateValue(map[uint64]interface{}{
+			saleBill.Uuid: saleBill,
+		}),
+	); err != nil {
+		ctx.Log().Error("更新 SaleBill 缓存失败", zap.Error(err), zap.Uint64("saleBillUuid", saleBill.Uuid))
+		return errors.WithMessage(err, "更新缓存失败")
+	}
+
+	// 异步保存到数据库
+	// 注意：需要在 goroutine 中创建新的 context，避免原 context 取消影响异步保存
+	utils.Go(func() {
+		// 创建新的 context，使用独立的数据库连接
+		asyncCtx := context.NewContext(
+			context.WithCompanyUuid(ctx.GetCompanyUuid()),
+			context.WithContext(contexts.Background()),
+			context.WithStaff(staff),
+		)
+		db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetDbId())
+		asyncCtx.SetDB(db)
+
+		// 异步调用原方法保存到数据库
+		if err := CalcAndSaveSaleBill(asyncCtx, db, saleBill, options...); err != nil {
+			logger.Logger.Error("异步保存 SaleBill 到数据库失败",
+				zap.Error(err),
+				zap.Uint64("saleBillUuid", saleBill.Uuid),
+			)
+		} else {
+			// 保存成功后，再次更新缓存（确保缓存与数据库一致）
+			if err := objectStorageController.GetSaleBillController().Update(asyncCtx, db,
+				[]uint64{saleBill.Uuid},
+				objectStorageController.WithUpdateValue(map[uint64]interface{}{
+					saleBill.Uuid: saleBill,
+				}),
+			); err != nil {
+				logger.Logger.Error("异步保存后更新 SaleBill 缓存失败",
+					zap.Error(err),
+					zap.Uint64("saleBillUuid", saleBill.Uuid),
+				)
+			}
+		}
+	})
+
 	return nil
 }
 

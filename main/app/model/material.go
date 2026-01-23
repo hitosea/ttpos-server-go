@@ -19,6 +19,7 @@ type Material struct {
 	UnitUuid              uint64   `gorm:"default:0;column:unit_uuid;comment:'单位ID'"`
 	PurchaseUnitUuid      uint64   `gorm:"default:0;column:purchase_unit_uuid;comment:'采购单位ID'"`
 	CostUnitUuid          uint64   `gorm:"default:0;column:cost_unit_uuid;comment:'成本单位ID'"`
+	DefaultSalesUnitUuid  uint64   `gorm:"default:0;column:default_sales_unit_uuid;comment:'默认销售单位ID（MaterialUnit UUID）'"`
 	Price                 float64  `gorm:"default:0;column:price;comment:'采购单价'"`
 	StockNum              float64  `gorm:"default:0;column:stock_num;comment:'库存数量'"`
 	SafetyStock           *float64 `gorm:"column:safety_stock;comment:'安全库存数量'"`
@@ -140,6 +141,15 @@ func (model *Material) GetBaseUnit() *MaterialUnit {
 	return nil
 }
 
+// 获取限购配置中的单位信息
+func (model *Material) GetUnitByUuidForQuotaConfig() *MaterialUnit {
+	if model.DefaultSalesUnitUuid > 0 {
+		return model.GetUnit(model.DefaultSalesUnitUuid)
+	}
+	return model.GetUnit(model.UnitUuid)
+}
+
+// 获取图片URL
 func (model *Material) GetImage(baseUrl string) string {
 	if model.ImageFile != nil {
 		return model.ImageFile.GetUrl(baseUrl)

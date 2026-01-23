@@ -1174,7 +1174,6 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 	var statisticsData []model.StatisticsProductData
 	statisticsQuery := db.Table(statisticsProductTable).
 		Select(
-			"sp.product_sale_price AS sale_price",
 			"sp.product_package_uuid AS product_package_uuid",
 			"SUM(sp.product_num) AS sale_num",
 			"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, sp.product_final_price * (sp.product_num - sp.refund_num))) AS sale_amount",
@@ -1195,7 +1194,7 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 	// 使用 map 按 product_package_uuid 合并，保持原有逻辑不变
 	mergedData := make(map[uint64]*model.StatisticsProductData)
 
-	// 先处理统计表数据（保持原有逻辑，sale_price 使用统计表的值）
+	// 先处理统计表数据
 	for i := range statisticsData {
 		if statisticsData[i].ProductPackageUuid.Valid {
 			uuid := uint64(statisticsData[i].ProductPackageUuid.Int64)
@@ -1212,7 +1211,6 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 		uuid := uint64(item.ProductPackageUuid.Int64)
 		if existing, exists := mergedData[uuid]; exists {
 			// 如果已存在，累加 sale_num 和 sale_amount
-			// sale_price 保持使用统计表的值（原有逻辑）
 			if item.SaleNum.Valid {
 				if existing.SaleNum.Valid {
 					// 使用 decimal 进行精确累加
@@ -2320,27 +2318,50 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 	var mainQuery string
 	var args []any
 
+	// 判断是否有店内订单查询条件
+	hasStoreOrderFilter := req.IsDesk || req.IsInstant || req.IsTakeout
+
 	if req.IsDelivery && takeoutOrderQuery != "" {
-		// 合并店内订单和外卖订单
-		mainQuery = fmt.Sprintf(`
-			SELECT 
-				period_start_time,
-				SUM(order_amount) AS order_amount,
-				SUM(pay_amount) AS pay_amount,
-				SUM(refund_amount) AS refund_amount,
-				COUNT(DISTINCT sale_bill_uuid) AS order_num,
-				SUM(meal_num) AS meal_num
-			FROM (
-				(%s)
-				UNION ALL
-				(%s)
-			) AS combined_orders
-			GROUP BY period_start_time
-			ORDER BY period_start_time ASC
-			LIMIT ? OFFSET ?
-		`, storeOrderQuery, takeoutOrderQuery)
-		args = append(storeOrderArgs, takeoutOrderArgs...)
-		args = append(args, req.PageSize, (req.PageNo-1)*req.PageSize)
+		if hasStoreOrderFilter {
+			// 合并店内订单和外卖订单
+			mainQuery = fmt.Sprintf(`
+				SELECT 
+					period_start_time,
+					SUM(order_amount) AS order_amount,
+					SUM(pay_amount) AS pay_amount,
+					SUM(refund_amount) AS refund_amount,
+					COUNT(DISTINCT sale_bill_uuid) AS order_num,
+					SUM(meal_num) AS meal_num
+				FROM (
+					(%s)
+					UNION ALL
+					(%s)
+				) AS combined_orders
+				GROUP BY period_start_time
+				ORDER BY period_start_time ASC
+				LIMIT ? OFFSET ?
+			`, storeOrderQuery, takeoutOrderQuery)
+			args = append(storeOrderArgs, takeoutOrderArgs...)
+			args = append(args, req.PageSize, (req.PageNo-1)*req.PageSize)
+		} else {
+			// 仅外卖订单（当 IsDelivery=1 且其他三个都是0时）
+			mainQuery = fmt.Sprintf(`
+				SELECT 
+					period_start_time,
+					SUM(order_amount) AS order_amount,
+					SUM(pay_amount) AS pay_amount,
+					SUM(refund_amount) AS refund_amount,
+					COUNT(DISTINCT sale_bill_uuid) AS order_num,
+					SUM(meal_num) AS meal_num
+				FROM (
+					%s
+				) AS subquery
+				GROUP BY period_start_time
+				ORDER BY period_start_time ASC
+				LIMIT ? OFFSET ?
+			`, takeoutOrderQuery)
+			args = append(takeoutOrderArgs, req.PageSize, (req.PageNo-1)*req.PageSize)
+		}
 	} else {
 		// 仅店内订单
 		mainQuery = fmt.Sprintf(`
@@ -2367,24 +2388,28 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 
 	// 计算总时段数（需要考虑合并后的时段）
 	var total int64
+
 	if req.IsDelivery {
-		// 计算合并后的总时段数
-		// 注意：timeField 包含表别名（sb.finish_time 或 sb.create_time），需要提取字段名
-		timeFieldName := "finish_time"
-		if req.IsCreateTime {
-			timeFieldName = "create_time"
-		}
-		countQuery := fmt.Sprintf(`
-			SELECT COUNT(DISTINCT period_start_time) FROM (
-				SELECT FLOOR(%s / %d) * %d AS period_start_time FROM ttpos_sale_bill WHERE delete_time = ? AND status = ? AND %s >= ? AND %s <= ?
-		`, timeFieldName, req.PeriodSeconds, req.PeriodSeconds, timeFieldName, timeFieldName)
-		countArgs := []any{constant.NotDeleted, constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
+		// 使用 statistics_takeout.go 中定义的变量，保持代码一致性
+		takeoutValidStatesStr := buildStateInCondition(validOrderStates)
 
-		if len(opts) > 0 {
-			countQuery += " AND uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)"
-		}
+		if hasStoreOrderFilter {
+			// 计算合并后的总时段数（店内订单 + 外卖订单）
+			// 注意：timeField 包含表别名（sb.finish_time 或 sb.create_time），需要提取字段名
+			timeFieldName := "finish_time"
+			if req.IsCreateTime {
+				timeFieldName = "create_time"
+			}
+			countQuery := fmt.Sprintf(`
+				SELECT COUNT(DISTINCT period_start_time) FROM (
+					SELECT FLOOR(%s / %d) * %d AS period_start_time FROM ttpos_sale_bill WHERE delete_time = ? AND status = ? AND %s >= ? AND %s <= ?
+			`, timeFieldName, req.PeriodSeconds, req.PeriodSeconds, timeFieldName, timeFieldName)
+			countArgs := []any{constant.NotDeleted, constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
 
-		if req.IsDesk || req.IsInstant || req.IsTakeout {
+			if len(opts) > 0 {
+				countQuery += " AND uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)"
+			}
+
 			var billTypeList []uint
 			if req.IsDesk {
 				billTypeList = append(billTypeList, constant.SaleBillTypeDesk)
@@ -2397,17 +2422,24 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 			}
 			countQuery += " AND bill_type IN (?)"
 			countArgs = append(countArgs, billTypeList)
-		}
 
-		// 使用 statistics_takeout.go 中定义的变量，保持代码一致性
-		takeoutValidStatesStr := buildStateInCondition(validOrderStates)
-		countQuery += fmt.Sprintf(`
-			UNION
-			SELECT FLOOR(accepted_time / ?) * ? AS period_start_time FROM ttpos_takeout_order WHERE delete_time = ? AND order_state IN %s AND accepted_time > 0 AND accepted_time >= ? AND accepted_time <= ?
-			) AS all_periods
-		`, takeoutValidStatesStr)
-		countArgs = append(countArgs, req.PeriodSeconds, req.PeriodSeconds, constant.NotDeleted, req.StartTime, req.EndTime)
-		r.db.Raw(countQuery, countArgs...).Scan(&total)
+			countQuery += fmt.Sprintf(`
+				UNION
+				SELECT FLOOR(accepted_time / ?) * ? AS period_start_time FROM ttpos_takeout_order WHERE delete_time = ? AND order_state IN %s AND accepted_time > 0 AND accepted_time >= ? AND accepted_time <= ?
+				) AS all_periods
+			`, takeoutValidStatesStr)
+			countArgs = append(countArgs, req.PeriodSeconds, req.PeriodSeconds, constant.NotDeleted, req.StartTime, req.EndTime)
+			r.db.Raw(countQuery, countArgs...).Scan(&total)
+		} else {
+			// 仅外卖订单的总时段数（当 IsDelivery=1 且其他三个都是0时）
+			countQuery := fmt.Sprintf(`
+				SELECT COUNT(DISTINCT period_start_time) FROM (
+					SELECT FLOOR(accepted_time / ?) * ? AS period_start_time FROM ttpos_takeout_order WHERE delete_time = ? AND order_state IN %s AND accepted_time > 0 AND accepted_time >= ? AND accepted_time <= ?
+				) AS all_periods
+			`, takeoutValidStatesStr)
+			countArgs := []any{req.PeriodSeconds, req.PeriodSeconds, constant.NotDeleted, req.StartTime, req.EndTime}
+			r.db.Raw(countQuery, countArgs...).Scan(&total)
+		}
 	} else {
 		// 仅店内订单的总时段数
 		countQuery := baseQuery.
@@ -2631,6 +2663,7 @@ type CountBusinessPaymentMethodReq struct {
 	PaymentMethodNames           []string // 支付方式名称列表: 空=全部（PaymentMethodList为空时使用）
 	ExcludeDataManage            bool     // 是否排除数据管理订单
 	Timezone                     string   // 业务时区，如 "Asia/Shanghai"
+	Source                       int      // 查询来源：0-营业收款统计、1-门店汇总统计
 }
 
 // businessPaymentMethodRawData 支付方式统计原始数据
@@ -2639,6 +2672,7 @@ type businessPaymentMethodRawData struct {
 	PaymentMethodUuid       uint64  // 支付方式UUID
 	PaymentMethodSort       int     // 支付方式排序
 	PaymentMethodCreateTime int64   // 支付方式创建时间戳
+	Name                    string  // 名称
 	PaymentName             string  // 支付方式名称
 	PaymentAmount           float64 // 支付金额（已扣除退款）
 }
@@ -2650,6 +2684,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		SELECT 
 			sb.finish_time AS create_time,
 			po.payment_method_uuid,
+			pm.name,
 			pm.payment_name,
 			pm.sort AS payment_method_sort,
 			pm.create_time AS payment_method_create_time,
@@ -2716,7 +2751,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		args = append(args, req.PaymentMethodList)
 	} else if len(req.PaymentMethodNames) > 0 {
 		// 使用支付方式名称筛选（因为不同商家的同一支付方式UUID可能不同）
-		baseQuery += " AND pm.payment_name IN (?)"
+		baseQuery += " AND pm.name IN (?)"
 		args = append(args, req.PaymentMethodNames)
 	}
 
@@ -2794,7 +2829,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 				// 如果使用 PaymentMethodNames，检查是否匹配（当 IsDelivery=false 时）
 				found := false
 				for _, name := range req.PaymentMethodNames {
-					if name == takeoutItem.PaymentName {
+					if name == takeoutItem.Name {
 						found = true
 						break
 					}
@@ -2810,6 +2845,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 				PaymentMethodUuid:       takeoutItem.PaymentMethodUuid,
 				PaymentMethodSort:       takeoutItem.PaymentMethodSort,
 				PaymentMethodCreateTime: takeoutItem.PaymentMethodCreateTime,
+				Name:                    takeoutItem.Name,
 				PaymentName:             takeoutItem.PaymentName,
 				PaymentAmount:           takeoutItem.PaymentAmount,
 			})
@@ -2819,11 +2855,17 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	// 2. 在应用层按业务时区分组、统计
 	timeUtil := utils.SetTimezone(req.Timezone)
 
+	useUuid := true
+	if req.Source == 1 {
+		useUuid = false
+	}
+
 	// 按日期和支付方式分组统计
 	// 使用 decimal 进行精确计算
 	type groupKey struct {
 		Date              string
 		PaymentMethodUuid uint64
+		PaymentName       string
 	}
 	type paymentGroupData struct {
 		PaymentName             string
@@ -2845,15 +2887,27 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 			dateKey = timeUtil.FormatUnixTime(item.CreateTime, "2006-01-02")
 		}
 
-		key := groupKey{
-			Date:              dateKey,
-			PaymentMethodUuid: item.PaymentMethodUuid,
+		key := groupKey{}
+		if useUuid {
+			key = groupKey{
+				Date:              dateKey,
+				PaymentMethodUuid: item.PaymentMethodUuid,
+			}
+		} else {
+			key = groupKey{
+				Date:        dateKey,
+				PaymentName: item.Name,
+			}
 		}
 
 		// 初始化分组数据
 		if groupedData[key] == nil {
+			paymentName := item.PaymentName
+			if !useUuid {
+				paymentName = item.Name
+			}
 			groupedData[key] = &paymentGroupData{
-				PaymentName:             item.PaymentName,
+				PaymentName:             paymentName,
 				PaymentMethodSort:       item.PaymentMethodSort,
 				PaymentMethodCreateTime: item.PaymentMethodCreateTime,
 			}
@@ -3169,7 +3223,7 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 }
 
 // calculateChannelSaleFromRawData 从原始数据计算渠道统计
-func calculateChannelSaleFromRawData(rawData []takeoutChannelSaleRawData) *model.ChannelSaleRepoResult {
+func calculateChannelSaleFromRawData(rawData []TakeoutChannelSaleRawData) *model.ChannelSaleRepoResult {
 	result := &model.ChannelSaleRepoResult{}
 	if len(rawData) == 0 {
 		return result

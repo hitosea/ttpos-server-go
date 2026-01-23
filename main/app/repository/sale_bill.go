@@ -16,7 +16,6 @@ type ISaleBillRepo interface {
 	ISaleBillQueryRepo
 	UpdateSaleBill(saleBill *model.SaleBill) error
 	UpdateSaleBillRecord(saleBill model.SaleBill) error
-	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error                      // 确认必点
 	UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) error                // 完成自动加购
 	DeleteSaleBill(saleBillUuid uint64) error                                  // 软删除销售账单

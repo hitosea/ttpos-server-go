@@ -232,6 +232,34 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(err, "获取物品列表失败")
 	}
 
+	// 品牌采购：批量查询限购配置（避免 N+1 查询问题）
+	var quotaLimitMap map[string]float64
+	if req.PurchaseType == 2 && len(materials) > 0 {
+		// 提取所有物品编码
+		materialCodes := make([]string, 0, len(materials))
+		for _, material := range materials {
+			materialCodes = append(materialCodes, material.Code)
+		}
+
+		// 获取当前星期几
+		currentWeekday := utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday()
+
+		// 批量查询限购配置
+		headquarterUuid := companySetting.HeadquarterUuid
+		if headquarterUuid > 0 {
+			headquarterDb := s.dbm.GetDB(headquarterUuid)
+			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
+			quotaLimitMap, err = schemeRepo.GetMinQuotaLimitBatchByMaterialCodes(
+				companySetting.CompanyUuid,
+				materialCodes,
+				currentWeekday,
+			)
+			if err != nil {
+				logger.Logger.Error("批量查询限购配置失败", zap.Error(err))
+			}
+		}
+	}
+
 	// 转换为响应格式
 	var materialList []material_resp.Material
 	for _, material := range materials {
@@ -262,8 +290,10 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		}
 		purchaseUnit := material.GetUnit(material.PurchaseUnitUuid)
 		costUnit := material.GetUnit(material.CostUnitUuid)
+		defaultSalesUnit := material.GetUnit(material.DefaultSalesUnitUuid)
 		baseUnit := material.GetBaseUnit()
-		var purchaseUnitLocaleName, costUnitLocaleName, baseUnitLocaleName dto.LocaleResponse
+		quotaUnit := material.GetUnitByUuidForQuotaConfig()
+		var purchaseUnitLocaleName, costUnitLocaleName, baseUnitLocaleName, defaultSalesUnitLocaleName dto.LocaleResponse
 		if costUnit != nil {
 			costUnitLocaleName = *language.JsonToLocaleResponse(costUnit.Name)
 		}
@@ -272,6 +302,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		}
 		if baseUnit != nil {
 			baseUnitLocaleName = *language.JsonToLocaleResponse(baseUnit.Name)
+		}
+		if defaultSalesUnit != nil {
+			defaultSalesUnitLocaleName = *language.JsonToLocaleResponse(defaultSalesUnit.Name)
 		}
 
 		// 库存数量、可用库存数量、在途库存数量
@@ -344,7 +377,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 				return ""
 			}(),
-			UnitUuid: material.UnitUuid,
+			UnitUuid:       material.UnitUuid,
+			UnitLocaleName: baseUnitLocaleName,
 			PurchaseUnitName: func() string {
 				if material.PurchaseUnit == nil {
 					return ""
@@ -372,15 +406,65 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			}(),
 			CostUnitUuid:           material.CostUnitUuid,
 			PurchaseUnitLocaleName: purchaseUnitLocaleName,
-			CostUnitLocaleName:     costUnitLocaleName,
-			UnitLocaleName:         baseUnitLocaleName,
-			UnitList:               unitList,
-			AllowSubstoreVisible:   material.AllowSubstoreVisible,
-			AllowNegativeStock:     material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
+			DefaultSalesUnitName: func() string {
+				if defaultSalesUnit == nil {
+					return ""
+				}
+				if defaultSalesUnit.Unit == nil {
+					return ""
+				}
+				if defaultSalesUnit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
+					return ""
+				}
+				return defaultSalesUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+			}(),
+			DefaultSalesUnitUuid:       material.DefaultSalesUnitUuid,
+			DefaultSalesUnitLocaleName: defaultSalesUnitLocaleName,
+			CostUnitLocaleName:         costUnitLocaleName,
+			UnitList:                   unitList,
+			AllowSubstoreVisible:       material.AllowSubstoreVisible,
+			AllowNegativeStock:         material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
+			AvailableQuantity:          decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
+			StoreQuantity:              stockNum,
+			QuotaConfig: func() material_resp.MaterialQuotaConfig {
+				if req.PurchaseType != 2 {
+					return material_resp.MaterialQuotaConfig{
+						QuotaLimit:          0,
+						QuotaUnitUuid:       0,
+						QuotaUnitName:       "",
+						QuotaUnitLocaleName: dto.LocaleResponse{},
+					}
+				}
 
-			AvailableQuantity: decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
-			StoreQuantity:     stockNum,
+				// 从批量查询的结果中获取限购数量（无需再次查询数据库）
+				quotaLimit, exists := quotaLimitMap[material.Code]
+				if !exists || quotaLimit == 0 {
+					return material_resp.MaterialQuotaConfig{
+						QuotaLimit:          0,
+						QuotaUnitUuid:       0,
+						QuotaUnitName:       "",
+						QuotaUnitLocaleName: dto.LocaleResponse{},
+					}
+				}
+
+				return material_resp.MaterialQuotaConfig{
+					QuotaLimit:          quotaLimit,
+					QuotaUnitUuid:       quotaUnit.Uuid,
+					QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+					QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
+				}
+			}(),
 		}
+		for _, unit := range material.NotBaseUnitList {
+			if unit.Uuid == material.DefaultSalesUnitUuid {
+				// 转成销售单位数量
+				if unit.ConversionRate != 0 {
+					respMaterial.AvailableQuantity = decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+					respMaterial.StoreQuantity = decimal.NewFromFloat(stockNum).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+				}
+			}
+		}
+
 		materialList = append(materialList, respMaterial)
 	}
 
@@ -459,6 +543,19 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		}
 	}
 
+	// 获取默认销售单位信息
+	var defaultSalesUnitUuid uint64
+	var defaultSalesUnitLocaleName dto.LocaleResponse
+	if material.DefaultSalesUnitUuid > 0 {
+		materialUnitRepo := repository.NewMaterialUnitRepo(s.dbm.GetDB(dbId))
+		materialUnit, err := materialUnitRepo.GetMaterialUnitsByUuid(material.DefaultSalesUnitUuid)
+		if err == nil && materialUnit.Unit != nil {
+			defaultSalesUnitLocaleName = materialUnit.Unit.MultiLanguageName.GetNames()
+			// 返回 MaterialUnit UUID（与采购单位、成本单位一致）
+			defaultSalesUnitUuid = materialUnit.Uuid
+		}
+	}
+
 	return material_resp.MaterialDetailResp{
 		Uuid:                 material.Uuid,
 		LocaleName:           material.MultiLanguageName.GetNames(),
@@ -481,16 +578,18 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 			}
 			return material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
 		}(),
-		PurchaseUnitUuid:       material.PurchaseUnitUuid,
-		FromPurchaseUnitUuid:   fromPurchaseUnitUuid,
-		CostUnitName:           material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		CostUnitUuid:           material.CostUnitUuid,
-		FromCostUnitUuid:       fromCostUnitUuid,
-		PurchaseUnitLocaleName: purchaseUnitLocaleName,
-		CostUnitLocaleName:     costUnitLocaleName,
-		UnitLocaleName:         baseUnitLocaleName,
-		OriginCountry:          originCountry,
-		IsEditable:             !material.IsHeadquarter(), // 总部物品不可编辑
+		PurchaseUnitUuid:           material.PurchaseUnitUuid,
+		FromPurchaseUnitUuid:       fromPurchaseUnitUuid,
+		CostUnitName:               material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		CostUnitUuid:               material.CostUnitUuid,
+		FromCostUnitUuid:           fromCostUnitUuid,
+		PurchaseUnitLocaleName:     purchaseUnitLocaleName,
+		CostUnitLocaleName:         costUnitLocaleName,
+		UnitLocaleName:             baseUnitLocaleName,
+		DefaultSalesUnitUuid:       defaultSalesUnitUuid,
+		DefaultSalesUnitLocaleName: defaultSalesUnitLocaleName,
+		OriginCountry:              originCountry,
+		IsEditable:                 !material.IsHeadquarter(), // 总部物品不可编辑
 	}, nil
 }
 
@@ -663,6 +762,16 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		purchaseUnitUuid = purchaseUnit.Uuid
 	}
 
+	// 获取默认销售单位
+	var defaultSalesUnitUuid uint64
+	if request.DefaultSalesUnit != "" {
+		defaultSalesUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.DefaultSalesUnit)
+		if err != nil {
+			return nil, errors.WithMessage(err, fmt.Sprintf("默认销售单位不存在: %s", request.DefaultSalesUnit))
+		}
+		defaultSalesUnitUuid = defaultSalesUnit.Uuid
+	}
+
 	var material *model.Material
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
@@ -706,14 +815,18 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 				}
 				return 1
 			}(),
-			InitStock:          request.OpeningStock,
-			BarcodeValue:       request.BarcodeValue,
-			UnitUuid:           productUnit.Uuid,
-			UnitList:           unitList,
-			PurchaseUnitUuid:   purchaseUnitUuid,
-			CostUnitUuid:       productUnit.Uuid,
-			InternalCode:       request.InternalCode,
-			AllowNegativeStock: request.AllowNegativeStock,
+			InitStock:            request.OpeningStock,
+			BarcodeValue:         request.BarcodeValue,
+			UnitUuid:             productUnit.Uuid,
+			UnitList:             unitList,
+			PurchaseUnitUuid:     purchaseUnitUuid,
+			CostUnitUuid:         productUnit.Uuid,
+			DefaultSalesUnitUuid: defaultSalesUnitUuid,
+			InternalCode:         request.InternalCode,
+			AllowNegativeStock:   request.AllowNegativeStock,
+		}
+		if request.AllowSubstoreVisible {
+			params.AllowSubstoreVisible = 1
 		}
 		params.SetHeadquarterUuid(0)
 		// 获取默认仓库ID
@@ -913,6 +1026,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		BarcodeValue:          request.BarcodeValue,
 		PurchaseUnitUuid:      unitMap[request.PurchaseUnitUuid],
 		CostUnitUuid:          unitMap[request.CostUnitUuid],
+		DefaultSalesUnitUuid:  unitMap[request.DefaultSalesUnitUuid],
 		SafetyStock:           request.SafetyStock,
 		Status: func() bool {
 			if request.Status == 1 {
@@ -1003,6 +1117,18 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		}
 	}
 
+	// 获取默认销售单位
+	var defaultSalesUom string
+	if material.DefaultSalesUnitUuid != 0 {
+		defaultSalesUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.DefaultSalesUnitUuid)
+		if err != nil {
+			return nil, nil, errors.WithMessage(err, "获取默认销售单位失败")
+		}
+		if defaultSalesUnit.Unit != nil {
+			defaultSalesUom = defaultSalesUnit.Unit.ErpnextUom
+		}
+	}
+
 	materialAddErpReq := &req.MaterialAddErpReq{
 		ItemName:           getEnName,
 		StockUom:           productUnit.ErpnextUom,
@@ -1015,6 +1141,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		Classification:     getMaterialCategoryName,
 		ClassificationCode: materialCategory.Code,
 		PurchaseUom:        purchaseUom,
+		DefaultSalesUnit:   defaultSalesUom,
 		AllowNegativeStock: request.AllowNegativeStock,
 	}
 
@@ -1154,6 +1281,14 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				}
 				return unitMap[request.CostUnitUuid]
 			}(),
+			DefaultSalesUnitUuid: func() uint64 {
+				// 如果选择了已经存在的单位，则使用已存在的单位
+				if _, ok := notBaseUnitList[request.DefaultSalesUnitUuid]; ok {
+					return request.DefaultSalesUnitUuid
+				}
+				// 如果选择了新的单位，则创建新的单位
+				return unitMap[request.DefaultSalesUnitUuid]
+			}(),
 			OriginCountryCode: request.OriginCountryCode,
 		}
 
@@ -1276,6 +1411,19 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 					purchaseUom = purchaseUnit.Unit.ErpnextUom
 				}
 			}
+
+			// 获取默认销售单位
+			var defaultSalesUom string
+			if request.DefaultSalesUnitUuid != 0 {
+				defaultSalesUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.DefaultSalesUnitUuid)
+				if err != nil {
+					return errors.WithMessage(err, "获取默认销售单位失败")
+				}
+				if defaultSalesUnit.Unit != nil {
+					defaultSalesUom = defaultSalesUnit.Unit.ErpnextUom
+				}
+			}
+
 			allowNegativeStock := request.AllowNegativeStock
 			_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
 				ItemCode:     existingMaterial.Code,
@@ -1293,6 +1441,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				Classification:     getMaterialCategoryName,
 				ClassificationCode: materialCategory.Code,
 				PurchaseUom:        purchaseUom,
+				DefaultSalesUnit:   defaultSalesUom,
 				AllowNegativeStock: &allowNegativeStock,
 			})
 			if errErp != nil {
@@ -1374,6 +1523,8 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 				return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
 			}
 			purchaseUnitUuid = purchaseUnit.Uuid
+		} else {
+			updateData["purchase_unit_uuid"] = 0
 		}
 
 		// 同步单位
@@ -1457,6 +1608,36 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 
 		if !slices.Contains(saveUnitUuids, material.CostUnitUuid) {
 			updateData["cost_unit_uuid"] = 0
+		}
+
+		// 处理默认销售单位（如果传入）
+		// ERPNext 传入的是 UOM code，需要转换为 MaterialUnit UUID
+		if request.DefaultSalesUnit != "" {
+			defaultSalesUnitProductUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.DefaultSalesUnit)
+			if err != nil {
+				return errors.WithMessage(err, fmt.Sprintf("默认销售单位不存在: %s %s", request.ItemCode, request.DefaultSalesUnit))
+			}
+			// 查找对应的 MaterialUnit UUID
+			var defaultSalesUnitMaterialUnitUuid uint64
+			// 检查是否是基准单位
+			if material.Unit != nil && material.Unit.Unit != nil && material.Unit.Unit.Uuid == defaultSalesUnitProductUnit.Uuid {
+				defaultSalesUnitMaterialUnitUuid = material.UnitUuid
+			} else {
+				// 检查是否是非基准单位
+				materialUnit := materialUnitRepo.GetMaterialUnit(
+					commonRepo.WhereByUnitUuid(defaultSalesUnitProductUnit.Uuid),
+					commonRepo.WhereByMaterialUuid(material.Uuid),
+					commonRepo.WhereBySoftDelete(),
+				)
+				if materialUnit.Uuid > 0 {
+					defaultSalesUnitMaterialUnitUuid = materialUnit.Uuid
+				}
+			}
+			if defaultSalesUnitMaterialUnitUuid > 0 {
+				updateData["default_sales_unit_uuid"] = defaultSalesUnitMaterialUnitUuid
+			}
+		} else {
+			updateData["default_sales_unit_uuid"] = 0
 		}
 
 		// 根据NotForSale设置删除时间，物品下架时设置为当前时间，上架时重置为0
@@ -2962,6 +3143,10 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 				materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 			)
 			if existingMaterial.Uuid != 0 { // 如果物品已存在
+				defaultSalesUnit := ""
+				if itemInfo.SalesUom != nil && *itemInfo.SalesUom != "" {
+					defaultSalesUnit = *itemInfo.SalesUom
+				}
 				if err := s.UpdateMaterialByEprItem(copyCtx, req.MaterialEditErpReq{
 					Uuid:               existingMaterial.Uuid,
 					ItemCode:           itemInfo.ItemCode,
@@ -2975,6 +3160,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					ClassificationCode: itemInfo.ClassificationCode,
 					Uoms:               uoms,
 					PurchaseUom:        itemInfo.PurchaseUom,
+					DefaultSalesUnit:   defaultSalesUnit,
 					NotForSale:         itemInfo.NotForSale,
 					AllowNegativeStock: itemInfo.AllowNegativeStock,
 				}); err != nil {
@@ -3022,8 +3208,15 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					Uoms:               uoms,
 					StockUom:           itemInfo.StockUom,
 					PurchaseUom:        itemInfo.PurchaseUom,
-					NotForSale:         itemInfo.NotForSale,
-					AllowNegativeStock: itemInfo.AllowNegativeStock, // 是否允许负库存：true-允许，false-不允许
+					DefaultSalesUnit: func() string {
+						if itemInfo.SalesUom != nil && *itemInfo.SalesUom != "" {
+							return *itemInfo.SalesUom
+						}
+						return ""
+					}(),
+					NotForSale:           itemInfo.NotForSale,
+					AllowNegativeStock:   itemInfo.AllowNegativeStock, // 是否允许负库存：true-允许，false-不允许
+					AllowSubstoreVisible: true,
 				})
 				if err != nil {
 					logger.Logger.Error("同步erp物品列表失败-02", zap.Error(err))
@@ -3108,6 +3301,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					InternalCode:          material.InternalCode,
 					Status:                material.Status,
 					HeadquarterUuid:       companySetting.HeadquarterUuid,
+					DefaultSalesUnitUuid:  material.DefaultSalesUnitUuid,
 					WarehouseUuid:         material.WarehouseUuid,
 					AllowSubstoreVisible:  material.AllowSubstoreVisible, // 同步可见性字段
 					AllowNegativeStock:    material.AllowNegativeStock,

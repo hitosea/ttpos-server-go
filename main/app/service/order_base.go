@@ -6,12 +6,16 @@ import (
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
@@ -28,6 +32,46 @@ import (
 
 // CreateInstantOrder 创建点餐订单
 func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if config.Server.Mode == constant.ServerModeStop { // 暂时关闭特性功能
+			db := ctx.GetDB()
+			// 创建订单编号
+			orderNo, err := s.createOrderNo(ctx, db, constant.OrderSourceInstant)
+			if err != nil {
+				ctx.Log().Error("订单编号生成失败", zap.Error(err))
+				return resp.CreateInstantOrderResp{}, errors.WithMessage(err, "订单编号生成失败")
+			}
+
+			serialNo, err := s.createInstantOrderSerialNo(ctx, db)
+			if err != nil {
+				ctx.Log().Error("订单序号生成失败", zap.Error(err))
+				return resp.CreateInstantOrderResp{}, errors.WithMessage(err, "订单序号生成失败")
+			}
+			// 获取当前员工班次信息
+			staff := ctx.GetStaff()
+			staffShiftLogUuid := uint64(0)
+			staffShiftLog, err := repository.NewShiftLogRepo(db).GetShiftLog(
+				func(db *gorm.DB) *gorm.DB {
+					return db.Where("staff_uuid = ?", staff.Uuid)
+				},
+				func(db *gorm.DB) *gorm.DB {
+					return db.Where("status = ?", constant.StaffNotHandedOver)
+				},
+			)
+			if err != nil {
+				ctx.Log().Error("获取当前员工班次信息失败", zap.Error(err))
+			} else {
+				staffShiftLogUuid = staffShiftLog.Uuid
+			}
+
+			return s.CreateInstantOrderInCache(ctx, orderNo, serialNo, staffShiftLogUuid)
+		}
+	}
+	return s.createInstantOrder(ctx)
+}
+
+// createInstantOrder 创建点餐订单
+func (s *orderSrv) createInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error) {
 	dbId := ctx.GetDbId()
 	var billUuid uint64
 	var orderUuid uint64
@@ -43,7 +87,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	}
 	if err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 创建订单编号
-		orderNo, err := s.createOrderNo(tx, constant.OrderSourceInstant)
+		orderNo, err := s.createOrderNo(ctx, tx, constant.OrderSourceInstant)
 		if err != nil {
 			ctx.Log().Error("订单编号生成失败", zap.Error(err))
 			return errors.WithMessage(err, "订单编号生成失败")
@@ -95,6 +139,73 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	}, nil
 }
 
+// CreateInstantOrderInCache 创建点餐订单（存内存缓存）
+// 订单信息直接使用对象缓存方案存到缓存中，之后可异步保存到数据库
+func (s *orderSrv) CreateInstantOrderInCache(ctx context.Context, orderNo string, serialNo string, staffShiftLogUuid uint64) (resp.CreateInstantOrderResp, error) {
+	// 生成订单UUID
+	billUuid := utils.MustGetID()
+	var orderUuid uint64
+
+	// 创建销售账单对象（不保存到数据库）
+	saleBill := &model.SaleBill{
+		BaseModel: model.BaseModel{
+			Uuid:       billUuid,
+			CreateTime: time.Now().Unix(),
+			UpdateTime: time.Now().Unix(),
+			DeleteTime: 0,
+		},
+		OrderNo:       orderNo,
+		SerialNo:      serialNo,
+		BillType:      constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
+		DiningMethod:  constant.SaleBillDiningMethodDineIn,
+		DeviceUuid:    ctx.GetDeviceUuid(),
+		Source:        constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
+		ClientVersion: constant.NormalizeClientVersion(ctx.GetVersion()),
+
+		// 设置默认值的必点方案、自动加购必点商品
+		ShowMustPlan:       constant.SaleBillShowMustPlanYes,
+		AutoAddMustProduct: 1,
+	}
+
+	// 创建销售账单设置（不保存到数据库）
+	saleBillSetting, err := s.NewSaleBillSetting(ctx, billUuid, 0, false)
+	if err != nil {
+		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
+	}
+
+	// 创建销售订单对象（不保存到数据库）
+	deviceSn := ctx.GetDeviceSn()
+	if ctx.GetSource() == jwt.SourceH5 {
+		deviceSn = jwt.SourceH5 // 扫码h5订单，设备sn为h5
+	}
+	if ctx.GetSource() == jwt.SourceMember {
+		deviceSn = jwt.SourceMember // 会员端订单，设备sn为member
+	}
+
+	saleOrder := model.NewSaleOrder(deviceSn, billUuid, orderNo, *saleBillSetting)
+	orderUuid = saleOrder.Uuid
+
+	// 设置收银员信息
+	staff := ctx.GetStaff()
+	saleOrder.SetCashier(staff.Uuid, staff.GetUserName())
+
+	// 设置员工班次信息（可选）
+	saleOrder.StaffShiftLogUuid = staffShiftLogUuid
+
+	saleBill.SaleBillSetting = saleBillSetting
+	saleBill.SaleOrders = append(saleBill.SaleOrders, saleOrder)
+
+	// 同步保存到缓存,异步保存到数据库
+	if err := objectStorageController.GetSaleBillController().SaveToDb(ctx, saleBill); err != nil {
+		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
+	}
+
+	return resp.CreateInstantOrderResp{
+		SaleBillUuid:  billUuid,
+		SaleOrderUuid: orderUuid,
+	}, nil
+}
+
 // CreateDeskOrder 创建桌台订单
 func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
 	// 禁止并发操作
@@ -117,7 +228,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	desk.SetOpenDesk(saleBillUuid)
 
 	// 创建订单编号
-	orderNo, err := s.createOrderNo(db, constant.OrderSourceDesk)
+	orderNo, err := s.createOrderNo(ctx, db, constant.OrderSourceDesk)
 	if err != nil {
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "订单编号生成失败")
 	}
@@ -767,7 +878,7 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	} else {
 		orderSourceType = constant.OrderSourceInstant
 	}
-	orderNo, err := s.createOrderNo(db, orderSourceType)
+	orderNo, err := s.createOrderNo(ctx, db, orderSourceType)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

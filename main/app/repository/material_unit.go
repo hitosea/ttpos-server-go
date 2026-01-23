@@ -111,7 +111,7 @@ func (r *MaterialUnitRepoImpl) GetMaterialUnitsByUuid(baseUnitUuid uint64, opts 
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.Preload(
 			WithPreload{
-				Query: "Unit",
+				Query: "Unit.MultiLanguageName",
 			},
 		),
 	)

@@ -83,7 +83,8 @@ queue:
 
 # 调用链监控配置
 otlp:
-  enabled: false
+  enabled: ${OTLP_ENABLED}
   serviceName: "ttpos-erp"
-  endpoint: "10.0.11.43:4318"
-  path: "/v1/traces"
+  endpoint: "${OTLP_ENDPOINT}"
+  path: "${OTLP_PATH}"
+  token: "${OTLP_TOKEN}"

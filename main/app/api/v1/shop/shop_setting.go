@@ -23,6 +23,7 @@ import (
 
 // SettingHandler 设置控制器
 type SettingHandler struct {
+	dbm           *database.DBManager
 	syncSrv       service.ISyncSrv
 	settingSrv    settingSrv.ISrv
 	otherSrv      service.IOtherSrv
@@ -679,7 +680,13 @@ func (h *SettingHandler) GranularSync(c *gin.Context) {
 // @Router /shop/setting/payment_method/list [get]
 func (h *SettingHandler) GetPaymentMethodList(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	result := h.settingSrv.GetPaymentMethodList(ctx)
+	paymentRepo := service.NewPaymentRepo(ctx, h.dbm)
+	lianLianPayAvailable := true
+	err := paymentRepo.ValidateConfigError(ctx.GetCompanyUuid())
+	if err != nil {
+		lianLianPayAvailable = false
+	}
+	result := h.settingSrv.GetPaymentMethodList(ctx, lianLianPayAvailable)
 	helper.Success(c, result)
 }
 
@@ -1278,6 +1285,7 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	wrapper := &SettingHandler{
+		dbm:           dbm,
 		settingSrv:    settingSrv,
 		otherSrv:      otherSrv,
 		uploadFileSrv: service.NewUploadFileSrv(dbm),

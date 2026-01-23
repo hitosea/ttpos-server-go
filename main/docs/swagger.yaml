@@ -336,6 +336,9 @@ definitions:
       avg_desk_order_amount:
         description: 桌台方式-平均订单金额
         type: number
+      avg_grab_order_amount:
+        description: Grab平均订单金额
+        type: number
       avg_instant_order_amount:
         description: 点餐方式-平均订单金额
         type: number
@@ -351,6 +354,9 @@ definitions:
       max_desk_order_amount:
         description: 桌台方式-最大订单金额
         type: number
+      max_grab_order_amount:
+        description: Grab最大订单金额
+        type: number
       max_instant_order_amount:
         description: 点餐方式-最大订单金额
         type: number
@@ -362,6 +368,9 @@ definitions:
         type: number
       min_desk_order_amount:
         description: 桌台方式-最小订单金额
+        type: number
+      min_grab_order_amount:
+        description: Grab最小订单金额
         type: number
       min_instant_order_amount:
         description: 点餐方式-最小订单金额
@@ -404,6 +413,9 @@ definitions:
       total_gift_num:
         description: 赠菜数量
         type: number
+      total_grab_order_num:
+        description: Grab订单数
+        type: integer
       total_instant_order_num:
         description: 点餐方式-订单数
         type: integer
@@ -976,6 +988,16 @@ definitions:
       cost_unit_uuid:
         description: 成本单位UUID
         type: integer
+      default_sales_unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 默认销售单位名称
+      default_sales_unit_name:
+        description: 默认销售单位名称
+        type: string
+      default_sales_unit_uuid:
+        description: 默认销售单位UUID
+        type: integer
       erp_code:
         description: erp编码
         type: string
@@ -1012,6 +1034,10 @@ definitions:
       purchase_unit_uuid:
         description: 采购单位UUID
         type: integer
+      quota_config:
+        allOf:
+        - $ref: '#/definitions/material_resp.MaterialQuotaConfig'
+        description: 限购配置
       safety_stock:
         description: 安全库存数量
         type: number
@@ -1105,6 +1131,13 @@ definitions:
       cost_unit_uuid:
         description: 成本单位UUID
         type: integer
+      default_sales_unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 默认销售单位多语言名称
+      default_sales_unit_uuid:
+        description: 默认销售单位UUID（ProductUnit UUID，与采购单位、成本单位一致）
+        type: integer
       from_cost_unit_uuid:
         description: 来源成本单位UUID
         type: integer
@@ -1190,6 +1223,22 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  material_resp.MaterialQuotaConfig:
+    properties:
+      quota_limit:
+        description: 限购数量
+        type: number
+      quota_unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 限购单位名称
+      quota_unit_name:
+        description: 限购单位名称
+        type: string
+      quota_unit_uuid:
+        description: 限购单位UUID
+        type: integer
     type: object
   material_resp.MaterialStockDetailResp:
     properties:
@@ -4531,6 +4580,9 @@ definitions:
     type: object
   req.InstantOrderPaymentCancelReq:
     properties:
+      payment_info:
+        description: 撤销原因, 非必填. 用于保存 kbank 设备返回的撤单消息
+        type: string
       payment_order_uuid:
         description: 支付单UUID, 必填
         type: integer
@@ -4821,6 +4873,9 @@ definitions:
       cost_unit_uuid:
         description: 成本单位UUID
         type: integer
+      default_sales_unit_uuid:
+        description: 默认销售单位UUID（MaterialUnit UUID，与采购单位、成本单位一致）
+        type: integer
       init_stock:
         description: 期初库存
         type: number
@@ -4937,6 +4992,9 @@ definitions:
         type: integer
       cost_unit_uuid:
         description: 成本单位UUID
+        type: integer
+      default_sales_unit_uuid:
+        description: 默认销售单位UUID（MaterialUnit UUID，与采购单位、成本单位一致）
         type: integer
       internal_code:
         description: 内部编码
@@ -6141,6 +6199,9 @@ definitions:
         type: integer
       cost_unit_uuid:
         description: 成本单位UUID
+        type: integer
+      default_sales_unit_uuid:
+        description: 默认销售单位UUID（MaterialUnit UUID，与采购单位、成本单位一致）
         type: integer
       init_stock:
         description: 期初库存
@@ -7657,6 +7718,93 @@ definitions:
         description: 送厨商品ID
         type: integer
     type: object
+  req.PurchaseLimitSchemeCreateReq:
+    properties:
+      apply_to_all_shops:
+        description: 0-否 1-是
+        type: integer
+      daily_limit:
+        description: 0-不限制
+        type: integer
+      items:
+        description: 物品配置
+        items:
+          $ref: '#/definitions/req.PurchaseLimitSchemeItemReq'
+        type: array
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 多语言名称
+      shops:
+        description: 门店UUID列表
+        items:
+          type: integer
+        type: array
+      status:
+        description: 0-关闭 1-开启
+        type: integer
+      weekdays:
+        description: 星期配置 1-7 表示周一到周日，逗号分隔
+        items:
+          type: integer
+        type: array
+    required:
+    - locale_name
+    type: object
+  req.PurchaseLimitSchemeDeleteReq:
+    properties:
+      uuid:
+        description: 方案UUID
+        type: integer
+    type: object
+  req.PurchaseLimitSchemeItemReq:
+    properties:
+      material_uuid:
+        description: 物品UUID
+        type: integer
+      quota_limit:
+        description: 限购数量
+        type: number
+    required:
+    - material_uuid
+    type: object
+  req.PurchaseLimitSchemeUpdateReq:
+    properties:
+      apply_to_all_shops:
+        description: 0-否 1-是
+        type: integer
+      daily_limit:
+        description: 0-不限制
+        type: integer
+      items:
+        description: 物品配置
+        items:
+          $ref: '#/definitions/req.PurchaseLimitSchemeItemReq'
+        type: array
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 多语言名称
+      shops:
+        description: 门店UUID列表
+        items:
+          type: integer
+        type: array
+      status:
+        description: 0-关闭 1-开启
+        type: integer
+      uuid:
+        description: 方案UUID
+        type: integer
+      weekdays:
+        description: 星期配置 1-7 表示周一到周日，逗号分隔
+        items:
+          type: integer
+        type: array
+    required:
+    - locale_name
+    - uuid
+    type: object
   req.PurchaseOrderApproveReq:
     properties:
       action:
@@ -7719,6 +7867,15 @@ definitions:
     - supplier_name
     type: object
   req.PurchaseOrderDeleteReq:
+    properties:
+      uuid:
+        description: 采购订单ID
+        minimum: 1
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.PurchaseOrderDetailReq:
     properties:
       uuid:
         description: 采购订单ID
@@ -7849,6 +8006,9 @@ definitions:
       is_confirm:
         description: 是否确认提交（移除禁用物品）
         type: boolean
+      is_resubmit:
+        description: 是否重新提交
+        type: boolean
       uuid:
         description: 采购订单ID
         minimum: 1
@@ -7862,9 +8022,6 @@ definitions:
         description: 期望到货时间(时间戳)
         minimum: 0
         type: integer
-      is_recommit:
-        description: 是否重新提交
-        type: boolean
       items:
         description: 采购商品明细
         items:
@@ -8401,6 +8558,9 @@ definitions:
         type: string
       query_start_time:
         description: 查询开始时间戳
+        type: integer
+      source:
+        description: 查询来源：0-营业收款统计、1-门店汇总统计
         type: integer
     type: object
   req.StatisticsSummaryReq:
@@ -10550,6 +10710,21 @@ definitions:
         type: string
       super_real_name:
         description: 超管姓名
+        type: string
+      uuid:
+        description: 门店UUID
+        type: integer
+    type: object
+  resp.CompanyInfoRespWithStoreCode:
+    properties:
+      name:
+        description: 门店名称
+        type: string
+      status:
+        description: 状态 1-启用 0-禁用
+        type: integer
+      store_code:
+        description: 店铺编码
         type: string
       uuid:
         description: 门店UUID
@@ -14843,6 +15018,77 @@ definitions:
         description: 送厨商品数量，用于厨显来菜提醒
         type: number
     type: object
+  resp.PurchaseLimitSchemeItemResp:
+    properties:
+      material_uuid:
+        type: integer
+      quota_limit:
+        type: number
+    type: object
+  resp.PurchaseLimitSchemeListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.PurchaseLimitSchemeSummaryResp'
+        type: array
+      meta:
+        $ref: '#/definitions/resp.PageMeta'
+    type: object
+  resp.PurchaseLimitSchemeResp:
+    properties:
+      apply_to_all_shops:
+        type: integer
+      create_time:
+        type: integer
+      daily_limit:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/resp.PurchaseLimitSchemeItemResp'
+        type: array
+      locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      shops:
+        items:
+          type: integer
+        type: array
+      status:
+        type: integer
+      update_time:
+        type: integer
+      uuid:
+        type: integer
+      weekdays:
+        items:
+          type: integer
+        type: array
+    type: object
+  resp.PurchaseLimitSchemeSummaryResp:
+    properties:
+      apply_to_all_shops:
+        type: integer
+      create_time:
+        type: integer
+      daily_limit:
+        type: integer
+      item_count:
+        description: 物品数量
+        type: integer
+      locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      shop_count:
+        description: 门店数量
+        type: integer
+      status:
+        type: integer
+      update_time:
+        type: integer
+      uuid:
+        type: integer
+      weekday_str:
+        description: '例如: "周一、周三、周五"'
+        type: string
+    type: object
   resp.PurchaseOrderCreateResp:
     properties:
       order_no:
@@ -14875,6 +15121,9 @@ definitions:
       headquarter_status:
         description: V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
         type: integer
+      is_update_quota_scheme:
+        description: 是否更新限购方案
+        type: boolean
       items:
         description: 采购明细
         items:
@@ -15004,6 +15253,13 @@ definitions:
       base_unit_name:
         description: 基准单位名称
         type: string
+      default_sales_unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 默认销售单位名称
+      default_sales_unit_uuid:
+        description: 默认销售单位UUID
+        type: integer
       internal_code:
         description: 内部编码
         type: string
@@ -15028,6 +15284,10 @@ definitions:
       num:
         description: 申请数量
         type: number
+      quota_config:
+        allOf:
+        - $ref: '#/definitions/resp.PurchaseOrderItemQuotaConfig'
+        description: 限购配置
       store_quantity:
         description: 门店数量
         type: number
@@ -15043,7 +15303,7 @@ definitions:
         description: 采购单位名称
         type: string
       units:
-        description: 单位列表
+        description: 已经选中的采购单位列表
         items:
           $ref: '#/definitions/resp.PurchaseOrderItemUnit'
         type: array
@@ -15053,6 +15313,9 @@ definitions:
     type: object
   resp.PurchaseOrderItemMaterialUnit:
     properties:
+      conversion_rate:
+        description: 转换率
+        type: number
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -15061,10 +15324,32 @@ definitions:
         description: 单位UUID
         type: integer
     type: object
+  resp.PurchaseOrderItemQuotaConfig:
+    properties:
+      error_message:
+        description: 错误信息，用于出现感叹号提示用户，如果为空则不显示
+        type: string
+      quota_limit:
+        description: 限购数量
+        type: number
+      quota_unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 限购单位名称
+      quota_unit_name:
+        description: 限购单位名称
+        type: string
+      quota_unit_uuid:
+        description: 限购单位UUID
+        type: integer
+    type: object
   resp.PurchaseOrderItemUnit:
     properties:
       arrival_num:
         description: 到货数量
+        type: number
+      conversion_rate:
+        description: 转换率
         type: number
       locale_unit_name:
         allOf:
@@ -15897,6 +16182,13 @@ definitions:
       list:
         items:
           $ref: '#/definitions/resp.CompanyInfoResp'
+        type: array
+    type: object
+  resp.SaasCompanyListWithStoreCodeResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.CompanyInfoRespWithStoreCode'
         type: array
     type: object
   resp.SaleOrder:
@@ -19357,7 +19649,7 @@ definitions:
         description: 翻译后的中文繁体
         type: string
     type: object
-host: 8080--main--gold-moose-23--zzhheverywhere.coder.hitosea.com
+host: 192.168.100.69:8080
 info:
   contact: {}
   description: 点餐系统服务端接口文档
@@ -32715,6 +33007,28 @@ paths:
       summary: 获取可见门店列表
       tags:
       - 商家端.门店管理
+  /shop/company/list-all:
+    get:
+      consumes:
+      - application/json
+      description: 获取可选的发货门店/对方机构列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SaasCompanyListWithStoreCodeResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取门店列表/对方机构
+      tags:
+      - 商家端.基础信息
   /shop/company/update:
     post:
       consumes:
@@ -36440,6 +36754,161 @@ paths:
       summary: 解除成本卡关联
       tags:
       - 商家端.物品管理
+  /shop/purchase/limit/scheme/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建新的限购方案
+      parameters:
+      - description: 创建限购方案请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseLimitSchemeCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建限购方案
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/limit/scheme/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 软删除限购方案及其关联配置
+      parameters:
+      - description: 删除限购方案请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseLimitSchemeDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除限购方案
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/limit/scheme/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据UUID获取限购方案详情
+      parameters:
+      - description: 方案UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseLimitSchemeResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取限购方案详情
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/limit/scheme/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取限购方案列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        required: true
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      - description: 状态：0=关闭，1=开启
+        in: query
+        name: status
+        type: integer
+      - description: 方案名称（模糊搜索）
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseLimitSchemeListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取限购方案列表
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/limit/scheme/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新限购方案信息
+      parameters:
+      - description: 更新限购方案请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseLimitSchemeUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新限购方案
+      tags:
+      - 商家端.采购管理
   /shop/purchase/order/approve:
     post:
       consumes:
@@ -36555,6 +37024,35 @@ paths:
       security:
       - JwtToken: []
       summary: 获取采购订单详情
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/item/units/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新采购订单物品单位
+      parameters:
+      - description: 更新采购订单物品单位请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderDetailReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseOrderDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 更新采购订单物品单位
       tags:
       - 商家端.采购管理
   /shop/purchase/order/list:

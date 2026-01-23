@@ -46,6 +46,7 @@ type IPurchaseOrderRepo interface {
 	WhereWarehouseErpCode(warehouseErpCode string) DBOption
 	WhereCompanyUuid(companyUuid uint64) DBOption
 	WithItems() DBOption
+	WithSimpleItems() DBOption
 	WithWarehouse() DBOption
 	WithLogs() DBOption
 	WithReceipts() DBOption
@@ -349,6 +350,13 @@ func (r *PurchaseOrderRepoImpl) WithItems() DBOption {
 	}
 }
 
+// WithItems 预加载明细
+func (r *PurchaseOrderRepoImpl) WithSimpleItems() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Items.Units")
+	}
+}
+
 // WithWarehouse 预加载仓库
 func (r *PurchaseOrderRepoImpl) WithWarehouse() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -604,9 +612,10 @@ func (r *PurchaseOrderRepoImpl) CountBrandPurchaseByTimeRange(
 ) (int64, error) {
 	var count int64
 	err := r.db.Model(&model.PurchaseOrder{}).
-		Where("purchase_type = ?", constant.PurchaseTypeBrand).  // 品牌采购
-		Where("status != ?", constant.PurchaseOrderStatusDraft). // 排除草稿
-		Where("order_time > 0").                                 // order_time 必须有值
+		Where("purchase_type = ?", constant.PurchaseTypeBrand).     // 品牌采购
+		Where("status != ?", constant.PurchaseOrderStatusDraft).    // 排除草稿
+		Where("status != ?", constant.PurchaseOrderStatusRejected). // 排除驳回
+		Where("order_time > 0").                                    // order_time 必须有值
 		Where("order_time >= ? AND order_time <= ?", startTime, endTime).
 		Where("delete_time = 0").
 		Count(&count).Error

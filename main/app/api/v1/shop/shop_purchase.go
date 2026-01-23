@@ -10,7 +10,6 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
-	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
@@ -19,10 +18,11 @@ import (
 
 // PurchaseHandler 采购控制器
 type PurchaseHandler struct {
-	authSrv          service.IAuthSrv
-	purchaseOrderSrv purchase_order.IPurchaseOrderSrv
-	uploadFileSrv    service.IUploadFileSrv
-	receiptFileSrv   service.IPurchaseReceiptFileSrv
+	authSrv                service.IAuthSrv
+	purchaseOrderSrv       purchase_order.IPurchaseOrderSrv
+	purchaseLimitSchemeSrv purchase_order.IPurchaseLimitSchemeSrv
+	uploadFileSrv          service.IUploadFileSrv
+	receiptFileSrv         service.IPurchaseReceiptFileSrv
 }
 
 // GetPurchaseOrderList 获取采购订单列表
@@ -134,6 +134,33 @@ func (h *PurchaseHandler) UpdatePurchaseOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// UpdatePurchaseOrder 更新采购订单
+// @Summary 更新采购订单物品单位
+// @Description 更新采购订单物品单位
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.PurchaseOrderDetailReq true "更新采购订单物品单位请求参数"
+// @Success 200 {object} dto.Response{data=resp.PurchaseOrderDetailResp} "成功"
+// @Router /shop/purchase/order/item/units/update [post]
+func (h *PurchaseHandler) UpdatePurchaseOrderItemUnit(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var updateReq req.PurchaseOrderDetailReq
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.HandleValidationError(c, err, updateReq, nil)
+		return
+	}
+
+	resp, err := h.purchaseOrderSrv.UpdatePurchaseOrderItemUnit(ctx, updateReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
 // DeletePurchaseOrder 删除采购订单
 // @Summary 删除采购订单
 // @Description 删除采购订单
@@ -237,10 +264,7 @@ func (h *PurchaseHandler) CreatePurchaseReceipt(c *gin.Context) {
 		return
 	}
 
-	if ctx.Version(context.LT, "2.9.0") {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("您的软件版本过低，请升级后再试"))
-		return
-	} else if createReq.IsConfirm && len(createReq.FileUuids) == 0 {
+	if createReq.IsConfirm && len(createReq.FileUuids) == 0 {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("请上传相关附件后确定收货。"))
 		return
 	}
@@ -271,10 +295,7 @@ func (h *PurchaseHandler) UpdatePurchaseReceipt(c *gin.Context) {
 		helper.HandleValidationError(c, err, updateReq, nil)
 		return
 	}
-	if ctx.Version(context.LT, "2.9.0") {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("您的软件版本过低，请升级后再试"))
-		return
-	} else if updateReq.IsConfirm && len(updateReq.FileUuids) == 0 {
+	if updateReq.IsConfirm && len(updateReq.FileUuids) == 0 {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("请上传相关附件后确定收货。"))
 		return
 	}
@@ -455,6 +476,148 @@ func (h *PurchaseHandler) DeleteReceiptFile(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// GetLimitSchemeList 获取限购方案列表
+// @Summary 获取限购方案列表
+// @Description 分页获取限购方案列表
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param page_no query int true "页码"
+// @Param page_size query int true "每页数量"
+// @Param status query int false "状态：0=关闭，1=开启"
+// @Param name query string false "方案名称（模糊搜索）"
+// @Success 200 {object} dto.Response{data=resp.PurchaseLimitSchemeListResp} "成功"
+// @Router /shop/purchase/limit/scheme/list [get]
+func (h *PurchaseHandler) GetLimitSchemeList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var listReq req.PurchaseLimitSchemeListReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, nil)
+		return
+	}
+
+	resp, err := h.purchaseLimitSchemeSrv.GetList(ctx, listReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
+// GetLimitSchemeDetail 获取限购方案详情
+// @Summary 获取限购方案详情
+// @Description 根据UUID获取限购方案详情
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query int true "方案UUID"
+// @Success 200 {object} dto.Response{data=resp.PurchaseLimitSchemeResp} "成功"
+// @Router /shop/purchase/limit/scheme/detail [get]
+func (h *PurchaseHandler) GetLimitSchemeDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var detailReq req.PurchaseLimitSchemeDetailReq
+	if err := c.ShouldBindQuery(&detailReq); err != nil {
+		helper.HandleValidationError(c, err, detailReq, nil)
+		return
+	}
+
+	resp, err := h.purchaseLimitSchemeSrv.GetByUuid(ctx, detailReq.Uuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
+// CreateLimitScheme 创建限购方案
+// @Summary 创建限购方案
+// @Description 创建新的限购方案
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.PurchaseLimitSchemeCreateReq true "创建限购方案请求参数"
+// @Success 200 {object} dto.Response{data=map[string]interface{}} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
+// @Router /shop/purchase/limit/scheme/create [post]
+func (h *PurchaseHandler) CreateLimitScheme(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var createReq req.PurchaseLimitSchemeCreateReq
+	if err := c.ShouldBindJSON(&createReq); err != nil {
+		helper.HandleValidationError(c, err, createReq, nil)
+		return
+	}
+
+	uuid, err := h.purchaseLimitSchemeSrv.Create(ctx, createReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, gin.H{
+		"uuid": uuid,
+	})
+}
+
+// UpdateLimitScheme 更新限购方案
+// @Summary 更新限购方案
+// @Description 更新限购方案信息
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.PurchaseLimitSchemeUpdateReq true "更新限购方案请求参数"
+// @Success 200 {object} dto.Response{} "成功"
+// @Router /shop/purchase/limit/scheme/update [post]
+func (h *PurchaseHandler) UpdateLimitScheme(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var updateReq req.PurchaseLimitSchemeUpdateReq
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.HandleValidationError(c, err, updateReq, nil)
+		return
+	}
+
+	err := h.purchaseLimitSchemeSrv.Update(ctx, updateReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, gin.H{})
+}
+
+// DeleteLimitScheme 删除限购方案
+// @Summary 删除限购方案
+// @Description 软删除限购方案及其关联配置
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.PurchaseLimitSchemeDeleteReq true "删除限购方案请求参数"
+// @Success 200 {object} dto.Response{} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
+// @Router /shop/purchase/limit/scheme/delete [delete]
+func (h *PurchaseHandler) DeleteLimitScheme(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var deleteReq req.PurchaseLimitSchemeDeleteReq
+	if err := c.ShouldBindJSON(&deleteReq); err != nil {
+		helper.HandleValidationError(c, err, deleteReq, nil)
+		return
+	}
+
+	err := h.purchaseLimitSchemeSrv.Delete(ctx, deleteReq.Uuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, gin.H{})
+}
+
 func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -468,18 +631,20 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 
 	// 采购服务
 	purchaseOrderSrv := purchase_order.NewPurchaseOrderSrvImpl(dbm, settingSrv)
+	purchaseLimitSchemeSrv := purchase_order.NewPurchaseLimitSchemeSrv(dbm)
 	uploadFileSrv := service.NewUploadFileSrv(dbm)
 	receiptFileSrv := service.NewPurchaseReceiptFileSrv(dbm)
 
 	wrapper := &PurchaseHandler{
-		authSrv:          authSrv,
-		purchaseOrderSrv: purchaseOrderSrv,
-		uploadFileSrv:    uploadFileSrv,
-		receiptFileSrv:   receiptFileSrv,
+		authSrv:                authSrv,
+		purchaseOrderSrv:       purchaseOrderSrv,
+		purchaseLimitSchemeSrv: purchaseLimitSchemeSrv,
+		uploadFileSrv:          uploadFileSrv,
+		receiptFileSrv:         receiptFileSrv,
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.MinVersionCheck("2.9.0"), middleware.Auth(authSrv, dbm))
+	privateApi := router.Group("", middleware.MinVersionCheck(settingSrv, middleware.TypePurchaseOrder, constant.ClientVersionV2150), middleware.Auth(authSrv, dbm))
 	{
 		// 采购订单管理
 		privateApi.GET("/purchase/order/list", wrapper.GetPurchaseOrderList)
@@ -494,11 +659,19 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.GET("/purchase/receipt/list", wrapper.GetPurchaseReceiptList)
 		privateApi.POST("/purchase/receipt/create", wrapper.CreatePurchaseReceipt)
 		privateApi.POST("/purchase/receipt/update", wrapper.UpdatePurchaseReceipt)
+		privateApi.POST("/purchase/order/item/units/update", wrapper.UpdatePurchaseOrderItemUnit)
 		privateApi.GET("/purchase/receipt/detail", wrapper.GetPurchaseReceiptDetail)
 		privateApi.DELETE("/purchase/receipt/cancel", wrapper.CancelPurchaseReceipt)
 
 		// 收货单附件管理
 		privateApi.POST("/file/upload_document", wrapper.UploadDocument)
 		privateApi.DELETE("/purchase/receipt/file", wrapper.DeleteReceiptFile)
+
+		// 限购方案管理
+		privateApi.GET("/purchase/limit/scheme/list", wrapper.GetLimitSchemeList)
+		privateApi.GET("/purchase/limit/scheme/detail", wrapper.GetLimitSchemeDetail)
+		privateApi.POST("/purchase/limit/scheme/create", wrapper.CreateLimitScheme)
+		privateApi.POST("/purchase/limit/scheme/update", wrapper.UpdateLimitScheme)
+		privateApi.DELETE("/purchase/limit/scheme/delete", wrapper.DeleteLimitScheme)
 	}
 }

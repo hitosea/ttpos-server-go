@@ -88,8 +88,9 @@ type ISrv interface {
 	EditBusinessSetting(ctx context.Context, businessSetting req.UpdateBusinessSetting) error                                             // 修改业务设置
 	GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness, error)                                                             // 获取商家业务设置
 	GetMenuQrcode(ctx context.Context) (string, error)                                                                                    // 获取电子菜单二维码
-	GetPaymentMethodList(ctx context.Context) setting.PaymentMethodListResp                                                               // 获取支付方式列表
+	GetPaymentMethodList(ctx context.Context, opts ...bool) setting.PaymentMethodListResp                                                 // 获取支付方式列表
 	GetDataManageSetting(ctx context.Context) model.DataManageSetting                                                                     // 获取数据管理设置
+	GetShopAppMinVersion() string                                                                                                         // 获取 shop_app 配置的最小版本号
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -110,6 +111,37 @@ func NewSrvImpl(dbm *database.DBManager, cache cache.Cache) *Srv {
 		cacheKey:      "setting:company_id:%d",
 		cloudCacheKey: "__CLOUD__SYNCBASEINFO__",
 	}
+}
+
+// shopAppSetting shop_app 配置结构
+type shopAppSetting struct {
+	MinVersion string `json:"min_version"`
+}
+
+// defaultShopAppMinVersion 默认最小版本号
+const defaultShopAppMinVersion = "2.15.0"
+
+// GetShopAppMinVersion 获取 shop_app 配置的最小版本号
+func (s *Srv) GetShopAppMinVersion() string {
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	if saasDB == nil {
+		return defaultShopAppMinVersion
+	}
+	var setting model.Setting
+	if err := saasDB.Table("ttpos_setting").Where("`key` = ? AND delete_time = 0", model.SettingKeyShopApp).First(&setting).Error; err != nil {
+		return defaultShopAppMinVersion
+	}
+	if setting.Values == "" {
+		return defaultShopAppMinVersion
+	}
+	var config shopAppSetting
+	if err := json.Unmarshal([]byte(setting.Values), &config); err != nil {
+		return defaultShopAppMinVersion
+	}
+	if config.MinVersion == "" {
+		return defaultShopAppMinVersion
+	}
+	return config.MinVersion
 }
 
 // 从缓存读取，没有则生成缓存
@@ -2488,16 +2520,26 @@ func (s *Srv) getMenuQrcodeToken(ctx context.Context, businessSetting setting.Bu
 }
 
 // GetPaymentMethodList 获取支付方式列表
-func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodListResp {
+func (s *Srv) GetPaymentMethodList(ctx context.Context, opts ...bool) setting.PaymentMethodListResp {
 	commonRepo := repository.NewCommonRepo()
-	paymentRepo := repository.NewPaymentMethodRepo(ctx.GetDB())
-	paymentMethodList := paymentRepo.GetAllPaymentMethodList(
+	paymentMethodRepo := repository.NewPaymentMethodRepo(ctx.GetDB())
+	paymentMethodList := paymentMethodRepo.GetAllPaymentMethodList(
 		commonRepo.SortWithSort("asc"),
 		commonRepo.SortWithCreateTime("desc"),
 	)
+	lianLianPayAvailable := false
+	if len(opts) > 0 {
+		lianLianPayAvailable = opts[0]
+	}
 
 	list := make([]setting.PaymentMethod, 0, len(paymentMethodList))
 	for _, paymentMethod := range paymentMethodList {
+		if paymentMethod == nil {
+			continue
+		}
+		if !paymentMethodRepo.FilterPaymentMethod(*paymentMethod, lianLianPayAvailable) {
+			continue
+		}
 		list = append(list, setting.PaymentMethod{
 			Uuid:        paymentMethod.Uuid,
 			Name:        paymentMethod.Name,

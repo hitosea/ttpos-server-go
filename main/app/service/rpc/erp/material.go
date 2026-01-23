@@ -66,6 +66,9 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 		NotForSale:         params.NotForSale,
 		AllowNegativeStock: params.AllowNegativeStock, // 是否允许负库存
 	}
+	if params.DefaultSalesUnit != "" {
+		param.SalesUom = &params.DefaultSalesUnit
+	}
 	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
 	if err != nil {
 		return nil, err

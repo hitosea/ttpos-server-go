@@ -22,11 +22,13 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/otel"
 
 	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nacos-group/nacos-sdk-go/v2/common/logger"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // InstantHandler 收银点餐处理程序
@@ -575,9 +577,17 @@ func (h *InstantHandler) OrderCartInfo(c *gin.Context) {
 // @Router /cashier/instant/order/cart/product/add [post]
 func (h *InstantHandler) OrderCartProductAdd(c *gin.Context) {
 	ctx := helper.GetContext(c)
+
+	// 使用 otelgin 中间件自动创建的 span（通过 c.Request.Context() 获取）
+	// otelgin 已经自动记录了 HTTP 方法、路径、状态码等信息
+	// stdCtx := c.Request.Context()
+	stdCtx := ctx.GetGin().Request.Context()
+	otel.AddSpanEvent(stdCtx, "开始处理点餐页面向购物车添加商品接口请求")
+
 	// 绑定请求参数
 	params := req.OrderCartProductAddReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
+		otel.RecordSpanError(stdCtx, err, "参数绑定失败")
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
@@ -585,12 +595,17 @@ func (h *InstantHandler) OrderCartProductAdd(c *gin.Context) {
 	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
 		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
+			otel.AddSpanEvent(stdCtx, "商品价格已变更", attribute.String("error.type", "product_price_changed"))
 			helper.ErrorWithData(c, constant.CodeOrderCheckProductPriceChanged, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), err.Error())))
 			return
 		}
+		otel.RecordSpanError(stdCtx, err, "添加商品到购物车失败")
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+
+	// 记录成功事件
+	otel.AddSpanEvent(stdCtx, "商品添加成功")
 	// 返回结果
 	helper.Success(c, res)
 }

@@ -11,6 +11,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/utils"
@@ -385,6 +386,10 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 		return res, nil
 	}
 
+	// 如果是自助点餐机,不检查是否有未送厨,自助点餐机在结账完成后才进行送厨.
+	if ctx.GetSource() == constant.SourceKiosk {
+		return nil, nil
+	}
 	// 检查是否有未送厨的商品
 	if len(unCookingSaleOrderProducts) > 0 || len(h5OrderProductUnAccept) > 0 {
 		products := make([]resp.Product, 0)
@@ -475,6 +480,9 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 	// 保存到数据库
 	if db == nil {
 		db = s.dbm.GetDB(ctx.GetDbId())
+	}
+	if config.Server.Mode == constant.ServerModeStop { // 暂时关闭特性功能
+		return CalcAndCacheSaleBillAsync(ctx, db, saleBill, options...)
 	}
 	return CalcAndSaveSaleBill(ctx, db, saleBill, options...)
 }

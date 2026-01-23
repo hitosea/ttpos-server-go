@@ -325,6 +325,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_order` (
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '支付状态, 0-未支付 1-已支付 2-已退款',
     `status_reason` TEXT  COMMENT '支付状态原因',
     `payment_info` text COMMENT '支付信息(JSON格式,存储第三方支付返回的详细信息)',
+    `cancel_info` text COMMENT '撤销信息(JSON格式,存储第三方支付返回的撤销信息)',
     -- 余额支付相关，用于反结账时退款
     `balance_amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '主账户金额,用于反结账时退款',
     `gift_balance_amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '赠送帐户金额,用于反结账时退款',
@@ -1039,6 +1040,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
     `purchase_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购单位ID',
     `cost_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '成本单位ID',
+    `default_sales_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '默认销售单位ID（MaterialUnit UUID）',
     `price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '采购单价',
     `stock_num`  DECIMAL(22, 4) UNSIGNED NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
     `safety_stock` DECIMAL(14, 4) DEFAULT NULL COMMENT '安全库存数量',
@@ -4168,43 +4170,56 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖平台配置表(多平台)';
 
 -- ----------------------------
--- Table structure for ttpos_purchase_quota_config
+-- Table structure for ttpos_purchase_limit_scheme (限购方案主表)
 -- ----------------------------
-CREATE TABLE IF NOT EXISTS `ttpos_purchase_quota_config` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    `uuid` bigint(20) unsigned NOT NULL COMMENT '配置UUID',
-    `material_code` varchar(100) NOT NULL COMMENT '物品编码',
-    `unit_code` varchar(50) NOT NULL COMMENT '限购单位编码',
-    `quota_limit` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '限购数量',
-    `apply_to_all_shops` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '是否应用到全部店铺: 1=是 0=否',
-    `period_type` tinyint(1) unsigned NOT NULL DEFAULT 0 COMMENT '周期类型: 0=按天(默认) 1=月度',
-    `strict_mode` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '超限策略: 1=严格拒绝',
-    `config_source` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '配置来源: 1=门店 2=总部',
-    `status` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '状态: 1=启用 0=禁用',
-    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
-    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
-    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_limit_scheme` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `name` text NOT NULL COMMENT '方案名称',
+    `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态：0=关闭，1=开启',
+    `apply_to_all_shops` tinyint NOT NULL DEFAULT 1 COMMENT '是否适用所有门店：0=否，1=是',
+    `daily_limit` int NOT NULL DEFAULT 0 COMMENT '每日申请次数限制（0=不限制）',
+    `weekdays` varchar(20) NOT NULL DEFAULT '' COMMENT '星期配置（逗号分隔，1-7表示周一到周日）',
+    `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_uuid` (`uuid`),
-    KEY `idx_material` (`material_code`, `delete_time`),
-    KEY `idx_status` (`status`, `delete_time`),
-    KEY `idx_delete_time` (`delete_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='品牌采购限购配置主表';
+    KEY `idx_status` (`status`, `delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='限购方案表';
 
 -- ----------------------------
--- Table structure for ttpos_purchase_quota_config_shop
+-- Table structure for ttpos_purchase_limit_scheme_item (限购方案物品配置表)
 -- ----------------------------
-CREATE TABLE IF NOT EXISTS `ttpos_purchase_quota_config_shop` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    `config_uuid` bigint(20) unsigned NOT NULL COMMENT '限购配置UUID',
-    `company_uuid` bigint(20) unsigned NOT NULL COMMENT '公司UUID（门店UUID）',
-    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
-    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_limit_scheme_item` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `scheme_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '限购方案UUID',
+    `material_code` varchar(50) NOT NULL DEFAULT '' COMMENT '物品编码',
+    `unit_code` varchar(50) NOT NULL DEFAULT '' COMMENT '单位编码',
+    `quota_limit` decimal(20,8) NOT NULL DEFAULT 0 COMMENT '限购数量（0=不限制）',
+    `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_config_company` (`config_uuid`, `company_uuid`),
-    KEY `idx_config` (`config_uuid`),
-    KEY `idx_company` (`company_uuid`),
-    KEY `idx_delete_time` (`delete_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='品牌采购限购配置门店关联表';
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    KEY `idx_scheme_material` (`scheme_uuid`, `material_code`, `delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='限购方案物品配置表';
+
+-- ----------------------------
+-- Table structure for ttpos_purchase_limit_scheme_shop (限购方案门店配置表)
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_limit_scheme_shop` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `scheme_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '限购方案UUID',
+    `company_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '门店UUID',
+    `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    KEY `idx_scheme_company` (`scheme_uuid`, `company_uuid`, `delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='限购方案门店配置表';
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -68,9 +68,9 @@ type IStatisticsTakeoutRepo interface {
 	RankTakeoutProduct(req CountTakeoutReq) []model.StatisticsProductData                                          // 统计外卖订单商品排行
 	CountTakeoutBusinessTimePeriod(req CountTakeoutBusinessTimePeriodReq) []model.StatisticsBusinessTimePeriodData // 统计外卖订单营业时段
 	CountTakeoutBusinessSummary(req CountTakeoutBusinessSummaryReq) []takeoutBusinessSummaryRawData                // 统计外卖订单综合运营（返回原始数据）
-	CountTakeoutChannelSale(req CountTakeoutChannelSaleReq) []takeoutChannelSaleRawData                            // 统计外卖订单渠道营业（返回原始数据）
-	CountTakeoutChannelSaleByPlatform(req CountTakeoutChannelSaleReq, platform string) []takeoutChannelSaleRawData // 统计外卖订单渠道营业（按平台）
-	CountTakeoutPaymentMethodRawData(req CountTakeoutReq) []takeoutPaymentMethodRawData                            // 查询外卖订单支付方式原始数据（用于合并统计）
+	CountTakeoutChannelSale(req CountTakeoutChannelSaleReq) []TakeoutChannelSaleRawData                            // 统计外卖订单渠道营业（返回原始数据）
+	CountTakeoutChannelSaleByPlatform(req CountTakeoutChannelSaleReq, platform string) []TakeoutChannelSaleRawData // 统计外卖订单渠道营业（按平台）
+	CountTakeoutPaymentMethodRawData(req CountTakeoutReq) []TakeoutPaymentMethodRawData                            // 查询外卖订单支付方式原始数据（用于合并统计）
 	CountTakeoutCategory(req CountTakeoutReq, categoryType int, language string) []model.StatisticsCategoryData    // 统计外卖订单商品分类
 	CountTakeoutProduct(req CountTakeoutReq, language string) []model.StatisticsProductData                        // 统计外卖订单商品
 	CountTakeoutRefundAmount(req CountTakeoutReq) float64                                                          // 统计外卖订单退款金额
@@ -103,8 +103,8 @@ type CountTakeoutChannelSaleReq struct {
 	EndTime   int64 // 查询结束时间戳
 }
 
-// takeoutChannelSaleRawData 外卖订单渠道营业统计原始数据
-type takeoutChannelSaleRawData struct {
+// TakeoutChannelSaleRawData 外卖订单渠道营业统计原始数据
+type TakeoutChannelSaleRawData struct {
 	AcceptedTime int64   // 接单时间戳
 	OrderUuid    uint64  // 订单UUID
 	OrderAmount  float64 // 订单金额（subtotal）
@@ -113,13 +113,14 @@ type takeoutChannelSaleRawData struct {
 	RefundNum    int64   // 退款笔数
 }
 
-// takeoutPaymentMethodRawData 外卖订单支付方式统计原始数据
-type takeoutPaymentMethodRawData struct {
+// TakeoutPaymentMethodRawData 外卖订单支付方式统计原始数据
+type TakeoutPaymentMethodRawData struct {
 	AcceptedTime            int64   // 接单时间戳
 	PaymentMethodUuid       uint64  // 支付方式UUID
 	PaymentMethodSort       int     // 支付方式排序
 	PaymentMethodCreateTime int64   // 支付方式创建时间戳
 	PaymentName             string  // 支付方式名称
+	Name                    string  // 名称
 	PaymentAmount           float64 // 支付金额（营业收入状态的 eater_payment，取消状态为0）
 }
 
@@ -407,7 +408,6 @@ func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.
 
 	query := r.db.Table(takeoutOrderItemTable+" AS toi").
 		Select(
-			"toi.price AS sale_price",
 			"toi.ttpos_product_package_uuid AS product_package_uuid",
 			// 销量：所有 validOrderStates 都统计（包括取消订单60）
 			"SUM(CAST(toi.quantity AS DECIMAL(14,2))) AS sale_num",
@@ -535,8 +535,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessSummary(req CountTakeoutBusi
 // 使用 accepted_time（接单时间）作为时间字段
 // 订单金额：所有有效状态的 subtotal
 // 实付金额：状态为60（已取消）时=0，其他有效状态=eater_payment
-func (r *StatisticsTakeoutRepo) CountTakeoutChannelSale(req CountTakeoutChannelSaleReq) []takeoutChannelSaleRawData {
-	var result []takeoutChannelSaleRawData
+func (r *StatisticsTakeoutRepo) CountTakeoutChannelSale(req CountTakeoutChannelSaleReq) []TakeoutChannelSaleRawData {
+	var result []TakeoutChannelSaleRawData
 
 	// 构建状态条件字符串
 	validStatesStr := buildStateInCondition(validOrderStates)
@@ -568,8 +568,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSale(req CountTakeoutChannelS
 // 使用 accepted_time（接单时间）作为时间字段
 // 订单金额：所有有效状态的 subtotal
 // 实付金额：状态为60（已取消）时=0，其他有效状态=eater_payment
-func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeoutChannelSaleReq, platform string) []takeoutChannelSaleRawData {
-	var result []takeoutChannelSaleRawData
+func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeoutChannelSaleReq, platform string) []TakeoutChannelSaleRawData {
+	var result []TakeoutChannelSaleRawData
 
 	// 构建状态条件字符串
 	validStatesStr := buildStateInCondition(validOrderStates)
@@ -602,8 +602,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeo
 // 查询 validOrderStates 状态下的订单，且 accepted_time > 0（接单后才能统计）
 // 使用 IF 判断：如果状态是营业收入状态(10,20,30,40)，则取 eater_payment；如果状态是取消状态(60)，则取 0
 // 返回每个订单的接单时间、支付方式UUID、支付方式排序、支付方式创建时间、支付方式名称和支付金额
-func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeoutReq) []takeoutPaymentMethodRawData {
-	var result []takeoutPaymentMethodRawData
+func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeoutReq) []TakeoutPaymentMethodRawData {
+	var result []TakeoutPaymentMethodRawData
 
 	baseQuery := r.db.Model(&takeoutmodel.TakeoutOrder{})
 
@@ -657,6 +657,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 		"pm.sort AS payment_method_sort",
 		"pm.create_time AS payment_method_create_time",
 		"pm.payment_name",
+		"pm.name",
 		// 计算每个订单的支付金额：如果状态是营业收入状态(10,20,30,40)，则取 eater_payment；如果状态是取消状态(60)，则取 0
 		fmt.Sprintf("IF(t.order_state IN %s, t.eater_payment, 0) AS payment_amount", businessStatesStr),
 	}

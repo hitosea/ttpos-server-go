@@ -129,6 +129,7 @@ class Supplier extends SupplierModel
         $datas['real_name'] = $shopUser->getData('username');
         $datas['create_time'] = $shopUser->getData('create_time');
         $datas['update_time'] = $shopUser->getData('update_time');
+        $datas['permission_password'] = hash_password_bcrypt($data['permission_password'] ?? '666888');
         $subShopUserFields = (new ShopStaffModel([], $this->company_uuid))->getFields();
         $pdo->exec($this->getInsertSql($prefix . 'staff', $datas, array_keys($subShopUserFields)));
         //

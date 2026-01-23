@@ -13,8 +13,10 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/otel"
 
 	"github.com/jinzhu/copier"
+	"go.opentelemetry.io/otel/attribute"
 	"gorm.io/gorm"
 
 	"ttpos-server-go/app/constant"
@@ -25,7 +27,7 @@ import (
 type IRoleAccessSrv interface {
 	GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*resp.Permission, error)
 	GetPermissionGroup(staffUuid, companyUuid uint64) (resp.PermissionGroup, error)
-	GetApiPermission(staffUuid, companyUuid uint64) ([]string, error)
+	GetApiPermission(ctx context.Context, staffUuid, companyUuid uint64) ([]string, error)
 	GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error)
 }
 
@@ -216,8 +218,8 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if slices.Contains([]uint64{2858468511744000, 2858548203520000, 2858825027584000}, permission.Uuid) && companySetting.IsTtposSite() {
 			continue
 		}
-		// 新管理端-非总部不显示门店管理
-		if permission.Uuid == 2856866287616001 && !companySetting.IsHeadquarter() {
+		// 新管理端-非总部不显示门店管理\参数设置
+		if slices.Contains([]uint64{2856866287616001, 2858908913663000}, permission.Uuid) && !companySetting.IsHeadquarter() {
 			continue
 		}
 		// 新管理端-管理APP-云平台未开启自助点餐机，权限列表无自助点餐机设置
@@ -284,15 +286,25 @@ func (s *roleAccessSrv) buildPermissionTreeWithoutFilter(permissions []resp.Perm
 	return roots
 }
 
-func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]string, error) {
+type PermissionsCache struct {
+	Permissions []string `json:"permissions"`
+	UpdateTime  int64    `json:"update_time"`
+}
+
+func (s *roleAccessSrv) GetApiPermission(ctx context.Context, staffUuid, companyUuid uint64) ([]string, error) {
+	// 使用传入的 context（包含 otelgin 创建的 span）
+	stdCtx := ctx.GetGin().Request.Context()
+
 	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
 	enableCache := objectStorageAdapter.IsObjectStorageCacheEnabled(companyUuid)
+	// enableCache = false // 暂时不开启,未进行充分测试. 开启后本地macmini环境快15ms左右.
 
 	// 查询函数（从数据库获取权限）
-	queryFunc := func() ([]string, error) {
+	queryFunc := func() (PermissionsCache, error) {
+		otel.AddSpanEvent(stdCtx, "从数据库查询权限")
 		accesses, _, _, err := s.getDbPermissions(staffUuid, companyUuid)
 		if err != nil {
-			return nil, errors.WithMessage(err)
+			return PermissionsCache{}, errors.WithMessage(err)
 		}
 		var permissions []string
 		for _, access := range accesses {
@@ -300,25 +312,43 @@ func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]strin
 				permissions = append(permissions, access.Path)
 			}
 		}
-		return permissions, nil
+		otel.AddSpanEvent(stdCtx, "从数据库查询权限成功", attribute.Int("permission.count", len(permissions)))
+		return PermissionsCache{
+			Permissions: permissions,
+			UpdateTime:  time.Now().Unix(),
+		}, nil
 	}
 
 	var permissions []string
 	var err error
 
 	if enableCache {
+		otel.AddSpanEvent(stdCtx, "使用缓存查询权限")
 		// 使用缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-		cacheLayer := objectStorageAdapter.GetApiPermissionCache[[]string](cache.Global)
+		cacheLayer := objectStorageAdapter.GetApiPermissionCache[PermissionsCache](cache.Global)
 		cacheKey := objectStoragePersistence.BuildApiPermissionKey(companyUuid, staffUuid)
-		permissions, err = cacheLayer.GET(cacheKey, queryFunc)
+		permissionsCache, err := cacheLayer.GET(cacheKey, queryFunc)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		permissions = permissionsCache.Permissions
 	} else {
+		otel.AddSpanEvent(stdCtx, "直接从数据库查询权限")
 		// 不使用缓存，直接查询数据库
-		permissions, err = queryFunc()
+		permissionsCache, err := queryFunc()
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		permissions = permissionsCache.Permissions
 	}
 
 	if err != nil {
+		otel.RecordSpanError(stdCtx, err, "获取 API 权限失败")
 		return nil, errors.WithMessage(err)
 	}
+
+	// 记录方法执行耗时和成功信息
+	otel.AddSpanEvent(stdCtx, "获取 API 权限成功", attribute.Int("permission.count", len(permissions)))
 	return permissions, nil
 }
 
