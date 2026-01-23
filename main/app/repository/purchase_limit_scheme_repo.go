@@ -269,7 +269,7 @@ func (r *purchaseLimitSchemeRepoImpl) GetMinQuotaLimitBatchByMaterialCodes(
 // 逻辑：
 //  1. 查询所有启用的、应用到该门店的限购方案
 //  2. 过滤出包含当前星期的方案
-//  3. 取这些方案中最小的 daily_limit（排除 0 值，0 表示不限制）
+//  3. 取这些方案中最小的 daily_limit（排除 -1 值，-1 表示不限制）
 func (r *purchaseLimitSchemeRepoImpl) GetMinDailyLimit(
 	companyUuid uint64,
 	currentWeekday int8,
@@ -288,27 +288,27 @@ func (r *purchaseLimitSchemeRepoImpl) GetMinDailyLimit(
 
 	err := r.db.Table("ttpos_purchase_limit_scheme").
 		Select("daily_limit, weekdays").
-		Where("daily_limit > ?", 0).
+		Where("daily_limit != ?", -1).
 		Where("delete_time = ?", 0).
 		Where("status = ?", 1).
 		Where("apply_to_all_shops = 1 OR uuid IN (?)", subQuery).
 		Find(&schemes).Error
 
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
 
 	if len(schemes) == 0 {
-		return 0, nil // 没有限购配置，返回0表示不限制
+		return -1, nil // 没有限购配置，返回0表示不限制
 	}
 
 	// 3. 过滤出包含当前星期的方案，并取最小的 daily_limit
-	minDailyLimit := 0
+	minDailyLimit := -1
 	for _, scheme := range schemes {
 		if isWeekdayInScheme(currentWeekday, scheme.Weekdays) {
 			// 排除 0 值（0 表示不限制）
-			if scheme.DailyLimit > 0 {
-				if minDailyLimit == 0 || scheme.DailyLimit < minDailyLimit {
+			if scheme.DailyLimit != -1 {
+				if minDailyLimit == -1 || scheme.DailyLimit < minDailyLimit {
 					minDailyLimit = scheme.DailyLimit
 				}
 			}
