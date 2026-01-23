@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
+	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/lineman"
 	rpcAdapter "ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
@@ -48,7 +49,7 @@ type takeoutOrderAppService struct {
 	// 数据库管理器
 	dbm *database.DBManager
 	// 平台转换器映射（用于菜单和订单）
-	converters map[string]*grab.GrabConverter
+	converters map[string]service.IOrderConverter
 	// 订单服务
 	orderService service.ITakeoutOrderSrv
 	// 系统锁
@@ -63,10 +64,9 @@ func NewTakeoutOrderAppService(
 	rpcService := rpcAdapter.NewTakeoutRPCService()
 
 	// 初始化平台转换器
-	converters := make(map[string]*grab.GrabConverter)
-	grabConverter := grab.NewGrabConverter(dbm)
-	converters["grab"] = grabConverter
-	converters["lineman"] = grabConverter
+	converters := make(map[string]service.IOrderConverter)
+	converters[value_object.TakeoutPlatformGrab] = grab.NewGrabConverter(dbm)
+	converters[value_object.TakeoutPlatformLineman] = lineman.NewLineManConverter()
 
 	return &takeoutOrderAppService{
 		rpcService:   rpcService,
@@ -142,7 +142,7 @@ func (s *takeoutOrderAppService) SyncNewOrder(ctx context.Context, platform stri
 		rawDataJSON = dataJSON
 	} else if platform == value_object.TakeoutPlatformLineman {
 		// 将 orderData 转为 JSON
-		dataJSON, err := json.Marshal(orderDataMap)
+		dataJSON, err := json.Marshal(rawData)
 		if err != nil {
 			logger.Logger.Error("序列化订单数据失败", zap.Error(err))
 			return fmt.Errorf("序列化订单数据失败: %w", err)
@@ -157,27 +157,44 @@ func (s *takeoutOrderAppService) SyncNewOrder(ctx context.Context, platform stri
 		return fmt.Errorf("解析订单 Webhook 失败: %w", err)
 	}
 
-	// 4. 类型断言为 Grab SubmitOrderRequest（Grab 平台特定）
-	submitOrderReq, ok := webhookInterface.(*grabfood.SubmitOrderRequest)
-	if !ok {
-		logger.Logger.Error("Webhook 类型断言失败", zap.Any("webhookInterface", webhookInterface))
-		return fmt.Errorf("Webhook 类型断言失败，期望 *grabfood.SubmitOrderRequest，实际类型：%T", webhookInterface)
-	}
-
-	// 5. 生成订单 UUID
+	// 4. 生成订单 UUID
 	orderUuid, err := utils.GetID()
 	if err != nil {
 		logger.Logger.Error("生成订单UUID失败", zap.Error(err))
 		return fmt.Errorf("生成订单UUID失败: %w", err)
 	}
 
-	// 6. 获取平台订单 ID（从 submitOrderReq 中获取）
-	platformOrderId := submitOrderReq.GetOrderID()
-	if platformOrderId == "" {
-		// 兜底：如果 submitOrderReq 中没有，尝试从 rawData 获取
-		if orderIdVal, ok := rawData["orderID"].(string); ok {
+	// 5. 获取平台订单 ID（根据平台动态获取）
+	var platformOrderId string
+	switch platform {
+	case value_object.TakeoutPlatformGrab:
+		// Grab 平台：从 SubmitOrderRequest 获取
+		if submitOrderReq, ok := webhookInterface.(*grabfood.SubmitOrderRequest); ok {
+			platformOrderId = submitOrderReq.GetOrderID()
+		}
+		// 兜底：从 rawData 获取
+		if platformOrderId == "" {
+			if orderIdVal, ok := rawData["orderID"].(string); ok {
+				platformOrderId = orderIdVal
+			}
+		}
+	case value_object.TakeoutPlatformLineman:
+		// Lineman 平台：从 rawData 获取 orderId
+		if orderIdVal, ok := rawData["orderId"].(string); ok {
+			platformOrderId = orderIdVal
+		} else if orderIdVal, ok := rawData["orderID"].(string); ok {
 			platformOrderId = orderIdVal
 		}
+	default:
+		logger.Logger.Error("不支持的平台", zap.String("platform", platform))
+		return fmt.Errorf("不支持的平台: %s", platform)
+	}
+
+	if platformOrderId == "" {
+		logger.Logger.Error("无法获取平台订单ID",
+			zap.String("platform", platform),
+			zap.Any("rawData", rawData))
+		return fmt.Errorf("无法获取平台订单ID")
 	}
 
 	// 6. 使用转换器将平台订单转换为通用订单格式（包括商品数据）
