@@ -821,6 +821,9 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 			InternalCode:         request.InternalCode,
 			AllowNegativeStock:   request.AllowNegativeStock,
 		}
+		if request.AllowSubstoreVisible {
+			params.AllowSubstoreVisible = 1
+		}
 		params.SetHeadquarterUuid(0)
 		// 获取默认仓库ID
 		warehouseUuid, err := repository.NewWarehouseRepo(tx).GetDefaultWarehouse()
@@ -3207,8 +3210,9 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 						}
 						return ""
 					}(),
-					NotForSale:         itemInfo.NotForSale,
-					AllowNegativeStock: itemInfo.AllowNegativeStock, // 是否允许负库存：true-允许，false-不允许
+					NotForSale:           itemInfo.NotForSale,
+					AllowNegativeStock:   itemInfo.AllowNegativeStock, // 是否允许负库存：true-允许，false-不允许
+					AllowSubstoreVisible: true,
 				})
 				if err != nil {
 					logger.Logger.Error("同步erp物品列表失败-02", zap.Error(err))
