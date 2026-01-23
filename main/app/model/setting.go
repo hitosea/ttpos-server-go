@@ -14,6 +14,7 @@ type Setting struct {
 
 const (
 	SettingKeyPurchaseBrandSetting = "purchase_brand_setting"
+	SettingKeyShopApp              = "shop_app"
 )
 
 func (s *Setting) GetPurchaseBrandDailyLimit() int {
