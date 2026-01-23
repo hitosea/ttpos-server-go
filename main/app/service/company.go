@@ -15,9 +15,10 @@ import (
 )
 
 type ICompanySrv interface {
-	GetCompanyList(ctx context.Context) (resp.SaasCompanyListResp, error)                   // 获取本店可看到的所有店列表（包含店铺名称、超管real_name以及超管手机号）
-	GetCompanyInfo(ctx context.Context, companyUuid uint64) (*resp.CompanyStoreResp, error) // 获取门店信息
-	UpdateCompanyInfo(ctx context.Context, updateReq req.UpdateCompanySettingReq) error     // 修改门店信息
+	GetCompanyList(ctx context.Context) (resp.SaasCompanyListResp, error)                           // 获取本店可看到的所有店列表（包含店铺名称、超管real_name以及超管手机号）
+	GetCompanyListWithStoreCode(ctx context.Context) (resp.SaasCompanyListWithStoreCodeResp, error) // 获取本店可看到的所有店列表（包含店铺编码）
+	GetCompanyInfo(ctx context.Context, companyUuid uint64) (*resp.CompanyStoreResp, error)         // 获取门店信息
+	UpdateCompanyInfo(ctx context.Context, updateReq req.UpdateCompanySettingReq) error             // 修改门店信息
 }
 
 type companySrv struct {
@@ -123,6 +124,49 @@ func (s *companySrv) GetCompanyList(ctx context.Context) (resp.SaasCompanyListRe
 
 	return resp.SaasCompanyListResp{
 		List: companyList,
+	}, nil
+}
+
+// GetCompanyListWithStoreCode 获取本店可看到的所有店列表（包含店铺编码）
+func (s *companySrv) GetCompanyListWithStoreCode(ctx context.Context) (resp.SaasCompanyListWithStoreCodeResp, error) {
+	db := s.dbm.GetDB(constant.DefaultDB)
+	companyRepo := repository.NewCompanyRepo(db)
+	currentCompanyUuid := ctx.GetCompanyUuid()
+	companySetting := ctx.GetCompanySetting()
+
+	// 获取总部下的所有门店
+	headquarterUuid := companySetting.HeadquarterUuid
+	if companySetting.IsHeadquarter() {
+		headquarterUuid = currentCompanyUuid
+	}
+
+	companies, err := companyRepo.GetNoDeleteListByHeadquarterUuid(headquarterUuid)
+	if err != nil {
+		return resp.SaasCompanyListWithStoreCodeResp{}, errors.WithMessage(errors.New("获取总部下的所有门店失败"), err.Error())
+	}
+
+	// 转换响应数据
+	list := make([]resp.CompanyInfoRespWithStoreCode, 0)
+	for _, company := range companies {
+		if company.Uuid == currentCompanyUuid {
+			continue
+		}
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetCompanyUuid(company.Uuid)
+		storeSetting, err := s.settingSrv.GetStoreSetting(ctxCopy)
+		if err != nil {
+			return resp.SaasCompanyListWithStoreCodeResp{}, errors.WithMessage(errors.New("获取门店设置失败"), err.Error())
+		}
+		list = append(list, resp.CompanyInfoRespWithStoreCode{
+			Uuid:      company.Uuid,
+			Name:      company.Name,
+			StoreCode: storeSetting.StoreCode,
+			Status:    company.Status,
+		})
+	}
+
+	return resp.SaasCompanyListWithStoreCodeResp{
+		List: list,
 	}, nil
 }
 

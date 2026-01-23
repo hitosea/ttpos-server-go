@@ -23,6 +23,7 @@ import (
 type BaseHandler struct {
 	authSrv       service.IAuthSrv
 	staffShiftSrv service.IStaffShiftSrv
+	companySrv    service.ICompanySrv
 	smsSrv        service.ISmsSrv
 	settingSrv    setting.ISrv
 }
@@ -129,6 +130,25 @@ func (h *BaseHandler) GetBase(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// GetCompanyList 获取门店列表/对方机构
+// @Summary 获取门店列表/对方机构
+// @Description 获取可选的发货门店/对方机构列表
+// @Tags 商家端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.CompanyListResp} "成功"
+// @Router /shop/company/list-all [get]
+func (h *BaseHandler) GetAllCompanyList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	res, err := h.companySrv.GetCompanyListWithStoreCode(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // CheckUpdate 检查更新
 // @Summary 检查更新
 // @Description 检查更新
@@ -161,13 +181,14 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	smsSrv := service.NewSMSSrvImpl(dbm)
-
+	companySrv := service.NewCompanySrv(dbm, settingSrv)
 	// 初始化处理器
 	wrapper := BaseHandler{
 		authSrv:       authSrv,
 		staffShiftSrv: staffShiftSrv,
 		smsSrv:        smsSrv,
 		settingSrv:    settingSrv,
+		companySrv:    companySrv,
 	}
 
 	// 不需要认证，获取商家剩余短信额度
@@ -182,7 +203,8 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/shift", wrapper.SubmitShift)
 		privateApi.POST("/sms/member-recharge", wrapper.SendMemberRechargeSMS)
 
-		privateApi.GET("/base", wrapper.GetBase)             // 获取基础信息
-		privateApi.GET("/check_update", wrapper.CheckUpdate) // 检查更新
+		privateApi.GET("/base", wrapper.GetBase)                       // 获取基础信息
+		privateApi.GET("/check_update", wrapper.CheckUpdate)           // 检查更新
+		privateApi.GET("/company/list-all", wrapper.GetAllCompanyList) // 获取门店列表
 	}
 }
