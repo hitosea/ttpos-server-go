@@ -14,7 +14,7 @@
           <!-- 权限主要列表 -->
           <div class="role-menu">
             <template v-for="(item, index) in data" :key="index">
-              <div class="role-menu-title" :class="{ active: active == index }" @click="handleClick(index)">{{ item.name }}</div>
+              <div class="role-menu-title" :class="{ active: active == index }" @click="handleClick(index)" v-if="item.path != 'management_app'">{{ item.name }}</div>
             </template>
           </div>
           <div class="flex-1">
@@ -62,6 +62,8 @@
           sort: 1,
         },
         data: [],
+        rawMenuData: [], // 保存原始菜单数据
+        appManagePermissionIds: [], // 管理APP的所有权限ID
         defaultProps: {
           children: 'children',
           label: 'name',
@@ -85,6 +87,11 @@
         self.upCheckedKeysMap.map((item) => {
           form.access_id = form.access_id.concat(item);
         });
+        // 这个时候需要加上管理APP的权限和他子级权限
+        if (self.appManagePermissionIds && self.appManagePermissionIds.length > 0) {
+          form.access_id = form.access_id.concat(self.appManagePermissionIds);
+        }
+
         self.$refs.form.validate((valid) => {
           if (valid) {
             if (self.form.access_id.length == 0) {
@@ -119,11 +126,34 @@
         });
       },
 
+      // 收集权限ID的递归函数
+      collectPermissionIds(items) {
+        let ids = [];
+        items.forEach(item => {
+          ids.push(item.access_id);
+          if (item.children && item.children.length > 0) {
+            ids = ids.concat(this.collectPermissionIds(item.children));
+          }
+        });
+        return ids;
+      },
+
       /*获取数据*/
       getData() {
         let self = this;
         AuthApi.roleAddInfo()
           .then((data) => {
+            // 保存原始数据用于后续查找管理APP权限
+            self.rawMenuData = data.data.menu;
+
+            // 查找并保存管理APP的所有权限ID
+            const appManageItem = data.data.menu.find(item => item.path === 'management_app');
+            if (appManageItem) {
+              self.appManagePermissionIds = this.collectPermissionIds([appManageItem]);
+            } else {
+              self.appManagePermissionIds = [];
+            }
+
             self.data = data.data.menu;
             self.checkedKeysMap = [];
             self.upCheckedKeysMap = [];
