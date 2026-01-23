@@ -66,8 +66,13 @@ func (po *PurchaseOrder) IsHeadquarterPurchase() bool {
 }
 
 // 是否店内未审核状态
-func (po *PurchaseOrder) IsStorePending() bool {
+func (po *PurchaseOrder) IsStorePendingOrDraft() bool {
 	return po.Status == constant.PurchaseOrderStatusPending || po.Status == constant.PurchaseOrderStatusDraft
+}
+
+// 是否店内未审核状态
+func (po *PurchaseOrder) IsStorePending() bool {
+	return po.Status == constant.PurchaseOrderStatusPending
 }
 
 // 获取收货进度
