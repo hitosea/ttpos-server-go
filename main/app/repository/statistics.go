@@ -1174,7 +1174,6 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 	var statisticsData []model.StatisticsProductData
 	statisticsQuery := db.Table(statisticsProductTable).
 		Select(
-			"sp.product_sale_price AS sale_price",
 			"sp.product_package_uuid AS product_package_uuid",
 			"SUM(sp.product_num) AS sale_num",
 			"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, sp.product_final_price * (sp.product_num - sp.refund_num))) AS sale_amount",
@@ -1195,7 +1194,7 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 	// 使用 map 按 product_package_uuid 合并，保持原有逻辑不变
 	mergedData := make(map[uint64]*model.StatisticsProductData)
 
-	// 先处理统计表数据（保持原有逻辑，sale_price 使用统计表的值）
+	// 先处理统计表数据
 	for i := range statisticsData {
 		if statisticsData[i].ProductPackageUuid.Valid {
 			uuid := uint64(statisticsData[i].ProductPackageUuid.Int64)
@@ -1212,7 +1211,6 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 		uuid := uint64(item.ProductPackageUuid.Int64)
 		if existing, exists := mergedData[uuid]; exists {
 			// 如果已存在，累加 sale_num 和 sale_amount
-			// sale_price 保持使用统计表的值（原有逻辑）
 			if item.SaleNum.Valid {
 				if existing.SaleNum.Valid {
 					// 使用 decimal 进行精确累加
