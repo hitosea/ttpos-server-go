@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
-	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/config"
 
@@ -381,8 +381,12 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		if saleOrder.CustomDiscountFee != 0 {
 			ratio := ""
 			if temp == 3 || temp == 4 {
-				// 计算折扣率：折扣金额 / 原始金额 * 100
-				discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
+				// 防止除零错误
+				discountRate := decimal.NewFromFloat(0)
+				if saleOrder.ProductOriginalAmount > 0 {
+					// 计算折扣率：折扣金额 / 原始金额 * 100
+					discountRate = decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
+				}
 				ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
 			}
 			//
