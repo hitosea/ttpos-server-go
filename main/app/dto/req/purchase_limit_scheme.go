@@ -7,7 +7,7 @@ type PurchaseLimitSchemeCreateReq struct {
 	LocaleName      dto.LocaleResponse           `json:"locale_name" binding:"required"` // 多语言名称
 	Status          int8                         `json:"status"`                         // 0-关闭 1-开启
 	ApplyToAllShops int8                         `json:"apply_to_all_shops"`             // 0-否 1-是
-	DailyLimit      int                          `json:"daily_limit"`                    // 0-不限制
+	DailyLimit      int                          `json:"daily_limit"`                    // -1=不限制 其他=限制
 	Weekdays        []int8                       `json:"weekdays"`                       // 星期配置 1-7 表示周一到周日，逗号分隔
 	Items           []PurchaseLimitSchemeItemReq `json:"items"`                          // 物品配置
 	Shops           []uint64                     `json:"shops"`                          // 门店UUID列表
@@ -25,7 +25,7 @@ type PurchaseLimitSchemeUpdateReq struct {
 	LocaleName      dto.LocaleResponse           `json:"locale_name" binding:"required"` // 多语言名称
 	Status          int8                         `json:"status"`                         // 0-关闭 1-开启
 	ApplyToAllShops int8                         `json:"apply_to_all_shops"`             // 0-否 1-是
-	DailyLimit      int                          `json:"daily_limit"`                    // 0-不限制
+	DailyLimit      int                          `json:"daily_limit"`                    // -1=不限制 其他=限制
 	Weekdays        []int8                       `json:"weekdays"`                       // 星期配置 1-7 表示周一到周日，逗号分隔
 	Items           []PurchaseLimitSchemeItemReq `json:"items"`                          // 物品配置
 	Shops           []uint64                     `json:"shops"`                          // 门店UUID列表

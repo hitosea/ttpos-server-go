@@ -888,10 +888,14 @@ func (h *purchaseOrderHelper) getQuotaLimitMap(
 		if headquarterUuid > 0 {
 			headquarterDb := dbm.GetDB(headquarterUuid)
 			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
-			quotaLimits, _ := schemeRepo.GetMinQuotaLimitBatchByMaterialCodes(
+			quotaLimits, err := schemeRepo.GetMinQuotaLimitBatchByMaterialCodes(
 				materialCodes,
 				utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday(),
 			)
+			if err != nil {
+				logger.Logger.Error("批量查询限购配置失败", zap.Error(err))
+				return quotaLimitMap
+			}
 			quotaLimitMap = quotaLimits
 		}
 	}
@@ -905,6 +909,10 @@ func (h *purchaseOrderHelper) getMinDailyLimit(
 	purchaseOrder *model.PurchaseOrder,
 ) int {
 	companySetting := ctx.GetCompanySetting()
+	headquarterUuid := companySetting.HeadquarterUuid
+	if headquarterUuid == 0 {
+		return -1
+	}
 	if purchaseOrder.IsHeadquarterPurchase() && len(purchaseOrder.Items) > 0 {
 		// 提取所有物品编码
 		materialCodes := make([]string, 0, len(purchaseOrder.Items))
@@ -916,11 +924,15 @@ func (h *purchaseOrderHelper) getMinDailyLimit(
 		if headquarterUuid > 0 {
 			headquarterDb := dbm.GetDB(headquarterUuid)
 			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
-			minDailyLimit, _ := schemeRepo.GetMinDailyLimit(
+			minDailyLimit, err := schemeRepo.GetMinDailyLimit(
 				utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday(),
 			)
+			if err != nil {
+				logger.Logger.Error("获取当天最小的每日申请次数限制失败", zap.Error(err))
+				return -1
+			}
 			return minDailyLimit
 		}
 	}
-	return 999999999
+	return -1
 }
