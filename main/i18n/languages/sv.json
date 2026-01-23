@@ -1504,6 +1504,7 @@
   "参数错误，请注意参数类型是否错误": "Parameterfel, kontrollera om parametertypen är felaktig",
   "参数错误：status": "Parameterfel: status",
   "参数验证失败": "Parameterverifiering misslyckades",
+  "参数设置": "Parameterinställningar",
   "反序列化菜单数据失败 (preview: %s, length: %d): %w": "Kunde inte deserialisera menydatan (preview: %s, length: %d): %w",
   "反结账": "Omvänd utcheckning",
   "反结账充值订单参数": "Parameter för omvänd avräkning av påfyllningsorder",

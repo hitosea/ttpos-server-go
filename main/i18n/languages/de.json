@@ -1504,6 +1504,7 @@
   "参数错误，请注意参数类型是否错误": "Parameterfehler, bitte überprüfen Sie den Parametertyp",
   "参数错误：status": "Parameterfehler: status",
   "参数验证失败": "Parameterüberprüfung fehlgeschlagen",
+  "参数设置": "Parametereinstellungen",
   "反序列化菜单数据失败 (preview: %s, length: %d): %w": "Deserialisierung der Menüdaten fehlgeschlagen (preview: %s, length: %d): %w",
   "反结账": "Stornierte Abrechnung",
   "反结账充值订单参数": "Parameter für Rückabwicklungs-Aufladebestellung",
