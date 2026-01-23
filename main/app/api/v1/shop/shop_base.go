@@ -122,6 +122,11 @@ func (h *BaseHandler) SendMemberRechargeSMS(c *gin.Context) {
 // @Router /shop/base [get]
 func (h *BaseHandler) GetBase(c *gin.Context) {
 	ctx := helper.GetContext(c)
+	minVersion := h.settingSrv.GetShopAppMinVersion()
+	if ctx.Version(context.LT, minVersion) {
+		helper.Fail(c, constant.CodeAccessDenied, "请更新软件版本再尝试")
+		return
+	}
 	info, err := h.authSrv.ShopBase(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
