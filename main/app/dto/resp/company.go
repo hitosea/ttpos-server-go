@@ -17,6 +17,17 @@ type SaasCompanyListResp struct {
 	List []CompanyInfoResp `json:"list"`
 }
 
+type CompanyInfoRespWithStoreCode struct {
+	Uuid      uint64 `json:"uuid"`       // 门店UUID
+	Name      string `json:"name"`       // 门店名称
+	StoreCode string `json:"store_code"` // 店铺编码
+	Status    int    `json:"status"`     // 状态 1-启用 0-禁用
+
+}
+type SaasCompanyListWithStoreCodeResp struct {
+	List []CompanyInfoRespWithStoreCode `json:"list"`
+}
+
 // Store 商城设置
 type CompanyStoreResp struct {
 	Uuid         uint64             `json:"uuid"`          // 门店UUID
