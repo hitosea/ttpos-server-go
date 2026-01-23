@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/cache"
@@ -370,7 +371,11 @@ func (c *ContextImpl) GetVersion() string {
 	}
 	// HTTP 场景，从 Header 读取
 	if c.cc != nil {
-		return c.cc.GetHeader("Client-Version")
+		version := c.cc.GetHeader("Client-Version")
+		if version != "" {
+			return version
+		}
+		return constant.ClientVersionV2000
 	}
 	return ""
 }

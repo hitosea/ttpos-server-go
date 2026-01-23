@@ -889,6 +889,7 @@ func (h *purchaseOrderHelper) getQuotaLimitMap(
 			headquarterDb := dbm.GetDB(headquarterUuid)
 			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
 			quotaLimits, err := schemeRepo.GetMinQuotaLimitBatchByMaterialCodes(
+				companySetting.CompanyUuid,
 				materialCodes,
 				utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday(),
 			)
@@ -925,6 +926,7 @@ func (h *purchaseOrderHelper) getMinDailyLimit(
 			headquarterDb := dbm.GetDB(headquarterUuid)
 			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
 			minDailyLimit, err := schemeRepo.GetMinDailyLimit(
+				companySetting.CompanyUuid,
 				utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday(),
 			)
 			if err != nil {

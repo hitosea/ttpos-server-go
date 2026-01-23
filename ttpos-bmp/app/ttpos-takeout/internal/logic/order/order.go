@@ -8,6 +8,7 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 
+	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -49,11 +50,31 @@ func (s *sOrder) GetOrderInfo(ctx context.Context, req *api.GetOrderInfoReq) (re
 		return nil, gerror.New("订单不存在")
 	}
 
+	// 处理 RawData: 解析 JSON 并在 price 对象中添加 total 字段
+	rawData := orderEntity.RawData
+	if rawData != "" {
+		j, parseErr := gjson.DecodeToJson(rawData)
+		if parseErr == nil && j != nil {
+			// 读取 price 对象中的字段值
+			subTotal := j.Get("price.subtotal").Int64()
+			merchantChargeFee := j.Get("price.merchantChargeFee").Int64()
+			merchantFundPromo := j.Get("price.merchantFundPromo").Int64()
+
+			// 计算 total: 商品小计 + 商户收取费用 - 商户承担促销
+			total := subTotal + merchantChargeFee - merchantFundPromo
+
+			// 设置 total 到 price 对象
+			if setErr := j.Set("price.total", total); setErr == nil {
+				rawData = j.MustToJsonString()
+			}
+		}
+	}
+
 	res = &api.GetOrderInfoResp{
 		ShopUuid:     orderEntity.ShopUuid,
 		OrderStatus:  orderEntity.OrderStatus,
 		OrderType:    orderEntity.OrderType,
-		RawData:      orderEntity.RawData,
+		RawData:      rawData,
 		ProviderName: orderEntity.ProviderName,
 	}
 

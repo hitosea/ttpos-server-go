@@ -168,3 +168,36 @@ func ParseFullReductionString(s string) (*FullReductionResult, error) {
 
 	return &result, nil
 }
+
+// ProcessStoreCodeForSort 处理 StoreCode 用于排序
+// 去掉 "No." 前缀（不区分大小写），返回处理后的字符串
+func ProcessStoreCodeForSort(storeCode string) string {
+	codeLower := strings.ToLower(storeCode)
+	if strings.HasPrefix(codeLower, "no.") {
+		return storeCode[3:] // 去掉前3个字符 "No."
+	}
+	return storeCode
+}
+
+// IsOnlyDigits 判断字符串是否只包含数字
+func IsOnlyDigits(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// ParseNumberWithoutLeadingZeros 去掉前缀0并转换为数字
+func ParseNumberWithoutLeadingZeros(s string) (int, error) {
+	// 去掉前缀0
+	trimmed := strings.TrimLeft(s, "0")
+	if trimmed == "" {
+		return 0, nil
+	}
+	return strconv.Atoi(trimmed)
+}

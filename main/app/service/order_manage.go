@@ -13,8 +13,6 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
-	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
@@ -1864,7 +1862,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
-
+	
 	// 获取门店设置
 	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
 	if err != nil {
@@ -2286,13 +2284,6 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err)
-	}
-
-	// 失效 sale_bill 缓存（反结账后）
-	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
-		if err := objectStorageController.GetSaleBillController().Invalidate(ctx, saleBill.Uuid); err != nil {
-			logger.Logger.Error("反结账后失效 sale_bill 缓存失败", zap.Uint64("saleBillUuid", saleBill.Uuid), zap.Error(err))
-		}
 	}
 
 	return nil
