@@ -26,10 +26,10 @@ type IPurchaseLimitSchemeRepo interface {
 	GetActiveSchemes(companyUuid uint64) ([]*model.PurchaseLimitScheme, error)
 
 	// GetMinQuotaLimitBatchByMaterialCodes 批量获取物品的最小限购数量
-	GetMinQuotaLimitBatchByMaterialCodes(materialCodes []string, currentWeekday int8) (map[string]float64, error)
+	GetMinQuotaLimitBatchByMaterialCodes(companyUuid uint64, materialCodes []string, currentWeekday int8) (map[string]float64, error)
 
 	// GetMinDailyLimit 获取当天最小的每日申请次数限制
-	GetMinDailyLimit(currentWeekday int8) (int, error)
+	GetMinDailyLimit(companyUuid uint64, currentWeekday int8) (int, error)
 
 	// Delete 软删除限购方案
 	Delete(uuid uint64) error
@@ -178,6 +178,7 @@ func (r *purchaseLimitSchemeRepoImpl) Paginate(pageNo, pageSize int) DBOption {
 //  3. 在这些方案中查找匹配的物品配置
 //  4. 对每个物品取最小的限购数量（排除 0 值，0 表示不限制）
 func (r *purchaseLimitSchemeRepoImpl) GetMinQuotaLimitBatchByMaterialCodes(
+	companyUuid uint64,
 	materialCodes []string,
 	currentWeekday int8,
 ) (map[string]float64, error) {
@@ -188,6 +189,7 @@ func (r *purchaseLimitSchemeRepoImpl) GetMinQuotaLimitBatchByMaterialCodes(
 	// 1. 子查询：查找应用到该门店的方案UUID
 	subQuery := r.db.Table("ttpos_purchase_limit_scheme_shop").
 		Select("scheme_uuid").
+		Where("company_uuid = ?", companyUuid).
 		Where("delete_time = ?", 0)
 
 	// 2. 查询所有启用的、应用到该门店的限购方案
@@ -269,11 +271,13 @@ func (r *purchaseLimitSchemeRepoImpl) GetMinQuotaLimitBatchByMaterialCodes(
 //  2. 过滤出包含当前星期的方案
 //  3. 取这些方案中最小的 daily_limit（排除 0 值，0 表示不限制）
 func (r *purchaseLimitSchemeRepoImpl) GetMinDailyLimit(
+	companyUuid uint64,
 	currentWeekday int8,
 ) (int, error) {
 	// 1. 子查询：查找应用到该门店的方案UUID
 	subQuery := r.db.Table("ttpos_purchase_limit_scheme_shop").
 		Select("scheme_uuid").
+		Where("company_uuid = ?", companyUuid).
 		Where("delete_time = ?", 0)
 
 	// 2. 查询所有启用的、应用到该门店的限购方案
