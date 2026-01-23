@@ -347,7 +347,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 						if unit.UnitUuid != itemInfo.QuotaConfig.QuotaUnitUuid {
 							detailResp.IsUpdateQuotaScheme = true
 							itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(
-								i18n.Translate(lang, "物品%s的单位限制已变更，当前使用的单位（%s）不在允许范围内，请修改。"),
+								i18n.Translate(lang, "物品%s的单位限制已变更，当前使用的单位（%s）不在允许范围内，请更新。"),
 								materialName, language.JsonToLocaleResponse(unit.UnitName).GetLocale(lang),
 							)
 							break
