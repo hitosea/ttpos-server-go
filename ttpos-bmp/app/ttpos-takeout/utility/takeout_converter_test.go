@@ -101,30 +101,26 @@ func TestFromGrabSDK(t *testing.T) {
 		t.Errorf("Expected MerchantID 'GFSBPOS-721-058', got '%s'", order.MerchantID)
 	}
 
-	if order.PartnerMerchantID != "partner-123" {
-		t.Errorf("Expected PartnerMerchantID 'partner-123', got '%s'", order.PartnerMerchantID)
+	// PartnerMerchantID is now *string
+	if order.PartnerMerchantID == nil || *order.PartnerMerchantID != "partner-123" {
+		t.Errorf("Expected PartnerMerchantID 'partner-123', got '%v'", order.PartnerMerchantID)
 	}
 
 	if order.PaymentType != "CASH" {
 		t.Errorf("Expected PaymentType 'CASH', got '%s'", order.PaymentType)
 	}
 
-	if order.Cutlery == nil || *order.Cutlery != false {
+	// Cutlery is now bool (not pointer)
+	if order.Cutlery != false {
 		t.Errorf("Expected Cutlery false, got %v", order.Cutlery)
 	}
 
-	// 验证 Currency
-	if order.Currency == nil {
-		t.Fatal("Expected Currency not nil")
-	}
+	// 验证 Currency (now required, not pointer)
 	if order.Currency.Code != "THB" {
 		t.Errorf("Expected Currency.Code 'THB', got '%s'", order.Currency.Code)
 	}
 
-	// 验证 FeatureFlags
-	if order.FeatureFlags == nil {
-		t.Fatal("Expected FeatureFlags not nil")
-	}
+	// 验证 FeatureFlags (now required, not pointer)
 	if order.FeatureFlags.OrderAcceptedType != "AUTO" {
 		t.Errorf("Expected FeatureFlags.OrderAcceptedType 'AUTO', got '%s'", order.FeatureFlags.OrderAcceptedType)
 	}
@@ -143,10 +139,10 @@ func TestFromGrabSDK(t *testing.T) {
 		t.Errorf("Expected Item.Quantity 1, got %d", item.Quantity)
 	}
 
-	// 验证价格转换（33389 分 -> 333.89 泰铢）
-	expectedPrice := 333.89
+	// Price is now int64 (minor unit), no longer needs conversion
+	expectedPrice := int64(33389)
 	if item.Price != expectedPrice {
-		t.Errorf("Expected Item.Price %.2f, got %.2f", expectedPrice, item.Price)
+		t.Errorf("Expected Item.Price %d, got %d", expectedPrice, item.Price)
 	}
 
 	// 验证 Modifiers
@@ -155,17 +151,17 @@ func TestFromGrabSDK(t *testing.T) {
 	}
 
 	modifier := item.Modifiers[0]
-	if modifier.ID != "TTPOS-FLAVOR-592" {
-		t.Errorf("Expected Modifier.ID 'TTPOS-FLAVOR-592', got '%s'", modifier.ID)
+	if modifier.ID == nil || *modifier.ID != "TTPOS-FLAVOR-592" {
+		t.Errorf("Expected Modifier.ID 'TTPOS-FLAVOR-592', got '%v'", modifier.ID)
 	}
 
-	// 验证 Price
-	if order.Price.Subtotal != 333.89 {
-		t.Errorf("Expected Price.Subtotal 333.89, got %.2f", order.Price.Subtotal)
+	// 验证 Price (now int64, minor unit)
+	if order.Price.Subtotal != 33389 {
+		t.Errorf("Expected Price.Subtotal 33389, got %d", order.Price.Subtotal)
 	}
 
-	if order.Price.EaterPayment == nil || *order.Price.EaterPayment != 333.89 {
-		t.Errorf("Expected Price.EaterPayment 333.89, got %v", order.Price.EaterPayment)
+	if order.Price.EaterPayment == nil || *order.Price.EaterPayment != 33389 {
+		t.Errorf("Expected Price.EaterPayment 33389, got %v", order.Price.EaterPayment)
 	}
 }
 
@@ -240,8 +236,9 @@ func TestFromLinemanPlaceOrder(t *testing.T) {
 		t.Errorf("Expected MerchantID to be empty, got '%s'", order.MerchantID)
 	}
 
-	if order.PartnerMerchantID != "store-123" {
-		t.Errorf("Expected PartnerMerchantID 'store-123', got '%s'", order.PartnerMerchantID)
+	// PartnerMerchantID is now *string
+	if order.PartnerMerchantID == nil || *order.PartnerMerchantID != "store-123" {
+		t.Errorf("Expected PartnerMerchantID 'store-123', got '%v'", order.PartnerMerchantID)
 	}
 
 	if order.PaymentType != "CASH" {
@@ -253,9 +250,6 @@ func TestFromLinemanPlaceOrder(t *testing.T) {
 	}
 
 	// 验证 FeatureFlags.OrderType（从 Lineman customerType 转换）
-	if order.FeatureFlags == nil {
-		t.Fatal("Expected FeatureFlags not nil")
-	}
 	if order.FeatureFlags.OrderType != "Delivery" {
 		t.Errorf("Expected FeatureFlags.OrderType 'Delivery', got '%s'", order.FeatureFlags.OrderType)
 	}
@@ -265,13 +259,18 @@ func TestFromLinemanPlaceOrder(t *testing.T) {
 		t.Errorf("Expected MembershipID 'member-789', got %v", order.MembershipID)
 	}
 
-	// 验证 AdditionalProperties（复用类似 Grab 的字段名）
-	if len(order.AdditionalProperties) != 1 {
-		t.Fatalf("Expected 1 additional property, got %d", len(order.AdditionalProperties))
+	// 验证 AdditionalProperties（现在是 map[string]any）
+	if order.AdditionalProperties == nil {
+		t.Fatal("Expected AdditionalProperties not nil")
 	}
 
-	if order.AdditionalProperties[0].Name != "ไม่รับช้อนส้อมพลาสติก" {
-		t.Errorf("Expected AdditionalProperties[0].Name 'ไม่รับช้อนส้อมพลาสติก', got '%s'", order.AdditionalProperties[0].Name)
+	additionalItems, ok := order.AdditionalProperties["additionalItems"].([]map[string]any)
+	if !ok || len(additionalItems) != 1 {
+		t.Fatalf("Expected 1 additional item, got %v", order.AdditionalProperties["additionalItems"])
+	}
+
+	if additionalItems[0]["name"] != "ไม่รับช้อนส้อมพลาสติก" {
+		t.Errorf("Expected additionalItems[0].name 'ไม่รับช้อนส้อมพลาสติก', got '%v'", additionalItems[0]["name"])
 	}
 
 	// 验证 Items
@@ -288,8 +287,10 @@ func TestFromLinemanPlaceOrder(t *testing.T) {
 		t.Errorf("Expected Item.Quantity 1, got %d", item.Quantity)
 	}
 
-	if item.Price != 333.89 {
-		t.Errorf("Expected Item.Price 333.89, got %.2f", item.Price)
+	// Price is now int64 (minor unit): 333.89 THB = 33389 satang
+	expectedPrice := int64(33389)
+	if item.Price != expectedPrice {
+		t.Errorf("Expected Item.Price %d, got %d", expectedPrice, item.Price)
 	}
 
 	// 验证 Specifications（Lineman memo -> Grab specifications）
@@ -304,12 +305,14 @@ func TestFromLinemanPlaceOrder(t *testing.T) {
 	}
 
 	promo := order.Promos[0]
-	if promo.Code != "promo-001" {
-		t.Errorf("Expected Promo.Code 'promo-001', got '%s'", promo.Code)
+	if promo.Code == nil || *promo.Code != "promo-001" {
+		t.Errorf("Expected Promo.Code 'promo-001', got '%v'", promo.Code)
 	}
 
-	if promo.MexFundedAmount != 10.0 {
-		t.Errorf("Expected Promo.MexFundedAmount 10.0, got %.2f", promo.MexFundedAmount)
+	// MexFundedAmount is now *int64 (minor unit): 10.0 THB = 1000 satang
+	expectedDiscount := int64(1000)
+	if promo.MexFundedAmount == nil || *promo.MexFundedAmount != expectedDiscount {
+		t.Errorf("Expected Promo.MexFundedAmount %d, got %v", expectedDiscount, promo.MexFundedAmount)
 	}
 
 	// 验证 Properties -> Modifiers 转换
@@ -319,35 +322,31 @@ func TestFromLinemanPlaceOrder(t *testing.T) {
 
 	// 第一个 Modifier（TTPOS-FLAVOR-592）
 	modifier1 := item.Modifiers[0]
-	if modifier1.ID != "TTPOS-FLAVOR-592" {
-		t.Errorf("Expected Modifier[0].ID 'TTPOS-FLAVOR-592', got '%s'", modifier1.ID)
-	}
-
-	if len(modifier1.Values) != 1 {
-		t.Fatalf("Expected 1 value in modifier[0], got %d", len(modifier1.Values))
-	}
-
-	if modifier1.Values[0].ID != "FLAVOR-MILD" {
-		t.Errorf("Expected Modifier[0].Values[0].ID 'FLAVOR-MILD', got '%s'", modifier1.Values[0].ID)
+	if modifier1.ID == nil || *modifier1.ID != "TTPOS-FLAVOR-592" {
+		t.Errorf("Expected Modifier[0].ID 'TTPOS-FLAVOR-592', got '%v'", modifier1.ID)
 	}
 
 	// 第二个 Modifier（TTPOS-SIZE-001）
 	modifier2 := item.Modifiers[1]
-	if modifier2.ID != "TTPOS-SIZE-001" {
-		t.Errorf("Expected Modifier[1].ID 'TTPOS-SIZE-001', got '%s'", modifier2.ID)
+	if modifier2.ID == nil || *modifier2.ID != "TTPOS-SIZE-001" {
+		t.Errorf("Expected Modifier[1].ID 'TTPOS-SIZE-001', got '%v'", modifier2.ID)
 	}
 
-	if modifier2.Price != 20.0 {
-		t.Errorf("Expected Modifier[1].Price 20.0, got %.2f", modifier2.Price)
+	// Price is now *int64 (minor unit): 20.0 THB = 2000 satang
+	expectedModPrice := int64(2000)
+	if modifier2.Price == nil || *modifier2.Price != expectedModPrice {
+		t.Errorf("Expected Modifier[1].Price %d, got %v", expectedModPrice, modifier2.Price)
 	}
 
 	// 验证 Price（参考 Google Sheets：restaurantRevenue -> Subtotal/EaterPayment）
-	if order.Price.Subtotal != 333.89 {
-		t.Errorf("Expected Price.Subtotal 333.89, got %.2f", order.Price.Subtotal)
+	// Price is now int64 (minor unit): 333.89 THB = 33389 satang
+	expectedSubtotal := int64(33389)
+	if order.Price.Subtotal != expectedSubtotal {
+		t.Errorf("Expected Price.Subtotal %d, got %d", expectedSubtotal, order.Price.Subtotal)
 	}
 
-	if order.Price.EaterPayment == nil || *order.Price.EaterPayment != 333.89 {
-		t.Errorf("Expected Price.EaterPayment 333.89, got %v", order.Price.EaterPayment)
+	if order.Price.EaterPayment == nil || *order.Price.EaterPayment != expectedSubtotal {
+		t.Errorf("Expected Price.EaterPayment %d, got %v", expectedSubtotal, order.Price.EaterPayment)
 	}
 }
 
@@ -535,6 +534,8 @@ func TestRoundTripLineman(t *testing.T) {
 		t.Errorf("Item.Quantity mismatch: expected %d, got %d", origItem.Quantity, convItem.Quantity)
 	}
 
+	// Note: There may be slight floating point differences due to conversion
+	// 150.16 * 100 = 15016, 15016 / 100 = 150.16
 	if convItem.UnitPrice != origItem.UnitPrice {
 		t.Errorf("Item.UnitPrice mismatch: expected %.2f, got %.2f", origItem.UnitPrice, convItem.UnitPrice)
 	}
@@ -547,37 +548,51 @@ func TestRoundTripLineman(t *testing.T) {
 // TestJSONSerialization 测试 JSON 序列化
 func TestJSONSerialization(t *testing.T) {
 	membershipID := "member-001"
+	partnerMerchantID := "partner-001"
+	modID := "mod-001"
+	modQty := int32(1)
+	modPrice := int64(1000)
+	eaterPayment := int64(20000)
 
 	order := &message.TakeoutOrder{
 		OrderID:           "test-order-001",
 		ShortOrderNumber:  "0001",
 		MerchantID:        "merchant-001",
-		PartnerMerchantID: "partner-001",
+		PartnerMerchantID: &partnerMerchantID,
 		PaymentType:       "CASH",
+		Cutlery:           true,
 		OrderTime:         "2025-12-26T09:57:06Z",
 		MembershipID:      &membershipID,
+		Currency: message.TakeoutCurrency{
+			Code:     "THB",
+			Symbol:   "฿",
+			Exponent: 2,
+		},
+		FeatureFlags: message.TakeoutFeatureFlags{
+			OrderAcceptedType: "AUTO",
+			OrderType:         "Delivery",
+		},
 		Items: []message.TakeoutOrderItem{
 			{
-				ID:       "item-001",
-				Quantity: 2,
-				Price:    100.50,
+				ID:         "item-001",
+				GrabItemID: "grab-item-001",
+				Quantity:   2,
+				Price:      10050, // 100.50 in minor unit
 				Modifiers: []message.TakeoutModifier{
 					{
-						ID:       "mod-001",
-						Quantity: 1,
-						Price:    10.0,
+						ID:       &modID,
+						Quantity: &modQty,
+						Price:    &modPrice,
 					},
 				},
 			},
 		},
 		Price: message.TakeoutOrderPrice{
-			Subtotal:     200.0,
-			EaterPayment: floatPtr(200.0),
+			Subtotal:     20000, // 200.00 in minor unit
+			EaterPayment: &eaterPayment,
 		},
-		AdditionalProperties: []message.TakeoutAdditionalProperty{
-			{
-				Name: "Test property",
-			},
+		AdditionalProperties: map[string]any{
+			"testKey": "testValue",
 		},
 	}
 
@@ -602,16 +617,78 @@ func TestJSONSerialization(t *testing.T) {
 	if len(decoded.Items) != len(order.Items) {
 		t.Errorf("Items count mismatch after JSON round-trip: expected %d, got %d", len(order.Items), len(decoded.Items))
 	}
+
+	// Verify currency
+	if decoded.Currency.Code != order.Currency.Code {
+		t.Errorf("Currency.Code mismatch after JSON round-trip: expected '%s', got '%s'", order.Currency.Code, decoded.Currency.Code)
+	}
+
+	// Verify feature flags
+	if decoded.FeatureFlags.OrderType != order.FeatureFlags.OrderType {
+		t.Errorf("FeatureFlags.OrderType mismatch after JSON round-trip: expected '%s', got '%s'", order.FeatureFlags.OrderType, decoded.FeatureFlags.OrderType)
+	}
+}
+
+// TestNullableTypes 测试 Nullable 类型
+func TestNullableTypes(t *testing.T) {
+	// Test NullableTakeoutDineIn
+	tableID := "T001"
+	eaterCount := int64(4)
+	dineIn := &message.TakeoutDineIn{
+		TableID:    &tableID,
+		EaterCount: &eaterCount,
+	}
+
+	nullable := message.NullableTakeoutDineIn{}
+	if nullable.IsSet() {
+		t.Error("Expected NullableTakeoutDineIn to be unset initially")
+	}
+
+	nullable.Set(dineIn)
+	if !nullable.IsSet() {
+		t.Error("Expected NullableTakeoutDineIn to be set after Set()")
+	}
+
+	got := nullable.Get()
+	if got == nil || got.TableID == nil || *got.TableID != "T001" {
+		t.Errorf("Expected TableID 'T001', got '%v'", got)
+	}
+
+	nullable.Unset()
+	if nullable.IsSet() {
+		t.Error("Expected NullableTakeoutDineIn to be unset after Unset()")
+	}
+}
+
+// TestNullableTimeJSON 测试 NullableTime JSON 序列化
+func TestNullableTimeJSON(t *testing.T) {
+	now := time.Now()
+	nullable := message.NewNullableTime(&now)
+
+	// 序列化
+	data, err := json.Marshal(nullable)
+	if err != nil {
+		t.Fatalf("JSON Marshal failed: %v", err)
+	}
+
+	// 反序列化
+	var decoded message.NullableTime
+	err = json.Unmarshal(data, &decoded)
+	if err != nil {
+		t.Fatalf("JSON Unmarshal failed: %v", err)
+	}
+
+	if !decoded.IsSet() {
+		t.Error("Expected NullableTime to be set after unmarshal")
+	}
+
+	got := decoded.Get()
+	if got == nil {
+		t.Error("Expected NullableTime value not nil")
+	}
 }
 
 // 辅助函数
-
-func floatPtr(f float64) *float64 {
-	if f == 0 {
-		return nil
-	}
-	return &f
-}
 
 func int32Ptr(i int32) *int32 {
 	return &i

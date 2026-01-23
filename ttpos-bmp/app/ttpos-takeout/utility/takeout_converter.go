@@ -23,21 +23,19 @@ func FromGrabSDK(req *grabsdk.SubmitOrderRequest) (*message.TakeoutOrder, error)
 		OrderID:           req.OrderID,
 		ShortOrderNumber:  req.ShortOrderNumber,
 		MerchantID:        req.MerchantID,
-		PartnerMerchantID: stringPtrValue(req.PartnerMerchantID),
+		PartnerMerchantID: req.PartnerMerchantID,
 		PaymentType:       req.PaymentType,
-		Cutlery:           &req.Cutlery,
+		Cutlery:           req.Cutlery,
 		OrderTime:         req.OrderTime,
 	}
 
-	// SubmitTime, CompleteTime, ScheduledTime
+	// SubmitTime, CompleteTime
 	if req.SubmitTime != nil {
-		submitTime := req.SubmitTime.Format(time.RFC3339)
-		order.SubmitTime = &submitTime
+		order.SubmitTime = req.SubmitTime
 	}
 
 	if req.CompleteTime != nil {
-		completeTime := req.CompleteTime.Format(time.RFC3339)
-		order.CompleteTime = &completeTime
+		order.CompleteTime = req.CompleteTime
 	}
 
 	if req.ScheduledTime != nil {
@@ -52,201 +50,178 @@ func FromGrabSDK(req *grabsdk.SubmitOrderRequest) (*message.TakeoutOrder, error)
 		order.MembershipID = req.MembershipID
 	}
 
-	// Currency
-	if req.Currency.Code != "" {
-		order.Currency = &message.TakeoutCurrency{
-			Code:     req.Currency.Code,
-			Symbol:   req.Currency.Symbol,
-			Exponent: int(req.Currency.Exponent),
-		}
+	// Currency (required in new struct)
+	order.Currency = message.TakeoutCurrency{
+		Code:     req.Currency.Code,
+		Symbol:   req.Currency.Symbol,
+		Exponent: req.Currency.Exponent,
 	}
 
-	// FeatureFlags
-	if req.FeatureFlags.OrderAcceptedType != "" || req.FeatureFlags.OrderType != "" {
-		order.FeatureFlags = &message.TakeoutFeatureFlags{
-			OrderAcceptedType: req.FeatureFlags.OrderAcceptedType,
-			IsMexEditOrder:    req.FeatureFlags.IsMexEditOrder != nil && *req.FeatureFlags.IsMexEditOrder,
-			OrderType:         req.FeatureFlags.OrderType,
-		}
+	// FeatureFlags (required in new struct)
+	order.FeatureFlags = message.TakeoutFeatureFlags{
+		OrderAcceptedType: req.FeatureFlags.OrderAcceptedType,
+		IsMexEditOrder:    req.FeatureFlags.IsMexEditOrder,
+		OrderType:         req.FeatureFlags.OrderType,
 	}
 
 	// Items
 	for _, item := range req.Items {
 		takeoutItem := message.TakeoutOrderItem{
-			ID:             item.Id,
-			GrabItemID:     stringPtr(item.GrabItemID),
-			Quantity:       int(item.Quantity),
-			Price:          float64(item.Price) / 100, // 转换为泰铢
-			Specifications: item.Specifications,
+			ID:         item.Id,
+			GrabItemID: item.GrabItemID,
+			Quantity:   item.Quantity,
+			Price:      item.Price, // Already in minor unit from Grab SDK
 		}
 
-		if item.Tax != nil && *item.Tax != 0 {
-			tax := float64(*item.Tax) / 100
-			takeoutItem.Tax = &tax
+		if item.Tax != nil {
+			takeoutItem.Tax = item.Tax
+		}
+
+		if item.Specifications != nil {
+			takeoutItem.Specifications = item.Specifications
 		}
 
 		// Modifiers
 		for _, mod := range item.Modifiers {
-			modifier := message.TakeoutModifier{}
-
-			if mod.Id != nil {
-				modifier.ID = *mod.Id
+			modifier := message.TakeoutModifier{
+				ID:       mod.Id,
+				Price:    mod.Price,
+				Tax:      mod.Tax,
+				Quantity: mod.Quantity,
 			}
-
-			if mod.Quantity != nil {
-				modifier.Quantity = int(*mod.Quantity)
-			} else {
-				modifier.Quantity = 1
-			}
-
-			if mod.Price != nil {
-				modifier.Price = float64(*mod.Price) / 100
-			}
-
 			takeoutItem.Modifiers = append(takeoutItem.Modifiers, modifier)
 		}
 
 		// OutOfStockInstruction
 		if item.OutOfStockInstruction.IsSet() {
 			inst := item.OutOfStockInstruction.Get()
-			if inst != nil && inst.InstructionType != nil {
-				takeoutItem.OutOfStockInstruction = &message.TakeoutOutOfStockInstruction{
-					Type: *inst.InstructionType,
+			if inst != nil {
+				takeoutInst := &message.TakeoutOutOfStockInstruction{
+					Title:                 inst.Title,
+					InstructionType:       inst.InstructionType,
+					ReplacementItemID:     inst.ReplacementItemID,
+					ReplacementGrabItemID: inst.ReplacementGrabItemID,
 				}
+				takeoutItem.OutOfStockInstruction.Set(takeoutInst)
 			}
 		}
 
 		order.Items = append(order.Items, takeoutItem)
 	}
 
-	// Price
+	// Price (required in new struct, all values in minor unit)
 	order.Price = message.TakeoutOrderPrice{
-		Subtotal: float64(req.Price.Subtotal) / 100,
+		Subtotal:          req.Price.Subtotal,
+		Tax:               req.Price.Tax,
+		MerchantChargeFee: req.Price.MerchantChargeFee,
+		GrabFundPromo:     req.Price.GrabFundPromo,
+		MerchantFundPromo: req.Price.MerchantFundPromo,
+		BasketPromo:       req.Price.BasketPromo,
+		DeliveryFee:       req.Price.DeliveryFee,
+		SmallOrderFee:     req.Price.SmallOrderFee,
+		EaterPayment:      req.Price.EaterPayment,
 	}
 
-	if req.Price.Tax != nil {
-		tax := float64(*req.Price.Tax) / 100
-		order.Price.Tax = &tax
-	}
-
-	if req.Price.MerchantChargeFee != nil {
-		fee := float64(*req.Price.MerchantChargeFee) / 100
-		order.Price.MerchantChargeFee = &fee
-	}
-
-	if req.Price.DeliveryFee != nil {
-		fee := float64(*req.Price.DeliveryFee) / 100
-		order.Price.DeliveryFee = &fee
-	}
-
-	if req.Price.GrabFundPromo != nil {
-		promo := float64(*req.Price.GrabFundPromo) / 100
-		order.Price.GrabFundPromo = &promo
-	}
-
-	if req.Price.MerchantFundPromo != nil {
-		promo := float64(*req.Price.MerchantFundPromo) / 100
-		order.Price.MerchantFundPromo = &promo
-	}
-
-	if req.Price.EaterPayment != nil {
-		payment := float64(*req.Price.EaterPayment) / 100
-		order.Price.EaterPayment = &payment
-	}
-
-	// DineIn
+	// DineIn (nullable)
 	if req.DineIn.IsSet() {
 		dineIn := req.DineIn.Get()
 		if dineIn != nil {
-			takeoutDineIn := &message.TakeoutDineIn{}
-
-			if dineIn.TableID != nil {
-				takeoutDineIn.TableID = *dineIn.TableID
+			takeoutDineIn := &message.TakeoutDineIn{
+				TableID:    dineIn.TableID,
+				EaterCount: dineIn.EaterCount,
 			}
-
-			if dineIn.EaterCount != nil {
-				takeoutDineIn.EaterCount = int(*dineIn.EaterCount)
-			}
-
-			order.DineIn = takeoutDineIn
+			order.DineIn.Set(takeoutDineIn)
 		}
 	}
 
-	// Receiver
+	// Receiver (nullable)
 	if req.Receiver.IsSet() {
 		receiver := req.Receiver.Get()
 		if receiver != nil {
-			takeoutReceiver := &message.TakeoutReceiver{}
-
-			if receiver.Name != nil {
-				takeoutReceiver.Name = *receiver.Name
-			}
-
-			// Grab SDK 使用 Phones 字段（注意是复数）
-			if receiver.Phones != nil {
-				takeoutReceiver.Phone = *receiver.Phones
+			takeoutReceiver := &message.TakeoutReceiver{
+				Name:   receiver.Name,
+				Phones: receiver.Phones,
 			}
 
 			if receiver.Address != nil {
-				takeoutReceiver.Address = &message.TakeoutDeliveryAddress{}
-
-				if receiver.Address.UnitNumber != nil {
-					takeoutReceiver.Address.UnitNumber = *receiver.Address.UnitNumber
-				}
-
-				if receiver.Address.DeliveryInstruction != nil {
-					takeoutReceiver.Address.DeliveryInstruction = *receiver.Address.DeliveryInstruction
-				}
-
-				if receiver.Address.PoiSource != nil {
-					takeoutReceiver.Address.PoiSource = *receiver.Address.PoiSource
-				}
-
-				if receiver.Address.PoiID != nil {
-					takeoutReceiver.Address.PoiID = *receiver.Address.PoiID
-				}
-
-				if receiver.Address.Address != nil {
-					takeoutReceiver.Address.Address = *receiver.Address.Address
-				}
-
-				if receiver.Address.Postcode != nil {
-					takeoutReceiver.Address.Postcode = *receiver.Address.Postcode
+				takeoutReceiver.Address = &message.TakeoutAddress{
+					UnitNumber:          receiver.Address.UnitNumber,
+					DeliveryInstruction: receiver.Address.DeliveryInstruction,
+					PoiSource:           receiver.Address.PoiSource,
+					PoiID:               receiver.Address.PoiID,
+					Address:             receiver.Address.Address,
+					Postcode:            receiver.Address.Postcode,
 				}
 
 				if receiver.Address.Coordinates != nil {
-					takeoutReceiver.Address.Coordinates = &message.TakeoutCoordinates{}
-
-					if receiver.Address.Coordinates.Latitude != nil {
-						takeoutReceiver.Address.Coordinates.Latitude = *receiver.Address.Coordinates.Latitude
-					}
-
-					if receiver.Address.Coordinates.Longitude != nil {
-						takeoutReceiver.Address.Coordinates.Longitude = *receiver.Address.Coordinates.Longitude
+					takeoutReceiver.Address.Coordinates = &message.TakeoutCoordinates{
+						Latitude:  receiver.Address.Coordinates.Latitude,
+						Longitude: receiver.Address.Coordinates.Longitude,
 					}
 				}
 			}
 
-			order.Receiver = takeoutReceiver
+			order.Receiver.Set(takeoutReceiver)
 		}
 	}
 
 	// OrderReadyEstimation
 	if req.OrderReadyEstimation != nil {
 		order.OrderReadyEstimation = &message.TakeoutOrderReadyEstimation{
-			AllowChange:        req.OrderReadyEstimation.AllowChange,
-			EstimatedReadyTime: req.OrderReadyEstimation.EstimatedOrderReadyTime.Format(time.RFC3339),
-			MaxReadyTime:       req.OrderReadyEstimation.MaxOrderReadyTime.Format(time.RFC3339),
+			AllowChange:             req.OrderReadyEstimation.AllowChange,
+			EstimatedOrderReadyTime: req.OrderReadyEstimation.EstimatedOrderReadyTime,
+			MaxOrderReadyTime:       req.OrderReadyEstimation.MaxOrderReadyTime,
 		}
 
-		// NewOrderReadyTime 可能为空
+		// NewOrderReadyTime (nullable)
 		if req.OrderReadyEstimation.NewOrderReadyTime.IsSet() {
 			newTime := req.OrderReadyEstimation.NewOrderReadyTime.Get()
 			if newTime != nil {
-				newTimeStr := newTime.Format(time.RFC3339)
-				order.OrderReadyEstimation.NewReadyTime = newTimeStr
+				order.OrderReadyEstimation.NewOrderReadyTime.Set(newTime)
 			}
 		}
+	}
+
+	// Campaigns
+	for _, campaign := range req.Campaigns {
+		takeoutCampaign := message.TakeoutCampaign{
+			ID:                 campaign.Id,
+			Name:               campaign.Name,
+			CampaignNameForMex: campaign.CampaignNameForMex,
+			Level:              campaign.Level,
+			Type:               campaign.Type,
+			UsageCount:         campaign.UsageCount,
+			MexFundedRatio:     campaign.MexFundedRatio,
+			DeductedAmount:     campaign.DeductedAmount,
+			DeductedPart:       campaign.DeductedPart,
+			AppliedItemIDs:     campaign.AppliedItemIDs,
+		}
+
+		if campaign.FreeItem != nil {
+			takeoutCampaign.FreeItem = &message.TakeoutFreeItem{
+				ID:       campaign.FreeItem.Id,
+				Name:     campaign.FreeItem.Name,
+				Quantity: campaign.FreeItem.Quantity,
+				Price:    campaign.FreeItem.Price,
+			}
+		}
+
+		order.Campaigns = append(order.Campaigns, takeoutCampaign)
+	}
+
+	// Promos
+	for _, promo := range req.Promos {
+		takeoutPromo := message.TakeoutPromo{
+			Code:             promo.Code,
+			Description:      promo.Description,
+			Name:             promo.Name,
+			PromoAmount:      promo.PromoAmount,
+			MexFundedRatio:   promo.MexFundedRatio,
+			MexFundedAmount:  promo.MexFundedAmount,
+			TargetedPrice:    promo.TargetedPrice,
+			PromoAmountInMin: promo.PromoAmountInMin,
+		}
+		order.Promos = append(order.Promos, takeoutPromo)
 	}
 
 	return order, nil
@@ -259,29 +234,21 @@ func ToGrabSDK(o *message.TakeoutOrder) *grabsdk.SubmitOrderRequest {
 	}
 
 	req := &grabsdk.SubmitOrderRequest{
-		OrderID:          o.OrderID,
-		ShortOrderNumber: o.ShortOrderNumber,
-		MerchantID:       o.MerchantID,
-		PaymentType:      o.PaymentType,
-		OrderTime:        o.OrderTime,
-	}
-
-	if o.PartnerMerchantID != "" {
-		req.PartnerMerchantID = &o.PartnerMerchantID
-	}
-
-	if o.Cutlery != nil {
-		req.Cutlery = *o.Cutlery
+		OrderID:           o.OrderID,
+		ShortOrderNumber:  o.ShortOrderNumber,
+		MerchantID:        o.MerchantID,
+		PartnerMerchantID: o.PartnerMerchantID,
+		PaymentType:       o.PaymentType,
+		Cutlery:           o.Cutlery,
+		OrderTime:         o.OrderTime,
 	}
 
 	if o.SubmitTime != nil {
-		t, _ := time.Parse(time.RFC3339, *o.SubmitTime)
-		req.SubmitTime = &t
+		req.SubmitTime = o.SubmitTime
 	}
 
 	if o.CompleteTime != nil {
-		t, _ := time.Parse(time.RFC3339, *o.CompleteTime)
-		req.CompleteTime = &t
+		req.CompleteTime = o.CompleteTime
 	}
 
 	if o.ScheduledTime != nil {
@@ -297,67 +264,52 @@ func ToGrabSDK(o *message.TakeoutOrder) *grabsdk.SubmitOrderRequest {
 	}
 
 	// Currency
-	if o.Currency != nil {
-		req.Currency = grabsdk.Currency{
-			Code:     o.Currency.Code,
-			Symbol:   o.Currency.Symbol,
-			Exponent: int32(o.Currency.Exponent),
-		}
+	req.Currency = grabsdk.Currency{
+		Code:     o.Currency.Code,
+		Symbol:   o.Currency.Symbol,
+		Exponent: o.Currency.Exponent,
 	}
 
 	// FeatureFlags
-	if o.FeatureFlags != nil {
-		isMexEditOrder := o.FeatureFlags.IsMexEditOrder
-		req.FeatureFlags = grabsdk.OrderFeatureFlags{
-			OrderAcceptedType: o.FeatureFlags.OrderAcceptedType,
-			IsMexEditOrder:    &isMexEditOrder,
-			OrderType:         o.FeatureFlags.OrderType,
-		}
+	req.FeatureFlags = grabsdk.OrderFeatureFlags{
+		OrderAcceptedType: o.FeatureFlags.OrderAcceptedType,
+		IsMexEditOrder:    o.FeatureFlags.IsMexEditOrder,
+		OrderType:         o.FeatureFlags.OrderType,
 	}
 
 	// Items
 	for _, item := range o.Items {
-		grabItemID := item.ID
-		if item.GrabItemID != nil {
-			grabItemID = *item.GrabItemID
-		}
-
 		grabItem := grabsdk.OrderItem{
-			Id:         item.ID,
-			GrabItemID: grabItemID,
-			Quantity:   int32(item.Quantity),
-			Price:      int64(item.Price * 100), // 转换为最小单位
-		}
-
-		if item.Tax != nil {
-			tax := int64(*item.Tax * 100)
-			grabItem.Tax = &tax
-		}
-
-		if item.Specifications != nil {
-			grabItem.Specifications = item.Specifications
+			Id:             item.ID,
+			GrabItemID:     item.GrabItemID,
+			Quantity:       item.Quantity,
+			Price:          item.Price, // Already in minor unit
+			Tax:            item.Tax,
+			Specifications: item.Specifications,
 		}
 
 		// Modifiers
 		for _, mod := range item.Modifiers {
-			modID := mod.ID
-			modQty := int32(mod.Quantity)
-			modPrice := int64(mod.Price * 100)
-
 			grabItem.Modifiers = append(grabItem.Modifiers, grabsdk.OrderItemModifier{
-				Id:       &modID,
-				Quantity: &modQty,
-				Price:    &modPrice,
+				Id:       mod.ID,
+				Quantity: mod.Quantity,
+				Price:    mod.Price,
+				Tax:      mod.Tax,
 			})
 		}
 
 		// OutOfStockInstruction
-		if item.OutOfStockInstruction != nil {
-			instType := item.OutOfStockInstruction.Type
-			inst := grabsdk.OutOfStockInstruction{
-				InstructionType: &instType,
+		if item.OutOfStockInstruction.IsSet() {
+			inst := item.OutOfStockInstruction.Get()
+			if inst != nil {
+				grabInst := grabsdk.OutOfStockInstruction{
+					Title:                 inst.Title,
+					InstructionType:       inst.InstructionType,
+					ReplacementItemID:     inst.ReplacementItemID,
+					ReplacementGrabItemID: inst.ReplacementGrabItemID,
+				}
+				grabItem.OutOfStockInstruction.Set(&grabInst)
 			}
-			grabItem.OutOfStockInstruction.Set(&inst)
 		}
 
 		req.Items = append(req.Items, grabItem)
@@ -365,149 +317,117 @@ func ToGrabSDK(o *message.TakeoutOrder) *grabsdk.SubmitOrderRequest {
 
 	// Price
 	req.Price = grabsdk.OrderPrice{
-		Subtotal: int64(o.Price.Subtotal * 100),
-	}
-
-	if o.Price.Tax != nil {
-		tax := int64(*o.Price.Tax * 100)
-		req.Price.Tax = &tax
-	}
-
-	if o.Price.MerchantChargeFee != nil {
-		fee := int64(*o.Price.MerchantChargeFee * 100)
-		req.Price.MerchantChargeFee = &fee
-	}
-
-	if o.Price.DeliveryFee != nil {
-		fee := int64(*o.Price.DeliveryFee * 100)
-		req.Price.DeliveryFee = &fee
-	}
-
-	if o.Price.GrabFundPromo != nil {
-		promo := int64(*o.Price.GrabFundPromo * 100)
-		req.Price.GrabFundPromo = &promo
-	}
-
-	if o.Price.MerchantFundPromo != nil {
-		promo := int64(*o.Price.MerchantFundPromo * 100)
-		req.Price.MerchantFundPromo = &promo
-	}
-
-	if o.Price.EaterPayment != nil {
-		payment := int64(*o.Price.EaterPayment * 100)
-		req.Price.EaterPayment = &payment
+		Subtotal:          o.Price.Subtotal,
+		Tax:               o.Price.Tax,
+		MerchantChargeFee: o.Price.MerchantChargeFee,
+		GrabFundPromo:     o.Price.GrabFundPromo,
+		MerchantFundPromo: o.Price.MerchantFundPromo,
+		BasketPromo:       o.Price.BasketPromo,
+		DeliveryFee:       o.Price.DeliveryFee,
+		SmallOrderFee:     o.Price.SmallOrderFee,
+		EaterPayment:      o.Price.EaterPayment,
 	}
 
 	// DineIn
-	if o.DineIn != nil {
-		dineIn := grabsdk.DineIn{}
-
-		if o.DineIn.TableID != "" {
-			tableID := o.DineIn.TableID
-			dineIn.TableID = &tableID
+	if o.DineIn.IsSet() {
+		dineIn := o.DineIn.Get()
+		if dineIn != nil {
+			grabDineIn := grabsdk.DineIn{
+				TableID:    dineIn.TableID,
+				EaterCount: dineIn.EaterCount,
+			}
+			req.DineIn.Set(&grabDineIn)
 		}
-
-		if o.DineIn.EaterCount != 0 {
-			eaterCount := int64(o.DineIn.EaterCount)
-			dineIn.EaterCount = &eaterCount
-		}
-
-		req.DineIn.Set(&dineIn)
 	}
 
 	// Receiver
-	if o.Receiver != nil {
-		receiver := &grabsdk.Receiver{}
-
-		if o.Receiver.Name != "" {
-			name := o.Receiver.Name
-			receiver.Name = &name
-		}
-
-		if o.Receiver.Phone != "" {
-			phone := o.Receiver.Phone
-			receiver.Phones = &phone // 注意 Grab SDK 使用 Phones 字段（复数）
-		}
-
-		if o.Receiver.Address != nil {
-			receiver.Address = &grabsdk.Address{}
-
-			if o.Receiver.Address.UnitNumber != "" {
-				unitNum := o.Receiver.Address.UnitNumber
-				receiver.Address.UnitNumber = &unitNum
+	if o.Receiver.IsSet() {
+		receiver := o.Receiver.Get()
+		if receiver != nil {
+			grabReceiver := &grabsdk.Receiver{
+				Name:   receiver.Name,
+				Phones: receiver.Phones,
 			}
 
-			if o.Receiver.Address.DeliveryInstruction != "" {
-				instruction := o.Receiver.Address.DeliveryInstruction
-				receiver.Address.DeliveryInstruction = &instruction
-			}
-
-			if o.Receiver.Address.PoiSource != "" {
-				poiSource := o.Receiver.Address.PoiSource
-				receiver.Address.PoiSource = &poiSource
-			}
-
-			if o.Receiver.Address.PoiID != "" {
-				poiID := o.Receiver.Address.PoiID
-				receiver.Address.PoiID = &poiID
-			}
-
-			if o.Receiver.Address.Address != "" {
-				addr := o.Receiver.Address.Address
-				receiver.Address.Address = &addr
-			}
-
-			if o.Receiver.Address.Postcode != "" {
-				postcode := o.Receiver.Address.Postcode
-				receiver.Address.Postcode = &postcode
-			}
-
-			if o.Receiver.Address.Coordinates != nil {
-				receiver.Address.Coordinates = &grabsdk.Coordinates{}
-
-				if o.Receiver.Address.Coordinates.Latitude != 0 {
-					lat := o.Receiver.Address.Coordinates.Latitude
-					receiver.Address.Coordinates.Latitude = &lat
+			if receiver.Address != nil {
+				grabReceiver.Address = &grabsdk.Address{
+					UnitNumber:          receiver.Address.UnitNumber,
+					DeliveryInstruction: receiver.Address.DeliveryInstruction,
+					PoiSource:           receiver.Address.PoiSource,
+					PoiID:               receiver.Address.PoiID,
+					Address:             receiver.Address.Address,
+					Postcode:            receiver.Address.Postcode,
 				}
 
-				if o.Receiver.Address.Coordinates.Longitude != 0 {
-					lng := o.Receiver.Address.Coordinates.Longitude
-					receiver.Address.Coordinates.Longitude = &lng
+				if receiver.Address.Coordinates != nil {
+					grabReceiver.Address.Coordinates = &grabsdk.Coordinates{
+						Latitude:  receiver.Address.Coordinates.Latitude,
+						Longitude: receiver.Address.Coordinates.Longitude,
+					}
 				}
 			}
-		}
 
-		req.Receiver.Set(receiver)
+			req.Receiver.Set(grabReceiver)
+		}
 	}
 
 	// OrderReadyEstimation
 	if o.OrderReadyEstimation != nil {
-		// 解析时间字符串
-		estimatedTime, err := time.Parse(time.RFC3339, o.OrderReadyEstimation.EstimatedReadyTime)
-		if err != nil {
-			// 如果解析失败,使用当前时间
-			estimatedTime = time.Now()
-		}
-
-		maxTime, err := time.Parse(time.RFC3339, o.OrderReadyEstimation.MaxReadyTime)
-		if err != nil {
-			// 如果解析失败,使用当前时间
-			maxTime = time.Now()
-		}
-
 		req.OrderReadyEstimation = &grabsdk.OrderReadyEstimation{
 			AllowChange:             o.OrderReadyEstimation.AllowChange,
-			EstimatedOrderReadyTime: estimatedTime,
-			MaxOrderReadyTime:       maxTime,
+			EstimatedOrderReadyTime: o.OrderReadyEstimation.EstimatedOrderReadyTime,
+			MaxOrderReadyTime:       o.OrderReadyEstimation.MaxOrderReadyTime,
 		}
 
-		// NewReadyTime 可能为空
-		if o.OrderReadyEstimation.NewReadyTime != "" {
-			newTime, err := time.Parse(time.RFC3339, o.OrderReadyEstimation.NewReadyTime)
-			if err == nil {
-				req.OrderReadyEstimation.NewOrderReadyTime.Set(&newTime)
+		// NewOrderReadyTime
+		if o.OrderReadyEstimation.NewOrderReadyTime.IsSet() {
+			newTime := o.OrderReadyEstimation.NewOrderReadyTime.Get()
+			if newTime != nil {
+				req.OrderReadyEstimation.NewOrderReadyTime.Set(newTime)
 			}
 		}
+	}
+
+	// Campaigns
+	for _, campaign := range o.Campaigns {
+		grabCampaign := grabsdk.OrderCampaign{
+			Id:                 campaign.ID,
+			Name:               campaign.Name,
+			CampaignNameForMex: campaign.CampaignNameForMex,
+			Level:              campaign.Level,
+			Type:               campaign.Type,
+			UsageCount:         campaign.UsageCount,
+			MexFundedRatio:     campaign.MexFundedRatio,
+			DeductedAmount:     campaign.DeductedAmount,
+			DeductedPart:       campaign.DeductedPart,
+			AppliedItemIDs:     campaign.AppliedItemIDs,
+		}
+
+		if campaign.FreeItem != nil {
+			grabCampaign.FreeItem = &grabsdk.OrderFreeItem{
+				Id:       campaign.FreeItem.ID,
+				Name:     campaign.FreeItem.Name,
+				Quantity: campaign.FreeItem.Quantity,
+				Price:    campaign.FreeItem.Price,
+			}
+		}
+
+		req.Campaigns = append(req.Campaigns, grabCampaign)
+	}
+
+	// Promos
+	for _, promo := range o.Promos {
+		grabPromo := grabsdk.OrderPromo{
+			Code:             promo.Code,
+			Description:      promo.Description,
+			Name:             promo.Name,
+			PromoAmount:      promo.PromoAmount,
+			MexFundedRatio:   promo.MexFundedRatio,
+			MexFundedAmount:  promo.MexFundedAmount,
+			TargetedPrice:    promo.TargetedPrice,
+			PromoAmountInMin: promo.PromoAmountInMin,
+		}
+		req.Promos = append(req.Promos, grabPromo)
 	}
 
 	return req
@@ -524,15 +444,36 @@ func FromLinemanPlaceOrder(req *linemanv1.PlaceOrderReq) (*message.TakeoutOrder,
 		return nil, nil
 	}
 
+	// Parse orderAcceptedTime to time.Time for SubmitTime
+	var submitTime *time.Time
+	if req.OrderAcceptedTime != "" {
+		t, err := time.Parse(time.RFC3339, req.OrderAcceptedTime)
+		if err == nil {
+			submitTime = &t
+		}
+	}
+
 	order := &message.TakeoutOrder{
 		// 基础字段映射（参考用户要求）
-		OrderID:           req.OrderId,            // orderId -> OrderID
-		ShortOrderNumber:  req.OrderShortCode,     // orderShortCode -> ShortOrderNumber
-		MerchantID:        "",                     // MerchantID 为空
-		PartnerMerchantID: req.StoreId,            // storeId -> PartnerMerchantID (TTPOS 侧的店铺 ID)
-		PaymentType:       "CASH",                 // Lineman 默认为 CASH
-		OrderTime:         req.OrderAcceptedTime,  // orderAcceptedTime -> OrderTime
-		SubmitTime:        &req.OrderAcceptedTime, //复用订单接受时间
+		OrderID:          req.OrderId,           // orderId -> OrderID
+		ShortOrderNumber: req.OrderShortCode,    // orderShortCode -> ShortOrderNumber
+		MerchantID:       "",                    // MerchantID 为空
+		PaymentType:      "CASH",                // Lineman 默认为 CASH
+		Cutlery:          false,                 // Lineman 不提供，默认 false
+		OrderTime:        req.OrderAcceptedTime, // orderAcceptedTime -> OrderTime
+		SubmitTime:       submitTime,            // 转换后的 time.Time
+	}
+
+	// PartnerMerchantID
+	if req.StoreId != "" {
+		order.PartnerMerchantID = &req.StoreId // storeId -> PartnerMerchantID (TTPOS 侧的店铺 ID)
+	}
+
+	// Currency - 设置 THB 默认值
+	order.Currency = message.TakeoutCurrency{
+		Code:     "THB",
+		Symbol:   "฿",
+		Exponent: 2, // THB 使用 satang，exponent = 2
 	}
 
 	// FeatureFlags.OrderType（从 Lineman customerType 转换）
@@ -544,11 +485,14 @@ func FromLinemanPlaceOrder(req *linemanv1.PlaceOrderReq) (*message.TakeoutOrder,
 		"PICKUP":   "Pickup",
 	}
 
+	orderType := "Delivery" // 默认值
 	if mappedType, ok := orderTypeMapping[req.CustomerType]; ok {
-		order.FeatureFlags = &message.TakeoutFeatureFlags{
-			OrderAcceptedType: "AUTO", // Lineman 默认为自动接单
-			OrderType:         mappedType,
-		}
+		orderType = mappedType
+	}
+
+	order.FeatureFlags = message.TakeoutFeatureFlags{
+		OrderAcceptedType: "AUTO", // Lineman 默认为自动接单
+		OrderType:         orderType,
 	}
 
 	// MembershipID（复用 Grab 字段名）
@@ -559,10 +503,15 @@ func FromLinemanPlaceOrder(req *linemanv1.PlaceOrderReq) (*message.TakeoutOrder,
 
 	// AdditionalProperties（复用类似 Grab 的字段名）
 	// Lineman: additionalItems[] -> AdditionalProperties
-	for _, addItem := range req.AdditionalItems {
-		order.AdditionalProperties = append(order.AdditionalProperties, message.TakeoutAdditionalProperty{
-			Name: addItem.Name,
-		})
+	if len(req.AdditionalItems) > 0 {
+		order.AdditionalProperties = make(map[string]any)
+		additionalItems := make([]map[string]any, 0, len(req.AdditionalItems))
+		for _, addItem := range req.AdditionalItems {
+			additionalItems = append(additionalItems, map[string]any{
+				"name": addItem.Name,
+			})
+		}
+		order.AdditionalProperties["additionalItems"] = additionalItems
 	}
 
 	// 收集促销信息（从商品级别提取到订单级别）
@@ -571,10 +520,14 @@ func FromLinemanPlaceOrder(req *linemanv1.PlaceOrderReq) (*message.TakeoutOrder,
 
 	// Items（参考 Google Sheets 映射）
 	for _, item := range req.Items {
+		// 转换价格：Lineman 使用泰铢（float64），需要转换为最小单位（satang）
+		priceInMinor := int64(item.UnitPrice * 100)
+
 		takeoutItem := message.TakeoutOrderItem{
-			ID:       item.Id,        // id -> ID
-			Quantity: item.Quantity,  // quantity -> Quantity
-			Price:    item.UnitPrice, // unitPrice -> Price (已含选项费用和折扣)
+			ID:         item.Id, // id -> ID
+			GrabItemID: item.Id, // Lineman 没有单独的 GrabItemID，使用 id
+			Quantity:   int32(item.Quantity),
+			Price:      priceInMinor, // unitPrice -> Price (转换为最小单位)
 		}
 
 		// Specifications（商品备注/规格说明）
@@ -587,15 +540,20 @@ func FromLinemanPlaceOrder(req *linemanv1.PlaceOrderReq) (*message.TakeoutOrder,
 		// Lineman: items[].promotionId -> Grab: promos[].code
 		// Lineman: items[].discount -> Grab: promos[].mexFundedAmount
 		if item.PromotionId != "" && item.Discount != 0 {
+			// 转换折扣金额为最小单位
+			discountInMinor := int64(item.Discount * 100)
 			if _, exists := promoMap[item.PromotionId]; !exists {
 				// 新促销，创建 Promo 结构
+				promoCode := item.PromotionId
 				promoMap[item.PromotionId] = &message.TakeoutPromo{
-					Code:            item.PromotionId, // promotionId -> code
-					MexFundedAmount: item.Discount,    // discount -> mexFundedAmount (商户承担金额)
+					Code:            &promoCode,       // promotionId -> code
+					MexFundedAmount: &discountInMinor, // discount -> mexFundedAmount (商户承担金额)
 				}
 			} else {
 				// 相同促销，累加金额
-				promoMap[item.PromotionId].MexFundedAmount += item.Discount
+				existingAmount := *promoMap[item.PromotionId].MexFundedAmount
+				newAmount := existingAmount + discountInMinor
+				promoMap[item.PromotionId].MexFundedAmount = &newAmount
 			}
 		}
 
@@ -605,19 +563,19 @@ func FromLinemanPlaceOrder(req *linemanv1.PlaceOrderReq) (*message.TakeoutOrder,
 		// 需要将 Lineman 的属性组结构转换为 Grab 的扁平结构
 		for _, prop := range item.Properties {
 			// 为每个 property 创建一个 modifier，包含所有 values
-			modifier := message.TakeoutModifier{
-				ID:       prop.Id,
-				Quantity: 1, // Lineman 不提供 quantity，默认为 1
-				Price:    0, // 价格从 values 中累加
+			modID := prop.Id
+			var modPrice int64 = 0
+			modQty := int32(1) // Lineman 不提供 quantity，默认为 1
+
+			// 累加 values 的价格
+			for _, val := range prop.Values {
+				modPrice += int64(val.Price * 100) // 转换为最小单位
 			}
 
-			// 转换 values
-			for _, val := range prop.Values {
-				modifier.Values = append(modifier.Values, message.TakeoutModifierValue{
-					ID:    val.Id,
-					Price: val.Price,
-				})
-				modifier.Price += val.Price // 累加价格
+			modifier := message.TakeoutModifier{
+				ID:       &modID,
+				Quantity: &modQty,
+				Price:    &modPrice,
 			}
 
 			takeoutItem.Modifiers = append(takeoutItem.Modifiers, modifier)
@@ -629,16 +587,17 @@ func FromLinemanPlaceOrder(req *linemanv1.PlaceOrderReq) (*message.TakeoutOrder,
 	// 转换促销信息（从 map 转为数组）
 	// Lineman: items[].promotionId + items[].discount -> Grab: order.promos[]
 	for _, promo := range promoMap {
-		order.Promos = append(order.Promos, message.TakeoutPromo{
-			Code:            promo.Code,            // promotionId -> code
-			MexFundedAmount: promo.MexFundedAmount, // discount -> mexFundedAmount
-		})
+		order.Promos = append(order.Promos, *promo)
 	}
 
 	// Price（参考 Google Sheets 映射）
+	// 转换价格为最小单位
+	subtotalInMinor := int64(req.RestaurantRevenue * 100)
+	eaterPaymentInMinor := int64(req.RestaurantRevenue * 100)
+
 	order.Price = message.TakeoutOrderPrice{
-		Subtotal:     req.RestaurantRevenue,  // restaurantRevenue -> Subtotal（用户实付金额）
-		EaterPayment: &req.RestaurantRevenue, // restaurantRevenue -> EaterPayment
+		Subtotal:     subtotalInMinor,      // restaurantRevenue -> Subtotal（用户实付金额）
+		EaterPayment: &eaterPaymentInMinor, // restaurantRevenue -> EaterPayment
 	}
 
 	return order, nil
@@ -650,13 +609,20 @@ func ToLinemanPlaceOrder(o *message.TakeoutOrder) *linemanv1.PlaceOrderReq {
 		return nil
 	}
 
+	// 从最小单位转换回泰铢
+	subtotalInTHB := float64(o.Price.Subtotal) / 100
+
 	req := &linemanv1.PlaceOrderReq{
-		PartnerId:         o.PartnerMerchantID,
 		StoreId:           o.MerchantID,
 		OrderId:           o.OrderID,
 		OrderShortCode:    o.ShortOrderNumber,
-		RestaurantRevenue: o.Price.Subtotal,
+		RestaurantRevenue: subtotalInTHB,
 		OrderAcceptedTime: o.OrderTime,
+	}
+
+	// PartnerMerchantID -> PartnerId
+	if o.PartnerMerchantID != nil {
+		req.PartnerId = *o.PartnerMerchantID
 	}
 
 	// CustomerType（从 FeatureFlags.OrderType 推导）
@@ -664,18 +630,14 @@ func ToLinemanPlaceOrder(o *message.TakeoutOrder) *linemanv1.PlaceOrderReq {
 	// - Grab "Delivery" -> Lineman DELIVERY
 	// - Grab "Pickup" -> Lineman PICKUP
 	// - Grab "DineIn" -> Lineman PICKUP（堂食视为自取）
-	if o.FeatureFlags != nil {
-		switch o.FeatureFlags.OrderType {
-		case "Delivery":
-			req.CustomerType = "DELIVERY"
-		case "Pickup":
-			req.CustomerType = "PICKUP"
-		case "DineIn":
-			req.CustomerType = "PICKUP" // 堂食视为自取
-		default:
-			req.CustomerType = "DELIVERY"
-		}
-	} else {
+	switch o.FeatureFlags.OrderType {
+	case "Delivery":
+		req.CustomerType = "DELIVERY"
+	case "Pickup":
+		req.CustomerType = "PICKUP"
+	case "DineIn":
+		req.CustomerType = "PICKUP" // 堂食视为自取
+	default:
 		req.CustomerType = "DELIVERY" // 默认外送
 	}
 
@@ -686,19 +648,27 @@ func ToLinemanPlaceOrder(o *message.TakeoutOrder) *linemanv1.PlaceOrderReq {
 	}
 
 	// AdditionalItems（从 AdditionalProperties 转换）
-	// Lineman: additionalItems[] -> Grab: AdditionalProperties（扩展字段）
-	for _, addProp := range o.AdditionalProperties {
-		req.AdditionalItems = append(req.AdditionalItems, linemanv1.OrderAdditionalItem{
-			Name: addProp.Name,
-		})
+	if o.AdditionalProperties != nil {
+		if additionalItems, ok := o.AdditionalProperties["additionalItems"].([]map[string]any); ok {
+			for _, addItem := range additionalItems {
+				if name, ok := addItem["name"].(string); ok {
+					req.AdditionalItems = append(req.AdditionalItems, linemanv1.OrderAdditionalItem{
+						Name: name,
+					})
+				}
+			}
+		}
 	}
 
 	// Items
 	for _, item := range o.Items {
+		// 从最小单位转换回泰铢
+		priceInTHB := float64(item.Price) / 100
+
 		linemanItem := linemanv1.OrderItem{
 			Id:        item.ID,
-			Quantity:  item.Quantity,
-			UnitPrice: item.Price,
+			Quantity:  int(item.Quantity),
+			UnitPrice: priceInTHB,
 		}
 
 		// Memo（从 Specifications 转换）
@@ -714,25 +684,26 @@ func ToLinemanPlaceOrder(o *message.TakeoutOrder) *linemanv1.PlaceOrderReq {
 		// Modifiers -> Properties 转换
 		// 将 Grab 的扁平 modifiers 结构转换回 Lineman 的属性组结构
 		for _, mod := range item.Modifiers {
-			prop := linemanv1.OrderItemProperty{
-				Id: mod.ID,
+			var propID string
+			if mod.ID != nil {
+				propID = *mod.ID
 			}
 
-			// 如果有 Values（来自 Lineman），直接转换
-			if len(mod.Values) > 0 {
-				for _, val := range mod.Values {
-					prop.Values = append(prop.Values, linemanv1.OrderItemPropertyValue{
-						Id:    val.ID,
-						Price: val.Price,
-					})
-				}
-			} else {
-				// 如果没有 Values（来自 Grab），创建一个默认 value
-				prop.Values = append(prop.Values, linemanv1.OrderItemPropertyValue{
-					Id:    mod.ID,
-					Price: mod.Price,
-				})
+			prop := linemanv1.OrderItemProperty{
+				Id: propID,
 			}
+
+			// 转换价格从最小单位到泰铢
+			var priceInTHB float64 = 0
+			if mod.Price != nil {
+				priceInTHB = float64(*mod.Price) / 100
+			}
+
+			// 创建一个默认 value
+			prop.Values = append(prop.Values, linemanv1.OrderItemPropertyValue{
+				Id:    propID,
+				Price: priceInTHB,
+			})
 
 			linemanItem.Properties = append(linemanItem.Properties, prop)
 		}
@@ -745,8 +716,13 @@ func ToLinemanPlaceOrder(o *message.TakeoutOrder) *linemanv1.PlaceOrderReq {
 	// 注意：这是反向转换的限制，因为 Grab Promos 是订单级别，Lineman 是商品级别
 	if len(o.Promos) > 0 && len(req.Items) > 0 {
 		firstPromo := o.Promos[0]
-		req.Items[0].PromotionId = firstPromo.Code
-		req.Items[0].Discount = firstPromo.MexFundedAmount
+		if firstPromo.Code != nil {
+			req.Items[0].PromotionId = *firstPromo.Code
+		}
+		if firstPromo.MexFundedAmount != nil {
+			// 从最小单位转换回泰铢
+			req.Items[0].Discount = float64(*firstPromo.MexFundedAmount) / 100
+		}
 	}
 
 	return req

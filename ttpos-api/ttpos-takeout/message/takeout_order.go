@@ -1,270 +1,757 @@
 package message
 
-// TakeoutOrder 统一外卖订单模型
-// 以 Grab 订单格式为基准，扩展支持 Lineman 字段
-type TakeoutOrder struct {
-	// ========== 基础字段（Grab 和 Lineman 通用） ==========
+import (
+	"encoding/json"
+	"time"
+)
 
-	// OrderID 订单 ID
+// ============================================================================
+// TakeoutOrder - Aligned with Grab SDK Order
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order.go
+// ============================================================================
+
+// TakeoutOrder unified takeout order model
+// Fully aligned with Grab SDK Order structure
+type TakeoutOrder struct {
+	// OrderID The order's ID that is returned from GrabFood
 	// Grab: orderID
 	// Lineman: orderId
 	OrderID string `json:"orderID"`
 
-	// ShortOrderNumber 短订单号
+	// ShortOrderNumber The GrabFood short order number
 	// Grab: shortOrderNumber
 	// Lineman: orderShortCode
 	ShortOrderNumber string `json:"shortOrderNumber"`
 
-	// MerchantID 商户 ID（平台侧）
+	// MerchantID The merchant's ID that is in GrabFood's database
 	// Grab: merchantID
-	// Lineman: storeId (作为 provider merchant ID)
+	// Lineman: storeId (mapped to PartnerMerchantID)
 	MerchantID string `json:"merchantID"`
 
-	// PartnerMerchantID 合作商户 ID（TTPOS 侧）
+	// PartnerMerchantID The merchant's ID that is on the partner's database (optional)
 	// Grab: partnerMerchantID
 	// Lineman: partnerId
-	PartnerMerchantID string `json:"partnerMerchantID,omitempty"`
+	PartnerMerchantID *string `json:"partnerMerchantID,omitempty"`
 
-	// PaymentType 支付方式
+	// PaymentType The payment method used
 	// Grab: paymentType (CASH, CASHLESS)
-	// Lineman: 不直接提供，默认为 CASH
+	// Lineman: defaults to CASH
 	PaymentType string `json:"paymentType"`
 
-	// OrderTime 下单时间 (RFC3339)
+	// Cutlery Whether cutlery are needed (required, non-pointer)
+	// Grab: cutlery (bool, required)
+	Cutlery bool `json:"cutlery"`
+
+	// OrderTime The UTC time that a consumer places the order, based on ISO_8601/RFC3339
 	// Grab: orderTime
 	// Lineman: orderAcceptedTime
 	OrderTime string `json:"orderTime"`
 
-	// Items 订单商品列表
-	Items []TakeoutOrderItem `json:"items"`
+	// SubmitTime The order submit time, based on ISO_8601/RFC3339 (optional)
+	// Grab: submitTime (*time.Time)
+	SubmitTime *time.Time `json:"submitTime,omitempty"`
 
-	// Price 价格信息
-	Price TakeoutOrderPrice `json:"price"`
+	// CompleteTime The order complete time, based on ISO_8601/RFC3339 (optional)
+	// Grab: completeTime (*time.Time)
+	CompleteTime *time.Time `json:"completeTime,omitempty"`
 
-	// ========== Grab 特有字段 ==========
-
-	// Cutlery 是否需要餐具（Grab 特有）
-	Cutlery *bool `json:"cutlery,omitempty"`
-
-	// SubmitTime 提交时间（Grab 特有）
-	SubmitTime *string `json:"submitTime,omitempty"`
-
-	// CompleteTime 完成时间（Grab 特有）
-	CompleteTime *string `json:"completeTime,omitempty"`
-
-	// ScheduledTime 预约时间（Grab 特有）
+	// ScheduledTime The order scheduled time, based on ISO_8601/RFC3339 (optional)
+	// Grab: scheduledTime
 	ScheduledTime *string `json:"scheduledTime,omitempty"`
 
-	// OrderState 订单状态（Grab 特有）
+	// OrderState The state of the order (optional)
+	// Grab: orderState
 	OrderState *string `json:"orderState,omitempty"`
 
-	// Currency 货币信息（Grab 特有）
-	Currency *TakeoutCurrency `json:"currency,omitempty"`
+	// Currency Currency information (required, non-pointer)
+	// Grab: currency (Currency, required)
+	Currency TakeoutCurrency `json:"currency"`
 
-	// FeatureFlags 功能标识（Grab 特有）
-	FeatureFlags *TakeoutFeatureFlags `json:"featureFlags,omitempty"`
+	// FeatureFlags Feature related information (required, non-pointer)
+	// Grab: featureFlags (OrderFeatureFlags, required)
+	FeatureFlags TakeoutFeatureFlags `json:"featureFlags"`
 
-	// Campaigns 活动信息（Grab 特有）
+	// Items The ordered items in an array (required)
+	// Grab: items ([]OrderItem, required)
+	Items []TakeoutOrderItem `json:"items"`
+
+	// Campaigns Campaigns applicable for the order (optional)
+	// Grab: campaigns
 	Campaigns []TakeoutCampaign `json:"campaigns,omitempty"`
 
-	// Promos 促销信息（Grab 特有）
+	// Promos Array of promotion objects (optional)
+	// Grab: promos
 	Promos []TakeoutPromo `json:"promos,omitempty"`
 
-	// DineIn 堂食信息（Grab 特有）
-	DineIn *TakeoutDineIn `json:"dineIn,omitempty"`
+	// Price Order price information (required, non-pointer)
+	// Grab: price (OrderPrice, required)
+	Price TakeoutOrderPrice `json:"price"`
 
-	// Receiver 收货人信息（Grab 特有）
-	Receiver *TakeoutReceiver `json:"receiver,omitempty"`
+	// DineIn Dine-in information (nullable)
+	// Grab: dineIn (NullableDineIn)
+	DineIn NullableTakeoutDineIn `json:"dineIn,omitempty"`
 
-	// OrderReadyEstimation 准备时间估算（Grab 特有）
+	// Receiver Receiver information for delivery orders (nullable)
+	// Grab: receiver (NullableReceiver)
+	Receiver NullableTakeoutReceiver `json:"receiver,omitempty"`
+
+	// OrderReadyEstimation Order ready time estimation (optional)
+	// Grab: orderReadyEstimation
 	OrderReadyEstimation *TakeoutOrderReadyEstimation `json:"orderReadyEstimation,omitempty"`
 
-	// MembershipID 会员 ID（Grab 特有）
+	// MembershipID Membership ID for loyalty project (optional)
+	// Grab: membershipID
+	// Lineman: memberId
 	MembershipID *string `json:"membershipID,omitempty"`
 
-	// ========== 扩展字段（Lineman 等其他平台需要） ==========
-
-	// AdditionalProperties 订单附加属性（扩展字段）
-	// Grab: 无此字段（但 SDK 有 AdditionalProperties map）
-	// Lineman: additionalItems[] -> 映射为 AdditionalProperties
-	// 如：ไม่รับช้อนส้อมพลาสติก（不需要塑料餐具）
-	AdditionalProperties []TakeoutAdditionalProperty `json:"additionalProperties,omitempty"`
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	// Used for platform-specific fields (e.g., Lineman additionalItems)
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutOrderItem 订单商品项
+// ============================================================================
+// TakeoutOrderItem - Aligned with Grab SDK OrderItem
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_item.go
+// ============================================================================
+
+// TakeoutOrderItem order item structure
 type TakeoutOrderItem struct {
-	// ID 商品 ID
+	// ID The item's externalID in the partner system (required)
 	// Grab: id
 	// Lineman: id
 	ID string `json:"id"`
 
-	// GrabItemID Grab 商品 ID（Grab 特有）
-	GrabItemID *string `json:"grabItemID,omitempty"`
+	// GrabItemID The item's ID in Grab system (required)
+	// Grab: grabItemID (string, required)
+	GrabItemID string `json:"grabItemID"`
 
-	// Quantity 商品数量
-	Quantity int `json:"quantity"`
+	// Quantity The number of the item ordered (required)
+	// Grab: quantity (int32, required)
+	Quantity int32 `json:"quantity"`
 
-	// Price 商品价格
-	// Grab: price (int64, 最小单位，如泰铢分)
-	// Lineman: unitPrice (float64, 泰铢)
-	Price float64 `json:"price"`
+	// Price The price for a single item in minor unit (required)
+	// Grab: price (int64, required) - in minor unit (e.g., satang for THB)
+	// Lineman: unitPrice (float64, THB) - converted to minor unit
+	Price int64 `json:"price"`
 
-	// Tax 税额（Grab 特有）
-	Tax *float64 `json:"tax,omitempty"`
+	// Tax Tax in minor format for a single item (optional)
+	// Grab: tax (*int64)
+	Tax *int64 `json:"tax,omitempty"`
 
-	// Specifications 规格说明（Grab 特有）
+	// Specifications An extra note for the merchant (optional)
+	// Grab: specifications
+	// Lineman: memo
 	Specifications *string `json:"specifications,omitempty"`
 
-	// Modifiers 修改项/配料
+	// OutOfStockInstruction Instructions when item is out of stock (nullable)
+	// Grab: outOfStockInstruction (NullableOutOfStockInstruction)
+	OutOfStockInstruction NullableTakeoutOutOfStockInstruction `json:"outOfStockInstruction,omitempty"`
+
+	// Modifiers Array of modifiers (optional)
 	// Grab: modifiers
-	// Lineman: properties (结构不同，需转换)
+	// Lineman: properties (converted)
 	Modifiers []TakeoutModifier `json:"modifiers,omitempty"`
 
-	// OutOfStockInstruction 缺货处理指令（Grab 特有）
-	OutOfStockInstruction *TakeoutOutOfStockInstruction `json:"outOfStockInstruction,omitempty"`
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutModifier 商品修改项/配料
+// ============================================================================
+// TakeoutModifier - Aligned with Grab SDK OrderItemModifier
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_item_modifier.go
+// ============================================================================
+
+// TakeoutModifier order item modifier structure
 type TakeoutModifier struct {
-	// ID 修改项 ID
-	ID string `json:"id"`
+	// ID The modifier's ID in the partner's system (optional)
+	// Grab: id (*string)
+	ID *string `json:"id,omitempty"`
 
-	// Quantity 数量
-	Quantity int `json:"quantity"`
+	// Price The modifier's price in minor format (optional)
+	// Grab: price (*int64)
+	Price *int64 `json:"price,omitempty"`
 
-	// Price 价格
-	Price float64 `json:"price"`
+	// Tax Tax in minor format for 1 modifier (optional)
+	// Grab: tax (*int64)
+	Tax *int64 `json:"tax,omitempty"`
 
-	// ========== Lineman 扩展（从 properties 转换） ==========
+	// Quantity The number of modifiers present (optional)
+	// Grab: quantity (*int32)
+	Quantity *int32 `json:"quantity,omitempty"`
 
-	// Values 选项值列表（Lineman properties 转换而来）
-	Values []TakeoutModifierValue `json:"values,omitempty"`
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutModifierValue 修改项值（Lineman properties 专用）
-type TakeoutModifierValue struct {
-	ID    string  `json:"id"`
-	Price float64 `json:"price"`
-}
+// ============================================================================
+// TakeoutOrderPrice - Aligned with Grab SDK OrderPrice
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_price.go
+// ============================================================================
 
-// TakeoutOrderPrice 价格信息
+// TakeoutOrderPrice order price information in minor unit format
 type TakeoutOrderPrice struct {
-	// Subtotal 商品小计
-	// Grab: subtotal (int64, 最小单位)
-	// Lineman: restaurantRevenue (float64, 泰铢)
-	Subtotal float64 `json:"subtotal"`
+	// Subtotal Total item and modifier price (tax-inclusive) in minor unit (required)
+	// Grab: subtotal (int64, required)
+	// Lineman: restaurantRevenue (float64, THB) - converted to minor unit
+	Subtotal int64 `json:"subtotal"`
 
-	// Tax 税额（Grab 特有）
-	Tax *float64 `json:"tax,omitempty"`
+	// Tax GrabFood's tax in minor unit (optional)
+	// Grab: tax (*int64)
+	Tax *int64 `json:"tax,omitempty"`
 
-	// MerchantChargeFee 商户收取费用（Grab 特有）
-	MerchantChargeFee *float64 `json:"merchantChargeFee,omitempty"`
+	// MerchantChargeFee Additional fee charged by merchant (tax-inclusive) (optional)
+	// Grab: merchantChargeFee (*int64)
+	MerchantChargeFee *int64 `json:"merchantChargeFee,omitempty"`
 
-	// DeliveryFee 配送费（Grab 特有）
-	DeliveryFee *float64 `json:"deliveryFee,omitempty"`
+	// GrabFundPromo GrabFood's promo fund in minor unit (optional)
+	// Grab: grabFundPromo (*int64)
+	GrabFundPromo *int64 `json:"grabFundPromo,omitempty"`
 
-	// GrabFundPromo Grab 承担促销（Grab 特有）
-	GrabFundPromo *float64 `json:"grabFundPromo,omitempty"`
+	// MerchantFundPromo Merchant's promo fund in minor unit (optional)
+	// Grab: merchantFundPromo (*int64)
+	MerchantFundPromo *int64 `json:"merchantFundPromo,omitempty"`
 
-	// MerchantFundPromo 商户承担促销（Grab 特有）
-	MerchantFundPromo *float64 `json:"merchantFundPromo,omitempty"`
+	// BasketPromo Total promo applied to basket items in minor unit (optional)
+	// Grab: basketPromo (*int64)
+	BasketPromo *int64 `json:"basketPromo,omitempty"`
 
-	// EaterPayment 用户实付金额（Grab 特有）
-	// Lineman 用 restaurantRevenue 对应此字段
-	EaterPayment *float64 `json:"eaterPayment,omitempty"`
+	// DeliveryFee Delivery fee in minor unit (optional)
+	// Grab: deliveryFee (*int64)
+	DeliveryFee *int64 `json:"deliveryFee,omitempty"`
 
-	// Total 总金额（Grab 特有）
-	Total *float64 `json:"total,omitempty"`
+	// SmallOrderFee Fee for orders below minimum value in minor unit (optional)
+	// Grab: smallOrderFee (*int64)
+	SmallOrderFee *int64 `json:"smallOrderFee,omitempty"`
+
+	// EaterPayment Total amount paid by consumer in minor unit (optional)
+	// Grab: eaterPayment (*int64)
+	// Lineman: restaurantRevenue - converted to minor unit
+	EaterPayment *int64 `json:"eaterPayment,omitempty"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutCurrency 货币信息（Grab 特有）
+// ============================================================================
+// TakeoutCurrency - Aligned with Grab SDK Currency
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_currency.go
+// ============================================================================
+
+// TakeoutCurrency currency information
 type TakeoutCurrency struct {
-	Code     string `json:"code"`     // 货币代码: THB, SGD
-	Symbol   string `json:"symbol"`   // 符号
-	Exponent int    `json:"exponent"` // 小数位数
+	// Code The three-letter ISO currency code (required)
+	// Grab: code (string, required)
+	Code string `json:"code"`
+
+	// Symbol The currency symbol (required)
+	// Grab: symbol (string, required)
+	Symbol string `json:"symbol"`
+
+	// Exponent The log base 10 of major to minor unit multiplier (required)
+	// Grab: exponent (int32, required)
+	// 0 for VN, 2 for other countries (SG/MY/ID/TH/PH/KH/MM)
+	Exponent int32 `json:"exponent"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutFeatureFlags 功能标识（Grab 特有）
+// ============================================================================
+// TakeoutFeatureFlags - Aligned with Grab SDK OrderFeatureFlags
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_feature_flags.go
+// ============================================================================
+
+// TakeoutFeatureFlags feature related information
 type TakeoutFeatureFlags struct {
-	OrderAcceptedType string `json:"orderAcceptedType"` // 接单类型: AUTO, MANUAL
-	IsMexEditOrder    bool   `json:"isMexEditOrder"`    // 是否为商户编辑订单
-	OrderType         string `json:"orderType"`         // 订单类型: DineIn, Delivery
+	// OrderAcceptedType The acceptance type for the order (required)
+	// Grab: orderAcceptedType (string, required)
+	// Values: AUTO, MANUAL
+	OrderAcceptedType string `json:"orderAcceptedType"`
+
+	// OrderType The type of order (required)
+	// Grab: orderType (string, required)
+	// Values: DineIn, Delivery, Pickup, etc.
+	OrderType string `json:"orderType"`
+
+	// IsMexEditOrder Whether the order is edited by merchant (optional)
+	// Grab: isMexEditOrder (*bool)
+	IsMexEditOrder *bool `json:"isMexEditOrder,omitempty"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutCampaign 活动信息（Grab 特有）
+// ============================================================================
+// TakeoutCampaign - Aligned with Grab SDK OrderCampaign
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_campaign.go
+// ============================================================================
+
+// TakeoutCampaign campaign information
 type TakeoutCampaign struct {
-	CampaignID         string  `json:"campaignID"`
-	CampaignNameForMex string  `json:"campaignNameForMex"`
-	Name               string  `json:"name"`
-	Level              string  `json:"level"`
-	Type               string  `json:"type"`
-	UsedCount          int     `json:"usedCount"`
-	DeductedAmount     float64 `json:"deductedAmount"`
-	MexFundedRatio     int     `json:"mexFundedRatio"`
+	// ID The campaign's ID returned by GrabFood (optional)
+	// Grab: id (*string)
+	ID *string `json:"id,omitempty"`
+
+	// Name The name of the campaign (optional)
+	// Grab: name (*string)
+	Name *string `json:"name,omitempty"`
+
+	// CampaignNameForMex The campaign name provided by merchant (optional)
+	// Grab: campaignNameForMex (*string)
+	CampaignNameForMex *string `json:"campaignNameForMex,omitempty"`
+
+	// Level The campaign level (optional)
+	// Grab: level (*string)
+	Level *string `json:"level,omitempty"`
+
+	// Type The type of campaign (optional)
+	// Grab: type (*string)
+	Type *string `json:"type,omitempty"`
+
+	// UsageCount The redemption count of same campaign in this order (optional)
+	// Grab: usageCount (*int64)
+	UsageCount *int64 `json:"usageCount,omitempty"`
+
+	// MexFundedRatio The ratio funded by merchant in percentage (optional)
+	// Grab: mexFundedRatio (*int32)
+	MexFundedRatio *int32 `json:"mexFundedRatio,omitempty"`
+
+	// DeductedAmount Total discount amount in minor unit (optional)
+	// Grab: deductedAmount (*int64)
+	DeductedAmount *int64 `json:"deductedAmount,omitempty"`
+
+	// DeductedPart The part that the campaign is applied (optional)
+	// Grab: deductedPart (*string)
+	DeductedPart *string `json:"deductedPart,omitempty"`
+
+	// AppliedItemIDs Array of item IDs that get discount (optional)
+	// Grab: appliedItemIDs ([]string)
+	AppliedItemIDs []string `json:"appliedItemIDs,omitempty"`
+
+	// FreeItem Free item information for freeItem campaign (optional)
+	// Grab: freeItem (*OrderFreeItem)
+	FreeItem *TakeoutFreeItem `json:"freeItem,omitempty"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutPromo 促销信息（Grab 特有）
+// ============================================================================
+// TakeoutFreeItem - Aligned with Grab SDK OrderFreeItem
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_free_item.go
+// ============================================================================
+
+// TakeoutFreeItem free item information for campaign
+type TakeoutFreeItem struct {
+	// ID The free item's externalID (optional)
+	// Grab: id (*string)
+	ID *string `json:"id,omitempty"`
+
+	// Name The name of the free item (optional)
+	// Grab: name (*string)
+	Name *string `json:"name,omitempty"`
+
+	// Quantity The item's quantity, max is 1 (optional)
+	// Grab: quantity (*int32)
+	Quantity *int32 `json:"quantity,omitempty"`
+
+	// Price The item's price in minor unit format (optional)
+	// Grab: price (*int64)
+	Price *int64 `json:"price,omitempty"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
+}
+
+// ============================================================================
+// TakeoutPromo - Aligned with Grab SDK OrderPromo
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_promo.go
+// ============================================================================
+
+// TakeoutPromo promotion information
 type TakeoutPromo struct {
-	Code            string  `json:"code"`
-	Description     string  `json:"description"`
-	PromoAmount     float64 `json:"promoAmount"`
-	MexFundedRatio  int     `json:"mexFundedRatio"`
-	MexFundedAmount float64 `json:"mexFundedAmount"`
+	// Code Promo code applied in the order (optional)
+	// Grab: code (*string)
+	// Lineman: promotionId
+	Code *string `json:"code,omitempty"`
+
+	// Description Promo description (optional)
+	// Grab: description (*string)
+	Description *string `json:"description,omitempty"`
+
+	// Name Name of the promotion (optional)
+	// Grab: name (*string)
+	Name *string `json:"name,omitempty"`
+
+	// PromoAmount Promo amount in local currency (optional)
+	// Grab: promoAmount (*int64)
+	PromoAmount *int64 `json:"promoAmount,omitempty"`
+
+	// MexFundedRatio Merchant's funded ratio in percentage (optional)
+	// Grab: mexFundedRatio (*int32)
+	MexFundedRatio *int32 `json:"mexFundedRatio,omitempty"`
+
+	// MexFundedAmount Merchant's promo fund in minor unit (optional)
+	// Grab: mexFundedAmount (*int64)
+	// Lineman: discount
+	MexFundedAmount *int64 `json:"mexFundedAmount,omitempty"`
+
+	// TargetedPrice Subtotal of the order basket in minor unit (optional)
+	// Grab: targetedPrice (*int64)
+	TargetedPrice *int64 `json:"targetedPrice,omitempty"`
+
+	// PromoAmountInMin Promo amount in minor unit (optional)
+	// Grab: promoAmountInMin (*int64)
+	PromoAmountInMin *int64 `json:"promoAmountInMin,omitempty"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutDineIn 堂食信息（Grab 特有）
+// ============================================================================
+// TakeoutDineIn - Aligned with Grab SDK DineIn
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_dine_in.go
+// ============================================================================
+
+// TakeoutDineIn dine-in information
 type TakeoutDineIn struct {
-	TableID    string `json:"tableID"`
-	EaterCount int    `json:"eaterCount"`
+	// TableID Table number (optional)
+	// Grab: tableID (*string)
+	TableID *string `json:"tableID,omitempty"`
+
+	// EaterCount The number of eaters (optional)
+	// Grab: eaterCount (*int64)
+	EaterCount *int64 `json:"eaterCount,omitempty"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutReceiver 收货人信息（Grab 特有）
+// ============================================================================
+// TakeoutReceiver - Aligned with Grab SDK Receiver
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_receiver.go
+// ============================================================================
+
+// TakeoutReceiver receiver information
 type TakeoutReceiver struct {
-	Name           string                  `json:"name"`
-	Phone          string                  `json:"phone"`
-	Address        *TakeoutDeliveryAddress `json:"address"`
-	VirtualContact *TakeoutVirtualContact  `json:"virtualContact"`
+	// Name The name of the receiver (optional)
+	// Grab: name (*string)
+	Name *string `json:"name,omitempty"`
+
+	// Phones The receiver's phone number (optional)
+	// Grab: phones (*string) - note: singular "phones" in Grab SDK
+	Phones *string `json:"phones,omitempty"`
+
+	// Address Receiver's location information (optional)
+	// Grab: address (*Address)
+	Address *TakeoutAddress `json:"address,omitempty"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutDeliveryAddress 配送地址（Grab 特有）
-type TakeoutDeliveryAddress struct {
-	UnitNumber          string              `json:"unitNumber"`
-	DeliveryInstruction string              `json:"deliveryInstruction"`
-	PoiSource           string              `json:"poiSource"`
-	PoiID               string              `json:"poiID"`
-	Address             string              `json:"address"`
-	Postcode            string              `json:"postcode"`
-	Coordinates         *TakeoutCoordinates `json:"coordinates"`
+// ============================================================================
+// TakeoutAddress - Aligned with Grab SDK Address
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_address.go
+// ============================================================================
+
+// TakeoutAddress delivery address information
+type TakeoutAddress struct {
+	// UnitNumber The delivery address' unit number (optional)
+	// Grab: unitNumber (*string)
+	UnitNumber *string `json:"unitNumber,omitempty"`
+
+	// DeliveryInstruction Instructions for the delivery (optional)
+	// Grab: deliveryInstruction (*string)
+	DeliveryInstruction *string `json:"deliveryInstruction,omitempty"`
+
+	// PoiSource POI source (optional)
+	// Grab: poiSource (*string)
+	PoiSource *string `json:"poiSource,omitempty"`
+
+	// PoiID POI ID, empty when poiSource is GRAB (optional)
+	// Grab: poiID (*string)
+	PoiID *string `json:"poiID,omitempty"`
+
+	// Address The delivery address (optional)
+	// Grab: address (*string)
+	Address *string `json:"address,omitempty"`
+
+	// Postcode The postcode of the delivery address (optional)
+	// Grab: postcode (*string)
+	Postcode *string `json:"postcode,omitempty"`
+
+	// Coordinates GPS coordinates (optional)
+	// Grab: coordinates (*Coordinates)
+	Coordinates *TakeoutCoordinates `json:"coordinates,omitempty"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutCoordinates 坐标（Grab 特有）
+// ============================================================================
+// TakeoutCoordinates - Aligned with Grab SDK Coordinates
+// ============================================================================
+
+// TakeoutCoordinates GPS coordinates
 type TakeoutCoordinates struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
+	// Latitude GPS latitude (optional)
+	// Grab: latitude (*float64)
+	Latitude *float64 `json:"latitude,omitempty"`
+
+	// Longitude GPS longitude (optional)
+	// Grab: longitude (*float64)
+	Longitude *float64 `json:"longitude,omitempty"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutVirtualContact 虚拟联系方式（Grab 特有）
-type TakeoutVirtualContact struct {
-	Phone      string `json:"phone"`
-	ExpiryTime string `json:"expiryTime"`
-}
+// ============================================================================
+// TakeoutOrderReadyEstimation - Aligned with Grab SDK OrderReadyEstimation
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_ready_estimation.go
+// ============================================================================
 
-// TakeoutOrderReadyEstimation 准备时间估算（Grab 特有）
+// TakeoutOrderReadyEstimation order ready time estimation
 type TakeoutOrderReadyEstimation struct {
-	AllowChange        bool   `json:"allowChange"`
-	EstimatedReadyTime string `json:"estimatedReadyTime"`
-	MaxReadyTime       string `json:"maxReadyTime"`
-	NewReadyTime       string `json:"newReadyTime,omitempty"`
+	// AllowChange Whether the order ready time can be changed (required)
+	// Grab: allowChange (bool, required)
+	AllowChange bool `json:"allowChange"`
+
+	// EstimatedOrderReadyTime The estimated order ready time (required)
+	// Grab: estimatedOrderReadyTime (time.Time, required)
+	EstimatedOrderReadyTime time.Time `json:"estimatedOrderReadyTime"`
+
+	// MaxOrderReadyTime The max allowed order ready time (required)
+	// Grab: maxOrderReadyTime (time.Time, required)
+	MaxOrderReadyTime time.Time `json:"maxOrderReadyTime"`
+
+	// NewOrderReadyTime The new order ready time (nullable)
+	// Grab: newOrderReadyTime (NullableTime)
+	NewOrderReadyTime NullableTime `json:"newOrderReadyTime,omitempty"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutOutOfStockInstruction 缺货处理指令（Grab 特有）
+// ============================================================================
+// TakeoutOutOfStockInstruction - Aligned with Grab SDK OutOfStockInstruction
+// Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_out_of_stock_instruction.go
+// ============================================================================
+
+// TakeoutOutOfStockInstruction out-of-stock instructions
 type TakeoutOutOfStockInstruction struct {
-	Type string `json:"type"` // REMOVE_ITEM, CONTACT_EATER, CANCEL_ORDER
+	// Title The short instruction message (optional)
+	// Grab: title (*string)
+	Title *string `json:"title,omitempty"`
+
+	// InstructionType Type of out-of-stock instruction (optional)
+	// Grab: instructionType (*string)
+	// Values: CONTACT, SPECIFIC_ITEM, etc.
+	InstructionType *string `json:"instructionType,omitempty"`
+
+	// ReplacementItemID The preferred item's ID in partner system (optional)
+	// Grab: replacementItemID (*string)
+	ReplacementItemID *string `json:"replacementItemID,omitempty"`
+
+	// ReplacementGrabItemID The preferred item's ID in Grab system (optional)
+	// Grab: replacementGrabItemID (*string)
+	ReplacementGrabItemID *string `json:"replacementGrabItemID,omitempty"`
+
+	// AdditionalProperties Extra properties not defined in the schema
+	// Grab: AdditionalProperties map[string]interface{}
+	AdditionalProperties map[string]any `json:"-"`
 }
 
-// TakeoutAdditionalProperty 订单附加属性（扩展字段）
-// Lineman: additionalItems[] -> name
-// Grab: 无直接对应，扩展字段
-type TakeoutAdditionalProperty struct {
-	Name string `json:"name"` // 如：ไม่รับช้อนส้อมพลาสติก
+// ============================================================================
+// Nullable Types - Following Grab SDK Pattern
+// ============================================================================
+
+// NullableTakeoutDineIn nullable wrapper for TakeoutDineIn
+type NullableTakeoutDineIn struct {
+	value *TakeoutDineIn
+	isSet bool
+}
+
+// Get returns the value
+func (v NullableTakeoutDineIn) Get() *TakeoutDineIn {
+	return v.value
+}
+
+// Set sets the value
+func (v *NullableTakeoutDineIn) Set(val *TakeoutDineIn) {
+	v.value = val
+	v.isSet = true
+}
+
+// IsSet returns whether the value has been set
+func (v NullableTakeoutDineIn) IsSet() bool {
+	return v.isSet
+}
+
+// Unset removes the value
+func (v *NullableTakeoutDineIn) Unset() {
+	v.value = nil
+	v.isSet = false
+}
+
+// NewNullableTakeoutDineIn creates a new NullableTakeoutDineIn
+func NewNullableTakeoutDineIn(val *TakeoutDineIn) *NullableTakeoutDineIn {
+	return &NullableTakeoutDineIn{value: val, isSet: true}
+}
+
+// MarshalJSON implements json.Marshaler
+func (v NullableTakeoutDineIn) MarshalJSON() ([]byte, error) {
+	return json.Marshal(v.value)
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (v *NullableTakeoutDineIn) UnmarshalJSON(src []byte) error {
+	v.isSet = true
+	return json.Unmarshal(src, &v.value)
+}
+
+// NullableTakeoutReceiver nullable wrapper for TakeoutReceiver
+type NullableTakeoutReceiver struct {
+	value *TakeoutReceiver
+	isSet bool
+}
+
+// Get returns the value
+func (v NullableTakeoutReceiver) Get() *TakeoutReceiver {
+	return v.value
+}
+
+// Set sets the value
+func (v *NullableTakeoutReceiver) Set(val *TakeoutReceiver) {
+	v.value = val
+	v.isSet = true
+}
+
+// IsSet returns whether the value has been set
+func (v NullableTakeoutReceiver) IsSet() bool {
+	return v.isSet
+}
+
+// Unset removes the value
+func (v *NullableTakeoutReceiver) Unset() {
+	v.value = nil
+	v.isSet = false
+}
+
+// NewNullableTakeoutReceiver creates a new NullableTakeoutReceiver
+func NewNullableTakeoutReceiver(val *TakeoutReceiver) *NullableTakeoutReceiver {
+	return &NullableTakeoutReceiver{value: val, isSet: true}
+}
+
+// MarshalJSON implements json.Marshaler
+func (v NullableTakeoutReceiver) MarshalJSON() ([]byte, error) {
+	return json.Marshal(v.value)
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (v *NullableTakeoutReceiver) UnmarshalJSON(src []byte) error {
+	v.isSet = true
+	return json.Unmarshal(src, &v.value)
+}
+
+// NullableTakeoutOutOfStockInstruction nullable wrapper for TakeoutOutOfStockInstruction
+type NullableTakeoutOutOfStockInstruction struct {
+	value *TakeoutOutOfStockInstruction
+	isSet bool
+}
+
+// Get returns the value
+func (v NullableTakeoutOutOfStockInstruction) Get() *TakeoutOutOfStockInstruction {
+	return v.value
+}
+
+// Set sets the value
+func (v *NullableTakeoutOutOfStockInstruction) Set(val *TakeoutOutOfStockInstruction) {
+	v.value = val
+	v.isSet = true
+}
+
+// IsSet returns whether the value has been set
+func (v NullableTakeoutOutOfStockInstruction) IsSet() bool {
+	return v.isSet
+}
+
+// Unset removes the value
+func (v *NullableTakeoutOutOfStockInstruction) Unset() {
+	v.value = nil
+	v.isSet = false
+}
+
+// NewNullableTakeoutOutOfStockInstruction creates a new NullableTakeoutOutOfStockInstruction
+func NewNullableTakeoutOutOfStockInstruction(val *TakeoutOutOfStockInstruction) *NullableTakeoutOutOfStockInstruction {
+	return &NullableTakeoutOutOfStockInstruction{value: val, isSet: true}
+}
+
+// MarshalJSON implements json.Marshaler
+func (v NullableTakeoutOutOfStockInstruction) MarshalJSON() ([]byte, error) {
+	return json.Marshal(v.value)
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (v *NullableTakeoutOutOfStockInstruction) UnmarshalJSON(src []byte) error {
+	v.isSet = true
+	return json.Unmarshal(src, &v.value)
+}
+
+// NullableTime nullable wrapper for time.Time
+type NullableTime struct {
+	value *time.Time
+	isSet bool
+}
+
+// Get returns the value
+func (v NullableTime) Get() *time.Time {
+	return v.value
+}
+
+// Set sets the value
+func (v *NullableTime) Set(val *time.Time) {
+	v.value = val
+	v.isSet = true
+}
+
+// IsSet returns whether the value has been set
+func (v NullableTime) IsSet() bool {
+	return v.isSet
+}
+
+// Unset removes the value
+func (v *NullableTime) Unset() {
+	v.value = nil
+	v.isSet = false
+}
+
+// NewNullableTime creates a new NullableTime
+func NewNullableTime(val *time.Time) *NullableTime {
+	return &NullableTime{value: val, isSet: true}
+}
+
+// MarshalJSON implements json.Marshaler
+func (v NullableTime) MarshalJSON() ([]byte, error) {
+	return json.Marshal(v.value)
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (v *NullableTime) UnmarshalJSON(src []byte) error {
+	v.isSet = true
+	return json.Unmarshal(src, &v.value)
 }
