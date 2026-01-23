@@ -21,6 +21,7 @@ import (
 type AuthHandler struct {
 	authSrv          service.IAuthSrv
 	staffLoginLogSrv service.IStaffLoginLogSrv
+	settingSrv       setting.ISrv
 }
 
 // Login 登录
@@ -35,6 +36,11 @@ type AuthHandler struct {
 // @Router /shop/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	ctx := helper.GetContext(c)
+	minVersion := h.settingSrv.GetShopAppMinVersion()
+	if ctx.Version(context.LT, minVersion) {
+		helper.Fail(c, constant.CodeFail, "请更新软件版本再尝试")
+		return
+	}
 	var loginReq req.LoginReq
 	if err := c.ShouldBindJSON(&loginReq); err != nil {
 		helper.HandleValidationError(c, err, loginReq, req.LoginRequestMessage)
@@ -179,6 +185,7 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	wrapper := &AuthHandler{
 		authSrv:          authSrv,
 		staffLoginLogSrv: service.NewStaffLoginLogSrv(dbm),
+		settingSrv:       settingSrv,
 	}
 
 	publicApi := router.Group("")

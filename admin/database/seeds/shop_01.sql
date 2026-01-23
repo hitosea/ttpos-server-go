@@ -3100,9 +3100,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     INDEX idx_duty_no (duty_no),
     INDEX idx_desk_uuid (desk_uuid),
     INDEX idx_complete_time (complete_time),
-    INDEX `idx_is_takeout` (`is_takeout`),
-    INDEX `idx_refund_time_product_package_uuid` (`refund_time`, `product_package_uuid`),
-    INDEX `idx_refund_time_product_package_uuid_covering` (`refund_time`, `product_package_uuid`, `product_sale_price`, `product_num`, `free_num`, `give_num`, `product_final_price`, `refund_num`)
+    INDEX `idx_is_takeout` (`is_takeout`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品统计表';
 
 

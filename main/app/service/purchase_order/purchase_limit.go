@@ -36,7 +36,7 @@ func (s *purchaseOrderSrv) checkPurchaseLimit(ctx context.Context, order *model.
 
 	// 1 检查每日申请次数限制
 	minDailyLimit := s.helper.getMinDailyLimit(ctx, s.dbm, order)
-	if minDailyLimit > 0 {
+	if minDailyLimit != -1 {
 		if err := s.checkDailyLimitByScheme(ctx, minDailyLimit); err != nil {
 			return err
 		}

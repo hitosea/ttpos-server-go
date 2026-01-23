@@ -90,6 +90,7 @@ func (r *companyRepo) GetNoDeleteListByHeadquarterUuid(headquarterUuid uint64) (
 	db = db.Joins("LEFT JOIN ttpos_company_setting ON ttpos_company.uuid = ttpos_company_setting.company_uuid")
 	db = db.Where("ttpos_company_setting.headquarter_uuid = ? OR ttpos_company.uuid = ?", headquarterUuid, headquarterUuid)
 	db = db.Where("ttpos_company.delete_time = ?", 0)
+	db = db.Order("ttpos_company.status DESC")
 	result := db.Find(&companies)
 	if result.Error != nil {
 		return companies, result.Error

@@ -166,10 +166,13 @@ func (r *saleBillRepo) UpdateSaleBill(saleBill *model.SaleBill) error {
 // UpdateSaleBillRecord 仅更新sale_bill表
 func (r *saleBillRepo) UpdateSaleBillRecord(saleBill model.SaleBill) error {
 	saleBill.SetNil() // 将关联对象置空，为了不更新这些关联的对象
+	if saleBill.NoPrimaryKey() {
+		return errors.New("SaleBill不能没有ID或UUID")
+	}
 	// 2. 创建上下文
 	ctx := context.WithValue(context.Background(), constant.OrderOperateSource, saleBill.GetOperateSource())
-	// 3. 更新. 不更新主键id和uuid.
-	return r.db.WithContext(ctx).Model(&model.SaleBill{}).Omit("id", "uuid").Where("uuid = ?", saleBill.Uuid).Updates(&saleBill).Error
+	// 3. 更新
+	return r.db.WithContext(ctx).Model(&model.SaleBill{}).Select("*").Where("uuid = ?", saleBill.Uuid).Updates(&saleBill).Error
 }
 
 func (r *saleBillRepo) UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error {

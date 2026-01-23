@@ -408,7 +408,6 @@ func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.
 
 	query := r.db.Table(takeoutOrderItemTable+" AS toi").
 		Select(
-			"toi.price AS sale_price",
 			"toi.ttpos_product_package_uuid AS product_package_uuid",
 			// 销量：所有 validOrderStates 都统计（包括取消订单60）
 			"SUM(CAST(toi.quantity AS DECIMAL(14,2))) AS sale_num",

@@ -1504,6 +1504,7 @@
   "参数错误，请注意参数类型是否错误": "Parameter error, please check if the parameter type is incorrect",
   "参数错误：status": "Parameter error: status",
   "参数验证失败": "Parameter validation failed",
+  "参数设置": "Parameter Settings",
   "反序列化菜单数据失败 (preview: %s, length: %d): %w": "Failed to deserialize menu data (preview: %s, length: %d): %w",
   "反结账": "Reverse checkout",
   "反结账充值订单参数": "Reverse checkout recharge order parameter",
