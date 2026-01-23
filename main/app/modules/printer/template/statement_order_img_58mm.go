@@ -443,8 +443,12 @@ func (t *statementOrderImg58mmTemplate) GetPrintContent58mm(
 		if saleOrder.CustomDiscountFee != 0 {
 			ratio := ""
 			if temp == 3 || temp == 4 || temp == 5 {
-				// 计算折扣率：折扣金额 / 原始金额 * 100
-				discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
+				// 防止除零错误
+				discountRate := decimal.NewFromFloat(0)
+				if saleOrder.ProductOriginalAmount > 0 {
+					// 计算折扣率：折扣金额 / 原始金额 * 100
+					discountRate = decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
+				}
 				ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
 			}
 			//

@@ -285,6 +285,10 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 			}(),
 			DiscountFee: t.base.Amount(saleOrder.CustomDiscountFee),
 			DiscountRate: func() string {
+				// 防止除零错误
+				if saleOrder.ProductOriginalAmount <= 0 {
+					return "0"
+				}
 				// 计算折扣率：折扣金额 / 原始金额 * 100
 				discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
 				return t.base.Number(discountRate.InexactFloat64())
