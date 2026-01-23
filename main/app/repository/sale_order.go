@@ -71,8 +71,10 @@ func (r *saleOrderRepo) GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, er
 
 func (r *saleOrderRepo) UpdateSaleOrderRecord(obj model.SaleOrder) error {
 	obj.SetNil()
-	// 更新销售订单时，不更新主键id.
-	return r.db.Model(&model.SaleOrder{}).Omit("id", "uuid").Where("uuid = ?", obj.Uuid).Updates(obj).Error
+	if obj.NoPrimaryKey() {
+		return errors.New("销售订单没有主键")
+	}
+	return r.db.Model(&model.SaleOrder{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(obj).Error
 }
 
 func (r *saleOrderRepo) UpdateSaleOrderCashier(ctx context.Context, saleOrderUuid uint64, cashierUuid uint64, cashierName string) error {
