@@ -386,15 +386,12 @@ func (s *purchaseLimitSchemeSrv) GetList(ctx context.Context, req req.PurchaseLi
 			shopCount = len(shops)
 		}
 
-		// 3.3 生成星期字符串
-		weekdayStr := s.formatWeekdaysFromString(lang, scheme.Weekdays)
-
 		list = append(list, resp.PurchaseLimitSchemeSummaryResp{
 			Uuid:            scheme.Uuid,
 			LocaleName:      *language.JsonToLocaleResponse(scheme.Name),
 			Status:          scheme.Status,
 			ApplyToAllShops: scheme.ApplyToAllShops,
-			WeekdayStr:      weekdayStr,
+			WeekdayStr:      s.formatWeekdaysFromString(lang, scheme.Weekdays),
 			ShopCount:       shopCount,
 			ItemCount:       len(items),
 			DailyLimit:      scheme.DailyLimit,
@@ -494,6 +491,27 @@ func (s *purchaseLimitSchemeSrv) formatWeekdaysFromString(language string, weekd
 	weekdays := s.stringToWeekdays(weekdaysStr)
 	if len(weekdays) == 0 {
 		return ""
+	}
+
+	// 如果包含所有星期（1-7），返回"每天"
+	if len(weekdays) == 7 {
+		hasAll := true
+		for i := int8(1); i <= 7; i++ {
+			found := false
+			for _, w := range weekdays {
+				if w == i {
+					found = true
+					break
+				}
+			}
+			if !found {
+				hasAll = false
+				break
+			}
+		}
+		if hasAll {
+			return i18n.Translate(language, "每天")
+		}
 	}
 
 	weekdayMap := map[int8]string{
