@@ -90,6 +90,7 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 | Proposal | 说明 | 状态 |
 | --- | --- | --- |
+| [takeout-order-model-refactor](2026-01/takeout-order-model-refactor.md) | TakeoutOrder 结构体重构对齐 Grab SDK | 待评审 |
 | [bmp-lineman-currency-conversion](2026-01/bmp-lineman-currency-conversion.md) | Lineman 订单金额泰铢转分 | 待评审 |
 | [v2.14-shop-lineman-trigger-sync-menu](2026-01/v2.14-shop-lineman-trigger-sync-menu.md) | Lineman TriggerSyncMenu 落库与触发 | 待评审 |
 
@@ -109,5 +110,5 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 ---
 
-**最后更新**: 2026-01-22
+**最后更新**: 2026-01-23
 

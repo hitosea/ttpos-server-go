@@ -8,12 +8,13 @@ package service
 import (
 	"context"
 	"time"
+
+	grabfood "github.com/grab/grabfood-api-sdk-go"
+
 	api "ttpos-bmp/app/ttpos-takeout/api/menu"
 	orderApi "ttpos-bmp/app/ttpos-takeout/api/order"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
-
-	grabfood "github.com/grab/grabfood-api-sdk-go"
 )
 
 type (
@@ -33,6 +34,18 @@ type (
 		// CheckOrderCancelable 检查订单是否可取消
 		// 返回 Grab SDK 的完整响应对象
 		CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (*grabfood.CheckOrderCancelableResponse, error)
+		// ListOrders 查询 Grab 订单列表
+		// 封装 GrabFood SDK ListOrdersAPI，支持按商户、日期、订单ID等维度查询
+		// 注意：此接口在 Grab 测试环境下不可用，仅生产环境支持
+		// 参数：
+		//   - merchantID: Grab 商户 ID（必填）
+		//   - date: 日期过滤，格式 YYYY-MM-DD（可选）
+		//   - orderIDs: 订单 ID 列表过滤（可选）
+		//   - page: 分页页码（可选）
+		// 返回：
+		//   - resp: ListOrdersResponse（使用 TakeoutOrder 以获取完整 Price 含 Total）
+		//   - err: 错误信息
+		ListOrders(ctx context.Context, merchantID string, date string, orderIDs []string, page int32) (*grabDto.ListOrdersResponse, error)
 		// PauseStore 暂停门店
 		PauseStore(ctx context.Context, merchantID string, duration int) error
 		// ResumeStore 恢复门店营业

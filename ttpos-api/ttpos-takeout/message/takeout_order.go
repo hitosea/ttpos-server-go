@@ -234,6 +234,9 @@ type TakeoutOrderPrice struct {
 	// AdditionalProperties Extra properties not defined in the schema
 	// Grab: AdditionalProperties map[string]interface{}
 	AdditionalProperties map[string]any `json:"-"`
+
+	//Grab SDK 尚未实现，但 API 文档有提及的字段。暂时新增用于解析 API 响应。
+	Total *int64 `json:"total,omitempty"`
 }
 
 // ============================================================================

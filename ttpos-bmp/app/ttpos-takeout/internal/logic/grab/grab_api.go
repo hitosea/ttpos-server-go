@@ -3,7 +3,9 @@ package grab
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +17,7 @@ import (
 
 	"ttpos-bmp/app/ttpos-takeout/internal/client/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
+	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
@@ -563,6 +566,86 @@ func (s *sGrab) CreateSelfServeJourney(ctx context.Context, merchantID string) (
 
 	g.Log().Infof(ctx, "[Grab] 自助激活链接已创建: merchant=%s, requestId=%s", merchantID, requestID)
 	return activationURL, requestID, nil
+}
+
+// ============================================================================
+// 订单查询 API
+// ============================================================================
+
+// ListOrders 查询 Grab 订单列表
+// 封装 GrabFood SDK ListOrdersAPI，支持按商户、日期、订单ID等维度查询
+// 注意：此接口在 Grab 测试环境下不可用，仅生产环境支持
+//
+// 参数：
+//   - ctx: 上下文对象
+//   - merchantID: Grab 商户 ID（必填）
+//   - date: 日期过滤，格式 YYYY-MM-DD（可选）
+//   - orderIDs: 订单 ID 列表过滤（可选）
+//   - page: 分页页码（可选，默认 1）
+//
+// 返回：
+//   - resp: ListOrdersResponse，使用 TakeoutOrder 以获取完整 Price（含 Total）
+//   - err: 错误信息
+func (s *sGrab) ListOrders(ctx context.Context, merchantID string, date string, orderIDs []string, page int32) (*grabDto.ListOrdersResponse, error) {
+	// 1. 参数验证
+	if merchantID == "" {
+		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "merchant_id 不能为空")
+	}
+
+	// 2. 获取 Client 和授权
+	client := grab.Default()
+	auth, err := client.GetAuthorizationHeader(ctx)
+	if err != nil {
+		return nil, gerror.Wrap(err, "获取授权信息失败")
+	}
+
+	// 3. 构建请求
+	g.Log().Infof(ctx, "[Grab] ListOrders 开始: merchantID=%s, date=%s, orderIDs=%v, page=%d",
+		merchantID, date, orderIDs, page)
+
+	req := client.GetClient().ListOrdersAPI.
+		ListOrders(client.GetSDKContext(ctx)).
+		Authorization(auth).
+		MerchantID(merchantID)
+
+	// 可选参数
+	if date != "" {
+		req = req.Date(date)
+	}
+	if len(orderIDs) > 0 {
+		req = req.OrderIDs(orderIDs)
+	}
+	if page > 0 {
+		req = req.Page(page)
+	}
+
+	// 4. 执行请求（获取原始 HTTP 响应以解析完整字段）
+	_, httpResp, err := req.Execute()
+	if err = client.HandleSDKError(ctx, err, "ListOrders"); err != nil {
+		return nil, err
+	}
+	if httpResp == nil {
+		return nil, gerror.NewCode(gcode.CodeInternalError, "ListOrders 响应为空")
+	}
+	defer httpResp.Body.Close()
+
+	// 5. 读取原始响应体并解析为自定义结构（SDK 的 OrderPrice 缺少 Total 字段）
+	bodyBytes, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, gerror.Wrap(err, "读取响应体失败")
+	}
+
+	var resp grabDto.ListOrdersResponse
+	if err := json.Unmarshal(bodyBytes, &resp); err != nil {
+		g.Log().Warningf(ctx, "[Grab] ListOrders 解析响应失败: %v, body=%s", err, string(bodyBytes))
+		return nil, gerror.Wrap(err, "解析 ListOrders 响应失败")
+	}
+
+	// 6. 记录成功日志
+	g.Log().Infof(ctx, "[Grab] ListOrders 成功: merchantID=%s, 返回订单数=%d, more=%v",
+		merchantID, len(resp.Orders), resp.More)
+
+	return &resp, nil
 }
 
 // ============================================================================
