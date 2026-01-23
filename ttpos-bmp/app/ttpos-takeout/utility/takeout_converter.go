@@ -110,6 +110,17 @@ func FromGrabSDK(req *grabsdk.SubmitOrderRequest) (*message.TakeoutOrder, error)
 	}
 
 	// Price (required in new struct, all values in minor unit)
+	// 计算 Total: Subtotal + MerchantChargeFee - MerchantFundPromo
+	// 注意: MerchantChargeFee 和 MerchantFundPromo 是可选的 *int64 类型
+	var merchantChargeFee, merchantFundPromo int64
+	if req.Price.MerchantChargeFee != nil {
+		merchantChargeFee = *req.Price.MerchantChargeFee
+	}
+	if req.Price.MerchantFundPromo != nil {
+		merchantFundPromo = *req.Price.MerchantFundPromo
+	}
+	calculatedTotal := req.Price.Subtotal + merchantChargeFee - merchantFundPromo
+
 	order.Price = message.TakeoutOrderPrice{
 		Subtotal:          req.Price.Subtotal,
 		Tax:               req.Price.Tax,
@@ -120,6 +131,7 @@ func FromGrabSDK(req *grabsdk.SubmitOrderRequest) (*message.TakeoutOrder, error)
 		DeliveryFee:       req.Price.DeliveryFee,
 		SmallOrderFee:     req.Price.SmallOrderFee,
 		EaterPayment:      req.Price.EaterPayment,
+		Total:             &calculatedTotal, // 特殊处理：Grab SDK 不支持此字段，通过计算生成
 	}
 
 	// DineIn (nullable)
