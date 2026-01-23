@@ -10,7 +10,6 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
-	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
@@ -265,10 +264,7 @@ func (h *PurchaseHandler) CreatePurchaseReceipt(c *gin.Context) {
 		return
 	}
 
-	if ctx.Version(context.LT, "2.9.0") {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("您的软件版本过低，请升级后再试"))
-		return
-	} else if createReq.IsConfirm && len(createReq.FileUuids) == 0 {
+	if createReq.IsConfirm && len(createReq.FileUuids) == 0 {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("请上传相关附件后确定收货。"))
 		return
 	}
@@ -299,10 +295,7 @@ func (h *PurchaseHandler) UpdatePurchaseReceipt(c *gin.Context) {
 		helper.HandleValidationError(c, err, updateReq, nil)
 		return
 	}
-	if ctx.Version(context.LT, "2.9.0") {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("您的软件版本过低，请升级后再试"))
-		return
-	} else if updateReq.IsConfirm && len(updateReq.FileUuids) == 0 {
+	if updateReq.IsConfirm && len(updateReq.FileUuids) == 0 {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("请上传相关附件后确定收货。"))
 		return
 	}
@@ -651,7 +644,7 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.MinVersionCheck("2.9.0"), middleware.Auth(authSrv, dbm))
+	privateApi := router.Group("", middleware.MinVersionCheck(settingSrv, middleware.TypePurchaseOrder, constant.ClientVersionV2150), middleware.Auth(authSrv, dbm))
 	{
 		// 采购订单管理
 		privateApi.GET("/purchase/order/list", wrapper.GetPurchaseOrderList)

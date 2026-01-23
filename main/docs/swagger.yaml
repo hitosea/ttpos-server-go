@@ -10718,6 +10718,21 @@ definitions:
         description: 门店UUID
         type: integer
     type: object
+  resp.CompanyInfoRespWithStoreCode:
+    properties:
+      name:
+        description: 门店名称
+        type: string
+      status:
+        description: 状态 1-启用 0-禁用
+        type: integer
+      store_code:
+        description: 店铺编码
+        type: string
+      uuid:
+        description: 门店UUID
+        type: integer
+    type: object
   resp.CompanyPaymentMethodItem:
     properties:
       payment_name:
@@ -16170,6 +16185,13 @@ definitions:
       list:
         items:
           $ref: '#/definitions/resp.CompanyInfoResp'
+        type: array
+    type: object
+  resp.SaasCompanyListWithStoreCodeResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.CompanyInfoRespWithStoreCode'
         type: array
     type: object
   resp.SaleOrder:
@@ -32988,6 +33010,28 @@ paths:
       summary: 获取可见门店列表
       tags:
       - 商家端.门店管理
+  /shop/company/list-all:
+    get:
+      consumes:
+      - application/json
+      description: 获取可选的发货门店/对方机构列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SaasCompanyListWithStoreCodeResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取门店列表/对方机构
+      tags:
+      - 商家端.基础信息
   /shop/company/update:
     post:
       consumes:

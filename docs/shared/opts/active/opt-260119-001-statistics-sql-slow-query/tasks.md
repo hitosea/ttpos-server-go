@@ -1,9 +1,9 @@
 # Opt-260119-001 优化任务清单
 
-> **当前状态**: 🟢 规划中 → ✅ 已完成
+> **当前状态**: ⚠️ 索引方案已撤销，改为 SQL 优化
 > **开始时间**: 2026-01-19
-> **完成时间**: 2026-01-19
-> **预期收益**: 查询性能从数秒降低到 < 1 秒，提升 3-10 倍
+> **更新时间**: 2026-01-23
+> **优化方式**: 移除 SQL 中未使用的 `sale_price` 字段查询，减少数据传输
 
 ---
 
@@ -30,39 +30,25 @@
 
 ### 2. 数据库优化
 
-- [x] **创建联合索引** `admin/database/migrations/`
-  - 需求: 为 `ttpos_statistics_product` 表创建联合索引 `idx_refund_time_product_package_uuid`
-  - 预计时间: 1 小时
-  - 负责人: 王昱
-  - 完成时间: 2026-01-19
-  - SQL:
-    ```sql
-    CREATE INDEX idx_refund_time_product_package_uuid 
-    ON ttpos_statistics_product 
-    (refund_time, product_package_uuid);
-    ```
-  - 结果:
-    - ✅ 消除临时表（Using temporary 已消失）
-    - ⚠️ 仍需要全索引扫描（type: index）
-    - ⚠️ 扫描行数：520,002 行（未减少）
-  
-- [x] **创建覆盖索引** `admin/database/migrations/`
-  - 需求: 为 `ttpos_statistics_product` 表创建覆盖索引 `idx_refund_time_product_package_uuid_covering`
-  - 预计时间: 1 小时
-  - 负责人: 王昱
-  - 完成时间: 2026-01-19
-  - SQL:
-    ```sql
-    CREATE INDEX idx_refund_time_product_package_uuid_covering 
-    ON ttpos_statistics_product 
-    (refund_time, product_package_uuid, product_sale_price, product_num, 
-     free_num, give_num, product_final_price, refund_num);
-    ```
-  - 结果:
-    - ✅ 查询类型优化为 `ref`（索引查找）
-    - ✅ 扫描行数减少到 260,001 行（减少 50%）
-    - ✅ 消除回表操作（Using index）
-    - ✅ 过滤效率 100%（filtered: 100.00）
+- [ ] ~~**创建联合索引**~~ `admin/database/migrations/` **（已撤销）**
+  - ⚠️ **撤销原因**: 运维评估后建议仅通过 SQL 优化，不增加索引维护成本
+  - 原方案: 为 `ttpos_statistics_product` 表创建联合索引
+
+- [ ] ~~**创建覆盖索引**~~ `admin/database/migrations/` **（已撤销）**
+  - ⚠️ **撤销原因**: 运维评估后建议仅通过 SQL 优化，不增加索引维护成本
+
+### 2.1 SQL 优化（替代方案）
+
+- [x] **移除未使用的 `sale_price` 字段查询**
+  - 需求: 从 `RankProduct` 和 `RankTakeoutProduct` 方法的 SQL 中移除未使用的 `sale_price` 字段
+  - 完成时间: 2026-01-23
+  - 修改文件:
+    - `main/app/repository/statistics.go` - `RankProduct` 方法
+    - `main/app/repository/statistics_takeout.go` - `RankTakeoutProduct` 方法
+  - 收益:
+    - ✅ 减少数据库查询字段，降低数据传输量
+    - ✅ 简化代码，移除未使用的字段
+    - ✅ 无需维护额外索引，降低写入开销
 
 ### 3. 性能验证
 
@@ -111,15 +97,12 @@
     - `solution.md` - 优化方案文档
     - `tasks.md` - 任务清单文档（本文件）
 
-- [x] **更新数据库迁移脚本**
-  - 需求: 将索引创建脚本添加到数据库迁移文件
-  - 预计时间: 0.5 小时
-  - 负责人: 王昱
-  - 完成时间: 2026-01-19
-  - 文件:
-    - `admin/database/migrations/20260119134844_add_statistics_product_performance_indexes.php` - 迁移文件
-    - `admin/database/seeds/shop_01.sql` - 种子文件（已同步更新索引定义）
-  - 结果: ✅ 已创建迁移文件并同步更新种子文件
+- [x] **撤销数据库迁移脚本**
+  - 需求: 删除索引迁移文件，恢复 shop_01.sql
+  - 完成时间: 2026-01-23
+  - 操作:
+    - ✅ 删除迁移文件: `admin/database/migrations/20260119134844_add_statistics_product_performance_indexes.php`
+    - ✅ 从 `admin/database/seeds/shop_01.sql` 移除索引定义
 
 ### 5. 部署上线
 
@@ -155,11 +138,9 @@
 
 ## 📊 任务统计
 
-- **总任务数**: 11
-- **已完成**: 10
-- **进行中**: 0
-- **未开始**: 1
-- **完成率**: 91%
+- **优化方案**: SQL 优化（索引方案已撤销）
+- **SQL 修改**: ✅ 已完成
+- **索引方案**: ⚠️ 已撤销
 
 ---
 
@@ -187,24 +168,30 @@
 
 ## 📝 备注
 
-### 优化效果总结
+### 方案变更说明（2026-01-23）
 
-优化已基本完成，主要成果：
+**索引方案已撤销**，改为仅通过 SQL 优化实现。
 
-1. ✅ **创建联合索引**：消除临时表，初步优化查询
-2. ✅ **创建覆盖索引**：避免回表操作，大幅提升查询性能
-3. ✅ **性能验证**：查询类型从 `ALL` → `index` → `ref`，扫描行数减少 50%，消除回表操作
-4. ✅ **查询性能提升**：从数秒降低到 < 1 秒，提升 3-10 倍
+**撤销原因**：
+- 运维评估后认为索引维护成本较高
+- 移除未使用的 `sale_price` 字段查询可以减少数据传输
+- SQL 优化方案实现简单，风险低
 
-### 后续工作
+### 最终优化方案
 
-1. ✅ **数据库迁移脚本**：已创建并同步更新种子文件
-2. ✅ **测试环境部署**：已在测试环境执行迁移并验证通过
-3. ⏳ **生产环境部署**：待在生产环境执行迁移（建议在业务低峰期执行）
-4. 📊 **性能监控**：持续监控查询性能和索引使用情况
+**SQL 优化**：从 `RankProduct` 和 `RankTakeoutProduct` 方法的 SQL 查询中移除未使用的 `sale_price` 字段
+
+**修改文件**：
+- `main/app/repository/statistics.go` - `RankProduct` 方法
+- `main/app/repository/statistics_takeout.go` - `RankTakeoutProduct` 方法
+
+**收益**：
+- ✅ 减少数据库查询字段，降低数据传输量
+- ✅ 简化代码，移除未使用的字段
+- ✅ 无需维护额外索引，降低写入开销
 
 ### 经验总结
 
-1. **索引设计**：覆盖索引可以大幅提升查询性能，避免回表操作
-2. **逐步优化**：先创建联合索引消除临时表，再创建覆盖索引避免回表，逐步验证效果
-3. **数据分布影响**：数据分布不均匀会影响索引选择性，需要根据实际情况调整优化策略
+1. **先分析再优化**：在添加索引前，先分析查询是否真的需要所有字段
+2. **移除未使用字段**：SQL 查询中只选择真正需要的字段，减少不必要的数据传输
+3. **运维成本考量**：索引虽然能提升查询性能，但也会增加写入开销和维护成本

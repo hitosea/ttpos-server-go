@@ -137,7 +137,7 @@ func (h *BaseHandler) GetBase(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.CompanyListResp} "成功"
+// @Success 200 {object} dto.Response{data=resp.SaasCompanyListWithStoreCodeResp} "成功"
 // @Router /shop/company/list-all [get]
 func (h *BaseHandler) GetAllCompanyList(c *gin.Context) {
 	ctx := helper.GetContext(c)

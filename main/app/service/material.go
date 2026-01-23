@@ -249,10 +249,14 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		if headquarterUuid > 0 {
 			headquarterDb := s.dbm.GetDB(headquarterUuid)
 			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
-			quotaLimitMap, _ = schemeRepo.GetMinQuotaLimitBatchByMaterialCodes(
+			quotaLimitMap, err = schemeRepo.GetMinQuotaLimitBatchByMaterialCodes(
+				companySetting.CompanyUuid,
 				materialCodes,
 				currentWeekday,
 			)
+			if err != nil {
+				logger.Logger.Error("批量查询限购配置失败", zap.Error(err))
+			}
 		}
 	}
 

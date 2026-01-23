@@ -415,7 +415,7 @@ func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.MinVersionCheck("2.9.0"), middleware.Auth(authSrv, dbm))
+	privateApi := router.Group("", middleware.MinVersionCheck(settingSrv, middleware.TypeTransferOrder, constant.ClientVersionV2090), middleware.Auth(authSrv, dbm))
 	{
 		// 调拨单管理
 		privateApi.GET("/transfer/order/list", wrapper.GetTransferOrderList)

@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/api/helper"
@@ -1940,17 +1939,17 @@ func (s *authSrv) GetCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 
 		// 3. 如果都有 StoreCode，按新规则排序
 		// 去掉 "No." 前缀（如果有）
-		processed1 := processStoreCodeForSort(item1.StoreCode)
-		processed2 := processStoreCodeForSort(item2.StoreCode)
+		processed1 := utils.ProcessStoreCodeForSort(item1.StoreCode)
+		processed2 := utils.ProcessStoreCodeForSort(item2.StoreCode)
 
 		// 判断处理后的内容是否只有数字
-		isDigits1 := isOnlyDigits(processed1)
-		isDigits2 := isOnlyDigits(processed2)
+		isDigits1 := utils.IsOnlyDigits(processed1)
+		isDigits2 := utils.IsOnlyDigits(processed2)
 
 		// 如果都是纯数字，按数字大小排序
 		if isDigits1 && isDigits2 {
-			num1, _ := parseNumberWithoutLeadingZeros(processed1)
-			num2, _ := parseNumberWithoutLeadingZeros(processed2)
+			num1, _ := utils.ParseNumberWithoutLeadingZeros(processed1)
+			num2, _ := utils.ParseNumberWithoutLeadingZeros(processed2)
 			return num1 < num2
 		}
 
@@ -1964,37 +1963,4 @@ func (s *authSrv) GetCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 	})
 
 	return availableCompanyList
-}
-
-// processStoreCodeForSort 处理 StoreCode 用于排序
-// 去掉 "No." 前缀（不区分大小写），返回处理后的字符串
-func processStoreCodeForSort(storeCode string) string {
-	codeLower := strings.ToLower(storeCode)
-	if strings.HasPrefix(codeLower, "no.") {
-		return storeCode[3:] // 去掉前3个字符 "No."
-	}
-	return storeCode
-}
-
-// isOnlyDigits 判断字符串是否只包含数字
-func isOnlyDigits(s string) bool {
-	if len(s) == 0 {
-		return false
-	}
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return false
-		}
-	}
-	return true
-}
-
-// parseNumberWithoutLeadingZeros 去掉前缀0并转换为数字
-func parseNumberWithoutLeadingZeros(s string) (int, error) {
-	// 去掉前缀0
-	trimmed := strings.TrimLeft(s, "0")
-	if trimmed == "" {
-		return 0, nil
-	}
-	return strconv.Atoi(trimmed)
 }

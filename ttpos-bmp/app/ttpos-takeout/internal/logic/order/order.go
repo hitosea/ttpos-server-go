@@ -70,6 +70,7 @@ func (s *sOrder) GetOrderInfo(ctx context.Context, req *api.GetOrderInfoReq) (re
 			g.Log().Errorf(ctx, "Grab订单数据反序列化失败, orderId=%s, error=%v",
 				req.OrderUuid, unmarshalErr)
 		} else {
+			//特殊处理 price.total
 			takeoutOrder, err = utility.FromGrabSDK(&grabReq)
 		}
 	case string(consts.ProviderLineman):

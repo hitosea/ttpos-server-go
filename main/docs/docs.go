@@ -22716,6 +22716,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/company/list-all": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取可选的发货门店/对方机构列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.基础信息"
+                ],
+                "summary": "获取门店列表/对方机构",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SaasCompanyListWithStoreCodeResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/company/update": {
             "post": {
                 "security": [
@@ -53362,6 +53402,27 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.CompanyInfoRespWithStoreCode": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态 1-启用 0-禁用",
+                    "type": "integer"
+                },
+                "store_code": {
+                    "description": "店铺编码",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.CompanyPaymentMethodItem": {
             "type": "object",
             "properties": {
@@ -61460,6 +61521,17 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.CompanyInfoResp"
+                    }
+                }
+            }
+        },
+        "resp.SaasCompanyListWithStoreCodeResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyInfoRespWithStoreCode"
                     }
                 }
             }
