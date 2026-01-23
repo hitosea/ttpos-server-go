@@ -176,6 +176,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 	utils.Go(func() {
 		ctxCopy := ctx.Copy()
 		ctxCopy.SetDB(db)
+		ctxCopy.SetCompanyUuid(company.Uuid)
 		takeoutOrderSrv := takeoutOrderService.NewTakeoutOrderSrv(s.dbm)
 		if err := takeoutOrderSrv.BatchAssignShiftLogToPendingOrders(ctxCopy, shiftLog.Uuid, staff.Uuid); err != nil {
 			logger.Logger.Warn("批量分配外卖订单班次失败", zap.Error(err), zap.Uint64("shiftLogUuid", shiftLog.Uuid), zap.Uint64("staffUuid", staff.Uuid))

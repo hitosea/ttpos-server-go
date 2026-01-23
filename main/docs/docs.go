@@ -60193,6 +60193,10 @@ const docTemplate = `{
         "resp.PurchaseOrderItemMaterialUnit": {
             "type": "object",
             "properties": {
+                "conversion_rate": {
+                    "description": "转换率",
+                    "type": "number"
+                },
                 "locale_name": {
                     "description": "单位名称",
                     "allOf": [
@@ -60210,9 +60214,9 @@ const docTemplate = `{
         "resp.PurchaseOrderItemQuotaConfig": {
             "type": "object",
             "properties": {
-                "is_update_quota_scheme": {
-                    "description": "是否更新限购方案",
-                    "type": "boolean"
+                "error_message": {
+                    "description": "错误信息，用于出现感叹号提示用户，如果为空则不显示",
+                    "type": "string"
                 },
                 "quota_limit": {
                     "description": "限购数量",
@@ -60241,6 +60245,10 @@ const docTemplate = `{
             "properties": {
                 "arrival_num": {
                     "description": "到货数量",
+                    "type": "number"
+                },
+                "conversion_rate": {
+                    "description": "转换率",
                     "type": "number"
                 },
                 "locale_unit_name": {

@@ -1504,6 +1504,7 @@
   "参数错误，请注意参数类型是否错误": "Parametre hatası, parametre türünün hatalı olup olmadığını kontrol edin",
   "参数错误：status": "Parametre hatası: durum",
   "参数验证失败": "Parametre doğrulaması başarısız",
+  "参数设置": "Parametre Ayarları",
   "反序列化菜单数据失败 (preview: %s, length: %d): %w": "Menü verilerinin serileştirmesi çözülemedi (preview: %s, length: %d): %w",
   "反结账": "Hesap kapama",
   "反结账充值订单参数": "Fatura ters işleminde yükleme sipariş parametresi",

@@ -218,8 +218,8 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if slices.Contains([]uint64{2858468511744000, 2858548203520000, 2858825027584000}, permission.Uuid) && companySetting.IsTtposSite() {
 			continue
 		}
-		// 新管理端-非总部不显示门店管理
-		if permission.Uuid == 2856866287616001 && !companySetting.IsHeadquarter() {
+		// 新管理端-非总部不显示门店管理\参数设置
+		if slices.Contains([]uint64{2856866287616001, 2858908913663000}, permission.Uuid) && !companySetting.IsHeadquarter() {
 			continue
 		}
 		// 新管理端-管理APP-云平台未开启自助点餐机，权限列表无自助点餐机设置
@@ -293,7 +293,7 @@ type PermissionsCache struct {
 
 func (s *roleAccessSrv) GetApiPermission(ctx context.Context, staffUuid, companyUuid uint64) ([]string, error) {
 	// 使用传入的 context（包含 otelgin 创建的 span）
-	stdCtx := ctx.GetContext()
+	stdCtx := ctx.GetGin().Request.Context()
 
 	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
 	enableCache := objectStorageAdapter.IsObjectStorageCacheEnabled(companyUuid)
