@@ -60243,6 +60243,10 @@ const docTemplate = `{
                     "description": "到货数量",
                     "type": "number"
                 },
+                "conversion_rate": {
+                    "description": "转换率",
+                    "type": "number"
+                },
                 "locale_unit_name": {
                     "description": "单位名称",
                     "allOf": [
