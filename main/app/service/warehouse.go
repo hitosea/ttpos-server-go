@@ -742,7 +742,6 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 		return errors.New("公司未开启erp")
 	}
 
-	t1 := time.Now()
 	// 本店获取erp仓库列表
 	companySetting := ctx.GetCompanySetting()
 	var warehouseErpCodes []string
@@ -754,12 +753,10 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 	if err != nil {
 		return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
 	}
-	logger.Logger.Info("SyncWarehouse - 获取erp仓库列表耗时", zap.Duration("time", time.Since(t1)))
 	for _, warehouse := range warehouseList {
 		warehouseErpCodes = append(warehouseErpCodes, warehouse.Name)
 	}
 
-	t2 := time.Now()
 	// 子店获取总部ttpos仓库
 	var headquarter model.CompanySetting
 	var headquarterWarehouses []model.Warehouse
@@ -770,9 +767,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 		}
 		s.dbm.GetDB(headquarter.Uuid).Model(&model.Warehouse{}).Preload("MultiLanguageName").Find(&headquarterWarehouses)
 	}
-	logger.Logger.Info("SyncWarehouse - 获取总部仓库耗时", zap.Duration("time", time.Since(t2)))
 
-	t3 := time.Now()
 	// 本店ttpos仓库
 	db := s.dbm.GetDB(companySetting.CompanyUuid)
 	var warehouses []model.Warehouse
@@ -796,23 +791,16 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 		warehouseCodes = append(warehouseCodes, warehouse.Code)
 	}
 
-	logger.Logger.Info("SyncWarehouse - 获取本店仓库耗时", zap.Duration("time", time.Since(t3)))
-
 	// 待翻译多语言Uuid
 	var multiLanguageNameUuids []uint64
 
-	t4 := time.Now()
 	err = db.Transaction(func(tx *gorm.DB) error {
-		t5 := time.Now()
 		if len(deletingWarehouseUuids) > 0 {
 			err = tx.Model(&model.Warehouse{}).Where("uuid IN (?)", deletingWarehouseUuids).Update("delete_time", time.Now().Unix()).Error
 			if err != nil {
 				return errors.WithMessage(errors.New("erp已删除仓库，标记删除ttpos仓库失败"), err.Error())
 			}
 		}
-		logger.Logger.Info("SyncWarehouse - 删除erp已删除仓库，标记删除ttpos仓库耗时", zap.Duration("time", time.Since(t5)))
-
-		t6 := time.Now()
 		var insertingWarehouses []model.Warehouse
 		var defaultWarehouseErpCode string
 		for _, erpWarehouse := range warehouseList {
@@ -847,7 +835,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 			}
 
 			if warehouse.Uuid != 0 { // 如果存在，则更新
-				db.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(map[string]any{
+				tx.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(map[string]any{
 					"type":        warehouseType,
 					"status":      status,
 					"is_default":  isDefault,
@@ -905,9 +893,6 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 			}
 		}
 
-		logger.Logger.Info("SyncWarehouse - 同步本店erp仓库耗时", zap.Duration("time", time.Since(t6)))
-
-		t7 := time.Now()
 		// 同步ttpos总店数据（多语言由 SyncMultiLanguage 任务处理）
 		if len(headquarterWarehouses) > 0 && syncHeadquarterData {
 			// 删除仓库
@@ -936,37 +921,27 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 				})
 			}
 		}
-		logger.Logger.Info("SyncWarehouse - 同步子店erp仓库或总部仓库耗时", zap.Duration("time", time.Since(t7)))
-
-		t8 := time.Now()
 		if len(insertingWarehouses) > 0 {
 			err = tx.Model(&model.Warehouse{}).Create(&insertingWarehouses).Error
 			if err != nil {
 				return errors.WithMessage(err, "同步子店erp仓库或总部仓库失败")
 			}
 		}
-		logger.Logger.Info("SyncWarehouse - 同步子店erp仓库或总部仓库耗时", zap.Duration("time", time.Since(t8)))
-
-		t9 := time.Now()
 		// 更新所有物品的warehouse_uuid为默认仓库Uuid
 		var defaultWarehouse model.Warehouse
 		tx.Model(&model.Warehouse{}).Where("erp_code = ?", defaultWarehouseErpCode).Scopes(repository.NotDeleted).Find(&defaultWarehouse)
 		if err := tx.Model(&model.Material{}).Where("id > 0").Update("warehouse_uuid", defaultWarehouse.Uuid).Error; err != nil {
 			return errors.WithMessage(errors.New("更新所有物品的warehouse_uuid为默认仓库Uuid失败"), err.Error())
 		}
-		logger.Logger.Info("SyncWarehouse - 更新所有物品的warehouse_uuid为默认仓库Uuid", zap.Duration("time", time.Since(t9)))
 		return nil
 	})
-	logger.Logger.Info("SyncWarehouse - 同步子店erp仓库或总部仓库耗时", zap.Duration("time", time.Since(t4)))
 
-	t10 := time.Now()
 	// 添加多语言uuid到待翻译集合中
 	if len(multiLanguageNameUuids) > 0 {
 		if err := s.translateSrv.AddMultiLanguageNameUuidToSet(ctx.GetCompanyUuid(), multiLanguageNameUuids...); err != nil {
 			logger.Logger.Error("仓库同步添加多语言uuid到待翻译集合中失败", zap.Error(err), zap.Any("multiLanguageNameUuids", multiLanguageNameUuids))
 		}
 	}
-	logger.Logger.Info("SyncWarehouse - 仓库同步添加多语言uuid到待翻译集合中耗时", zap.Duration("time", time.Since(t10)))
 	return err
 }
 

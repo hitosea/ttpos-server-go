@@ -52,16 +52,18 @@ type PurchaseOrderRemark struct {
 }
 
 type PurchaseOrderItemMaterialUnit struct {
-	Uuid       uint64             `json:"uuid"`        // 单位UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 单位名称
+	Uuid           uint64             `json:"uuid"`            // 单位UUID
+	ConversionRate float64            `json:"conversion_rate"` // 转换率
+	LocaleName     dto.LocaleResponse `json:"locale_name"`     // 单位名称
 }
 
 type PurchaseOrderItemUnit struct {
-	Num         float64            `json:"num"`              // 本次数量
-	ArrivalNum  float64            `json:"arrival_num"`      // 到货数量
-	PurchaseNum float64            `json:"purchase_num"`     // 采购数量
-	UnitUuid    uint64             `json:"unit_uuid"`        // 单位UUID
-	LocaleName  dto.LocaleResponse `json:"locale_unit_name"` // 单位名称
+	Num            float64            `json:"num"`              // 本次数量
+	ArrivalNum     float64            `json:"arrival_num"`      // 到货数量
+	PurchaseNum    float64            `json:"purchase_num"`     // 采购数量
+	UnitUuid       uint64             `json:"unit_uuid"`        // 单位UUID
+	LocaleName     dto.LocaleResponse `json:"locale_unit_name"` // 单位名称
+	ConversionRate float64            `json:"conversion_rate"`  // 转换率
 }
 
 // PurchaseOrderItemQuotaConfig 采购订单商品限购配置

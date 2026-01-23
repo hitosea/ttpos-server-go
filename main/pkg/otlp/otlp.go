@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/url"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ type OtlpConfig struct {
 	ServiceName   string  `json:"serviceName"`
 	Endpoint      string  `json:"endpoint"`
 	Path          string  `json:"path"`
+	Token         string  `json:"token"`
 	LogHeaders    string  `json:"logHeaders"`
 	Enabled       bool    `json:"enabled"`
 	SamplingRatio float64 `json:"samplingRatio"`
@@ -37,6 +39,38 @@ var (
 	Inited         = false // 是否已初始化
 	logHeaders     []string
 )
+
+// parseEndpoint 解析 endpoint，支持 http:// 或 https:// 格式
+// 参数：
+//   - rawEndpoint: 原始 endpoint 字符串，可以是 "host:port" 或 "http://host:port" 或 "https://host:port"
+//
+// 返回：
+//   - endpoint: 解析后的 host:port 格式
+//   - useInsecure: 是否使用不安全连接（HTTP）
+func parseEndpoint(rawEndpoint string) (endpoint string, useInsecure bool) {
+	// 默认使用不安全连接（向后兼容）
+	useInsecure = true
+
+	// 如果不包含协议前缀，直接返回原始值
+	if !strings.Contains(rawEndpoint, "://") {
+		return rawEndpoint, useInsecure
+	}
+
+	// 解析 URL
+	u, err := url.Parse(rawEndpoint)
+	if err != nil {
+		// 解析失败，返回原始值
+		return rawEndpoint, useInsecure
+	}
+
+	// 根据协议决定是否使用 TLS
+	if strings.EqualFold(u.Scheme, "https") {
+		useInsecure = false
+	}
+
+	// 返回 host:port 格式（WithEndpoint 不需要协议前缀）
+	return u.Host, useInsecure
+}
 
 // LoadOtlpConfig 加载 OpenTelemetry 配置
 // 参数：
@@ -58,6 +92,7 @@ func LoadOtlpConfig(opt copier.Option) *OtlpConfig {
 		ServiceName:   viper.GetString("OTLP_SERVICE_NAME"),
 		Endpoint:      viper.GetString("OTLP_ENDPOINT"),
 		Path:          viper.GetString("OTLP_PATH"),
+		Token:         viper.GetString("OTLP_TOKEN"),
 		LogHeaders:    viper.GetString("OTLP_LOG_HEADERS"),
 		Enabled:       viper.GetBool("OTLP_ENABLED"),
 		SamplingRatio: viper.GetFloat64("OTLP_SAMPLING_RATIO"),
@@ -94,12 +129,24 @@ func Init(ctx context.Context, config *OtlpConfig) error {
 
 	currentConfig = config
 
-	// 创建 OTLP HTTP Exporter
-	exporter, err := otlptracehttp.New(ctx,
-		otlptracehttp.WithEndpoint(config.Endpoint),
+	// 解析 endpoint，支持 http:// 或 https:// 格式
+	endpoint, useInsecure := parseEndpoint(config.Endpoint)
+
+	// 创建 OTLP HTTP Exporter 选项
+	opts := []otlptracehttp.Option{
+		otlptracehttp.WithEndpoint(endpoint),
 		otlptracehttp.WithURLPath(config.Path),
-		otlptracehttp.WithInsecure(), // 生产环境请使用 TLS
-	)
+	}
+	if useInsecure {
+		opts = append(opts, otlptracehttp.WithInsecure())
+	}
+	if config.Token != "" {
+		opts = append(opts, otlptracehttp.WithHeaders(map[string]string{
+			"Authorization": "Basic " + config.Token,
+		}))
+	}
+
+	exporter, err := otlptracehttp.New(ctx, opts...)
 	if err != nil {
 		return fmt.Errorf("创建 OTLP exporter 失败: %w", err)
 	}
@@ -141,7 +188,8 @@ func Init(ctx context.Context, config *OtlpConfig) error {
 		propagation.Baggage{},
 	))
 
-	log.Printf("[OTLP] Initialized successfully (service=%s, endpoint=%s)", config.ServiceName, config.Endpoint)
+	log.Printf("[OTLP] Initialized successfully (service=%s, endpoint=%s, tls=%v, has_token=%v)",
+		config.ServiceName, config.Endpoint, !useInsecure, config.Token != "")
 	Inited = true
 	return nil
 }
