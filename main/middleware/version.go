@@ -24,7 +24,7 @@ func MinVersionCheck(settingSrv setting.ISrv, typ VersionCheckType, minVersion s
 			minVersion = settingSrv.GetShopAppMinVersion()
 		}
 		if ctx.Version(context.LT, minVersion) {
-			helper.Fail(c, constant.CodeVersionError, "软件版本过低，请升级软件")
+			helper.Fail(c, constant.CodeAccessDenied, "软件版本过低，请升级软件")
 			c.Abort()
 			return
 		}
