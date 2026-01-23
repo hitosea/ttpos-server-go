@@ -72,6 +72,7 @@ type TakeoutOrderPriceResp struct {
 	BasketPromo       float64 `json:"basket_promo"`        // 购物车促销
 	Tax               float64 `json:"tax"`                 // 税费
 	MerchantChargeFee float64 `json:"merchant_charge_fee"` // 商户收取费用
+	PlatformTotal     float64 `json:"platform_total"`      // 平台结算总额 (v2.15.0+)
 }
 
 // CurrencyResp 货币响应

@@ -3939,6 +3939,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order` (
     `basket_promo` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '购物车优惠 (price.basketPromo)',
     `tax` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '税费 (price.tax)',
     `merchant_charge_fee` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '商户服务费 (price.merchantChargeFee)',
+    `platform_total` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '平台结算总额 (subtotal + merchant_charge_fee - merchant_discount)',
     `currency_code` varchar(10) NOT NULL DEFAULT '' COMMENT '货币代码(THB,VND等)',
     `currency_symbol` varchar(10) NOT NULL DEFAULT '' COMMENT '货币符号(฿,$等)',
     `currency_exponent` int(4) unsigned NOT NULL DEFAULT 2 COMMENT '货币指数',
