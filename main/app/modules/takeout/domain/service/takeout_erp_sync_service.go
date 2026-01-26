@@ -317,6 +317,25 @@ func buildPosInvoiceItems(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 	// 	})
 	// }
 
+	// LINEMAN 特殊处理：计算商品合计与 restaurantRevenue 的差额
+	// restaurantRevenue = Grand Total (THB)
+	// 差额处理：
+	// 1. 如果商品合计 > restaurantRevenue（少收了），差额作为优惠
+	// 2. 如果商品合计 < restaurantRevenue（多收了），差额作为服务费
+	if takeoutOrder.IsLinemanOrder() {
+		diff := takeoutOrder.GetLinemanServiceFee()
+		if diff < -0.01 {
+			// 商品合计 < restaurantRevenue：差额作为负数服务费
+			items = append(items, &selling.PosInvoiceItem{
+				ItemCode:    constant.PosInvoiceItemCodeServiceFee, // VP001 服务费
+				Qty:         1,
+				Rate:        -diff,
+				Amount:      -diff,
+				Description: "LINEMAN Service Fee",
+			})
+		}
+	}
+
 	return items
 }
 
@@ -341,6 +360,17 @@ func buildPosInvoiceTaxes(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 			TaxAmount:   -takeoutOrder.MerchantDiscount,
 			Description: "Merchant Discount", // 商户优惠
 		})
+	}
+
+	// LINEMAN 特殊处理：整单改价（Whole Order Price Adjustment）
+	if takeoutOrder.IsLinemanOrder() {
+		diff := takeoutOrder.GetLinemanServiceFee()
+		if diff > 0.01 {
+			taxes = append(taxes, &selling.PosInvoiceTax{
+				TaxAmount:   -diff,
+				Description: "Merchant Discount", // 商户优惠
+			})
+		}
 	}
 
 	return taxes

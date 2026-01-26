@@ -232,6 +232,17 @@ func (o *TakeoutOrder) IsLinemanOrder() bool {
 	return o.Platform == valueobject.TakeoutPlatformLineman
 }
 
+// 获取lineman服务费
+func (o *TakeoutOrder) GetLinemanServiceFee() float64 {
+	if o == nil {
+		return 0
+	}
+	if o.IsLinemanOrder() {
+		return o.Subtotal - o.PlatformTotal
+	}
+	return 0
+}
+
 // 是否存在班次
 func (o *TakeoutOrder) IsExistShiftLog() bool {
 	if o == nil {
