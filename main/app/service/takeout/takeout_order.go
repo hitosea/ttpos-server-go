@@ -1151,7 +1151,7 @@ func determineRecordType(order *takeoutModel.TakeoutOrder) string {
 func buildSaleBillFromTakeoutOrder(order *takeoutModel.TakeoutOrder, recordType string) *model.SaleBill {
 	saleBill := &model.SaleBill{
 		Status:        constant.SaleBillStatusComplete, // 设置为已完成状态，IsFinish() 才能返回 true
-		PaymentAmount: order.EaterPayment,              // 顾客实付金额（单位：元）
+		PaymentAmount: order.PlatformTotal,             // 顾客实付金额（单位：元）
 		CashierUuid:   0,                               // 默认值
 		FinishTime:    0,                               // 默认值
 	}
