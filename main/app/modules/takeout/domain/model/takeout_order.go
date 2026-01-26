@@ -39,6 +39,7 @@ type TakeoutOrder struct {
 	BasketPromo       float64 `gorm:"column:basket_promo" json:"basket_promo"`               // 购物车优惠
 	Tax               float64 `gorm:"column:tax" json:"tax"`                                 // 税费
 	MerchantChargeFee float64 `gorm:"column:merchant_charge_fee" json:"merchant_charge_fee"` // 商户收取费用
+	PlatformTotal     float64 `gorm:"column:platform_total" json:"platform_total"`           // 平台结算总额 (subtotal + merchant_charge_fee - merchant_discount)
 
 	// 货币信息
 	CurrencyCode     string `gorm:"column:currency_code" json:"currency_code"`
@@ -154,6 +155,14 @@ func (o *TakeoutOrder) IsTakeawayOrder() bool {
 		return false
 	}
 	return o.OrderType != valueobject.TakeoutOrderTypeDineIn
+}
+
+// 是否商家配送
+func (o *TakeoutOrder) IsRestaurantDeliveryOrder() bool {
+	if o == nil {
+		return false
+	}
+	return o.OrderType == valueobject.TakeoutOrderTypeRestaurantDelivery
 }
 
 // 判断是否删除或者已经取消
