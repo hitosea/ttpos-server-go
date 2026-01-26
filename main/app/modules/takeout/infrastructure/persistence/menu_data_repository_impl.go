@@ -952,7 +952,7 @@ func (r *menuDataRepositoryImpl) FetchTakeoutMenuByPlatform(ctx context.Context,
 
 	// 解析菜单数据为 grabfood 结构
 	var grabMenu grabfood.GetMenuNewResponse
-	if takeoutMenu.Menu != nil {
+	if takeoutMenu.Menu != nil && platform == value_object.TakeoutPlatformGrab {
 		// 使用统一的解析函数
 		menuBytes, err := parseMenuJSON(takeoutMenu.Menu)
 		if err != nil {

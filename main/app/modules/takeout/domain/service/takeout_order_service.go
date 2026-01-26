@@ -292,6 +292,7 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutOrderAcceptReq) error {
 	db := ctx.GetDB()
 	currentTime := time.Now().Unix()
+	acceptedTime := time.Now().Unix()
 	userUuid := ctx.GetStaffUuid()
 
 	// 查询订单
@@ -335,9 +336,12 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 
 	// 更新订单状态
 	if err := db.Transaction(func(tx *gorm.DB) error {
+		if order.AcceptedTime > 0 {
+			acceptedTime = order.AcceptedTime
+		}
 		updateData := map[string]interface{}{
 			"order_state":          valueobject.TakeoutOrderStateAccepted,
-			"accepted_time":        currentTime,
+			"accepted_time":        acceptedTime,
 			"staff_shift_log_uuid": order.StaffShiftLogUuid,
 			"accepted_by":          order.AcceptedBy,
 			"update_time":          currentTime,

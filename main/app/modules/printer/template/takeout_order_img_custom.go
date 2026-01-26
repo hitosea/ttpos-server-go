@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"ttpos-server-go/app/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/app/modules/printer/tyeps/structs"
@@ -74,11 +73,6 @@ func (t *platformTakeoutImgTemplate) GetPrintContent(
 	if err != nil {
 		logger.Logger.Error("外卖平台订单打印模板解析失败", zap.Error(err))
 		return ""
-	}
-
-	// TODO: 临时处理，后续需要去掉
-	if config.Server.Mode == constant.ServerModeDebug {
-		img.SegmentationHeight = 200000
 	}
 
 	// 保存图片

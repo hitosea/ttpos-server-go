@@ -622,7 +622,7 @@ func ToLinemanPlaceOrder(o *message.TakeoutOrder) *linemanv1.PlaceOrderReq {
 	}
 
 	// 从最小单位转换回泰铢
-	subtotalInTHB := float64(o.Price.Subtotal) / 100
+	subtotalInTHB := float64(o.Price.Subtotal)
 
 	req := &linemanv1.PlaceOrderReq{
 		StoreId:           o.MerchantID,
@@ -675,7 +675,7 @@ func ToLinemanPlaceOrder(o *message.TakeoutOrder) *linemanv1.PlaceOrderReq {
 	// Items
 	for _, item := range o.Items {
 		// 从最小单位转换回泰铢
-		priceInTHB := float64(item.Price) / 100
+		priceInTHB := float64(item.Price)
 
 		linemanItem := linemanv1.OrderItem{
 			Id:        item.ID,
@@ -708,7 +708,7 @@ func ToLinemanPlaceOrder(o *message.TakeoutOrder) *linemanv1.PlaceOrderReq {
 			// 转换价格从最小单位到泰铢
 			var priceInTHB float64 = 0
 			if mod.Price != nil {
-				priceInTHB = float64(*mod.Price) / 100
+				priceInTHB = float64(*mod.Price)
 			}
 
 			// 创建一个默认 value
@@ -733,7 +733,7 @@ func ToLinemanPlaceOrder(o *message.TakeoutOrder) *linemanv1.PlaceOrderReq {
 		}
 		if firstPromo.MexFundedAmount != nil {
 			// 从最小单位转换回泰铢
-			req.Items[0].Discount = float64(*firstPromo.MexFundedAmount) / 100
+			req.Items[0].Discount = float64(*firstPromo.MexFundedAmount)
 		}
 	}
 

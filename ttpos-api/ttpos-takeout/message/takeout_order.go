@@ -2,6 +2,7 @@ package message
 
 import (
 	"encoding/json"
+	"reflect"
 	"time"
 )
 
@@ -68,7 +69,7 @@ type TakeoutOrder struct {
 	Currency TakeoutCurrency `json:"currency"`
 
 	// FeatureFlags Feature related information (required, non-pointer)
-	// Grab: featureFlags (OrderFeatureFlags, required)
+	// Grab: featureFlags (TakeoutFeatureFlags, required)
 	FeatureFlags TakeoutFeatureFlags `json:"featureFlags"`
 
 	// Items The ordered items in an array (required)
@@ -84,7 +85,7 @@ type TakeoutOrder struct {
 	Promos []TakeoutPromo `json:"promos,omitempty"`
 
 	// Price Order price information (required, non-pointer)
-	// Grab: price (OrderPrice, required)
+	// Grab: price (TakeoutOrderPrice, required)
 	Price TakeoutOrderPrice `json:"price"`
 
 	// DineIn Dine-in information (nullable)
@@ -108,6 +109,622 @@ type TakeoutOrder struct {
 	// Grab: AdditionalProperties map[string]interface{}
 	// Used for platform-specific fields (e.g., Lineman additionalItems)
 	AdditionalProperties map[string]any `json:"-"`
+}
+
+// GetOrderID returns the OrderID field value
+func (o *TakeoutOrder) GetOrderID() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.OrderID
+}
+
+// GetOrderIDOk returns a tuple with the OrderID field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetOrderIDOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.OrderID, true
+}
+
+// SetOrderID sets field value
+func (o *TakeoutOrder) SetOrderID(v string) {
+	o.OrderID = v
+}
+
+// GetShortOrderNumber returns the ShortOrderNumber field value
+func (o *TakeoutOrder) GetShortOrderNumber() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.ShortOrderNumber
+}
+
+// GetShortOrderNumberOk returns a tuple with the ShortOrderNumber field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetShortOrderNumberOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.ShortOrderNumber, true
+}
+
+// SetShortOrderNumber sets field value
+func (o *TakeoutOrder) SetShortOrderNumber(v string) {
+	o.ShortOrderNumber = v
+}
+
+// GetMerchantID returns the MerchantID field value
+func (o *TakeoutOrder) GetMerchantID() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.MerchantID
+}
+
+// GetMerchantIDOk returns a tuple with the MerchantID field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetMerchantIDOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.MerchantID, true
+}
+
+// SetMerchantID sets field value
+func (o *TakeoutOrder) SetMerchantID(v string) {
+	o.MerchantID = v
+}
+
+// GetPartnerMerchantID returns the PartnerMerchantID field value if set, zero value otherwise.
+func (o *TakeoutOrder) GetPartnerMerchantID() string {
+	if o == nil || IsNil(o.PartnerMerchantID) {
+		var ret string
+		return ret
+	}
+	return *o.PartnerMerchantID
+}
+
+// GetPartnerMerchantIDOk returns a tuple with the PartnerMerchantID field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetPartnerMerchantIDOk() (*string, bool) {
+	if o == nil || IsNil(o.PartnerMerchantID) {
+		return nil, false
+	}
+	return o.PartnerMerchantID, true
+}
+
+// HasPartnerMerchantID returns a boolean if a field has been set.
+func (o *TakeoutOrder) HasPartnerMerchantID() bool {
+	if o != nil && !IsNil(o.PartnerMerchantID) {
+		return true
+	}
+
+	return false
+}
+
+// SetPartnerMerchantID gets a reference to the given string and assigns it to the PartnerMerchantID field.
+func (o *TakeoutOrder) SetPartnerMerchantID(v string) {
+	o.PartnerMerchantID = &v
+}
+
+// GetPaymentType returns the PaymentType field value
+func (o *TakeoutOrder) GetPaymentType() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.PaymentType
+}
+
+// GetPaymentTypeOk returns a tuple with the PaymentType field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetPaymentTypeOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.PaymentType, true
+}
+
+// SetPaymentType sets field value
+func (o *TakeoutOrder) SetPaymentType(v string) {
+	o.PaymentType = v
+}
+
+// GetCutlery returns the Cutlery field value
+func (o *TakeoutOrder) GetCutlery() bool {
+	if o == nil {
+		var ret bool
+		return ret
+	}
+
+	return o.Cutlery
+}
+
+// GetCutleryOk returns a tuple with the Cutlery field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetCutleryOk() (*bool, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Cutlery, true
+}
+
+// SetCutlery sets field value
+func (o *TakeoutOrder) SetCutlery(v bool) {
+	o.Cutlery = v
+}
+
+// GetOrderTime returns the OrderTime field value
+func (o *TakeoutOrder) GetOrderTime() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.OrderTime
+}
+
+// GetOrderTimeOk returns a tuple with the OrderTime field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetOrderTimeOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.OrderTime, true
+}
+
+// SetOrderTime sets field value
+func (o *TakeoutOrder) SetOrderTime(v string) {
+	o.OrderTime = v
+}
+
+// GetSubmitTime returns the SubmitTime field value if set, zero value otherwise.
+func (o *TakeoutOrder) GetSubmitTime() time.Time {
+	if o == nil || IsNil(o.SubmitTime) {
+		var ret time.Time
+		return ret
+	}
+	return *o.SubmitTime
+}
+
+// GetSubmitTimeOk returns a tuple with the SubmitTime field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetSubmitTimeOk() (*time.Time, bool) {
+	if o == nil || IsNil(o.SubmitTime) {
+		return nil, false
+	}
+	return o.SubmitTime, true
+}
+
+// HasSubmitTime returns a boolean if a field has been set.
+func (o *TakeoutOrder) HasSubmitTime() bool {
+	if o != nil && !IsNil(o.SubmitTime) {
+		return true
+	}
+
+	return false
+}
+
+// SetSubmitTime gets a reference to the given time.Time and assigns it to the SubmitTime field.
+func (o *TakeoutOrder) SetSubmitTime(v time.Time) {
+	o.SubmitTime = &v
+}
+
+// GetCompleteTime returns the CompleteTime field value if set, zero value otherwise.
+func (o *TakeoutOrder) GetCompleteTime() time.Time {
+	if o == nil || IsNil(o.CompleteTime) {
+		var ret time.Time
+		return ret
+	}
+	return *o.CompleteTime
+}
+
+// GetCompleteTimeOk returns a tuple with the CompleteTime field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetCompleteTimeOk() (*time.Time, bool) {
+	if o == nil || IsNil(o.CompleteTime) {
+		return nil, false
+	}
+	return o.CompleteTime, true
+}
+
+// HasCompleteTime returns a boolean if a field has been set.
+func (o *TakeoutOrder) HasCompleteTime() bool {
+	if o != nil && !IsNil(o.CompleteTime) {
+		return true
+	}
+
+	return false
+}
+
+// SetCompleteTime gets a reference to the given time.Time and assigns it to the CompleteTime field.
+func (o *TakeoutOrder) SetCompleteTime(v time.Time) {
+	o.CompleteTime = &v
+}
+
+// GetScheduledTime returns the ScheduledTime field value if set, zero value otherwise.
+func (o *TakeoutOrder) GetScheduledTime() string {
+	if o == nil || IsNil(o.ScheduledTime) {
+		var ret string
+		return ret
+	}
+	return *o.ScheduledTime
+}
+
+// GetScheduledTimeOk returns a tuple with the ScheduledTime field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetScheduledTimeOk() (*string, bool) {
+	if o == nil || IsNil(o.ScheduledTime) {
+		return nil, false
+	}
+	return o.ScheduledTime, true
+}
+
+// HasScheduledTime returns a boolean if a field has been set.
+func (o *TakeoutOrder) HasScheduledTime() bool {
+	if o != nil && !IsNil(o.ScheduledTime) {
+		return true
+	}
+
+	return false
+}
+
+// SetScheduledTime gets a reference to the given string and assigns it to the ScheduledTime field.
+func (o *TakeoutOrder) SetScheduledTime(v string) {
+	o.ScheduledTime = &v
+}
+
+// GetOrderState returns the OrderState field value if set, zero value otherwise.
+func (o *TakeoutOrder) GetOrderState() string {
+	if o == nil || IsNil(o.OrderState) {
+		var ret string
+		return ret
+	}
+	return *o.OrderState
+}
+
+// GetOrderStateOk returns a tuple with the OrderState field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetOrderStateOk() (*string, bool) {
+	if o == nil || IsNil(o.OrderState) {
+		return nil, false
+	}
+	return o.OrderState, true
+}
+
+// HasOrderState returns a boolean if a field has been set.
+func (o *TakeoutOrder) HasOrderState() bool {
+	if o != nil && !IsNil(o.OrderState) {
+		return true
+	}
+
+	return false
+}
+
+// SetOrderState gets a reference to the given string and assigns it to the OrderState field.
+func (o *TakeoutOrder) SetOrderState(v string) {
+	o.OrderState = &v
+}
+
+// GetCurrency returns the Currency field value
+func (o *TakeoutOrder) GetCurrency() TakeoutCurrency {
+	if o == nil {
+		var ret TakeoutCurrency
+		return ret
+	}
+
+	return o.Currency
+}
+
+// GetCurrencyOk returns a tuple with the Currency field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetCurrencyOk() (*TakeoutCurrency, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Currency, true
+}
+
+// SetCurrency sets field value
+func (o *TakeoutOrder) SetCurrency(v TakeoutCurrency) {
+	o.Currency = v
+}
+
+// GetFeatureFlags returns the FeatureFlags field value
+func (o *TakeoutOrder) GetFeatureFlags() TakeoutFeatureFlags {
+	if o == nil {
+		var ret TakeoutFeatureFlags
+		return ret
+	}
+
+	return o.FeatureFlags
+}
+
+// GetFeatureFlagsOk returns a tuple with the FeatureFlags field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetFeatureFlagsOk() (*TakeoutFeatureFlags, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.FeatureFlags, true
+}
+
+// SetFeatureFlags sets field value
+func (o *TakeoutOrder) SetFeatureFlags(v TakeoutFeatureFlags) {
+	o.FeatureFlags = v
+}
+
+// GetItems returns the Items field value
+func (o *TakeoutOrder) GetItems() []TakeoutOrderItem {
+	if o == nil {
+		var ret []TakeoutOrderItem
+		return ret
+	}
+
+	return o.Items
+}
+
+// GetItemsOk returns a tuple with the Items field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetItemsOk() ([]TakeoutOrderItem, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Items, true
+}
+
+// SetItems sets field value
+func (o *TakeoutOrder) SetItems(v []TakeoutOrderItem) {
+	o.Items = v
+}
+
+// GetCampaigns returns the Campaigns field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *TakeoutOrder) GetCampaigns() []TakeoutCampaign {
+	if o == nil {
+		var ret []TakeoutCampaign
+		return ret
+	}
+	return o.Campaigns
+}
+
+// GetCampaignsOk returns a tuple with the Campaigns field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *TakeoutOrder) GetCampaignsOk() ([]TakeoutCampaign, bool) {
+	if o == nil || IsNil(o.Campaigns) {
+		return nil, false
+	}
+	return o.Campaigns, true
+}
+
+// HasCampaigns returns a boolean if a field has been set.
+func (o *TakeoutOrder) HasCampaigns() bool {
+	if o != nil && !IsNil(o.Campaigns) {
+		return true
+	}
+
+	return false
+}
+
+// SetCampaigns gets a reference to the given []OrderCampaign and assigns it to the Campaigns field.
+func (o *TakeoutOrder) SetCampaigns(v []TakeoutCampaign) {
+	o.Campaigns = v
+}
+
+// GetPromos returns the Promos field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *TakeoutOrder) GetPromos() []TakeoutPromo {
+	if o == nil {
+		var ret []TakeoutPromo
+		return ret
+	}
+	return o.Promos
+}
+
+// GetPromosOk returns a tuple with the Promos field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *TakeoutOrder) GetPromosOk() ([]TakeoutPromo, bool) {
+	if o == nil || IsNil(o.Promos) {
+		return nil, false
+	}
+	return o.Promos, true
+}
+
+// HasPromos returns a boolean if a field has been set.
+func (o *TakeoutOrder) HasPromos() bool {
+	if o != nil && !IsNil(o.Promos) {
+		return true
+	}
+
+	return false
+}
+
+// SetPromos gets a reference to the given []OrderPromo and assigns it to the Promos field.
+func (o *TakeoutOrder) SetPromos(v []TakeoutPromo) {
+	o.Promos = v
+}
+
+// GetPrice returns the Price field value
+func (o *TakeoutOrder) GetPrice() TakeoutOrderPrice {
+	if o == nil {
+		var ret TakeoutOrderPrice
+		return ret
+	}
+
+	return o.Price
+}
+
+// GetPriceOk returns a tuple with the Price field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetPriceOk() (*TakeoutOrderPrice, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Price, true
+}
+
+// SetPrice sets field value
+func (o *TakeoutOrder) SetPrice(v TakeoutOrderPrice) {
+	o.Price = v
+}
+
+// GetDineIn returns the DineIn field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *TakeoutOrder) GetDineIn() TakeoutDineIn {
+	if o == nil || IsNil(o.DineIn.Get()) {
+		var ret TakeoutDineIn
+		return ret
+	}
+	return *o.DineIn.Get()
+}
+
+// GetDineInOk returns a tuple with the DineIn field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *TakeoutOrder) GetDineInOk() (*TakeoutDineIn, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.DineIn.Get(), o.DineIn.IsSet()
+}
+
+// HasDineIn returns a boolean if a field has been set.
+func (o *TakeoutOrder) HasDineIn() bool {
+	if o != nil && o.DineIn.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetDineIn gets a reference to the given NullableDineIn and assigns it to the DineIn field.
+func (o *TakeoutOrder) SetDineIn(v TakeoutDineIn) {
+	o.DineIn.Set(&v)
+}
+
+// SetDineInNil sets the value for DineIn to be an explicit nil
+func (o *TakeoutOrder) SetDineInNil() {
+	o.DineIn.Set(nil)
+}
+
+// UnsetDineIn ensures that no value is present for DineIn, not even an explicit nil
+func (o *TakeoutOrder) UnsetDineIn() {
+	o.DineIn.Unset()
+}
+
+// GetReceiver returns the Receiver field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *TakeoutOrder) GetReceiver() TakeoutReceiver {
+	if o == nil || IsNil(o.Receiver.Get()) {
+		var ret TakeoutReceiver
+		return ret
+	}
+	return *o.Receiver.Get()
+}
+
+// GetReceiverOk returns a tuple with the Receiver field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *TakeoutOrder) GetReceiverOk() (*TakeoutReceiver, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Receiver.Get(), o.Receiver.IsSet()
+}
+
+// HasReceiver returns a boolean if a field has been set.
+func (o *TakeoutOrder) HasReceiver() bool {
+	if o != nil && o.Receiver.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetReceiver gets a reference to the given NullableReceiver and assigns it to the Receiver field.
+func (o *TakeoutOrder) SetReceiver(v TakeoutReceiver) {
+	o.Receiver.Set(&v)
+}
+
+// SetReceiverNil sets the value for Receiver to be an explicit nil
+func (o *TakeoutOrder) SetReceiverNil() {
+	o.Receiver.Set(nil)
+}
+
+// UnsetReceiver ensures that no value is present for Receiver, not even an explicit nil
+func (o *TakeoutOrder) UnsetReceiver() {
+	o.Receiver.Unset()
+}
+
+// GetOrderReadyEstimation returns the OrderReadyEstimation field value if set, zero value otherwise.
+func (o *TakeoutOrder) GetOrderReadyEstimation() TakeoutOrderReadyEstimation {
+	if o == nil || IsNil(o.OrderReadyEstimation) {
+		var ret TakeoutOrderReadyEstimation
+		return ret
+	}
+	return *o.OrderReadyEstimation
+}
+
+// GetOrderReadyEstimationOk returns a tuple with the OrderReadyEstimation field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetOrderReadyEstimationOk() (*TakeoutOrderReadyEstimation, bool) {
+	if o == nil || IsNil(o.OrderReadyEstimation) {
+		return nil, false
+	}
+	return o.OrderReadyEstimation, true
+}
+
+// HasOrderReadyEstimation returns a boolean if a field has been set.
+func (o *TakeoutOrder) HasOrderReadyEstimation() bool {
+	if o != nil && !IsNil(o.OrderReadyEstimation) {
+		return true
+	}
+
+	return false
+}
+
+// SetOrderReadyEstimation gets a reference to the given OrderReadyEstimation and assigns it to the OrderReadyEstimation field.
+func (o *TakeoutOrder) SetOrderReadyEstimation(v TakeoutOrderReadyEstimation) {
+	o.OrderReadyEstimation = &v
+}
+
+// GetMembershipID returns the MembershipID field value if set, zero value otherwise.
+func (o *TakeoutOrder) GetMembershipID() string {
+	if o == nil || IsNil(o.MembershipID) {
+		var ret string
+		return ret
+	}
+	return *o.MembershipID
+}
+
+// GetMembershipIDOk returns a tuple with the MembershipID field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrder) GetMembershipIDOk() (*string, bool) {
+	if o == nil || IsNil(o.MembershipID) {
+		return nil, false
+	}
+	return o.MembershipID, true
+}
+
+// HasMembershipID returns a boolean if a field has been set.
+func (o *TakeoutOrder) HasMembershipID() bool {
+	if o != nil && !IsNil(o.MembershipID) {
+		return true
+	}
+
+	return false
+}
+
+// SetMembershipID gets a reference to the given string and assigns it to the MembershipID field.
+func (o *TakeoutOrder) SetMembershipID(v string) {
+	o.MembershipID = &v
 }
 
 // ============================================================================
@@ -158,6 +775,241 @@ type TakeoutOrderItem struct {
 	AdditionalProperties map[string]any `json:"-"`
 }
 
+// GetId returns the Id field value
+func (o *TakeoutOrderItem) GetId() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.ID
+}
+
+// GetIdOk returns a tuple with the Id field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderItem) GetIdOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.ID, true
+}
+
+// SetId sets field value
+func (o *TakeoutOrderItem) SetId(v string) {
+	o.ID = v
+}
+
+// GetGrabItemID returns the GrabItemID field value
+func (o *TakeoutOrderItem) GetGrabItemID() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.GrabItemID
+}
+
+// GetGrabItemIDOk returns a tuple with the GrabItemID field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderItem) GetGrabItemIDOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.GrabItemID, true
+}
+
+// SetGrabItemID sets field value
+func (o *TakeoutOrderItem) SetGrabItemID(v string) {
+	o.GrabItemID = v
+}
+
+// GetQuantity returns the Quantity field value
+func (o *TakeoutOrderItem) GetQuantity() int32 {
+	if o == nil {
+		var ret int32
+		return ret
+	}
+
+	return o.Quantity
+}
+
+// GetQuantityOk returns a tuple with the Quantity field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderItem) GetQuantityOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Quantity, true
+}
+
+// SetQuantity sets field value
+func (o *TakeoutOrderItem) SetQuantity(v int32) {
+	o.Quantity = v
+}
+
+// GetPrice returns the Price field value
+func (o *TakeoutOrderItem) GetPrice() int64 {
+	if o == nil {
+		var ret int64
+		return ret
+	}
+
+	return o.Price
+}
+
+// GetPriceOk returns a tuple with the Price field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderItem) GetPriceOk() (*int64, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Price, true
+}
+
+// SetPrice sets field value
+func (o *TakeoutOrderItem) SetPrice(v int64) {
+	o.Price = v
+}
+
+// GetTax returns the Tax field value if set, zero value otherwise.
+func (o *TakeoutOrderItem) GetTax() int64 {
+	if o == nil || IsNil(o.Tax) {
+		var ret int64
+		return ret
+	}
+	return *o.Tax
+}
+
+// GetTaxOk returns a tuple with the Tax field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderItem) GetTaxOk() (*int64, bool) {
+	if o == nil || IsNil(o.Tax) {
+		return nil, false
+	}
+	return o.Tax, true
+}
+
+// HasTax returns a boolean if a field has been set.
+func (o *TakeoutOrderItem) HasTax() bool {
+	if o != nil && !IsNil(o.Tax) {
+		return true
+	}
+
+	return false
+}
+
+// SetTax gets a reference to the given int64 and assigns it to the Tax field.
+func (o *TakeoutOrderItem) SetTax(v int64) {
+	o.Tax = &v
+}
+
+// GetSpecifications returns the Specifications field value if set, zero value otherwise.
+func (o *TakeoutOrderItem) GetSpecifications() string {
+	if o == nil || IsNil(o.Specifications) {
+		var ret string
+		return ret
+	}
+	return *o.Specifications
+}
+
+// GetSpecificationsOk returns a tuple with the Specifications field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderItem) GetSpecificationsOk() (*string, bool) {
+	if o == nil || IsNil(o.Specifications) {
+		return nil, false
+	}
+	return o.Specifications, true
+}
+
+// HasSpecifications returns a boolean if a field has been set.
+func (o *TakeoutOrderItem) HasSpecifications() bool {
+	if o != nil && !IsNil(o.Specifications) {
+		return true
+	}
+
+	return false
+}
+
+// SetSpecifications gets a reference to the given string and assigns it to the Specifications field.
+func (o *TakeoutOrderItem) SetSpecifications(v string) {
+	o.Specifications = &v
+}
+
+// GetOutOfStockInstruction returns the OutOfStockInstruction field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *TakeoutOrderItem) GetOutOfStockInstruction() TakeoutOutOfStockInstruction {
+	if o == nil || IsNil(o.OutOfStockInstruction.Get()) {
+		var ret TakeoutOutOfStockInstruction
+		return ret
+	}
+	return *o.OutOfStockInstruction.Get()
+}
+
+// GetOutOfStockInstructionOk returns a tuple with the OutOfStockInstruction field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *TakeoutOrderItem) GetOutOfStockInstructionOk() (*TakeoutOutOfStockInstruction, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.OutOfStockInstruction.Get(), o.OutOfStockInstruction.IsSet()
+}
+
+// HasOutOfStockInstruction returns a boolean if a field has been set.
+func (o *TakeoutOrderItem) HasOutOfStockInstruction() bool {
+	if o != nil && o.OutOfStockInstruction.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetOutOfStockInstruction gets a reference to the given NullableOutOfStockInstruction and assigns it to the OutOfStockInstruction field.
+func (o *TakeoutOrderItem) SetOutOfStockInstruction(v TakeoutOutOfStockInstruction) {
+	o.OutOfStockInstruction.Set(&v)
+}
+
+// SetOutOfStockInstructionNil sets the value for OutOfStockInstruction to be an explicit nil
+func (o *TakeoutOrderItem) SetOutOfStockInstructionNil() {
+	o.OutOfStockInstruction.Set(nil)
+}
+
+// UnsetOutOfStockInstruction ensures that no value is present for OutOfStockInstruction, not even an explicit nil
+func (o *TakeoutOrderItem) UnsetOutOfStockInstruction() {
+	o.OutOfStockInstruction.Unset()
+}
+
+// GetModifiers returns the Modifiers field value if set, zero value otherwise.
+func (o *TakeoutOrderItem) GetModifiers() []TakeoutModifier {
+	if o == nil || IsNil(o.Modifiers) {
+		var ret []TakeoutModifier
+		return ret
+	}
+	return o.Modifiers
+}
+
+// GetModifiersOk returns a tuple with the Modifiers field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderItem) GetModifiersOk() ([]TakeoutModifier, bool) {
+	if o == nil || IsNil(o.Modifiers) {
+		return nil, false
+	}
+	return o.Modifiers, true
+}
+
+// HasModifiers returns a boolean if a field has been set.
+func (o *TakeoutOrderItem) HasModifiers() bool {
+	if o != nil && !IsNil(o.Modifiers) {
+		return true
+	}
+
+	return false
+}
+
+// SetModifiers gets a reference to the given []OrderItemModifier and assigns it to the Modifiers field.
+func (o *TakeoutOrderItem) SetModifiers(v []TakeoutModifier) {
+	o.Modifiers = v
+}
+
 // ============================================================================
 // TakeoutModifier - Aligned with Grab SDK OrderItemModifier
 // Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_item_modifier.go
@@ -186,12 +1038,135 @@ type TakeoutModifier struct {
 	AdditionalProperties map[string]any `json:"-"`
 }
 
+// GetId returns the Id field value if set, zero value otherwise.
+func (o *TakeoutModifier) GetId() string {
+	if o == nil || IsNil(o.ID) {
+		var ret string
+		return ret
+	}
+	return *o.ID
+}
+
+// GetIdOk returns a tuple with the Id field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutModifier) GetIdOk() (*string, bool) {
+	if o == nil || IsNil(o.ID) {
+		return nil, false
+	}
+	return o.ID, true
+}
+
+// HasId returns a boolean if a field has been set.
+func (o *TakeoutModifier) HasId() bool {
+	if o != nil && !IsNil(o.ID) {
+		return true
+	}
+
+	return false
+}
+
+// SetId gets a reference to the given string and assigns it to the Id field.
+func (o *TakeoutModifier) SetId(v string) {
+	o.ID = &v
+}
+
+// GetPrice returns the Price field value if set, zero value otherwise.
+func (o *TakeoutModifier) GetPrice() int64 {
+	if o == nil || IsNil(o.Price) {
+		var ret int64
+		return ret
+	}
+	return *o.Price
+}
+
+// GetPriceOk returns a tuple with the Price field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutModifier) GetPriceOk() (*int64, bool) {
+	if o == nil || IsNil(o.Price) {
+		return nil, false
+	}
+	return o.Price, true
+}
+
+// HasPrice returns a boolean if a field has been set.
+func (o *TakeoutModifier) HasPrice() bool {
+	if o != nil && !IsNil(o.Price) {
+		return true
+	}
+
+	return false
+}
+
+// SetPrice gets a reference to the given int64 and assigns it to the Price field.
+func (o *TakeoutModifier) SetPrice(v int64) {
+	o.Price = &v
+}
+
+// GetTax returns the Tax field value if set, zero value otherwise.
+func (o *TakeoutModifier) GetTax() int64 {
+	if o == nil || IsNil(o.Tax) {
+		var ret int64
+		return ret
+	}
+	return *o.Tax
+}
+
+// GetTaxOk returns a tuple with the Tax field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutModifier) GetTaxOk() (*int64, bool) {
+	if o == nil || IsNil(o.Tax) {
+		return nil, false
+	}
+	return o.Tax, true
+}
+
+// HasTax returns a boolean if a field has been set.
+func (o *TakeoutModifier) HasTax() bool {
+	if o != nil && !IsNil(o.Tax) {
+		return true
+	}
+
+	return false
+}
+
+// SetTax gets a reference to the given int64 and assigns it to the Tax field.
+func (o *TakeoutModifier) SetTax(v int64) {
+	o.Tax = &v
+}
+
+// GetQuantity returns the Quantity field value if set, zero value otherwise.
+func (o *TakeoutModifier) GetQuantity() int32 {
+	if o == nil || IsNil(o.Quantity) {
+		var ret int32
+		return ret
+	}
+	return *o.Quantity
+}
+
+// GetQuantityOk returns a tuple with the Quantity field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutModifier) GetQuantityOk() (*int32, bool) {
+	if o == nil || IsNil(o.Quantity) {
+		return nil, false
+	}
+	return o.Quantity, true
+}
+
+// HasQuantity returns a boolean if a field has been set.
+func (o *TakeoutModifier) HasQuantity() bool {
+	if o != nil && !IsNil(o.Quantity) {
+		return true
+	}
+
+	return false
+}
+
 // ============================================================================
-// TakeoutOrderPrice - Aligned with Grab SDK OrderPrice
+// TakeoutTakeoutOrderPrice - Aligned with Grab SDK TakeoutOrderPrice
 // Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_price.go
 // ============================================================================
 
-// TakeoutOrderPrice order price information in minor unit format
+// TakeoutTakeoutOrderPrice order price information in minor unit format
 type TakeoutOrderPrice struct {
 	// Subtotal Total item and modifier price (tax-inclusive) in minor unit (required)
 	// Grab: subtotal (int64, required)
@@ -239,6 +1214,347 @@ type TakeoutOrderPrice struct {
 	Total *int64 `json:"total,omitempty"`
 }
 
+// GetSubtotal returns the Subtotal field value
+func (o *TakeoutOrderPrice) GetSubtotal() int64 {
+	if o == nil {
+		var ret int64
+		return ret
+	}
+
+	return o.Subtotal
+}
+
+// GetSubtotalOk returns a tuple with the Subtotal field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderPrice) GetSubtotalOk() (*int64, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Subtotal, true
+}
+
+// SetSubtotal sets field value
+func (o *TakeoutOrderPrice) SetSubtotal(v int64) {
+	o.Subtotal = v
+}
+
+// GetTax returns the Tax field value if set, zero value otherwise.
+func (o *TakeoutOrderPrice) GetTax() int64 {
+	if o == nil || IsNil(o.Tax) {
+		var ret int64
+		return ret
+	}
+	return *o.Tax
+}
+
+// GetTaxOk returns a tuple with the Tax field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderPrice) GetTaxOk() (*int64, bool) {
+	if o == nil || IsNil(o.Tax) {
+		return nil, false
+	}
+	return o.Tax, true
+}
+
+// HasTax returns a boolean if a field has been set.
+func (o *TakeoutOrderPrice) HasTax() bool {
+	if o != nil && !IsNil(o.Tax) {
+		return true
+	}
+
+	return false
+}
+
+// SetTax gets a reference to the given int64 and assigns it to the Tax field.
+func (o *TakeoutOrderPrice) SetTax(v int64) {
+	o.Tax = &v
+}
+
+// GetMerchantChargeFee returns the MerchantChargeFee field value if set, zero value otherwise.
+func (o *TakeoutOrderPrice) GetMerchantChargeFee() int64 {
+	if o == nil || IsNil(o.MerchantChargeFee) {
+		var ret int64
+		return ret
+	}
+	return *o.MerchantChargeFee
+}
+
+// GetMerchantChargeFeeOk returns a tuple with the MerchantChargeFee field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderPrice) GetMerchantChargeFeeOk() (*int64, bool) {
+	if o == nil || IsNil(o.MerchantChargeFee) {
+		return nil, false
+	}
+	return o.MerchantChargeFee, true
+}
+
+// HasMerchantChargeFee returns a boolean if a field has been set.
+func (o *TakeoutOrderPrice) HasMerchantChargeFee() bool {
+	if o != nil && !IsNil(o.MerchantChargeFee) {
+		return true
+	}
+
+	return false
+}
+
+// SetMerchantChargeFee gets a reference to the given int64 and assigns it to the MerchantChargeFee field.
+func (o *TakeoutOrderPrice) SetMerchantChargeFee(v int64) {
+	o.MerchantChargeFee = &v
+}
+
+// GetGrabFundPromo returns the GrabFundPromo field value if set, zero value otherwise.
+func (o *TakeoutOrderPrice) GetGrabFundPromo() int64 {
+	if o == nil || IsNil(o.GrabFundPromo) {
+		var ret int64
+		return ret
+	}
+	return *o.GrabFundPromo
+}
+
+// GetGrabFundPromoOk returns a tuple with the GrabFundPromo field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderPrice) GetGrabFundPromoOk() (*int64, bool) {
+	if o == nil || IsNil(o.GrabFundPromo) {
+		return nil, false
+	}
+	return o.GrabFundPromo, true
+}
+
+// HasGrabFundPromo returns a boolean if a field has been set.
+func (o *TakeoutOrderPrice) HasGrabFundPromo() bool {
+	if o != nil && !IsNil(o.GrabFundPromo) {
+		return true
+	}
+
+	return false
+}
+
+// SetGrabFundPromo gets a reference to the given int64 and assigns it to the GrabFundPromo field.
+func (o *TakeoutOrderPrice) SetGrabFundPromo(v int64) {
+	o.GrabFundPromo = &v
+}
+
+// GetMerchantFundPromo returns the MerchantFundPromo field value if set, zero value otherwise.
+func (o *TakeoutOrderPrice) GetMerchantFundPromo() int64 {
+	if o == nil || IsNil(o.MerchantFundPromo) {
+		var ret int64
+		return ret
+	}
+	return *o.MerchantFundPromo
+}
+
+// GetMerchantFundPromoOk returns a tuple with the MerchantFundPromo field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderPrice) GetMerchantFundPromoOk() (*int64, bool) {
+	if o == nil || IsNil(o.MerchantFundPromo) {
+		return nil, false
+	}
+	return o.MerchantFundPromo, true
+}
+
+// HasMerchantFundPromo returns a boolean if a field has been set.
+func (o *TakeoutOrderPrice) HasMerchantFundPromo() bool {
+	if o != nil && !IsNil(o.MerchantFundPromo) {
+		return true
+	}
+
+	return false
+}
+
+// SetMerchantFundPromo gets a reference to the given int64 and assigns it to the MerchantFundPromo field.
+func (o *TakeoutOrderPrice) SetMerchantFundPromo(v int64) {
+	o.MerchantFundPromo = &v
+}
+
+// GetBasketPromo returns the BasketPromo field value if set, zero value otherwise.
+func (o *TakeoutOrderPrice) GetBasketPromo() int64 {
+	if o == nil || IsNil(o.BasketPromo) {
+		var ret int64
+		return ret
+	}
+	return *o.BasketPromo
+}
+
+// GetBasketPromoOk returns a tuple with the BasketPromo field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderPrice) GetBasketPromoOk() (*int64, bool) {
+	if o == nil || IsNil(o.BasketPromo) {
+		return nil, false
+	}
+	return o.BasketPromo, true
+}
+
+// HasBasketPromo returns a boolean if a field has been set.
+func (o *TakeoutOrderPrice) HasBasketPromo() bool {
+	if o != nil && !IsNil(o.BasketPromo) {
+		return true
+	}
+
+	return false
+}
+
+// SetBasketPromo gets a reference to the given int64 and assigns it to the BasketPromo field.
+func (o *TakeoutOrderPrice) SetBasketPromo(v int64) {
+	o.BasketPromo = &v
+}
+
+// GetDeliveryFee returns the DeliveryFee field value if set, zero value otherwise.
+func (o *TakeoutOrderPrice) GetDeliveryFee() int64 {
+	if o == nil || IsNil(o.DeliveryFee) {
+		var ret int64
+		return ret
+	}
+	return *o.DeliveryFee
+}
+
+// GetDeliveryFeeOk returns a tuple with the DeliveryFee field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderPrice) GetDeliveryFeeOk() (*int64, bool) {
+	if o == nil || IsNil(o.DeliveryFee) {
+		return nil, false
+	}
+	return o.DeliveryFee, true
+}
+
+// HasDeliveryFee returns a boolean if a field has been set.
+func (o *TakeoutOrderPrice) HasDeliveryFee() bool {
+	if o != nil && !IsNil(o.DeliveryFee) {
+		return true
+	}
+
+	return false
+}
+
+// SetDeliveryFee gets a reference to the given int64 and assigns it to the DeliveryFee field.
+func (o *TakeoutOrderPrice) SetDeliveryFee(v int64) {
+	o.DeliveryFee = &v
+}
+
+// GetSmallOrderFee returns the SmallOrderFee field value if set, zero value otherwise.
+func (o *TakeoutOrderPrice) GetSmallOrderFee() int64 {
+	if o == nil || IsNil(o.SmallOrderFee) {
+		var ret int64
+		return ret
+	}
+	return *o.SmallOrderFee
+}
+
+// GetSmallOrderFeeOk returns a tuple with the SmallOrderFee field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderPrice) GetSmallOrderFeeOk() (*int64, bool) {
+	if o == nil || IsNil(o.SmallOrderFee) {
+		return nil, false
+	}
+	return o.SmallOrderFee, true
+}
+
+// HasSmallOrderFee returns a boolean if a field has been set.
+func (o *TakeoutOrderPrice) HasSmallOrderFee() bool {
+	if o != nil && !IsNil(o.SmallOrderFee) {
+		return true
+	}
+
+	return false
+}
+
+// SetSmallOrderFee gets a reference to the given int64 and assigns it to the SmallOrderFee field.
+func (o *TakeoutOrderPrice) SetSmallOrderFee(v int64) {
+	o.SmallOrderFee = &v
+}
+
+// GetEaterPayment returns the EaterPayment field value if set, zero value otherwise.
+func (o *TakeoutOrderPrice) GetEaterPayment() int64 {
+	if o == nil || IsNil(o.EaterPayment) {
+		var ret int64
+		return ret
+	}
+	return *o.EaterPayment
+}
+
+// GetEaterPaymentOk returns a tuple with the EaterPayment field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderPrice) GetEaterPaymentOk() (*int64, bool) {
+	if o == nil || IsNil(o.EaterPayment) {
+		return nil, false
+	}
+	return o.EaterPayment, true
+}
+
+// GetTotal returns the Total field value if set, zero value otherwise.
+func (o *TakeoutOrderPrice) GetTotal() int64 {
+	if o == nil || IsNil(o.Total) {
+		var ret int64
+		return ret
+	}
+	return *o.Total
+}
+
+// GetTotalOk returns a tuple with the Total field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutOrderPrice) GetTotalOk() (*int64, bool) {
+	if o == nil || IsNil(o.Total) {
+		return nil, false
+	}
+	return o.Total, true
+}
+
+// HasEaterPayment returns a boolean if a field has been set.
+func (o *TakeoutOrderPrice) HasEaterPayment() bool {
+	if o != nil && !IsNil(o.EaterPayment) {
+		return true
+	}
+
+	return false
+}
+
+// SetEaterPayment gets a reference to the given int64 and assigns it to the EaterPayment field.
+func (o *TakeoutOrderPrice) SetEaterPayment(v int64) {
+	o.EaterPayment = &v
+}
+
+func (o TakeoutOrderPrice) MarshalJSON() ([]byte, error) {
+	toSerialize, err := o.ToMap()
+	if err != nil {
+		return []byte{}, err
+	}
+	return json.Marshal(toSerialize)
+}
+
+func (o TakeoutOrderPrice) ToMap() (map[string]interface{}, error) {
+	toSerialize := map[string]interface{}{}
+	toSerialize["subtotal"] = o.Subtotal
+	if !IsNil(o.Tax) {
+		toSerialize["tax"] = o.Tax
+	}
+	if !IsNil(o.MerchantChargeFee) {
+		toSerialize["merchantChargeFee"] = o.MerchantChargeFee
+	}
+	if !IsNil(o.GrabFundPromo) {
+		toSerialize["grabFundPromo"] = o.GrabFundPromo
+	}
+	if !IsNil(o.MerchantFundPromo) {
+		toSerialize["merchantFundPromo"] = o.MerchantFundPromo
+	}
+	if !IsNil(o.BasketPromo) {
+		toSerialize["basketPromo"] = o.BasketPromo
+	}
+	if !IsNil(o.DeliveryFee) {
+		toSerialize["deliveryFee"] = o.DeliveryFee
+	}
+	if !IsNil(o.SmallOrderFee) {
+		toSerialize["smallOrderFee"] = o.SmallOrderFee
+	}
+	if !IsNil(o.EaterPayment) {
+		toSerialize["eaterPayment"] = o.EaterPayment
+	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
+	return toSerialize, nil
+}
+
 // ============================================================================
 // TakeoutCurrency - Aligned with Grab SDK Currency
 // Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_currency.go
@@ -265,7 +1581,7 @@ type TakeoutCurrency struct {
 }
 
 // ============================================================================
-// TakeoutFeatureFlags - Aligned with Grab SDK OrderFeatureFlags
+// TakeoutFeatureFlags - Aligned with Grab SDK TakeoutFeatureFlags
 // Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_feature_flags.go
 // ============================================================================
 
@@ -288,6 +1604,86 @@ type TakeoutFeatureFlags struct {
 	// AdditionalProperties Extra properties not defined in the schema
 	// Grab: AdditionalProperties map[string]interface{}
 	AdditionalProperties map[string]any `json:"-"`
+}
+
+// GetOrderAcceptedType returns the OrderAcceptedType field value
+func (o *TakeoutFeatureFlags) GetOrderAcceptedType() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.OrderAcceptedType
+}
+
+// GetOrderAcceptedTypeOk returns a tuple with the OrderAcceptedType field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutFeatureFlags) GetOrderAcceptedTypeOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.OrderAcceptedType, true
+}
+
+// SetOrderAcceptedType sets field value
+func (o *TakeoutFeatureFlags) SetOrderAcceptedType(v string) {
+	o.OrderAcceptedType = v
+}
+
+// GetOrderType returns the OrderType field value
+func (o *TakeoutFeatureFlags) GetOrderType() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.OrderType
+}
+
+// GetOrderTypeOk returns a tuple with the OrderType field value
+// and a boolean to check if the value has been set.
+func (o *TakeoutFeatureFlags) GetOrderTypeOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.OrderType, true
+}
+
+// SetOrderType sets field value
+func (o *TakeoutFeatureFlags) SetOrderType(v string) {
+	o.OrderType = v
+}
+
+// GetIsMexEditOrder returns the IsMexEditOrder field value if set, zero value otherwise.
+func (o *TakeoutFeatureFlags) GetIsMexEditOrder() bool {
+	if o == nil || IsNil(o.IsMexEditOrder) {
+		var ret bool
+		return ret
+	}
+	return *o.IsMexEditOrder
+}
+
+// GetIsMexEditOrderOk returns a tuple with the IsMexEditOrder field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TakeoutFeatureFlags) GetIsMexEditOrderOk() (*bool, bool) {
+	if o == nil || IsNil(o.IsMexEditOrder) {
+		return nil, false
+	}
+	return o.IsMexEditOrder, true
+}
+
+// HasIsMexEditOrder returns a boolean if a field has been set.
+func (o *TakeoutFeatureFlags) HasIsMexEditOrder() bool {
+	if o != nil && !IsNil(o.IsMexEditOrder) {
+		return true
+	}
+
+	return false
+}
+
+// SetIsMexEditOrder gets a reference to the given bool and assigns it to the IsMexEditOrder field.
+func (o *TakeoutFeatureFlags) SetIsMexEditOrder(v bool) {
+	o.IsMexEditOrder = &v
 }
 
 // ============================================================================
@@ -757,4 +2153,18 @@ func (v NullableTime) MarshalJSON() ([]byte, error) {
 func (v *NullableTime) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
+}
+
+// IsNil checks if an input is nil
+func IsNil(i interface{}) bool {
+	if i == nil {
+		return true
+	}
+	switch reflect.TypeOf(i).Kind() {
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
+		return reflect.ValueOf(i).IsNil()
+	case reflect.Array:
+		return reflect.ValueOf(i).IsZero()
+	}
+	return false
 }

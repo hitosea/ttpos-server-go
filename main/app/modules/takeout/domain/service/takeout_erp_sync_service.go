@@ -155,7 +155,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	}
 
 	// 13. 记录 ERP 发票信息到日志
-	logger.Logger.Info("成功同步 Grab 订单到 ERP",
+	logger.Logger.Info("成功同步 外卖订单到 ERP",
 		zap.Uint64("orderUuid", orderUuid),
 		zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
 		zap.String("erpProductsInvoiceName", savePosInvoiceResp.ProductsInvoiceName),

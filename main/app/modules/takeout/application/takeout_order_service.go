@@ -142,7 +142,7 @@ func (s *takeoutOrderAppService) SyncNewOrder(ctx context.Context, platform stri
 		rawDataJSON = dataJSON
 	} else if platform == value_object.TakeoutPlatformLineman {
 		// 将 orderData 转为 JSON
-		dataJSON, err := json.Marshal(rawData)
+		dataJSON, err := json.Marshal(orderDataMap)
 		if err != nil {
 			logger.Logger.Error("序列化订单数据失败", zap.Error(err))
 			return fmt.Errorf("序列化订单数据失败: %w", err)
