@@ -340,14 +340,14 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 					QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
 				}
 				// 是否更新限购方案
-				if purchaseOrder.IsStorePending() {
+				if purchaseOrder.IsStorePendingOrDraft() {
 					// 检查是否使用限购单位
 					materialName := language.JsonToLocaleResponse(item.Material.Name).GetLocale(lang)
 					for _, unit := range item.Units {
 						if unit.UnitUuid != itemInfo.QuotaConfig.QuotaUnitUuid {
 							detailResp.IsUpdateQuotaScheme = true
 							itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(
-								i18n.Translate(lang, "物品%s的单位限制已变更，当前使用的单位（%s）不在允许范围内，请修改。"),
+								i18n.Translate(lang, "物品%s的单位限制已变更，当前使用的单位（%s）不在允许范围内，请更新。"),
 								materialName, language.JsonToLocaleResponse(unit.UnitName).GetLocale(lang),
 							)
 							break
@@ -784,7 +784,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrderItemUnit(
 		}
 
 		// 2. 检查是否可编辑（待提交或待审核状态）
-		if !purchaseOrder.IsStorePending() {
+		if !purchaseOrder.IsStorePendingOrDraft() {
 			return errors.New("当前状态不允许修改")
 		}
 
@@ -1125,7 +1125,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 				return err
 			}
 			// 🔥 新增：品牌采购限购校验（基于新的限购方案表）
-			if purchaseOrder.IsHeadquarterPurchase() && purchaseOrder.IsStorePending() {
+			if purchaseOrder.IsHeadquarterPurchase() && purchaseOrder.IsStorePendingOrDraft() {
 				// 检查限购方案（包含每日申请次数限制和物品数量限制）
 				if err := s.checkPurchaseLimit(ctx, purchaseOrder); err != nil {
 					return err

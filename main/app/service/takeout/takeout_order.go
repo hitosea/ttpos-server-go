@@ -1121,7 +1121,7 @@ func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, orderUuid u
 
 	// 5. 记录高峰期
 	peakTimeRepo := repository.NewSaleOrderPeakTimeRepo(db)
-	refundMoney := utils.IfFloat64(recordType == "dec", order.EaterPayment, 0.0)
+	refundMoney := utils.IfFloat64(recordType == "dec", order.PlatformTotal, 0.0)
 	return peakTimeRepo.Record(recordType, saleBill, refundMoney, storeSetting.TimeZone)
 }
 
