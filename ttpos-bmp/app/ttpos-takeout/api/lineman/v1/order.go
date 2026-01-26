@@ -85,7 +85,7 @@ type OrderStatusUpdateRes struct {
 // OrderUpdateReq 订单更新通知请求
 // LINE MAN 通知 TTPOS 订单信息已更新
 type OrderUpdateReq struct {
-	g.Meta            `path:"/partners/:partnerId/stores/:storeId/orders" method:"put" tags:"LINE MAN Order" summary:"接收订单更新通知"`
+	g.Meta            `path:"/partners/:partnerId/stores/:storeId/orders/notification" method:"put" tags:"LINE MAN Order" summary:"接收订单更新通知"`
 	PartnerId         string                `json:"partnerId" v:"required#合作伙伴ID不能为空" dc:"合作伙伴唯一 ID（路径参数）"`
 	StoreId           string                `json:"storeId" v:"required#门店ID不能为空" dc:"门店唯一 ID（路径参数）"`
 	OrderId           string                `json:"orderId" v:"required|length:1,20#订单ID不能为空|订单ID长度为1-20个字符" dc:"订单唯一 ID，格式：LMF-yyMMdd-{generated number}"`
