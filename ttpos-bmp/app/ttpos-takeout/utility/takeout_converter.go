@@ -572,25 +572,23 @@ func FromLinemanPlaceOrder(req *linemanv1.PlaceOrderReq) (*message.TakeoutOrder,
 		// Properties -> Modifiers 转换
 		// Lineman: properties[].values[] (属性组 -> 属性值列表)
 		// Grab: modifiers[] (扁平的修改项列表)
-		// 需要将 Lineman 的属性组结构转换为 Grab 的扁平结构
-		for _, prop := range item.Properties {
-			// 为每个 property 创建一个 modifier，包含所有 values
-			modID := prop.Id
-			var modPrice int64 = 0
-			modQty := int32(1) // Lineman 不提供 quantity，默认为 1
+		// 需要将 Lineman 的属性组结构转换为 Grab 的扁平结构,不需要按组合计
 
+		for _, prop := range item.Properties {
 			// 累加 values 的价格
 			for _, val := range prop.Values {
-				modPrice += int64(val.Price * 100) // 转换为最小单位
+
+				modPrice := int64(val.Price * 100) // 转换为最小单位
+				modQty := int32(1)                 // Lineman 属性值没有数量，默认 1
+				modifier := message.TakeoutModifier{
+					ID:       &val.Id,
+					Quantity: &modQty,
+					Price:    &modPrice,
+				}
+
+				takeoutItem.Modifiers = append(takeoutItem.Modifiers, modifier)
 			}
 
-			modifier := message.TakeoutModifier{
-				ID:       &modID,
-				Quantity: &modQty,
-				Price:    &modPrice,
-			}
-
-			takeoutItem.Modifiers = append(takeoutItem.Modifiers, modifier)
 		}
 
 		order.Items = append(order.Items, takeoutItem)
