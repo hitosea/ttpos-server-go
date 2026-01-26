@@ -509,6 +509,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 				QueryStartTime: req.QueryStartTime,
 				QueryEndTime:   req.QueryEndTime,
 				CategoryType:   req.CategoryType,
+				DutyNo:         req.DutyNo,
 			})
 			return business_data_resp.MemberData{
 				RechargeAmount: memberData.TotalRechargeAmount,
@@ -546,6 +547,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 				QueryEndTime:      req.QueryEndTime,
 				CategoryType:      req.CategoryType,
 				ExcludeDataManage: req.ExcludeDataManage,
+				DutyNo:            req.DutyNo,
 			})
 			list := make([]business_data_resp.Percentage, 0, len(taxData))
 			for _, tax := range taxData {
