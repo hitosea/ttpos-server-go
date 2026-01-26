@@ -264,7 +264,7 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 			}
 		}
 		if len(additionalItemNames) > 0 {
-			order.AdditionalProperties = strings.Join(additionalItemNames, ",")
+			order.AdditionalProperties = strings.Join(additionalItemNames, ", ")
 		}
 	}
 

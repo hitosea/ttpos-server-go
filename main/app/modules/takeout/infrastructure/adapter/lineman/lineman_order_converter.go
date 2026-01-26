@@ -98,7 +98,7 @@ func (c *LineManConverter) ParseOrderWebhook(rawData []byte) (interface{}, error
 	var additionalPropsValue interface{} // 保存原始值
 
 	if err := json.Unmarshal(rawData, &tempMap); err == nil {
-		if addProps, exists := tempMap["additionalProperties"]; exists {
+		if addProps, exists := tempMap["additionalItems"]; exists {
 			additionalPropsValue = addProps // 保存原始值供后续使用
 
 			// 检查类型，如果不是 map，则删除该字段避免解析错误
@@ -106,8 +106,7 @@ func (c *LineManConverter) ParseOrderWebhook(rawData []byte) (interface{}, error
 			case map[string]interface{}:
 				// 正确的类型，不需要处理
 			default:
-				// 是 string 或 array，删除该字段
-				delete(tempMap, "additionalProperties")
+				delete(tempMap, "additionalItems")
 				// 重新序列化
 				var err error
 				rawData, err = json.Marshal(tempMap)
@@ -126,7 +125,11 @@ func (c *LineManConverter) ParseOrderWebhook(rawData []byte) (interface{}, error
 
 	// 如果原始 additionalProperties 是数组，手动恢复并转换为 map 格式
 	if additionalPropsValue != nil {
-		if arrayValue, ok := additionalPropsValue.([]interface{}); ok {
+		if arrayValue, ok := additionalPropsValue.([]interface{}); ok && len(arrayValue) > 0 {
+			// 初始化 map（避免 nil map 赋值 panic）
+			if takeoutOrder.AdditionalProperties == nil {
+				takeoutOrder.AdditionalProperties = make(map[string]interface{})
+			}
 			for index, value := range arrayValue {
 				if valueMap, ok := value.(map[string]interface{}); ok {
 					if name, ok := valueMap["name"].(string); ok {

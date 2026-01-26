@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -34,8 +35,8 @@ type ITakeoutOrderSrv interface {
 	// 订单查询
 	GetList(ctx context.Context, req *request.TakeoutOrderListReq) (*response.TakeoutOrderListResp, error)
 	GetByUuid(ctx context.Context, uuid uint64) (*response.TakeoutOrderResp, error)
-	// 创建订单（接受已转换的订单对象，商品数据从 order.RawData 中解析）- 由 Application 层调用
-	CreateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder) error
+	// 创建或更新订单（接受已转换的订单对象，商品数据从 order.RawData 中解析）- 由 Application 层调用
+	CreateOrUpdateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder, isUpdate bool) error
 	// 更新订单状态 - 由 Application 层调用
 	UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string, message string) error
 	// 订单操作
@@ -753,19 +754,22 @@ func (s *takeoutOrderSrv) findModifierMapping(platform, platformModifierId strin
 }
 
 // CreateOrder 创建订单（接受已转换的订单对象）- 由 Application 层调用
-func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder) error {
+func (s *takeoutOrderSrv) CreateOrUpdateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder, isUpdate bool) error {
 	db := ctx.GetDB()
 	currentTime := time.Now().Unix()
+	orderRepo := persistence.NewTakeoutOrderRepo(db)
 
 	// 检查订单是否已存在
-	orderRepo := persistence.NewTakeoutOrderRepo(db)
-	existingOrder, err := orderRepo.GetByPlatformOrderId(order.Platform, order.PlatformOrderId)
-	if err != nil {
-		logger.Logger.Error("查询订单失败", zap.Error(err), zap.String("platform", order.Platform), zap.String("platformOrderId", order.PlatformOrderId))
-		return errors.WithMessage(errors.New("查询订单失败"), err.Error())
-	}
-	if existingOrder != nil {
-		return nil
+	if !isUpdate {
+		existingOrder, err := orderRepo.GetByPlatformOrderId(order.Platform, order.PlatformOrderId)
+		if err != nil {
+			logger.Logger.Error("查询订单失败", zap.Error(err), zap.String("platform", order.Platform), zap.String("platformOrderId", order.PlatformOrderId))
+			return errors.WithMessage(errors.New("查询订单失败"), err.Error())
+		}
+		if existingOrder != nil && existingOrder.Uuid > 0 {
+			// 订单已存在，直接返回
+			return nil
+		}
 	}
 
 	// 验证商品数据
@@ -786,10 +790,41 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 		ctxTx.SetDB(tx)
 		// 创建订单仓储
 		orderRepoTx := persistence.NewTakeoutOrderRepo(tx)
-		// 1. 创建订单
-		if err := orderRepoTx.Create(order); err != nil {
-			logger.Logger.Error("创建订单失败", zap.Error(err), zap.Any("order", order))
-			return errors.WithMessage(errors.New("创建订单失败"), err.Error())
+
+		// 保存或者更新订单
+		if order != nil && order.Uuid > 0 {
+			// 删除旧的关联数据（通过仓库层）
+			if err := orderRepoTx.DeleteRelatedData(order.Uuid); err != nil {
+				logger.Logger.Error("删除旧订单关联数据失败", zap.Uint64("orderUuid", order.Uuid), zap.Error(err))
+				return fmt.Errorf("删除旧订单关联数据失败: %w", err)
+			}
+			// 更新订单主表字段
+			updateFields := map[string]interface{}{
+				"subtotal":              order.Subtotal,
+				"delivery_fee":          order.DeliveryFee,
+				"small_order_fee":       order.SmallOrderFee,
+				"eater_payment":         order.EaterPayment,
+				"platform_discount":     order.PlatformDiscount,
+				"merchant_discount":     order.MerchantDiscount,
+				"basket_promo":          order.BasketPromo,
+				"tax":                   order.Tax,
+				"merchant_charge_fee":   order.MerchantChargeFee,
+				"platform_total":        order.PlatformTotal,
+				"additional_properties": order.AdditionalProperties,
+				"raw_data":              order.RawData,
+				"completed_time":        order.CompletedTime,
+			}
+			if err := orderRepoTx.UpdateByMap(order.Uuid, updateFields); err != nil {
+				logger.Logger.Error("更新订单主表失败",
+					zap.Uint64("orderUuid", order.Uuid),
+					zap.Error(err))
+				return fmt.Errorf("更新订单主表失败: %w", err)
+			}
+		} else {
+			if err := orderRepoTx.Create(order); err != nil {
+				logger.Logger.Error("创建订单失败", zap.Error(err), zap.Any("order", order))
+				return errors.WithMessage(errors.New("创建订单失败"), err.Error())
+			}
 		}
 
 		// 2. 处理订单商品和修饰符
@@ -1061,23 +1096,35 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 	}
 
 	// 发布订单创建事件
-	event.GetDispatcher().Publish(event.NewOrderCreatedEvent(
-		order.Uuid,
-		order.Platform,
-		order.PlatformOrderId,
-		order.ShortOrderNumber,
-		order.TakeoutOrderUuid,
-		order.EaterPayment,
-		ctx.GetCompanyUuid(),
-	))
+	if !isUpdate {
+		event.GetDispatcher().Publish(event.NewOrderCreatedEvent(
+			order.Uuid,
+			order.Platform,
+			order.PlatformOrderId,
+			order.ShortOrderNumber,
+			order.TakeoutOrderUuid,
+			order.EaterPayment,
+			ctx.GetCompanyUuid(),
+		))
 
-	// 自动接单
-	if order.IsAutoAcceptOrder() {
-		if err := s.AcceptOrder(ctx, &request.TakeoutOrderAcceptReq{
-			Uuid: order.Uuid,
-		}); err != nil {
-			logger.Logger.Error("接单失败", zap.Error(err))
+		// 自动接单
+		if order.IsAutoAcceptOrder() {
+			if err := s.AcceptOrder(ctx, &request.TakeoutOrderAcceptReq{
+				Uuid: order.Uuid,
+			}); err != nil {
+				logger.Logger.Error("接单失败", zap.Error(err))
+			}
 		}
+	} else {
+		event.GetDispatcher().Publish(event.NewOrderUpdatedEvent(
+			order.Uuid,
+			order.Platform,
+			order.PlatformOrderId,
+			order.ShortOrderNumber,
+			order.TakeoutOrderUuid,
+			order.EaterPayment,
+			ctx.GetCompanyUuid(),
+		))
 	}
 
 	return nil

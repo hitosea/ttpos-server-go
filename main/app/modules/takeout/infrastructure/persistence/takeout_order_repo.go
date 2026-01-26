@@ -30,12 +30,16 @@ type ITakeoutOrderRepo interface {
 	BatchAssignShiftLog(shiftLogUuid, staffUuid uint64, orderUuids []uint64) (int64, error) // 批量分配班次给订单
 	GetErpOpenPosEntryNameByOrderUuid(orderUuid uint64) (string, error)                     // 获取当前订单的ERP开账名称
 	GetShiftLogByOrderUuid(orderUuid uint64) (*appModel.StaffShiftLog, error)               // 根据订单UUID获取班次信息
+	DeleteRelatedData(orderUuid uint64) error                                               // 删除订单关联数据（商品、修饰符、收货人、活动、促销、物料）
 
 	// 选项方法
 	WithPreload(options ...DBOption) DBOption
 	WithTakeoutOrderItems() DBOption
 	WithTakeoutOrderItemModifiers() DBOption
 	WithTakeoutOrderMaterials() DBOption
+	WithTakeoutOrderReceiver() DBOption
+	WithTakeoutOrderCampaigns() DBOption
+	WithTakeoutOrderPromos() DBOption
 	WhereUuid(uuid uint64) DBOption
 	WherePlatform(platform string) DBOption
 	WhereOrderState(orderState int) DBOption
@@ -451,6 +455,63 @@ func (r *TakeoutOrderRepoImpl) WithTakeoutOrderMaterials() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("TakeoutOrderMaterials.Material.Unit")
 	}
+}
+
+// WithTakeoutOrderReceiver 预加载订单收货人信息
+func (r *TakeoutOrderRepoImpl) WithTakeoutOrderReceiver() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("TakeoutOrderReceiver")
+	}
+}
+
+// WithTakeoutOrderCampaigns 预加载订单活动信息
+func (r *TakeoutOrderRepoImpl) WithTakeoutOrderCampaigns() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("TakeoutOrderCampaigns")
+	}
+}
+
+// WithTakeoutOrderPromos 预加载订单促销信息
+func (r *TakeoutOrderRepoImpl) WithTakeoutOrderPromos() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("TakeoutOrderPromos")
+	}
+}
+
+// DeleteRelatedData 删除订单关联数据（商品、修饰符、收货人、活动、促销、物料）
+// 使用物理删除，按依赖顺序：先删子表再删主表
+func (r *TakeoutOrderRepoImpl) DeleteRelatedData(orderUuid uint64) error {
+	// 1. 删除商品修饰符（依赖商品）
+	if err := r.db.Unscoped().Where("takeout_order_item_uuid IN (SELECT uuid FROM ttpos_takeout_order_item WHERE takeout_order_uuid = ?)", orderUuid).Delete(&model.TakeoutOrderItemModifier{}).Error; err != nil {
+		return errors.WithMessage(err, "删除订单商品修饰符失败")
+	}
+
+	// 2. 删除商品
+	if err := r.db.Unscoped().Where("takeout_order_uuid = ?", orderUuid).Delete(&model.TakeoutOrderItem{}).Error; err != nil {
+		return errors.WithMessage(err, "删除订单商品失败")
+	}
+
+	// 3. 删除收货人
+	if err := r.db.Unscoped().Where("takeout_order_uuid = ?", orderUuid).Delete(&model.TakeoutOrderReceiver{}).Error; err != nil {
+		return errors.WithMessage(err, "删除订单收货人失败")
+	}
+
+	// 4. 删除活动
+	if err := r.db.Unscoped().Where("takeout_order_uuid = ?", orderUuid).Delete(&model.TakeoutOrderCampaign{}).Error; err != nil {
+		return errors.WithMessage(err, "删除订单活动失败")
+	}
+
+	// 5. 删除促销
+	if err := r.db.Unscoped().Where("takeout_order_uuid = ?", orderUuid).Delete(&model.TakeoutOrderPromo{}).Error; err != nil {
+		return errors.WithMessage(err, "删除订单促销失败")
+	}
+
+	// 6. 删除物料
+	if err := r.db.Unscoped().Where("takeout_order_uuid = ?", orderUuid).Delete(&model.TakeoutOrderMaterial{}).Error; err != nil {
+		return errors.WithMessage(err, "删除订单物料失败")
+	}
+
+	return nil
 }
 
 // GetShiftLogByOrderUuid 根据订单UUID获取班次信息
