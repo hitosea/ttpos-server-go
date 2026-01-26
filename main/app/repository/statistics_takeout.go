@@ -93,8 +93,8 @@ type CountTakeoutBusinessSummaryReq struct {
 type takeoutBusinessSummaryRawData struct {
 	AcceptedTime int64   // 接单时间戳
 	OrderUuid    uint64  // 订单UUID
-	OrderAmount  float64 // 订单金额（subtotal）
-	PayAmount    float64 // 实付金额（状态为60时=0，其他状态=eater_payment）
+	OrderAmount  float64 // 订单金额（platform_total）
+	PayAmount    float64 // 实付金额（状态为60时=0，其他状态=platform_total）
 }
 
 // CountTakeoutChannelSaleReq 统计外卖订单渠道营业请求
@@ -107,8 +107,8 @@ type CountTakeoutChannelSaleReq struct {
 type TakeoutChannelSaleRawData struct {
 	AcceptedTime int64   // 接单时间戳
 	OrderUuid    uint64  // 订单UUID
-	OrderAmount  float64 // 订单金额（subtotal）
-	PayAmount    float64 // 实付金额（状态为60时=0，其他状态=eater_payment）
+	OrderAmount  float64 // 订单金额（platform_total）
+	PayAmount    float64 // 实付金额（状态为60时=0，其他状态=platform_total）
 	OrderNum     int64   // 订单数
 	RefundNum    int64   // 退款笔数
 }
@@ -121,7 +121,7 @@ type TakeoutPaymentMethodRawData struct {
 	PaymentMethodCreateTime int64   // 支付方式创建时间戳
 	PaymentName             string  // 支付方式名称
 	Name                    string  // 名称
-	PaymentAmount           float64 // 支付金额（营业收入状态的 eater_payment，取消状态为0）
+	PaymentAmount           float64 // 支付金额（营业收入状态的 platform_total，取消状态为0）
 }
 
 // NewStatisticsTakeoutRepo 创建外卖统计仓储实例
@@ -151,9 +151,9 @@ func NewStatisticsTakeoutRepoImpl(db *gorm.DB) *StatisticsTakeoutRepo {
 //   - 取消状态（60）的订单需要 accepted_time > 0 才会被统计
 //
 // 字段说明：
-//   - TotalSaleAmount: 总销售额（使用顾客实付 eater_payment，与堂食统计统一）
-//   - MinOrderAmount/MaxOrderAmount: 最小/最大订单金额（使用顾客实付 eater_payment）
-//   - TotalOrderAmount: 总订单金额（使用顾客实付 eater_payment，用于计算平均值）
+//   - TotalSaleAmount: 总销售额（使用顾客实付 platform_total，与堂食统计统一）
+//   - MinOrderAmount/MaxOrderAmount: 最小/最大订单金额（使用顾客实付 platform_total）
+//   - TotalOrderAmount: 总订单金额（使用顾客实付 platform_total，用于计算平均值）
 //   - TotalProductAmount: 原商品金额（使用小计金额 subtotal，兼容前端）
 func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.StatisticsTakeoutSaleData {
 	var result model.StatisticsTakeoutSaleData
@@ -189,31 +189,31 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 	// 使用 COALESCE 处理 NULL 值，直接返回普通类型
 	selectFields := []string{
 		// 1. 总销售额：当 order_state 为有效状态时统计（使用顾客实付）
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment, 0)), 0) AS total_sale_amount", validStatesStr),
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.platform_total, 0)), 0) AS total_sale_amount", validStatesStr),
 		// 2. 总实付金额：当 order_state 为营业收入状态时统计
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment, 0)), 0) AS total_pay_amount", businessStatesStr),
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.platform_total, 0)), 0) AS total_pay_amount", businessStatesStr),
 		// 3. 总订单数：当 order_state 为有效状态时统计
 		fmt.Sprintf("COALESCE(COUNT(DISTINCT IF(t.order_state IN %s, t.uuid, NULL)), 0) AS total_order_num", validStatesStr),
 		// 4. 总退款金额：当 order_state = 60 时统计（已取消订单的顾客实付）
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.eater_payment, 0)), 0) AS total_refund_amount", canceledOrderState),
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.platform_total, 0)), 0) AS total_refund_amount", canceledOrderState),
 		// 5. 最小订单金额：当 order_state 为有效状态时统计（使用顾客实付）
-		fmt.Sprintf("COALESCE(MIN(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS min_order_amount", businessStatesStr),
+		fmt.Sprintf("COALESCE(MIN(IF(t.order_state IN %s, t.platform_total, NULL)), 0) AS min_order_amount", businessStatesStr),
 		// 6. 最大订单金额：当 order_state 为有效状态时统计（使用顾客实付）
-		fmt.Sprintf("COALESCE(MAX(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS max_order_amount", businessStatesStr),
+		fmt.Sprintf("COALESCE(MAX(IF(t.order_state IN %s, t.platform_total, NULL)), 0) AS max_order_amount", businessStatesStr),
 		// 7. 总优惠折扣：当 order_state 为有效状态时统计 platform_discount + merchant_discount + basket_promo
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.platform_discount + t.merchant_discount + t.basket_promo, 0)), 0) AS total_discount", validStatesStr),
 		// 8. 总税费：当 order_state 为营业收入状态时统计 tax
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.tax, 0)), 0) AS total_tax", businessStatesStr),
 		// 9. 总营业收入：当 order_state 为营业收入状态时统计（实付金额 - 税费）
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment - t.tax, 0)), 0) AS total_business_amount", businessStatesStr),
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.platform_total - t.tax, 0)), 0) AS total_business_amount", businessStatesStr),
 		// 10. 取消订单数：当 order_state = 60 时统计（已取消订单）
 		fmt.Sprintf("COALESCE(COUNT(DISTINCT IF(t.order_state = %d, t.uuid, NULL)), 0) AS cancel_order_num", canceledOrderState),
 		// 11. 取消订单金额：当 order_state = 60 时统计（已取消订单的顾客实付）
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.eater_payment, 0)), 0) AS cancel_order_amount", canceledOrderState),
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.platform_total, 0)), 0) AS cancel_order_amount", canceledOrderState),
 		// 12. 总商品数量：当 order_state 为有效状态时统计，关联商品表的 quantity 字段
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, IFNULL(t.total_quantity, 0), 0)), 0) AS total_product_num", validStatesStr),
 		// 13. 总订单金额：当 order_state 为有效状态时统计（使用顾客实付，用于计算平均值）
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment, 0)), 0) AS total_order_amount", businessStatesStr),
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.platform_total, 0)), 0) AS total_order_amount", businessStatesStr),
 		// 14. 原商品金额：当 order_state 为有效状态时统计（使用小计金额，兼容前端）
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.subtotal, 0)), 0) AS total_product_origin_price", validStatesStr),
 	}
@@ -223,7 +223,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 		"ttpos_takeout_order.uuid",
 		"ttpos_takeout_order.order_state",
 		"ttpos_takeout_order.subtotal",
-		"ttpos_takeout_order.eater_payment",
+		"ttpos_takeout_order.platform_total",
 		"ttpos_takeout_order.platform_discount",
 		"ttpos_takeout_order.merchant_discount",
 		"ttpos_takeout_order.basket_promo",
@@ -249,8 +249,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 //   - 仅统计 validOrderStates 状态的订单（10, 20, 30, 40, 60），且 accepted_time > 0（接单后才能统计）
 //   - 取消状态（60）的订单需要 accepted_time > 0 才会被统计
 //
-// TotalPaymentAmount = eater_payment[10,20,30,40]（营业收入状态，优化后直接统计，避免先求和再相减）
-// TotalRefundAmount = eater_payment[60]（已取消订单，且 accepted_time > 0）
+// TotalPaymentAmount = platform_total[10,20,30,40]（营业收入状态，优化后直接统计，避免先求和再相减）
+// TotalRefundAmount = platform_total[60]（已取消订单，且 accepted_time > 0）
 func (r *StatisticsTakeoutRepo) CountTakeoutPayment(req CountTakeoutReq) []model.StatisticsTakeoutPaymentData {
 	var result []model.StatisticsTakeoutPaymentData
 
@@ -292,7 +292,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPayment(req CountTakeoutReq) []model
 	subQuery := baseQuery.Select([]string{
 		"ttpos_takeout_order.uuid",
 		"ttpos_takeout_order.order_state",
-		"ttpos_takeout_order.eater_payment",
+		"ttpos_takeout_order.platform_total",
 		paymentNameMapping,
 	})
 
@@ -310,10 +310,10 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPayment(req CountTakeoutReq) []model
 		"pm.source",
 		// 总订单数：有效状态的订单数
 		fmt.Sprintf("COALESCE(COUNT(DISTINCT IF(t.order_state IN %s, t.uuid, NULL)), 0) AS total_order_num", validStatesStr),
-		// 总支付金额：eater_payment[10,20,30,40]（优化：直接统计营业收入状态，避免 eater_payment[10,20,30,40,60] - eater_payment[60]）
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment, 0)), 0) AS total_payment_amount", businessStatesStr),
-		// 总退款金额：eater_payment[60]
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.eater_payment, 0)), 0) AS total_refund_amount", canceledOrderState),
+		// 总支付金额：platform_total[10,20,30,40]（优化：直接统计营业收入状态，避免 platform_total[10,20,30,40,60] - platform_total[60]）
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.platform_total, 0)), 0) AS total_payment_amount", businessStatesStr),
+		// 总退款金额：platform_total[60]
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.platform_total, 0)), 0) AS total_refund_amount", canceledOrderState),
 	}
 
 	// 构建排序字段：Grab 在 LINE MAN 前
@@ -339,7 +339,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPayment(req CountTakeoutReq) []model
 
 // CountTakeoutReceivedAmount 统计外卖订单实收金额
 // 查询 validOrderStates 状态下的订单，且 accepted_time > 0（接单后才能统计）
-// 使用 IF 判断：如果状态是营业收入状态(10,20,30,40)，则取 eater_payment；如果状态是取消状态(60)，则取 0
+// 使用 IF 判断：如果状态是营业收入状态(10,20,30,40)，则取 platform_total；如果状态是取消状态(60)，则取 0
 // 返回每个订单的接单时间、订单UUID和实收金额
 func (r *StatisticsTakeoutRepo) CountTakeoutReceivedAmount(req CountTakeoutReq) []model.StatisticsTakeoutReceivedAmountData {
 	var result []model.StatisticsTakeoutReceivedAmountData
@@ -375,11 +375,11 @@ func (r *StatisticsTakeoutRepo) CountTakeoutReceivedAmount(req CountTakeoutReq) 
 	businessStatesStr := buildStateInCondition(businessOrderStates)
 
 	// 计算每个订单的实收金额：
-	// 使用 IF 判断：如果状态是营业收入状态(10,20,30,40)，则取 eater_payment；如果状态是取消状态(60)，则取 0
+	// 使用 IF 判断：如果状态是营业收入状态(10,20,30,40)，则取 platform_total；如果状态是取消状态(60)，则取 0
 	selectFields := []string{
 		"ttpos_takeout_order.accepted_time",
 		"ttpos_takeout_order.uuid AS takeout_order_uuid",
-		fmt.Sprintf("IF(ttpos_takeout_order.order_state IN %s, ttpos_takeout_order.eater_payment, 0) AS total_received_amount", businessStatesStr),
+		fmt.Sprintf("IF(ttpos_takeout_order.order_state IN %s, ttpos_takeout_order.platform_total, 0) AS total_received_amount", businessStatesStr),
 	}
 
 	baseQuery.Select(selectFields).
@@ -450,8 +450,8 @@ func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.
 //   - 仅统计有效状态的订单（10,20,30,40,60），且 accepted_time > 0（接单后才能统计）
 //   - 取消状态（60）的订单需要 accepted_time > 0 才会被统计
 //
-// 订单金额：所有有效状态的 subtotal
-// 实付金额：状态为60（已取消）时=0，其他有效状态=eater_payment
+// 订单金额：所有有效状态的 platform_total
+// 实付金额：状态为60（已取消）时=0，其他有效状态=platform_total
 // 订单数量：按 uuid 去重统计
 // 用餐人数：始终为0（外卖订单无用餐人数）
 func (r *StatisticsTakeoutRepo) CountTakeoutBusinessTimePeriod(req CountTakeoutBusinessTimePeriodReq) []model.StatisticsBusinessTimePeriodData {
@@ -474,8 +474,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessTimePeriod(req CountTakeoutB
 		FROM (
 			SELECT 
 				FLOOR(accepted_time / %d) * %d AS period_start_time,
-				IF(order_state IN %s, subtotal, 0) AS order_amount,
-				IF(order_state = %d, 0, IF(order_state IN %s, eater_payment, 0)) AS pay_amount,
+				IF(order_state IN %s, platform_total, 0) AS order_amount,
+				IF(order_state = %d, 0, IF(order_state IN %s, platform_total, 0)) AS pay_amount,
 				uuid AS order_uuid
 			FROM ttpos_takeout_order
 			WHERE delete_time = ?
@@ -500,8 +500,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessTimePeriod(req CountTakeoutB
 //   - 仅统计有效状态的订单（10,20,30,40,60），且 accepted_time > 0（接单后才能统计）
 //   - 取消状态（60）的订单需要 accepted_time > 0 才会被统计
 //
-// 订单金额：所有有效状态的 subtotal
-// 实付金额：状态为60（已取消）时=0，其他有效状态=eater_payment
+// 订单金额：所有有效状态的 platform_total
+// 实付金额：状态为60（已取消）时=0，其他有效状态=platform_total
 func (r *StatisticsTakeoutRepo) CountTakeoutBusinessSummary(req CountTakeoutBusinessSummaryReq) []takeoutBusinessSummaryRawData {
 	var result []takeoutBusinessSummaryRawData
 
@@ -514,8 +514,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessSummary(req CountTakeoutBusi
 		SELECT 
 			accepted_time,
 			uuid AS order_uuid,
-			IF(order_state IN %s, eater_payment, 0) AS order_amount,
-			IF(order_state = %d, 0, IF(order_state IN %s, eater_payment, 0)) AS pay_amount
+			IF(order_state IN %s, platform_total, 0) AS order_amount,
+			IF(order_state = %d, 0, IF(order_state IN %s, platform_total, 0)) AS pay_amount
 		FROM ttpos_takeout_order
 		WHERE delete_time = ?
 			AND order_state IN %s
@@ -533,8 +533,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessSummary(req CountTakeoutBusi
 
 // CountTakeoutChannelSale 统计外卖订单渠道营业（返回原始数据，不分组）
 // 使用 accepted_time（接单时间）作为时间字段
-// 订单金额：所有有效状态的 subtotal
-// 实付金额：状态为60（已取消）时=0，其他有效状态=eater_payment
+// 订单金额：所有有效状态的 platform_total
+// 实付金额：状态为60（已取消）时=0，其他有效状态=platform_total
 func (r *StatisticsTakeoutRepo) CountTakeoutChannelSale(req CountTakeoutChannelSaleReq) []TakeoutChannelSaleRawData {
 	var result []TakeoutChannelSaleRawData
 
@@ -547,8 +547,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSale(req CountTakeoutChannelS
 		SELECT 
 			accepted_time,
 			uuid AS order_uuid,
-			IF(order_state IN %s, subtotal, 0) AS order_amount,
-			IF(order_state = %d, 0, IF(order_state IN %s, eater_payment, 0)) AS pay_amount
+			IF(order_state IN %s, platform_total, 0) AS order_amount,
+			IF(order_state = %d, 0, IF(order_state IN %s, platform_total, 0)) AS pay_amount
 		FROM ttpos_takeout_order
 		WHERE delete_time = ?
 			AND order_state IN %s
@@ -566,8 +566,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSale(req CountTakeoutChannelS
 
 // CountTakeoutChannelSaleByPlatform 统计外卖订单渠道营业（按平台，返回原始数据，不分组）
 // 使用 accepted_time（接单时间）作为时间字段
-// 订单金额：所有有效状态的 subtotal
-// 实付金额：状态为60（已取消）时=0，其他有效状态=eater_payment
+// 订单金额：所有有效状态的 platform_total
+// 实付金额：状态为60（已取消）时=0，其他有效状态=platform_total
 func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeoutChannelSaleReq, platform string) []TakeoutChannelSaleRawData {
 	var result []TakeoutChannelSaleRawData
 
@@ -580,8 +580,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeo
 		SELECT 
 			accepted_time,
 			uuid AS order_uuid,
-			IF(order_state IN %s, subtotal, 0) AS order_amount,
-			IF(order_state = %d, 0, IF(order_state IN %s, eater_payment, 0)) AS pay_amount
+			IF(order_state IN %s, platform_total, 0) AS order_amount,
+			IF(order_state = %d, 0, IF(order_state IN %s, platform_total, 0)) AS pay_amount
 		FROM ttpos_takeout_order
 		WHERE delete_time = ?
 			AND order_state IN %s
@@ -600,7 +600,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeo
 
 // CountTakeoutPaymentMethodRawData 查询外卖订单支付方式原始数据（用于合并统计）
 // 查询 validOrderStates 状态下的订单，且 accepted_time > 0（接单后才能统计）
-// 使用 IF 判断：如果状态是营业收入状态(10,20,30,40)，则取 eater_payment；如果状态是取消状态(60)，则取 0
+// 使用 IF 判断：如果状态是营业收入状态(10,20,30,40)，则取 platform_total；如果状态是取消状态(60)，则取 0
 // 返回每个订单的接单时间、支付方式UUID、支付方式排序、支付方式创建时间、支付方式名称和支付金额
 func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeoutReq) []TakeoutPaymentMethodRawData {
 	var result []TakeoutPaymentMethodRawData
@@ -646,7 +646,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 	subQuery := baseQuery.Select([]string{
 		"ttpos_takeout_order.accepted_time",
 		"ttpos_takeout_order.order_state",
-		"ttpos_takeout_order.eater_payment",
+		"ttpos_takeout_order.platform_total",
 		paymentNameMapping,
 	})
 
@@ -658,8 +658,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 		"pm.create_time AS payment_method_create_time",
 		"pm.payment_name",
 		"pm.name",
-		// 计算每个订单的支付金额：如果状态是营业收入状态(10,20,30,40)，则取 eater_payment；如果状态是取消状态(60)，则取 0
-		fmt.Sprintf("IF(t.order_state IN %s, t.eater_payment, 0) AS payment_amount", businessStatesStr),
+		// 计算每个订单的支付金额：如果状态是营业收入状态(10,20,30,40)，则取 platform_total；如果状态是取消状态(60)，则取 0
+		fmt.Sprintf("IF(t.order_state IN %s, t.platform_total, 0) AS payment_amount", businessStatesStr),
 	}
 
 	// 关联 payment_method 表，根据 payment_name 匹配
@@ -882,7 +882,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 }
 
 // CountTakeoutRefundAmount 统计外卖订单退款金额
-// 统计 canceledOrderState（60）状态下的订单，且 accepted_time > 0（接单后才能统计），退款金额为 eater_payment
+// 统计 canceledOrderState（60）状态下的订单，且 accepted_time > 0（接单后才能统计），退款金额为 platform_total
 func (r *StatisticsTakeoutRepo) CountTakeoutRefundAmount(req CountTakeoutReq) float64 {
 	var amount sql.NullFloat64
 
@@ -890,7 +890,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutRefundAmount(req CountTakeoutReq) fl
 	takeoutOrderTable := prefix + "takeout_order"
 
 	query := r.db.Table(takeoutOrderTable).
-		Select("COALESCE(SUM(eater_payment), 0) AS amount").
+		Select("COALESCE(SUM(platform_total), 0) AS amount").
 		Where("delete_time = ?", constant.NotDeleted).
 		Where("order_state = ?", canceledOrderState) // 只统计取消状态的订单
 

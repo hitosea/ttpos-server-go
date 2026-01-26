@@ -2299,8 +2299,8 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 		takeoutOrderQuery = fmt.Sprintf(`
 		SELECT 
 			FLOOR(accepted_time / %d) * %d AS period_start_time,
-			IF(order_state IN %s, eater_payment, 0) AS order_amount,
-			IF(order_state = %d, 0, IF(order_state IN %s, eater_payment, 0)) AS pay_amount,
+			IF(order_state IN %s, platform_total, 0) AS order_amount,
+			IF(order_state = %d, 0, IF(order_state IN %s, platform_total, 0)) AS pay_amount,
 			0 AS refund_amount,
 			uuid AS sale_bill_uuid,
 			0 AS meal_num
@@ -3403,14 +3403,14 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 	// 2.1. 查询外卖订单取消订单数据（order_state = 60，且 accepted_time > 0）
 	type takeoutRefundRawData struct {
 		AcceptedTime int64   // 接单时间戳
-		RefundAmount float64 // 退款金额（eater_payment）
+		RefundAmount float64 // 退款金额（platform_total）
 		RefundNum    int64   // 退款笔数（每个订单算一笔）
 	}
 	var takeoutRefundData []takeoutRefundRawData
 	takeoutRefundQuery := `
 		SELECT 
 			accepted_time,
-			eater_payment AS refund_amount,
+			platform_total AS refund_amount,
 			1 AS refund_num
 		FROM ttpos_takeout_order
 		WHERE delete_time = ?
@@ -3557,13 +3557,13 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 
 		// 使用 decimal 累加统计数据
 		group := groupedData[dateKey]
-		// 退款金额：+ 外卖订单取消金额 "eaterPayment"
+		// 退款金额：+ 外卖订单取消金额 "platform_total"
 		group.RefundAmount = group.RefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
 		// 退款笔数：+ 外卖订单取消笔数
 		group.RefundNum += item.RefundNum
 		// 部分退款金额：+外卖订单（无部分退款金额，所以不加）
 		// 部分退款笔数：+外卖订单（无部分退款笔数，所以不加）
-		// 整单退款金额：+外卖订单取消金额 "eaterPayment"
+		// 整单退款金额：+外卖订单取消金额 "platform_total"
 		group.FullRefundAmount = group.FullRefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
 		// 整单退款笔数：+外卖订单取消笔数
 		group.FullRefundNum += item.RefundNum

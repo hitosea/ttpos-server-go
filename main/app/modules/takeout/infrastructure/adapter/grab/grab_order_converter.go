@@ -171,6 +171,11 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 	order.BasketPromo = decimal.NewFromInt(int64(price.GetBasketPromo())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 	order.Tax = decimal.NewFromInt(int64(price.GetTax())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 	order.MerchantChargeFee = decimal.NewFromInt(int64(price.GetMerchantChargeFee())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	// 计算平台结算总额: subtotal + merchant_charge_fee - merchant_discount
+	order.PlatformTotal = decimal.NewFromFloat(order.Subtotal).
+		Add(decimal.NewFromFloat(order.MerchantChargeFee)).
+		Sub(decimal.NewFromFloat(order.MerchantDiscount)).
+		InexactFloat64()
 	order.EaterPayment = func() float64 {
 		if platform == valueobject.TakeoutPlatformGrab {
 			if order.PaymentType == "CASH" || featureFlags.OrderType == "DeliveredByRestaurant" {
