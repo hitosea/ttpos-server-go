@@ -152,14 +152,14 @@ func TestClosePosEntryDetail_ValidationLogic(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Logf("测试用例: %s", tc.name)
-			
+
 			// 模拟校验逻辑（实际在 Controller 层）
 			isEmpty := func(s *string) bool {
 				return s == nil || *s == ""
 			}
-			
+
 			bothEmpty := isEmpty(tc.paymentID) && isEmpty(tc.modeOfPayment)
-			
+
 			if tc.shouldFail {
 				t.AssertEQ(bothEmpty, true)
 			} else {

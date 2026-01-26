@@ -189,26 +189,28 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 		itemGroupCodeName := data.Get("item_group").String()
 
 		itemList = append(itemList, &item.ItemInfo{
-			Branch:             data.Get("custom_branch").String(),
-			Company:            data.Get("custom_company").String(),
-			ItemName:           data.Get("item_name").String(),
-			ItemCode:           data.Get("item_code").String(),
-			ItemGroup:          utility.ParseItemGroupFromString(data.Get("item_group").String()),
-			StockUom:           data.Get("stock_uom").String(),
-			Disabled:           data.Get("disabled").Bool(),
-			PurchaseUom:        itemInfo.PurchaseUom,
-			SalesUom:           proto.String(itemInfo.SalesUom),
-			Uoms:               uomDetails,
-			Classification:     itemInfo.CustomClassification,
-			ClassificationCode: itemInfo.CustomClassificationCode,
-			InternalCode:       itemInfo.CustomInternalCode,
-			ValuationRate:      itemInfo.ValuationRate,
-			OpeningStock:       itemInfo.OpeningStock,
-			Attributes:         attrList,
-			ItemGroupName:      itemGroupCodeName,
-			VariantOf:          itemInfo.VariantOf,
-			NotForSale:         itemInfo.CustomNotForSale,
-			AllowNegativeStock: proto.Bool(itemInfo.AllowNegativeStock == 1),
+			Branch:              data.Get("custom_branch").String(),
+			Company:             data.Get("custom_company").String(),
+			ItemName:            data.Get("item_name").String(),
+			ItemCode:            data.Get("item_code").String(),
+			ItemGroup:           utility.ParseItemGroupFromString(data.Get("item_group").String()),
+			StockUom:            data.Get("stock_uom").String(),
+			Disabled:            data.Get("disabled").Bool(),
+			PurchaseUom:         itemInfo.PurchaseUom,
+			SalesUom:            proto.String(itemInfo.SalesUom),
+			Uoms:                uomDetails,
+			Classification:      itemInfo.CustomClassification,
+			ClassificationCode:  itemInfo.CustomClassificationCode,
+			InternalCode:        itemInfo.CustomInternalCode,
+			ValuationRate:       itemInfo.ValuationRate,
+			OpeningStock:        itemInfo.OpeningStock,
+			Attributes:          attrList,
+			ItemGroupName:       itemGroupCodeName,
+			VariantOf:           itemInfo.VariantOf,
+			NotForSale:          itemInfo.CustomNotForSale,
+			AllowNegativeStock:  proto.Bool(itemInfo.AllowNegativeStock == 1),
+			DeliveredBySupplier: itemInfo.DeliveredBySupplier == 1,
+			SupplierItems:       convertSupplierItems(itemInfo.SupplierItems),
 		})
 	}
 
@@ -975,4 +977,19 @@ func (s *sItem) DeleteItem(ctx context.Context, req *item.DeleteItemReq) (*item.
 	}
 
 	return &item.DeleteItemResp{ItemCode: req.ItemCode}, nil
+}
+
+// convertSupplierItems 将 DTO 供应商列表转换为 Protobuf 格式
+func convertSupplierItems(dtoItems []erp.ItemSupplier) []*item.SupplierItem {
+	if len(dtoItems) == 0 {
+		return make([]*item.SupplierItem, 0)
+	}
+	result := make([]*item.SupplierItem, 0, len(dtoItems))
+	for _, s := range dtoItems {
+		result = append(result, &item.SupplierItem{
+			Supplier: s.Supplier,
+			Idx:      int32(s.Idx),
+		})
+	}
+	return result
 }
