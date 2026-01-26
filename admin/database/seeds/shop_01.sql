@@ -1053,6 +1053,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `allow_substore_visible` INT(1) NOT NULL DEFAULT 1 COMMENT '允许子店可见：1-允许，0-不允许',
     `origin_country_code` VARCHAR(10) NOT NULL DEFAULT '' COMMENT '原产地国家编码（ISO 3166-1 alpha-2，如：CN, US, TH）',
     `allow_negative_stock` INT(1) NOT NULL DEFAULT 0 COMMENT '允许负库存, 0-不允许 1-允许',
+    `delivered_by_supplier` INT(1) NOT NULL DEFAULT 0 COMMENT '是否由供应商配送，0-否，1-是',
+    `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商ERP编码',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
