@@ -311,6 +311,7 @@ type SaveMaterialRequestResp struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	MaterialRequestName string                 `protobuf:"bytes,1,opt,name=material_request_name,json=materialRequestName,proto3" json:"material_request_name,omitempty" dc:"物品申请单名称"` // 物品申请单名称
 	PurchaseOrder       string                 `protobuf:"bytes,2,opt,name=purchase_order,json=purchaseOrder,proto3" json:"purchase_order,omitempty" dc:"采购订单号"`                       // 采购订单号
+	SalesOrder          string                 `protobuf:"bytes,3,opt,name=sales_order,json=salesOrder,proto3" json:"sales_order,omitempty" dc:"内部销售订单号"`                              // 内部销售订单号
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -355,6 +356,13 @@ func (x *SaveMaterialRequestResp) GetMaterialRequestName() string {
 func (x *SaveMaterialRequestResp) GetPurchaseOrder() string {
 	if x != nil {
 		return x.PurchaseOrder
+	}
+	return ""
+}
+
+func (x *SaveMaterialRequestResp) GetSalesOrder() string {
+	if x != nil {
+		return x.SalesOrder
 	}
 	return ""
 }
@@ -1711,10 +1719,12 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\bsupplier\x18\b \x01(\tR\bsupplier\x120\n" +
 	"\x05items\x18\t \x03(\v2\x1a.stock.MaterialRequestItemR\x05items\x12\x15\n" +
 	"\x06ref_no\x18\n" +
-	" \x01(\tR\x05refNo\"t\n" +
+	" \x01(\tR\x05refNo\"\x95\x01\n" +
 	"\x17SaveMaterialRequestResp\x122\n" +
 	"\x15material_request_name\x18\x01 \x01(\tR\x13materialRequestName\x12%\n" +
-	"\x0epurchase_order\x18\x02 \x01(\tR\rpurchaseOrder\"V\n" +
+	"\x0epurchase_order\x18\x02 \x01(\tR\rpurchaseOrder\x12\x1f\n" +
+	"\vsales_order\x18\x03 \x01(\tR\n" +
+	"salesOrder\"V\n" +
 	"\x19GetMaterialRequestListReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\"h\n" +

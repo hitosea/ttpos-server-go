@@ -72,18 +72,19 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 		}
 		resp.PurchaseOrder = purchaseOrder.Name
 
-		// saleOrder := &erp.SaleOrder{}
-		if _, err = service.Buying().CreateInnerSaleOrderFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
+		saleOrder, err := service.Buying().CreateInnerSaleOrderFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
 			SourceName:      purchaseOrder.Name,
 			DeliveryDate:    requiredBy,
 			SourceWarehouse: req.SourceWarehouse,
-		}); err != nil {
+		})
+		if err != nil {
 			//需要回退之前创建的材料申请
 			g.Log().Warningf(ctx, "创建内部销售订单失败，回退之前创建的材料申请:%s\n %v", resp.MaterialRequestName, err)
 			service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, purchaseOrder.Name, erp.DocstatusCancelled)
 			service.Document().ChangeDocStatus(ctx, erp.DocTypeMaterialRequest, resp.MaterialRequestName, erp.DocstatusCancelled)
 			return rpc.ApiError(err.Error()), nil
 		}
+		resp.SalesOrder = saleOrder.Name
 
 		//直接创建发货单，后续接入物流方
 		// update: 需求36978 调整
