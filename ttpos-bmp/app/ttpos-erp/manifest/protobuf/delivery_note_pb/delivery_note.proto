@@ -1,0 +1,62 @@
+syntax = "proto3";
+import "erp.proto";
+
+package delivery_note;
+
+option go_package = "ttpos-bmp/app/ttpos-erp/api/delivery_note_pb";
+
+// DeliveryNote 送货单信息
+message DeliveryNote {
+  string name = 1;                    // 送货单号
+  string company = 2;                 // 公司
+  string customer = 3;                // 客户
+  string customer_name = 4;           // 客户名称
+  string posting_date = 5;            // 过账日期
+  string posting_time = 6;            // 过账时间
+  string set_warehouse = 7;           // 设置仓库
+  string selling_price_list = 8;      // 销售价格表
+  double total_qty = 9;               // 总数量
+  double grand_total = 10;            // 总金额
+  string status = 11;                 // 状态
+  int32 docstatus = 12;               // 单据状态
+  repeated DeliveryNoteItem items = 13; // 送货项
+}
+
+// DeliveryNoteItem 送货单明细项
+message DeliveryNoteItem {
+  string item_code = 1;               // 物品编码
+  string item_name = 2;               // 物品名称
+  double qty = 3;                     // 数量
+  string uom = 4;                     // 单位
+  double rate = 5;                    // 单价
+  double amount = 6;                  // 金额
+  string warehouse = 7;               // 仓库
+  string against_sales_order = 8;     // 关联销售订单
+}
+
+// GetDeliveryNoteListReq 获取送货单列表请求
+message GetDeliveryNoteListReq {
+  string company_abbr = 1;            // 公司缩写，必填
+  string branch = 2;                  // 分支名称，可选
+  string customer = 3;                // 客户，可选
+  string warehouse = 4;               // 仓库，可选
+  string status = 5;                  // 状态，可选
+  string from_date = 6;               // 开始日期，可选
+  string to_date = 7;                 // 结束日期，可选
+  int32 limit = 8;                    // 查询限制数量，可选
+  bool include_items = 9;             // 是否包含明细项，可选
+  string po_no = 10;                  // 采购订单号，可选（通过关联销售订单反查）
+}
+
+// GetDeliveryNoteListResp 获取送货单列表响应
+message GetDeliveryNoteListResp {
+  repeated DeliveryNote delivery_note_list = 1; // 送货单列表
+}
+
+// DeliveryNoteService 送货单服务定义
+service DeliveryNoteService {
+  // 获取送货单列表
+  // 参数：查询条件，包含公司、客户、仓库、采购订单号等过滤条件
+  // 返回：送货单列表
+  rpc GetDeliveryNoteList(GetDeliveryNoteListReq) returns (erp.ResponseInfo);
+}

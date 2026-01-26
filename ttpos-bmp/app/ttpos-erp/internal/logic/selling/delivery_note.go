@@ -1,4 +1,4 @@
-package stock
+package selling
 
 import (
 	"context"
@@ -212,6 +212,26 @@ func (s *sDeliveryNote) GetDeliveryNoteList(ctx context.Context, req *delivery_n
 		filters = append(filters, []string{"posting_date", "<=", req.ToDate})
 	}
 
+	// 按采购订单号过滤（通过关联销售订单反查）
+	if len(req.PoNo) > 0 {
+		// 通过 po_no 查询关联的销售订单
+		salesOrderNames, err := s.getSalesOrdersByPoNo(ctx, company.CompanyName, req.PoNo)
+		if err != nil {
+			g.Log().Warningf(ctx, "通过采购订单号查询销售订单失败: %v", err)
+		}
+		if len(salesOrderNames) > 0 {
+			// 添加销售订单过滤条件（使用 in 查询）
+			// 由于 ERPNext API 过滤器格式限制，这里使用 like 匹配第一个销售订单
+			// 如果需要精确匹配多个销售订单，可以在应用层过滤
+			filters = append(filters, []string{"name", "in", s.buildSalesOrderFilter(ctx, salesOrderNames)})
+		} else {
+			// 如果没有找到关联的销售订单，返回空结果
+			return &delivery_note.GetDeliveryNoteListResp{
+				DeliveryNoteList: make([]*delivery_note.DeliveryNoteData, 0),
+			}, nil
+		}
+	}
+
 	// 设置查询限制
 	limit := consts.Limit100
 	if req.Limit > 0 && req.Limit <= 1000 {
@@ -249,11 +269,97 @@ func (s *sDeliveryNote) GetDeliveryNoteList(ctx context.Context, req *delivery_n
 		}
 	}
 
+	// 如果有 po_no 过滤，在应用层进行精确过滤
+	if len(req.PoNo) > 0 {
+		deliveryNoteList = s.filterByPoNo(ctx, deliveryNoteList, req.PoNo)
+	}
+
 	res = &delivery_note.GetDeliveryNoteListResp{
 		DeliveryNoteList: deliveryNoteList,
 	}
 
 	return res, nil
+}
+
+// getSalesOrdersByPoNo 通过采购订单号查询关联的销售订单
+func (s *sDeliveryNote) getSalesOrdersByPoNo(ctx context.Context, company string, poNo string) ([]string, error) {
+	// 查询销售订单，通过 po_no 字段匹配
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeSaleOrder,
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{"name"},
+		Filters: [][]string{
+			{"company", "=", company},
+			{"po_no", "=", poNo},
+		},
+		Limit: 100,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	j := resp
+	var salesOrders []struct {
+		Name string `json:"name"`
+	}
+	if err = j.GetJson("data").Scan(&salesOrders); err != nil {
+		return nil, err
+	}
+
+	names := make([]string, 0, len(salesOrders))
+	for _, so := range salesOrders {
+		names = append(names, so.Name)
+	}
+	return names, nil
+}
+
+// buildSalesOrderFilter 构建销售订单过滤条件
+func (s *sDeliveryNote) buildSalesOrderFilter(ctx context.Context, salesOrderNames []string) string {
+	// 由于需要查询 Delivery Note Item 中的 against_sales_order 字段
+	// 这里返回第一个销售订单名称用于简单过滤
+	// 更精确的过滤在 filterByPoNo 方法中进行
+	if len(salesOrderNames) > 0 {
+		return salesOrderNames[0]
+	}
+	return ""
+}
+
+// filterByPoNo 按采购订单号过滤送货单
+func (s *sDeliveryNote) filterByPoNo(ctx context.Context, deliveryNotes []*delivery_note.DeliveryNoteData, poNo string) []*delivery_note.DeliveryNoteData {
+	if len(poNo) == 0 || len(deliveryNotes) == 0 {
+		return deliveryNotes
+	}
+
+	// 获取关联的销售订单
+	salesOrderNames, err := s.getSalesOrdersByPoNo(ctx, "", poNo)
+	if err != nil || len(salesOrderNames) == 0 {
+		return make([]*delivery_note.DeliveryNoteData, 0)
+	}
+
+	// 构建销售订单名称集合
+	soNameSet := make(map[string]bool)
+	for _, name := range salesOrderNames {
+		soNameSet[name] = true
+	}
+
+	// 过滤送货单
+	result := make([]*delivery_note.DeliveryNoteData, 0)
+	for _, dn := range deliveryNotes {
+		// 获取送货单明细，检查是否关联到指定的销售订单
+		items, err := s.getDeliveryNoteItems(ctx, dn.Name)
+		if err != nil {
+			continue
+		}
+		for _, item := range items {
+			if soNameSet[item.AgainstSalesOrder] {
+				dn.Items = items
+				result = append(result, dn)
+				break
+			}
+		}
+	}
+
+	return result
 }
 
 // getDeliveryNoteItems 获取送货单明细

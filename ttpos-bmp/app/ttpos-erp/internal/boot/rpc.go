@@ -4,6 +4,7 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/buying"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/company"
+	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/item"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/manufacturing"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/material_transfer"
@@ -36,6 +37,7 @@ func initRpcServer() {
 	material_transfer.Register(service.RpcServer.GRpc)
 	manufacturing.Register(service.RpcServer.GRpc)
 	buying.Register(service.RpcServer.GRpc)
+	delivery_note.Register(service.RpcServer.GRpc)
 	go service.RpcServer.GRpc.Run()
 }
 
