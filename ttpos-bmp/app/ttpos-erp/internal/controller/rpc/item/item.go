@@ -213,28 +213,39 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 		})
 	}
 
+	// 转换供应商列表数据结构：从内部模型转换为protobuf响应模型
+	supplierItems := make([]*item.SupplierItem, 0, len(itemInfo.SupplierItems))
+	for _, supplier := range itemInfo.SupplierItems {
+		supplierItems = append(supplierItems, &item.SupplierItem{
+			Supplier: supplier.Supplier, // 供应商名称
+			Idx:      int32(supplier.Idx), // 排序索引
+		})
+	}
+
 	// 构建最终的物品信息响应对象
 	// 将内部itemInfo模型的各个字段映射到protobuf响应模型中
 	respItem := &item.ItemInfo{
-		ItemName:           itemInfo.ItemName,                 // 物品名称
-		StockUom:           itemInfo.StockUom,                 // 库存单位
-		ItemCode:           itemInfo.ItemCode,                 // 物品编码
-		ValuationRate:      itemInfo.ValuationRate,            // 估价率
-		IsStockItem:        itemInfo.IsStockItem == 1,         // 是否为库存物品（数值型转布尔型）
-		Branch:             itemInfo.CustomBranch,             // 分支机构
-		Company:            itemInfo.CustomCompany,            // 公司
-		ItemSpecification:  itemInfo.CustomSpecification,      // 物品规格
-		Disabled:           itemInfo.Disabled,                 // 是否禁用（数值型转布尔型）
-		Classification:     itemInfo.CustomClassification,     // 分类
-		ClassificationCode: itemInfo.CustomClassificationCode, // 分类编码
-		InternalCode:       itemInfo.CustomInternalCode,       // 内部编码
-		PurchaseUom:        itemInfo.PurchaseUom,              // 采购单位
-		Uoms:               uomDetails,                        // 单位列表（已转换）
-		OpeningStock:       itemInfo.OpeningStock,             // 期初库存
-		Attributes:         attrList,                          // 属性列表（已转换）
-		VariantOf:          itemInfo.VariantOf,                //变体模板
-		AllowNegativeStock: proto.Bool(itemInfo.AllowNegativeStock == 1),
-		SalesUom:           &itemInfo.SalesUom, // 销售单位
+		ItemName:            itemInfo.ItemName,                 // 物品名称
+		StockUom:            itemInfo.StockUom,                 // 库存单位
+		ItemCode:            itemInfo.ItemCode,                 // 物品编码
+		ValuationRate:       itemInfo.ValuationRate,            // 估价率
+		IsStockItem:         itemInfo.IsStockItem == 1,         // 是否为库存物品（数值型转布尔型）
+		Branch:              itemInfo.CustomBranch,             // 分支机构
+		Company:             itemInfo.CustomCompany,            // 公司
+		ItemSpecification:   itemInfo.CustomSpecification,      // 物品规格
+		Disabled:            itemInfo.Disabled,                 // 是否禁用（数值型转布尔型）
+		Classification:      itemInfo.CustomClassification,     // 分类
+		ClassificationCode:  itemInfo.CustomClassificationCode, // 分类编码
+		InternalCode:        itemInfo.CustomInternalCode,       // 内部编码
+		PurchaseUom:         itemInfo.PurchaseUom,              // 采购单位
+		Uoms:                uomDetails,                        // 单位列表（已转换）
+		OpeningStock:        itemInfo.OpeningStock,             // 期初库存
+		Attributes:          attrList,                          // 属性列表（已转换）
+		VariantOf:           itemInfo.VariantOf,                // 变体模板
+		AllowNegativeStock:  proto.Bool(itemInfo.AllowNegativeStock == 1),
+		SalesUom:            &itemInfo.SalesUom,                // 销售单位
+		DeliveredBySupplier: itemInfo.DeliveredBySupplier == 1, // 是否由供应商直接配送
+		SupplierItems:       supplierItems,                     // 供应商列表（已转换）
 	}
 
 	// 返回成功响应，包含转换后的物品详细信息
