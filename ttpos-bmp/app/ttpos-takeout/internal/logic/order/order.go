@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	linemanv1 "ttpos-bmp/app/ttpos-takeout/api/lineman/v1"
@@ -93,12 +94,16 @@ func (s *sOrder) GetOrderInfo(ctx context.Context, req *api.GetOrderInfoReq) (re
 		orderData = "" // 返回空字符串
 	} else if takeoutOrder != nil {
 		// 序列化为 JSON 字符串
-		orderData, err = gjson.New(takeoutOrder).ToJsonString()
-		if err != nil {
+		// 使用 json.Marshal 而非 gjson.New().ToJsonString()
+		// 因为 gjson 使用反射序列化，会忽略自定义的 MarshalJSON 方法
+		// 而 json.Marshal 会调用 TakeoutOrder.MarshalJSON() 来正确处理 AdditionalProperties
+		jsonBytes, marshalErr := json.Marshal(takeoutOrder)
+		if marshalErr != nil {
 			g.Log().Errorf(ctx, "订单数据序列化失败, orderId=%s, error=%v",
-				req.OrderUuid, err)
+				req.OrderUuid, marshalErr)
 			orderData = ""
 		} else {
+			orderData = string(jsonBytes)
 			// 记录转换耗时（用于性能监控）
 			duration := time.Since(startTime).Milliseconds()
 			g.Log().Debugf(ctx, "订单数据转换完成, orderId=%s, provider=%s, duration=%dms",

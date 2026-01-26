@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogf/gf/v2/encoding/gjson"
 	grabsdk "github.com/grab/grabfood-api-sdk-go"
 	"ttpos-api/ttpos-takeout/message"
 	linemanv1 "ttpos-bmp/app/ttpos-takeout/api/lineman/v1"
@@ -602,6 +603,12 @@ func TestJSONSerialization(t *testing.T) {
 		t.Fatalf("JSON Marshal failed: %v", err)
 	}
 
+	// 验证 AdditionalProperties 被正确序列化到 JSON 顶层
+	jsonStr := string(data)
+	if !contains(jsonStr, `"testKey":"testValue"`) {
+		t.Errorf("AdditionalProperties not serialized correctly. JSON: %s", jsonStr)
+	}
+
 	// 反序列化
 	var decoded message.TakeoutOrder
 	err = json.Unmarshal(data, &decoded)
@@ -627,6 +634,144 @@ func TestJSONSerialization(t *testing.T) {
 	if decoded.FeatureFlags.OrderType != order.FeatureFlags.OrderType {
 		t.Errorf("FeatureFlags.OrderType mismatch after JSON round-trip: expected '%s', got '%s'", order.FeatureFlags.OrderType, decoded.FeatureFlags.OrderType)
 	}
+}
+
+// TestAdditionalPropertiesSerialization 测试 AdditionalProperties 序列化到 JSON 顶层
+func TestAdditionalPropertiesSerialization(t *testing.T) {
+	partnerMerchantID := "6293997752320000"
+	eaterPayment := int64(2200)
+
+	order := &message.TakeoutOrder{
+		OrderID:           "LMF-260123-697259800",
+		ShortOrderNumber:  "9800",
+		MerchantID:        "",
+		PartnerMerchantID: &partnerMerchantID,
+		PaymentType:       "CASH",
+		Cutlery:           false,
+		OrderTime:         "2026-01-23 09:26:59",
+		Currency: message.TakeoutCurrency{
+			Code:     "THB",
+			Symbol:   "฿",
+			Exponent: 2,
+		},
+		FeatureFlags: message.TakeoutFeatureFlags{
+			OrderAcceptedType: "AUTO",
+			OrderType:         "Delivery",
+		},
+		Items: []message.TakeoutOrderItem{
+			{
+				ID:         "ITEM-792",
+				GrabItemID: "ITEM-792",
+				Quantity:   1,
+				Price:      2200,
+			},
+		},
+		Price: message.TakeoutOrderPrice{
+			Subtotal:     2200,
+			EaterPayment: &eaterPayment,
+		},
+		AdditionalProperties: map[string]any{
+			"additionalItems": []map[string]any{
+				{"name": "ไม่รับช้อนส้อมพลาสติก"},
+			},
+		},
+	}
+
+	// 使用标准 json.Marshal（会调用我们的 MarshalJSON）
+	data, err := json.Marshal(order)
+	if err != nil {
+		t.Fatalf("JSON Marshal failed: %v", err)
+	}
+
+	jsonStr := string(data)
+
+	// 验证 AdditionalProperties 被序列化到 JSON 顶层
+	if !contains(jsonStr, `"additionalItems"`) {
+		t.Errorf("AdditionalProperties 'additionalItems' not found in JSON output.\nJSON: %s", jsonStr)
+	}
+
+	if !contains(jsonStr, `ไม่รับช้อนส้อมพลาสติก`) {
+		t.Errorf("AdditionalProperties content not found in JSON output.\nJSON: %s", jsonStr)
+	}
+
+	t.Logf("JSON output: %s", jsonStr)
+}
+
+// contains 检查字符串是否包含子串
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+// TestGJsonDoesNotSupportMarshalJSON 验证 gjson 不支持自定义 MarshalJSON
+// 这是为什么 order.go 中改用 json.Marshal 的原因
+func TestGJsonDoesNotSupportMarshalJSON(t *testing.T) {
+	partnerMerchantID := "6293997752320000"
+	eaterPayment := int64(2200)
+
+	order := &message.TakeoutOrder{
+		OrderID:           "LMF-260123-697259800",
+		ShortOrderNumber:  "9800",
+		MerchantID:        "",
+		PartnerMerchantID: &partnerMerchantID,
+		PaymentType:       "CASH",
+		Cutlery:           false,
+		OrderTime:         "2026-01-23 09:26:59",
+		Currency: message.TakeoutCurrency{
+			Code:     "THB",
+			Symbol:   "฿",
+			Exponent: 2,
+		},
+		FeatureFlags: message.TakeoutFeatureFlags{
+			OrderAcceptedType: "AUTO",
+			OrderType:         "Delivery",
+		},
+		Items: []message.TakeoutOrderItem{
+			{
+				ID:         "ITEM-792",
+				GrabItemID: "ITEM-792",
+				Quantity:   1,
+				Price:      2200,
+			},
+		},
+		Price: message.TakeoutOrderPrice{
+			Subtotal:     2200,
+			EaterPayment: &eaterPayment,
+		},
+		AdditionalProperties: map[string]any{
+			"additionalItems": []map[string]any{
+				{"name": "ไม่รับช้อนส้อมพลาสติก"},
+			},
+		},
+	}
+
+	// gjson.New() 使用反射序列化，不会调用自定义 MarshalJSON
+	// 所以 AdditionalProperties 不会出现在输出中
+	gjsonOutput := gjson.New(order).MustToJsonString()
+	if contains(gjsonOutput, `"additionalItems"`) {
+		t.Error("gjson unexpectedly included AdditionalProperties - this test documents why we use json.Marshal")
+	}
+
+	// json.Marshal 会调用自定义 MarshalJSON，AdditionalProperties 正确序列化
+	jsonOutput, err := json.Marshal(order)
+	if err != nil {
+		t.Fatalf("json.Marshal failed: %v", err)
+	}
+	if !contains(string(jsonOutput), `"additionalItems"`) {
+		t.Errorf("json.Marshal should include AdditionalProperties.\nJSON: %s", string(jsonOutput))
+	}
+
+	t.Logf("gjson output (missing additionalItems): %s", gjsonOutput)
+	t.Logf("json.Marshal output (includes additionalItems): %s", string(jsonOutput))
 }
 
 // TestNullableTypes 测试 Nullable 类型

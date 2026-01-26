@@ -727,6 +727,75 @@ func (o *TakeoutOrder) SetMembershipID(v string) {
 	o.MembershipID = &v
 }
 
+// MarshalJSON implements json.Marshaler interface
+// This method ensures AdditionalProperties are merged into the JSON output
+func (o TakeoutOrder) MarshalJSON() ([]byte, error) {
+	toSerialize, err := o.ToMap()
+	if err != nil {
+		return []byte{}, err
+	}
+	return json.Marshal(toSerialize)
+}
+
+// ToMap converts the TakeoutOrder to a map for custom JSON serialization
+func (o TakeoutOrder) ToMap() (map[string]any, error) {
+	toSerialize := map[string]any{}
+
+	// Required fields
+	toSerialize["orderID"] = o.OrderID
+	toSerialize["shortOrderNumber"] = o.ShortOrderNumber
+	toSerialize["merchantID"] = o.MerchantID
+	toSerialize["paymentType"] = o.PaymentType
+	toSerialize["cutlery"] = o.Cutlery
+	toSerialize["orderTime"] = o.OrderTime
+	toSerialize["currency"] = o.Currency
+	toSerialize["featureFlags"] = o.FeatureFlags
+	toSerialize["items"] = o.Items
+	toSerialize["price"] = o.Price
+
+	// Optional fields
+	if !IsNil(o.PartnerMerchantID) {
+		toSerialize["partnerMerchantID"] = o.PartnerMerchantID
+	}
+	if !IsNil(o.SubmitTime) {
+		toSerialize["submitTime"] = o.SubmitTime
+	}
+	if !IsNil(o.CompleteTime) {
+		toSerialize["completeTime"] = o.CompleteTime
+	}
+	if !IsNil(o.ScheduledTime) {
+		toSerialize["scheduledTime"] = o.ScheduledTime
+	}
+	if !IsNil(o.OrderState) {
+		toSerialize["orderState"] = o.OrderState
+	}
+	if !IsNil(o.Campaigns) {
+		toSerialize["campaigns"] = o.Campaigns
+	}
+	if !IsNil(o.Promos) {
+		toSerialize["promos"] = o.Promos
+	}
+	if o.DineIn.IsSet() {
+		toSerialize["dineIn"] = o.DineIn.Get()
+	}
+	if o.Receiver.IsSet() {
+		toSerialize["receiver"] = o.Receiver.Get()
+	}
+	if !IsNil(o.OrderReadyEstimation) {
+		toSerialize["orderReadyEstimation"] = o.OrderReadyEstimation
+	}
+	if !IsNil(o.MembershipID) {
+		toSerialize["membershipID"] = o.MembershipID
+	}
+
+	// Merge AdditionalProperties into the output
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
+	return toSerialize, nil
+}
+
 // ============================================================================
 // TakeoutOrderItem - Aligned with Grab SDK OrderItem
 // Reference: github.com/grab/grabfood-api-sdk-go@v1.0.2/model_order_item.go
@@ -1008,6 +1077,48 @@ func (o *TakeoutOrderItem) HasModifiers() bool {
 // SetModifiers gets a reference to the given []OrderItemModifier and assigns it to the Modifiers field.
 func (o *TakeoutOrderItem) SetModifiers(v []TakeoutModifier) {
 	o.Modifiers = v
+}
+
+// MarshalJSON implements json.Marshaler interface
+// This method ensures AdditionalProperties are merged into the JSON output
+func (o TakeoutOrderItem) MarshalJSON() ([]byte, error) {
+	toSerialize, err := o.ToMap()
+	if err != nil {
+		return []byte{}, err
+	}
+	return json.Marshal(toSerialize)
+}
+
+// ToMap converts the TakeoutOrderItem to a map for custom JSON serialization
+func (o TakeoutOrderItem) ToMap() (map[string]any, error) {
+	toSerialize := map[string]any{}
+
+	// Required fields
+	toSerialize["id"] = o.ID
+	toSerialize["grabItemID"] = o.GrabItemID
+	toSerialize["quantity"] = o.Quantity
+	toSerialize["price"] = o.Price
+
+	// Optional fields
+	if !IsNil(o.Tax) {
+		toSerialize["tax"] = o.Tax
+	}
+	if !IsNil(o.Specifications) {
+		toSerialize["specifications"] = o.Specifications
+	}
+	if o.OutOfStockInstruction.IsSet() {
+		toSerialize["outOfStockInstruction"] = o.OutOfStockInstruction.Get()
+	}
+	if !IsNil(o.Modifiers) {
+		toSerialize["modifiers"] = o.Modifiers
+	}
+
+	// Merge AdditionalProperties into the output
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
+	return toSerialize, nil
 }
 
 // ============================================================================
