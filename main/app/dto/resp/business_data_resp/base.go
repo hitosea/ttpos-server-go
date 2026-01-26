@@ -256,6 +256,10 @@ type BusinessDataExportItem struct {
 	MinGrabOrderAmount         float64                     `json:"min_grab_order_amount"`         // Grab最小订单金额
 	MaxGrabOrderAmount         float64                     `json:"max_grab_order_amount"`         // Grab最大订单金额
 	AvgGrabOrderAmount         float64                     `json:"avg_grab_order_amount"`         // Grab平均订单金额
+	TotalLinemanOrderNum       int64                       `json:"total_lineman_order_num"`       // Lineman订单数
+	MinLinemanOrderAmount      float64                     `json:"min_lineman_order_amount"`      // Lineman最小订单金额
+	MaxLinemanOrderAmount      float64                     `json:"max_lineman_order_amount"`      // Lineman最大订单金额
+	AvgLinemanOrderAmount      float64                     `json:"avg_lineman_order_amount"`      // Lineman平均订单金额
 	AreaList                   []BusinessDataExportArea    `json:"area_list"`                     // 区域列表
 	PaymentList                []BusinessDataExportPayment `json:"payment_list"`                  // 支付列表
 }
