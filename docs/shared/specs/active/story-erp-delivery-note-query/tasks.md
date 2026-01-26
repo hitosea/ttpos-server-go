@@ -17,7 +17,7 @@
 
 | 项目 | 内容 |
 |------|------|
-| File | `ttpos-bmp/app/ttpos-erp/manifest/protobuf/delivery_note_pb/delivery_note.proto` |
+| File | `ttpos-bmp/app/ttpos-erp/manifest/protobuf/delivery_note/delivery_note.proto` |
 | Purpose | 定义独立的 DeliveryNoteService 和相关 message |
 | Requirements | 需求 R1 - 送货单列表查询接口 |
 | Leverage | 参考 `selling/selling.proto` 结构 |
@@ -28,11 +28,12 @@
 3. 添加 `GetDeliveryNoteListReq` message（包含 po_no 字段）
 4. 添加 `GetDeliveryNoteListResp` message
 5. 定义独立的 `DeliveryNoteService` 服务
-6. `go_package` 设为 `ttpos-bmp/app/ttpos-erp/api/delivery_note_pb`
+6. `go_package` 设为 `ttpos-bmp/app/ttpos-erp/api/delivery_note`
 
 **实现说明**：
-- 为避免与 `api/selling/` 中现有 `selling` 包冲突，proto 文件放置在独立目录 `delivery_note_pb/`
-- 生成的 Go 代码位于 `api/delivery_note_pb/`
+- Proto 文件放置在独立目录 `delivery_note/`
+- 生成的 Go 代码位于 `api/delivery_note/`
+- DTO 放置在 `internal/model/dto/delivery_note/`
 
 - [x] 完成
 
@@ -40,7 +41,7 @@
 
 | 项目 | 内容 |
 |------|------|
-| File | `ttpos-bmp/app/ttpos-erp/api/delivery_note_pb/` |
+| File | `ttpos-bmp/app/ttpos-erp/api/delivery_note/` |
 | Purpose | 生成 Go 代码 |
 | Requirements | - |
 | Leverage | - |
@@ -82,7 +83,7 @@ cd ttpos-bmp/app/ttpos-erp && make pb
 
 | 项目 | 内容 |
 |------|------|
-| File | `ttpos-bmp/app/ttpos-erp/api/delivery_note/delivery_note.go` |
+| File | `ttpos-bmp/app/ttpos-erp/internal/model/dto/delivery_note/delivery_note.go` |
 | Purpose | 添加 PoNo 字段支持采购订单号查询 |
 | Requirements | 支持 po_no 查询 |
 | Leverage | - |
@@ -192,11 +193,12 @@ delivery_note.Register(service.RpcServer.GRpc)
 
 | 操作 | 文件路径 |
 |------|----------|
-| 新建 | `ttpos-bmp/app/ttpos-erp/manifest/protobuf/delivery_note_pb/delivery_note.proto` |
-| 生成 | `ttpos-bmp/app/ttpos-erp/api/delivery_note_pb/delivery_note.pb.go` |
-| 生成 | `ttpos-bmp/app/ttpos-erp/api/delivery_note_pb/delivery_note_grpc.pb.go` |
+| 新建 | `ttpos-bmp/app/ttpos-erp/manifest/protobuf/delivery_note/delivery_note.proto` |
+| 生成 | `ttpos-bmp/app/ttpos-erp/api/delivery_note/delivery_note.pb.go` |
+| 生成 | `ttpos-bmp/app/ttpos-erp/api/delivery_note/delivery_note_grpc.pb.go` |
 | 新建 | `ttpos-bmp/app/ttpos-erp/internal/logic/selling/delivery_note.go` |
 | 删除 | `ttpos-bmp/app/ttpos-erp/internal/logic/stock/delivery_note.go` |
-| 修改 | `ttpos-bmp/app/ttpos-erp/api/delivery_note/delivery_note.go` |
+| 修改 | `ttpos-bmp/app/ttpos-erp/internal/model/dto/delivery_note/delivery_note.go` |
 | 新建 | `ttpos-bmp/app/ttpos-erp/internal/controller/rpc/delivery_note/delivery_note.go` |
 | 修改 | `ttpos-bmp/app/ttpos-erp/internal/boot/rpc.go` |
+| 修改 | `ttpos-bmp/app/ttpos-erp/internal/service/stock.go` |

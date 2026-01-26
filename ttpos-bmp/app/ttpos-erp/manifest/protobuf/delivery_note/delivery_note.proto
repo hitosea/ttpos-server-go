@@ -3,7 +3,7 @@ import "erp.proto";
 
 package delivery_note;
 
-option go_package = "ttpos-bmp/app/ttpos-erp/api/delivery_note_pb";
+option go_package = "ttpos-bmp/app/ttpos-erp/api/delivery_note";
 
 // DeliveryNote 送货单信息
 message DeliveryNote {
@@ -46,6 +46,7 @@ message GetDeliveryNoteListReq {
   int32 limit = 8;                    // 查询限制数量，可选
   bool include_items = 9;             // 是否包含明细项，可选
   string po_no = 10;                  // 采购订单号，可选（通过关联销售订单反查）
+  string so_no = 11;                  // 销售订单号，可选（通过 Delivery Note Item.against_sales_order 过滤）
 }
 
 // GetDeliveryNoteListResp 获取送货单列表响应

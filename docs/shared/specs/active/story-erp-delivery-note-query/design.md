@@ -18,14 +18,14 @@
 | 文件 | 说明 | 复用方式 |
 |------|------|---------|
 | `ttpos-bmp/app/ttpos-erp/internal/logic/stock/delivery_note.go` | 送货单 Logic 层（GetDeliveryNoteList 方法已实现） | **迁移**到 selling 目录 |
-| `ttpos-bmp/app/ttpos-erp/api/delivery_note/delivery_note.go` | 送货单请求/响应 DTO | 扩展添加 PoNo 字段 |
+| `ttpos-bmp/app/ttpos-erp/internal/model/dto/delivery_note/delivery_note.go` | 送货单请求/响应 DTO | 扩展添加 PoNo 字段 |
 | `ttpos-bmp/app/ttpos-erp/manifest/protobuf/selling/selling.proto` | 现有 Selling 模块 proto | 参考结构 |
 
 ### 需要新建
 
 | 文件 | 说明 |
 |------|------|
-| `ttpos-bmp/app/ttpos-erp/manifest/protobuf/selling/delivery_note.proto` | **新建** DeliveryNote 独立 proto 定义 |
+| `ttpos-bmp/app/ttpos-erp/manifest/protobuf/delivery_note/delivery_note.proto` | **新建** DeliveryNote 独立 proto 定义 |
 | `ttpos-bmp/app/ttpos-erp/internal/controller/rpc/delivery_note/delivery_note.go` | **新建** DeliveryNote gRPC Controller |
 | `ttpos-bmp/app/ttpos-erp/internal/logic/selling/delivery_note.go` | **迁移** Logic 从 stock 到 selling |
 
@@ -33,9 +33,9 @@
 
 | 文件 | 说明 |
 |------|------|
-| `ttpos-bmp/app/ttpos-erp/api/delivery_note/delivery_note.go` | GetDeliveryNoteListReq 添加 PoNo 字段 |
-| `ttpos-bmp/app/ttpos-erp/internal/cmd/cmd.go` | 注册 DeliveryNoteService |
-| `ttpos-bmp/app/ttpos-erp/internal/service/delivery_note.go` | 更新 service 注册指向新 Logic |
+| `ttpos-bmp/app/ttpos-erp/internal/model/dto/delivery_note/delivery_note.go` | GetDeliveryNoteListReq 添加 PoNo 字段 |
+| `ttpos-bmp/app/ttpos-erp/internal/boot/rpc.go` | 注册 DeliveryNoteService |
+| `ttpos-bmp/app/ttpos-erp/internal/service/stock.go` | 更新 service 接口指向 DTO |
 
 ---
 
@@ -53,7 +53,7 @@ graph TD
 
 ### 分层说明
 
-- **gRPC Layer**: `manifest/protobuf/selling/delivery_note.proto` - 独立接口定义
+- **gRPC Layer**: `manifest/protobuf/delivery_note/delivery_note.proto` - 独立接口定义
 - **Controller Layer**: `internal/controller/rpc/delivery_note/delivery_note.go` - 独立控制器
 - **Logic Layer**: `internal/logic/selling/delivery_note.go` - 业务逻辑（从 stock 迁移）
 - **Service Layer**: `internal/service/` - 服务接口注册
@@ -78,7 +78,7 @@ graph TD
 
 ### Proto 定义
 
-**位置**: `manifest/protobuf/selling/delivery_note.proto`
+**位置**: `manifest/protobuf/delivery_note/delivery_note.proto`
 
 ```protobuf
 syntax = "proto3";
@@ -86,7 +86,7 @@ import "erp.proto";
 
 package delivery_note;
 
-option go_package = "ttpos-bmp/app/ttpos-erp/api/delivery_note_pb";
+option go_package = "ttpos-bmp/app/ttpos-erp/api/delivery_note";
 
 // 送货单信息
 message DeliveryNote {
@@ -129,6 +129,7 @@ message GetDeliveryNoteListReq {
   int32 limit = 8;                    // 查询限制数量，可选
   bool include_items = 9;             // 是否包含明细项，可选
   string po_no = 10;                  // 采购订单号，可选（通过关联销售订单反查）
+  string so_no = 11;                  // 销售订单号，可选（通过 Delivery Note Item.against_sales_order 过滤）
 }
 
 // 获取送货单列表响应
@@ -155,8 +156,8 @@ package delivery_note
 import (
     "context"
     "ttpos-bmp/app/ttpos-erp/api"
-    pb "ttpos-bmp/app/ttpos-erp/api/delivery_note_pb"
-    dto "ttpos-bmp/app/ttpos-erp/api/delivery_note"
+    pb "ttpos-bmp/app/ttpos-erp/api/delivery_note"
+    dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/delivery_note"
     "ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
     "ttpos-bmp/app/ttpos-erp/internal/service"
 
@@ -194,6 +195,7 @@ func (*Controller) GetDeliveryNoteList(ctx context.Context, req *pb.GetDeliveryN
         Limit:        req.Limit,
         IncludeItems: req.IncludeItems,
         PoNo:         req.PoNo,
+        SoNo:         req.SoNo,
     }
 
     // 调用 Logic 层
@@ -213,7 +215,7 @@ func (*Controller) GetDeliveryNoteList(ctx context.Context, req *pb.GetDeliveryN
 
 ### 需要扩展的 DTO
 
-**位置**: `api/delivery_note/delivery_note.go`
+**位置**: `internal/model/dto/delivery_note/delivery_note.go`
 
 ```go
 // GetDeliveryNoteListReq 获取送货单列表请求（扩展）
@@ -228,6 +230,7 @@ type GetDeliveryNoteListReq struct {
     Limit        int32  `json:"limit"`
     IncludeItems bool   `json:"include_items"`
     PoNo         string `json:"po_no"`  // 新增：采购订单号
+    SoNo         string `json:"so_no"`  // 新增：销售订单号
 }
 ```
 
@@ -235,8 +238,8 @@ type GetDeliveryNoteListReq struct {
 
 | 文件 | 结构体 | 说明 |
 |------|--------|------|
-| `api/delivery_note/delivery_note.go` | `GetDeliveryNoteListResp` | 响应数据 |
-| `api/delivery_note/delivery_note.go` | `DeliveryNoteData` | 送货单数据 |
+| `internal/model/dto/delivery_note/delivery_note.go` | `GetDeliveryNoteListResp` | 响应数据 |
+| `internal/model/dto/delivery_note/delivery_note.go` | `DeliveryNoteData` | 送货单数据 |
 | `api/delivery_note/delivery_note.go` | `DeliveryNoteItemData` | 送货单明细 |
 
 ### po_no 查询逻辑
@@ -274,6 +277,7 @@ type GetDeliveryNoteListReq struct {
 | limit | int32 | 否 | 查询限制 (默认 100，最大 1000) |
 | include_items | bool | 否 | 是否包含明细项 |
 | po_no | string | 否 | 采购订单号（通过关联销售订单反查） |
+| so_no | string | 否 | 销售订单号（通过 Delivery Note Item.against_sales_order 过滤） |
 
 **响应示例**：
 

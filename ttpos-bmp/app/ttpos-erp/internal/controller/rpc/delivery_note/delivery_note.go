@@ -3,9 +3,9 @@ package delivery_note
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api"
-	dto "ttpos-bmp/app/ttpos-erp/api/delivery_note"
-	pb "ttpos-bmp/app/ttpos-erp/api/delivery_note_pb"
+	pb "ttpos-bmp/app/ttpos-erp/api/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
+	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
@@ -42,6 +42,7 @@ func (*Controller) GetDeliveryNoteList(ctx context.Context, req *pb.GetDeliveryN
 		Limit:        req.Limit,
 		IncludeItems: req.IncludeItems,
 		PoNo:         req.PoNo,
+		SoNo:         req.SoNo,
 	}
 
 	// 调用 Logic 层

@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v3.21.12
-// source: delivery_note_pb/delivery_note.proto
+// source: delivery_note/delivery_note.proto
 
-package delivery_note_pb
+package delivery_note
 
 import (
 	reflect "reflect"
@@ -45,7 +45,7 @@ type DeliveryNote struct {
 
 func (x *DeliveryNote) Reset() {
 	*x = DeliveryNote{}
-	mi := &file_delivery_note_pb_delivery_note_proto_msgTypes[0]
+	mi := &file_delivery_note_delivery_note_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -57,7 +57,7 @@ func (x *DeliveryNote) String() string {
 func (*DeliveryNote) ProtoMessage() {}
 
 func (x *DeliveryNote) ProtoReflect() protoreflect.Message {
-	mi := &file_delivery_note_pb_delivery_note_proto_msgTypes[0]
+	mi := &file_delivery_note_delivery_note_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -70,7 +70,7 @@ func (x *DeliveryNote) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeliveryNote.ProtoReflect.Descriptor instead.
 func (*DeliveryNote) Descriptor() ([]byte, []int) {
-	return file_delivery_note_pb_delivery_note_proto_rawDescGZIP(), []int{0}
+	return file_delivery_note_delivery_note_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *DeliveryNote) GetName() string {
@@ -181,7 +181,7 @@ type DeliveryNoteItem struct {
 
 func (x *DeliveryNoteItem) Reset() {
 	*x = DeliveryNoteItem{}
-	mi := &file_delivery_note_pb_delivery_note_proto_msgTypes[1]
+	mi := &file_delivery_note_delivery_note_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -193,7 +193,7 @@ func (x *DeliveryNoteItem) String() string {
 func (*DeliveryNoteItem) ProtoMessage() {}
 
 func (x *DeliveryNoteItem) ProtoReflect() protoreflect.Message {
-	mi := &file_delivery_note_pb_delivery_note_proto_msgTypes[1]
+	mi := &file_delivery_note_delivery_note_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -206,7 +206,7 @@ func (x *DeliveryNoteItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeliveryNoteItem.ProtoReflect.Descriptor instead.
 func (*DeliveryNoteItem) Descriptor() ([]byte, []int) {
-	return file_delivery_note_pb_delivery_note_proto_rawDescGZIP(), []int{1}
+	return file_delivery_note_delivery_note_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *DeliveryNoteItem) GetItemCode() string {
@@ -268,23 +268,24 @@ func (x *DeliveryNoteItem) GetAgainstSalesOrder() string {
 // GetDeliveryNoteListReq 获取送货单列表请求
 type GetDeliveryNoteListReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，必填"`        // 公司缩写，必填
-	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                     // 分支名称，可选
-	Customer      string                 `protobuf:"bytes,3,opt,name=customer,proto3" json:"customer,omitempty" dc:"客户，可选"`                                   // 客户，可选
-	Warehouse     string                 `protobuf:"bytes,4,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库，可选"`                                 // 仓库，可选
-	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty" dc:"状态，可选"`                                       // 状态，可选
-	FromDate      string                 `protobuf:"bytes,6,opt,name=from_date,json=fromDate,proto3" json:"from_date,omitempty" dc:"开始日期，可选"`                 // 开始日期，可选
-	ToDate        string                 `protobuf:"bytes,7,opt,name=to_date,json=toDate,proto3" json:"to_date,omitempty" dc:"结束日期，可选"`                       // 结束日期，可选
-	Limit         int32                  `protobuf:"varint,8,opt,name=limit,proto3" json:"limit,omitempty" dc:"查询限制数量，可选"`                                    // 查询限制数量，可选
-	IncludeItems  bool                   `protobuf:"varint,9,opt,name=include_items,json=includeItems,proto3" json:"include_items,omitempty" dc:"是否包含明细项，可选"` // 是否包含明细项，可选
-	PoNo          string                 `protobuf:"bytes,10,opt,name=po_no,json=poNo,proto3" json:"po_no,omitempty" dc:"采购订单号，可选（通过关联销售订单反查）"`               // 采购订单号，可选（通过关联销售订单反查）
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，必填"`                            // 公司缩写，必填
+	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                         // 分支名称，可选
+	Customer      string                 `protobuf:"bytes,3,opt,name=customer,proto3" json:"customer,omitempty" dc:"客户，可选"`                                                       // 客户，可选
+	Warehouse     string                 `protobuf:"bytes,4,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库，可选"`                                                     // 仓库，可选
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty" dc:"状态，可选"`                                                           // 状态，可选
+	FromDate      string                 `protobuf:"bytes,6,opt,name=from_date,json=fromDate,proto3" json:"from_date,omitempty" dc:"开始日期，可选"`                                     // 开始日期，可选
+	ToDate        string                 `protobuf:"bytes,7,opt,name=to_date,json=toDate,proto3" json:"to_date,omitempty" dc:"结束日期，可选"`                                           // 结束日期，可选
+	Limit         int32                  `protobuf:"varint,8,opt,name=limit,proto3" json:"limit,omitempty" dc:"查询限制数量，可选"`                                                        // 查询限制数量，可选
+	IncludeItems  bool                   `protobuf:"varint,9,opt,name=include_items,json=includeItems,proto3" json:"include_items,omitempty" dc:"是否包含明细项，可选"`                     // 是否包含明细项，可选
+	PoNo          string                 `protobuf:"bytes,10,opt,name=po_no,json=poNo,proto3" json:"po_no,omitempty" dc:"采购订单号，可选（通过关联销售订单反查）"`                                   // 采购订单号，可选（通过关联销售订单反查）
+	SoNo          string                 `protobuf:"bytes,11,opt,name=so_no,json=soNo,proto3" json:"so_no,omitempty" dc:"销售订单号，可选（通过 Delivery Note Item.against_sales_order 过滤）"` // 销售订单号，可选（通过 Delivery Note Item.against_sales_order 过滤）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetDeliveryNoteListReq) Reset() {
 	*x = GetDeliveryNoteListReq{}
-	mi := &file_delivery_note_pb_delivery_note_proto_msgTypes[2]
+	mi := &file_delivery_note_delivery_note_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -296,7 +297,7 @@ func (x *GetDeliveryNoteListReq) String() string {
 func (*GetDeliveryNoteListReq) ProtoMessage() {}
 
 func (x *GetDeliveryNoteListReq) ProtoReflect() protoreflect.Message {
-	mi := &file_delivery_note_pb_delivery_note_proto_msgTypes[2]
+	mi := &file_delivery_note_delivery_note_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -309,7 +310,7 @@ func (x *GetDeliveryNoteListReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDeliveryNoteListReq.ProtoReflect.Descriptor instead.
 func (*GetDeliveryNoteListReq) Descriptor() ([]byte, []int) {
-	return file_delivery_note_pb_delivery_note_proto_rawDescGZIP(), []int{2}
+	return file_delivery_note_delivery_note_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GetDeliveryNoteListReq) GetCompanyAbbr() string {
@@ -382,6 +383,13 @@ func (x *GetDeliveryNoteListReq) GetPoNo() string {
 	return ""
 }
 
+func (x *GetDeliveryNoteListReq) GetSoNo() string {
+	if x != nil {
+		return x.SoNo
+	}
+	return ""
+}
+
 // GetDeliveryNoteListResp 获取送货单列表响应
 type GetDeliveryNoteListResp struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
@@ -392,7 +400,7 @@ type GetDeliveryNoteListResp struct {
 
 func (x *GetDeliveryNoteListResp) Reset() {
 	*x = GetDeliveryNoteListResp{}
-	mi := &file_delivery_note_pb_delivery_note_proto_msgTypes[3]
+	mi := &file_delivery_note_delivery_note_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -404,7 +412,7 @@ func (x *GetDeliveryNoteListResp) String() string {
 func (*GetDeliveryNoteListResp) ProtoMessage() {}
 
 func (x *GetDeliveryNoteListResp) ProtoReflect() protoreflect.Message {
-	mi := &file_delivery_note_pb_delivery_note_proto_msgTypes[3]
+	mi := &file_delivery_note_delivery_note_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -417,7 +425,7 @@ func (x *GetDeliveryNoteListResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDeliveryNoteListResp.ProtoReflect.Descriptor instead.
 func (*GetDeliveryNoteListResp) Descriptor() ([]byte, []int) {
-	return file_delivery_note_pb_delivery_note_proto_rawDescGZIP(), []int{3}
+	return file_delivery_note_delivery_note_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetDeliveryNoteListResp) GetDeliveryNoteList() []*DeliveryNote {
@@ -427,11 +435,11 @@ func (x *GetDeliveryNoteListResp) GetDeliveryNoteList() []*DeliveryNote {
 	return nil
 }
 
-var File_delivery_note_pb_delivery_note_proto protoreflect.FileDescriptor
+var File_delivery_note_delivery_note_proto protoreflect.FileDescriptor
 
-const file_delivery_note_pb_delivery_note_proto_rawDesc = "" +
+const file_delivery_note_delivery_note_proto_rawDesc = "" +
 	"\n" +
-	"$delivery_note_pb/delivery_note.proto\x12\rdelivery_note\x1a\terp.proto\"\xc1\x03\n" +
+	"!delivery_note/delivery_note.proto\x12\rdelivery_note\x1a\terp.proto\"\xc1\x03\n" +
 	"\fDeliveryNote\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\acompany\x18\x02 \x01(\tR\acompany\x12\x1a\n" +
@@ -456,7 +464,7 @@ const file_delivery_note_pb_delivery_note_proto_rawDesc = "" +
 	"\x04rate\x18\x05 \x01(\x01R\x04rate\x12\x16\n" +
 	"\x06amount\x18\x06 \x01(\x01R\x06amount\x12\x1c\n" +
 	"\twarehouse\x18\a \x01(\tR\twarehouse\x12.\n" +
-	"\x13against_sales_order\x18\b \x01(\tR\x11againstSalesOrder\"\xab\x02\n" +
+	"\x13against_sales_order\x18\b \x01(\tR\x11againstSalesOrder\"\xc0\x02\n" +
 	"\x16GetDeliveryNoteListReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x1a\n" +
@@ -468,33 +476,34 @@ const file_delivery_note_pb_delivery_note_proto_rawDesc = "" +
 	"\x05limit\x18\b \x01(\x05R\x05limit\x12#\n" +
 	"\rinclude_items\x18\t \x01(\bR\fincludeItems\x12\x13\n" +
 	"\x05po_no\x18\n" +
-	" \x01(\tR\x04poNo\"d\n" +
+	" \x01(\tR\x04poNo\x12\x13\n" +
+	"\x05so_no\x18\v \x01(\tR\x04soNo\"d\n" +
 	"\x17GetDeliveryNoteListResp\x12I\n" +
 	"\x12delivery_note_list\x18\x01 \x03(\v2\x1b.delivery_note.DeliveryNoteR\x10deliveryNoteList2f\n" +
 	"\x13DeliveryNoteService\x12O\n" +
-	"\x13GetDeliveryNoteList\x12%.delivery_note.GetDeliveryNoteListReq\x1a\x11.erp.ResponseInfoB.Z,ttpos-bmp/app/ttpos-erp/api/delivery_note_pbb\x06proto3"
+	"\x13GetDeliveryNoteList\x12%.delivery_note.GetDeliveryNoteListReq\x1a\x11.erp.ResponseInfoB+Z)ttpos-bmp/app/ttpos-erp/api/delivery_noteb\x06proto3"
 
 var (
-	file_delivery_note_pb_delivery_note_proto_rawDescOnce sync.Once
-	file_delivery_note_pb_delivery_note_proto_rawDescData []byte
+	file_delivery_note_delivery_note_proto_rawDescOnce sync.Once
+	file_delivery_note_delivery_note_proto_rawDescData []byte
 )
 
-func file_delivery_note_pb_delivery_note_proto_rawDescGZIP() []byte {
-	file_delivery_note_pb_delivery_note_proto_rawDescOnce.Do(func() {
-		file_delivery_note_pb_delivery_note_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_delivery_note_pb_delivery_note_proto_rawDesc), len(file_delivery_note_pb_delivery_note_proto_rawDesc)))
+func file_delivery_note_delivery_note_proto_rawDescGZIP() []byte {
+	file_delivery_note_delivery_note_proto_rawDescOnce.Do(func() {
+		file_delivery_note_delivery_note_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_delivery_note_delivery_note_proto_rawDesc), len(file_delivery_note_delivery_note_proto_rawDesc)))
 	})
-	return file_delivery_note_pb_delivery_note_proto_rawDescData
+	return file_delivery_note_delivery_note_proto_rawDescData
 }
 
-var file_delivery_note_pb_delivery_note_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_delivery_note_pb_delivery_note_proto_goTypes = []any{
+var file_delivery_note_delivery_note_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_delivery_note_delivery_note_proto_goTypes = []any{
 	(*DeliveryNote)(nil),            // 0: delivery_note.DeliveryNote
 	(*DeliveryNoteItem)(nil),        // 1: delivery_note.DeliveryNoteItem
 	(*GetDeliveryNoteListReq)(nil),  // 2: delivery_note.GetDeliveryNoteListReq
 	(*GetDeliveryNoteListResp)(nil), // 3: delivery_note.GetDeliveryNoteListResp
 	(*api.ResponseInfo)(nil),        // 4: erp.ResponseInfo
 }
-var file_delivery_note_pb_delivery_note_proto_depIdxs = []int32{
+var file_delivery_note_delivery_note_proto_depIdxs = []int32{
 	1, // 0: delivery_note.DeliveryNote.items:type_name -> delivery_note.DeliveryNoteItem
 	0, // 1: delivery_note.GetDeliveryNoteListResp.delivery_note_list:type_name -> delivery_note.DeliveryNote
 	2, // 2: delivery_note.DeliveryNoteService.GetDeliveryNoteList:input_type -> delivery_note.GetDeliveryNoteListReq
@@ -506,26 +515,26 @@ var file_delivery_note_pb_delivery_note_proto_depIdxs = []int32{
 	0, // [0:2] is the sub-list for field type_name
 }
 
-func init() { file_delivery_note_pb_delivery_note_proto_init() }
-func file_delivery_note_pb_delivery_note_proto_init() {
-	if File_delivery_note_pb_delivery_note_proto != nil {
+func init() { file_delivery_note_delivery_note_proto_init() }
+func file_delivery_note_delivery_note_proto_init() {
+	if File_delivery_note_delivery_note_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_delivery_note_pb_delivery_note_proto_rawDesc), len(file_delivery_note_pb_delivery_note_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_delivery_note_delivery_note_proto_rawDesc), len(file_delivery_note_delivery_note_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_delivery_note_pb_delivery_note_proto_goTypes,
-		DependencyIndexes: file_delivery_note_pb_delivery_note_proto_depIdxs,
-		MessageInfos:      file_delivery_note_pb_delivery_note_proto_msgTypes,
+		GoTypes:           file_delivery_note_delivery_note_proto_goTypes,
+		DependencyIndexes: file_delivery_note_delivery_note_proto_depIdxs,
+		MessageInfos:      file_delivery_note_delivery_note_proto_msgTypes,
 	}.Build()
-	File_delivery_note_pb_delivery_note_proto = out.File
-	file_delivery_note_pb_delivery_note_proto_goTypes = nil
-	file_delivery_note_pb_delivery_note_proto_depIdxs = nil
+	File_delivery_note_delivery_note_proto = out.File
+	file_delivery_note_delivery_note_proto_goTypes = nil
+	file_delivery_note_delivery_note_proto_depIdxs = nil
 }

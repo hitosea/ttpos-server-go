@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.0
 // - protoc             v3.21.12
-// source: delivery_note_pb/delivery_note.proto
+// source: delivery_note/delivery_note.proto
 
-package delivery_note_pb
+package delivery_note
 
 import (
 	context "context"
@@ -129,5 +129,5 @@ var DeliveryNoteService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "delivery_note_pb/delivery_note.proto",
+	Metadata: "delivery_note/delivery_note.proto",
 }

@@ -217,7 +217,7 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 	supplierItems := make([]*item.SupplierItem, 0, len(itemInfo.SupplierItems))
 	for _, supplier := range itemInfo.SupplierItems {
 		supplierItems = append(supplierItems, &item.SupplierItem{
-			Supplier: supplier.Supplier, // 供应商名称
+			Supplier: supplier.Supplier,   // 供应商名称
 			Idx:      int32(supplier.Idx), // 排序索引
 		})
 	}

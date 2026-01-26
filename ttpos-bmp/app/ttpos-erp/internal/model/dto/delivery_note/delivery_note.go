@@ -81,6 +81,7 @@ type GetDeliveryNoteListReq struct {
 	Limit        int32  `json:"limit"`                              // 查询限制数量，可选
 	IncludeItems bool   `json:"include_items"`                      // 是否包含明细项，可选
 	PoNo         string `json:"po_no"`                              // 采购订单号，可选（通过关联销售订单反查）
+	SoNo         string `json:"so_no"`                              // 销售订单号，可选（通过 Delivery Note Item.against_sales_order 过滤）
 }
 
 // GetDeliveryNoteListResp 获取送货单列表响应

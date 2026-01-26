@@ -2,8 +2,8 @@ package selling
 
 import (
 	"context"
-	"ttpos-bmp/app/ttpos-erp/api/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 	"ttpos-bmp/app/ttpos-erp/utility"
@@ -230,6 +230,12 @@ func (s *sDeliveryNote) GetDeliveryNoteList(ctx context.Context, req *delivery_n
 				DeliveryNoteList: make([]*delivery_note.DeliveryNoteData, 0),
 			}, nil
 		}
+	}
+
+	// 按销售订单号过滤（通过 Delivery Note Item.against_sales_order 过滤）
+	// 使用子表过滤格式: ["Delivery Note Item", "against_sales_order", "=", "SAL-ORD-xxx"]
+	if len(req.SoNo) > 0 {
+		filters = append(filters, []string{"Delivery Note Item", "against_sales_order", "=", req.SoNo})
 	}
 
 	// 设置查询限制
