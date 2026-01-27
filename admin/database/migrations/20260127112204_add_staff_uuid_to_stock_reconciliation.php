@@ -32,7 +32,7 @@ class AddStaffUuidToStockReconciliation extends Migrator
                 'null' => false,
                 'default' => 0,
                 'comment' => '提交人员工UUID',
-                'after' => 'creator_staff_uuid'
+                'after' => 'submit_time'
             ]);
         }
 
