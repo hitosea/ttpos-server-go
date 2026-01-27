@@ -279,3 +279,32 @@ func (s *erpSrv) CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *buy
 	}
 	return &buying.CreatePurchaseOrderResp{}, nil
 }
+
+// GetPurchaseOrder 获取采购单详情
+func (s *erpSrv) GetPurchaseOrder(ctx cc.Context, getPurchaseOrderReq *buying.GetPurchaseOrderReq) (*buying.GetPurchaseOrderResp, error) {
+	client, conn, err := NewErpBuyingClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	companySetting := ctx.GetCompany().CompanySetting
+
+	result, err := client.GetPurchaseOrder(WithSiteCode(context.Background(), companySetting.ErpnextSiteCode), getPurchaseOrderReq)
+	if err != nil {
+		return nil, err
+	}
+	if result.Code != "0" {
+		logger.Logger.Error("GetPurchaseOrder-GetPurchaseOrder", zap.Any("err", err), zap.String("message", result.GetMessage()))
+		return nil, errors.New("调用erp接口失败-10002-" + result.GetMessage())
+	}
+	if result.Data != nil {
+		var resp buying.GetPurchaseOrderResp
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("GetPurchaseOrder-UnmarshalTo", zap.Any("err", err))
+			return nil, err
+		}
+		return &resp, nil
+	}
+	return &buying.GetPurchaseOrderResp{}, nil
+}

@@ -197,9 +197,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 		// 4. 总退款金额：当 order_state = 60 时统计（已取消订单的顾客实付）
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.platform_total, 0)), 0) AS total_refund_amount", canceledOrderState),
 		// 5. 最小订单金额：当 order_state 为有效状态时统计（使用顾客实付）
-		fmt.Sprintf("COALESCE(MIN(IF(t.order_state IN %s, t.platform_total, NULL)), 0) AS min_order_amount", businessStatesStr),
+		fmt.Sprintf("COALESCE(MIN(IF(t.order_state IN %s, t.platform_total, 0)), 0) AS min_order_amount", businessStatesStr),
 		// 6. 最大订单金额：当 order_state 为有效状态时统计（使用顾客实付）
-		fmt.Sprintf("COALESCE(MAX(IF(t.order_state IN %s, t.platform_total, NULL)), 0) AS max_order_amount", businessStatesStr),
+		fmt.Sprintf("COALESCE(MAX(IF(t.order_state IN %s, t.platform_total, 0)), 0) AS max_order_amount", businessStatesStr),
 		// 7. 总优惠折扣：当 order_state 为有效状态时统计 platform_discount + merchant_discount + basket_promo
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.platform_discount + t.merchant_discount + t.basket_promo, 0)), 0) AS total_discount", validStatesStr),
 		// 8. 总税费：当 order_state 为营业收入状态时统计 tax

@@ -19685,7 +19685,7 @@ definitions:
         description: 翻译后的中文繁体
         type: string
     type: object
-host: 192.168.100.69:8080
+host: 8080--main--blue-iguana-12--dingri101.coder.gezi.vip
 info:
   contact: {}
   description: 点餐系统服务端接口文档

@@ -66715,7 +66715,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "192.168.100.69:8080",
+	Host:             "8080--main--blue-iguana-12--dingri101.coder.gezi.vip",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "ttpos-server-go API",
