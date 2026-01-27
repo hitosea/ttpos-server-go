@@ -13,6 +13,7 @@ import (
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/repository"
 	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
+	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/lineman"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
@@ -576,8 +577,11 @@ func (s *takeoutOrderSrv) CheckOrderCancelable(ctx context.Context, req *request
 		return nil, errors.WithMessage(errors.New("查询订单失败"), err.Error())
 	}
 	if order == nil {
-		return nil, errors.New("订单不存在")
 	}
+	if order.IsLinemanOrder() {
+		return nil, errors.New("LINE MAN 订单不支持取消")
+	}
+
 	// 检查订单状态
 	if order.OrderState == valueobject.TakeoutOrderStateCompleted || order.IsDeletedOrCanceled() {
 		return &response.TakeoutOrderCancelCheckResp{
@@ -651,6 +655,9 @@ func (s *takeoutOrderSrv) CancelOrder(ctx context.Context, req *request.TakeoutO
 	}
 	if order == nil {
 		return errors.New("订单不存在")
+	}
+	if order.IsLinemanOrder() {
+		return errors.New("LINE MAN 订单不支持取消")
 	}
 
 	// 检查订单状态
@@ -819,7 +826,7 @@ func (s *takeoutOrderSrv) CreateOrUpdateOrder(ctx context.Context, order *takeou
 		orderRepoTx := persistence.NewTakeoutOrderRepo(tx)
 
 		// 保存或者更新订单
-		if order != nil && order.Uuid > 0 {
+		if isUpdate && order != nil && order.Uuid > 0 {
 			// 删除旧的关联数据（通过仓库层）
 			if err := orderRepoTx.DeleteRelatedData(order.Uuid); err != nil {
 				logger.Logger.Error("删除旧订单关联数据失败", zap.Uint64("orderUuid", order.Uuid), zap.Error(err))
@@ -1422,7 +1429,12 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		// 3. 转换并更新订单状态
 		// 使用平台转换器将平台状态转换为内部状态码
 		oldOrderState := order.OrderState
-		newOrderState := grab.ConvertPlatformStateToOrderState(status, order.OrderState)
+		newOrderState := func() int {
+			if order.IsLinemanOrder() {
+				return lineman.ConvertPlatformStateToOrderState(status, order.OrderState)
+			}
+			return grab.ConvertPlatformStateToOrderState(status, order.OrderState)
+		}()
 		if newOrderState != -1 {
 			order.OrderState = newOrderState // 更新内部状态码
 		}

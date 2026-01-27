@@ -588,7 +588,12 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 				item.ProductAttributeNames = *pkgLanguage.JsonToLocaleResponse(product.ProductAttributeNames)
 				item.SerialNo = product.TakeoutOrder.GetKdsTakeoutPlatformAndOrderNumber()
 				item.IsSaleBillDeleted = product.TakeoutOrder.IsDeletedOrCanceled()
-				remark = product.TakeoutOrderItem.Specifications
+				remark = func() string {
+					if product.TakeoutOrderItem != nil {
+						return product.TakeoutOrderItem.Specifications
+					}
+					return remark
+				}()
 			} else {
 				item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 				item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()

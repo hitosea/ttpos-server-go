@@ -54,7 +54,7 @@ func ConvertPlatformStateToOrderState(platformState string, ttposOrderState int)
 		}
 		return valueobject.TakeoutOrderStateRiderProcessing // 3 - 骑手配送中（已到店/已取餐/配送中）
 
-	case "DELIVERED":
+	case "DELIVERED", "COMPLETED":
 		if ttposOrderState == valueobject.TakeoutOrderStateAccepted {
 			return ttposOrderState // 不合法状态，不能从已接单配餐中到店
 		}
