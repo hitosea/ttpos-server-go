@@ -101,3 +101,17 @@ type StockReconciliationTemplateData struct {
 	Weekly  []string `json:"weekly"`  // 周盘物品编号列表
 	Monthly []string `json:"monthly"` // 月盘物品编号列表
 }
+
+// StockReconciliationAnnotationListResp 盘点单批注列表响应
+type StockReconciliationAnnotationListResp struct {
+	List []*StockReconciliationAnnotationInfo `json:"list"` // 批注列表
+}
+
+// StockReconciliationAnnotationInfo 盘点单批注信息
+type StockReconciliationAnnotationInfo struct {
+	Uuid               uint64 `json:"uuid"`                 // 批注UUID
+	AnnotationType     int    `json:"annotation_type"`      // 批注类型 1-重新发起 2-驳回 3-通过
+	AnnotationTypeName string `json:"annotation_type_name"` // 批注类型名称
+	Content            string `json:"content"`              // 批注内容
+	CreateTime         int64  `json:"create_time"`          // 创建时间
+}

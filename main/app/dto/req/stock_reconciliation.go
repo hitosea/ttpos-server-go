@@ -39,6 +39,18 @@ type StockReconciliationSaveReq struct {
 	Purpose         int                           `json:"purpose"`           // 盘点目的 1-库存盘点 2-期初盘点
 	Type            int                           `json:"type"`              // 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘
 	Items           []*StockReconciliationItemReq `json:"items"`             // 盘点单物品明细
+
+	isResubmit bool // 是否重新提交（内部使用，不暴露到接口文档）
+}
+
+// SetIsResubmit 设置是否重新提交
+func (r *StockReconciliationSaveReq) SetIsResubmit(isResubmit bool) {
+	r.isResubmit = isResubmit
+}
+
+// GetIsResubmit 获取是否重新提交
+func (r *StockReconciliationSaveReq) GetIsResubmit() bool {
+	return r.isResubmit
 }
 
 // StockReconciliationDeleteReq 删除盘点单请求
@@ -48,12 +60,19 @@ type StockReconciliationDeleteReq struct {
 
 // StockReconciliationApproveReq 审核盘点单请求
 type StockReconciliationApproveReq struct {
-	Uuid uint64 `json:"uuid" binding:"required"` // 盘点单UUID
+	Uuid       uint64 `json:"uuid" binding:"required"` // 盘点单UUID
+	Annotation string `json:"annotation"`              // 批注内容（非必填）
 }
 
 // StockReconciliationRejectReq 驳回盘点单请求
 type StockReconciliationRejectReq struct {
-	Uuid uint64 `json:"uuid" binding:"required"` // 盘点单UUID
+	Uuid       uint64 `json:"uuid" binding:"required"` // 盘点单UUID
+	Annotation string `json:"annotation"`              // 批注内容（非必填）
+}
+
+// StockReconciliationAnnotationListReq 盘点单批注列表请求
+type StockReconciliationAnnotationListReq struct {
+	StockReconciliationUuid uint64 `json:"stock_reconciliation_uuid" form:"stock_reconciliation_uuid" binding:"required"` // 盘点单UUID
 }
 
 // StockReconciliationCopyReq 新增盘点单请求

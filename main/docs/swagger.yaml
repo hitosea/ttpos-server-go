@@ -7724,7 +7724,7 @@ definitions:
         description: 0-否 1-是
         type: integer
       daily_limit:
-        description: 0-不限制
+        description: -1=不限制 其他=限制
         type: integer
       items:
         description: 物品配置
@@ -7774,7 +7774,7 @@ definitions:
         description: 0-否 1-是
         type: integer
       daily_limit:
-        description: 0-不限制
+        description: -1=不限制 其他=限制
         type: integer
       items:
         description: 物品配置
@@ -8595,6 +8595,9 @@ definitions:
     type: object
   req.StockReconciliationApproveReq:
     properties:
+      annotation:
+        description: 批注内容（非必填）
+        type: string
       uuid:
         description: 盘点单UUID
         type: integer
@@ -8651,6 +8654,9 @@ definitions:
     type: object
   req.StockReconciliationRejectReq:
     properties:
+      annotation:
+        description: 批注内容（非必填）
+        type: string
       uuid:
         description: 盘点单UUID
         type: integer
@@ -15070,6 +15076,7 @@ definitions:
       create_time:
         type: integer
       daily_limit:
+        description: 每日限购数量（-1表示不限）
         type: integer
       item_count:
         description: 物品数量
@@ -16718,6 +16725,32 @@ definitions:
       uuid:
         description: 角色UUID
         type: integer
+    type: object
+  resp.StockReconciliationAnnotationInfo:
+    properties:
+      annotation_type:
+        description: 批注类型 1-重新发起 2-驳回 3-通过
+        type: integer
+      annotation_type_name:
+        description: 批注类型名称
+        type: string
+      content:
+        description: 批注内容
+        type: string
+      create_time:
+        description: 创建时间
+        type: integer
+      uuid:
+        description: 批注UUID
+        type: integer
+    type: object
+  resp.StockReconciliationAnnotationListResp:
+    properties:
+      list:
+        description: 批注列表
+        items:
+          $ref: '#/definitions/resp.StockReconciliationAnnotationInfo'
+        type: array
     type: object
   resp.StockReconciliationApproveResp:
     properties:
@@ -18464,6 +18497,9 @@ definitions:
         type: number
       platform_discount:
         description: 平台优惠
+        type: number
+      platform_total:
+        description: 平台结算总额 (v2.15.0+)
         type: number
       small_order_fee:
         description: 小订单费
@@ -39730,6 +39766,38 @@ paths:
       summary: 导出用户分析统计
       tags:
       - 商家端.报表
+  /shop/stock_reconciliation/annotation:
+    get:
+      consumes:
+      - application/json
+      description: 根据盘点单UUID获取批注列表，按创建时间倒序排列
+      parameters:
+      - description: 盘点单UUID
+        in: query
+        name: stock_reconciliation_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockReconciliationAnnotationListResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取盘点单批注列表
+      tags:
+      - 商家端.盘点管理
   /shop/stock_reconciliation/approve:
     post:
       consumes:
@@ -39937,6 +40005,39 @@ paths:
       security:
       - JwtToken: []
       summary: 驳回盘点单
+      tags:
+      - 商家端.盘点管理
+  /shop/stock_reconciliation/resubmit:
+    post:
+      consumes:
+      - application/json
+      description: 将已驳回的盘点单重新提交审核，支持修改盘点单信息后提交
+      parameters:
+      - description: 重新提交盘点单请求参数（is_resubmit必须为true）
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockReconciliationSaveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockReconciliationUuidResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 重新提交盘点单
       tags:
       - 商家端.盘点管理
   /shop/stock_reconciliation/save:
