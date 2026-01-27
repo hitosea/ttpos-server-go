@@ -32,6 +32,7 @@ type PurchaseHandler struct {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseOrderListReq true "采购订单列表请求参数"
 // @Success 200 {object} dto.Response{data=resp.PurchaseOrderListResp} "成功"
 // @Router /shop/purchase/order/list [get]
@@ -59,6 +60,7 @@ func (h *PurchaseHandler) GetPurchaseOrderList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param uuid query int true "采购订单UUID"
 // @Success 200 {object} dto.Response{data=resp.PurchaseOrderDetailResp} "成功"
 // @Router /shop/purchase/order/detail [get]
@@ -86,6 +88,7 @@ func (h *PurchaseHandler) GetPurchaseOrderDetail(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseOrderCreateReq true "创建采购订单请求参数"
 // @Success 200 {object} dto.Response{data=resp.PurchaseOrderCreateResp} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
@@ -114,6 +117,7 @@ func (h *PurchaseHandler) CreatePurchaseOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseOrderUpdateReq true "更新采购订单请求参数"
 // @Success 200 {object} dto.Response{} "成功"
 // @Router /shop/purchase/order/update [post]
@@ -141,6 +145,7 @@ func (h *PurchaseHandler) UpdatePurchaseOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseOrderDetailReq true "更新采购订单物品单位请求参数"
 // @Success 200 {object} dto.Response{data=resp.PurchaseOrderDetailResp} "成功"
 // @Router /shop/purchase/order/item/units/update [post]
@@ -168,6 +173,7 @@ func (h *PurchaseHandler) UpdatePurchaseOrderItemUnit(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseOrderDeleteReq true "删除采购订单请求参数"
 // @Success 200 {object} dto.Response{} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
@@ -196,6 +202,7 @@ func (h *PurchaseHandler) DeletePurchaseOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseOrderSubmitReq true "提交采购订单请求参数"
 // @Success 200 {object} dto.Response "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
@@ -224,6 +231,7 @@ func (h *PurchaseHandler) SubmitPurchaseOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseOrderApproveReq true "审核采购订单请求参数"
 // @Success 200 {object} dto.Response{} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
@@ -252,6 +260,7 @@ func (h *PurchaseHandler) ApprovePurchaseOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseReceiptCreateReq true "创建收货记录请求参数"
 // @Success 200 {object} dto.Response{data=resp.PurchaseReceiptCreateResp} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
@@ -284,6 +293,7 @@ func (h *PurchaseHandler) CreatePurchaseReceipt(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseReceiptOrderUpdateReq true "更新收货记录请求参数"
 // @Success 200 {object} dto.Response{} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
@@ -315,6 +325,7 @@ func (h *PurchaseHandler) UpdatePurchaseReceipt(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param page_no query int false "页码" default(1)
 // @Param page_size query int false "每页条数" default(20)
 // @Param order_no query string false "订单号"
@@ -350,6 +361,7 @@ func (h *PurchaseHandler) GetPurchaseReceiptList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param uuid query int true "收货记录UUID"
 // @Success 200 {object} dto.Response{data=resp.PurchaseReceiptOrderDetailResp} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
@@ -378,6 +390,7 @@ func (h *PurchaseHandler) GetPurchaseReceiptDetail(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseReceiptOrderCancelReq true "取消收货单请求参数"
 // @Success 200 {object} dto.Response{} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
@@ -406,6 +419,7 @@ func (h *PurchaseHandler) CancelPurchaseReceipt(c *gin.Context) {
 // @Accept multipart/form-data
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param file formData file true "文件"
 // @Param group_id formData int false "分组ID"
 // @Success 200 {object} dto.Response{data=resp.UploadFileResp} "成功"
@@ -454,6 +468,7 @@ func (h *PurchaseHandler) UploadDocument(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.DeleteReceiptFileReq true "删除附件请求参数"
 // @Success 200 {object} dto.Response "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
@@ -476,6 +491,37 @@ func (h *PurchaseHandler) DeleteReceiptFile(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// GetReceiptPendingItems 获取待收货物品列表 (v2.16.0+)
+// @Summary 获取待收货物品列表
+// @Description 根据采购单UUID和DN单号或供应商编码获取待收货物品列表，用于创建收货单
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param client-version header string true "版本号"
+// @Param purchase_order_uuid query int true "采购单UUID"
+// @Param delivery_note_no query string false "DN单号（与supplier_erp_code二选一）"
+// @Param supplier_erp_code query string false "供应商ERP编码（与delivery_note_no二选一）"
+// @Success 200 {object} dto.Response{data=resp.ReceiptPendingItemsResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
+// @Router /shop/purchase/receipt/pending_items [get]
+func (h *PurchaseHandler) GetReceiptPendingItems(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var pendingReq req.ReceiptPendingItemsReq
+	if err := c.ShouldBindQuery(&pendingReq); err != nil {
+		helper.HandleValidationError(c, err, pendingReq, nil)
+		return
+	}
+
+	resp, err := h.purchaseOrderSrv.GetReceiptPendingItems(ctx, pendingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
 // GetLimitSchemeList 获取限购方案列表
 // @Summary 获取限购方案列表
 // @Description 分页获取限购方案列表
@@ -483,6 +529,7 @@ func (h *PurchaseHandler) DeleteReceiptFile(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param page_no query int true "页码"
 // @Param page_size query int true "每页数量"
 // @Param status query int false "状态：0=关闭，1=开启"
@@ -513,6 +560,7 @@ func (h *PurchaseHandler) GetLimitSchemeList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param uuid query int true "方案UUID"
 // @Success 200 {object} dto.Response{data=resp.PurchaseLimitSchemeResp} "成功"
 // @Router /shop/purchase/limit/scheme/detail [get]
@@ -540,6 +588,7 @@ func (h *PurchaseHandler) GetLimitSchemeDetail(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseLimitSchemeCreateReq true "创建限购方案请求参数"
 // @Success 200 {object} dto.Response{data=map[string]interface{}} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
@@ -570,6 +619,7 @@ func (h *PurchaseHandler) CreateLimitScheme(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseLimitSchemeUpdateReq true "更新限购方案请求参数"
 // @Success 200 {object} dto.Response{} "成功"
 // @Router /shop/purchase/limit/scheme/update [post]
@@ -597,6 +647,7 @@ func (h *PurchaseHandler) UpdateLimitScheme(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param client-version header string true "版本号"
 // @Param data body req.PurchaseLimitSchemeDeleteReq true "删除限购方案请求参数"
 // @Success 200 {object} dto.Response{} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
@@ -662,6 +713,7 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/purchase/order/item/units/update", wrapper.UpdatePurchaseOrderItemUnit)
 		privateApi.GET("/purchase/receipt/detail", wrapper.GetPurchaseReceiptDetail)
 		privateApi.DELETE("/purchase/receipt/cancel", wrapper.CancelPurchaseReceipt)
+		privateApi.GET("/purchase/receipt/pending_items", wrapper.GetReceiptPendingItems) // v2.16.0+ 获取待收货物品
 
 		// 收货单附件管理
 		privateApi.POST("/file/upload_document", wrapper.UploadDocument)

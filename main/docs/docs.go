@@ -23088,6 +23088,13 @@ const docTemplate = `{
                 "summary": "上传文档",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "type": "file",
                         "description": "文件",
                         "name": "file",
@@ -28885,6 +28892,13 @@ const docTemplate = `{
                 "summary": "创建限购方案",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "创建限购方案请求参数",
                         "name": "data",
                         "in": "body",
@@ -28943,6 +28957,13 @@ const docTemplate = `{
                 "summary": "删除限购方案",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "删除限购方案请求参数",
                         "name": "data",
                         "in": "body",
@@ -28987,6 +29008,13 @@ const docTemplate = `{
                 ],
                 "summary": "获取限购方案详情",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "type": "integer",
                         "description": "方案UUID",
@@ -29036,6 +29064,13 @@ const docTemplate = `{
                 ],
                 "summary": "获取限购方案列表",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "type": "integer",
                         "description": "页码",
@@ -29105,6 +29140,13 @@ const docTemplate = `{
                 "summary": "更新限购方案",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "更新限购方案请求参数",
                         "name": "data",
                         "in": "body",
@@ -29143,6 +29185,13 @@ const docTemplate = `{
                 ],
                 "summary": "审核采购订单",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "审核采购订单请求参数",
                         "name": "data",
@@ -29188,6 +29237,13 @@ const docTemplate = `{
                 ],
                 "summary": "创建采购订单",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "创建采购订单请求参数",
                         "name": "data",
@@ -29246,6 +29302,13 @@ const docTemplate = `{
                 "summary": "删除采购订单",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "删除采购订单请求参数",
                         "name": "data",
                         "in": "body",
@@ -29290,6 +29353,13 @@ const docTemplate = `{
                 ],
                 "summary": "获取采购订单详情",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "type": "integer",
                         "description": "采购订单UUID",
@@ -29339,6 +29409,13 @@ const docTemplate = `{
                 ],
                 "summary": "更新采购订单物品单位",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "更新采购订单物品单位请求参数",
                         "name": "data",
@@ -29391,6 +29468,13 @@ const docTemplate = `{
                 "summary": "获取采购订单列表",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "采购订单列表请求参数",
                         "name": "data",
                         "in": "body",
@@ -29442,6 +29526,13 @@ const docTemplate = `{
                 "summary": "提交采购订单",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "提交采购订单请求参数",
                         "name": "data",
                         "in": "body",
@@ -29487,6 +29578,13 @@ const docTemplate = `{
                 "summary": "更新采购订单",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "更新采购订单请求参数",
                         "name": "data",
                         "in": "body",
@@ -29525,6 +29623,13 @@ const docTemplate = `{
                 ],
                 "summary": "取消收货单",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "取消收货单请求参数",
                         "name": "data",
@@ -29570,6 +29675,13 @@ const docTemplate = `{
                 ],
                 "summary": "创建收货记录",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "创建收货记录请求参数",
                         "name": "data",
@@ -29628,6 +29740,13 @@ const docTemplate = `{
                 "summary": "获取收货记录详情",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "type": "integer",
                         "description": "收货记录UUID",
                         "name": "uuid",
@@ -29683,6 +29802,13 @@ const docTemplate = `{
                 "summary": "删除收货单附件",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "删除附件请求参数",
                         "name": "data",
                         "in": "body",
@@ -29727,6 +29853,13 @@ const docTemplate = `{
                 ],
                 "summary": "获取收货记录列表",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "type": "integer",
                         "default": 1,
@@ -29814,6 +29947,80 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/purchase/receipt/pending_items": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据采购单UUID和DN单号或供应商编码获取待收货物品列表，用于创建收货单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.采购管理"
+                ],
+                "summary": "获取待收货物品列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "采购单UUID",
+                        "name": "purchase_order_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "DN单号（与supplier_erp_code二选一）",
+                        "name": "delivery_note_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "供应商ERP编码（与delivery_note_no二选一）",
+                        "name": "supplier_erp_code",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ReceiptPendingItemsResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/purchase/receipt/update": {
             "post": {
                 "security": [
@@ -29833,6 +30040,13 @@ const docTemplate = `{
                 ],
                 "summary": "更新收货记录",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "更新收货记录请求参数",
                         "name": "data",
@@ -49690,6 +49904,11 @@ const docTemplate = `{
                 "receive_time"
             ],
             "properties": {
+                "delivery_note_no": {
+                    "description": "v2.16.0+ DN单号",
+                    "type": "string",
+                    "maxLength": 255
+                },
                 "file_uuids": {
                     "description": "附件UUID列表，最多10个",
                     "type": "array",
@@ -49726,6 +49945,11 @@ const docTemplate = `{
                     "description": "收货时间(时间戳)",
                     "type": "integer",
                     "minimum": 0
+                },
+                "source_supplier_code": {
+                    "description": "v2.16.0+ 供应商编码",
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -60115,6 +60339,13 @@ const docTemplate = `{
                     "description": "V2.6 采购类型 1-外部采购 2-内部采购",
                     "type": "integer"
                 },
+                "receipt_list": {
+                    "description": "v2.16.0+ 收货清单，旧版本不返回",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ReceiptListItem"
+                    }
+                },
                 "receipt_progress": {
                     "description": "收货进度（百分比0.00%）前端直接显示",
                     "type": "string"
@@ -60848,6 +61079,215 @@ const docTemplate = `{
                 "sort_order": {
                     "description": "排序",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.ReceiptListItem": {
+            "type": "object",
+            "properties": {
+                "delivery_note_no": {
+                    "description": "DN单据号",
+                    "type": "string"
+                },
+                "erp_purchase_order_no": {
+                    "description": "ERP采购单号",
+                    "type": "string"
+                },
+                "is_completed": {
+                    "description": "是否已收货完成",
+                    "type": "boolean"
+                },
+                "is_delivery_note": {
+                    "description": "是否DN单据",
+                    "type": "boolean"
+                },
+                "is_legacy": {
+                    "description": "是否为旧采购单收货清单（无ErpSaleOrderNo）",
+                    "type": "boolean"
+                },
+                "receipt_orders": {
+                    "description": "收货单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ReceiptListOrderInfo"
+                    }
+                },
+                "supplier_erp_code": {
+                    "description": "供应商ERP编码",
+                    "type": "string"
+                },
+                "supplier_name": {
+                    "description": "供应商名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.ReceiptListOrderInfo": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "display_no": {
+                    "description": "显示单号（已收货显示erp_order_no，草稿显示\"草稿（时间）\"）",
+                    "type": "string"
+                },
+                "erp_order_no": {
+                    "description": "ERP收货单号",
+                    "type": "string"
+                },
+                "is_confirmed": {
+                    "description": "是否已确认",
+                    "type": "boolean"
+                },
+                "status": {
+                    "description": "状态",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "收货单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ReceiptPendingItemInfo": {
+            "type": "object",
+            "properties": {
+                "arrival_num": {
+                    "description": "已到货数量",
+                    "type": "number"
+                },
+                "base_unit_uuid": {
+                    "description": "基准单位UUID",
+                    "type": "integer"
+                },
+                "locale_base_unit_name": {
+                    "description": "基准单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "locale_name": {
+                    "description": "物料名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "locale_unit_name": {
+                    "description": "单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "material_code": {
+                    "description": "物料编码",
+                    "type": "string"
+                },
+                "material_uuid": {
+                    "description": "物料UUID",
+                    "type": "integer"
+                },
+                "pending_num": {
+                    "description": "待收货数量",
+                    "type": "number"
+                },
+                "purchase_num": {
+                    "description": "采购数量",
+                    "type": "number"
+                },
+                "purchase_order_item_uuid": {
+                    "description": "采购单物品UUID",
+                    "type": "integer"
+                },
+                "unit_conversion_rate": {
+                    "description": "单位转换率",
+                    "type": "number"
+                },
+                "unit_list": {
+                    "description": "可选单位列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PurchaseOrderItemMaterialUnit"
+                    }
+                },
+                "unit_uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
+                },
+                "units": {
+                    "description": "多单位待收货信息",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ReceiptPendingItemUnit"
+                    }
+                }
+            }
+        },
+        "resp.ReceiptPendingItemUnit": {
+            "type": "object",
+            "properties": {
+                "arrival_num": {
+                    "description": "已到货数量",
+                    "type": "number"
+                },
+                "conversion_rate": {
+                    "description": "转换率",
+                    "type": "number"
+                },
+                "locale_unit_name": {
+                    "description": "单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "pending_num": {
+                    "description": "待收货数量",
+                    "type": "number"
+                },
+                "purchase_num": {
+                    "description": "采购数量",
+                    "type": "number"
+                },
+                "unit_uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ReceiptPendingItemsResp": {
+            "type": "object",
+            "properties": {
+                "delivery_note_no": {
+                    "description": "DN单据号",
+                    "type": "string"
+                },
+                "is_delivery_note": {
+                    "description": "是否DN单据",
+                    "type": "boolean"
+                },
+                "items": {
+                    "description": "待收货物品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ReceiptPendingItemInfo"
+                    }
+                },
+                "supplier_erp_code": {
+                    "description": "供应商ERP编码",
+                    "type": "string"
+                },
+                "supplier_name": {
+                    "description": "供应商名称",
+                    "type": "string"
                 }
             }
         },

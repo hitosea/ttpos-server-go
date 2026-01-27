@@ -50,6 +50,7 @@ type IPurchaseOrderSrv interface {
 	GetPurchaseReceiptOrderDetail(ctx context.Context, req req.PurchaseReceiptOrderDetailReq) (resp.PurchaseReceiptOrderDetailResp, error) // 获取收货单详情
 	UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error                                           // 更新收货单
 	CancelPurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderCancelReq) error                                           // 取消收货单
+	GetReceiptPendingItems(ctx context.Context, req req.ReceiptPendingItemsReq) (resp.ReceiptPendingItemsResp, error)                      // v2.16.0+ 获取待收货物品
 }
 
 // purchaseOrderSrv 采购申请服务实现
@@ -425,6 +426,23 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		return remarks[i].CreateTime > remarks[j].CreateTime
 	})
 	detailResp.Remarks = remarks
+
+	// 版本判断：v2.16.0+ 返回收货清单（仅子店）
+	if ctx.Version(context.GTE, constant.ClientVersionV2160) && !companySetting.IsHeadquarter() {
+		// 初始化为空数组，确保 v2.16.0+ 始终返回该字段
+		detailResp.ReceiptList = make([]resp.ReceiptListItem, 0)
+
+		// 检查是否需要获取收货清单数据（有ErpSaleOrderNo或是品牌采购）
+		needReceiptList := purchaseOrder.ErpSaleOrderNo != "" || purchaseOrder.PurchaseType == constant.PurchaseTypeBrand
+		if needReceiptList {
+			receiptList, err := s.GetReceiptList(ctx, purchaseOrder)
+			if err != nil {
+				logger.Logger.Warn("获取收货清单失败", zap.Error(err), zap.Uint64("purchase_order_uuid", purchaseOrder.Uuid))
+			} else if len(receiptList) > 0 {
+				detailResp.ReceiptList = receiptList
+			}
+		}
+	}
 
 	return detailResp, nil
 }
