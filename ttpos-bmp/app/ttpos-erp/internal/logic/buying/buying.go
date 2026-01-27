@@ -303,7 +303,7 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 			//获取已有物品
 			var existsItem *erp.PurchaseReceiptItem
 			for _, item := range receipt.Items {
-				if item.ItemCode == itemReq.ItemCode {
+				if item.ItemCode == itemReq.ItemCode && item.Uom == itemReq.Uom {
 					existsItem = item
 					break
 				}
@@ -319,7 +319,6 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 			receiptItem := &erp.PurchaseReceiptItem{}
 			gvar.New(existsItem).Clone().Scan(receiptItem)
 			receiptItem.Qty = itemReq.Qty
-			receiptItem.Uom = itemReq.Uom
 			receiptItems = append(receiptItems, receiptItem)
 
 			// if gPurchaseItemCodeList.Contains(itemReq.ItemCode) {
