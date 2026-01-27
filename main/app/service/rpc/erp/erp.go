@@ -3,6 +3,7 @@ package erp
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
+	"ttpos-bmp/app/ttpos-erp/api/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
@@ -96,6 +97,9 @@ type IErpSrv interface {
 	// 商品
 	GetProductList(ctx pkgCtx.Context, params GetErpProductListReq) (*item.GetItemListResp, error) // 获取商品列表
 	UpdateProduct(ctx pkgCtx.Context, params UpdateProductReq) error                               // 更新商品
+
+	// 送货单
+	GetDeliveryNoteList(ctx pkgCtx.Context, getDeliveryNoteListReq *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error)
 }
 type erpSrv struct {
 	dbm *database.DBManager

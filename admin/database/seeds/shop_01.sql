@@ -1129,6 +1129,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `sub_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '子订单UUID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单号',
     `erp_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP采购单号',
+    `erp_sale_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP销售单号',
     `order_type` INT(10) NOT NULL DEFAULT 0 COMMENT '申请类型, 0-仓库调拨',
     `supplier_name` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '供应商名称',
     `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商编码',

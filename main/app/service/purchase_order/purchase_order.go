@@ -1352,12 +1352,12 @@ func (s *purchaseOrderSrv) handleErpApproval(
 ) error {
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 
-	var erpOrderNo string
+	var erpOrderNo, erpSaleOrderNo string
 	var err error
 
 	if purchaseOrder.IsHeadquarterPurchase() {
 		// 内部采购
-		erpOrderNo, err = s.handleInternalPurchaseErp(ctx, tx, purchaseOrder)
+		erpOrderNo, erpSaleOrderNo, err = s.handleInternalPurchaseErp(ctx, tx, purchaseOrder)
 		if err != nil {
 			return err
 		}
@@ -1371,6 +1371,7 @@ func (s *purchaseOrderSrv) handleErpApproval(
 
 	// 更新采购申请单号
 	purchaseOrder.ErpOrderNo = erpOrderNo
+	purchaseOrder.ErpSaleOrderNo = erpSaleOrderNo
 	err = purchaseOrderRepo.Update(purchaseOrder)
 	if err != nil {
 		return errors.WithMessage(errors.New("更新采购申请单号失败"), err.Error())
@@ -1389,7 +1390,7 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 	ctx context.Context,
 	tx *gorm.DB,
 	purchaseOrder *model.PurchaseOrder,
-) (string, error) {
+) (string, string, error) {
 	// 构建物料请求项
 	stockItems := make([]*stock.MaterialRequestItem, 0, len(purchaseOrder.Items))
 	for _, item := range purchaseOrder.Items {
@@ -1401,10 +1402,10 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 			if erpnextUom == "" {
 				materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
 				if err != nil {
-					return "", errors.WithMessage(errors.New("查询物品单位失败"), err.Error())
+					return "", "", errors.WithMessage(errors.New("查询物品单位失败"), err.Error())
 				}
 				if materialUnit.Unit == nil {
-					return "", errors.New("查询物品原始单位失败")
+					return "", "", errors.New("查询物品原始单位失败")
 				}
 				erpnextUom = materialUnit.Unit.ErpnextUom
 			}
@@ -1432,13 +1433,13 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 	// 获取子公司数据库
 	subDb := s.dbm.GetDB(purchaseOrder.CompanyUuid)
 	if subDb == nil {
-		return "", errors.New("获取子店数据库失败")
+		return "", "", errors.New("获取子店数据库失败")
 	}
 
 	// 减总部库存并记录出入库日志
 	err := s.helper.reduceHeadquarterStockAndLog(ctx, subDb, tx, purchaseOrder)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	// 获取子公司设置
@@ -1460,10 +1461,10 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 		RefNo:           purchaseOrder.OrderNo, // 来源单据号，用于跟踪ttpos原始订单号
 	})
 	if err != nil {
-		return "", s.helper.handleErpError(ctx, err, purchaseOrder)
+		return "", "", s.helper.handleErpError(ctx, err, purchaseOrder)
 	}
 
-	return stockResp.PurchaseOrder, nil
+	return stockResp.PurchaseOrder, stockResp.SalesOrder, nil
 }
 
 // handleExternalPurchaseErp 处理外部采购ERP
@@ -1580,6 +1581,7 @@ func (s *purchaseOrderSrv) syncToSubShop(purchaseOrder *model.PurchaseOrder) err
 	subPurchaseOrder.Status = constant.PurchaseOrderStatusApproved
 	subPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusApproved
 	subPurchaseOrder.PassTime = purchaseOrder.PassTime
+	subPurchaseOrder.ErpSaleOrderNo = purchaseOrder.ErpSaleOrderNo
 
 	err = repository.NewPurchaseOrderRepo(subDb).Update(subPurchaseOrder)
 	if err != nil {
