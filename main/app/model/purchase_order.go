@@ -224,7 +224,7 @@ type PurchaseOrderLog struct {
 	ActionDesc        string `gorm:"column:action_desc;type:varchar(255);not null;default:'';comment:操作描述" json:"action_desc"`
 	OldStatus         int    `gorm:"column:old_status;type:int(10);not null;default:0;comment:操作前状态" json:"old_status"`
 	NewStatus         int    `gorm:"column:new_status;type:int(10);not null;default:0;comment:操作后状态" json:"new_status"`
-	Content           string `gorm:"column:content;type:text;comment:操作内容详情" json:"content"`
+	Content           string `gorm:"column:content;type:longtext;comment:操作内容详情" json:"content"`
 	Remark            string `gorm:"column:remark;type:text;comment:备注" json:"remark"`
 
 	// 关联关系
