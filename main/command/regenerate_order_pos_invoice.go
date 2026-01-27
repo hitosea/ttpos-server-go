@@ -39,8 +39,8 @@ func init() {
 
 var (
 	regenerateOrderPosInvoiceCompanyUuidFlag      uint64
-	regenerateOrderPosInvoiceSaleOrderUuidFlag     uint64
-	regenerateOrderPosInvoiceOpenPosEntryNameFlag  string
+	regenerateOrderPosInvoiceSaleOrderUuidFlag    uint64
+	regenerateOrderPosInvoiceOpenPosEntryNameFlag string
 	regenerateOrderPosInvoiceDryRunFlag           bool
 )
 
