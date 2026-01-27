@@ -2758,7 +2758,7 @@ func (s *statisticsSrv) CountShiftRefundAmount(ctx context.Context, req CountReq
 		}
 	}
 
-	// 获取外卖订单退款金额（状态为 canceledOrderState，退款金额为 eater_payment）
+	// 获取外卖订单退款金额（状态为 canceledOrderState，退款金额为 platform_total）
 	takeoutRefundAmount := repository.NewStatisticsTakeoutRepo(db).CountTakeoutRefundAmount(
 		repository.CountTakeoutReq{
 			TimeStart:         req.QueryStartTime,

@@ -107,7 +107,7 @@ func (s *takeoutOrderSrv) GetList(ctx context.Context, req *request.TakeoutOrder
 			ShortOrderNumber: order.ShortOrderNumber,
 			OrderState:       order.OrderState,
 			IsAbnormal:       order.IsAbnormal,
-			Subtotal:         order.EaterPayment,
+			Subtotal:         order.PlatformTotal, // 列表返回 platform_total 字段
 			TotalItems:       len(order.TakeoutOrderItems),
 		}
 		list = append(list, orderResp)
@@ -230,6 +230,25 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 		})
 	}
 
+	// 构建价格信息
+	priceResp := response.TakeoutOrderPriceResp{
+		Subtotal:          order.Subtotal,
+		DeliveryFee:       order.DeliveryFee,
+		EaterPayment:      order.EaterPayment,
+		PlatformDiscount:  order.PlatformDiscount,
+		MerchantDiscount:  order.MerchantDiscount,
+		BasketPromo:       order.BasketPromo,
+		Tax:               order.Tax,
+		SmallOrderFee:     order.SmallOrderFee,
+		MerchantChargeFee: order.MerchantChargeFee,
+		PlatformTotal:     order.PlatformTotal,
+	}
+
+	// 版本兼容处理：	 之前的版本，eater_payment 返回 platform_total 的值
+	if ctx.Version(context.LT, "2.16.0") {
+		priceResp.EaterPayment = order.PlatformTotal
+	}
+
 	return &response.TakeoutOrderResp{
 		Uuid:             order.Uuid,
 		Platform:         order.Platform,
@@ -246,17 +265,7 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 			EstimatedReadyTime: order.EstimatedReadyTime,
 			MaxReadyTime:       order.MaxReadyTime,
 		},
-		Price: response.TakeoutOrderPriceResp{
-			Subtotal:          order.Subtotal,
-			DeliveryFee:       order.DeliveryFee,
-			EaterPayment:      order.EaterPayment,
-			PlatformDiscount:  order.PlatformDiscount,
-			MerchantDiscount:  order.MerchantDiscount,
-			BasketPromo:       order.BasketPromo,
-			Tax:               order.Tax,
-			SmallOrderFee:     order.SmallOrderFee,
-			MerchantChargeFee: order.MerchantChargeFee,
-		},
+		Price: priceResp,
 		Currencies: response.TakeoutOrderCurrencyResp{
 			CurrencyCode:     order.CurrencyCode,
 			CurrencySymbol:   order.CurrencySymbol,

@@ -7,11 +7,11 @@ package service
 
 import (
 	"context"
-	"ttpos-bmp/app/ttpos-erp/api/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 )

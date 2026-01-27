@@ -1121,7 +1121,7 @@ func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, orderUuid u
 
 	// 5. 记录高峰期
 	peakTimeRepo := repository.NewSaleOrderPeakTimeRepo(db)
-	refundMoney := utils.IfFloat64(recordType == "dec", order.EaterPayment, 0.0)
+	refundMoney := utils.IfFloat64(recordType == "dec", order.PlatformTotal, 0.0)
 	return peakTimeRepo.Record(recordType, saleBill, refundMoney, storeSetting.TimeZone)
 }
 
@@ -1151,7 +1151,7 @@ func determineRecordType(order *takeoutModel.TakeoutOrder) string {
 func buildSaleBillFromTakeoutOrder(order *takeoutModel.TakeoutOrder, recordType string) *model.SaleBill {
 	saleBill := &model.SaleBill{
 		Status:        constant.SaleBillStatusComplete, // 设置为已完成状态，IsFinish() 才能返回 true
-		PaymentAmount: order.EaterPayment,              // 顾客实付金额（单位：元）
+		PaymentAmount: order.PlatformTotal,             // 顾客实付金额（单位：元）
 		CashierUuid:   0,                               // 默认值
 		FinishTime:    0,                               // 默认值
 	}

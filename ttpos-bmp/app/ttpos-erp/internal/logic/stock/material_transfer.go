@@ -3,12 +3,12 @@ package stock
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
-	"ttpos-bmp/app/ttpos-erp/api/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	dtoSelling "ttpos-bmp/app/ttpos-erp/internal/model/dto/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/entity"

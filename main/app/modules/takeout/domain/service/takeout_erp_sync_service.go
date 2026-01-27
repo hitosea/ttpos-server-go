@@ -285,25 +285,37 @@ func buildPosInvoiceItems(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 		}
 	}
 
-	// 添加虚拟商品：配送费
-	if takeoutOrder.DeliveryFee > 0 {
+	// 添加虚拟商品：服务
+	if takeoutOrder.MerchantChargeFee > 0 {
 		items = append(items, &selling.PosInvoiceItem{
-			ItemCode: constant.PosInvoiceItemCodeDeliveryFee, // VP003
+			ItemCode: constant.PosInvoiceItemCodeServiceFee, // VP001 服务费
 			Qty:      1,
-			Rate:     takeoutOrder.DeliveryFee,
-			Amount:   takeoutOrder.DeliveryFee,
+			Rate:     takeoutOrder.MerchantChargeFee,
+			Amount:   takeoutOrder.MerchantChargeFee,
 		})
 	}
 
 	// 添加虚拟商品：小单费用（Small Order Fee）
 	if takeoutOrder.SmallOrderFee > 0 {
 		items = append(items, &selling.PosInvoiceItem{
-			ItemCode: constant.PosInvoiceItemCodeSmallOrderFee, // 小单费虚拟商品编码
+			ItemCode: constant.PosInvoiceItemCodeServiceFee, // VP001 服务费
 			Qty:      1,
 			Rate:     takeoutOrder.SmallOrderFee,
 			Amount:   takeoutOrder.SmallOrderFee,
 		})
 	}
+
+	// 添加虚拟商品：配送费
+	// 因为Grab的配送费是作为服务费同步的
+	// NOTE: 产品 -》 目前模拟器不传配送费，生产传了配送费但是不记录在total。所以：所有订单都不传配送费到ERP
+	// if takeoutOrder.DeliveryFee > 0 && takeoutOrder.IsRestaurantDeliveryOrder() {
+	// 	items = append(items, &selling.PosInvoiceItem{
+	// 		ItemCode: constant.PosInvoiceItemCodeDeliveryFee, // VP003 配送费
+	// 		Qty:      1,
+	// 		Rate:     takeoutOrder.DeliveryFee,
+	// 		Amount:   takeoutOrder.DeliveryFee,
+	// 	})
+	// }
 
 	return items
 }
@@ -323,35 +335,11 @@ func buildPosInvoiceTaxes(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 		})
 	}
 
-	// 2. 商户服务费（Merchant Charge Fee）
-	if takeoutOrder.MerchantChargeFee > 0 {
-		taxes = append(taxes, &selling.PosInvoiceTax{
-			TaxAmount:   takeoutOrder.MerchantChargeFee,
-			Description: "Merchant Service Fee", // 商户服务费
-		})
-	}
-
-	// 3. 平台优惠（Platform Discount）- 作为负数税费
-	if takeoutOrder.PlatformDiscount > 0 {
-		taxes = append(taxes, &selling.PosInvoiceTax{
-			TaxAmount:   -takeoutOrder.PlatformDiscount,
-			Description: "Platform Discount", // 平台优惠
-		})
-	}
-
-	// 4. 商户优惠（Merchant Discount）- 作为负数税费
+	// 2. 商户优惠（Merchant Discount）- 作为负数税费
 	if takeoutOrder.MerchantDiscount > 0 {
 		taxes = append(taxes, &selling.PosInvoiceTax{
 			TaxAmount:   -takeoutOrder.MerchantDiscount,
 			Description: "Merchant Discount", // 商户优惠
-		})
-	}
-
-	// 5. 购物车优惠（Basket Promo）- 作为负数税费
-	if takeoutOrder.BasketPromo > 0 {
-		taxes = append(taxes, &selling.PosInvoiceTax{
-			TaxAmount:   -takeoutOrder.BasketPromo,
-			Description: "Basket Promo", // 购物车优惠
 		})
 	}
 
@@ -363,20 +351,10 @@ func buildPosInvoiceTaxes(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 // @spec story-erp-grab-invoice-sync
 func buildPosInvoicePayments(takeoutOrder *takeoutModel.TakeoutOrder, existPayment *model.PaymentMethod) []*selling.PosInvoicePayment {
 	payments := make([]*selling.PosInvoicePayment, 0)
-
-	if takeoutOrder.IsGrabOrder() {
-		payments = append(payments, &selling.PosInvoicePayment{
-			ModeOfPayment: existPayment.ErpnextPayment, // 支付方式
-			Amount:        takeoutOrder.EaterPayment,   // 实付金额
-		})
-	}
-	if takeoutOrder.IsLinemanOrder() {
-		payments = append(payments, &selling.PosInvoicePayment{
-			ModeOfPayment: existPayment.PaymentName,  // 支付方式
-			Amount:        takeoutOrder.EaterPayment, // 实付金额
-		})
-	}
-
+	payments = append(payments, &selling.PosInvoicePayment{
+		ModeOfPayment: existPayment.ErpnextPayment, // 支付方式
+		Amount:        takeoutOrder.PlatformTotal,  // 平台结算总额
+	})
 	return payments
 }
 

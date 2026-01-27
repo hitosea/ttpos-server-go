@@ -510,8 +510,8 @@ type POSInvoice struct {
 
 	CustomerUUID          string `json:"custom_customer_uuid,omitempty"`     // 客户UUID 自定义字段
 	CustomPosOpeningEntry string `json:"custom_pos_opening_entry,omitempty"` // 自定义POS开帐分录
-	CustomTakeoutOrderNo  string `json:"custom_takeout_order_no,omitempty"`   // 外卖订单号
-	CustomTakeoutProvider string `json:"custom_takeout_provider,omitempty"`   // 外卖平台提供商
+	CustomTakeoutOrderNo  string `json:"custom_takeout_order_no,omitempty"`  // 外卖订单号
+	CustomTakeoutProvider string `json:"custom_takeout_provider,omitempty"`  // 外卖平台提供商
 }
 
 // POSInvoiceItem 结构体定义

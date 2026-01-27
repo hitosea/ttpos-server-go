@@ -32,6 +32,8 @@ type Material struct {
 	AllowSubstoreVisible  int      `gorm:"column:allow_substore_visible;comment:'允许子店可见：1-允许，0-不允许'"`
 	OriginCountryCode     string   `gorm:"type:varchar(10);default:'';column:origin_country_code;comment:'原产地国家编码（ISO 3166-1 alpha-2）'"`
 	AllowNegativeStock    int      `gorm:"column:allow_negative_stock;default:0;comment:'是否允许负库存：1-允许，0-不允许'"`
+	DeliveredBySupplier   int      `gorm:"column:delivered_by_supplier;default:0;comment:'是否由供应商配送：0-否，1-是'"`
+	SupplierErpCode       string   `gorm:"column:supplier_erp_code;default:'';comment:'供应商ERP编码'"`
 
 	MultiLanguageName   MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	Unit                *MaterialUnit      `gorm:"foreignKey:uuid;references:unit_uuid"`                // 基准单位
