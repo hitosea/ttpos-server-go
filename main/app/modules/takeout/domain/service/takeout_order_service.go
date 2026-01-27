@@ -152,11 +152,21 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 	order, err := orderRepo.GetByUuid(
 		uuid,
 		orderRepo.WithPreload(persistence.DBOption(func(db *gorm.DB) *gorm.DB {
-			return db.Preload("TakeoutOrderItems").
-				Preload("TakeoutOrderItems.TakeoutOrderItemModifiers").
-				Preload("TakeoutOrderReceiver").
-				Preload("TakeoutOrderCampaigns").
-				Preload("TakeoutOrderPromos")
+			return db.Preload("TakeoutOrderItems", func(db *gorm.DB) *gorm.DB {
+				return db.Where("delete_time = ?", 0)
+			}).
+				Preload("TakeoutOrderItems.TakeoutOrderItemModifiers", func(db *gorm.DB) *gorm.DB {
+					return db.Where("delete_time = ?", 0)
+				}).
+				Preload("TakeoutOrderReceiver", func(db *gorm.DB) *gorm.DB {
+					return db.Where("delete_time = ?", 0)
+				}).
+				Preload("TakeoutOrderCampaigns", func(db *gorm.DB) *gorm.DB {
+					return db.Where("delete_time = ?", 0)
+				}).
+				Preload("TakeoutOrderPromos", func(db *gorm.DB) *gorm.DB {
+					return db.Where("delete_time = ?", 0)
+				})
 		})),
 		orderRepo.WithTakeoutOrderUpdateLogs(orderRepo.Select("uuid", "create_time", "takeout_order_uuid")),
 	)
