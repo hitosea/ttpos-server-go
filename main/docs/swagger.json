@@ -6,7 +6,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "192.168.100.69:8080",
+    "host": "8080--main--blue-iguana-12--dingri101.coder.gezi.vip",
     "basePath": "/",
     "paths": {
         "/admin/erpnext/lianlian/payment/add": {
@@ -49138,7 +49138,7 @@
                     "type": "integer"
                 },
                 "daily_limit": {
-                    "description": "0-不限制",
+                    "description": "-1=不限制 其他=限制",
                     "type": "integer"
                 },
                 "items": {
@@ -49213,7 +49213,7 @@
                     "type": "integer"
                 },
                 "daily_limit": {
-                    "description": "0-不限制",
+                    "description": "-1=不限制 其他=限制",
                     "type": "integer"
                 },
                 "items": {
@@ -59893,6 +59893,7 @@
                     "type": "integer"
                 },
                 "daily_limit": {
+                    "description": "每日限购数量（-1表示不限）",
                     "type": "integer"
                 },
                 "item_count": {
@@ -64849,6 +64850,10 @@
                 },
                 "platform_discount": {
                     "description": "平台优惠",
+                    "type": "number"
+                },
+                "platform_total": {
+                    "description": "平台结算总额 (v2.15.0+)",
                     "type": "number"
                 },
                 "small_order_fee": {

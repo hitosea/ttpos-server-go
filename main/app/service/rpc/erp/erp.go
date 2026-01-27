@@ -47,6 +47,7 @@ type IErpSrv interface {
 	GetMaterialRequestList(ctx pkgCtx.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
 	SaveMaterialRequest(ctx pkgCtx.Context, companySetting model.CompanySetting, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
 	CreatePurchaseOrder(ctx pkgCtx.Context, createPurchaseOrderReq *buying.CreatePurchaseOrderReq) (*buying.CreatePurchaseOrderResp, error)
+	GetPurchaseOrder(ctx pkgCtx.Context, getPurchaseOrderReq *buying.GetPurchaseOrderReq) (*buying.GetPurchaseOrderResp, error)
 	SavePurchaseReceipt(ctx pkgCtx.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error)
 
 	// 盘点单

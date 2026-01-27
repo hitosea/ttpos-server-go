@@ -49144,7 +49144,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "daily_limit": {
-                    "description": "0-不限制",
+                    "description": "-1=不限制 其他=限制",
                     "type": "integer"
                 },
                 "items": {
@@ -49219,7 +49219,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "daily_limit": {
-                    "description": "0-不限制",
+                    "description": "-1=不限制 其他=限制",
                     "type": "integer"
                 },
                 "items": {
@@ -59899,6 +59899,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "daily_limit": {
+                    "description": "每日限购数量（-1表示不限）",
                     "type": "integer"
                 },
                 "item_count": {
@@ -64857,6 +64858,10 @@ const docTemplate = `{
                     "description": "平台优惠",
                     "type": "number"
                 },
+                "platform_total": {
+                    "description": "平台结算总额 (v2.15.0+)",
+                    "type": "number"
+                },
                 "small_order_fee": {
                     "description": "小订单费",
                     "type": "number"
@@ -66553,7 +66558,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "192.168.100.69:8080",
+	Host:             "8080--main--blue-iguana-12--dingri101.coder.gezi.vip",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "ttpos-server-go API",
