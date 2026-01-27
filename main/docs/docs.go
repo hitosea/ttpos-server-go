@@ -33900,6 +33900,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/stock_reconciliation/annotation": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据盘点单UUID获取批注列表，按创建时间倒序排列",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.盘点管理"
+                ],
+                "summary": "获取盘点单批注列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "盘点单UUID",
+                        "name": "stock_reconciliation_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockReconciliationAnnotationListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/stock_reconciliation/approve": {
             "post": {
                 "security": [
@@ -34236,6 +34291,63 @@ const docTemplate = `{
                         "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_reconciliation/resubmit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "将已驳回的盘点单重新提交审核，支持修改盘点单信息后提交",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.盘点管理"
+                ],
+                "summary": "重新提交盘点单",
+                "parameters": [
+                    {
+                        "description": "重新提交盘点单请求参数（is_resubmit必须为true）",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockReconciliationSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockReconciliationUuidResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -49144,7 +49256,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "daily_limit": {
-                    "description": "0-不限制",
+                    "description": "-1=不限制 其他=限制",
                     "type": "integer"
                 },
                 "items": {
@@ -49219,7 +49331,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "daily_limit": {
-                    "description": "0-不限制",
+                    "description": "-1=不限制 其他=限制",
                     "type": "integer"
                 },
                 "items": {
@@ -50349,6 +50461,10 @@ const docTemplate = `{
                 "uuid"
             ],
             "properties": {
+                "annotation": {
+                    "description": "批注内容（非必填）",
+                    "type": "string"
+                },
                 "uuid": {
                     "description": "盘点单UUID",
                     "type": "integer"
@@ -50430,6 +50546,10 @@ const docTemplate = `{
                 "uuid"
             ],
             "properties": {
+                "annotation": {
+                    "description": "批注内容（非必填）",
+                    "type": "string"
+                },
                 "uuid": {
                     "description": "盘点单UUID",
                     "type": "integer"
@@ -59903,6 +60023,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "daily_limit": {
+                    "description": "每日限购数量（-1表示不限）",
                     "type": "integer"
                 },
                 "item_count": {
@@ -62316,6 +62437,43 @@ const docTemplate = `{
                 "uuid": {
                     "description": "角色UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.StockReconciliationAnnotationInfo": {
+            "type": "object",
+            "properties": {
+                "annotation_type": {
+                    "description": "批注类型 1-重新发起 2-驳回 3-通过",
+                    "type": "integer"
+                },
+                "annotation_type_name": {
+                    "description": "批注类型名称",
+                    "type": "string"
+                },
+                "content": {
+                    "description": "批注内容",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "批注UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.StockReconciliationAnnotationListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "批注列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockReconciliationAnnotationInfo"
+                    }
                 }
             }
         },
@@ -64861,6 +65019,10 @@ const docTemplate = `{
                     "description": "平台优惠",
                     "type": "number"
                 },
+                "platform_total": {
+                    "description": "平台结算总额 (v2.15.0+)",
+                    "type": "number"
+                },
                 "small_order_fee": {
                     "description": "小订单费",
                     "type": "number"
@@ -66557,7 +66719,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "192.168.100.69:8080",
+	Host:             "8080--main--blue-iguana-12--dingri101.coder.gezi.vip",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "ttpos-server-go API",

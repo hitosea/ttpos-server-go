@@ -34,5 +34,3 @@ type ErpWarehouseDTO struct {
 	WarehouseType string // 仓库类型
 	Disabled      bool   // 是否禁用
 }
-
-

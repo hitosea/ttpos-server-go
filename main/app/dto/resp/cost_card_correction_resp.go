@@ -9,34 +9,34 @@ type CostCardCorrectionPreviewResp struct {
 
 // OrderCorrectionInfo 订单修正信息
 type OrderCorrectionInfo struct {
-	OrderUuid  uint64                 `json:"order_uuid"`  // 订单UUID
-	OrderNo    string                 `json:"order_no"`    // 订单号
-	CreateTime int64                  `json:"create_time"` // 创建时间
+	OrderUuid  uint64                  `json:"order_uuid"`  // 订单UUID
+	OrderNo    string                  `json:"order_no"`    // 订单号
+	CreateTime int64                   `json:"create_time"` // 创建时间
 	Products   []ProductCorrectionInfo `json:"products"`    // 商品修正信息列表
 }
 
 // ProductCorrectionInfo 商品修正信息
 type ProductCorrectionInfo struct {
-	ProductBomUuid uint64                 `json:"product_bom_uuid"` // 商品BOM UUID
-	ProductName    string                  `json:"product_name"`     // 商品名称
-	BomCardUuid    uint64                  `json:"bom_card_uuid"`   // 成本卡UUID
-	Materials      []MaterialCorrectionInfo `json:"materials"`       // 材料修正信息列表
+	ProductBomUuid uint64                   `json:"product_bom_uuid"` // 商品BOM UUID
+	ProductName    string                   `json:"product_name"`     // 商品名称
+	BomCardUuid    uint64                   `json:"bom_card_uuid"`    // 成本卡UUID
+	Materials      []MaterialCorrectionInfo `json:"materials"`        // 材料修正信息列表
 }
 
 // MaterialCorrectionInfo 材料修正信息
 type MaterialCorrectionInfo struct {
 	MaterialUuid   uint64  `json:"material_uuid"`   // 材料UUID
-	MaterialName   string  `json:"material_name"`    // 材料名称
-	OldConsumption float64 `json:"old_consumption"`  // 旧消耗量
+	MaterialName   string  `json:"material_name"`   // 材料名称
+	OldConsumption float64 `json:"old_consumption"` // 旧消耗量
 	NewConsumption float64 `json:"new_consumption"` // 新消耗量
-	ReturnQuantity float64 `json:"return_quantity"`  // 退回数量
+	ReturnQuantity float64 `json:"return_quantity"` // 退回数量
 }
 
 // CostCardCorrectionResp 成本卡修正执行响应
 type CostCardCorrectionResp struct {
-	CorrectionUuid uint64          `json:"correction_uuid"` // 修正操作UUID（用于日志追踪）
-	SuccessCount   int              `json:"success_count"`   // 成功修正的订单数
-	FailCount      int              `json:"fail_count"`      // 失败的订单数
+	CorrectionUuid uint64            `json:"correction_uuid"` // 修正操作UUID（用于日志追踪）
+	SuccessCount   int               `json:"success_count"`   // 成功修正的订单数
+	FailCount      int               `json:"fail_count"`      // 失败的订单数
 	FailedOrders   []FailedOrderInfo `json:"failed_orders"`   // 失败的订单信息
 }
 
@@ -58,7 +58,7 @@ type CostCardCorrectionLog struct {
 	OperationType  string `json:"operation_type"`  // 操作类型 (e.g., "preview", "execute")
 	Status         string `json:"status"`          // 状态 (e.g., "success", "failed")
 	Message        string `json:"message"`         // 消息
-	Details        string `json:"details"`        // 详细信息 (JSON)
+	Details        string `json:"details"`         // 详细信息 (JSON)
 	CreateTime     int64  `json:"create_time"`     // 创建时间
 }
 
@@ -69,4 +69,3 @@ type CostCardCorrectionLogsResp struct {
 	PageNo   int                     `json:"page_no"`   // 当前页码
 	PageSize int                     `json:"page_size"` // 每页大小
 }
-

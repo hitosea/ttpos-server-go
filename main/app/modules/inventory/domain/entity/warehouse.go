@@ -3,24 +3,24 @@ package entity
 import (
 	"time"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/modules/inventory/domain/valueobject"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/inventory/domain/valueobject"
 )
 
 // Warehouse 仓库聚合根
 type Warehouse struct {
-	uuid              uint64
-	name              valueobject.MultiLanguageName
-	warehouseType     valueobject.WarehouseType
-	code              valueobject.WarehouseCode
-	status            valueobject.WarehouseStatus
-	contactInfo       valueobject.ContactInfo
-	isDefault         bool
-	erpCode           string
-	headquarterUuid   uint64
-	createTime        int64
-	updateTime        int64
-	hasItems          bool // 是否有关联的物品
+	uuid            uint64
+	name            valueobject.MultiLanguageName
+	warehouseType   valueobject.WarehouseType
+	code            valueobject.WarehouseCode
+	status          valueobject.WarehouseStatus
+	contactInfo     valueobject.ContactInfo
+	isDefault       bool
+	erpCode         string
+	headquarterUuid uint64
+	createTime      int64
+	updateTime      int64
+	hasItems        bool // 是否有关联的物品
 }
 
 // NewWarehouse 创建新仓库
@@ -292,5 +292,3 @@ func (w *Warehouse) IsTransit() bool {
 func (w *Warehouse) IsNormal() bool {
 	return w.warehouseType.String() == constant.WarehouseTypeNormal
 }
-
-

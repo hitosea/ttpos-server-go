@@ -59,6 +59,14 @@ message ItemInfo {
   string variant_of = 24; // 变体物品编码，可选。 多规格商品时填。
   optional bool allow_negative_stock = 25; // 是否允许负库存，未传则保持原值
   optional string sales_uom = 26; // 销售单位，可选
+  bool delivered_by_supplier = 27; // 是否由供应商直接配送
+  repeated SupplierItem supplier_items = 28; // 关联的供应商列表
+}
+
+// SupplierItem 供应商商品关联信息
+message SupplierItem {
+  string supplier = 1; // 供应商名称
+  int32 idx = 2;       // 排序索引
 }
 
 message ItemAttribute {

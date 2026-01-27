@@ -1053,6 +1053,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `allow_substore_visible` INT(1) NOT NULL DEFAULT 1 COMMENT '允许子店可见：1-允许，0-不允许',
     `origin_country_code` VARCHAR(10) NOT NULL DEFAULT '' COMMENT '原产地国家编码（ISO 3166-1 alpha-2，如：CN, US, TH）',
     `allow_negative_stock` INT(1) NOT NULL DEFAULT 0 COMMENT '允许负库存, 0-不允许 1-允许',
+    `delivered_by_supplier` INT(1) NOT NULL DEFAULT 0 COMMENT '是否由供应商配送，0-否，1-是',
+    `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商ERP编码',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1127,6 +1129,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `sub_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '子订单UUID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单号',
     `erp_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP采购单号',
+    `erp_sale_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP销售单号',
     `order_type` INT(10) NOT NULL DEFAULT 0 COMMENT '申请类型, 0-仓库调拨',
     `supplier_name` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '供应商名称',
     `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商编码',
@@ -3503,6 +3506,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation` (
   `purpose` int(10) NOT NULL DEFAULT 1 COMMENT '盘点目的 1-库存盘点 2-期初盘点',
   `status` int(10) NOT NULL DEFAULT 0 COMMENT '状态 0-已保存 1-已提交 2-已审核 3-已驳回',
   `submit_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '提交时间(时间戳)',
+  `submitter_staff_uuid` bigint NOT NULL DEFAULT 0 COMMENT '提交人员工UUID',
   `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
   `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
   `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -3547,6 +3551,21 @@ CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation_item_unit` (
   KEY `idx_material_unit_uuid` (`material_unit_uuid`),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点单物品单位明细表';
+
+-- 盘点单批注表
+CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation_annotation` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '批注ID',
+  `stock_reconciliation_uuid` bigint NOT NULL DEFAULT 0 COMMENT '盘点单UUID',
+  `annotation_type` int(1) NOT NULL DEFAULT 0 COMMENT '批注类型 1-重新发起 2-驳回 3-通过',
+  `content` text COMMENT '批注内容',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_stock_reconciliation_uuid` (`stock_reconciliation_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点单批注表';
 
 -- 原料供应商关联表
 CREATE TABLE IF NOT EXISTS `ttpos_material_supplier` (

@@ -2,6 +2,7 @@
 offline
 logs/*
 .env
+.mcp.private.json
 bin/*
 .txt
 /docker/redis/data/*

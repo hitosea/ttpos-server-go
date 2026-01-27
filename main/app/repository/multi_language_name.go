@@ -24,7 +24,7 @@ type IMultiLanguageNameRepo interface {
 
 type IMultiLanguageNameQueryRepo interface {
 	GetMultiLanguageName(opts ...DBOption) (*model.MultiLanguageName, error)
-	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error) // 获取多语言名称
+	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error)            // 获取多语言名称
 	GetMultiLanguageNameListByUuids(uuids []uint64) ([]*model.MultiLanguageName, error) // 根据UUID列表批量获取多语言名称
 }
 

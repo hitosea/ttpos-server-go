@@ -13,7 +13,7 @@ import (
 // @in header
 // @name Authorization
 
-// @host 192.168.100.69:8080
+// @host 8080--main--blue-iguana-12--dingri101.coder.gezi.vip
 // @BasePath /
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())

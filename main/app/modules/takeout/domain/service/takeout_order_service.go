@@ -259,7 +259,7 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 	}
 
 	// 版本兼容处理：	 之前的版本，eater_payment 返回 platform_total 的值
-	if ctx.Version(context.LT, "2.15.0") {
+	if ctx.Version(context.LT, "2.16.0") {
 		priceResp.EaterPayment = order.PlatformTotal
 	}
 

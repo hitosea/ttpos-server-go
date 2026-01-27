@@ -68,7 +68,7 @@ type Item struct {
 	Uoms                             []UomConversionDetail  `json:"uoms,omitempty"`                                // 计量单位换算明细
 	ItemDefaults                     []ItemDefault          `json:"item_defaults,omitempty"`                       // 商品默认配置
 	Attributes                       []ItemVariantAttribute `json:"attributes,omitempty"`                          // 属性
-	SupplierItems                    []interface{}          `json:"supplier_items,omitempty"`                      // 供应商商品
+	SupplierItems                    []ItemSupplier         `json:"supplier_items,omitempty"`                      // 供应商商品
 	VariantOf                        string                 `json:"variant_of,omitempty"`                          // 变体依据商品编码
 	PurchaseUom                      string                 `json:"purchase_uom,omitempty"`                        // 采购单位
 	SalesUom                         string                 `json:"sales_uom,omitempty"`                           // 销售单位
@@ -187,4 +187,14 @@ type CreateSingleVariantItemReq struct {
 	ItemCode     string            `json:"item_code"`     // 商品编码
 	Args         map[string]string `json:"args"`          // 属性值映射
 	InternalCode string            `json:"internal_code"` //规格商品内部编码
+}
+
+// ItemSupplier 供应商商品关联信息
+type ItemSupplier struct {
+	Name       string `json:"name,omitempty"`       // ERPNext 内部 ID
+	Supplier   string `json:"supplier,omitempty"`   // 供应商名称
+	Idx        int    `json:"idx,omitempty"`        // 排序索引
+	Parent     string `json:"parent,omitempty"`     // 父级商品编码
+	Parenttype string `json:"parenttype,omitempty"` // 父级类型
+	Doctype    string `json:"doctype,omitempty"`    // 文档类型
 }

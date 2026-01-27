@@ -8,7 +8,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
-	"github.com/gogf/gf/v2/container/garray"
+	"github.com/gogf/gf/v2/container/gvar"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -290,28 +290,49 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 	if req.Items != nil && len(req.Items) > 0 {
 		receiptItems := make([]*erp.PurchaseReceiptItem, 0)
 		//获取采购单中所有物品编码
-		purchaseItemCodeList := make([]string, len(receipt.Items))
-		_warehouse := receipt.SetWarehouse
-		for _, item := range receipt.Items {
-			purchaseItemCodeList = append(purchaseItemCodeList, item.ItemCode)
-			if len(item.Warehouse) > 0 {
-				_warehouse = item.Warehouse
-			}
-		}
-		gPurchaseItemCodeList := garray.NewStrArrayFrom(purchaseItemCodeList)
+		// purchaseItemCodeList := make([]string, len(receipt.Items))
+		// _warehouse := receipt.SetWarehouse
+		// for _, item := range receipt.Items {
+		// 	purchaseItemCodeList = append(purchaseItemCodeList, item.ItemCode)
+		// 	if len(item.Warehouse) > 0 {
+		// 		_warehouse = item.Warehouse
+		// 	}
+		// }
+		// gPurchaseItemCodeList := garray.NewStrArrayFrom(purchaseItemCodeList)
 		for _, itemReq := range req.Items {
-			if gPurchaseItemCodeList.Contains(itemReq.ItemCode) {
-				if len(itemReq.Warehouse) > 0 {
-					_warehouse = itemReq.Warehouse
+			//获取已有物品
+			var existsItem *erp.PurchaseReceiptItem
+			for _, item := range receipt.Items {
+				if item.ItemCode == itemReq.ItemCode && item.Uom == itemReq.Uom {
+					existsItem = item
+					break
 				}
-				receiptItems = append(receiptItems, &erp.PurchaseReceiptItem{
-					ItemCode:      itemReq.ItemCode,
-					Qty:           itemReq.Qty,
-					Uom:           itemReq.Uom,
-					Warehouse:     _warehouse,
-					PurchaseOrder: req.PurchaseOrderName,
-				})
 			}
+
+			// 校验：请求的物品必须在采购单中存在
+			if existsItem == nil {
+				g.Log().Warningf(ctx, "物品 %s 不在采购单中，跳过", itemReq.ItemCode)
+				continue
+			}
+
+			//复制已有物品，根据请求参数设置收货数量和单位
+			receiptItem := &erp.PurchaseReceiptItem{}
+			gvar.New(existsItem).Clone().Scan(receiptItem)
+			receiptItem.Qty = itemReq.Qty
+			receiptItems = append(receiptItems, receiptItem)
+
+			// if gPurchaseItemCodeList.Contains(itemReq.ItemCode) {
+			// 	if len(itemReq.Warehouse) > 0 {
+			// 		_warehouse = itemReq.Warehouse
+			// 	}
+			// 	receiptItems = append(receiptItems, &erp.PurchaseReceiptItem{
+			// 		ItemCode:      itemReq.ItemCode,
+			// 		Qty:           itemReq.Qty,
+			// 		Uom:           itemReq.Uom,
+			// 		Warehouse:     _warehouse,
+			// 		PurchaseOrder: req.PurchaseOrderName,
+			// 	})
+			// }
 		}
 		receipt.Items = receiptItems
 	}

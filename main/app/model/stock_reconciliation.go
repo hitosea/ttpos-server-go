@@ -7,13 +7,14 @@ import (
 // StockReconciliation 盘点单表
 type StockReconciliation struct {
 	BaseModel
-	OrderNo       string `gorm:"column:order_no;type:varchar(255);not null;default:'';index:idx_order_no;comment:单据编号" json:"order_no"`
-	ErpCode       string `gorm:"column:erp_code;type:varchar(255);not null;default:'';comment:ERP盘点单号" json:"erp_code"`
-	Type          int    `gorm:"column:type;not null;default:1;comment:盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘" json:"type"`
-	WarehouseUuid uint64 `gorm:"column:warehouse_uuid;not null;default:0;index:idx_warehouse_uuid;comment:仓库ID" json:"warehouse_uuid"`
-	Purpose       int    `gorm:"column:purpose;not null;default:1;comment:盘点目的 1-库存盘点 2-期初盘点" json:"purpose"`
-	Status        int    `gorm:"column:status;not null;default:0;index:idx_status;comment:状态 0-已保存 1-已提交 2-已审核 3-已驳回" json:"status"`
-	SubmitTime    int    `gorm:"column:submit_time;not null;default:0;comment:提交时间(时间戳)" json:"submit_time"`
+	OrderNo            string `gorm:"column:order_no;type:varchar(255);not null;default:'';index:idx_order_no;comment:单据编号" json:"order_no"`
+	ErpCode            string `gorm:"column:erp_code;type:varchar(255);not null;default:'';comment:ERP盘点单号" json:"erp_code"`
+	Type               int    `gorm:"column:type;not null;default:1;comment:盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘" json:"type"`
+	WarehouseUuid      uint64 `gorm:"column:warehouse_uuid;not null;default:0;index:idx_warehouse_uuid;comment:仓库ID" json:"warehouse_uuid"`
+	Purpose            int    `gorm:"column:purpose;not null;default:1;comment:盘点目的 1-库存盘点 2-期初盘点" json:"purpose"`
+	Status             int    `gorm:"column:status;not null;default:0;index:idx_status;comment:状态 0-已保存 1-已提交 2-已审核 3-已驳回" json:"status"`
+	SubmitTime         int    `gorm:"column:submit_time;not null;default:0;comment:提交时间(时间戳)" json:"submit_time"`
+	SubmitterStaffUuid uint64 `gorm:"column:submitter_staff_uuid;not null;default:0;comment:发起人员工UUID" json:"submitter_staff_uuid"`
 
 	// 关联仓库
 	Warehouse *Warehouse `gorm:"foreignKey:WarehouseUuid;references:Uuid"`
