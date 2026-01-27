@@ -25,6 +25,27 @@ func TakeoutProviderOrderUpdateHandler(ctx context.Context, msg *primitive.Messa
 		}
 	}()
 
+	// 调试代码
+	// // 构造测试事件
+	// events := request.TakeoutOrderEvent{
+	// 	Action:       "status_update",
+	// 	ProviderName: value_object.TakeoutPlatformLineman,
+	// 	MerchantId:   "",
+	// 	ShopUuid:     "8609817471094784", // 使用实际存在的店铺UUID
+	// 	OrderUuid:    "19yx3qw1p00dfz5wjmbtus92w0bz6s8a",
+	// 	OrderId:      "LMF-260127-343306443",
+	// 	Status:       "COMPLETED",
+	// 	Message:      "",
+	// 	Timestamp:    time.Now().Unix(),
+	// }
+	// // 序列化为JSON
+	// body, err := json.Marshal(events)
+	// if err != nil {
+	// 	logger.Logger.Error("序列化供应商订单更新消息失败", zap.Error(err))
+	// 	return err
+	// }
+	// msg.Body = body
+
 	var event request.TakeoutOrderEvent
 	if err := json.Unmarshal(msg.Body, &event); err != nil {
 		logger.Logger.Error("解析供应商订单更新消息失败",
