@@ -37,7 +37,7 @@ type ITakeoutOrderSrv interface {
 	GetList(ctx context.Context, req *request.TakeoutOrderListReq) (*response.TakeoutOrderListResp, error)
 	GetByUuid(ctx context.Context, uuid uint64) (*response.TakeoutOrderResp, error)
 	// 创建或更新订单（接受已转换的订单对象，商品数据从 order.RawData 中解析）- 由 Application 层调用
-	CreateOrUpdateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder, isUpdate bool) error
+	CreateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder) error
 	// 更新订单状态 - 由 Application 层调用
 	UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string, message string) error
 	// 订单操作
@@ -793,22 +793,20 @@ func (s *takeoutOrderSrv) findModifierMapping(platform, platformModifierId strin
 }
 
 // CreateOrder 创建订单（接受已转换的订单对象）- 由 Application 层调用
-func (s *takeoutOrderSrv) CreateOrUpdateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder, isUpdate bool) error {
+func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder) error {
 	db := ctx.GetDB()
 	currentTime := time.Now().Unix()
 	orderRepo := persistence.NewTakeoutOrderRepo(db)
 
 	// 检查订单是否已存在
-	if !isUpdate {
-		existingOrder, err := orderRepo.GetByPlatformOrderId(order.Platform, order.PlatformOrderId)
-		if err != nil {
-			logger.Logger.Error("查询订单失败", zap.Error(err), zap.String("platform", order.Platform), zap.String("platformOrderId", order.PlatformOrderId))
-			return errors.WithMessage(errors.New("查询订单失败"), err.Error())
-		}
-		if existingOrder != nil && existingOrder.Uuid > 0 {
-			// 订单已存在，直接返回
-			return nil
-		}
+	existingOrder, err := orderRepo.GetByPlatformOrderId(order.Platform, order.PlatformOrderId)
+	if err != nil {
+		logger.Logger.Error("查询订单失败", zap.Error(err), zap.String("platform", order.Platform), zap.String("platformOrderId", order.PlatformOrderId))
+		return errors.WithMessage(errors.New("查询订单失败"), err.Error())
+	}
+	if existingOrder != nil && existingOrder.Uuid > 0 {
+		// 订单已存在，直接返回
+		return nil
 	}
 
 	// 验证商品数据
@@ -831,227 +829,48 @@ func (s *takeoutOrderSrv) CreateOrUpdateOrder(ctx context.Context, order *takeou
 		orderRepoTx := persistence.NewTakeoutOrderRepo(tx)
 
 		// 保存或者更新订单
-		if isUpdate && order != nil && order.Uuid > 0 {
-			// 删除旧的关联数据（通过仓库层）
-			if err := orderRepoTx.DeleteRelatedData(order.Uuid); err != nil {
-				logger.Logger.Error("删除旧订单关联数据失败", zap.Uint64("orderUuid", order.Uuid), zap.Error(err))
-				return fmt.Errorf("删除旧订单关联数据失败: %w", err)
-			}
-			// 更新订单主表字段
-			updateFields := map[string]interface{}{
-				"subtotal":              order.Subtotal,
-				"delivery_fee":          order.DeliveryFee,
-				"small_order_fee":       order.SmallOrderFee,
-				"eater_payment":         order.EaterPayment,
-				"platform_discount":     order.PlatformDiscount,
-				"merchant_discount":     order.MerchantDiscount,
-				"basket_promo":          order.BasketPromo,
-				"tax":                   order.Tax,
-				"merchant_charge_fee":   order.MerchantChargeFee,
-				"platform_total":        order.PlatformTotal,
-				"additional_properties": order.AdditionalProperties,
-				"raw_data":              order.RawData,
-				"completed_time":        order.CompletedTime,
-			}
-			if err := orderRepoTx.UpdateByMap(order.Uuid, updateFields); err != nil {
-				logger.Logger.Error("更新订单主表失败",
-					zap.Uint64("orderUuid", order.Uuid),
-					zap.Error(err))
-				return fmt.Errorf("更新订单主表失败: %w", err)
-			}
-		} else {
-			if err := orderRepoTx.Create(order); err != nil {
-				logger.Logger.Error("创建订单失败", zap.Error(err), zap.Any("order", order))
-				return errors.WithMessage(errors.New("创建订单失败"), err.Error())
-			}
+		if err := orderRepoTx.Create(order); err != nil {
+			logger.Logger.Error("创建订单失败", zap.Error(err), zap.Any("order", order))
+			return errors.WithMessage(errors.New("创建订单失败"), err.Error())
 		}
 
 		// 2. 处理订单商品和修饰符
 		hasUnmapped := false
+		abnormalProductIds := make([]uint64, 0)
 		orderItemRepo := persistence.NewTakeoutOrderItemRepo(tx)
 		modifierRepo := persistence.NewTakeoutOrderItemModifierRepo(tx)
 
-		// Step 1: 批量处理商品信息（生成UUID、查询映射、收集查询参数）
-		productIds := make([]string, 0, len(order.TakeoutOrderItems))      // 未映射商品ID
-		productUuids := make([]uint64, 0, len(order.TakeoutOrderItems))    // 已映射商品UUID
-		productTypes := make(map[uint64]int, len(order.TakeoutOrderItems)) // 商品类型映射
-
 		for i := range order.TakeoutOrderItems {
 			item := &order.TakeoutOrderItems[i]
 
-			// 生成商品 UUID
-			if itemUuid, err := utils.GetID(); err != nil {
-				logger.Logger.Error("生成商品UUID失败", zap.Error(err))
-				return errors.WithMessage(err, "生成商品UUID失败")
-			} else {
-				item.Uuid = itemUuid
-				item.TakeoutOrderUuid = order.Uuid
-			}
-
-			// 查询商品映射
-			isMapped, productUuid, productType, err := s.findProductMapping(order.Platform, item.PlatformItemId)
+			// 补全商品信息（UUID、映射、名称等）
+			isAbnormal, err := s.enrichItemInfo(ctx, order.Platform, order.Uuid, item)
 			if err != nil {
-				logger.Logger.Error("查询商品映射失败", zap.Error(err), zap.String("platform", order.Platform), zap.String("platformItemId", item.PlatformItemId))
-				return errors.WithMessage(err, "查询商品映射失败")
+				return err
 			}
-
-			item.IsMapped = isMapped
-			item.TtposProductPackageUuid = productUuid
-			item.TtposProductType = productType
-
-			// 收集查询参数
-			if isMapped == 0 {
+			if isAbnormal {
+				abnormalProductIds = append(abnormalProductIds, item.TtposProductPackageUuid)
+			}
+			if item.IsMapped == 0 {
 				hasUnmapped = true
-				productIds = append(productIds, item.PlatformItemId)
-			} else if productUuid > 0 {
-				productUuids = append(productUuids, productUuid)
-				productTypes[productUuid] = productType
 			}
-		}
 
-		// Step 2: 批量查询商品名称（已映射商品）
-		// productInfos 中包含两个名称：Name (显示用), TtposName (标识用)
-		productInfos := s.menuRepo.GetProductNamesByUuids(ctx, productUuids, productTypes)
-		// Step 3: 批量查询菜单名称（未映射商品）
-		menuNames := s.menuRepo.GetMenuNamesByPlatformItemIds(ctx, order.Platform, productIds)
-		// 标记异常商品
-		abnormalProductIds := make([]uint64, 0)
-
-		// 处理订单商品和修饰符
-		for i := range order.TakeoutOrderItems {
-			item := &order.TakeoutOrderItems[i]
-
-			// 设置商品名称
-			if item.IsMapped == 1 && item.TtposProductPackageUuid > 0 {
-				// 已映射商品：使用商品名称
-				if info, ok := productInfos[item.TtposProductPackageUuid]; ok {
-					// ItemName: 显示用名称（外卖表优先）
-					if info.Name != "" {
-						item.ItemName = info.Name
-					}
-					// TtposItemName: TTPOS 核心表名称
-					item.TtposItemName = info.TtposName
-					// TtposItemErpCode: ERP编码
-					item.TtposItemErpCode = info.TtposErpCode
-					// TtposPrice: TTPOS 店内价格
-					item.TtposPrice = info.TtposPrice
-					// 分类信息
-					item.TtposCategoryUuid = info.TtposCategoryUuid
-					item.TtposCategoryName = info.TtposCategoryName
-					item.TtposParentCategoryUuid = info.TtposParentCategoryUuid
-					item.TtposParentCategoryName = info.TtposParentCategoryName
-					// 标记异常商品
-					if info.TtposName == "" || info.Name == "" {
-						abnormalProductIds = append(abnormalProductIds, item.TtposProductPackageUuid)
-					}
-				}
-			} else if item.IsMapped == 0 {
-				// 未映射商品：使用平台菜单名称
-				if name, ok := menuNames[item.PlatformItemId]; ok && name != "" {
-					item.ItemName = name
-				}
-			}
 			// 创建订单商品
 			if err := orderItemRepo.Create(item); err != nil {
 				logger.Logger.Error("创建订单商品失败", zap.Error(err), zap.Any("item", item))
 				return errors.WithMessage(errors.New("创建订单商品失败"), err.Error())
 			}
 
-			// 为每个修饰符生成 UUID 和设置基础信息
-			for j := range item.TakeoutOrderItemModifiers {
-				modifier := &item.TakeoutOrderItemModifiers[j]
-				// 生成修饰符 UUID
-				modifierUuid, err := utils.GetID()
-				if err != nil {
-					logger.Logger.Error("生成修饰符UUID失败", zap.Error(err))
-					return errors.WithMessage(errors.New("生成修饰符UUID失败"), err.Error())
-				}
-				modifier.Uuid = modifierUuid
-				modifier.TakeoutOrderItemUuid = item.Uuid
-				modifier.CreateTime = currentTime
-				modifier.UpdateTime = currentTime
-				// 查询修饰符映射
-				modifier.IsMapped, modifier.TtposModifierUuid, modifier.TtposModifierType, err = s.findModifierMapping(
-					order.Platform,
-					modifier.PlatformModifierId,
-				)
-				if err != nil {
-					logger.Logger.Error("查询修饰符映射失败", zap.Error(err), zap.String("platform", order.Platform), zap.String("platformModifierId", modifier.PlatformModifierId))
-					return errors.WithMessage(errors.New("查询修饰符映射失败"), err.Error())
-				}
+			// 补全修饰符信息（UUID、映射、名称等）
+			modifierAbnormalUuids, err := s.enrichModifiersInfo(ctx, order.Platform, item)
+			if err != nil {
+				return err
 			}
-		}
+			abnormalProductIds = append(abnormalProductIds, modifierAbnormalUuids...)
 
-		// 批量查询修饰符名称
-		modifierUuids := make([]uint64, 0)
-		modifierTypes := make(map[uint64]string)
-		modifierPlatformIds := make([]string, 0) // 未映射修饰符的平台ID
-		for i := range order.TakeoutOrderItems {
-			item := &order.TakeoutOrderItems[i]
+			// 创建修饰符
 			for j := range item.TakeoutOrderItemModifiers {
 				modifier := &item.TakeoutOrderItemModifiers[j]
-				if modifier.IsMapped == 1 && modifier.TtposModifierUuid > 0 {
-					modifierUuids = append(modifierUuids, modifier.TtposModifierUuid)
-					modifierTypes[modifier.TtposModifierUuid] = modifier.TtposModifierType
-				} else if modifier.IsMapped == 0 {
-					modifierPlatformIds = append(modifierPlatformIds, modifier.PlatformModifierId)
-				}
-			}
-		}
-
-		// 批量查询修饰符名称
-		// modifierInfos 中包含两个名称：Name (显示用), TtposName (标识用)
-		modifierInfos := s.menuRepo.GetModifierNamesByUuids(ctx, modifierUuids, modifierTypes)
-		platformModifierNames := s.menuRepo.GetModifierNamesByPlatformIds(ctx, order.Platform, modifierPlatformIds)
-
-		// 设置修饰符名称并创建
-		for i := range order.TakeoutOrderItems {
-			item := &order.TakeoutOrderItems[i]
-			for j := range item.TakeoutOrderItemModifiers {
-				modifier := &item.TakeoutOrderItemModifiers[j]
-
-				// 设置修饰符名称
-				if modifier.IsMapped == 1 && modifier.TtposModifierUuid > 0 {
-					// 已映射修饰符：使用修饰符名称和数量
-					if info, ok := modifierInfos[modifier.TtposModifierUuid]; ok {
-						// ModifierName: 用于显示（commodity: 外卖表优先, 其他: 核心表）
-						modifier.ModifierName = info.Name
-						// TtposModifierName: 用于标识（始终来自核心表）
-						modifier.TtposModifierName = info.TtposName
-						// TtposModifierErpCode: ERP编码
-						modifier.TtposModifierErpCode = info.TtposErpCode
-						// TtposPrice: TTPOS 店内价格
-						modifier.TtposPrice = info.TtposPrice
-						// 分类信息
-						modifier.TtposCategoryUuid = info.TtposCategoryUuid
-						modifier.TtposCategoryName = info.TtposCategoryName
-						modifier.TtposParentCategoryUuid = info.TtposParentCategoryUuid
-						modifier.TtposParentCategoryName = info.TtposParentCategoryName
-						// 计算单价
-						modifier.Price = decimal.NewFromInt(int64(modifier.Price)).Div(decimal.NewFromInt(int64(modifier.Quantity))).InexactFloat64()
-						// 如果是 commodity 类型，设置规格信息和数量
-						if modifier.IsCommodity() {
-							modifier.TtposProductPackageUuid = info.TtposProductPackageUuid
-							modifier.TtposFlavorProductBomUuid = info.TtposFlavorProductBomUuid
-							modifier.TtposFlavorName = info.TtposFlavorName
-							// 使用TTPOS数量覆盖平台数量
-							if info.Num > 0 {
-								modifier.Price = decimal.NewFromInt(int64(modifier.Price)).Div(decimal.NewFromInt(int64(info.Num))).InexactFloat64()
-								modifier.Quantity = int(decimal.NewFromInt(int64(info.Num)).Mul(decimal.NewFromInt(int64(item.Quantity))).InexactFloat64())
-							}
-						}
-
-						// 标记异常修饰符
-						if info.Name == "" || info.TtposName == "" {
-							abnormalProductIds = append(abnormalProductIds, modifier.TtposProductPackageUuid)
-						}
-					}
-				} else if modifier.IsMapped == 0 {
-					if name, ok := platformModifierNames[modifier.PlatformModifierId]; ok && name != "" {
-						modifier.ModifierName = name
-					}
-				}
-				// 创建修饰符
 				if err := modifierRepo.Create(modifier); err != nil {
 					logger.Logger.Error("创建商品修饰符失败", zap.Error(err), zap.Any("modifier", modifier))
 					return errors.WithMessage(errors.New("创建商品修饰符失败"), err.Error())
@@ -1135,24 +954,22 @@ func (s *takeoutOrderSrv) CreateOrUpdateOrder(ctx context.Context, order *takeou
 	}
 
 	// 发布订单创建事件
-	if !isUpdate {
-		event.GetDispatcher().Publish(event.NewOrderCreatedEvent(
-			order.Uuid,
-			order.Platform,
-			order.PlatformOrderId,
-			order.ShortOrderNumber,
-			order.TakeoutOrderUuid,
-			order.EaterPayment,
-			ctx.GetCompanyUuid(),
-		))
+	event.GetDispatcher().Publish(event.NewOrderCreatedEvent(
+		order.Uuid,
+		order.Platform,
+		order.PlatformOrderId,
+		order.ShortOrderNumber,
+		order.TakeoutOrderUuid,
+		order.EaterPayment,
+		ctx.GetCompanyUuid(),
+	))
 
-		// 自动接单
-		if order.IsAutoAcceptOrder() {
-			if err := s.AcceptOrder(ctx, &request.TakeoutOrderAcceptReq{
-				Uuid: order.Uuid,
-			}); err != nil {
-				logger.Logger.Error("接单失败", zap.Error(err))
-			}
+	// 自动接单
+	if order.IsAutoAcceptOrder() {
+		if err := s.AcceptOrder(ctx, &request.TakeoutOrderAcceptReq{
+			Uuid: order.Uuid,
+		}); err != nil {
+			logger.Logger.Error("接单失败", zap.Error(err))
 		}
 	}
 
@@ -1232,9 +1049,7 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 			case valueobject.ChangeTypeQuantity:
 				// 更新数量（减少）
 				if change.OldItem != nil && change.OldItem.Uuid > 0 {
-					if err := tx.Model(&takeoutModel.TakeoutOrderItem{}).
-						Where("uuid = ?", change.OldItem.Uuid).
-						Update("quantity", change.NewQuantity).Error; err != nil {
+					if err := itemRepoTx.UpdateQuantity(change.OldItem.Uuid, change.NewQuantity); err != nil {
 						logger.Logger.Error("更新退菜商品数量失败",
 							zap.Uint64("itemUuid", change.OldItem.Uuid),
 							zap.Error(err))
@@ -1244,30 +1059,22 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 				// 属性变动：更新商品和修饰符
 				if change.OldItem != nil && change.OldItem.Uuid > 0 {
 					// 删除旧修饰符
-					if err := tx.Where("takeout_order_item_uuid = ?", change.OldItem.Uuid).
-						Delete(&takeoutModel.TakeoutOrderItemModifier{}).Error; err != nil {
+					if err := modifierRepoTx.DeleteByItemUuid(change.OldItem.Uuid); err != nil {
 						logger.Logger.Error("删除旧修饰符失败", zap.Uint64("itemUuid", change.OldItem.Uuid), zap.Error(err))
 					}
 					// 更新数量
-					if err := tx.Model(&takeoutModel.TakeoutOrderItem{}).
-						Where("uuid = ?", change.OldItem.Uuid).
-						Update("quantity", change.NewQuantity).Error; err != nil {
+					if err := itemRepoTx.UpdateQuantity(change.OldItem.Uuid, change.NewQuantity); err != nil {
 						logger.Logger.Error("更新商品数量失败", zap.Error(err))
 					}
 					// 插入新修饰符
 					for j := range updatedOrder.TakeoutOrderItems {
 						newItem := &updatedOrder.TakeoutOrderItems[j]
 						if newItem.PlatformItemId == change.PlatformItemId {
-							for k := range newItem.TakeoutOrderItemModifiers {
-								modifier := &newItem.TakeoutOrderItemModifiers[k]
-								modifierUuid, _ := utils.GetID()
-								modifier.Uuid = modifierUuid
-								modifier.TakeoutOrderItemUuid = change.OldItem.Uuid
-								// 查询修饰符映射
-								isMapped, ttposUuid, ttposType, _ := s.findModifierMapping(platform, modifier.PlatformModifierId)
-								modifier.IsMapped = isMapped
-								modifier.TtposModifierUuid = ttposUuid
-								modifier.TtposModifierType = ttposType
+							// 使用已存在商品的 UUID，确保修饰符关联正确
+							newItem.Uuid = change.OldItem.Uuid
+							// 补全修饰符信息（UUID、映射、名称等）
+							if _, err := s.enrichModifiersInfo(ctx, platform, newItem); err != nil {
+								logger.Logger.Error("补全修饰符信息失败", zap.Error(err))
 							}
 							if len(newItem.TakeoutOrderItemModifiers) > 0 {
 								if err := modifierRepoTx.BatchCreate(s.toModifierPointers(newItem.TakeoutOrderItemModifiers)); err != nil {
@@ -1289,23 +1096,10 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 				for j := range updatedOrder.TakeoutOrderItems {
 					newItem := &updatedOrder.TakeoutOrderItems[j]
 					if newItem.PlatformItemId == change.PlatformItemId {
-						// 生成 UUID
-						itemUuid, err := utils.GetID()
-						if err != nil {
-							logger.Logger.Error("生成商品UUID失败", zap.Error(err))
+						// 补全商品信息（UUID、映射、名称等）
+						if _, err := s.enrichItemInfo(ctx, platform, orderUuid, newItem); err != nil {
+							logger.Logger.Error("补全商品信息失败", zap.Error(err))
 							continue
-						}
-						newItem.Uuid = itemUuid
-						newItem.TakeoutOrderUuid = orderUuid
-
-						// 查询商品映射
-						isMapped, productUuid, productType, err := s.findProductMapping(platform, newItem.PlatformItemId)
-						if err != nil {
-							logger.Logger.Warn("查询商品映射失败", zap.Error(err))
-						} else {
-							newItem.IsMapped = isMapped
-							newItem.TtposProductPackageUuid = productUuid
-							newItem.TtposProductType = productType
 						}
 
 						// 插入商品
@@ -1314,17 +1108,9 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 							continue
 						}
 
-						// 处理修饰符
-						for k := range newItem.TakeoutOrderItemModifiers {
-							modifier := &newItem.TakeoutOrderItemModifiers[k]
-							modifierUuid, _ := utils.GetID()
-							modifier.Uuid = modifierUuid
-							modifier.TakeoutOrderItemUuid = itemUuid
-							// 查询修饰符映射
-							isMapped, ttposUuid, ttposType, _ := s.findModifierMapping(platform, modifier.PlatformModifierId)
-							modifier.IsMapped = isMapped
-							modifier.TtposModifierUuid = ttposUuid
-							modifier.TtposModifierType = ttposType
+						// 补全修饰符信息（UUID、映射、名称等）
+						if _, err := s.enrichModifiersInfo(ctx, platform, newItem); err != nil {
+							logger.Logger.Error("补全修饰符信息失败", zap.Error(err))
 						}
 						if len(newItem.TakeoutOrderItemModifiers) > 0 {
 							if err := modifierRepoTx.BatchCreate(s.toModifierPointers(newItem.TakeoutOrderItemModifiers)); err != nil {
@@ -1337,9 +1123,7 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 			case valueobject.ChangeTypeQuantity:
 				// 数量增加：更新数量
 				if change.OldItem != nil && change.OldItem.Uuid > 0 {
-					if err := tx.Model(&takeoutModel.TakeoutOrderItem{}).
-						Where("uuid = ?", change.OldItem.Uuid).
-						Update("quantity", change.NewQuantity).Error; err != nil {
+					if err := itemRepoTx.UpdateQuantity(change.OldItem.Uuid, change.NewQuantity); err != nil {
 						logger.Logger.Error("更新加菜商品数量失败",
 							zap.Uint64("itemUuid", change.OldItem.Uuid),
 							zap.Error(err))
@@ -1365,6 +1149,183 @@ func (s *takeoutOrderSrv) toModifierPointers(modifiers []takeoutModel.TakeoutOrd
 		result[i] = &modifiers[i]
 	}
 	return result
+}
+
+// enrichModifiersInfo 完整处理商品的修饰符信息
+// 包含：生成 UUID、查询映射、补全名称/价格/分类等详细信息
+// 返回值：abnormalUuids 是异常修饰符的商品UUID列表（名称为空），err 表示处理错误
+func (s *takeoutOrderSrv) enrichModifiersInfo(ctx context.Context, platform string, item *takeoutModel.TakeoutOrderItem) (abnormalUuids []uint64, err error) {
+	if len(item.TakeoutOrderItemModifiers) == 0 {
+		return nil, nil
+	}
+
+	currentTime := time.Now().Unix()
+
+	// 第一阶段：生成 UUID、设置基础信息、查询映射
+	modifierUuids := make([]uint64, 0)
+	modifierTypes := make(map[uint64]string)
+	modifierPlatformIds := make([]string, 0)
+
+	for j := range item.TakeoutOrderItemModifiers {
+		modifier := &item.TakeoutOrderItemModifiers[j]
+
+		// 生成修饰符 UUID（如果没有）
+		if modifier.Uuid == 0 {
+			modifierUuid, err := utils.GetID()
+			if err != nil {
+				logger.Logger.Error("生成修饰符UUID失败", zap.Error(err))
+				return nil, errors.WithMessage(errors.New("生成修饰符UUID失败"), err.Error())
+			}
+			modifier.Uuid = modifierUuid
+		}
+
+		// 设置关联和时间
+		modifier.TakeoutOrderItemUuid = item.Uuid
+		modifier.CreateTime = currentTime
+		modifier.UpdateTime = currentTime
+
+		// 查询修饰符映射（如果没有）
+		if modifier.TtposModifierUuid == 0 {
+			isMapped, ttposUuid, ttposType, err := s.findModifierMapping(platform, modifier.PlatformModifierId)
+			if err != nil {
+				logger.Logger.Error("查询修饰符映射失败", zap.Error(err), zap.String("platformModifierId", modifier.PlatformModifierId))
+				return nil, errors.WithMessage(errors.New("查询修饰符映射失败"), err.Error())
+			}
+			modifier.IsMapped = isMapped
+			modifier.TtposModifierUuid = ttposUuid
+			modifier.TtposModifierType = ttposType
+		}
+
+		// 收集需要查询详细信息的修饰符
+		if modifier.IsMapped == 1 && modifier.TtposModifierUuid > 0 {
+			modifierUuids = append(modifierUuids, modifier.TtposModifierUuid)
+			modifierTypes[modifier.TtposModifierUuid] = modifier.TtposModifierType
+		} else if modifier.IsMapped == 0 {
+			modifierPlatformIds = append(modifierPlatformIds, modifier.PlatformModifierId)
+		}
+	}
+
+	// 第二阶段：批量查询修饰符名称
+	modifierInfos := s.menuRepo.GetModifierNamesByUuids(ctx, modifierUuids, modifierTypes)
+	platformModifierNames := s.menuRepo.GetModifierNamesByPlatformIds(ctx, platform, modifierPlatformIds)
+
+	// 第三阶段：设置修饰符详细信息
+	abnormalUuids = make([]uint64, 0)
+	for j := range item.TakeoutOrderItemModifiers {
+		modifier := &item.TakeoutOrderItemModifiers[j]
+
+		if modifier.IsMapped == 1 && modifier.TtposModifierUuid > 0 {
+			// 已映射修饰符：使用修饰符名称和数量
+			if info, ok := modifierInfos[modifier.TtposModifierUuid]; ok {
+				// ModifierName: 用于显示（commodity: 外卖表优先, 其他: 核心表）
+				modifier.ModifierName = info.Name
+				// TtposModifierName: 用于标识（始终来自核心表）
+				modifier.TtposModifierName = info.TtposName
+				// TtposModifierErpCode: ERP编码
+				modifier.TtposModifierErpCode = info.TtposErpCode
+				// TtposPrice: TTPOS 店内价格
+				modifier.TtposPrice = info.TtposPrice
+				// 分类信息
+				modifier.TtposCategoryUuid = info.TtposCategoryUuid
+				modifier.TtposCategoryName = info.TtposCategoryName
+				modifier.TtposParentCategoryUuid = info.TtposParentCategoryUuid
+				modifier.TtposParentCategoryName = info.TtposParentCategoryName
+				// 计算单价
+				if modifier.Quantity > 0 {
+					modifier.Price = decimal.NewFromInt(int64(modifier.Price)).Div(decimal.NewFromInt(int64(modifier.Quantity))).InexactFloat64()
+				}
+				// 如果是 commodity 类型，设置规格信息和数量
+				if modifier.IsCommodity() {
+					modifier.TtposProductPackageUuid = info.TtposProductPackageUuid
+					modifier.TtposFlavorProductBomUuid = info.TtposFlavorProductBomUuid
+					modifier.TtposFlavorName = info.TtposFlavorName
+					// 使用TTPOS数量覆盖平台数量
+					if info.Num > 0 {
+						modifier.Price = decimal.NewFromInt(int64(modifier.Price)).Div(decimal.NewFromInt(int64(info.Num))).InexactFloat64()
+						modifier.Quantity = int(decimal.NewFromInt(int64(info.Num)).Mul(decimal.NewFromInt(int64(item.Quantity))).InexactFloat64())
+					}
+				}
+				// 检查是否异常（名称为空）
+				if info.Name == "" || info.TtposName == "" {
+					abnormalUuids = append(abnormalUuids, modifier.TtposProductPackageUuid)
+				}
+			}
+		} else if modifier.IsMapped == 0 {
+			if name, ok := platformModifierNames[modifier.PlatformModifierId]; ok && name != "" {
+				modifier.ModifierName = name
+			}
+		}
+	}
+	return abnormalUuids, nil
+}
+
+// enrichItemInfo 完整处理商品信息
+// 包含：生成 UUID、查询映射、补全名称/价格/分类等详细信息
+// orderUuid: 订单UUID，用于设置商品的关联
+// 返回值：isAbnormal 表示商品是否异常（名称为空），err 表示处理错误
+func (s *takeoutOrderSrv) enrichItemInfo(ctx context.Context, platform string, orderUuid uint64, item *takeoutModel.TakeoutOrderItem) (isAbnormal bool, err error) {
+	// 生成商品 UUID（如果没有）
+	if item.Uuid == 0 {
+		itemUuid, err := utils.GetID()
+		if err != nil {
+			logger.Logger.Error("生成商品UUID失败", zap.Error(err))
+			return false, errors.WithMessage(errors.New("生成商品UUID失败"), err.Error())
+		}
+		item.Uuid = itemUuid
+	}
+
+	// 设置订单关联
+	item.TakeoutOrderUuid = orderUuid
+
+	// 查询商品映射（如果没有）
+	if item.TtposProductPackageUuid == 0 {
+		isMapped, productUuid, productType, err := s.findProductMapping(platform, item.PlatformItemId)
+		if err != nil {
+			logger.Logger.Error("查询商品映射失败", zap.Error(err), zap.String("platformItemId", item.PlatformItemId))
+			return false, errors.WithMessage(errors.New("查询商品映射失败"), err.Error())
+		}
+		item.IsMapped = isMapped
+		item.TtposProductPackageUuid = productUuid
+		item.TtposProductType = productType
+	}
+
+	// 补全商品详细信息
+	if item.IsMapped == 1 && item.TtposProductPackageUuid > 0 {
+		// 已映射商品：查询商品名称
+		productUuids := []uint64{item.TtposProductPackageUuid}
+		productTypes := map[uint64]int{item.TtposProductPackageUuid: item.TtposProductType}
+		productInfos := s.menuRepo.GetProductNamesByUuids(ctx, productUuids, productTypes)
+
+		if info, ok := productInfos[item.TtposProductPackageUuid]; ok {
+			// ItemName: 显示用名称（外卖表优先）
+			if info.Name != "" {
+				item.ItemName = info.Name
+			}
+			// TtposItemName: TTPOS 核心表名称
+			item.TtposItemName = info.TtposName
+			// TtposItemErpCode: ERP编码
+			item.TtposItemErpCode = info.TtposErpCode
+			// TtposPrice: TTPOS 店内价格
+			item.TtposPrice = info.TtposPrice
+			// 分类信息
+			item.TtposCategoryUuid = info.TtposCategoryUuid
+			item.TtposCategoryName = info.TtposCategoryName
+			item.TtposParentCategoryUuid = info.TtposParentCategoryUuid
+			item.TtposParentCategoryName = info.TtposParentCategoryName
+			// 检查是否异常（名称为空）
+			if info.TtposName == "" || info.Name == "" {
+				isAbnormal = true
+			}
+		}
+	} else if item.IsMapped == 0 {
+		// 未映射商品：使用平台菜单名称
+		platformIds := []string{item.PlatformItemId}
+		menuNames := s.menuRepo.GetMenuNamesByPlatformItemIds(ctx, platform, platformIds)
+		if name, ok := menuNames[item.PlatformItemId]; ok && name != "" {
+			item.ItemName = name
+		}
+	}
+	return isAbnormal, nil
 }
 
 // extractAndSaveTakeoutOrderMaterials 提取并保存外卖订单原料（在创建订单时调用）

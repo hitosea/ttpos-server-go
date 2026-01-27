@@ -16,6 +16,7 @@ type ITakeoutOrderItemModifierRepo interface {
 	GetByUuid(uuid uint64, options ...DBOption) (*model.TakeoutOrderItemModifier, error)
 	GetByOrderItemUuid(orderItemUuid uint64, options ...DBOption) ([]*model.TakeoutOrderItemModifier, error)
 	Delete(uuid uint64) error
+	DeleteByItemUuid(itemUuid uint64) error
 }
 
 // NewTakeoutOrderItemModifierRepo 创建外卖订单商品修饰符仓储
@@ -86,5 +87,13 @@ func (r *TakeoutOrderItemModifierRepoImpl) Delete(uuid uint64) error {
 		r.db.Model(&model.TakeoutOrderItemModifier{}).
 			Where("uuid = ? AND delete_time = ?", uuid, constant.NotDeleted).
 			Update("delete_time", time.Now().Unix()).Error,
+	)
+}
+
+// DeleteByItemUuid 根据商品UUID删除所有修饰符（硬删除）
+func (r *TakeoutOrderItemModifierRepoImpl) DeleteByItemUuid(itemUuid uint64) error {
+	return errors.WithMessage(
+		r.db.Where("takeout_order_item_uuid = ?", itemUuid).
+			Delete(&model.TakeoutOrderItemModifier{}).Error,
 	)
 }

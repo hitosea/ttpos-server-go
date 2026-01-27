@@ -17,6 +17,7 @@ type ITakeoutOrderItemRepo interface {
 	GetByUuid(uuid uint64, options ...DBOption) (*model.TakeoutOrderItem, error)
 	GetByOrderUuid(orderUuid uint64, options ...DBOption) ([]*model.TakeoutOrderItem, error)
 	Delete(uuid uint64) error
+	UpdateQuantity(uuid uint64, quantity int) error
 }
 
 // NewTakeoutOrderItemRepo 创建外卖订单商品仓储
@@ -84,5 +85,14 @@ func (r *TakeoutOrderItemRepoImpl) Delete(uuid uint64) error {
 		r.db.Model(&model.TakeoutOrderItem{}).
 			Where("uuid = ? AND delete_time = ?", uuid, constant.NotDeleted).
 			Update("delete_time", time.Now().Unix()).Error,
+	)
+}
+
+// UpdateQuantity 更新商品数量
+func (r *TakeoutOrderItemRepoImpl) UpdateQuantity(uuid uint64, quantity int) error {
+	return errors.WithMessage(
+		r.db.Model(&model.TakeoutOrderItem{}).
+			Where("uuid = ?", uuid).
+			Update("quantity", quantity).Error,
 	)
 }

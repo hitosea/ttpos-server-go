@@ -186,7 +186,7 @@ func (s *takeoutOrderAppService) SyncNewOrder(ctx context.Context, platform stri
 	order.TakeoutOrderUuid = takeoutOrderUuid
 
 	// 6. 调用 Domain Service 创建订单
-	return s.orderService.CreateOrUpdateOrder(ctx, order, false)
+	return s.orderService.CreateOrder(ctx, order)
 }
 
 // AcceptOrder 接单
