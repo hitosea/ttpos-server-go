@@ -77,7 +77,17 @@ func (s *takeoutOrderUpdatedEventSubscriber) Handle(domainEvent event.DomainEven
 			s.printKitchenReceipt(ctx, takeoutSrv, orderUpdatedEvent, changeResult)
 		}
 
-		// Step 3: 处理库存和销量同步（异步执行）
+		// Step 3: 同步更新生产单（厨显端数据来源）
+		// - 退菜商品：标记为退菜状态
+		// - 新增商品：创建新的生产单商品
+		if err := takeoutSrv.UpdateProductionOrderForTakeout(ctx, orderUpdatedEvent.OrderUuid, changeResult); err != nil {
+			logger.Logger.Error("同步更新生产单失败",
+				zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
+				zap.String("platform", orderUpdatedEvent.Platform),
+				zap.Error(err))
+		}
+
+		// Step 4: 处理库存和销量同步（异步执行）
 		utils.Go(func() {
 			if err := takeoutSrv.ProcessOrderItemsStockAndSales(
 				ctx,

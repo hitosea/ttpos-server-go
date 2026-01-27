@@ -1099,7 +1099,9 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 		}
 
 		// 3. 处理送厨项（新增或增加数量）
-		for _, change := range changeResult.KitchenItems {
+		// 注意：使用索引迭代以便更新 changeResult 中的 NewItem（用于后续生产单同步）
+		for i := range changeResult.KitchenItems {
+			change := &changeResult.KitchenItems[i]
 			switch change.ChangeType {
 			case valueobject.ChangeTypeAdded:
 				// 新增商品
@@ -1110,6 +1112,14 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 						if _, err := s.enrichItemInfo(ctx, platform, orderUuid, newItem); err != nil {
 							logger.Logger.Error("补全商品信息失败", zap.Error(err))
 							continue
+						}
+
+						// 同步更新 changeResult 中的 NewItem 映射信息（用于后续生产单同步和打印）
+						if change.NewItem != nil {
+							change.NewItem.Uuid = newItem.Uuid
+							change.NewItem.TtposProductPackageUuid = newItem.TtposProductPackageUuid
+							change.NewItem.TtposProductType = newItem.TtposProductType
+							change.NewItem.ItemName = newItem.ItemName
 						}
 
 						// 插入商品

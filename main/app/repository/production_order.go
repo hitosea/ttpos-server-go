@@ -15,8 +15,11 @@ import (
 
 type IProductionOrderRepo interface {
 	IProductionOrderQueryRepo
-	CreateProductionOrder(order *model.ProductionOrder) error              // 创建生产订单
-	DeleteProductionOrderByTakeoutOrderUuid(takeoutOrderUuid uint64) error // 根据外卖订单UUID删除生产订单
+	CreateProductionOrder(order *model.ProductionOrder) error                                            // 创建生产订单
+	CreateProductionOrderProduct(product *model.ProductionOrderProduct) error                            // 创建生产单商品
+	DeleteProductionOrderByTakeoutOrderUuid(takeoutOrderUuid uint64) error                               // 根据外卖订单UUID删除生产订单
+	GetProductionOrderByTakeoutOrderUuid(takeoutOrderUuid uint64) (*model.ProductionOrder, error)        // 根据外卖订单UUID查询生产单
+	UpdateProductionOrderProductStatusByTakeoutItemUuid(takeoutItemUuid uint64, status int) error        // 根据外卖商品UUID更新生产单商品状态
 	WhereProductStatus(status uint) DBOption                               // 生产商品状态
 	WhereUuid(uuid uint64) DBOption                                        // Uuid 条件
 	WhereProductFinishedTime(finishedTime int64) DBOption                  // 生产商品完成时间条件
@@ -535,6 +538,38 @@ func (r *productionRepo) GetProductsByUuids(uuids []uint64, opts ...DBOption) ([
 		return nil, errors.WithMessage(err)
 	}
 	return productionOrderProducts, nil
+}
+
+// GetProductionOrderByTakeoutOrderUuid 根据外卖订单UUID查询生产单
+func (r *productionRepo) GetProductionOrderByTakeoutOrderUuid(takeoutOrderUuid uint64) (*model.ProductionOrder, error) {
+	var productionOrder model.ProductionOrder
+	err := r.db.Model(&model.ProductionOrder{}).Scopes(NotDeleted).
+		Where("takeout_order_uuid = ?", takeoutOrderUuid).
+		Order("create_time desc").
+		First(&productionOrder).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, errors.WithMessage(err)
+	}
+	return &productionOrder, nil
+}
+
+// UpdateProductionOrderProductStatusByTakeoutItemUuid 根据外卖商品UUID更新生产单商品状态
+func (r *productionRepo) UpdateProductionOrderProductStatusByTakeoutItemUuid(takeoutItemUuid uint64, status int) error {
+	return r.db.Model(&model.ProductionOrderProduct{}).
+		Where("takeout_order_item_uuid = ?", takeoutItemUuid).
+		Where("delete_time = ?", 0).
+		Update("status", status).Error
+}
+
+// CreateProductionOrderProduct 创建生产单商品
+func (r *productionRepo) CreateProductionOrderProduct(product *model.ProductionOrderProduct) error {
+	if err := r.db.Model(product).Create(product).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }
 
 // DeleteProductionOrderByTakeoutOrderUuid 根据外卖订单UUID软删除生产订单及其商品

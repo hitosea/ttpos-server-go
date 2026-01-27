@@ -44,6 +44,9 @@ type ITakeoutOrderSrv interface {
 	ProcessOrderItemsStockAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64, changeResult *valueObject.OrderChangeResult) error
 	// CreateProductionOrderForTakeout 为外卖订单创建送厨单
 	CreateProductionOrderForTakeout(ctx context.Context, orderUuid uint64) error
+	// UpdateProductionOrderForTakeout 增量更新外卖订单的生产单
+	// 处理订单变动时的生产单同步：退菜商品标记为退菜状态，新增商品创建生产单商品
+	UpdateProductionOrderForTakeout(ctx context.Context, orderUuid uint64, changeResult *valueObject.OrderChangeResult) error
 	// PrintTakeoutOrder 打印外卖订单小票
 	PrintTakeoutOrder(ctx context.Context, orderUuid uint64, printLang string, firstExecution int) (*resp.PrinterData, error)
 	// 打印送厨单
@@ -1132,6 +1135,91 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 	// 5. 保存到数据库
 	if err := productionRepo.CreateProductionOrder(productionOrder); err != nil {
 		return errors.WithMessage(err, "创建送厨单失败")
+	}
+
+	return nil
+}
+
+// UpdateProductionOrderForTakeout 增量更新外卖订单的生产单
+// 处理订单变动时的生产单同步：
+// - 退菜商品：标记为退菜状态 (Status = 3)
+// - 新增商品：创建新的生产单商品
+func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderUuid uint64, changeResult *valueObject.OrderChangeResult) error {
+	if changeResult == nil || !changeResult.HasChange {
+		return nil
+	}
+
+	db := ctx.GetDB()
+	productionRepo := repository.NewProductionRepo(db)
+	currentTime := time.Now().Unix()
+
+	// 1. 查询现有的生产单
+	productionOrder, err := productionRepo.GetProductionOrderByTakeoutOrderUuid(orderUuid)
+	if err != nil {
+		logger.Logger.Error("查询生产单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		return errors.WithMessage(err, "查询生产单失败")
+	}
+	if productionOrder == nil || productionOrder.Uuid == 0 {
+		logger.Logger.Warn("生产单不存在，跳过更新", zap.Uint64("orderUuid", orderUuid))
+		return nil
+	}
+
+	// 2. 处理退菜商品：标记为退菜状态
+	for _, item := range changeResult.ReturnItems {
+		if item.OldItem == nil || item.OldItem.Uuid == 0 {
+			continue
+		}
+		// 根据外卖订单商品UUID更新生产单商品状态为退菜
+		if err := productionRepo.UpdateProductionOrderProductStatusByTakeoutItemUuid(
+			item.OldItem.Uuid,
+			constant.ProductionOrderProductStatusCancel,
+		); err != nil {
+			logger.Logger.Error("更新生产单商品为退菜状态失败",
+				zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
+				zap.Error(err))
+		}
+	}
+
+	// 3. 处理新增商品：创建生产单商品
+	for _, item := range changeResult.KitchenItems {
+		if item.ChangeType != valueObject.ChangeTypeAdded {
+			continue
+		}
+		if item.NewItem == nil || item.NewItem.TtposProductPackageUuid == 0 {
+			logger.Logger.Warn("新增商品缺少映射信息，跳过创建生产单商品",
+				zap.String("platformItemId", item.PlatformItemId))
+			continue
+		}
+
+		// 生成生产单商品 UUID
+		productUuid, err := utils.GetID()
+		if err != nil {
+			logger.Logger.Error("生成生产单商品UUID失败", zap.Error(err))
+			continue
+		}
+
+		// 创建生产单商品
+		productionOrderProduct := &model.ProductionOrderProduct{
+			BaseModel:            model.BaseModel{Uuid: productUuid, CreateTime: currentTime, UpdateTime: currentTime},
+			Name:                 item.NewItem.ItemName,
+			Num:                  float64(item.NewQuantity),
+			InitNum:              float64(item.NewQuantity),
+			ProductPackageUuid:   item.NewItem.TtposProductPackageUuid,
+			ProductionOrderUuid:  productionOrder.Uuid,
+			TakeoutOrderUuid:     orderUuid,
+			TakeoutOrderItemUuid: item.NewItem.Uuid,
+			Status:               constant.ProductionOrderProductStatusCooking,
+		}
+
+		if err := productionRepo.CreateProductionOrderProduct(productionOrderProduct); err != nil {
+			logger.Logger.Error("创建生产单商品失败",
+				zap.Uint64("takeoutOrderItemUuid", item.NewItem.Uuid),
+				zap.Error(err))
+		} else {
+			logger.Logger.Info("创建生产单商品成功",
+				zap.Uint64("productionOrderProductUuid", productUuid),
+				zap.String("itemName", item.NewItem.ItemName))
+		}
 	}
 
 	return nil
