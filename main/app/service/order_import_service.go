@@ -520,7 +520,7 @@ func (s *orderImportSrv) createOrder(_ context.Context, db *gorm.DB, orderBasic 
 		ConsumerUuid:  consumerUuid,
 		DeskUuid:      deskUuid,
 		Source:        constant.SaleBillSourceDefault, // 导入订单使用默认值 0
-		ClientVersion: "",                              // 导入订单没有版本信息，使用空字符串
+		ClientVersion: "",                             // 导入订单没有版本信息，使用空字符串
 		// ShopUuid 字段不存在，通过 DeskUuid 关联到门店
 	}
 

@@ -26,8 +26,8 @@ type ChannelSalesResp struct {
 	TakeoutDelivery *ChannelSalesBlock `json:"takeout_delivery"` // 外送
 	DineInStore     *ChannelSalesBlock `json:"dine_in_store"`    // 堂食
 	Takeaway        *ChannelSalesBlock `json:"takeaway"`         // 外带
-	Grab            *ChannelSalesBlock `json:"grab"`            // Grab 外卖
-	Lineman         *ChannelSalesBlock `json:"lineman"`         // LINE MAN 外卖
+	Grab            *ChannelSalesBlock `json:"grab"`             // Grab 外卖
+	Lineman         *ChannelSalesBlock `json:"lineman"`          // LINE MAN 外卖
 	Takeout         *ChannelSalesBlock `json:"takeout"`          // 外卖
-	Meta            *ChannelSalesMeta  `json:"meta"`            // 元数据
+	Meta            *ChannelSalesMeta  `json:"meta"`             // 元数据
 }

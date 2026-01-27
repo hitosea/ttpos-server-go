@@ -119,5 +119,3 @@ func (s *WarehouseQuerySpec) IsHeadquarter() *bool {
 func (s *WarehouseQuerySpec) HeadquarterUuid() *uint64 {
 	return s.headquarterUuid
 }
-
-

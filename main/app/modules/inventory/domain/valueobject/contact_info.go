@@ -37,5 +37,3 @@ func (c ContactInfo) Equals(other ContactInfo) bool {
 		c.phone == other.phone &&
 		c.address == other.address
 }
-
-

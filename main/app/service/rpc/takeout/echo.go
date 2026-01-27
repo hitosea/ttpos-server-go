@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-//根据配置创建外送服务gRPC客户端
+// 根据配置创建外送服务gRPC客户端
 func NewEchoClient() (echo.EchoServiceClient, *grpc.ClientConn, error) {
 	addr, err := cloud.GetServiceGrpcAddr(string(cloud.TakeOutServiceName))
 	if err != nil {

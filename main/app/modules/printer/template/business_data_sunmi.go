@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
-	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/pkg/utils"
 

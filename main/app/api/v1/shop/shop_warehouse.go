@@ -17,9 +17,9 @@ import (
 
 // WarehouseHandler 仓库控制器
 type WarehouseHandler struct {
-	authSrv                    service.IAuthSrv
-	warehouseSrv               service.IWarehouseSrv
-	salesOutboundSummarySrv    service.ISalesOutboundSummarySrv
+	authSrv                 service.IAuthSrv
+	warehouseSrv            service.IWarehouseSrv
+	salesOutboundSummarySrv service.ISalesOutboundSummarySrv
 }
 
 // GetWarehouseList 获取对方机构列表

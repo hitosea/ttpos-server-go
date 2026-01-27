@@ -17,6 +17,7 @@ import (
 )
 
 var once_create_member_sale_order_event_handler sync.Once
+
 // createMemberSaleOrderEventHandler "创建外送订单"事件处理器
 func CreateMemberSaleOrderEventHandler() {
 	once_create_member_sale_order_event_handler.Do(func() {

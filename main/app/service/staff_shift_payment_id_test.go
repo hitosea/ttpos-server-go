@@ -144,12 +144,12 @@ func createStaffShiftTestContext(t *testing.T, dbm *database.DBManager, enableEr
 		BaseModel: model.BaseModel{
 			Uuid: constant.MockDB,
 		},
-		CompanyUuid:        constant.MockDB,
-		ErpnextSiteCode:    erpnextSiteCode,
+		CompanyUuid:           constant.MockDB,
+		ErpnextSiteCode:       erpnextSiteCode,
 		ErpnextPosProfileName: "TEST_PROFILE",
-		ErpnextAdminEmail:  "test@example.com",
-		ErpnextCompanyAbbr: "TEST",
-		ErpnextBranchName:  "TEST_BRANCH",
+		ErpnextAdminEmail:     "test@example.com",
+		ErpnextCompanyAbbr:    "TEST",
+		ErpnextBranchName:     "TEST_BRANCH",
 	}
 	ctx.SetCompanySetting(companySetting)
 
@@ -419,4 +419,3 @@ func TestGetPaymentModeForErp_MultipleSources(t *testing.T) {
 	assert.Equal(t, "PID1234567890123456", result.ErpnextPaymentId)
 	assert.Equal(t, constant.PaymentMethodSourceSystem, result.Source)
 }
-

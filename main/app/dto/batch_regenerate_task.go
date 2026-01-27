@@ -17,8 +17,8 @@ type CompanyTask struct {
 
 // DateTask 日期任务
 type DateTask struct {
-	Date     string     `json:"date"`
-	DateStep StepTask   `json:"date_step"`
+	Date     string      `json:"date"`
+	DateStep StepTask    `json:"date_step"`
 	Orders   []OrderTask `json:"orders"`
 }
 
@@ -34,10 +34,10 @@ type OrderTask struct {
 type StepTask struct {
 	Step      int    `json:"step"`
 	Name      string `json:"name"`
-	Status    string `json:"status"` // pending, running, completed, failed
+	Status    string `json:"status"`     // pending, running, completed, failed
 	StartTime string `json:"start_time"` // RFC3339格式，可为空字符串
 	EndTime   string `json:"end_time"`   // RFC3339格式，可为空字符串
-	Error     string `json:"error"`       // 错误信息，可为空字符串
+	Error     string `json:"error"`      // 错误信息，可为空字符串
 }
 
 // TaskSummary 任务统计信息
@@ -67,4 +67,3 @@ func IsValidStatus(status string) bool {
 		status == StepStatusCompleted ||
 		status == StepStatusFailed
 }
-

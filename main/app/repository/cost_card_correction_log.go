@@ -11,7 +11,7 @@ type ICostCardCorrectionLogRepo interface {
 	// 基础操作
 	Create(log *model.CostCardCorrectionLog) error
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.CostCardCorrectionLog, int64, error)
-	
+
 	// 条件查询选项
 	WhereCorrectionUuid(correctionUuid uint64) DBOption
 	WhereOrderUuid(orderUuid uint64) DBOption
@@ -38,25 +38,25 @@ func (r *CostCardCorrectionLogRepoImpl) Create(log *model.CostCardCorrectionLog)
 func (r *CostCardCorrectionLogRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.CostCardCorrectionLog, int64, error) {
 	var logs []model.CostCardCorrectionLog
 	var total int64
-	
+
 	query := r.db.Model(&model.CostCardCorrectionLog{}).Scopes(NotDeleted)
-	
+
 	// 应用查询选项
 	for _, opt := range opts {
 		query = opt(query)
 	}
-	
+
 	// 计算总数
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	
+
 	// 分页查询
 	offset := (pageNo - 1) * pageSize
 	if err := query.Order("create_time DESC").Offset(offset).Limit(pageSize).Find(&logs).Error; err != nil {
 		return nil, 0, err
 	}
-	
+
 	return logs, total, nil
 }
 
@@ -87,4 +87,3 @@ func (r *CostCardCorrectionLogRepoImpl) WhereStatus(status string) DBOption {
 		return db.Where("status = ?", status)
 	}
 }
-
