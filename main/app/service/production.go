@@ -442,7 +442,12 @@ func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProduct
 		if product.TakeoutOrderUuid > 0 {
 			item.LocaleName = *pkgLanguage.JsonToLocaleResponse(product.Name)
 			item.SerialNo = product.TakeoutOrder.GetKdsTakeoutPlatformAndOrderNumber()
-			remark = product.TakeoutOrderItem.Specifications
+			remark = func() string {
+				if product.TakeoutOrderItem != nil {
+					return product.TakeoutOrderItem.Specifications
+				}
+				return remark
+			}()
 		} else {
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.SerialNo = product.SaleBill.SerialNo
