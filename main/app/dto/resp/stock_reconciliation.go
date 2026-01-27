@@ -26,18 +26,19 @@ type StockReconciliationInfo struct {
 
 // StockReconciliationDetailResp 盘点单详情响应
 type StockReconciliationDetailResp struct {
-	Uuid          uint64                         `json:"uuid"`           // 盘点单UUID
-	OrderNo       string                         `json:"order_no"`       // 单据编号
-	ErpCode       string                         `json:"erp_code"`       // ERP盘点单号
-	Type          int                            `json:"type"`           // 盘点类型 1-指定物品盘点 2-全部物品盘点
-	WarehouseUuid uint64                         `json:"warehouse_uuid"` // 仓库UUID
-	WarehouseName dto.LocaleResponse             `json:"warehouse_name"` // 仓库名称
-	Purpose       int                            `json:"purpose"`        // 盘点目的 1-库存盘点 2-期初盘点
-	Status        int                            `json:"status"`         // 状态 0-已保存 1-已提交 2-已审核 3-已驳回
-	Items         []*StockReconciliationItemInfo `json:"items"`          // 盘点单物品明细
-	SubmitTime    int                            `json:"submit_time"`    // 提交时间
-	CreateTime    int                            `json:"create_time"`    // 创建时间
-	UpdateTime    int                            `json:"update_time"`    // 更新时间
+	Uuid          uint64                               `json:"uuid"`           // 盘点单UUID
+	OrderNo       string                               `json:"order_no"`       // 单据编号
+	ErpCode       string                               `json:"erp_code"`       // ERP盘点单号
+	Type          int                                  `json:"type"`           // 盘点类型 1-指定物品盘点 2-全部物品盘点
+	WarehouseUuid uint64                               `json:"warehouse_uuid"` // 仓库UUID
+	WarehouseName dto.LocaleResponse                   `json:"warehouse_name"` // 仓库名称
+	Purpose       int                                  `json:"purpose"`        // 盘点目的 1-库存盘点 2-期初盘点
+	Status        int                                  `json:"status"`         // 状态 0-已保存 1-已提交 2-已审核 3-已驳回
+	Items         []*StockReconciliationItemInfo       `json:"items"`          // 盘点单物品明细
+	Annotations   []*StockReconciliationAnnotationInfo `json:"annotations"`    // 批注列表（按创建时间倒序）
+	SubmitTime    int                                  `json:"submit_time"`    // 提交时间
+	CreateTime    int                                  `json:"create_time"`    // 创建时间
+	UpdateTime    int                                  `json:"update_time"`    // 更新时间
 }
 
 // StockReconciliationItemInfo 盘点单物品明细信息

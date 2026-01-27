@@ -42,7 +42,6 @@ type IStockReconciliationSrv interface {
 	DeleteStockReconciliation(ctx context.Context, req req.StockReconciliationDeleteReq) error                                                // 删除盘点单
 	ApproveStockReconciliation(ctx context.Context, req req.StockReconciliationApproveReq) ([]dto.LocaleResponse, error)                      // 审核盘点单
 	RejectStockReconciliation(ctx context.Context, req req.StockReconciliationRejectReq) error                                                // 驳回盘点单
-	GetAnnotationList(ctx context.Context, req req.StockReconciliationAnnotationListReq) (*resp.StockReconciliationAnnotationListResp, error) // 获取批注列表
 	CheckMaterials(ctx context.Context, req req.StockReconciliationCheckMaterialsReq) (resp.StockReconciliationCheckMaterialsListResp, error) // 检查物品
 }
 
@@ -348,6 +347,24 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		itemsResp = append(itemsResp, itemInfo)
 	}
 	detailResp.Items = itemsResp
+
+	// 查询批注列表
+	annotationRepo := repository.NewStockReconciliationAnnotationRepo(db)
+	annotations, err := annotationRepo.GetListByStockReconciliationUuid(req.Uuid)
+	if err != nil {
+		logger.Logger.Error("查询批注列表失败", zap.Error(err))
+	}
+	annotationsResp := make([]*resp.StockReconciliationAnnotationInfo, 0, len(annotations))
+	for _, annotation := range annotations {
+		annotationsResp = append(annotationsResp, &resp.StockReconciliationAnnotationInfo{
+			Uuid:               annotation.Uuid,
+			AnnotationType:     annotation.AnnotationType,
+			AnnotationTypeName: constant.StockReconciliationAnnotationTypeNameMap[annotation.AnnotationType],
+			Content:            annotation.Content,
+			CreateTime:         int64(annotation.CreateTime),
+		})
+	}
+	detailResp.Annotations = annotationsResp
 
 	return detailResp, nil
 }
@@ -1286,43 +1303,4 @@ func (s *stockReconciliationSrv) extractName(name, after, errorMsg string) strin
 		return supplierInfo
 	}
 	return ""
-}
-
-// GetAnnotationList 获取盘点单批注列表
-func (s *stockReconciliationSrv) GetAnnotationList(ctx context.Context, req req.StockReconciliationAnnotationListReq) (*resp.StockReconciliationAnnotationListResp, error) {
-	db := ctx.GetDB()
-
-	// 验证盘点单是否存在
-	stockReconciliationRepo := repository.NewStockReconciliationRepo(db)
-	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliationByUuid(req.StockReconciliationUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err, "查询盘点单失败")
-	}
-	if stockReconciliation == nil {
-		return nil, errors.New("盘点单不存在")
-	}
-
-	// 查询批注列表
-	annotationRepo := repository.NewStockReconciliationAnnotationRepo(db)
-	annotations, err := annotationRepo.GetListByStockReconciliationUuid(req.StockReconciliationUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err, "查询批注列表失败")
-	}
-
-	// 转换响应数据
-	list := make([]*resp.StockReconciliationAnnotationInfo, 0, len(annotations))
-	for _, annotation := range annotations {
-		info := &resp.StockReconciliationAnnotationInfo{
-			Uuid:               annotation.Uuid,
-			AnnotationType:     annotation.AnnotationType,
-			AnnotationTypeName: constant.StockReconciliationAnnotationTypeNameMap[annotation.AnnotationType],
-			Content:            annotation.Content,
-			CreateTime:         int64(annotation.CreateTime),
-		}
-		list = append(list, info)
-	}
-
-	return &resp.StockReconciliationAnnotationListResp{
-		List: list,
-	}, nil
 }

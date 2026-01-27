@@ -108,11 +108,11 @@
 | 项目 | 内容 |
 |------|------|
 | File | `main/app/service/stock_reconciliation.go` |
-| Purpose | 扩展保存和审核逻辑，新增批注查询 |
+| Purpose | 扩展保存、审核和详情逻辑 |
 | Requirements | R1, R2, R3, R4 |
-| Changes | 扩展 SaveStockReconciliation 支持重新提交；修改 ApproveStockReconciliation, RejectStockReconciliation；新增 GetAnnotationList |
+| Changes | 扩展 SaveStockReconciliation 支持重新提交；修改 ApproveStockReconciliation, RejectStockReconciliation；扩展 GetStockReconciliationDetail 返回批注列表 |
 | Leverage | 现有保存和审核逻辑 |
-| Note | 重新提交复用 SaveStockReconciliation，通过 IsResubmit 标识区分；新增发起人验证逻辑 |
+| Note | 重新提交复用 SaveStockReconciliation，通过 isResubmit 私有字段区分；新增发起人验证逻辑；批注列表集成到详情接口 |
 
 - [ ] 完成
 
@@ -125,10 +125,11 @@
 | 项目 | 内容 |
 |------|------|
 | File | `main/app/api/v1/shop/shop_stock_reconciliation.go` |
-| Purpose | 修改审核接口，新增重新提交和批注查询接口 |
+| Purpose | 修改审核接口，新增重新提交接口 |
 | Requirements | R1, R2, R4 |
-| Changes | 修改 ApproveStockReconciliation, RejectStockReconciliation；新增 ResubmitStockReconciliation, GetAnnotationList |
-| Routes | POST /resubmit, GET /annotation |
+| Changes | 修改 ApproveStockReconciliation, RejectStockReconciliation；新增 ResubmitStockReconciliation（调用 SaveStockReconciliation）|
+| Routes | POST /resubmit |
+| Note | 批注列表已集成到详情接口，无需单独接口 |
 
 - [ ] 完成
 

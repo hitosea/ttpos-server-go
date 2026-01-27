@@ -185,14 +185,23 @@ var StockReconciliationAnnotationTypeNameMap = map[int]string{
 2. 验证当前用户为盘点单发起人（CreatorStaffUuid）
 3. 更新盘点单信息后提交到 ERP
 
-### 4. 批注历史（新增）
+### 4. 盘点单详情（修改）
 
 | 项目 | 内容 |
 |------|------|
 | Method | GET |
-| Path | `/shop/stock_reconciliation/annotation` |
-| 请求 | `req.StockReconciliationAnnotationListReq` |
-| 响应 | `resp.StockReconciliationAnnotationListResp` |
+| Path | `/shop/stock_reconciliation/detail` |
+| 请求 | `req.StockReconciliationDetailReq` |
+| 响应 | `resp.StockReconciliationDetailResp` |
+| 变更 | 响应新增 `annotations` 字段，包含批注列表（按创建时间倒序）|
+
+**响应新增字段**:
+```go
+type StockReconciliationDetailResp struct {
+    // ... 现有字段
+    Annotations []*StockReconciliationAnnotationInfo `json:"annotations"` // 批注列表
+}
+```
 
 ---
 

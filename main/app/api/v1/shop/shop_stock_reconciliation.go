@@ -294,34 +294,6 @@ func (h *StockReconciliationHandler) ResubmitStockReconciliation(c *gin.Context)
 	helper.Success(c, retData, "重新提交成功")
 }
 
-// GetAnnotationList 获取盘点单批注列表
-// @Summary 获取盘点单批注列表
-// @Description 根据盘点单UUID获取批注列表，按创建时间倒序排列
-// @Tags 商家端.盘点管理
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param stock_reconciliation_uuid query int true "盘点单UUID"
-// @Success 200 {object} dto.Response{data=resp.StockReconciliationAnnotationListResp} "成功"
-// @Failure 400 {object} dto.Response "请求参数错误"
-// @Router /shop/stock_reconciliation/annotation [get]
-func (h *StockReconciliationHandler) GetAnnotationList(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	var annotationListReq req.StockReconciliationAnnotationListReq
-	if err := c.ShouldBindQuery(&annotationListReq); err != nil {
-		helper.HandleValidationError(c, err, annotationListReq, nil)
-		return
-	}
-
-	resp, err := h.stockReconciliationSrv.GetAnnotationList(ctx, annotationListReq)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-
-	helper.Success(c, resp)
-}
-
 // GetStockReconciliationTemplate 获取盘点单模板
 // @Summary 获取盘点单模板
 // @Description 获取盘点单模板，包含日盘、周盘、月盘的物品编号列表
@@ -366,9 +338,8 @@ func RegisterStockReconciliationHandlers(router gin.IRouter, dbm *database.DBMan
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/stock_reconciliation/list", wrapper.GetStockReconciliationList)         // 获取盘点单列表
-		privateApi.GET("/stock_reconciliation/detail", wrapper.GetStockReconciliationDetail)     // 获取盘点单详情
+		privateApi.GET("/stock_reconciliation/detail", wrapper.GetStockReconciliationDetail)     // 获取盘点单详情（包含批注列表）
 		privateApi.GET("/stock_reconciliation/template", wrapper.GetStockReconciliationTemplate) // 获取盘点单模板
-		privateApi.GET("/stock_reconciliation/annotation", wrapper.GetAnnotationList)            // 获取盘点单批注列表
 		privateApi.POST("/stock_reconciliation/save", wrapper.SaveStockReconciliation)           // 保存盘点单
 		privateApi.DELETE("/stock_reconciliation/delete", wrapper.DeleteStockReconciliation)     // 删除盘点单
 		privateApi.POST("/stock_reconciliation/submit", wrapper.SubmitStockReconciliation)       // 提交盘点单

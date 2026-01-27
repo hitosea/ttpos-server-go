@@ -155,32 +155,32 @@ const (
 
 ---
 
-### Requirement 4: 批注历史查询接口
+### Requirement 4: 批注历史（集成到详情接口）
 
-**用户故事**: 作为用户，我想查看某个盘点单的所有批注历史，以便于了解审批过程
+**用户故事**: 作为用户，我想在查看盘点单详情时看到所有批注历史，以便于了解审批过程
 
 #### API 设计
 
+批注列表集成到盘点单详情接口中：
+
 ```
-GET /shop/stock_reconciliation/annotation?stock_reconciliation_uuid=xxx
+GET /shop/stock_reconciliation/detail?uuid=xxx
 ```
 
-#### 请求参数
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| stock_reconciliation_uuid | string | 是 | 盘点单 UUID |
-
-#### 响应格式
+#### 响应格式（新增 annotations 字段）
 
 ```json
 {
   "code": 1,
   "message": "success",
   "data": {
-    "list": [
+    "uuid": 8267304538112001,
+    "order_no": "ST202601271234560001",
+    "status": 3,
+    "items": [...],
+    "annotations": [
       {
-        "uuid": "xxx",
+        "uuid": 8267304538112500,
         "annotation_type": 2,
         "annotation_type_name": "驳回",
         "content": "数量有误，请核实",
@@ -193,7 +193,7 @@ GET /shop/stock_reconciliation/annotation?stock_reconciliation_uuid=xxx
 
 #### 验收标准
 
-1. **WHEN** 用户查询批注历史 **THEN** 系统 **SHALL** 按创建时间倒序返回所有批注记录
+1. **WHEN** 用户查询盘点单详情 **THEN** 系统 **SHALL** 在响应中包含批注列表（按创建时间倒序）
 2. **WHEN** 单据有多次驳回和重新提交 **THEN** 系统 **SHALL** 展示完整的操作时间线
 3. **WHEN** 单据无批注记录 **THEN** 系统 **SHALL** 返回空列表（不返回 null）
 
