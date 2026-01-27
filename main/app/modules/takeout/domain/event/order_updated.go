@@ -24,7 +24,6 @@ func NewOrderUpdatedEvent(
 	platformOrderId string,
 	shortOrderNumber string,
 	takeoutOrderUuid string,
-	eaterPayment float64,
 	companyUuid uint64,
 ) OrderUpdatedEvent {
 	return OrderUpdatedEvent{
@@ -34,7 +33,6 @@ func NewOrderUpdatedEvent(
 		PlatformOrderId:  platformOrderId,
 		ShortOrderNumber: shortOrderNumber,
 		TakeoutOrderUuid: takeoutOrderUuid,
-		EaterPayment:     eaterPayment,
 		CompanyUuid:      companyUuid,
 	}
 }

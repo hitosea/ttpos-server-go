@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
+	"ttpos-server-go/app/modules/takeout/domain/event"
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/modules/takeout/domain/value_object"
@@ -482,6 +483,16 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 			zap.Error(err))
 		return fmt.Errorf("更新订单事务失败: %w", err)
 	}
+
+	// 发布订单更新事件
+	event.GetDispatcher().Publish(event.NewOrderUpdatedEvent(
+		orderUuid,
+		updatedOrder.Platform,
+		updatedOrder.PlatformOrderId,
+		updatedOrder.ShortOrderNumber,
+		updatedOrder.TakeoutOrderUuid,
+		ctx.GetCompanyUuid(),
+	))
 
 	return nil
 }

@@ -304,7 +304,12 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 				item.SerialNo = product.TakeoutOrder.GetKdsTakeoutPlatformAndOrderNumber()
 				item.IsSaleBillDeleted = product.TakeoutOrder.IsDeletedOrCanceled()
 				item.TakeoutPlatform = product.TakeoutOrder.GetToLowerPlatform()
-				remark = product.TakeoutOrderItem.Specifications
+				remark = func() string {
+					if product.TakeoutOrderItem != nil {
+						return product.TakeoutOrderItem.Specifications
+					}
+					return remark
+				}()
 				item.DiningMethod = func() uint {
 					if product.TakeoutOrder.IsTakeawayOrder() {
 						return uint(constant.SaleBillDiningMethodTakeout)

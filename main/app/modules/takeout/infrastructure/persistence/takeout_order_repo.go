@@ -36,6 +36,7 @@ type ITakeoutOrderRepo interface {
 	WithPreload(options ...DBOption) DBOption
 	WithTakeoutOrderItems() DBOption
 	WithTakeoutOrderItemModifiers() DBOption
+	WithTakeoutOrderUpdateLogs(opts ...DBOption) DBOption
 	WithTakeoutOrderMaterials() DBOption
 	WithTakeoutOrderReceiver() DBOption
 	WithTakeoutOrderCampaigns() DBOption
@@ -50,6 +51,7 @@ type ITakeoutOrderRepo interface {
 	WherePendingOrAutoAccepted() DBOption      // 待接单或已自动接单
 	WhereSearch(search string) DBOption
 	WhereIsHistoryOrder(isHistory bool) DBOption
+	Select(fields ...string) DBOption
 	Limit(limit int) DBOption
 	Offset(offset int) DBOption
 }
@@ -406,6 +408,13 @@ func (r *TakeoutOrderRepoImpl) WherePendingOrAutoAccepted() DBOption {
 	}
 }
 
+// Select 选择查询字段
+func (r *TakeoutOrderRepoImpl) Select(fields ...string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Select(fields)
+	}
+}
+
 // Limit 限制查询数量
 func (r *TakeoutOrderRepoImpl) Limit(limit int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -447,6 +456,19 @@ func (r *TakeoutOrderRepoImpl) WithTakeoutOrderItems() DBOption {
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderItemModifiers() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("TakeoutOrderItems.TakeoutOrderItemModifiers")
+	}
+}
+
+// WithTakeoutOrderUpdateLogs 预加载订单更新日志
+func (r *TakeoutOrderRepoImpl) WithTakeoutOrderUpdateLogs(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		db = db.Preload("TakeoutOrderUpdateLogs", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db.Order("create_time DESC")
+		})
+		return db
 	}
 }
 

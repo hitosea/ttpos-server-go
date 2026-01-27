@@ -6,6 +6,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-server-go/app/errors"
 	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
+	"ttpos-server-go/i18n"
 )
 
 // TakeoutOrder 外卖订单表（多平台）
@@ -82,11 +83,12 @@ type TakeoutOrder struct {
 	RejectReason      string `gorm:"column:reject_reason" json:"reject_reason"`
 
 	// 关联字表结构
-	TakeoutOrderItems     []TakeoutOrderItem     `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
-	TakeoutOrderReceiver  *TakeoutOrderReceiver  `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
-	TakeoutOrderCampaigns []TakeoutOrderCampaign `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
-	TakeoutOrderMaterials []TakeoutOrderMaterial `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
-	TakeoutOrderPromos    []TakeoutOrderPromo    `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
+	TakeoutOrderItems      []TakeoutOrderItem      `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
+	TakeoutOrderReceiver   *TakeoutOrderReceiver   `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
+	TakeoutOrderCampaigns  []TakeoutOrderCampaign  `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
+	TakeoutOrderMaterials  []TakeoutOrderMaterial  `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
+	TakeoutOrderPromos     []TakeoutOrderPromo     `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
+	TakeoutOrderUpdateLogs []TakeoutOrderUpdateLog `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
 }
 
 func (*TakeoutOrder) TableName() string {
@@ -144,14 +146,6 @@ func (o *TakeoutOrder) IsPendingOrder() error {
 	return nil
 }
 
-// 获取外卖订单编号
-func (o *TakeoutOrder) GetKdsTakeoutPlatformAndOrderNumber() string {
-	if o == nil {
-		return ""
-	}
-	return o.ShortOrderNumber
-}
-
 // 是否是打包订单
 func (o *TakeoutOrder) IsTakeawayOrder() bool {
 	if o == nil {
@@ -174,30 +168,6 @@ func (o *TakeoutOrder) IsDeletedOrCanceled() bool {
 		return true
 	}
 	return o.DeleteTime > 0 || o.OrderState == valueobject.TakeoutOrderStateRejected || o.OrderState == valueobject.TakeoutOrderStateCanceled
-}
-
-// 获取外卖平台 全小写
-func (o *TakeoutOrder) GetToLowerPlatform() string {
-	if o == nil {
-		return ""
-	}
-	return strings.ToLower(o.Platform)
-}
-
-// 获取外卖平台 首字母大写
-func (o *TakeoutOrder) GetCapitalPlatform() string {
-	if o == nil || len(o.Platform) == 0 {
-		return ""
-	}
-	return strings.ToUpper(o.Platform[0:1]) + strings.ToLower(o.Platform[1:])
-}
-
-// 获取外卖平台 无空格名称
-func (o *TakeoutOrder) GetNoSpacePlatformName() string {
-	if o == nil {
-		return ""
-	}
-	return valueobject.GetNoSpacePlatformName(o.Platform)
 }
 
 // 是否店内就餐订单
@@ -232,17 +202,6 @@ func (o *TakeoutOrder) IsLinemanOrder() bool {
 	return o.Platform == valueobject.TakeoutPlatformLineman
 }
 
-// 获取lineman服务费
-func (o *TakeoutOrder) GetLinemanServiceFee() float64 {
-	if o == nil {
-		return 0
-	}
-	if o.IsLinemanOrder() {
-		return o.Subtotal - o.PlatformTotal
-	}
-	return 0
-}
-
 // 是否存在班次
 func (o *TakeoutOrder) IsExistShiftLog() bool {
 	if o == nil {
@@ -271,10 +230,68 @@ func (o *TakeoutOrder) GetErpPosInvoiceResp() *selling.SavePosInvoiceResp {
 	return &erpPosInvoiceResp
 }
 
+// 获取外卖订单编号
+func (o *TakeoutOrder) GetKdsTakeoutPlatformAndOrderNumber() string {
+	if o == nil {
+		return ""
+	}
+	return o.ShortOrderNumber
+}
+
+// 获取外卖平台 全小写
+func (o *TakeoutOrder) GetToLowerPlatform() string {
+	if o == nil {
+		return ""
+	}
+	return strings.ToLower(o.Platform)
+}
+
+// 获取外卖平台 首字母大写
+func (o *TakeoutOrder) GetCapitalPlatform() string {
+	if o == nil || len(o.Platform) == 0 {
+		return ""
+	}
+	return strings.ToUpper(o.Platform[0:1]) + strings.ToLower(o.Platform[1:])
+}
+
+// 获取外卖平台 无空格名称
+func (o *TakeoutOrder) GetNoSpacePlatformName() string {
+	if o == nil {
+		return ""
+	}
+	return valueobject.GetNoSpacePlatformName(o.Platform)
+}
+
+// 获取lineman服务费
+func (o *TakeoutOrder) GetLinemanServiceFee() float64 {
+	if o == nil {
+		return 0
+	}
+	if o.IsLinemanOrder() {
+		return o.Subtotal - o.PlatformTotal
+	}
+	return 0
+}
+
 // 获取骑手状态
 func (o *TakeoutOrder) GetRiderStatus() string {
 	if o.PlatformOrderState == "DRIVER_ARRIVED" {
 		return "rider_accepted"
 	}
 	return "rider_pending"
+}
+
+// 获取附加信息
+func (o *TakeoutOrder) GetAdditionalProperties(language string) string {
+	if o == nil {
+		return ""
+	}
+	if o.IsGrabOrder() {
+		if o.Cutlery == 1 {
+			return i18n.Translate(language, "需要餐具")
+		} else {
+			return i18n.Translate(language, "不需要餐具")
+		}
+	}
+	return o.AdditionalProperties
 }

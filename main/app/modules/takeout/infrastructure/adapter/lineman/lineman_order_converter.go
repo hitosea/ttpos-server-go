@@ -269,7 +269,7 @@ func (c *LineManConverter) ConvertOrderToTakeoutOrder(
 			}
 		}
 		if len(additionalItemNames) > 0 {
-			order.AdditionalProperties = strings.Join(additionalItemNames, ",")
+			order.AdditionalProperties = strings.Join(additionalItemNames, ", ")
 		}
 	}
 

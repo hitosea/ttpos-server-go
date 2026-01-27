@@ -240,7 +240,7 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	orderData.PaidAmount = t.base.Amount(order.PlatformTotal) // 使用平台结算总额
 
 	// 附加属性
-	orderData.AdditionalProperties = order.AdditionalProperties
+	orderData.AdditionalProperties = order.GetAdditionalProperties(t.base.Lang)
 
 	// 收货人信息
 	if order.TakeoutOrderReceiver != nil {
@@ -251,18 +251,23 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 
 	// 异常提示
 	if order.IsAbnormal == 1 {
-		orderData.WarningMessage = "该订单菜单信息异常,请前去Grab查看!!!"
 		if order.Platform == "Grab" {
 			orderData.WarningMessage = t.base.Translate("该订单菜单信息异常,请前去 Grab 查看!!!")
 		} else if order.Platform == "LINEMAN" {
 			orderData.WarningMessage = t.base.Translate("该订单菜单信息异常,请前去 LINEMAN 查看!!!")
 		}
-		// 判断是否58打印机，如果是则使用58打印机分隔符
-		if is58mmPrinter {
-			orderData.WarningMessageSeparator = "**************************************************************"
-		} else {
-			orderData.WarningMessageSeparator = "**********************************************************************************************"
-		}
+	}
+
+	// 从订单更新日志表查询是否有更新记录
+	if len(order.TakeoutOrderUpdateLogs) > 0 {
+		orderData.OrderUpdatedMessage = t.base.Translate("订单变更！！请查看最新的订单信息")
+	}
+
+	// 判断是否58打印机，如果是则使用58打印机分隔符
+	if is58mmPrinter {
+		orderData.WarningMessageSeparator = "**************************************************************"
+	} else {
+		orderData.WarningMessageSeparator = "**********************************************************************************************"
 	}
 
 	return orderData

@@ -88,6 +88,7 @@ func (s *takeoutOrderSrv) GetList(ctx context.Context, req *request.TakeoutOrder
 		orderRepo.WhereTimeRange(req.StartTime, req.EndTime),
 		orderRepo.WhereSearch(req.Search),
 		orderRepo.WhereIsHistoryOrder(req.IsHistory),
+		orderRepo.WithTakeoutOrderUpdateLogs(orderRepo.Select("uuid", "create_time", "takeout_order_uuid")),
 		orderRepo.Limit(req.PageSize),
 		orderRepo.Offset((req.PageNo - 1) * req.PageSize),
 	}
@@ -110,6 +111,16 @@ func (s *takeoutOrderSrv) GetList(ctx context.Context, req *request.TakeoutOrder
 			IsAbnormal:       order.IsAbnormal,
 			Subtotal:         order.PlatformTotal, // 列表返回 platform_total 字段
 			TotalItems:       len(order.TakeoutOrderItems),
+			UpdateLogs: func() []response.TakeoutOrderUpdateLogResp {
+				updateLogs := make([]response.TakeoutOrderUpdateLogResp, 0, len(order.TakeoutOrderUpdateLogs))
+				for _, updateLog := range order.TakeoutOrderUpdateLogs {
+					updateLogs = append(updateLogs, response.TakeoutOrderUpdateLogResp{
+						Uuid:       updateLog.Uuid,
+						CreateTime: updateLog.CreateTime,
+					})
+				}
+				return updateLogs
+			}(),
 		}
 		list = append(list, orderResp)
 	}
@@ -141,6 +152,7 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 				Preload("TakeoutOrderCampaigns").
 				Preload("TakeoutOrderPromos")
 		})),
+		orderRepo.WithTakeoutOrderUpdateLogs(orderRepo.Select("uuid", "create_time", "takeout_order_uuid")),
 	)
 	if err != nil {
 		logger.Logger.Error("查询订单失败",
@@ -279,13 +291,24 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 			MerchantDiscount: order.MerchantDiscount,
 		},
 		// 订单类型
-		Cutlery:    order.Cutlery,
-		OrderType:  order.OrderType,
-		TotalItems: len(itemList),
-		Items:      itemList,
-		Receiver:   receiverResp,
-		Campaigns:  campaigns,
-		Promos:     promos,
+		Cutlery:              order.Cutlery,
+		AdditionalProperties: order.GetAdditionalProperties(ctx.GetLanguage()),
+		OrderType:            order.OrderType,
+		TotalItems:           len(itemList),
+		Items:                itemList,
+		Receiver:             receiverResp,
+		Campaigns:            campaigns,
+		Promos:               promos,
+		UpdateLogs: func() []response.TakeoutOrderUpdateLogResp {
+			updateLogs := make([]response.TakeoutOrderUpdateLogResp, 0, len(order.TakeoutOrderUpdateLogs))
+			for _, updateLog := range order.TakeoutOrderUpdateLogs {
+				updateLogs = append(updateLogs, response.TakeoutOrderUpdateLogResp{
+					Uuid:       updateLog.Uuid,
+					CreateTime: updateLog.CreateTime,
+				})
+			}
+			return updateLogs
+		}(),
 	}, nil
 }
 
@@ -461,6 +484,10 @@ func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrd
 	}
 	if order == nil {
 		return errors.New("订单不存在")
+	}
+
+	if order.IsLinemanOrder() {
+		return errors.New("LINE MAN 订单不支持呼叫骑手")
 	}
 
 	// 检查订单状态 - 只有已接单配餐中的订单才能呼叫骑手
@@ -1115,16 +1142,6 @@ func (s *takeoutOrderSrv) CreateOrUpdateOrder(ctx context.Context, order *takeou
 				logger.Logger.Error("接单失败", zap.Error(err))
 			}
 		}
-	} else {
-		event.GetDispatcher().Publish(event.NewOrderUpdatedEvent(
-			order.Uuid,
-			order.Platform,
-			order.PlatformOrderId,
-			order.ShortOrderNumber,
-			order.TakeoutOrderUuid,
-			order.EaterPayment,
-			ctx.GetCompanyUuid(),
-		))
 	}
 
 	return nil
@@ -1649,6 +1666,7 @@ func (s *takeoutOrderSrv) GetOrderForPrint(ctx context.Context, orderUuid uint64
 		orderUuid,
 		orderRepo.WithTakeoutOrderItems(),
 		orderRepo.WithTakeoutOrderItemModifiers(),
+		orderRepo.WithTakeoutOrderUpdateLogs(orderRepo.Select("uuid", "takeout_order_uuid", "create_time")),
 	)
 	if err != nil {
 		logger.Logger.Error("查询订单失败", zap.Error(err), zap.Uint64("uuid", orderUuid))
