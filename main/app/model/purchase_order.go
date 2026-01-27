@@ -13,6 +13,7 @@ type PurchaseOrder struct {
 	OrderNo                 string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:单号" json:"order_no"`
 	SubUuid                 uint64  `gorm:"column:sub_uuid;type:bigint(20) unsigned;not null;default:0;comment:子订单UUID" json:"sub_uuid"`
 	ErpOrderNo              string  `gorm:"column:erp_order_no;type:varchar(255);not null;default:'';comment:ERP采购单号" json:"erp_order_no"`
+	ErpSaleOrderNo          string  `gorm:"column:erp_sale_order_no;type:varchar(255);not null;default:'';comment:ERP销售单号" json:"erp_sale_order_no"`
 	OrderType               int     `gorm:"column:order_type;type:int(10);not null;default:0;comment:申请类型, 0-仓库调拨" json:"order_type"`
 	SupplierName            string  `gorm:"column:supplier_name;type:varchar(100);not null;default:'';comment:供应商名称" json:"supplier_name"`
 	SupplierErpCode         string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商编码" json:"supplier_erp_code"`

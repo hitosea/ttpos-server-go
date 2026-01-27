@@ -153,5 +153,3 @@ func (s *ErpWarehouseService) convertWarehouseType(warehouseType string) string 
 		return "Normal"
 	}
 }
-
-

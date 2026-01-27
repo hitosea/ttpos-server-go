@@ -2,11 +2,11 @@ package printer
 
 import (
 	"slices"
-	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/resp"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/modules/printer/template"
 	"ttpos-server-go/app/service/setting"

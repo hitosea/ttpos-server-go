@@ -31,13 +31,13 @@ type LianLianRefundCallbackRequest struct {
 
 // CacheHitRateStatsReq 缓存命中率统计查询请求
 type CacheHitRateStatsReq struct {
-	Top    int    `form:"top,default=10" binding:"omitempty,min=1,max=100"`                    // Top N，默认10，最大100
-	Sort   string `form:"sort,default=total" binding:"omitempty,oneof=total hits hitrate"`     // 排序方式：total（总访问次数）、hits（命中次数）、hitrate（命中率），默认total
-	Key    string `form:"key"`                                                                  // 指定 key，如果提供则只返回该 key 的统计信息
+	Top  int    `form:"top,default=10" binding:"omitempty,min=1,max=100"`                // Top N，默认10，最大100
+	Sort string `form:"sort,default=total" binding:"omitempty,oneof=total hits hitrate"` // 排序方式：total（总访问次数）、hits（命中次数）、hitrate（命中率），默认total
+	Key  string `form:"key"`                                                             // 指定 key，如果提供则只返回该 key 的统计信息
 }
 
 var CacheHitRateStatsReqMessage = map[string]string{
-	"top.min":   "Top N 不能小于1",
-	"top.max":   "Top N 不能大于100",
+	"top.min":    "Top N 不能小于1",
+	"top.max":    "Top N 不能大于100",
 	"sort.oneof": "排序方式必须是 total、hits 或 hitrate",
 }

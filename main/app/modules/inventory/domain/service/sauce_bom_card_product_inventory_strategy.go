@@ -59,4 +59,3 @@ func (s *sauceBomCardProductInventoryStrategy) CalculateInventory(
 	// 确保返回非负数
 	return math.Max(0, inventory), nil
 }
-

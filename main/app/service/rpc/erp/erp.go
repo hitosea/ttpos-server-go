@@ -3,6 +3,7 @@ package erp
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
+	"ttpos-bmp/app/ttpos-erp/api/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
@@ -46,6 +47,7 @@ type IErpSrv interface {
 	GetMaterialRequestList(ctx pkgCtx.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
 	SaveMaterialRequest(ctx pkgCtx.Context, companySetting model.CompanySetting, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
 	CreatePurchaseOrder(ctx pkgCtx.Context, createPurchaseOrderReq *buying.CreatePurchaseOrderReq) (*buying.CreatePurchaseOrderResp, error)
+	GetPurchaseOrder(ctx pkgCtx.Context, getPurchaseOrderReq *buying.GetPurchaseOrderReq) (*buying.GetPurchaseOrderResp, error)
 	SavePurchaseReceipt(ctx pkgCtx.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error)
 
 	// 盘点单
@@ -96,6 +98,9 @@ type IErpSrv interface {
 	// 商品
 	GetProductList(ctx pkgCtx.Context, params GetErpProductListReq) (*item.GetItemListResp, error) // 获取商品列表
 	UpdateProduct(ctx pkgCtx.Context, params UpdateProductReq) error                               // 更新商品
+
+	// 送货单
+	GetDeliveryNoteList(ctx pkgCtx.Context, getDeliveryNoteListReq *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error)
 }
 type erpSrv struct {
 	dbm *database.DBManager

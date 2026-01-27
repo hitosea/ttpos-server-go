@@ -2,8 +2,8 @@ package entity
 
 import (
 	"testing"
-	"ttpos-server-go/app/modules/inventory/domain/valueobject"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/modules/inventory/domain/valueobject"
 )
 
 func TestNewWarehouse(t *testing.T) {
@@ -195,5 +195,3 @@ func createTestWarehouse() *Warehouse {
 
 	return NewWarehouse(name, warehouseType, code, status, contactInfo)
 }
-
-

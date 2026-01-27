@@ -41,5 +41,3 @@ func (c WarehouseCode) Equals(other WarehouseCode) bool {
 func (c WarehouseCode) String() string {
 	return c.value
 }
-
-

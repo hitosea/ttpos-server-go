@@ -82,4 +82,3 @@ func formatFloat(f float64) string {
 	// 使用 %g 格式化，去除尾部的0
 	return string([]byte{})
 }
-

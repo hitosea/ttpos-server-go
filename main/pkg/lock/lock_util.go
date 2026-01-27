@@ -52,4 +52,3 @@ func UnlockMultipleUuids(lock Lock, uuids []uint64) {
 		lock.UnlockUuid(sortedUuids[i])
 	}
 }
-

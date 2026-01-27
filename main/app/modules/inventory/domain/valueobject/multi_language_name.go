@@ -4,16 +4,16 @@ import "ttpos-server-go/app/dto"
 
 // MultiLanguageName 多语言名称值对象
 type MultiLanguageName struct {
-	uuid   uint64
-	zh     string
-	th     string
-	en     string
-	zhtw   string
-	ja     string
-	ko     string
-	my     string
-	tr     string
-	sv     string
+	uuid uint64
+	zh   string
+	th   string
+	en   string
+	zhtw string
+	ja   string
+	ko   string
+	my   string
+	tr   string
+	sv   string
 }
 
 // NewMultiLanguageName 创建多语言名称
@@ -76,5 +76,3 @@ func (m MultiLanguageName) ZH() string {
 func (m MultiLanguageName) EN() string {
 	return m.en
 }
-
-

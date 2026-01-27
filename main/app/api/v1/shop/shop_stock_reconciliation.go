@@ -260,6 +260,40 @@ func (h *StockReconciliationHandler) RejectStockReconciliation(c *gin.Context) {
 	helper.Success(c, gin.H{}, "驳回成功")
 }
 
+// ResubmitStockReconciliation 重新提交盘点单
+// @Summary 重新提交盘点单
+// @Description 将已驳回的盘点单重新提交审核，支持修改盘点单信息后提交
+// @Tags 商家端.盘点管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.StockReconciliationSaveReq true "重新提交盘点单请求参数（is_resubmit必须为true）"
+// @Success 200 {object} dto.Response{data=resp.StockReconciliationUuidResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
+// @Router /shop/stock_reconciliation/resubmit [post]
+func (h *StockReconciliationHandler) ResubmitStockReconciliation(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var saveReq req.StockReconciliationSaveReq
+	if err := c.ShouldBindJSON(&saveReq); err != nil {
+		helper.HandleValidationError(c, err, saveReq, nil)
+		return
+	}
+
+	// 强制设置为重新提交模式
+	saveReq.SetIsResubmit(true)
+
+	stockReconciliationUuid, err := h.stockReconciliationSrv.SaveStockReconciliation(ctx, saveReq)
+	retData := resp.StockReconciliationUuidResp{
+		Uuid: stockReconciliationUuid,
+	}
+	if err != nil {
+		helper.ErrorWithData(c, constant.CodeFail, retData, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, retData, "重新提交成功")
+}
+
 // GetStockReconciliationTemplate 获取盘点单模板
 // @Summary 获取盘点单模板
 // @Description 获取盘点单模板，包含日盘、周盘、月盘的物品编号列表
@@ -303,14 +337,15 @@ func RegisterStockReconciliationHandlers(router gin.IRouter, dbm *database.DBMan
 
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/stock_reconciliation/list", wrapper.GetStockReconciliationList)
-		privateApi.GET("/stock_reconciliation/detail", wrapper.GetStockReconciliationDetail)
-		privateApi.GET("/stock_reconciliation/template", wrapper.GetStockReconciliationTemplate)
-		privateApi.POST("/stock_reconciliation/save", wrapper.SaveStockReconciliation)
-		privateApi.DELETE("/stock_reconciliation/delete", wrapper.DeleteStockReconciliation)
-		privateApi.POST("/stock_reconciliation/submit", wrapper.SubmitStockReconciliation)
-		privateApi.POST("/stock_reconciliation/approve", wrapper.ApproveStockReconciliation)
-		privateApi.POST("/stock_reconciliation/reject", wrapper.RejectStockReconciliation)
-		privateApi.POST("/stock_reconciliation/check_materials", wrapper.CheckMaterials)
+		privateApi.GET("/stock_reconciliation/list", wrapper.GetStockReconciliationList)         // 获取盘点单列表
+		privateApi.GET("/stock_reconciliation/detail", wrapper.GetStockReconciliationDetail)     // 获取盘点单详情（包含批注列表）
+		privateApi.GET("/stock_reconciliation/template", wrapper.GetStockReconciliationTemplate) // 获取盘点单模板
+		privateApi.POST("/stock_reconciliation/save", wrapper.SaveStockReconciliation)           // 保存盘点单
+		privateApi.DELETE("/stock_reconciliation/delete", wrapper.DeleteStockReconciliation)     // 删除盘点单
+		privateApi.POST("/stock_reconciliation/submit", wrapper.SubmitStockReconciliation)       // 提交盘点单
+		privateApi.POST("/stock_reconciliation/approve", wrapper.ApproveStockReconciliation)     // 审核盘点单
+		privateApi.POST("/stock_reconciliation/reject", wrapper.RejectStockReconciliation)       // 驳回盘点单
+		privateApi.POST("/stock_reconciliation/resubmit", wrapper.ResubmitStockReconciliation)   // 重新提交盘点单
+		privateApi.POST("/stock_reconciliation/check_materials", wrapper.CheckMaterials)         // 检查物品
 	}
 }
