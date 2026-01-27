@@ -38,6 +38,10 @@ type ITakeoutOrderSrv interface {
 	ProcessTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64, acceptedBy uint64) error
 	// RestoreTakeoutOrderOutboundAndSales 恢复外卖订单出库和销量（取消订单时调用）
 	RestoreTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64) error
+	// ProcessOrderItemsStockAndSales 处理订单变动的库存和销量（订单更新时调用）
+	// returnItems: 需要归还库存和减少销量的菜品（退菜）
+	// kitchenItems: 需要扣减库存和增加销量的菜品（新增/加菜）
+	ProcessOrderItemsStockAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64, changeResult *valueObject.OrderChangeResult) error
 	// CreateProductionOrderForTakeout 为外卖订单创建送厨单
 	CreateProductionOrderForTakeout(ctx context.Context, orderUuid uint64) error
 	// PrintTakeoutOrder 打印外卖订单小票
@@ -594,6 +598,249 @@ func (s *takeoutSrv) reduceTakeoutOrderSalesVolume(ctx context.Context, order *t
 		if err := productPackageRepo.SubActualSaleNum(packageUuid, saleNum); err != nil {
 			logger.Logger.Error("减少Package销量失败", zap.Uint64("packageUuid", packageUuid), zap.Float64("saleNum", saleNum), zap.Error(err))
 			// 继续处理其他Package，不中断流程
+		}
+	}
+
+	return nil
+}
+
+// ProcessOrderItemsStockAndSales 处理订单变动的库存和销量
+// 退菜项：归还库存 + 减少销量
+// 送厨项：扣减库存 + 增加销量
+func (s *takeoutSrv) ProcessOrderItemsStockAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64, changeResult *valueObject.OrderChangeResult) error {
+	if changeResult == nil || !changeResult.HasChange {
+		return nil
+	}
+
+	db := s.dbm.GetDB(companyUuid)
+	ctx.SetDB(db)
+	ctx.SetCompanyUuid(companyUuid)
+
+	// 查询订单信息
+	orderRepo := persistence.NewTakeoutOrderRepo(db)
+	order, err := orderRepo.GetByUuid(orderUuid, orderRepo.WithTakeoutOrderItems(), orderRepo.WithTakeoutOrderItemModifiers())
+	if err != nil {
+		return errors.WithMessage(err, "查询订单失败")
+	}
+	if order == nil {
+		return errors.New("订单不存在")
+	}
+
+	// 在事务中处理库存和销量变动
+	err = db.Transaction(func(tx *gorm.DB) error {
+		ctxTx := ctx.Copy()
+		ctxTx.SetDB(tx)
+
+		// 1. 处理退菜项：归还库存 + 减少销量
+		if len(changeResult.ReturnItems) > 0 {
+			if err := s.processReturnItemsStock(ctxTx, order, changeResult.ReturnItems); err != nil {
+				logger.Logger.Error("处理退菜项库存失败",
+					zap.Uint64("orderUuid", orderUuid),
+					zap.Error(err))
+				// 不中断流程，继续处理其他项
+			}
+		}
+
+		// 2. 处理送厨项：扣减库存 + 增加销量
+		if len(changeResult.KitchenItems) > 0 {
+			if err := s.processKitchenItemsStock(ctxTx, order, changeResult.KitchenItems); err != nil {
+				logger.Logger.Error("处理送厨项库存失败",
+					zap.Uint64("orderUuid", orderUuid),
+					zap.Error(err))
+				// 不中断流程
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// 同步外卖平台库存
+	s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
+		Platform:    order.Platform,
+		CompanyUuid: companyUuid,
+	})
+
+	return nil
+}
+
+// processReturnItemsStock 处理退菜项的库存归还和销量减少
+func (s *takeoutSrv) processReturnItemsStock(ctx context.Context, order *takeoutModel.TakeoutOrder, returnItems []valueObject.ItemChange) error {
+	db := ctx.GetDB()
+
+	// 收集需要处理的 BOM UUID 和对应的数量
+	bomQuantityMap := make(map[uint64]int) // map[bomUuid]quantity
+	for _, item := range returnItems {
+		if item.OldItem != nil && item.OldItem.TtposProductPackageUuid > 0 {
+			// 对于退菜，使用原数量
+			bomQuantityMap[item.OldItem.TtposProductPackageUuid] += item.OldQuantity
+		}
+	}
+
+	if len(bomQuantityMap) == 0 {
+		return nil
+	}
+
+	// 查询该订单的出库单明细
+	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
+	warehouseOutFormItems, err := warehouseFormRepo.GetWarehouseOutFormItem(
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("takeout_order_uuid = ? AND revoke_time = ?", order.Uuid, 0)
+		},
+	)
+	if err != nil {
+		return errors.WithMessage(err, "查询出库单明细失败")
+	}
+
+	// 按 BOM UUID 筛选需要撤销的出库单明细
+	itemsToRevoke := make([]*model.WarehouseOutFormItem, 0)
+	for _, outItem := range warehouseOutFormItems {
+		if _, exists := bomQuantityMap[outItem.ProductBomUuid]; exists {
+			itemsToRevoke = append(itemsToRevoke, outItem)
+		}
+	}
+
+	if len(itemsToRevoke) == 0 {
+		return nil
+	}
+
+	// 撤销出库单明细
+	for _, item := range itemsToRevoke {
+		item.RevokeTime = time.Now().Unix()
+		if err := warehouseFormRepo.UpdateWarehouseOutFormItemRecord(*item); err != nil {
+			logger.Logger.Error("撤销出库单明细失败",
+				zap.Uint64("itemUuid", item.Uuid),
+				zap.Error(err))
+		}
+	}
+
+	// 恢复库存
+	if err := s.restoreTakeoutOrderStock(db, ctx.GetCompanyUuid(), itemsToRevoke); err != nil {
+		logger.Logger.Error("恢复退菜项库存失败",
+			zap.Uint64("orderUuid", order.Uuid),
+			zap.Error(err))
+	}
+
+	// 减少销量
+	productBomRepo := repository.NewProductBomRepo(db)
+	productPackageRepo := repository.NewProductPackageRepo(db)
+	for bomUuid, quantity := range bomQuantityMap {
+		saleNum := float64(quantity)
+		// 减少 BOM 销量
+		if err := productBomRepo.SubActualSaleNum(bomUuid, saleNum); err != nil {
+			logger.Logger.Error("减少退菜项BOM销量失败",
+				zap.Uint64("bomUuid", bomUuid),
+				zap.Float64("saleNum", saleNum),
+				zap.Error(err))
+		}
+		// 减少 Package 销量（如果是套餐）
+		for _, item := range returnItems {
+			if item.OldItem != nil && item.OldItem.TtposProductPackageUuid == bomUuid && item.OldItem.TtposProductType > 0 {
+				if err := productPackageRepo.SubActualSaleNum(bomUuid, saleNum); err != nil {
+					logger.Logger.Error("减少退菜项Package销量失败",
+						zap.Uint64("packageUuid", bomUuid),
+						zap.Float64("saleNum", saleNum),
+						zap.Error(err))
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// processKitchenItemsStock 处理送厨项的库存扣减和销量增加
+func (s *takeoutSrv) processKitchenItemsStock(ctx context.Context, order *takeoutModel.TakeoutOrder, kitchenItems []valueObject.ItemChange) error {
+	db := ctx.GetDB()
+
+	// 收集需要处理的商品和数量
+	decreaseStockList := make([]*model.Product, 0)
+	bomQuantityMap := make(map[uint64]int) // map[bomUuid]quantity
+
+	for _, item := range kitchenItems {
+		if item.NewItem == nil || item.NewItem.TtposProductPackageUuid == 0 {
+			continue
+		}
+
+		// 计算需要处理的数量（新增或增量）
+		quantity := item.NewQuantity
+		if item.ChangeType == valueObject.ChangeTypeQuantity {
+			// 数量变动只处理增量部分
+			quantity = item.NewQuantity - item.OldQuantity
+		}
+
+		if quantity <= 0 {
+			continue
+		}
+
+		bomUuid := item.NewItem.TtposProductPackageUuid
+		bomQuantityMap[bomUuid] += quantity
+
+		// 构建出库清单项
+		packageUuid := uint64(0)
+		if item.NewItem.TtposProductType > 0 {
+			packageUuid = item.NewItem.TtposProductPackageUuid
+		}
+
+		decreaseStockList = append(decreaseStockList, &model.Product{
+			TakeoutOrderUuid:     order.Uuid,
+			SaleOrderProductUuid: item.NewItem.Uuid,
+			ProductBomUuid:       bomUuid,
+			PackageUuid:          packageUuid,
+			Num:                  float64(quantity),
+		})
+	}
+
+	if len(decreaseStockList) == 0 {
+		return nil
+	}
+
+	// 获取员工班次记录
+	staffShiftLogUuid, err := s.getCurrentStaffShiftLogUuid(db, 0)
+	if err != nil {
+		logger.Logger.Warn("获取员工班次记录失败", zap.Error(err))
+	}
+
+	// 创建出库单
+	warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, false, 0, 0, staffShiftLogUuid, order.Uuid)
+	if err := repository.NewWarehouseFormRepo(db).CreateWarehouseOutFormRecordAll(warehouseOutForms); err != nil {
+		logger.Logger.Error("创建送厨项出库单失败",
+			zap.Uint64("orderUuid", order.Uuid),
+			zap.Error(err))
+	}
+
+	// 扣减库存
+	if err := s.reduceTakeoutOrderStock(db, ctx.GetCompanyUuid(), order.Uuid); err != nil {
+		logger.Logger.Error("扣减送厨项库存失败",
+			zap.Uint64("orderUuid", order.Uuid),
+			zap.Error(err))
+	}
+
+	// 增加销量
+	productBomRepo := repository.NewProductBomRepo(db)
+	productPackageRepo := repository.NewProductPackageRepo(db)
+	for bomUuid, quantity := range bomQuantityMap {
+		saleNum := float64(quantity)
+		// 增加 BOM 销量
+		if err := productBomRepo.AddActualSaleNum(bomUuid, saleNum); err != nil {
+			logger.Logger.Error("增加送厨项BOM销量失败",
+				zap.Uint64("bomUuid", bomUuid),
+				zap.Float64("saleNum", saleNum),
+				zap.Error(err))
+		}
+		// 增加 Package 销量（如果是套餐）
+		for _, item := range kitchenItems {
+			if item.NewItem != nil && item.NewItem.TtposProductPackageUuid == bomUuid && item.NewItem.TtposProductType > 0 {
+				if err := productPackageRepo.AddActualSaleNum(bomUuid, saleNum); err != nil {
+					logger.Logger.Error("增加送厨项Package销量失败",
+						zap.Uint64("packageUuid", bomUuid),
+						zap.Float64("saleNum", saleNum),
+						zap.Error(err))
+				}
+			}
 		}
 	}
 

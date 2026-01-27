@@ -29,7 +29,6 @@ import (
 
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // ITakeoutOrderAppService 外卖订单应用服务接口
@@ -412,70 +411,26 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 		return fmt.Errorf("订单商品数据不存在或格式错误")
 	}
 
-	// 6. 开启事务更新订单
-	err = db.Transaction(func(tx *gorm.DB) error {
-		ctxTx := ctx.Copy()
-		ctxTx.SetDB(tx)
+	// 6. 检测订单菜品变动
+	changeDetector := service.NewOrderChangeDetector()
+	changeResult := changeDetector.DetectChanges(
+		existingOrder.TakeoutOrderItems,
+		updatedOrder.TakeoutOrderItems,
+	)
 
-		// 6.1 记录更新前的订单信息（用于日志）
-		oldSubtotal := existingOrder.Subtotal
-		oldPlatformTotal := existingOrder.PlatformTotal
-
-		// 6.2 序列化更新前的订单数据（必须在更新前进行）
-		oldDataJSON, err := json.Marshal(existingOrder)
-		if err != nil {
-			logger.Logger.Warn("序列化更新前订单数据失败", zap.Error(err))
-			oldDataJSON = []byte("{}")
-		}
-
-		// 6.4 调用 Domain Service 更新订单
-		updatedOrder.Uuid = orderUuid
-		if err := s.orderService.CreateOrUpdateOrder(ctx, updatedOrder, true); err != nil {
-			logger.Logger.Error("更新订单失败", zap.Error(err))
-			return fmt.Errorf("更新订单失败: %w", err)
-		}
-
-		// 6.6 序列化更新后的订单数据
-		newDataJSON, err := json.Marshal(updatedOrder)
-		if err != nil {
-			logger.Logger.Warn("序列化更新后订单数据失败", zap.Error(err))
-			newDataJSON = []byte("{}")
-		}
-
-		// 6.7 记录到订单更新日志表
-		operationLogUuid, err := utils.GetID()
-		if err != nil {
-			logger.Logger.Warn("生成日志UUID失败", zap.Error(err))
-			return nil // 不影响主流程
-		}
-
-		updateLog := &model.TakeoutOrderUpdateLog{
-			BaseModel: model.BaseModel{
-				Uuid: operationLogUuid,
-			},
-			TakeoutOrderUuid: orderUuid,
-			OldData:          string(oldDataJSON),
-			NewData:          string(newDataJSON),
-		}
-
-		if err := tx.Create(updateLog).Error; err != nil {
-			logger.Logger.Warn("记录订单更新日志失败", zap.Error(err))
-			// 不影响主流程，继续执行
-		}
-
-		// 6.8 记录更新日志到控制台
-		logger.Logger.Info("订单更新成功",
+	// 记录变动日志
+	if changeResult.HasChange {
+		logger.Logger.Info("检测到订单菜品变动",
 			zap.Uint64("orderUuid", orderUuid),
 			zap.String("platform", platform),
-			zap.String("platformOrderId", platformOrderId),
-			zap.Float64("oldSubtotal", oldSubtotal),
-			zap.Float64("newSubtotal", updatedOrder.Subtotal),
-			zap.Float64("oldPlatformTotal", oldPlatformTotal),
-			zap.Float64("newPlatformTotal", updatedOrder.PlatformTotal),
-			zap.Int("itemCount", len(updatedOrder.TakeoutOrderItems)))
+			zap.Int("returnItemCount", changeResult.GetReturnItemCount()),
+			zap.Int("kitchenItemCount", changeResult.GetKitchenItemCount()),
+			zap.Int("totalChanges", len(changeResult.AllChanges)))
+	}
 
-		return nil
-	})
+	// 7. 调用 Domain Service 进行增量更新
+	updatedOrder.Uuid = orderUuid
+	err = s.orderService.IncrementalUpdateOrder(ctx, existingOrder, updatedOrder, changeResult)
 
 	if err != nil {
 		logger.Logger.Error("更新订单事务失败",
@@ -484,14 +439,15 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 		return fmt.Errorf("更新订单事务失败: %w", err)
 	}
 
-	// 发布订单更新事件
-	event.GetDispatcher().Publish(event.NewOrderUpdatedEvent(
+	// 发布订单更新事件（带变动信息）
+	event.GetDispatcher().Publish(event.NewOrderUpdatedEventWithChange(
 		orderUuid,
 		updatedOrder.Platform,
 		updatedOrder.PlatformOrderId,
 		updatedOrder.ShortOrderNumber,
 		updatedOrder.TakeoutOrderUuid,
 		ctx.GetCompanyUuid(),
+		changeResult,
 	))
 
 	return nil

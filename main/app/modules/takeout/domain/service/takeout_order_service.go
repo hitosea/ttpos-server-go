@@ -48,6 +48,11 @@ type ITakeoutOrderSrv interface {
 	CancelOrder(ctx context.Context, req *request.TakeoutOrderCancelReq) error
 	// GetOrderForPrint 获取打印所需的订单数据
 	GetOrderForPrint(ctx context.Context, orderUuid uint64) (*takeoutModel.TakeoutOrder, error)
+	// IncrementalUpdateOrder 增量更新订单（基于变动结果进行增删改）
+	// existingOrder: 数据库中的现有订单
+	// updatedOrder: 平台推送的更新订单
+	// changeResult: 变动检测结果
+	IncrementalUpdateOrder(ctx context.Context, existingOrder, updatedOrder *takeoutModel.TakeoutOrder, changeResult *valueobject.OrderChangeResult) error
 	// BuildBomQuantityMap 构建订单商品的 BOM 数量映射（用于库存检查和出库）
 	// 返回: bomQuantityMap (BOM UUID -> 数量), bomItemMap (BOM UUID -> 订单商品，包含 modifiers), error
 	BuildBomQuantityMap(ctx context.Context, order *takeoutModel.TakeoutOrder) (map[uint64]int, map[uint64]*takeoutModel.TakeoutOrderItem, error)
@@ -1152,6 +1157,214 @@ func (s *takeoutOrderSrv) CreateOrUpdateOrder(ctx context.Context, order *takeou
 	}
 
 	return nil
+}
+
+// IncrementalUpdateOrder 增量更新订单（基于变动结果进行增删改）
+// 相比 CreateOrUpdateOrder 的全量删除重建，此方法只更新变动的部分
+func (s *takeoutOrderSrv) IncrementalUpdateOrder(
+	ctx context.Context,
+	existingOrder, updatedOrder *takeoutModel.TakeoutOrder,
+	changeResult *valueobject.OrderChangeResult,
+) error {
+	db := ctx.GetDB()
+	orderUuid := existingOrder.Uuid
+	platform := existingOrder.Platform
+
+	// 构建现有商品的映射表（用于复用 UUID 和映射信息）
+	existingItemMap := make(map[string]*takeoutModel.TakeoutOrderItem)
+	for i := range existingOrder.TakeoutOrderItems {
+		item := &existingOrder.TakeoutOrderItems[i]
+		existingItemMap[item.PlatformItemId] = item
+	}
+
+	// 为 updatedOrder 的商品填充映射信息（从 existingOrder 复制）
+	for i := range updatedOrder.TakeoutOrderItems {
+		item := &updatedOrder.TakeoutOrderItems[i]
+		if existingItem, exists := existingItemMap[item.PlatformItemId]; exists {
+			// 复用现有商品的 UUID 和映射信息
+			item.Uuid = existingItem.Uuid
+			item.TakeoutOrderUuid = orderUuid
+			item.IsMapped = existingItem.IsMapped
+			item.TtposProductPackageUuid = existingItem.TtposProductPackageUuid
+			item.TtposProductType = existingItem.TtposProductType
+		}
+	}
+
+	// 开启事务
+	return db.Transaction(func(tx *gorm.DB) error {
+		orderRepoTx := persistence.NewTakeoutOrderRepo(tx)
+		itemRepoTx := persistence.NewTakeoutOrderItemRepo(tx)
+		modifierRepoTx := persistence.NewTakeoutOrderItemModifierRepo(tx)
+
+		// 1. 更新订单主表字段
+		updateFields := map[string]interface{}{
+			"subtotal":              updatedOrder.Subtotal,
+			"delivery_fee":          updatedOrder.DeliveryFee,
+			"small_order_fee":       updatedOrder.SmallOrderFee,
+			"eater_payment":         updatedOrder.EaterPayment,
+			"platform_discount":     updatedOrder.PlatformDiscount,
+			"merchant_discount":     updatedOrder.MerchantDiscount,
+			"basket_promo":          updatedOrder.BasketPromo,
+			"tax":                   updatedOrder.Tax,
+			"merchant_charge_fee":   updatedOrder.MerchantChargeFee,
+			"platform_total":        updatedOrder.PlatformTotal,
+			"additional_properties": updatedOrder.AdditionalProperties,
+			"raw_data":              updatedOrder.RawData,
+		}
+		if err := orderRepoTx.UpdateByMap(orderUuid, updateFields); err != nil {
+			logger.Logger.Error("更新订单主表失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+			return fmt.Errorf("更新订单主表失败: %w", err)
+		}
+
+		// 2. 处理退菜项（删除或减少数量）
+		for _, change := range changeResult.ReturnItems {
+			switch change.ChangeType {
+			case valueobject.ChangeTypeRemoved:
+				// 删除商品（软删除）
+				if change.OldItem != nil && change.OldItem.Uuid > 0 {
+					if err := itemRepoTx.Delete(change.OldItem.Uuid); err != nil {
+						logger.Logger.Error("删除退菜商品失败",
+							zap.Uint64("itemUuid", change.OldItem.Uuid),
+							zap.String("productName", change.ProductName),
+							zap.Error(err))
+					}
+				}
+			case valueobject.ChangeTypeQuantity:
+				// 更新数量（减少）
+				if change.OldItem != nil && change.OldItem.Uuid > 0 {
+					if err := tx.Model(&takeoutModel.TakeoutOrderItem{}).
+						Where("uuid = ?", change.OldItem.Uuid).
+						Update("quantity", change.NewQuantity).Error; err != nil {
+						logger.Logger.Error("更新退菜商品数量失败",
+							zap.Uint64("itemUuid", change.OldItem.Uuid),
+							zap.Error(err))
+					}
+				}
+			case valueobject.ChangeTypeAttribute:
+				// 属性变动：更新商品和修饰符
+				if change.OldItem != nil && change.OldItem.Uuid > 0 {
+					// 删除旧修饰符
+					if err := tx.Where("takeout_order_item_uuid = ?", change.OldItem.Uuid).
+						Delete(&takeoutModel.TakeoutOrderItemModifier{}).Error; err != nil {
+						logger.Logger.Error("删除旧修饰符失败", zap.Uint64("itemUuid", change.OldItem.Uuid), zap.Error(err))
+					}
+					// 更新数量
+					if err := tx.Model(&takeoutModel.TakeoutOrderItem{}).
+						Where("uuid = ?", change.OldItem.Uuid).
+						Update("quantity", change.NewQuantity).Error; err != nil {
+						logger.Logger.Error("更新商品数量失败", zap.Error(err))
+					}
+					// 插入新修饰符
+					for j := range updatedOrder.TakeoutOrderItems {
+						newItem := &updatedOrder.TakeoutOrderItems[j]
+						if newItem.PlatformItemId == change.PlatformItemId {
+							for k := range newItem.TakeoutOrderItemModifiers {
+								modifier := &newItem.TakeoutOrderItemModifiers[k]
+								modifierUuid, _ := utils.GetID()
+								modifier.Uuid = modifierUuid
+								modifier.TakeoutOrderItemUuid = change.OldItem.Uuid
+								// 查询修饰符映射
+								isMapped, ttposUuid, ttposType, _ := s.findModifierMapping(platform, modifier.PlatformModifierId)
+								modifier.IsMapped = isMapped
+								modifier.TtposModifierUuid = ttposUuid
+								modifier.TtposModifierType = ttposType
+							}
+							if len(newItem.TakeoutOrderItemModifiers) > 0 {
+								if err := modifierRepoTx.BatchCreate(s.toModifierPointers(newItem.TakeoutOrderItemModifiers)); err != nil {
+									logger.Logger.Error("创建新修饰符失败", zap.Error(err))
+								}
+							}
+							break
+						}
+					}
+				}
+			}
+		}
+
+		// 3. 处理送厨项（新增或增加数量）
+		for _, change := range changeResult.KitchenItems {
+			switch change.ChangeType {
+			case valueobject.ChangeTypeAdded:
+				// 新增商品
+				for j := range updatedOrder.TakeoutOrderItems {
+					newItem := &updatedOrder.TakeoutOrderItems[j]
+					if newItem.PlatformItemId == change.PlatformItemId {
+						// 生成 UUID
+						itemUuid, err := utils.GetID()
+						if err != nil {
+							logger.Logger.Error("生成商品UUID失败", zap.Error(err))
+							continue
+						}
+						newItem.Uuid = itemUuid
+						newItem.TakeoutOrderUuid = orderUuid
+
+						// 查询商品映射
+						isMapped, productUuid, productType, err := s.findProductMapping(platform, newItem.PlatformItemId)
+						if err != nil {
+							logger.Logger.Warn("查询商品映射失败", zap.Error(err))
+						} else {
+							newItem.IsMapped = isMapped
+							newItem.TtposProductPackageUuid = productUuid
+							newItem.TtposProductType = productType
+						}
+
+						// 插入商品
+						if err := itemRepoTx.Create(newItem); err != nil {
+							logger.Logger.Error("创建新增商品失败", zap.Error(err))
+							continue
+						}
+
+						// 处理修饰符
+						for k := range newItem.TakeoutOrderItemModifiers {
+							modifier := &newItem.TakeoutOrderItemModifiers[k]
+							modifierUuid, _ := utils.GetID()
+							modifier.Uuid = modifierUuid
+							modifier.TakeoutOrderItemUuid = itemUuid
+							// 查询修饰符映射
+							isMapped, ttposUuid, ttposType, _ := s.findModifierMapping(platform, modifier.PlatformModifierId)
+							modifier.IsMapped = isMapped
+							modifier.TtposModifierUuid = ttposUuid
+							modifier.TtposModifierType = ttposType
+						}
+						if len(newItem.TakeoutOrderItemModifiers) > 0 {
+							if err := modifierRepoTx.BatchCreate(s.toModifierPointers(newItem.TakeoutOrderItemModifiers)); err != nil {
+								logger.Logger.Error("创建新增商品修饰符失败", zap.Error(err))
+							}
+						}
+						break
+					}
+				}
+			case valueobject.ChangeTypeQuantity:
+				// 数量增加：更新数量
+				if change.OldItem != nil && change.OldItem.Uuid > 0 {
+					if err := tx.Model(&takeoutModel.TakeoutOrderItem{}).
+						Where("uuid = ?", change.OldItem.Uuid).
+						Update("quantity", change.NewQuantity).Error; err != nil {
+						logger.Logger.Error("更新加菜商品数量失败",
+							zap.Uint64("itemUuid", change.OldItem.Uuid),
+							zap.Error(err))
+					}
+				}
+			}
+		}
+
+		logger.Logger.Info("增量更新订单成功",
+			zap.Uint64("orderUuid", orderUuid),
+			zap.String("platform", platform),
+			zap.Int("returnItemCount", changeResult.GetReturnItemCount()),
+			zap.Int("kitchenItemCount", changeResult.GetKitchenItemCount()))
+
+		return nil
+	})
+}
+
+// toModifierPointers 将修饰符切片转换为指针切片
+func (s *takeoutOrderSrv) toModifierPointers(modifiers []takeoutModel.TakeoutOrderItemModifier) []*takeoutModel.TakeoutOrderItemModifier {
+	result := make([]*takeoutModel.TakeoutOrderItemModifier, len(modifiers))
+	for i := range modifiers {
+		result[i] = &modifiers[i]
+	}
+	return result
 }
 
 // extractAndSaveTakeoutOrderMaterials 提取并保存外卖订单原料（在创建订单时调用）

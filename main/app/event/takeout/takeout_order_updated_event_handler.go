@@ -3,7 +3,10 @@ package event
 import (
 	"context"
 	"sync"
+	"ttpos-server-go/app/dto/req"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/takeout/domain/event"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	takeoutService "ttpos-server-go/app/service/takeout"
 	"ttpos-server-go/config"
 	appContext "ttpos-server-go/pkg/context"
@@ -54,7 +57,43 @@ func (s *takeoutOrderUpdatedEventSubscriber) Handle(domainEvent event.DomainEven
 	// 创建 service
 	takeoutSrv := takeoutService.NewTakeoutSrvImpl(dbm)
 
-	// 异步重新打印外卖订单小票
+	// 检查是否有菜品变动
+	if orderUpdatedEvent.HasItemChange() {
+		changeResult := orderUpdatedEvent.ChangeResult
+
+		logger.Logger.Info("订单菜品变动，开始处理打印",
+			zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
+			zap.String("platform", orderUpdatedEvent.Platform),
+			zap.Int("returnItemCount", changeResult.GetReturnItemCount()),
+			zap.Int("kitchenItemCount", changeResult.GetKitchenItemCount()))
+
+		// Step 1: 先打印退菜单（同步执行，确保顺序）
+		if changeResult.GetReturnItemCount() > 0 {
+			s.printReturnReceipt(ctx, takeoutSrv, orderUpdatedEvent, changeResult)
+		}
+
+		// Step 2: 再打印送厨单
+		if changeResult.GetKitchenItemCount() > 0 {
+			s.printKitchenReceipt(ctx, takeoutSrv, orderUpdatedEvent, changeResult)
+		}
+
+		// Step 3: 处理库存和销量同步（异步执行）
+		utils.Go(func() {
+			if err := takeoutSrv.ProcessOrderItemsStockAndSales(
+				ctx,
+				orderUpdatedEvent.OrderUuid,
+				orderUpdatedEvent.CompanyUuid,
+				changeResult,
+			); err != nil {
+				logger.Logger.Error("处理订单变动库存销量失败",
+					zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
+					zap.String("platform", orderUpdatedEvent.Platform),
+					zap.Error(err))
+			}
+		})
+	}
+
+	// 异步重新打印外卖订单小票（无论是否有变动都打印）
 	utils.Go(func() {
 		_, err := takeoutSrv.PrintTakeoutOrder(ctx, orderUpdatedEvent.OrderUuid, "", 0)
 		if err != nil {
@@ -65,18 +104,6 @@ func (s *takeoutOrderUpdatedEventSubscriber) Handle(domainEvent event.DomainEven
 				zap.Error(err))
 		}
 	})
-
-	// 异步重新打印送厨单
-	// utils.Go(func() {
-	// 	_, err := takeoutSrv.PrintProductionOrder(ctx, orderUpdatedEvent.OrderUuid, printerConstant.PrinterProductTypeKitchen, nil)
-	// 	if err != nil {
-	// 		logger.Logger.Error("订单更新后重新打印送厨单失败",
-	// 			zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
-	// 			zap.String("takeoutOrderUuid", orderUpdatedEvent.TakeoutOrderUuid),
-	// 			zap.String("platform", orderUpdatedEvent.Platform),
-	// 			zap.Error(err))
-	// 	}
-	// })
 
 	// 发送 WebSocket 通知
 	sendTakeoutOrderWebSocketNotification(
@@ -89,4 +116,92 @@ func (s *takeoutOrderUpdatedEventSubscriber) Handle(domainEvent event.DomainEven
 	)
 
 	return nil
+}
+
+// printReturnReceipt 打印退菜单
+// 同一订单所有退菜菜品打印在一张小票上
+func (s *takeoutOrderUpdatedEventSubscriber) printReturnReceipt(
+	ctx appContext.Context,
+	takeoutSrv takeoutService.ITakeoutSrv,
+	orderUpdatedEvent event.OrderUpdatedEvent,
+	changeResult *value_object.OrderChangeResult,
+) {
+	// 构建要打印的菜品列表
+	productItems := make([]req.PrintProductItem, 0, len(changeResult.ReturnItems))
+	for _, item := range changeResult.ReturnItems {
+		if item.OldItem != nil && item.OldItem.TtposProductPackageUuid > 0 {
+			productItems = append(productItems, req.PrintProductItem{
+				ProductUuid: item.OldItem.TtposProductPackageUuid,
+			})
+		}
+	}
+
+	if len(productItems) == 0 {
+		logger.Logger.Warn("退菜单打印：没有有效的菜品",
+			zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid))
+		return
+	}
+
+	// 打印退菜单
+	_, err := takeoutSrv.PrintProductionOrder(
+		ctx,
+		orderUpdatedEvent.OrderUuid,
+		printerConstant.PrinterProductTypeBackFood, // -1 退菜打印
+		productItems,
+	)
+	if err != nil {
+		logger.Logger.Error("打印退菜单失败",
+			zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
+			zap.String("platform", orderUpdatedEvent.Platform),
+			zap.Int("itemCount", len(productItems)),
+			zap.Error(err))
+	} else {
+		logger.Logger.Info("退菜单打印成功",
+			zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
+			zap.Int("itemCount", len(productItems)))
+	}
+}
+
+// printKitchenReceipt 打印送厨单
+// 根据门店配置：一菜一单/整单打印
+func (s *takeoutOrderUpdatedEventSubscriber) printKitchenReceipt(
+	ctx appContext.Context,
+	takeoutSrv takeoutService.ITakeoutSrv,
+	orderUpdatedEvent event.OrderUpdatedEvent,
+	changeResult *value_object.OrderChangeResult,
+) {
+	// 构建要打印的菜品列表
+	productItems := make([]req.PrintProductItem, 0, len(changeResult.KitchenItems))
+	for _, item := range changeResult.KitchenItems {
+		if item.NewItem != nil && item.NewItem.TtposProductPackageUuid > 0 {
+			productItems = append(productItems, req.PrintProductItem{
+				ProductUuid: item.NewItem.TtposProductPackageUuid,
+			})
+		}
+	}
+
+	if len(productItems) == 0 {
+		logger.Logger.Warn("送厨单打印：没有有效的菜品",
+			zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid))
+		return
+	}
+
+	// 打印送厨单
+	_, err := takeoutSrv.PrintProductionOrder(
+		ctx,
+		orderUpdatedEvent.OrderUuid,
+		printerConstant.PrinterProductTypeKitchen, // 1 送厨打印
+		productItems,
+	)
+	if err != nil {
+		logger.Logger.Error("打印送厨单失败",
+			zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
+			zap.String("platform", orderUpdatedEvent.Platform),
+			zap.Int("itemCount", len(productItems)),
+			zap.Error(err))
+	} else {
+		logger.Logger.Info("送厨单打印成功",
+			zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
+			zap.Int("itemCount", len(productItems)))
+	}
 }
