@@ -357,11 +357,11 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 	annotationsResp := make([]*resp.StockReconciliationAnnotationInfo, 0, len(annotations))
 	for _, annotation := range annotations {
 		annotationsResp = append(annotationsResp, &resp.StockReconciliationAnnotationInfo{
-			Uuid:               annotation.Uuid,
-			AnnotationType:     annotation.AnnotationType,
-			AnnotationTypeName: constant.StockReconciliationAnnotationTypeNameMap[annotation.AnnotationType],
-			Content:            annotation.Content,
-			CreateTime:         int64(annotation.CreateTime),
+			Uuid:           annotation.Uuid,
+			AnnotationType: annotation.AnnotationType,
+			LocaleName:     constant.GetStockReconciliationAnnotationTypeLocaleName(annotation.AnnotationType),
+			Content:        annotation.Content,
+			CreateTime:     int64(annotation.CreateTime),
 		})
 	}
 	detailResp.Annotations = annotationsResp

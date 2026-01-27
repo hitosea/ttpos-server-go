@@ -110,9 +110,9 @@ type StockReconciliationAnnotationListResp struct {
 
 // StockReconciliationAnnotationInfo 盘点单批注信息
 type StockReconciliationAnnotationInfo struct {
-	Uuid               uint64 `json:"uuid"`                 // 批注UUID
-	AnnotationType     int    `json:"annotation_type"`      // 批注类型 1-重新发起 2-驳回 3-通过
-	AnnotationTypeName string `json:"annotation_type_name"` // 批注类型名称
-	Content            string `json:"content"`              // 批注内容
-	CreateTime         int64  `json:"create_time"`          // 创建时间
+	Uuid           uint64             `json:"uuid"`            // 批注UUID
+	AnnotationType int                `json:"annotation_type"` // 批注类型 1-重新发起 2-驳回 3-通过
+	LocaleName     dto.LocaleResponse `json:"locale_name"`     // 批注类型名称（多语言）
+	Content        string             `json:"content"`         // 批注内容
+	CreateTime     int64              `json:"create_time"`     // 创建时间
 }
