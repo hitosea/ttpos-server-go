@@ -412,8 +412,7 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 	}
 
 	// 6. 检测订单菜品变动
-	changeDetector := service.NewOrderChangeDetector()
-	changeResult := changeDetector.DetectChanges(
+	changeResult := service.NewOrderChangeDetector().DetectChanges(
 		existingOrder.TakeoutOrderItems,
 		updatedOrder.TakeoutOrderItems,
 	)
@@ -429,9 +428,7 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 	}
 
 	// 7. 调用 Domain Service 进行增量更新
-	updatedOrder.Uuid = orderUuid
 	err = s.orderService.IncrementalUpdateOrder(ctx, existingOrder, updatedOrder, changeResult)
-
 	if err != nil {
 		logger.Logger.Error("更新订单事务失败",
 			zap.Uint64("orderUuid", orderUuid),

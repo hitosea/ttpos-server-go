@@ -448,14 +448,18 @@ func (r *TakeoutOrderRepoImpl) WithPreload(options ...DBOption) DBOption {
 // WithTakeoutOrderItems 预加载订单商品
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("TakeoutOrderItems")
+		return db.Preload("TakeoutOrderItems", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", 0)
+		})
 	}
 }
 
 // WithTakeoutOrderItemModifiers 预加载订单商品修饰符
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderItemModifiers() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("TakeoutOrderItems.TakeoutOrderItemModifiers")
+		return db.Preload("TakeoutOrderItems.TakeoutOrderItemModifiers", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", 0)
+		})
 	}
 }
 
@@ -482,21 +486,27 @@ func (r *TakeoutOrderRepoImpl) WithTakeoutOrderMaterials() DBOption {
 // WithTakeoutOrderReceiver 预加载订单收货人信息
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderReceiver() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("TakeoutOrderReceiver")
+		return db.Preload("TakeoutOrderReceiver", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", 0)
+		})
 	}
 }
 
 // WithTakeoutOrderCampaigns 预加载订单活动信息
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderCampaigns() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("TakeoutOrderCampaigns")
+		return db.Preload("TakeoutOrderCampaigns", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", 0)
+		})
 	}
 }
 
 // WithTakeoutOrderPromos 预加载订单促销信息
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderPromos() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("TakeoutOrderPromos")
+		return db.Preload("TakeoutOrderPromos", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", 0)
+		})
 	}
 }
 
