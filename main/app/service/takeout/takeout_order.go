@@ -51,6 +51,9 @@ type ITakeoutOrderSrv interface {
 	PrintTakeoutOrder(ctx context.Context, orderUuid uint64, printLang string, firstExecution int) (*resp.PrinterData, error)
 	// 打印送厨单
 	PrintProductionOrder(ctx context.Context, orderUuid uint64, printType int, productItems []req.PrintProductItem) (*resp.PrinterData, error)
+	// PrintReturnOrder 打印退菜单（使用变更前的商品信息）
+	// 注意：此方法使用 changeResult.ReturnItems 中的 OldItem 数据，包含变更前的数量
+	PrintReturnOrder(ctx context.Context, orderUuid uint64, changeResult *valueObject.OrderChangeResult) error
 	// RecordTakeoutOrderPeakTime 记录外卖订单高峰期
 	// 自动根据订单状态判断是增加（inc）还是减少（dec）
 	RecordTakeoutOrderPeakTime(ctx context.Context, orderUuid uint64, companyUuid uint64) error
@@ -1552,6 +1555,111 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 	})
 
 	return nil, nil
+}
+
+// PrintReturnOrder 打印退菜单（使用变更前的商品信息）
+// 此方法使用 changeResult.ReturnItems 中的 OldItem 数据，确保打印的是变更前的数量
+func (s *takeoutSrv) PrintReturnOrder(ctx context.Context, orderUuid uint64, changeResult *valueObject.OrderChangeResult) error {
+	if changeResult == nil || len(changeResult.ReturnItems) == 0 {
+		return nil
+	}
+
+	db := ctx.GetDB()
+	if db == nil {
+		return errors.New("数据库连接失败")
+	}
+
+	// 1. 获取订单基本信息（用于打印头信息）
+	order, err := domainService.NewTakeoutOrderSrv(s.dbm).GetOrderForPrint(ctx, orderUuid)
+	if err != nil {
+		return err
+	}
+
+	// 2. 构建退菜商品列表（使用 OldItem 中的数量）
+	products := make([]printer_model.OrderProduct, 0, len(changeResult.ReturnItems))
+
+	for _, item := range changeResult.ReturnItems {
+		if item.OldItem == nil || item.OldItem.TtposProductPackageUuid == 0 {
+			continue
+		}
+
+		// 使用 OldItem 中的信息
+		itemName := item.OldItem.ItemName
+		quantity := item.OldQuantity // 使用变更前的数量
+
+		// 构建修饰符信息
+		attrList := make([]dto.LocaleResponse, 0)
+		saucesList := make([]dto.LocaleResponse, 0)
+		flavorName := dto.LocaleResponse{}
+
+		for _, modifier := range item.OldItem.Modifiers {
+			modifierName := modifier.ModifierName
+			if modifierName == "" {
+				continue
+			}
+
+			localeResp := language.JsonToLocaleResponse(modifierName)
+			if localeResp == nil || localeResp.IsNull() {
+				continue
+			}
+
+			switch modifier.TtposModifierType {
+			case string(valueObject.ModifierTypeFlavor):
+				flavorName = *localeResp
+			case string(valueObject.ModifierTypeAttr):
+				attrList = append(attrList, *localeResp)
+			case string(valueObject.ModifierTypeSauce):
+				saucesList = append(saucesList, *localeResp)
+			}
+		}
+
+		product := printer_model.OrderProduct{
+			OrderProductId:        item.OldItem.Uuid,
+			ProductId:             item.OldItem.TtposProductPackageUuid,
+			ProductName:           *language.JsonToLocaleResponse(itemName),
+			ProductType:           uint8(item.OldItem.TtposProductType),
+			FlavorName:            flavorName,
+			ProductAttrList:       attrList,
+			ProductSauceNamesList: saucesList,
+			TotalNum:              float64(quantity), // 使用变更前的数量
+			ProductPrice:          item.OldItem.Price,
+			TotalPrice:            item.OldItem.Price * float64(quantity),
+			IsWrap:                order.IsTakeawayOrder(),
+		}
+		products = append(products, product)
+	}
+
+	if len(products) == 0 {
+		logger.Logger.Warn("退菜单打印：没有有效的商品",
+			zap.Uint64("orderUuid", orderUuid))
+		return nil
+	}
+
+	// 3. 构建打印数据
+	printOrder := printer_model.Order{
+		Uuid:                   order.Uuid,
+		SaleOrderUuid:          0,
+		OrderNo:                order.PlatformOrderId,
+		MealNum:                1,
+		OrderSourceTakeoutText: order.GetCapitalPlatform(),
+		SerialNo:               order.ShortOrderNumber,
+		OrderRemark:            nil,
+		DeskUuid:               0,
+		Desk:                   nil,
+		UpdateTime:             int64(order.UpdateTime),
+		FinishTime:             time.Now().Unix(),
+		IsTakeout:              true,
+		Products:               products,
+	}
+
+	// 4. 异步执行打印
+	utils.Go(func() {
+		printerRepo := printer.NewPrinterRepo(ctx, "")
+		printerRepo.SetFinishedTime(time.Now().Unix())
+		printerRepo.PrintingDishes(printerConst.PrinterProductTypeBackFood, printOrder)
+	})
+
+	return nil
 }
 
 // RecordTakeoutOrderPeakTime 记录外卖订单高峰期
