@@ -120,7 +120,7 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	orderData := structs.StatementOrderInfoData{
 		Platform:     value_object.GetPlatformName(order.Platform),
 		OrderNo:      order.PlatformOrderId,
-		SerialNo:     fmt.Sprintf("%s: %s", order.GetCapitalPlatform(), order.ShortOrderNumber),
+		SerialNo:     fmt.Sprintf("%s: %s", order.GetSpacePlatformName(), order.ShortOrderNumber),
 		OrderType:    order.OrderType,
 		CreateTime:   t.base.FormatUnixTimeDefault(order.OrderTime),     // 下单时间
 		FinishTime:   t.base.FormatUnixTimeDefault(order.CompletedTime), // 完成时间
