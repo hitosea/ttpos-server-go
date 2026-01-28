@@ -101,6 +101,7 @@ type IErpSrv interface {
 
 	// 送货单
 	GetDeliveryNoteList(ctx pkgCtx.Context, getDeliveryNoteListReq *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error)
+	GetDeliveryNote(ctx pkgCtx.Context, companyAbbr, dnName string, includeItems bool) (*delivery_note.DeliveryNote, error) // 获取单个送货单详情
 }
 type erpSrv struct {
 	dbm *database.DBManager
