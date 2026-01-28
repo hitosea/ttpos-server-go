@@ -681,8 +681,17 @@ func (s *takeoutSrv) processReturnItemsStock(ctx context.Context, order *takeout
 	bomQuantityMap := make(map[uint64]int) // map[bomUuid]quantity
 	for _, item := range returnItems {
 		if item.OldItem != nil && item.OldItem.TtposProductPackageUuid > 0 {
+			// 计算需要处理的数量（新增或增量）
+			quantity := item.OldQuantity
+			if item.ChangeType == valueObject.ChangeTypeQuantity {
+				// 数量变动只处理增量部分
+				quantity = item.OldQuantity - item.NewQuantity
+			}
+			if quantity <= 0 {
+				continue
+			}
 			// 对于退菜，使用原数量
-			bomQuantityMap[item.OldItem.TtposProductPackageUuid] += item.OldQuantity
+			bomQuantityMap[item.OldItem.TtposProductPackageUuid] += quantity
 		}
 	}
 
