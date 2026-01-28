@@ -262,6 +262,14 @@ func (o *TakeoutOrder) GetNoSpacePlatformName() string {
 	return valueobject.GetNoSpacePlatformName(o.Platform)
 }
 
+// 获取外卖平台 有空格名称
+func (o *TakeoutOrder) GetSpacePlatformName() string {
+	if o == nil {
+		return ""
+	}
+	return valueobject.GetPlatformName(o.Platform)
+}
+
 // 获取lineman服务费
 func (o *TakeoutOrder) GetLinemanServiceFee() float64 {
 	if o == nil {

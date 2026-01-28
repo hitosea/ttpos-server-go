@@ -1144,19 +1144,11 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 				// 数量增加：更新数量
 				if change.OldItem != nil && change.OldItem.Uuid > 0 {
 					if err := itemRepoTx.UpdateQuantity(change.OldItem.Uuid, change.NewQuantity); err != nil {
-						logger.Logger.Error("更新加菜商品数量失败",
-							zap.Uint64("itemUuid", change.OldItem.Uuid),
-							zap.Error(err))
+						logger.Logger.Error("更新加菜商品数量失败", zap.Uint64("itemUuid", change.OldItem.Uuid), zap.Error(err))
 					}
 				}
 			}
 		}
-
-		logger.Logger.Info("增量更新订单成功",
-			zap.Uint64("orderUuid", orderUuid),
-			zap.String("platform", platform),
-			zap.Int("returnItemCount", changeResult.GetReturnItemCount()),
-			zap.Int("kitchenItemCount", changeResult.GetKitchenItemCount()))
 
 		return nil
 	})

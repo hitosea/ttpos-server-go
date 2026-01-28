@@ -1529,19 +1529,19 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 
 		// 2. 构建打印数据
 		printOrder := printer_model.Order{
-			Uuid:                   order.Uuid,                 // 使用外卖订单 UUID
-			SaleOrderUuid:          0,                          // 外卖订单没有 SaleOrder
-			OrderNo:                order.PlatformOrderId,      // 订单号
-			MealNum:                1,                          // 外卖订单默认1人
-			OrderSourceTakeoutText: order.GetCapitalPlatform(), // 显示平台名称（grab/lineman）
-			SerialNo:               order.ShortOrderNumber,     // 外卖订单流水号
-			OrderRemark:            nil,                        // 外卖订单备注（目前无此信息）
-			DeskUuid:               0,                          // 外卖订单无桌台
-			Desk:                   nil,                        // 外卖订单无桌台信息
-			UpdateTime:             int64(order.UpdateTime),    // 订单更新时间
-			FinishTime:             time.Now().Unix(),          // 订单完成时间
-			IsTakeout:              true,                       // 标记为第三方外卖平台订单
-			Products:               products,                   // 商品列表
+			Uuid:                   order.Uuid,                   // 使用外卖订单 UUID
+			SaleOrderUuid:          0,                            // 外卖订单没有 SaleOrder
+			OrderNo:                order.PlatformOrderId,        // 订单号
+			MealNum:                1,                            // 外卖订单默认1人
+			OrderSourceTakeoutText: order.GetSpacePlatformName(), // 显示平台名称（grab/lineman）
+			SerialNo:               order.ShortOrderNumber,       // 外卖订单流水号
+			OrderRemark:            nil,                          // 外卖订单备注（目前无此信息）
+			DeskUuid:               0,                            // 外卖订单无桌台
+			Desk:                   nil,                          // 外卖订单无桌台信息
+			UpdateTime:             int64(order.UpdateTime),      // 订单更新时间
+			FinishTime:             time.Now().Unix(),            // 订单完成时间
+			IsTakeout:              true,                         // 标记为第三方外卖平台订单
+			Products:               products,                     // 商品列表
 		}
 
 		// 3. 执行打印
@@ -1641,7 +1641,7 @@ func (s *takeoutSrv) PrintReturnOrder(ctx context.Context, orderUuid uint64, cha
 		SaleOrderUuid:          0,
 		OrderNo:                order.PlatformOrderId,
 		MealNum:                1,
-		OrderSourceTakeoutText: order.GetCapitalPlatform(),
+		OrderSourceTakeoutText: order.GetSpacePlatformName(),
 		SerialNo:               order.ShortOrderNumber,
 		OrderRemark:            nil,
 		DeskUuid:               0,
