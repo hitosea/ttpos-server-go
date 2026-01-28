@@ -1637,6 +1637,8 @@
   "只有待提交状态的调拨单才能删除": "Endast överföringsorder med status 'väntar på inskickning' kan tas bort.",
   "只有待提交状态的调拨单才能提交": "Endast överföringsorder med status 'väntar på inlämning' kan skickas in",
   "只有待收货状态的调拨单才能收货": "Endast överföringsorder med status 'väntar på mottagning' kan tas emot",
+  "只有发起门店才能重新提交调拨单": "Endast den initierande butiken kan skicka in överföringsordern på nytt",
+  "只有发起人才能重新提交调拨单": "Endast initieraren kan skicka in överföringsordern på nytt",
   "只能在内网环境下访问": "Kan endast nås i internt nätverk",
   "只能重新导入从平台到TTPOS的记录": "Kan endast ominportera poster från plattformen till TTPOS",
   "只能重新导入失败的记录": "Kan endast ominportera misslyckade poster",

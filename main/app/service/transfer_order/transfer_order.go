@@ -198,6 +198,16 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		return false
 	}()
 
+	// 是否可重新提交（已驳回状态且为发起门店的发起人）
+	detailResp.IsCanResubmit = func() bool {
+		if transferOrder.Status == constant.TransferOrderStatusRejected &&
+			transferOrder.CompanyUuid == ctx.GetCompanyUuid() &&
+			transferOrder.CreatorUuid == ctx.GetStaffUuid() {
+			return true
+		}
+		return false
+	}()
+
 	// 是否需要选择仓库
 	detailResp.ErpOrderNo = func() string {
 		if transferOrder.ErpResp != "" {
@@ -825,6 +835,13 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 	// 非重新提交操作时，只允许待提交状态修改
 	if transferOrder.Status == constant.TransferOrderStatusRejected && !isResubmit {
 		return errors.New("已驳回的调拨单只能重新提交")
+	}
+
+	// 重新提交时，验证当前用户是否是发起人
+	if isResubmit {
+		if transferOrder.CompanyUuid != companyUuid && transferOrder.CreatorUuid != ctx.GetStaffUuid() {
+			return errors.New(i18n.Translate(ctx.GetLanguage(), "只有发起人才能重新提交调拨单"), fmt.Sprintf(":%s", transferOrder.CreatorName))
+		}
 	}
 
 	if transferOrder.TransferType == 1 {

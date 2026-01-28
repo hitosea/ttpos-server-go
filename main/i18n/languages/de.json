@@ -1637,6 +1637,8 @@
   "只有待提交状态的调拨单才能删除": "Nur Umlagebelege im Status 'Zur Übermittlung ausstehend' können gelöscht werden.",
   "只有待提交状态的调拨单才能提交": "Nur Umlagerungsaufträge mit dem Status 'Zur Einreichung ausstehend' können eingereicht werden",
   "只有待收货状态的调拨单才能收货": "Nur Umlagerungsaufträge mit dem Status 'ausstehender Wareneingang' können empfangen werden",
+  "只有发起门店才能重新提交调拨单": "Nur die initierende Filiale kann den Umlagerungsauftrag erneut einreichen",
+  "只有发起人才能重新提交调拨单": "Nur der Initiator kann den Umlagerungsauftrag erneut einreichen",
   "只能在内网环境下访问": "Nur im internen Netzwerkumfeld zugänglich",
   "只能重新导入从平台到TTPOS的记录": "Es können nur Datensätze von der Plattform nach TTPOS erneut importiert werden",
   "只能重新导入失败的记录": "Es können nur fehlgeschlagene Datensätze erneut importiert werden",

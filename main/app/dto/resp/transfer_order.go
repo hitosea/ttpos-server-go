@@ -42,6 +42,7 @@ type TransferOrderInfo struct {
 	UpdateTime               int                `json:"update_time"`                  // 更新时间
 	IsCanApprove             bool               `json:"is_can_approve"`               // 是否可审批
 	IsCanReceive             bool               `json:"is_can_receive"`               // 是否可收货
+	IsCanResubmit            bool               `json:"is_can_resubmit"`              // 是否可重新提交（已驳回状态且为发起人）
 	IsNeedSelectOutWarehouse bool               `json:"is_need_select_out_warehouse"` // 是否需要选择出库仓库
 	IsNeedSelectInWarehouse  bool               `json:"is_need_select_in_warehouse"`  // 是否需要选择入库仓库
 }

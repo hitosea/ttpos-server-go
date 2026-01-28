@@ -1637,6 +1637,8 @@
   "只有待提交状态的调拨单才能删除": "Only transfer orders in 'pending submission' status can be deleted.",
   "只有待提交状态的调拨单才能提交": "Only transfer orders in 'pending submission' status can be submitted",
   "只有待收货状态的调拨单才能收货": "Only transfer orders in 'pending receipt' status can be received",
+  "只有发起门店才能重新提交调拨单": "Only the initiating store can resubmit the transfer order",
+  "只有发起人才能重新提交调拨单": "Only the initiator can resubmit the transfer order",
   "只能在内网环境下访问": "Can only be accessed in an intranet environment",
   "只能重新导入从平台到TTPOS的记录": "Can only re-import records from the platform to TTPOS",
   "只能重新导入失败的记录": "Can only re-import failed records",

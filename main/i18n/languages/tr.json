@@ -1637,6 +1637,8 @@
   "只有待提交状态的调拨单才能删除": "Sadece gönderilmeyi bekleyen transfer fişleri silinebilir.",
   "只有待提交状态的调拨单才能提交": "Yalnızca beklemede olan transfer fişleri gönderilebilir",
   "只有待收货状态的调拨单才能收货": "Yalnızca teslimat bekleyen transfer formları teslim alınabilir",
+  "只有发起门店才能重新提交调拨单": "Yalnızca başlatan mağaza transfer formunu yeniden gönderebilir",
+  "只有发起人才能重新提交调拨单": "Yalnızca başlatan kişi transfer formunu yeniden gönderebilir",
   "只能在内网环境下访问": "Yalnızca dahili ağ ortamında erişilebilir",
   "只能重新导入从平台到TTPOS的记录": "Yalnızca platformdan TTPOS'a olan kayıtlar yeniden içe aktarılabilir",
   "只能重新导入失败的记录": "Sadece başarısız kayıtları yeniden içe aktarabilirsiniz",
