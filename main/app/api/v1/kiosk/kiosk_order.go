@@ -416,6 +416,38 @@ func (h *OrderHandler) PayOrderStatus(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// PayOrderConfirm Kiosk 支付完成确认
+// @Summary Kiosk 支付完成确认
+// @Description 用于 KBank 等需要主动上报支付结果的场景。Kiosk 调用此接口确认支付完成后，系统会自动执行送厨、打印送厨单和完成订单
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.KioskPaymentConfirmReq true "支付确认参数"
+// @Success 200 {object} dto.Response "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /kiosk/order/pay/confirm [post]
+func (h *OrderHandler) PayOrderConfirm(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.KioskPaymentConfirmReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("kiosk支付确认", zap.Any("params", params))
+
+	// 调用 service 层处理支付确认
+	err := h.orderSrv.KioskPaymentConfirm(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	// 返回结果
+	helper.Success(c, nil)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -451,5 +483,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/payment/info", wrapper.OrderPaymentInfo)                  // 获取结账页面信息
 		privateApi.POST("/order/pay", wrapper.PayOrder)                                  // 发起支付
 		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                      // 获取支付状态
+		privateApi.POST("/order/pay/confirm", wrapper.PayOrderConfirm)                   // 支付完成确认（KBank 等主动上报场景）
 	}
 }

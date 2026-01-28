@@ -2093,3 +2093,143 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 	// 获取支付结账页面信息
 	return s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, req.SaleOrderUuid)
 }
+
+// KioskPaymentConfirm Kiosk 自助点餐机 KBank 支付确认
+// 接收 Kiosk 端主动上报的支付完成信息，创建支付记录并触发送厨和结账流程
+func (s *orderSrv) KioskPaymentConfirm(ctx context.Context, params req.KioskPaymentConfirmReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	companyUuid := ctx.GetCompanyUuid()
+
+	// 加锁
+	if ctx.NoLock() {
+		s.lock.LockUuid(params.SaleBillUuid)
+		defer s.lock.UnlockUuid(params.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	// 验证销售账单是否为 Kiosk 来源
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(params.SaleBillUuid)
+	if err != nil {
+		logger.Logger.Error("KioskPaymentConfirm GetSaleBillAllInfo failed",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+			zap.Error(err))
+		return errors.WithMessage(err, "销售账单不存在")
+	}
+	if saleBill.Source != constant.SaleBillSourceKiosk {
+		logger.Logger.Error("KioskPaymentConfirm sale bill source is not kiosk",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+			zap.Uint64("source", uint64(saleBill.Source)))
+		return errors.New("该订单不是自助点餐机订单")
+	}
+
+	// 获取销售订单
+	saleOrder := saleBill.GetSaleOrder(params.SaleOrderUuid)
+	if saleOrder == nil {
+		logger.Logger.Error("KioskPaymentConfirm GetSaleOrder failed",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_order_uuid", params.SaleOrderUuid))
+		return errors.New("销售订单不存在")
+	}
+
+	// 获取支付方式信息
+	paymentMethod, err := repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(params.PaymentMethodUuid)
+	if err != nil {
+		logger.Logger.Error("KioskPaymentConfirm GetPaymentMethodByUuid failed",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("payment_method_uuid", params.PaymentMethodUuid),
+			zap.Error(err))
+		return errors.WithMessage(err, "支付方式不存在")
+	}
+
+	// 获取货币设置
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		logger.Logger.Error("KioskPaymentConfirm GetCurrencySetting failed",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Error(err))
+		return errors.WithMessage(err, "获取货币设置失败")
+	}
+
+	// 检查该支付方式是否已经存在支付记录（幂等控制）
+	paymentOrderRepo := repository.NewPaymentOrderRepo(db)
+	existingPaymentOrders, err := paymentOrderRepo.GetPaymentOrderListBySaleOrderUuid(params.SaleOrderUuid)
+	if err != nil {
+		logger.Logger.Error("KioskPaymentConfirm GetPaymentOrderListBySaleOrderUuid failed",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_order_uuid", params.SaleOrderUuid),
+			zap.Error(err))
+		return errors.WithMessage(err, "查询支付记录失败")
+	}
+	for _, existingOrder := range existingPaymentOrders {
+		if existingOrder.PaymentMethodUuid == params.PaymentMethodUuid &&
+			existingOrder.Status == constant.PaymentOrderStatusPaid {
+			logger.Logger.Warn("KioskPaymentConfirm payment order already exists",
+				zap.Uint64("company_uuid", companyUuid),
+				zap.Uint64("sale_order_uuid", params.SaleOrderUuid),
+				zap.Uint64("payment_method_uuid", params.PaymentMethodUuid))
+			return nil // 已存在相同支付方式的已支付记录，幂等返回成功
+		}
+	}
+
+	// 计算支付手续费和实收金额
+	percent := paymentMethod.GetFeePercent()
+	commissionFee := paymentMethod.CalculatePaymentCommissionFee(params.PaymentAmount)
+	amount := paymentMethod.CalculatePaymentAmount(params.PaymentAmount)
+
+	// 创建支付记录
+	paymentOrder := model.PaymentOrder{
+		PaymentMethodName:    paymentMethod.PaymentName,
+		PaymentMethodUuid:    params.PaymentMethodUuid,
+		PaymentFeePercent:    percent,
+		RelatedType:          constant.PaymentOrderRelatedTypeSaleOrder,
+		RelatedUuid:          params.SaleOrderUuid,
+		CurrencyUnit:         currencySetting.Unit,
+		PaymentAmount:        params.PaymentAmount,
+		PaymentCommissionFee: commissionFee,
+		Amount:               amount,
+		TransactionNumber:    params.TransactionNumber,
+		Status:               constant.PaymentOrderStatusPaid,
+		PaymentInfo:          params.PaymentInfo,
+	}
+
+	// 在事务中创建支付记录
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		createdOrder, err := repository.NewPaymentOrderRepo(tx).Create(paymentOrder)
+		if err != nil {
+			return errors.WithMessage(err, "创建支付记录失败")
+		}
+		paymentOrder = createdOrder
+		return nil
+	}); err != nil {
+		logger.Logger.Error("KioskPaymentConfirm Create payment order failed",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_order_uuid", params.SaleOrderUuid),
+			zap.Error(err))
+		return err
+	}
+
+	logger.Logger.Info("KioskPaymentConfirm payment order created",
+		zap.Uint64("company_uuid", companyUuid),
+		zap.Uint64("payment_order_uuid", paymentOrder.Uuid),
+		zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+		zap.Uint64("sale_order_uuid", params.SaleOrderUuid),
+		zap.Float64("payment_amount", params.PaymentAmount))
+
+	// 发布 Kiosk 订单支付完成事件，触发送厨和结账流程
+	utils.Go(func() {
+		event.NewSystemBus().PublishPayFinishKioskOrderEvent(event.PayFinishKioskOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:           ctx,
+				CompanyUuid:   companyUuid,
+				Source:        constant.SourceKiosk,
+				SaleBillUuid:  params.SaleBillUuid,
+				SaleOrderUuid: params.SaleOrderUuid,
+			},
+			PaymentOrderUuid: paymentOrder.Uuid,
+		})
+	})
+
+	return nil
+}
