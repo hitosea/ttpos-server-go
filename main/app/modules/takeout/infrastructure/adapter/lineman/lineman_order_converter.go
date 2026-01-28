@@ -272,9 +272,9 @@ func (c *LineManConverter) ConvertOrderToTakeoutOrder(
 		order.TakeoutOrderItems = make([]takeoutModel.TakeoutOrderItem, 0, len(takeoutOrder.Items))
 		for _, item := range takeoutOrder.Items {
 			// 根据 item.Id 前缀判断商品类型
-			// TTPOS-ITEM- 开头为普通商品(0), TTPOS-PACKAGE- 开头为套餐(1)
+			// Lineman 平台使用简写前缀：PACKAGE- 开头为套餐(1)，ITEM- 开头为普通商品(0)
 			ttposProductType := 0
-			if strings.HasPrefix(item.ID, "TTPOS-PACKAGE-") {
+			if strings.HasPrefix(item.ID, valueobject.PrefixPackage.GetPrefix(platform)) {
 				ttposProductType = 1
 			}
 
