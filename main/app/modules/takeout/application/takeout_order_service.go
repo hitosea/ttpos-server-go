@@ -411,6 +411,15 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 		return fmt.Errorf("订单商品数据不存在或格式错误")
 	}
 
+	// 5.1 为新订单商品填充 TTPOS 商品映射信息（商品UUID、名称、分类等）
+	// 这样在 DetectChanges 时，新商品已有完整的 TTPOS 信息用于比对
+	if _, err := s.orderService.EnrichOrderItems(ctx, updatedOrder); err != nil {
+		logger.Logger.Error("填充订单商品信息失败",
+			zap.Uint64("orderUuid", orderUuid),
+			zap.Error(err))
+		return fmt.Errorf("填充订单商品信息失败: %w", err)
+	}
+
 	// 6. 检测订单菜品变动
 	changeResult := service.NewOrderChangeDetector().DetectChanges(
 		existingOrder.TakeoutOrderItems,

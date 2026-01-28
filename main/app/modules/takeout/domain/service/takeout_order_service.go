@@ -53,6 +53,10 @@ type ITakeoutOrderSrv interface {
 	// updatedOrder: 平台推送的更新订单
 	// changeResult: 变动检测结果
 	IncrementalUpdateOrder(ctx context.Context, existingOrder, updatedOrder *takeoutModel.TakeoutOrder, changeResult *valueobject.OrderChangeResult) error
+	// EnrichOrderItems 为订单商品填充 TTPOS 商品映射信息
+	// 解析平台商品ID，查询TTPOS商品信息（名称、分类、ERP编码等），填充到订单商品中
+	// 返回: abnormalItemUuids (商品映射异常的商品UUID列表)
+	EnrichOrderItems(ctx context.Context, order *takeoutModel.TakeoutOrder) (abnormalItemUuids []uint64, err error)
 	// BuildBomQuantityMap 构建订单商品的 BOM 数量映射（用于库存检查和出库）
 	// 返回: bomQuantityMap (BOM UUID -> 数量), bomItemMap (BOM UUID -> 订单商品，包含 modifiers), error
 	BuildBomQuantityMap(ctx context.Context, order *takeoutModel.TakeoutOrder) (map[uint64]int, map[uint64]*takeoutModel.TakeoutOrderItem, error)
@@ -1161,6 +1165,58 @@ func (s *takeoutOrderSrv) toModifierPointers(modifiers []takeoutModel.TakeoutOrd
 		result[i] = &modifiers[i]
 	}
 	return result
+}
+
+// EnrichOrderItems 为订单商品填充 TTPOS 商品映射信息
+// 遍历订单中的所有商品，调用 enrichItemInfo 和 enrichModifiersInfo 填充：
+// - 商品映射信息（TtposProductPackageUuid、TtposProductType）
+// - 商品详细信息（名称、价格、分类、ERP编码等）
+// - 修饰符映射和详细信息
+// 返回值：abnormalItemUuids 是异常商品的UUID列表（商品或修饰符信息缺失）
+func (s *takeoutOrderSrv) EnrichOrderItems(ctx context.Context, order *takeoutModel.TakeoutOrder) (abnormalItemUuids []uint64, err error) {
+	if order == nil || len(order.TakeoutOrderItems) == 0 {
+		return nil, nil
+	}
+
+	abnormalUuidSet := make(map[uint64]struct{})
+
+	for i := range order.TakeoutOrderItems {
+		item := &order.TakeoutOrderItems[i]
+
+		// 1. 填充商品信息
+		isAbnormal, err := s.enrichItemInfo(ctx, order.Platform, order.Uuid, item)
+		if err != nil {
+			logger.Logger.Error("填充商品信息失败",
+				zap.Error(err),
+				zap.String("platformItemId", item.PlatformItemId),
+				zap.Uint64("orderUuid", order.Uuid))
+			return nil, errors.WithMessage(errors.New("填充商品信息失败"), err.Error())
+		}
+		if isAbnormal {
+			abnormalUuidSet[item.Uuid] = struct{}{}
+		}
+
+		// 2. 填充修饰符信息
+		modifierAbnormalUuids, err := s.enrichModifiersInfo(ctx, order.Platform, item)
+		if err != nil {
+			logger.Logger.Error("填充修饰符信息失败",
+				zap.Error(err),
+				zap.String("platformItemId", item.PlatformItemId),
+				zap.Uint64("orderUuid", order.Uuid))
+			return nil, errors.WithMessage(errors.New("填充修饰符信息失败"), err.Error())
+		}
+		for _, abnormalUuid := range modifierAbnormalUuids {
+			abnormalUuidSet[abnormalUuid] = struct{}{}
+		}
+	}
+
+	// 转换为切片返回
+	abnormalItemUuids = make([]uint64, 0, len(abnormalUuidSet))
+	for uuid := range abnormalUuidSet {
+		abnormalItemUuids = append(abnormalItemUuids, uuid)
+	}
+
+	return abnormalItemUuids, nil
 }
 
 // enrichModifiersInfo 完整处理商品的修饰符信息
