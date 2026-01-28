@@ -760,6 +760,11 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 		return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(errors.New("数据转换失败"), err.Error())
 	}
 
+	// 补充收货单额外字段
+	detailResp.SupplierName = receipt.SupplierName
+	detailResp.SourceWarehouseName = *language.JsonToLocaleResponse(receipt.SourceWarehouseName)
+	detailResp.IsFromDeliveryNote = receipt.IsFromDeliveryNote == 1
+
 	// 转换收货明细数据
 	detailResp.Items = make([]resp.PurchaseReceiptItemInfo, 0, len(receipt.Items))
 	for _, item := range receipt.Items {

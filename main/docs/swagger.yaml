@@ -7881,6 +7881,9 @@ definitions:
         description: 采购订单ID
         minimum: 1
         type: integer
+      with_receipt_list:
+        description: 是否查看收货清单
+        type: boolean
     required:
     - uuid
     type: object
@@ -7922,84 +7925,6 @@ definitions:
         type: array
     required:
     - material_uuid
-    type: object
-  req.PurchaseOrderListReq:
-    properties:
-      company_uuid:
-        description: 公司UUID
-        minimum: 1
-        type: integer
-      create_time_end:
-        description: 创建时间结束
-        minimum: 0
-        type: integer
-      create_time_start:
-        description: 创建时间开始
-        minimum: 0
-        type: integer
-      expect_arrival_time_end:
-        description: 期望到货时间结束
-        minimum: 0
-        type: integer
-      expect_arrival_time_start:
-        description: 期望到货时间开始
-        minimum: 0
-        type: integer
-      order_no:
-        description: 订单编号
-        maxLength: 50
-        type: string
-      order_time_end:
-        description: 订单时间结束
-        minimum: 0
-        type: integer
-      order_time_start:
-        description: 订单时间开始
-        minimum: 0
-        type: integer
-      page_no:
-        description: 页码
-        minimum: 1
-        type: integer
-      page_size:
-        description: 每页大小
-        maximum: 1100
-        minimum: 1
-        type: integer
-      purchase_type:
-        description: V2.6 采购类型, 1-外部采购 2-内部采购
-        maximum: 2
-        minimum: 0
-        type: integer
-      receive_time_end:
-        description: 收货时间结束
-        minimum: 0
-        type: integer
-      receive_time_start:
-        description: 收货时间开始
-        minimum: 0
-        type: integer
-      status_in:
-        description: '状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核'
-        items:
-          type: integer
-        maxItems: 5
-        minItems: 0
-        type: array
-      supplier_name:
-        description: 供应商名称
-        maxLength: 100
-        type: string
-      uuid_in:
-        description: 采购订单ID
-        items:
-          type: integer
-        minItems: 1
-        type: array
-      warehouse_erp_code:
-        description: 仓库编码
-        maxLength: 255
-        type: string
     type: object
   req.PurchaseOrderSubmitReq:
     properties:
@@ -9010,6 +8935,12 @@ definitions:
     type: object
   req.TransferOrderReceiveReq:
     properties:
+      file_uuids:
+        description: 附件UUID列表
+        items:
+          type: integer
+        minItems: 1
+        type: array
       in_warehouse_erp_code:
         description: 入库仓库ERP编码
         type: string
@@ -9022,6 +8953,7 @@ definitions:
         minimum: 1
         type: integer
     required:
+    - file_uuids
     - uuid
     type: object
   req.TransferOrderRejectReq:
@@ -15165,8 +15097,11 @@ definitions:
       purchase_type:
         description: V2.6 采购类型 1-外部采购 2-内部采购
         type: integer
+      receipt_batch_num:
+        description: 收货批次（确认收货的记录数）
+        type: integer
       receipt_list:
-        description: v2.16.0+ 收货清单，旧版本不返回
+        description: v2.16.0+ 收货清单，请求with_receipt_list=true时返回
         items:
           $ref: '#/definitions/resp.ReceiptListItem'
         type: array
@@ -15488,6 +15423,45 @@ definitions:
         description: 明细ID
         type: integer
     type: object
+  resp.PurchaseReceiptNewListItem:
+    properties:
+      confirm_receipt_num:
+        description: 确认收货次数
+        type: integer
+      erp_order_no:
+        description: 采购单号（ErpOrderNo）
+        type: string
+      item_num:
+        description: 申请单物品数量
+        type: integer
+      order_no:
+        description: 单据编号（采购单OrderNo）
+        type: string
+      order_time:
+        description: 采购单时间
+        type: integer
+      receipt_progress:
+        description: 总收货进度（百分比如 "50.00%"）
+        type: string
+      receipt_status:
+        description: 采购单收货状态：0-待收货（未完全收货）1-已收货（已完全收货）
+        type: integer
+      uuid:
+        description: 采购单UUID
+        type: integer
+    type: object
+  resp.PurchaseReceiptNewListResp:
+    properties:
+      list:
+        description: 收货单列表（按采购单维度）
+        items:
+          $ref: '#/definitions/resp.PurchaseReceiptNewListItem'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
+    type: object
   resp.PurchaseReceiptOrderDetailResp:
     properties:
       cancel_time:
@@ -15507,6 +15481,9 @@ definitions:
         items:
           $ref: '#/definitions/resp.ReceiptFileInfo'
         type: array
+      is_from_delivery_note:
+        description: 是否来自DN单据
+        type: boolean
       items:
         description: 收货明细
         items:
@@ -15530,9 +15507,16 @@ definitions:
       receive_time:
         description: 收货日期
         type: integer
+      source_warehouse_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 来源仓库名称（多语言）
       status:
         description: 状态 0-待收货 1-已收货 2-已取消
         type: integer
+      supplier_name:
+        description: 供应商名称
+        type: string
       uuid:
         description: 收货单ID
         type: integer
@@ -15551,6 +15535,9 @@ definitions:
       expect_arrival_time:
         description: 期望到货日期
         type: integer
+      is_from_delivery_note:
+        description: 是否来自DN单据
+        type: boolean
       num:
         description: 物品数量
         type: integer
@@ -15569,9 +15556,16 @@ definitions:
       receive_time:
         description: 收货日期
         type: integer
+      source_warehouse_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 来源仓库名称（多语言）
       status:
         description: 状态 0-待收货 1-已收货 2-已取消
         type: integer
+      supplier_name:
+        description: 供应商名称
+        type: string
       uuid:
         description: 收货单ID
         type: integer
@@ -16965,6 +16959,9 @@ definitions:
       erp_code:
         description: ERP盘点单号
         type: string
+      is_can_resubmit:
+        description: 是否可重新提交（已驳回状态且为发起人）
+        type: boolean
       items:
         description: 盘点单物品明细
         items:
@@ -17586,6 +17583,11 @@ definitions:
       erp_order_no:
         description: ERP调拨单号
         type: string
+      files:
+        description: 附件列表
+        items:
+          $ref: '#/definitions/resp.TransferOrderFileInfo'
+        type: array
       in_warehouse_erp_code:
         description: 入库仓库ERP编码
         type: string
@@ -17598,6 +17600,9 @@ definitions:
         type: boolean
       is_can_receive:
         description: 是否可收货
+        type: boolean
+      is_can_resubmit:
+        description: 是否可重新提交（已驳回状态且为发起人）
         type: boolean
       is_need_select_in_warehouse:
         description: 是否需要选择入库仓库
@@ -17673,6 +17678,33 @@ definitions:
         description: 调拨单UUID
         type: integer
     type: object
+  resp.TransferOrderFileInfo:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      extension:
+        description: 文件扩展名
+        type: string
+      file_name:
+        description: 文件名
+        type: string
+      file_path:
+        description: 文件访问路径
+        type: string
+      file_size:
+        description: 文件大小（字节）
+        type: integer
+      file_type:
+        description: 文件类型（image/document）
+        type: string
+      file_uuid:
+        description: 文件UUID
+        type: integer
+      sort_order:
+        description: 排序
+        type: integer
+    type: object
   resp.TransferOrderInfo:
     properties:
       approval_progress:
@@ -17706,6 +17738,9 @@ definitions:
         type: boolean
       is_can_receive:
         description: 是否可收货
+        type: boolean
+      is_can_resubmit:
+        description: 是否可重新提交（已驳回状态且为发起人）
         type: boolean
       is_need_select_in_warehouse:
         description: 是否需要选择入库仓库
@@ -37269,7 +37304,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 根据UUID获取采购订单详情
+      description: 根据UUID获取采购订单详情，响应包含收货批次（确认收货的记录数）
       parameters:
       - description: 版本号
         in: header
@@ -37281,6 +37316,10 @@ paths:
         name: uuid
         required: true
         type: integer
+      - description: 是否查看收货清单，true时返回收货清单
+        in: query
+        name: with_receipt_list
+        type: boolean
       produces:
       - application/json
       responses:
@@ -37343,12 +37382,82 @@ paths:
         name: client-version
         required: true
         type: string
-      - description: 采购订单列表请求参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.PurchaseOrderListReq'
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      - description: 订单编号
+        in: query
+        name: order_no
+        type: string
+      - collectionFormat: csv
+        description: 采购订单ID
+        in: query
+        items:
+          format: int64
+          type: integer
+        name: uuid_in
+        type: array
+      - description: 采购类型, 1-外部采购 2-内部采购
+        in: query
+        name: purchase_type
+        type: integer
+      - collectionFormat: csv
+        description: '状态筛选: 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核'
+        in: query
+        items:
+          type: integer
+        name: status_in
+        type: array
+      - description: 供应商名称
+        in: query
+        name: supplier_name
+        type: string
+      - description: 仓库编码
+        in: query
+        name: warehouse_erp_code
+        type: string
+      - description: 公司UUID
+        format: int64
+        in: query
+        name: company_uuid
+        type: integer
+      - description: 创建时间开始
+        in: query
+        name: create_time_start
+        type: integer
+      - description: 创建时间结束
+        in: query
+        name: create_time_end
+        type: integer
+      - description: 订单时间开始
+        in: query
+        name: order_time_start
+        type: integer
+      - description: 订单时间结束
+        in: query
+        name: order_time_end
+        type: integer
+      - description: 期望到货时间开始
+        in: query
+        name: expect_arrival_time_start
+        type: integer
+      - description: 期望到货时间结束
+        in: query
+        name: expect_arrival_time_end
+        type: integer
+      - description: 收货时间开始
+        in: query
+        name: receive_time_start
+        type: integer
+      - description: 收货时间结束
+        in: query
+        name: receive_time_end
+        type: integer
       produces:
       - application/json
       responses:
@@ -37640,6 +37749,60 @@ paths:
       security:
       - JwtToken: []
       summary: 获取收货记录列表
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/receipt/new_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取品牌采购（内部采购）收货单列表，只显示总部审核通过的采购单，按采购单维度展示，返回采购单时间、收货状态、单据编号、采购单号、物品数量、收货次数、收货进度
+      parameters:
+      - description: 版本号
+        in: header
+        name: client-version
+        required: true
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      - description: 采购单收货状态：0-待收货（未完全收货）1-已收货（已完全收货）
+        in: query
+        name: receipt_status
+        type: integer
+      - description: 单据编号（采购单OrderNo）
+        in: query
+        name: order_no
+        type: string
+      - description: 采购单号（ErpOrderNo）
+        in: query
+        name: erp_order_no
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseReceiptNewListResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取品牌采购收货单列表（按采购单维度）
       tags:
       - 商家端.采购管理
   /shop/purchase/receipt/pending_items:

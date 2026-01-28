@@ -71,7 +71,7 @@ func (s *purchaseOrderSrv) getDNReceiptList(
 	dnListResp, err := erpSrv.GetDeliveryNoteList(ctx, &delivery_note.GetDeliveryNoteListReq{
 		CompanyAbbr:  companySetting.ErpnextHeadquarterAbbr,
 		SoNo:         purchaseOrder.ErpSaleOrderNo,
-		IncludeItems: true,
+		IncludeItems: false,
 	})
 	if err != nil {
 		return nil, err
@@ -83,7 +83,13 @@ func (s *purchaseOrderSrv) getDNReceiptList(
 
 	result := make([]resp.ReceiptListItem, 0, len(dnListResp.DeliveryNoteList))
 
+	// 过滤重复的 DN（按 Name 去重）
+	seenDN := make(map[string]bool)
 	for _, dn := range dnListResp.DeliveryNoteList {
+		if seenDN[dn.Name] {
+			continue
+		}
+		seenDN[dn.Name] = true
 		// 找到关联此DN的收货单
 		relatedReceipts := s.getReceiptsForDN(dn.Name, receiptOrders)
 

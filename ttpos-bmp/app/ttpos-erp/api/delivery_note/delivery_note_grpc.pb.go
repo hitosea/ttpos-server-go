@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	DeliveryNoteService_GetDeliveryNoteList_FullMethodName = "/delivery_note.DeliveryNoteService/GetDeliveryNoteList"
+	DeliveryNoteService_GetDeliveryNote_FullMethodName     = "/delivery_note.DeliveryNoteService/GetDeliveryNote"
 )
 
 // DeliveryNoteServiceClient is the client API for DeliveryNoteService service.
@@ -34,6 +35,10 @@ type DeliveryNoteServiceClient interface {
 	// 参数：查询条件，包含公司、客户、仓库、采购订单号等过滤条件
 	// 返回：送货单列表
 	GetDeliveryNoteList(ctx context.Context, in *GetDeliveryNoteListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 获取单个送货单
+	// 参数：送货单号
+	// 返回：送货单详情
+	GetDeliveryNote(ctx context.Context, in *GetDeliveryNoteReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type deliveryNoteServiceClient struct {
@@ -54,6 +59,16 @@ func (c *deliveryNoteServiceClient) GetDeliveryNoteList(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *deliveryNoteServiceClient) GetDeliveryNote(ctx context.Context, in *GetDeliveryNoteReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, DeliveryNoteService_GetDeliveryNote_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DeliveryNoteServiceServer is the server API for DeliveryNoteService service.
 // All implementations must embed UnimplementedDeliveryNoteServiceServer
 // for forward compatibility.
@@ -64,6 +79,10 @@ type DeliveryNoteServiceServer interface {
 	// 参数：查询条件，包含公司、客户、仓库、采购订单号等过滤条件
 	// 返回：送货单列表
 	GetDeliveryNoteList(context.Context, *GetDeliveryNoteListReq) (*api.ResponseInfo, error)
+	// 获取单个送货单
+	// 参数：送货单号
+	// 返回：送货单详情
+	GetDeliveryNote(context.Context, *GetDeliveryNoteReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedDeliveryNoteServiceServer()
 }
 
@@ -76,6 +95,9 @@ type UnimplementedDeliveryNoteServiceServer struct{}
 
 func (UnimplementedDeliveryNoteServiceServer) GetDeliveryNoteList(context.Context, *GetDeliveryNoteListReq) (*api.ResponseInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetDeliveryNoteList not implemented")
+}
+func (UnimplementedDeliveryNoteServiceServer) GetDeliveryNote(context.Context, *GetDeliveryNoteReq) (*api.ResponseInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDeliveryNote not implemented")
 }
 func (UnimplementedDeliveryNoteServiceServer) mustEmbedUnimplementedDeliveryNoteServiceServer() {}
 func (UnimplementedDeliveryNoteServiceServer) testEmbeddedByValue()                             {}
@@ -116,6 +138,24 @@ func _DeliveryNoteService_GetDeliveryNoteList_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DeliveryNoteService_GetDeliveryNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDeliveryNoteReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DeliveryNoteServiceServer).GetDeliveryNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DeliveryNoteService_GetDeliveryNote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DeliveryNoteServiceServer).GetDeliveryNote(ctx, req.(*GetDeliveryNoteReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DeliveryNoteService_ServiceDesc is the grpc.ServiceDesc for DeliveryNoteService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -126,6 +166,10 @@ var DeliveryNoteService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetDeliveryNoteList",
 			Handler:    _DeliveryNoteService_GetDeliveryNoteList_Handler,
+		},
+		{
+			MethodName: "GetDeliveryNote",
+			Handler:    _DeliveryNoteService_GetDeliveryNote_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

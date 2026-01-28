@@ -98,7 +98,8 @@ type PurchaseOrderItemUpdateReq struct {
 
 // PurchaseOrderDetailReq 采购订单详情请求
 type PurchaseOrderDetailReq struct {
-	Uuid uint64 `json:"uuid" form:"uuid" binding:"required,min=1"` // 采购订单ID
+	Uuid            uint64 `json:"uuid" form:"uuid" binding:"required,min=1"`          // 采购订单ID
+	WithReceiptList bool   `json:"with_receipt_list" form:"with_receipt_list"`         // 是否查看收货清单
 }
 
 // PurchaseOrderDeleteReq 删除采购订单请求
@@ -217,4 +218,12 @@ type ReceiptPendingItemsReq struct {
 	PurchaseOrderUuid uint64 `json:"purchase_order_uuid" form:"purchase_order_uuid" binding:"required,min=1"` // 采购订单UUID
 	DeliveryNoteNo    string `json:"delivery_note_no" form:"delivery_note_no" binding:"omitempty,max=255"`    // DN单号（与SupplierErpCode二选一）
 	SupplierErpCode   string `json:"supplier_erp_code" form:"supplier_erp_code" binding:"omitempty,max=255"`  // 供应商ERP编码（与DeliveryNoteNo二选一）
+}
+
+// PurchaseReceiptNewListReq 新收货单列表请求（按采购单维度）
+type PurchaseReceiptNewListReq struct {
+	dto.PageReq                   // 分页参数
+	ReceiptStatus *int   `json:"receipt_status" form:"receipt_status" binding:"omitempty,min=0,max=1"` // 采购单收货状态：0-待收货（未完全收货）1-已收货（已完全收货）
+	OrderNo       string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`                  // 单据编号（采购单OrderNo）
+	ErpOrderNo    string `json:"erp_order_no" form:"erp_order_no" binding:"omitempty,max=50"`          // 采购单号（ErpOrderNo）
 }

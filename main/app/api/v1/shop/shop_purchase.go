@@ -33,7 +33,23 @@ type PurchaseHandler struct {
 // @Produce json
 // @Security JwtToken
 // @Param client-version header string true "版本号"
-// @Param data body req.PurchaseOrderListReq true "采购订单列表请求参数"
+// @Param page query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Param order_no query string false "订单编号"
+// @Param uuid_in query []uint64 false "采购订单ID"
+// @Param purchase_type query int false "采购类型, 1-外部采购 2-内部采购"
+// @Param status_in query []int false "状态筛选: 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核"
+// @Param supplier_name query string false "供应商名称"
+// @Param warehouse_erp_code query string false "仓库编码"
+// @Param company_uuid query uint64 false "公司UUID"
+// @Param create_time_start query int false "创建时间开始"
+// @Param create_time_end query int false "创建时间结束"
+// @Param order_time_start query int false "订单时间开始"
+// @Param order_time_end query int false "订单时间结束"
+// @Param expect_arrival_time_start query int false "期望到货时间开始"
+// @Param expect_arrival_time_end query int false "期望到货时间结束"
+// @Param receive_time_start query int false "收货时间开始"
+// @Param receive_time_end query int false "收货时间结束"
 // @Success 200 {object} dto.Response{data=resp.PurchaseOrderListResp} "成功"
 // @Router /shop/purchase/order/list [get]
 func (h *PurchaseHandler) GetPurchaseOrderList(c *gin.Context) {
@@ -55,13 +71,14 @@ func (h *PurchaseHandler) GetPurchaseOrderList(c *gin.Context) {
 
 // GetPurchaseOrderDetail 获取采购订单详情
 // @Summary 获取采购订单详情
-// @Description 根据UUID获取采购订单详情
+// @Description 根据UUID获取采购订单详情，响应包含收货批次（确认收货的记录数）
 // @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @Param client-version header string true "版本号"
 // @Param uuid query int true "采购订单UUID"
+// @Param with_receipt_list query bool false "是否查看收货清单，true时返回收货清单"
 // @Success 200 {object} dto.Response{data=resp.PurchaseOrderDetailResp} "成功"
 // @Router /shop/purchase/order/detail [get]
 func (h *PurchaseHandler) GetPurchaseOrderDetail(c *gin.Context) {
@@ -522,6 +539,39 @@ func (h *PurchaseHandler) GetReceiptPendingItems(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
+// GetPurchaseReceiptNewList 获取品牌采购收货单列表（按采购单维度）
+// @Summary 获取品牌采购收货单列表（按采购单维度）
+// @Description 获取品牌采购（内部采购）收货单列表，只显示总部审核通过的采购单，按采购单维度展示，返回采购单时间、收货状态、单据编号、采购单号、物品数量、收货次数、收货进度
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param client-version header string true "版本号"
+// @Param page_no query int false "页码" default(1)
+// @Param page_size query int false "每页条数" default(20)
+// @Param receipt_status query int false "采购单收货状态：0-待收货（未完全收货）1-已收货（已完全收货）"
+// @Param order_no query string false "单据编号（采购单OrderNo）"
+// @Param erp_order_no query string false "采购单号（ErpOrderNo）"
+// @Success 200 {object} dto.Response{data=resp.PurchaseReceiptNewListResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
+// @Router /shop/purchase/receipt/new_list [get]
+func (h *PurchaseHandler) GetPurchaseReceiptNewList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var listReq req.PurchaseReceiptNewListReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, nil)
+		return
+	}
+
+	resp, err := h.purchaseOrderSrv.GetPurchaseReceiptNewList(ctx, listReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
 // GetLimitSchemeList 获取限购方案列表
 // @Summary 获取限购方案列表
 // @Description 分页获取限购方案列表
@@ -708,6 +758,7 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 
 		// 收货管理
 		privateApi.GET("/purchase/receipt/list", wrapper.GetPurchaseReceiptList)
+		privateApi.GET("/purchase/receipt/new_list", wrapper.GetPurchaseReceiptNewList) // 新收货单列表（按采购单维度）
 		privateApi.POST("/purchase/receipt/create", wrapper.CreatePurchaseReceipt)
 		privateApi.POST("/purchase/receipt/update", wrapper.UpdatePurchaseReceipt)
 		privateApi.POST("/purchase/order/item/units/update", wrapper.UpdatePurchaseOrderItemUnit)
