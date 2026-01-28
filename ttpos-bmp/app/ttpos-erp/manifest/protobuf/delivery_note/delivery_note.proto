@@ -54,10 +54,25 @@ message GetDeliveryNoteListResp {
   repeated DeliveryNote delivery_note_list = 1; // 送货单列表
 }
 
+// GetDeliveryNoteReq 获取单个送货单请求
+message GetDeliveryNoteReq {
+  string delivery_note_name = 1;  // 送货单号，必填
+}
+
+// GetDeliveryNoteResp 获取单个送货单响应
+message GetDeliveryNoteResp {
+  DeliveryNote delivery_note = 1; // 送货单信息
+}
+
 // DeliveryNoteService 送货单服务定义
 service DeliveryNoteService {
   // 获取送货单列表
   // 参数：查询条件，包含公司、客户、仓库、采购订单号等过滤条件
   // 返回：送货单列表
   rpc GetDeliveryNoteList(GetDeliveryNoteListReq) returns (erp.ResponseInfo);
+
+  // 获取单个送货单
+  // 参数：送货单号
+  // 返回：送货单详情
+  rpc GetDeliveryNote(GetDeliveryNoteReq) returns (erp.ResponseInfo);
 }
