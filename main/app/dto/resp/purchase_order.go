@@ -41,6 +41,8 @@ type PurchaseOrderDetailResp struct {
 	Items               []PurchaseOrderItemInfo `json:"items"`                  // 采购明细
 	Remarks             []PurchaseOrderRemark   `json:"remarks"`                // 批注
 	IsUpdateQuotaScheme bool                    `json:"is_update_quota_scheme"` // 是否更新限购方案
+	ReceiptBatchNum     int                     `json:"receipt_batch_num"`      // 收货批次（确认收货的记录数）
+	ReceiptList         []ReceiptListItem       `json:"receipt_list"`           // v2.16.0+ 收货清单，请求with_receipt_list=true时返回
 }
 
 // 批注
@@ -196,18 +198,21 @@ type PurchaseReceiptOrderListResp struct {
 
 // PurchaseReceiptOrderInfo 收货单信息
 type PurchaseReceiptOrderInfo struct {
-	Uuid              uint64 `json:"uuid"`                // 收货单ID
-	Status            int    `json:"status"`              // 状态 0-待收货 1-已收货 2-已取消
-	OrderNo           string `json:"order_no"`            // 订单编号
-	ErpOrderNo        string `json:"erp_order_no"`        // ERP收货单号
-	PurchaseOrderNo   string `json:"purchase_order_no"`   // 采购单号
-	PurchaseOrderUuid uint64 `json:"purchase_order_uuid"` // 采购单ID
-	Num               int    `json:"num"`                 // 物品数量
-	ExpectArrivalTime int    `json:"expect_arrival_time"` // 期望到货日期
-	PurchaseTime      uint64 `json:"purchase_time"`       // 采购时间
-	ReceiveTime       int    `json:"receive_time"`        // 收货日期
-	CancelTime        int    `json:"cancel_time"`         // 取消时间
-	CreateTime        int    `json:"create_time"`         // 创建时间
+	Uuid                    uint64             `json:"uuid"`                       // 收货单ID
+	Status                  int                `json:"status"`                     // 状态 0-待收货 1-已收货 2-已取消
+	OrderNo                 string             `json:"order_no"`                   // 订单编号
+	ErpOrderNo              string             `json:"erp_order_no"`               // ERP收货单号
+	PurchaseOrderNo         string             `json:"purchase_order_no"`          // 采购单号
+	PurchaseOrderUuid       uint64             `json:"purchase_order_uuid"`        // 采购单ID
+	Num                     int                `json:"num"`                        // 物品数量
+	ExpectArrivalTime       int                `json:"expect_arrival_time"`        // 期望到货日期
+	PurchaseTime            uint64             `json:"purchase_time"`              // 采购时间
+	ReceiveTime             int                `json:"receive_time"`               // 收货日期
+	CancelTime              int                `json:"cancel_time"`                // 取消时间
+	CreateTime              int                `json:"create_time"`                // 创建时间
+	SupplierName            string             `json:"supplier_name"`              // 供应商名称
+	SourceWarehouseName     dto.LocaleResponse `json:"source_warehouse_name"`      // 来源仓库名称（多语言）
+	IsFromDeliveryNote      bool               `json:"is_from_delivery_note"`      // 是否来自DN单据
 }
 
 // PurchaseReceiptItemInfo 收货明细信息
@@ -248,4 +253,81 @@ type ReceiptFileInfo struct {
 	FilePath   string `json:"file_path"`   // 文件访问路径
 	SortOrder  int    `json:"sort_order"`  // 排序
 	CreateTime int    `json:"create_time"` // 创建时间
+}
+
+// ReceiptListItem 收货清单项 (v2.16.0+)
+type ReceiptListItem struct {
+	IsLegacy           bool                   `json:"is_legacy"`             // 是否为旧采购单收货清单（无ErpSaleOrderNo）
+	IsDeliveryNote     bool                   `json:"is_delivery_note"`      // 是否DN单据
+	DeliveryNoteNo     string                 `json:"delivery_note_no"`      // DN单据号
+	IsCompleted        bool                   `json:"is_completed"`          // 是否已收货完成
+	SupplierName       string                 `json:"supplier_name"`         // 供应商名称
+	SupplierErpCode    string                 `json:"supplier_erp_code"`     // 供应商ERP编码
+	ErpPurchaseOrderNo string                 `json:"erp_purchase_order_no"` // ERP采购单号
+	ReceiptOrders      []ReceiptListOrderInfo `json:"receipt_orders"`        // 收货单列表
+}
+
+// ReceiptListOrderInfo 收货单简要信息
+type ReceiptListOrderInfo struct {
+	Uuid        uint64 `json:"uuid"`         // 收货单UUID
+	DisplayNo   string `json:"display_no"`   // 显示单号（已收货显示erp_order_no，草稿显示"草稿（时间）"）
+	Status      int    `json:"status"`       // 状态
+	ErpOrderNo  string `json:"erp_order_no"` // ERP收货单号
+	CreateTime  int64  `json:"create_time"`  // 创建时间
+	IsConfirmed bool   `json:"is_confirmed"` // 是否已确认
+}
+
+// ReceiptPendingItemsResp 待收货物品响应 (v2.16.0+)
+type ReceiptPendingItemsResp struct {
+	IsDeliveryNote  bool                     `json:"is_delivery_note"`  // 是否DN单据
+	DeliveryNoteNo  string                   `json:"delivery_note_no"`  // DN单据号
+	SupplierName    string                   `json:"supplier_name"`     // 供应商名称
+	SupplierErpCode string                   `json:"supplier_erp_code"` // 供应商ERP编码
+	Items           []ReceiptPendingItemInfo `json:"items"`             // 待收货物品列表
+}
+
+// PurchaseReceiptNewListResp 新收货单列表响应（按采购单维度）
+type PurchaseReceiptNewListResp struct {
+	List []*PurchaseReceiptNewListItem `json:"list"` // 收货单列表（按采购单维度）
+	Meta dto.PageResponse              `json:"meta"` // 分页信息
+}
+
+// PurchaseReceiptNewListItem 新收货单列表项（按采购单维度）
+type PurchaseReceiptNewListItem struct {
+	Uuid              uint64 `json:"uuid"`                // 采购单UUID
+	OrderNo           string `json:"order_no"`            // 单据编号（采购单OrderNo）
+	ErpOrderNo        string `json:"erp_order_no"`        // 采购单号（ErpOrderNo）
+	OrderTime         int64  `json:"order_time"`          // 采购单时间
+	ReceiptStatus     int    `json:"receipt_status"`      // 采购单收货状态：0-待收货（未完全收货）1-已收货（已完全收货）
+	ItemNum           int    `json:"item_num"`            // 申请单物品数量
+	ConfirmReceiptNum int    `json:"confirm_receipt_num"` // 确认收货次数
+	ReceiptProgress   string `json:"receipt_progress"`    // 总收货进度（百分比如 "50.00%"）
+}
+
+// ReceiptPendingItemInfo 待收货物品信息
+type ReceiptPendingItemInfo struct {
+	PurchaseOrderItemUuid uint64                          `json:"purchase_order_item_uuid"` // 采购单物品UUID
+	MaterialUuid          uint64                          `json:"material_uuid"`            // 物料UUID
+	MaterialCode          string                          `json:"material_code"`            // 物料编码
+	LocaleName            dto.LocaleResponse              `json:"locale_name"`              // 物料名称
+	PurchaseNum           float64                         `json:"purchase_num"`             // 采购数量
+	ArrivalNum            float64                         `json:"arrival_num"`              // 已到货数量
+	PendingNum            float64                         `json:"pending_num"`              // 待收货数量
+	UnitUuid              uint64                          `json:"unit_uuid"`                // 单位UUID
+	LocaleUnitName        dto.LocaleResponse              `json:"locale_unit_name"`         // 单位名称
+	UnitConversionRate    float64                         `json:"unit_conversion_rate"`     // 单位转换率
+	BaseUnitUuid          uint64                          `json:"base_unit_uuid"`           // 基准单位UUID
+	LocaleBaseUnitName    dto.LocaleResponse              `json:"locale_base_unit_name"`    // 基准单位名称
+	UnitList              []PurchaseOrderItemMaterialUnit `json:"unit_list"`                // 可选单位列表
+	Units                 []ReceiptPendingItemUnit        `json:"units"`                    // 多单位待收货信息
+}
+
+// ReceiptPendingItemUnit 待收货物品单位信息
+type ReceiptPendingItemUnit struct {
+	UnitUuid       uint64             `json:"unit_uuid"`        // 单位UUID
+	LocaleUnitName dto.LocaleResponse `json:"locale_unit_name"` // 单位名称
+	ConversionRate float64            `json:"conversion_rate"`  // 转换率
+	PurchaseNum    float64            `json:"purchase_num"`     // 采购数量
+	ArrivalNum     float64            `json:"arrival_num"`      // 已到货数量
+	PendingNum     float64            `json:"pending_num"`      // 待收货数量
 }

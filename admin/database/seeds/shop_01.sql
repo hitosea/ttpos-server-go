@@ -1228,10 +1228,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order` (
     `source_warehouse_name` TEXT COMMENT '源仓库名称',
     `target_warehouse_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '目标仓库ERP编码',
     `target_warehouse_name` TEXT COMMENT '目标仓库名称',
+    `delivery_note_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP Delivery Note号',
+    `is_from_delivery_note` INT(10) NOT NULL DEFAULT 0 COMMENT '是否来自DN单:0-否 1-是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_delivery_note_no` (`delivery_note_no`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order_item` (
@@ -3417,7 +3420,7 @@ CREATE TABLE `ttpos_purchase_order_log` (
   `action_desc` varchar(255) DEFAULT '' COMMENT '操作描述',
   `old_status` int(10) DEFAULT 0 COMMENT '操作前状态',
   `new_status` int(10) DEFAULT 0 COMMENT '操作后状态',
-  `content` text COMMENT '操作内容详情',
+  `content` longtext COMMENT '操作内容详情',
   `remark` text COMMENT '备注',
   `create_time` int(10) unsigned DEFAULT 0 COMMENT '创建时间(时间戳)',
   `update_time` int(10) unsigned DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -3617,6 +3620,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order` (
   `next_approval_company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '下一个审批门店UUID',
   `next_approval_company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '下一个审批门店名称',
   `remark` text COMMENT '备注',
+  `annotations` text COMMENT '批注列表JSON',
   `item_count` int(10) NOT NULL DEFAULT 0 COMMENT '物品种类数量',
   `erp_resp` text COMMENT 'ERP响应数据',
   `receipt_order_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '收货单ERP编码',
@@ -3733,6 +3737,21 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_log` (
   KEY `idx_action` (`action`),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单操作日志表';
+
+-- 调拨单附件表
+CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_file` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '附件关联ID',
+    `transfer_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '调拨单UUID',
+    `file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '文件UUID',
+    `sort_order` INT(11) NOT NULL DEFAULT 0 COMMENT '排序顺序',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `idx_uuid` (`uuid`),
+    KEY `idx_transfer_order_uuid` (`transfer_order_uuid`),
+    KEY `idx_file_uuid` (`file_uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '调拨单附件表';
 
 -- 导出记录表
 CREATE TABLE IF NOT EXISTS `ttpos_export_record` (

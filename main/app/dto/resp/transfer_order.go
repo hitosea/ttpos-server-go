@@ -42,6 +42,7 @@ type TransferOrderInfo struct {
 	UpdateTime               int                `json:"update_time"`                  // 更新时间
 	IsCanApprove             bool               `json:"is_can_approve"`               // 是否可审批
 	IsCanReceive             bool               `json:"is_can_receive"`               // 是否可收货
+	IsCanResubmit            bool               `json:"is_can_resubmit"`              // 是否可重新提交（已驳回状态且为发起人）
 	IsNeedSelectOutWarehouse bool               `json:"is_need_select_out_warehouse"` // 是否需要选择出库仓库
 	IsNeedSelectInWarehouse  bool               `json:"is_need_select_in_warehouse"`  // 是否需要选择入库仓库
 }
@@ -49,8 +50,10 @@ type TransferOrderInfo struct {
 // TransferOrderDetailResp 调拨单详情响应
 type TransferOrderDetailResp struct {
 	TransferOrderInfo
-	Items      []TransferOrderItemInfo `json:"items"`       // 调拨明细
-	RejectInfo TransferOrderRejectInfo `json:"reject_info"` // 驳回信息
+	Items       []TransferOrderItemInfo       `json:"items"`       // 调拨明细
+	RejectInfo  TransferOrderRejectInfo       `json:"reject_info"` // 驳回信息
+	Annotations []TransferOrderAnnotationItem `json:"annotations"` // 批注列表
+	Files       []TransferOrderFileInfo       `json:"files"`       // 附件列表
 }
 
 // TransferOrderItemInfo 调拨单明细信息
@@ -185,4 +188,16 @@ type TransferOrderWarehouseItem struct {
 	ErpCode string             `json:"erp_code"` // 仓库ERP编码
 	Name    dto.LocaleResponse `json:"name"`     // 仓库名称（多语言）
 	Type    string             `json:"type"`     // 仓库类型
+}
+
+// TransferOrderFileInfo 调拨单附件信息
+type TransferOrderFileInfo struct {
+	FileUuid   uint64 `json:"file_uuid"`   // 文件UUID
+	FileName   string `json:"file_name"`   // 文件名
+	FileSize   int64  `json:"file_size"`   // 文件大小（字节）
+	FileType   string `json:"file_type"`   // 文件类型（image/document）
+	Extension  string `json:"extension"`   // 文件扩展名
+	FilePath   string `json:"file_path"`   // 文件访问路径
+	SortOrder  int    `json:"sort_order"`  // 排序
+	CreateTime int    `json:"create_time"` // 创建时间
 }

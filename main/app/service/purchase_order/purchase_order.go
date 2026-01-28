@@ -50,6 +50,8 @@ type IPurchaseOrderSrv interface {
 	GetPurchaseReceiptOrderDetail(ctx context.Context, req req.PurchaseReceiptOrderDetailReq) (resp.PurchaseReceiptOrderDetailResp, error) // 获取收货单详情
 	UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error                                           // 更新收货单
 	CancelPurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderCancelReq) error                                           // 取消收货单
+	GetReceiptPendingItems(ctx context.Context, req req.ReceiptPendingItemsReq) (resp.ReceiptPendingItemsResp, error)                      // v2.16.0+ 获取待收货物品
+	GetPurchaseReceiptNewList(ctx context.Context, req req.PurchaseReceiptNewListReq) (resp.PurchaseReceiptNewListResp, error)             // 新收货单列表（按采购单维度）
 }
 
 // purchaseOrderSrv 采购申请服务实现
@@ -425,6 +427,38 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		return remarks[i].CreateTime > remarks[j].CreateTime
 	})
 	detailResp.Remarks = remarks
+
+	// 统计收货批次（确认收货的记录数，status=1 已收货）
+	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
+	receiptBatchNum, err := receiptOrderRepo.Count(
+		receiptOrderRepo.WherePurchaseOrderUuid(purchaseOrder.Uuid),
+		receiptOrderRepo.WhereStatusIn([]int{constant.ReceiptOrderStatusReceived}),
+	)
+	if err != nil {
+		logger.Logger.Warn("统计收货批次失败", zap.Error(err), zap.Uint64("purchase_order_uuid", purchaseOrder.Uuid))
+		receiptBatchNum = 0
+	}
+	detailResp.ReceiptBatchNum = int(receiptBatchNum)
+
+	// 版本判断：v2.16.0+ 返回收货清单字段（仅子店）
+	if ctx.Version(context.GTE, constant.ClientVersionV2160) && !companySetting.IsHeadquarter() {
+		// 初始化为空数组，确保始终返回该字段
+		detailResp.ReceiptList = make([]resp.ReceiptListItem, 0)
+
+		// 仅当 WithReceiptList=true 时才查询收货清单数据
+		if req.WithReceiptList {
+			// 检查是否需要获取收货清单数据（有ErpSaleOrderNo或是品牌采购）
+			needReceiptList := purchaseOrder.ErpSaleOrderNo != "" || purchaseOrder.PurchaseType == constant.PurchaseTypeBrand
+			if needReceiptList {
+				receiptList, err := s.GetReceiptList(ctx, purchaseOrder)
+				if err != nil {
+					logger.Logger.Warn("获取收货清单失败", zap.Error(err), zap.Uint64("purchase_order_uuid", purchaseOrder.Uuid))
+				} else if len(receiptList) > 0 {
+					detailResp.ReceiptList = receiptList
+				}
+			}
+		}
+	}
 
 	return detailResp, nil
 }
@@ -2014,4 +2048,118 @@ func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(
 	defer s.lock.UnlockUuid(req.Uuid)
 
 	return s.receiptSrv.CancelPurchaseReceiptOrder(ctx, req)
+}
+
+// GetPurchaseReceiptNewList 新收货单列表（按采购单维度）
+// 返回采购单OrderTime、采购单收货状态、单据编号、采购单号、申请单物品数量、确认收货次数、总收货进度
+func (s *purchaseOrderSrv) GetPurchaseReceiptNewList(
+	ctx context.Context,
+	reqData req.PurchaseReceiptNewListReq,
+) (resp.PurchaseReceiptNewListResp, error) {
+	db := ctx.GetDB()
+	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
+	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
+
+	// 构建查询选项 - 只查询品牌采购（内部采购）且已通过总部审核的采购单
+	var opts []repository.DBOption
+
+	// 只查询品牌采购（内部采购）
+	opts = append(opts, purchaseOrderRepo.WherePurchaseType(constant.PurchaseTypeBrand))
+
+	// 根据收货状态筛选
+	if reqData.ReceiptStatus != nil {
+		if *reqData.ReceiptStatus == 0 {
+			// 待收货（未完全收货）：状态为 2-已通过
+			opts = append(opts, purchaseOrderRepo.WhereStatusIn([]int{
+				constant.PurchaseOrderStatusApproved,
+			}))
+		} else if *reqData.ReceiptStatus == 1 {
+			// 已收货（已完全收货）：状态为 4-已完成
+			opts = append(opts, purchaseOrderRepo.WhereStatusIn([]int{
+				constant.PurchaseOrderStatusCompleted,
+			}))
+		}
+	} else {
+		// 默认查询所有可收货状态的采购单
+		opts = append(opts, purchaseOrderRepo.WhereStatusIn([]int{
+			constant.PurchaseOrderStatusApproved,
+			constant.PurchaseOrderStatusCompleted,
+		}))
+	}
+
+	// 单据编号筛选
+	if reqData.OrderNo != "" {
+		opts = append(opts, purchaseOrderRepo.WhereOrderNo(reqData.OrderNo))
+	}
+
+	// 采购单号筛选（ErpOrderNo）
+	if reqData.ErpOrderNo != "" {
+		opts = append(opts, func(db *gorm.DB) *gorm.DB {
+			return db.Where("erp_order_no LIKE ?", "%"+reqData.ErpOrderNo+"%")
+		})
+	}
+
+	// 按订单时间倒序排列
+	opts = append(opts, purchaseOrderRepo.OrderByOrderTime(true))
+
+	// 查询关联的物品明细以计算物品数量
+	opts = append(opts, purchaseOrderRepo.WithSimpleItems())
+
+	// 分页查询采购单
+	purchaseOrders, total, err := purchaseOrderRepo.GetListWithPagination(
+		reqData.PageNo,
+		reqData.PageSize,
+		opts...,
+	)
+	if err != nil {
+		return resp.PurchaseReceiptNewListResp{}, errors.WithMessage(errors.New("查询采购单列表失败"), err.Error())
+	}
+
+	// 构建响应列表
+	list := make([]*resp.PurchaseReceiptNewListItem, 0, len(purchaseOrders))
+
+	for _, po := range purchaseOrders {
+		// 统计确认收货次数（status=1 已收货的收货单数量）
+		confirmReceiptCount, err := receiptOrderRepo.Count(
+			receiptOrderRepo.WherePurchaseOrderUuid(po.Uuid),
+			receiptOrderRepo.WhereStatusIn([]int{constant.ReceiptOrderStatusReceived}),
+		)
+		if err != nil {
+			logger.Logger.Error("统计确认收货次数失败",
+				zap.Uint64("purchase_order_uuid", po.Uuid),
+				zap.Error(err),
+			)
+			confirmReceiptCount = 0
+		}
+
+		// 计算收货状态：0-待收货（未完全收货）1-已收货（已完全收货）
+		receiptStatus := 0
+		if po.Status == constant.PurchaseOrderStatusCompleted {
+			receiptStatus = 1
+		}
+
+		// 计算收货进度
+		receiptProgress := fmt.Sprintf("%.2f%%", po.GetReceiptProgress())
+
+		item := &resp.PurchaseReceiptNewListItem{
+			Uuid:              po.Uuid,
+			OrderNo:           po.OrderNo,
+			ErpOrderNo:        po.ErpOrderNo,
+			OrderTime:         po.OrderTime,
+			ReceiptStatus:     receiptStatus,
+			ItemNum:           len(po.Items),
+			ConfirmReceiptNum: int(confirmReceiptCount),
+			ReceiptProgress:   receiptProgress,
+		}
+		list = append(list, item)
+	}
+
+	return resp.PurchaseReceiptNewListResp{
+		List: list,
+		Meta: dto.PageResponse{
+			PageNo:   reqData.PageNo,
+			PageSize: reqData.PageSize,
+			Total:    total,
+		},
+	}, nil
 }

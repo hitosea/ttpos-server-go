@@ -1,6 +1,7 @@
 package event
 
 import (
+	kiosk "ttpos-server-go/app/event/kiosk"
 	member "ttpos-server-go/app/event/member"
 	order "ttpos-server-go/app/event/order"
 	order_h5 "ttpos-server-go/app/event/order_h5"
@@ -35,6 +36,10 @@ func init() {
 	member.PayFinishMemberSaleOrderEventHandler()
 	// 自动注册"接受会员订单"事件处理器
 	member.AcceptMemberSaleOrderEventHandler()
+
+	// 自助点餐机相关事件处理器
+	// 自动注册"自助点餐机订单支付完成"事件处理器
+	kiosk.PayFinishKioskOrderEventHandler()
 
 	// 订单操作相关事件处理器
 	// 自动注册"结账"事件处理器

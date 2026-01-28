@@ -53,6 +53,9 @@ type TransferOrder struct {
 	// 备注
 	Remark string `gorm:"column:remark;type:text;comment:备注" json:"remark"`
 
+	// 批注列表（JSON 格式存储）
+	Annotations string `gorm:"column:annotations;type:text;comment:批注列表JSON" json:"annotations"`
+
 	// 物品统计
 	ItemCount int `gorm:"column:item_count;type:int;default:0;comment:物品种类数量" json:"item_count"`
 
@@ -244,6 +247,13 @@ func (TransferOrderApproval) TableName() string {
 // IsViaCompanyWarehouseBool 获取是否通过公司仓库
 func (toa *TransferOrderApproval) IsViaCompanyWarehouseBool() bool {
 	return toa.IsViaCompanyWarehouse == 1
+}
+
+// TransferOrderAnnotationJSON 批注 JSON 结构（用于序列化/反序列化）
+type TransferOrderAnnotationJSON struct {
+	AnnotationType int    `json:"annotation_type"` // 批注类型
+	Content        string `json:"content"`         // 批注内容
+	CreateTime     int64  `json:"create_time"`     // 创建时间
 }
 
 // TransferOrderLog 调拨单操作日志表 ttpos_transfer_order_log

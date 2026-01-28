@@ -8,6 +8,39 @@
     "**/ttpos-flutter/**": true,
   },
 
+  // ==== 终端配置 =====
+  "terminal.integrated.profiles.linux": {
+    "Claude Code": {
+      "path": "claude",
+      "args": [],
+      "icon": "robot",
+      "color": "terminal.ansiYellow",
+      "overrideName": true
+    },
+    "Claude Code (yolo)": {
+      "path": "claude",
+      "args": ["--dangerously-skip-permissions"],
+      "icon": "robot",
+      "color": "terminal.ansiRed",
+      "overrideName": true
+    },
+    "Happy": {
+      "path": "happy",
+      "args": [],
+      "icon": "robot",
+      "color": "terminal.ansiGreen",
+      "overrideName": true
+    },
+    "Happy (yolo)": {
+      "path": "happy",
+      "args": ["--yolo"],
+      "icon": "robot",
+      "color": "terminal.ansiRed",
+      "overrideName": true
+    }
+  },
+
+
   // ===== Todo Tree 插件配置 =====
   "todo-tree.general.statusBar": "total",
   "todo-tree.general.tags": ["BUG", "NOTE", "FIXME", "TODO", "HACK"],

@@ -255,6 +255,10 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 	}
 	detailResp.WarehouseName = stockReconciliation.Warehouse.MultiLanguageName.GetNames()
 
+	// 是否可重新提交（已驳回状态且为发起人）
+	detailResp.IsCanResubmit = stockReconciliation.Status == constant.StockReconciliationStatusRejected &&
+		stockReconciliation.SubmitterStaffUuid == ctx.GetStaffUuid()
+
 	bookedQuantityMap, err := s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
 	if err != nil {
 		return detailResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
@@ -357,11 +361,11 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 	annotationsResp := make([]*resp.StockReconciliationAnnotationInfo, 0, len(annotations))
 	for _, annotation := range annotations {
 		annotationsResp = append(annotationsResp, &resp.StockReconciliationAnnotationInfo{
-			Uuid:               annotation.Uuid,
-			AnnotationType:     annotation.AnnotationType,
-			AnnotationTypeName: constant.StockReconciliationAnnotationTypeNameMap[annotation.AnnotationType],
-			Content:            annotation.Content,
-			CreateTime:         int64(annotation.CreateTime),
+			Uuid:           annotation.Uuid,
+			AnnotationType: annotation.AnnotationType,
+			LocaleName:     constant.GetStockReconciliationAnnotationTypeLocaleName(annotation.AnnotationType),
+			Content:        annotation.Content,
+			CreateTime:     int64(annotation.CreateTime),
 		})
 	}
 	detailResp.Annotations = annotationsResp

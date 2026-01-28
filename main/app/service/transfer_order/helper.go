@@ -1,9 +1,12 @@
 package transfer_order
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
+	"time"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
 	"ttpos-server-go/app/constant"
@@ -1317,4 +1320,116 @@ func (h *transferOrderHelper) joinNames(names []string) string {
 		result += name
 	}
 	return result
+}
+
+// AppendAnnotation 追加批注到调拨单
+func (h *transferOrderHelper) AppendAnnotation(
+	transferOrder *model.TransferOrder,
+	annotationType int,
+	content string,
+) error {
+	// 解析现有批注列表
+	var annotations []model.TransferOrderAnnotationJSON
+	if transferOrder.Annotations != "" {
+		if err := json.Unmarshal([]byte(transferOrder.Annotations), &annotations); err != nil {
+			logger.Logger.Error("解析批注列表失败", zap.Error(err))
+			annotations = []model.TransferOrderAnnotationJSON{}
+		}
+	}
+
+	// 追加新批注
+	annotations = append(annotations, model.TransferOrderAnnotationJSON{
+		AnnotationType: annotationType,
+		Content:        content,
+		CreateTime:     time.Now().Unix(),
+	})
+
+	// 按创建时间倒序排序（最新的在前面）
+	sort.Slice(annotations, func(i, j int) bool {
+		return annotations[i].CreateTime > annotations[j].CreateTime
+	})
+
+	// 序列化回 JSON
+	annotationsJSON, err := json.Marshal(annotations)
+	if err != nil {
+		return errors.WithMessage(errors.New("序列化批注列表失败"), err.Error())
+	}
+
+	transferOrder.Annotations = string(annotationsJSON)
+	return nil
+}
+
+// GetAnnotationList 从调拨单获取批注列表
+func (h *transferOrderHelper) GetAnnotationList(
+	transferOrder *model.TransferOrder,
+) []model.TransferOrderAnnotationJSON {
+	if transferOrder.Annotations == "" {
+		return []model.TransferOrderAnnotationJSON{}
+	}
+
+	var annotations []model.TransferOrderAnnotationJSON
+	if err := json.Unmarshal([]byte(transferOrder.Annotations), &annotations); err != nil {
+		logger.Logger.Error("解析批注列表失败", zap.Error(err))
+		return []model.TransferOrderAnnotationJSON{}
+	}
+
+	return annotations
+}
+
+// GetApproveAnnotationType 根据审批类型和调拨类型获取通过批注类型
+func (h *transferOrderHelper) GetApproveAnnotationType(approvalType string, transferType int) int {
+	switch approvalType {
+	case constant.TransferApprovalTypeSender:
+		// 发货门店
+		if transferType == constant.TransferTypeIn {
+			// 调入：发货门店审批
+			return constant.TransferOrderAnnotationTypeShipperApprove
+		}
+		// 调出：门店审批
+		return constant.TransferOrderAnnotationTypeShopApprove
+	case constant.TransferApprovalTypeSenderParent:
+		// 发货门店上级
+		return constant.TransferOrderAnnotationTypeParentApprove
+	case constant.TransferApprovalTypeReceiver:
+		// 收货门店
+		if transferType == constant.TransferTypeIn {
+			// 调入：门店审批
+			return constant.TransferOrderAnnotationTypeShopApprove
+		}
+		// 调出：收货门店审批
+		return constant.TransferOrderAnnotationTypeReceiverApprove
+	case constant.TransferApprovalTypeReceiverParent:
+		// 收货门店上级
+		return constant.TransferOrderAnnotationTypeParentApprove
+	}
+	return constant.TransferOrderAnnotationTypeShopApprove
+}
+
+// GetRejectAnnotationType 根据审批类型和调拨类型获取驳回批注类型
+func (h *transferOrderHelper) GetRejectAnnotationType(approvalType string, transferType int) int {
+	switch approvalType {
+	case constant.TransferApprovalTypeSender:
+		// 发货门店
+		if transferType == constant.TransferTypeIn {
+			// 调入：发货门店驳回
+			return constant.TransferOrderAnnotationTypeShipperReject
+		}
+		// 调出：门店驳回
+		return constant.TransferOrderAnnotationTypeShopReject
+	case constant.TransferApprovalTypeSenderParent:
+		// 发货门店上级
+		return constant.TransferOrderAnnotationTypeParentReject
+	case constant.TransferApprovalTypeReceiver:
+		// 收货门店
+		if transferType == constant.TransferTypeIn {
+			// 调入：门店驳回
+			return constant.TransferOrderAnnotationTypeShopReject
+		}
+		// 调出：收货门店驳回
+		return constant.TransferOrderAnnotationTypeReceiverReject
+	case constant.TransferApprovalTypeReceiverParent:
+		// 收货门店上级
+		return constant.TransferOrderAnnotationTypeParentReject
+	}
+	return constant.TransferOrderAnnotationTypeShopReject
 }

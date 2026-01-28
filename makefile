@@ -171,7 +171,8 @@ chown-all:
 
 # 更新 MCP Token
 update-mcp-token:
-	bash /home/coder/workspaces/update_mcp_token.sh
+	@echo "🔄 更新 MCP Token..."
+	bash ./ttpos-scripts/dootask.sh
 
 # 验证数据库结构
 verify-db-structure:

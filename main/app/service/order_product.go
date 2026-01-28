@@ -2067,6 +2067,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		batchCookingMode = shopCart.SaleBill.SaleBillSetting.BatchCookingMode
 	}
 	shopCartInfo := &resp.ShopCart{
+		SerialNo:         shopCart.SaleBill.SerialNo,
 		SaleBillUuid:     saleBillUuid,
 		IsDeskOrder:      shopCart.IsDeskShopCart(),
 		IsLock:           shopCart.SaleBill.IsLockStatus(),

@@ -19,9 +19,10 @@ import (
 
 // TransferOrderHandler 调拨单控制器
 type TransferOrderHandler struct {
-	authSrv          service.IAuthSrv
-	transferOrderSrv transfer_order.ITransferOrderSrv
-	materialSrv      service.IMaterialSrv
+	authSrv              service.IAuthSrv
+	transferOrderSrv     transfer_order.ITransferOrderSrv
+	materialSrv          service.IMaterialSrv
+	transferOrderFileSrv service.ITransferOrderFileSrv
 }
 
 // GetTransferOrderList 获取调拨单列表
@@ -307,6 +308,36 @@ func (h *TransferOrderHandler) RejectTransferOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// ResubmitTransferOrder 重新提交调拨单
+// @Summary 重新提交调拨单
+// @Description 重新提交已驳回的调拨单
+// @Tags 商家端.调拨单管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.TransferOrderUpdateReq true "重新提交调拨单请求参数"
+// @Success 200 {object} dto.Response{} "成功"
+// @Router /shop/transfer/order/resubmit [post]
+func (h *TransferOrderHandler) ResubmitTransferOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var updateReq req.TransferOrderUpdateReq
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.HandleValidationError(c, err, updateReq, nil)
+		return
+	}
+
+	// 设置为重新提交操作
+	updateReq.SetIsResubmit(true)
+
+	err := h.transferOrderSrv.UpdateTransferOrder(ctx, updateReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, gin.H{})
+}
+
 // ReceiveTransferOrder 收货调拨单
 // @Summary 收货调拨单
 // @Description 确认收货完成调拨
@@ -410,27 +441,29 @@ func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 	)
 	// 调拨单服务
 	wrapper := &TransferOrderHandler{
-		authSrv:          authSrv,
-		transferOrderSrv: transfer_order.NewTransferOrderSrv(dbm, materialSrv, settingSrv),
+		authSrv:              authSrv,
+		transferOrderSrv:     transfer_order.NewTransferOrderSrv(dbm, materialSrv, settingSrv),
+		transferOrderFileSrv: service.NewTransferOrderFileSrv(dbm),
 	}
 
 	// 需要认证
 	privateApi := router.Group("", middleware.MinVersionCheck(settingSrv, middleware.TypeTransferOrder, constant.ClientVersionV2090), middleware.Auth(authSrv, dbm))
 	{
 		// 调拨单管理
-		privateApi.GET("/transfer/order/list", wrapper.GetTransferOrderList)
-		privateApi.GET("/transfer/order/detail", wrapper.GetTransferOrderDetail)
-		privateApi.POST("/transfer/order/create", wrapper.CreateTransferOrder)
-		privateApi.POST("/transfer/order/update", wrapper.UpdateTransferOrder)
-		privateApi.DELETE("/transfer/order/delete", wrapper.DeleteTransferOrder)
-		privateApi.POST("/transfer/order/submit", wrapper.SubmitTransferOrder)
-		privateApi.POST("/transfer/order/approve", wrapper.ApproveTransferOrder)
-		privateApi.POST("/transfer/order/reject", wrapper.RejectTransferOrder)
-		privateApi.POST("/transfer/order/receive", wrapper.ReceiveTransferOrder)
+		privateApi.GET("/transfer/order/list", wrapper.GetTransferOrderList)       // 获取调拨单列表
+		privateApi.GET("/transfer/order/detail", wrapper.GetTransferOrderDetail)   // 获取调拨单详情
+		privateApi.POST("/transfer/order/create", wrapper.CreateTransferOrder)     // 创建调拨单
+		privateApi.POST("/transfer/order/update", wrapper.UpdateTransferOrder)     // 更新调拨单
+		privateApi.DELETE("/transfer/order/delete", wrapper.DeleteTransferOrder)   // 删除调拨单
+		privateApi.POST("/transfer/order/submit", wrapper.SubmitTransferOrder)     // 提交调拨单
+		privateApi.POST("/transfer/order/approve", wrapper.ApproveTransferOrder)   // 审批通过调拨单
+		privateApi.POST("/transfer/order/reject", wrapper.RejectTransferOrder)     // 驳回调拨单
+		privateApi.POST("/transfer/order/resubmit", wrapper.ResubmitTransferOrder) // 重新提交调拨单
+		privateApi.POST("/transfer/order/receive", wrapper.ReceiveTransferOrder)   // 收货调拨单
 
 		// 审批流程和操作日志
-		privateApi.GET("/transfer/order/approval/list", wrapper.GetTransferOrderApprovalList)
-		privateApi.GET("/transfer/order/log/list", wrapper.GetTransferOrderLogList)
+		privateApi.GET("/transfer/order/approval/list", wrapper.GetTransferOrderApprovalList) // 获取调拨单审批流程列表
+		privateApi.GET("/transfer/order/log/list", wrapper.GetTransferOrderLogList)           // 获取调拨单操作日志列表
 
 		// 下拉列表
 		privateApi.GET("/transfer/company/list", wrapper.GetTransferOrderCompanyList)     // 获取门店列表

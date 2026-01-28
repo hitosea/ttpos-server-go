@@ -96,3 +96,67 @@ func (*Controller) GetDeliveryNoteList(ctx context.Context, req *pb.GetDeliveryN
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("获取送货单列表成功", pbResp), nil
 }
+
+// GetDeliveryNote 获取单个送货单详情
+// 参数：ctx 上下文，req 送货单号
+// 返回：送货单详情和操作结果
+func (*Controller) GetDeliveryNote(ctx context.Context, req *pb.GetDeliveryNoteReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if len(req.DeliveryNoteName) == 0 {
+		return rpc.ApiError("送货单号不能为空"), nil
+	}
+
+	// 转换请求参数
+	logicReq := &dto.GetDeliveryNoteReq{
+		DeliveryNoteName: req.DeliveryNoteName,
+	}
+
+	// 调用 Logic 层
+	resp, err := service.DeliveryNote().GetDeliveryNote(ctx, logicReq)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 转换响应数据为 protobuf 格式
+	pbResp := &pb.GetDeliveryNoteResp{}
+	if resp.DeliveryNote != nil {
+		dn := resp.DeliveryNote
+		pbDn := &pb.DeliveryNote{
+			Name:             dn.Name,
+			Company:          dn.Company,
+			Customer:         dn.Customer,
+			CustomerName:     dn.CustomerName,
+			PostingDate:      dn.PostingDate,
+			PostingTime:      dn.PostingTime,
+			SetWarehouse:     dn.SetWarehouse,
+			SellingPriceList: dn.SellingPriceList,
+			TotalQty:         dn.TotalQty,
+			GrandTotal:       dn.GrandTotal,
+			Status:           dn.Status,
+			Docstatus:        int32(dn.Docstatus),
+		}
+
+		// 转换明细项
+		if len(dn.Items) > 0 {
+			pbDn.Items = make([]*pb.DeliveryNoteItem, 0, len(dn.Items))
+			for _, item := range dn.Items {
+				pbItem := &pb.DeliveryNoteItem{
+					ItemCode:          item.ItemCode,
+					ItemName:          item.ItemName,
+					Qty:               item.Qty,
+					Uom:               item.Uom,
+					Rate:              item.Rate,
+					Amount:            item.Amount,
+					Warehouse:         item.Warehouse,
+					AgainstSalesOrder: item.AgainstSalesOrder,
+				}
+				pbDn.Items = append(pbDn.Items, pbItem)
+			}
+		}
+
+		pbResp.DeliveryNote = pbDn
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("获取送货单成功", pbResp), nil
+}

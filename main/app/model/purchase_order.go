@@ -224,7 +224,7 @@ type PurchaseOrderLog struct {
 	ActionDesc        string `gorm:"column:action_desc;type:varchar(255);not null;default:'';comment:操作描述" json:"action_desc"`
 	OldStatus         int    `gorm:"column:old_status;type:int(10);not null;default:0;comment:操作前状态" json:"old_status"`
 	NewStatus         int    `gorm:"column:new_status;type:int(10);not null;default:0;comment:操作后状态" json:"new_status"`
-	Content           string `gorm:"column:content;type:text;comment:操作内容详情" json:"content"`
+	Content           string `gorm:"column:content;type:longtext;comment:操作内容详情" json:"content"`
 	Remark            string `gorm:"column:remark;type:text;comment:备注" json:"remark"`
 
 	// 关联关系
@@ -256,6 +256,8 @@ type PurchaseReceiptOrder struct {
 	SourceWarehouseName    string  `gorm:"column:source_warehouse_name;type:text;comment:源仓库名称" json:"source_warehouse_name"`
 	TargetWarehouseErpCode string  `gorm:"column:target_warehouse_erp_code;type:varchar(255);not null;default:'';comment:目标仓库ERP编码" json:"target_warehouse_erp_code"`
 	TargetWarehouseName    string  `gorm:"column:target_warehouse_name;type:text;comment:目标仓库名称" json:"target_warehouse_name"`
+	DeliveryNoteNo         string  `gorm:"column:delivery_note_no;type:varchar(255);not null;default:'';comment:ERP Delivery Note号" json:"delivery_note_no"`
+	IsFromDeliveryNote     int     `gorm:"column:is_from_delivery_note;type:int(10);not null;default:0;comment:是否来自DN单:0-否 1-是" json:"is_from_delivery_note"`
 
 	// 关联关系
 	PurchaseOrder PurchaseOrder              `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`

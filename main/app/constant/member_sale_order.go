@@ -12,6 +12,11 @@ const (
 	OrderFinishMemberSaleOrder    = "FINISH_MEMBER_SALE_ORDER"         // 配送完成，订单完成
 )
 
+// 自助点餐机订单操作类型
+const (
+	OrderPayFinishKioskOrder = "PAY_FINISH_KIOSK_ORDER" // 自助点餐机订单支付成功
+)
+
 // 会员端订单状态列表
 const (
 	MemberSaleOrderStatusSelecting             = 0 // 选购中

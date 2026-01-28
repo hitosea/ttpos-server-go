@@ -49,3 +49,28 @@ func (s *erpSrv) GetDeliveryNoteList(ctx pkgCtx.Context, getDeliveryNoteListReq 
 	}
 	return &delivery_note.GetDeliveryNoteListResp{}, nil
 }
+
+// GetDeliveryNote 获取单个送货单详情
+func (s *erpSrv) GetDeliveryNote(ctx pkgCtx.Context, companyAbbr, dnName string, includeItems bool) (*delivery_note.DeliveryNote, error) {
+	// 通过 GetDeliveryNoteList 获取，然后根据 Name 过滤
+	listResp, err := s.GetDeliveryNoteList(ctx, &delivery_note.GetDeliveryNoteListReq{
+		CompanyAbbr:  companyAbbr,
+		IncludeItems: includeItems,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if listResp == nil || len(listResp.DeliveryNoteList) == 0 {
+		return nil, errors.New("送货单不存在")
+	}
+
+	// 根据 Name 查找目标 DN
+	for _, dn := range listResp.DeliveryNoteList {
+		if dn.Name == dnName {
+			return dn, nil
+		}
+	}
+
+	return nil, errors.New("送货单不存在: " + dnName)
+}
