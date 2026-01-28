@@ -681,17 +681,46 @@ func (s *takeoutSrv) processReturnItemsStock(ctx context.Context, order *takeout
 	// 收集需要处理的 BOM UUID 和对应的减少数量
 	bomReduceQuantityMap := make(map[uint64]int) // map[bomUuid]reduceQuantity
 	for _, item := range returnItems {
-		if item.OldItem != nil && item.OldItem.TtposProductPackageUuid > 0 {
-			// 计算需要减少的数量
-			quantity := item.OldQuantity
-			if item.ChangeType == valueObject.ChangeTypeQuantity {
-				// 数量变动只处理减少的部分
-				quantity = item.OldQuantity - item.NewQuantity
+		if item.OldItem == nil {
+			continue
+		}
+
+		// 计算商品减少的数量
+		quantityDelta := item.OldQuantity
+		if item.ChangeType == valueObject.ChangeTypeQuantity {
+			// 数量变动只处理减少的部分
+			quantityDelta = item.OldQuantity - item.NewQuantity
+		}
+		if quantityDelta <= 0 {
+			continue
+		}
+
+		// 1. 处理商品本身的 BOM
+		if item.OldItem.TtposProductPackageUuid > 0 {
+			bomReduceQuantityMap[item.OldItem.TtposProductPackageUuid] += quantityDelta
+		}
+
+		// 2. 处理商品的修饰符（规格、加料、套餐商品等）
+		for _, modifier := range item.OldItem.Modifiers {
+			// 根据修饰符类型获取对应的 BOM UUID
+			var bomUuid uint64
+			if modifier.TtposModifierType == "flavor" || modifier.TtposModifierType == "sauce" {
+				// 规格和小料使用 TtposModifierUuid 作为 BOM UUID
+				bomUuid = modifier.TtposModifierUuid
+			} else if modifier.TtposModifierType == "commodity" {
+				// 套餐商品可能使用 TtposFlavorProductBomUuid 或 TtposProductPackageUuid
+				if modifier.TtposFlavorProductBomUuid > 0 {
+					bomUuid = modifier.TtposFlavorProductBomUuid
+				} else if modifier.TtposProductPackageUuid > 0 {
+					bomUuid = modifier.TtposProductPackageUuid
+				}
 			}
-			if quantity <= 0 {
-				continue
+
+			if bomUuid > 0 && modifier.Quantity > 0 {
+				// 修饰符的出库数量 = 修饰符数量 * 商品减少数量
+				modifierReduceQty := modifier.Quantity * quantityDelta
+				bomReduceQuantityMap[bomUuid] += modifierReduceQty
 			}
-			bomReduceQuantityMap[item.OldItem.TtposProductPackageUuid] += quantity
 		}
 	}
 
@@ -774,9 +803,10 @@ func (s *takeoutSrv) processReturnItemsStock(ctx context.Context, order *takeout
 	productBomRepo := repository.NewProductBomRepo(db)
 	productPackageRepo := repository.NewProductPackageRepo(db)
 	for _, item := range returnItems {
-		if item.OldItem == nil || item.OldItem.TtposProductPackageUuid == 0 {
+		if item.OldItem == nil {
 			continue
 		}
+
 		// 计算减少的数量
 		reduceQty := item.OldQuantity
 		if item.ChangeType == valueObject.ChangeTypeQuantity {
@@ -786,24 +816,53 @@ func (s *takeoutSrv) processReturnItemsStock(ctx context.Context, order *takeout
 			continue
 		}
 
-		bomUuid := item.OldItem.TtposProductPackageUuid
-		saleNum := float64(reduceQty)
+		// 1. 减少商品本身的销量
+		if item.OldItem.TtposProductPackageUuid > 0 {
+			bomUuid := item.OldItem.TtposProductPackageUuid
+			saleNum := float64(reduceQty)
 
-		// 减少 BOM 销量
-		if err := productBomRepo.SubActualSaleNum(bomUuid, saleNum); err != nil {
-			logger.Logger.Error("减少退菜项BOM销量失败",
-				zap.Uint64("bomUuid", bomUuid),
-				zap.Float64("saleNum", saleNum),
-				zap.Error(err))
-		}
-
-		// 减少 Package 销量（如果是套餐）
-		if item.OldItem.TtposProductType > 0 {
-			if err := productPackageRepo.SubActualSaleNum(bomUuid, saleNum); err != nil {
-				logger.Logger.Error("减少退菜项Package销量失败",
-					zap.Uint64("packageUuid", bomUuid),
+			// 减少 BOM 销量
+			if err := productBomRepo.SubActualSaleNum(bomUuid, saleNum); err != nil {
+				logger.Logger.Error("减少退菜项BOM销量失败",
+					zap.Uint64("bomUuid", bomUuid),
 					zap.Float64("saleNum", saleNum),
 					zap.Error(err))
+			}
+
+			// 减少 Package 销量（如果是套餐）
+			if item.OldItem.TtposProductType > 0 {
+				if err := productPackageRepo.SubActualSaleNum(bomUuid, saleNum); err != nil {
+					logger.Logger.Error("减少退菜项Package销量失败",
+						zap.Uint64("packageUuid", bomUuid),
+						zap.Float64("saleNum", saleNum),
+						zap.Error(err))
+				}
+			}
+		}
+
+		// 2. 减少修饰符的销量
+		for _, modifier := range item.OldItem.Modifiers {
+			// 根据修饰符类型获取对应的 BOM UUID
+			var bomUuid uint64
+			if modifier.TtposModifierType == "flavor" || modifier.TtposModifierType == "sauce" {
+				bomUuid = modifier.TtposModifierUuid
+			} else if modifier.TtposModifierType == "commodity" {
+				if modifier.TtposFlavorProductBomUuid > 0 {
+					bomUuid = modifier.TtposFlavorProductBomUuid
+				} else if modifier.TtposProductPackageUuid > 0 {
+					bomUuid = modifier.TtposProductPackageUuid
+				}
+			}
+
+			if bomUuid > 0 && modifier.Quantity > 0 {
+				modifierSaleNum := float64(modifier.Quantity * reduceQty)
+				if err := productBomRepo.SubActualSaleNum(bomUuid, modifierSaleNum); err != nil {
+					logger.Logger.Error("减少退菜项修饰符BOM销量失败",
+						zap.Uint64("bomUuid", bomUuid),
+						zap.String("modifierName", modifier.ModifierName),
+						zap.Float64("saleNum", modifierSaleNum),
+						zap.Error(err))
+				}
 			}
 		}
 	}
@@ -820,37 +879,70 @@ func (s *takeoutSrv) processKitchenItemsStock(ctx context.Context, order *takeou
 	bomQuantityMap := make(map[uint64]int) // map[bomUuid]quantity
 
 	for _, item := range kitchenItems {
-		if item.NewItem == nil || item.NewItem.TtposProductPackageUuid == 0 {
+		if item.NewItem == nil {
 			continue
 		}
 
 		// 计算需要处理的数量（新增或增量）
-		quantity := item.NewQuantity
+		quantityDelta := item.NewQuantity
 		if item.ChangeType == valueObject.ChangeTypeQuantity {
 			// 数量变动只处理增量部分
-			quantity = item.NewQuantity - item.OldQuantity
+			quantityDelta = item.NewQuantity - item.OldQuantity
 		}
 
-		if quantity <= 0 {
+		if quantityDelta <= 0 {
 			continue
 		}
 
-		bomUuid := item.NewItem.TtposProductPackageUuid
-		bomQuantityMap[bomUuid] += quantity
+		// 1. 处理商品本身的 BOM
+		if item.NewItem.TtposProductPackageUuid > 0 {
+			bomUuid := item.NewItem.TtposProductPackageUuid
+			bomQuantityMap[bomUuid] += quantityDelta
 
-		// 构建出库清单项
-		packageUuid := uint64(0)
-		if item.NewItem.TtposProductType > 0 {
-			packageUuid = item.NewItem.TtposProductPackageUuid
+			// 构建出库清单项
+			packageUuid := uint64(0)
+			if item.NewItem.TtposProductType > 0 {
+				packageUuid = item.NewItem.TtposProductPackageUuid
+			}
+
+			decreaseStockList = append(decreaseStockList, &model.Product{
+				TakeoutOrderUuid:     order.Uuid,
+				SaleOrderProductUuid: item.NewItem.Uuid,
+				ProductBomUuid:       bomUuid,
+				PackageUuid:          packageUuid,
+				Num:                  float64(quantityDelta),
+			})
 		}
 
-		decreaseStockList = append(decreaseStockList, &model.Product{
-			TakeoutOrderUuid:     order.Uuid,
-			SaleOrderProductUuid: item.NewItem.Uuid,
-			ProductBomUuid:       bomUuid,
-			PackageUuid:          packageUuid,
-			Num:                  float64(quantity),
-		})
+		// 2. 处理商品的修饰符（规格、加料、套餐商品等）
+		for _, modifier := range item.NewItem.Modifiers {
+			// 根据修饰符类型获取对应的 BOM UUID
+			var bomUuid uint64
+			if modifier.TtposModifierType == "flavor" || modifier.TtposModifierType == "sauce" {
+				bomUuid = modifier.TtposModifierUuid
+			} else if modifier.TtposModifierType == "commodity" {
+				if modifier.TtposFlavorProductBomUuid > 0 {
+					bomUuid = modifier.TtposFlavorProductBomUuid
+				} else if modifier.TtposProductPackageUuid > 0 {
+					bomUuid = modifier.TtposProductPackageUuid
+				}
+			}
+
+			if bomUuid > 0 && modifier.Quantity > 0 {
+				// 修饰符的出库数量 = 修饰符数量 * 商品增量
+				modifierQty := modifier.Quantity * quantityDelta
+				bomQuantityMap[bomUuid] += modifierQty
+
+				// 构建出库清单项
+				decreaseStockList = append(decreaseStockList, &model.Product{
+					TakeoutOrderUuid:     order.Uuid,
+					SaleOrderProductUuid: item.NewItem.Uuid,
+					ProductBomUuid:       bomUuid,
+					PackageUuid:          0, // 修饰符不是套餐
+					Num:                  float64(modifierQty),
+				})
+			}
+		}
 	}
 
 	if len(decreaseStockList) == 0 {

@@ -236,11 +236,14 @@ func (d *OrderChangeDetector) convertToChangedItem(item *model.TakeoutOrderItem)
 	modifiers := make([]value_object.ChangedItemModifier, 0, len(item.TakeoutOrderItemModifiers))
 	for _, m := range item.TakeoutOrderItemModifiers {
 		modifiers = append(modifiers, value_object.ChangedItemModifier{
-			PlatformModifierId: m.PlatformModifierId,
-			ModifierName:       m.ModifierName,
-			TtposModifierType:  m.TtposModifierType,
-			Quantity:           m.Quantity,
-			Price:              m.Price,
+			PlatformModifierId:        m.PlatformModifierId,
+			ModifierName:              m.ModifierName,
+			TtposModifierType:         m.TtposModifierType,
+			TtposModifierUuid:         m.TtposModifierUuid,
+			TtposProductPackageUuid:   m.TtposProductPackageUuid,
+			TtposFlavorProductBomUuid: m.TtposFlavorProductBomUuid,
+			Quantity:                  m.Quantity,
+			Price:                     m.Price,
 		})
 	}
 

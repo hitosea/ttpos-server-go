@@ -31,11 +31,14 @@ func (t OrderChangeType) String() string {
 
 // ChangedItemModifier 变动菜品的修饰符信息
 type ChangedItemModifier struct {
-	PlatformModifierId string  // 平台修饰符 ID
-	ModifierName       string  // 修饰符名称
-	TtposModifierType  string  // TTPOS 修饰符类型
-	Quantity           int     // 数量
-	Price              float64 // 价格
+	PlatformModifierId      string  // 平台修饰符 ID
+	ModifierName            string  // 修饰符名称
+	TtposModifierType       string  // TTPOS 修饰符类型
+	TtposModifierUuid       uint64  // TTPOS 修饰符 UUID（用于库存处理）
+	TtposProductPackageUuid uint64  // TTPOS 商品套餐 UUID（commodity 类型的修饰符使用）
+	TtposFlavorProductBomUuid uint64  // TTPOS 规格配方 UUID（flavor 类型的修饰符使用）
+	Quantity                int     // 数量
+	Price                   float64 // 价格
 }
 
 // ChangedItem 变动菜品信息（轻量级，避免循环导入）
