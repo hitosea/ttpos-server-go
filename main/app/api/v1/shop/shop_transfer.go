@@ -419,38 +419,6 @@ func (h *TransferOrderHandler) GetTransferOrderLogList(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
-// DeleteTransferOrderFile 删除调拨单附件
-// @Summary 删除调拨单附件
-// @Description 删除调拨单的指定附件（仅待收货状态可操作）
-// @Tags 商家端.调拨单管理
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param data body req.DeleteTransferOrderFileReq true "删除附件请求参数"
-// @Success 200 {object} dto.Response{} "成功"
-// @Router /shop/transfer/order/file [delete]
-func (h *TransferOrderHandler) DeleteTransferOrderFile(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	var deleteReq req.DeleteTransferOrderFileReq
-	if err := c.ShouldBindJSON(&deleteReq); err != nil {
-		helper.HandleValidationError(c, err, deleteReq, nil)
-		return
-	}
-
-	if err := deleteReq.Validate(); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-
-	err := h.transferOrderFileSrv.DeleteTransferOrderFile(ctx, deleteReq.FileUuid, deleteReq.TransferOrderUuid)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-
-	helper.Success(c, gin.H{})
-}
-
 // RegisterTransferOrderHandlers 注册调拨单相关路由
 func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -496,9 +464,6 @@ func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 		// 审批流程和操作日志
 		privateApi.GET("/transfer/order/approval/list", wrapper.GetTransferOrderApprovalList) // 获取调拨单审批流程列表
 		privateApi.GET("/transfer/order/log/list", wrapper.GetTransferOrderLogList)           // 获取调拨单操作日志列表
-
-		// 附件管理
-		privateApi.DELETE("/transfer/order/file", wrapper.DeleteTransferOrderFile) // 删除调拨单附件
 
 		// 下拉列表
 		privateApi.GET("/transfer/company/list", wrapper.GetTransferOrderCompanyList)     // 获取门店列表
