@@ -8889,6 +8889,9 @@ definitions:
     type: object
   req.TransferOrderApproveReq:
     properties:
+      annotation:
+        description: 批注内容
+        type: string
       in_warehouse_erp_code:
         description: 入库仓库ERP编码
         type: string
@@ -9015,6 +9018,9 @@ definitions:
     type: object
   req.TransferOrderRejectReq:
     properties:
+      annotation:
+        description: 批注内容
+        type: string
       is_confirm:
         description: 是否确认驳回
         type: boolean
@@ -16545,6 +16551,9 @@ definitions:
         items:
           $ref: '#/definitions/resp.SaleOrder'
         type: array
+      serial_no:
+        description: 桌位编号 (点餐流水号)
+        type: string
       takeout:
         description: 是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段
         type: boolean
@@ -16731,26 +16740,19 @@ definitions:
       annotation_type:
         description: 批注类型 1-重新发起 2-驳回 3-通过
         type: integer
-      annotation_type_name:
-        description: 批注类型名称
-        type: string
       content:
         description: 批注内容
         type: string
       create_time:
         description: 创建时间
         type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 批注类型名称（多语言）
       uuid:
         description: 批注UUID
         type: integer
-    type: object
-  resp.StockReconciliationAnnotationListResp:
-    properties:
-      list:
-        description: 批注列表
-        items:
-          $ref: '#/definitions/resp.StockReconciliationAnnotationInfo'
-        type: array
     type: object
   resp.StockReconciliationApproveResp:
     properties:
@@ -16795,6 +16797,11 @@ definitions:
     type: object
   resp.StockReconciliationDetailResp:
     properties:
+      annotations:
+        description: 批注列表（按创建时间倒序）
+        items:
+          $ref: '#/definitions/resp.StockReconciliationAnnotationInfo'
+        type: array
       create_time:
         description: 创建时间
         type: integer
@@ -17294,6 +17301,23 @@ definitions:
         description: 外卖平台 (grab/lineman等)
         type: string
     type: object
+  resp.TransferOrderAnnotationItem:
+    properties:
+      annotation_type:
+        description: '批注类型: 1-重新提交 2-门店通过 3-门店驳回 4-上级门店通过 5-上级门店驳回 6-发货门店通过 7-发货门店驳回
+          8-收货门店通过 9-收货门店驳回'
+        type: integer
+      content:
+        description: 批注内容
+        type: string
+      create_time:
+        description: 创建时间
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 批注类型名称（多语言）
+    type: object
   resp.TransferOrderApprovalInfo:
     properties:
       approval_company_name:
@@ -17381,6 +17405,11 @@ definitions:
     type: object
   resp.TransferOrderDetailResp:
     properties:
+      annotations:
+        description: 批注列表
+        items:
+          $ref: '#/definitions/resp.TransferOrderAnnotationItem'
+        type: array
       approval_progress:
         description: '审批中进度: wait-待审核 sender-待发货门店审批 sender_parent-待发货门店上级审批 receiver-待收货门店审批
           receiver_parent-待收货门店上级审批 parent-待上级审批'
@@ -39766,38 +39795,6 @@ paths:
       summary: 导出用户分析统计
       tags:
       - 商家端.报表
-  /shop/stock_reconciliation/annotation:
-    get:
-      consumes:
-      - application/json
-      description: 根据盘点单UUID获取批注列表，按创建时间倒序排列
-      parameters:
-      - description: 盘点单UUID
-        in: query
-        name: stock_reconciliation_uuid
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.StockReconciliationAnnotationListResp'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 获取盘点单批注列表
-      tags:
-      - 商家端.盘点管理
   /shop/stock_reconciliation/approve:
     post:
       consumes:
@@ -41129,6 +41126,30 @@ paths:
       security:
       - JwtToken: []
       summary: 驳回调拨单
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/resubmit:
+    post:
+      consumes:
+      - application/json
+      description: 重新提交已驳回的调拨单
+      parameters:
+      - description: 重新提交调拨单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TransferOrderUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 重新提交调拨单
       tags:
       - 商家端.调拨单管理
   /shop/transfer/order/submit:

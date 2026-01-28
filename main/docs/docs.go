@@ -33900,61 +33900,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/stock_reconciliation/annotation": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "根据盘点单UUID获取批注列表，按创建时间倒序排列",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.盘点管理"
-                ],
-                "summary": "获取盘点单批注列表",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "盘点单UUID",
-                        "name": "stock_reconciliation_uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.StockReconciliationAnnotationListResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/shop/stock_reconciliation/approve": {
             "post": {
                 "security": [
@@ -36163,6 +36108,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.TransferOrderRejectReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/resubmit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "重新提交已驳回的调拨单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "重新提交调拨单",
+                "parameters": [
+                    {
+                        "description": "重新提交调拨单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TransferOrderUpdateReq"
                         }
                     }
                 ],
@@ -50871,6 +50855,10 @@ const docTemplate = `{
                 "uuid"
             ],
             "properties": {
+                "annotation": {
+                    "description": "批注内容",
+                    "type": "string"
+                },
                 "in_warehouse_erp_code": {
                     "description": "入库仓库ERP编码",
                     "type": "string"
@@ -51044,6 +51032,10 @@ const docTemplate = `{
                 "uuid"
             ],
             "properties": {
+                "annotation": {
+                    "description": "批注内容",
+                    "type": "string"
+                },
                 "is_confirm": {
                     "description": "是否确认驳回",
                     "type": "boolean"
@@ -62174,6 +62166,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/resp.SaleOrder"
                     }
                 },
+                "serial_no": {
+                    "description": "桌位编号 (点餐流水号)",
+                    "type": "string"
+                },
                 "takeout": {
                     "description": "是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段",
                     "type": "boolean"
@@ -62443,10 +62439,6 @@ const docTemplate = `{
                     "description": "批注类型 1-重新发起 2-驳回 3-通过",
                     "type": "integer"
                 },
-                "annotation_type_name": {
-                    "description": "批注类型名称",
-                    "type": "string"
-                },
                 "content": {
                     "description": "批注内容",
                     "type": "string"
@@ -62455,21 +62447,17 @@ const docTemplate = `{
                     "description": "创建时间",
                     "type": "integer"
                 },
+                "locale_name": {
+                    "description": "批注类型名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "uuid": {
                     "description": "批注UUID",
                     "type": "integer"
-                }
-            }
-        },
-        "resp.StockReconciliationAnnotationListResp": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "description": "批注列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.StockReconciliationAnnotationInfo"
-                    }
                 }
             }
         },
@@ -62537,6 +62525,13 @@ const docTemplate = `{
         "resp.StockReconciliationDetailResp": {
             "type": "object",
             "properties": {
+                "annotations": {
+                    "description": "批注列表（按创建时间倒序）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockReconciliationAnnotationInfo"
+                    }
+                },
                 "create_time": {
                     "description": "创建时间",
                     "type": "integer"
@@ -63271,6 +63266,31 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.TransferOrderAnnotationItem": {
+            "type": "object",
+            "properties": {
+                "annotation_type": {
+                    "description": "批注类型: 1-重新提交 2-门店通过 3-门店驳回 4-上级门店通过 5-上级门店驳回 6-发货门店通过 7-发货门店驳回 8-收货门店通过 9-收货门店驳回",
+                    "type": "integer"
+                },
+                "content": {
+                    "description": "批注内容",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "批注类型名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                }
+            }
+        },
         "resp.TransferOrderApprovalInfo": {
             "type": "object",
             "properties": {
@@ -63393,6 +63413,13 @@ const docTemplate = `{
         "resp.TransferOrderDetailResp": {
             "type": "object",
             "properties": {
+                "annotations": {
+                    "description": "批注列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TransferOrderAnnotationItem"
+                    }
+                },
                 "approval_progress": {
                     "description": "审批中进度: wait-待审核 sender-待发货门店审批 sender_parent-待发货门店上级审批 receiver-待收货门店审批 receiver_parent-待收货门店上级审批 parent-待上级审批",
                     "type": "string"
