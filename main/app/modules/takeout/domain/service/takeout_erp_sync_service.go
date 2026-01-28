@@ -33,6 +33,8 @@ type ITakeoutErpSyncService interface {
 	SyncOrderToERP(ctx appContext.Context, orderUuid uint64) error
 	// SyncOrderCancelledToERP 同步订单取消到 ERP
 	SyncOrderCancelledToERP(ctx appContext.Context, orderUuid uint64) error
+	// ResyncOrderToERP 重新同步外卖订单到 ERP（订单变更后使用）
+	ResyncOrderToERP(ctx appContext.Context, orderUuid uint64) error
 }
 
 // takeoutErpSyncService ERP 同步领域服务实现
@@ -517,6 +519,75 @@ func (s *takeoutErpSyncService) SyncOrderCancelledToERP(ctx appContext.Context, 
 			zap.String("erpResp", erpResp.String()),
 			zap.Error(err))
 		return errors.WithMessage(err, "取消 ERP 发票失败")
+	}
+
+	// 清空订单的 erp_pos_invoice_resp 字段，使 SyncOrderToERP 能够重新同步
+	if err := takeoutOrderRepo.UpdateByMap(orderUuid, map[string]interface{}{
+		"erp_pos_invoice_resp": "",
+	}); err != nil {
+		logger.Logger.Error("清空订单 ERP 响应字段失败",
+			zap.Uint64("orderUuid", orderUuid),
+			zap.Error(err))
+		return errors.WithMessage(err, "清空订单 ERP 响应字段失败")
+	}
+
+	return nil
+}
+
+// ResyncOrderToERP 重新同步外卖订单到 ERP（订单变更后使用）
+// @version v2.15.0
+// @spec feature/takeout-lineman-02
+//
+// 实现策略：
+//  1. 调用 SyncOrderCancelledToERP 取消旧发票
+//  2. 清空订单的 erp_pos_invoice_resp 字段
+//  3. 调用 SyncOrderToERP 创建新发票
+func (s *takeoutErpSyncService) ResyncOrderToERP(ctx appContext.Context, orderUuid uint64) error {
+	db := ctx.GetDB()
+	if db == nil {
+		return fmt.Errorf("数据库连接失败")
+	}
+
+	companySetting := ctx.GetCompanySetting()
+
+	// 1. 检查 ERP 集成是否启用
+	if companySetting.ErpnextSiteCode == "" {
+		logger.Logger.Info("公司未启用 ERP 集成，跳过重新同步",
+			zap.Uint64("companyUuid", ctx.GetCompanyUuid()),
+			zap.Uint64("orderUuid", orderUuid))
+		return nil
+	}
+
+	// 2. 查询订单，检查是否已同步到 ERP
+	takeoutOrderRepo := persistence.NewTakeoutOrderRepo(db)
+	takeoutOrder, err := takeoutOrderRepo.GetByUuid(orderUuid)
+	if err != nil {
+		return errors.WithMessage(err, "查询外卖订单失败")
+	}
+	if takeoutOrder == nil {
+		return errors.WithMessage(errors.New("外卖订单不存在"), fmt.Sprintf("外卖订单不存在: %d", orderUuid))
+	}
+
+	// 3. 检查订单是否已同步到 ERP
+	if !takeoutOrder.IsErpInvoiceSynced() {
+		logger.Logger.Info("外卖订单未同步到 ERP，跳过重新同步",
+			zap.Uint64("orderUuid", orderUuid),
+			zap.String("platformOrderId", takeoutOrder.PlatformOrderId))
+		return nil
+	}
+
+	// 4. 取消旧发票
+	if err := s.SyncOrderCancelledToERP(ctx, orderUuid); err != nil {
+		logger.Logger.Error("取消旧发票失败",
+			zap.Uint64("orderUuid", orderUuid),
+			zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
+			zap.Error(err))
+		return errors.WithMessage(err, "取消旧发票失败")
+	}
+
+	// 5. 创建新发票
+	if err := s.SyncOrderToERP(ctx, orderUuid); err != nil {
+		return errors.WithMessage(err, "创建新发票失败")
 	}
 
 	return nil

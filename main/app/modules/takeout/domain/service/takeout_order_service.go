@@ -1022,7 +1022,7 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 	}
 
 	// 开启事务
-	return db.Transaction(func(tx *gorm.DB) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
 		orderRepoTx := persistence.NewTakeoutOrderRepo(tx)
 		itemRepoTx := persistence.NewTakeoutOrderItemRepo(tx)
 		modifierRepoTx := persistence.NewTakeoutOrderItemModifierRepo(tx)
@@ -1192,6 +1192,19 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 
 		return nil
 	})
+	if err != nil {
+		return errors.WithMessage(err, "更新订单事务失败")
+	}
+
+	// 同步到 ERP
+	if existingOrder.IsExistShiftLog() {
+		if err := s.erpSyncService.ResyncOrderToERP(ctx, existingOrder.Uuid); err != nil {
+			logger.Logger.Error("同步 Grab 订单到 ERP 失败", zap.Error(err), zap.Uint64("orderUuid", existingOrder.Uuid))
+			return errors.WithMessage(errors.New("同步 Grab 订单到 ERP 失败"), err.Error())
+		}
+	}
+
+	return nil
 }
 
 // toModifierPointers 将修饰符切片转换为指针切片

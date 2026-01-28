@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/modules/printer/printer_model"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	domainService "ttpos-server-go/app/modules/takeout/domain/service"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	valueObject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
@@ -130,6 +131,18 @@ func (s *takeoutSrv) ProcessTakeoutOrderOutboundAndSales(ctx context.Context, or
 	s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
 		Platform:    order.Platform,
 		CompanyUuid: companyUuid,
+	})
+
+	utils.Go(func() {
+		s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
+			Platform:    value_object.TakeoutPlatformGrab,
+			CompanyUuid: companyUuid,
+		})
+
+		s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
+			Platform:    value_object.TakeoutPlatformLineman,
+			CompanyUuid: companyUuid,
+		})
 	})
 
 	return nil
