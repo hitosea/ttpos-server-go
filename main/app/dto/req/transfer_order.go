@@ -76,7 +76,7 @@ type TransferOrderItemUnitCreateReq struct {
 	Num      float64 `json:"num"`       // 调拨数量
 }
 
-// TransferOrderUpdateReq 更新调拨单请求（待提交状态下可更新）
+// TransferOrderUpdateReq 更新调拨单请求（待提交状态下可更新，驳回状态下可重新提交）
 type TransferOrderUpdateReq struct {
 	Uuid                uint64                       `json:"uuid"`                   // 调拨单UUID
 	OrderTime           int64                        `json:"order_time"`             // 单据日期
@@ -86,6 +86,17 @@ type TransferOrderUpdateReq struct {
 	InWarehouseErpCode  string                       `json:"in_warehouse_erp_code"`  // 入库仓库ERP编码
 	Remark              string                       `json:"remark"`                 // 备注
 	Items               []TransferOrderItemCreateReq `json:"items"`                  // 调拨明细
+	isResubmit          bool                         // 私有字段：是否为重新提交操作
+}
+
+// SetIsResubmit 设置是否为重新提交操作
+func (r *TransferOrderUpdateReq) SetIsResubmit(isResubmit bool) {
+	r.isResubmit = isResubmit
+}
+
+// GetIsResubmit 获取是否为重新提交操作
+func (r *TransferOrderUpdateReq) GetIsResubmit() bool {
+	return r.isResubmit
 }
 
 func (r *TransferOrderUpdateReq) Validate() error {
@@ -135,6 +146,7 @@ type TransferOrderApproveReq struct {
 	OutWarehouseErpCode string `json:"out_warehouse_erp_code"`             // 出库仓库ERP编码
 	InWarehouseErpCode  string `json:"in_warehouse_erp_code"`              // 入库仓库ERP编码
 	IsConfirm           bool   `json:"is_confirm"`                         // 是否确认审核
+	Annotation          string `json:"annotation"`                         // 批注内容
 }
 
 func (r *TransferOrderApproveReq) Validate() error {
@@ -149,6 +161,7 @@ type TransferOrderRejectReq struct {
 	Uuid         uint64 `json:"uuid" binding:"required,min=1"` // 调拨单UUID
 	RejectReason string `json:"reject_reason"`                 // 驳回原因
 	IsConfirm    bool   `json:"is_confirm"`                    // 是否确认驳回
+	Annotation   string `json:"annotation"`                    // 批注内容
 }
 
 func (r *TransferOrderRejectReq) Validate() error {

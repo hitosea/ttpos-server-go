@@ -16,7 +16,7 @@ type ITransferOrderApprovalRepo interface {
 	Delete(uuid uint64) error
 	DeleteByTransferOrderUuid(transferOrderUuid uint64) error
 	GetByUuid(uuid uint64) (*model.TransferOrderApproval, error)
-	GetListByTransferOrderUuid(transferOrderUuid uint64) ([]*model.TransferOrderApproval, error)
+	GetListByTransferOrderUuid(transferOrderUuid uint64) ([]*model.TransferOrderApproval, error) // 根据调拨单UUID获取审批流程列表
 	GetCurrentApproval(transferOrderUuid uint64, companyUuid uint64) (*model.TransferOrderApproval, error)
 	GetNextApproval(transferOrderUuid uint64, currentSequence int) (*model.TransferOrderApproval, error)
 }
@@ -63,6 +63,7 @@ func (r *TransferOrderApprovalRepoImpl) GetByUuid(uuid uint64) (*model.TransferO
 	return &approval, nil
 }
 
+// GetListByTransferOrderUuid 根据调拨单UUID获取审批流程列表
 func (r *TransferOrderApprovalRepoImpl) GetListByTransferOrderUuid(transferOrderUuid uint64) ([]*model.TransferOrderApproval, error) {
 	var approvals []*model.TransferOrderApproval
 	err := r.db.Model(&model.TransferOrderApproval{}).

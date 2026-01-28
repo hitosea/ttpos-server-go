@@ -377,6 +377,18 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		}
 	}
 
+	// 解析批注列表
+	annotations := s.helper.GetAnnotationList(transferOrder)
+	detailResp.Annotations = make([]resp.TransferOrderAnnotationItem, 0, len(annotations))
+	for _, annotation := range annotations {
+		detailResp.Annotations = append(detailResp.Annotations, resp.TransferOrderAnnotationItem{
+			AnnotationType: annotation.AnnotationType,
+			LocaleName:     constant.GetTransferOrderAnnotationTypeLocaleName(annotation.AnnotationType),
+			Content:        annotation.Content,
+			CreateTime:     annotation.CreateTime,
+		})
+	}
+
 	return detailResp, nil
 }
 
@@ -778,9 +790,14 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 		return errors.WithMessage(errors.New("查询调拨单失败"), err.Error())
 	}
 
-	// 验证状态
-	if transferOrder.Status != constant.TransferOrderStatusDraft {
-		return errors.New("只有待提交状态的调拨单才能修改")
+	// 验证状态：待提交或已驳回状态可修改
+	isResubmit := req.GetIsResubmit()
+	if transferOrder.Status != constant.TransferOrderStatusDraft && transferOrder.Status != constant.TransferOrderStatusRejected {
+		return errors.New("只有待提交或已驳回状态的调拨单才能修改")
+	}
+	// 非重新提交操作时，只允许待提交状态修改
+	if transferOrder.Status == constant.TransferOrderStatusRejected && !isResubmit {
+		return errors.New("已驳回的调拨单只能重新提交")
 	}
 
 	if transferOrder.TransferType == 1 {
@@ -857,8 +874,13 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 		req.SenderCompanyUuid = companyUuid
 	}
 
+	// 保存旧状态用于日志
+	oldStatus := transferOrder.Status
+
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
+		transferOrderRepoTx := repository.NewTransferOrderRepo(tx)
+
 		// 更新主表
 		transferOrder.OrderTime = req.OrderTime
 		transferOrder.ItemCount = len(req.Items)
@@ -872,14 +894,74 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
 		transferOrder.InWarehouseName = inWarehouse.Name
 		transferOrder.Remark = req.Remark
+
+		// 重新提交逻辑
+		if isResubmit {
+			// 追加重新提交批注
+			if err := s.helper.AppendAnnotation(transferOrder, constant.TransferOrderAnnotationTypeResubmit, ""); err != nil {
+				logger.Logger.Error("追加批注失败", zap.Error(err))
+				return errors.WithMessage(errors.New("追加批注失败"), err.Error())
+			}
+
+			// 更新状态为待审核
+			transferOrder.Status = constant.TransferOrderStatusPending
+
+			// 重置审批流程：所有审批节点都重置为待审批状态，从第一个节点重新开始
+			approvalRepoTx := repository.NewTransferOrderApprovalRepo(tx)
+			approvals, err := approvalRepoTx.GetListByTransferOrderUuid(req.Uuid)
+			if err != nil {
+				logger.Logger.Error("查询审批流程失败", zap.Error(err))
+				return errors.WithMessage(errors.New("查询审批流程失败"), err.Error())
+			}
+
+			// 找到 Sequence 最小的节点作为第一个审批节点
+			var firstApproval *model.TransferOrderApproval
+			for i := range approvals {
+				approval := approvals[i]
+				// 重置所有非待审批状态的节点
+				if approval.Status != constant.TransferApprovalPending {
+					approval.Status = constant.TransferApprovalPending
+					approval.ApproverUuid = 0
+					approval.ApproverName = ""
+					approval.ApproveTime = 0
+					approval.RejectReason = ""
+					approval.Remark = ""
+					if err := approvalRepoTx.Update(approval); err != nil {
+						logger.Logger.Error("重置审批节点失败", zap.Error(err))
+						return errors.WithMessage(errors.New("重置审批节点失败"), err.Error())
+					}
+				}
+				// 记录 Sequence 最小的节点
+				if firstApproval == nil || approval.Sequence < firstApproval.Sequence {
+					firstApproval = approval
+				}
+			}
+
+			// 设置下一个审批门店为第一个节点
+			if firstApproval != nil {
+				transferOrder.NextApprovalCompanyUuid = firstApproval.ApprovalCompanyUuid
+				transferOrder.NextApprovalCompanyName = firstApproval.ApprovalCompanyName
+			}
+		}
+
 		transferOrder.SetNil()
-		if err := transferOrderRepo.Update(transferOrder); err != nil {
+		if err := transferOrderRepoTx.Update(transferOrder); err != nil {
 			return errors.WithMessage(errors.New("更新调拨单失败"), err.Error())
 		}
+
 		// 创建调拨单明细
 		if err := s.createItems(ctx, tx, transferOrder.Uuid, req.Items, materials); err != nil {
 			return errors.WithMessage(errors.New("创建调拨单明细失败"), err.Error())
 		}
+
+		// 重新提交时同步到SAAS库
+		if isResubmit {
+			if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
+				logger.Logger.Error("复制数据到总部失败", zap.Error(err))
+				return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
+			}
+		}
+
 		return nil
 	})
 
@@ -888,7 +970,14 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 	}
 
 	// 记录操作日志
-	if err := s.helper.CreateLog(ctx, db, req.Uuid, "update", "更新调拨单", transferOrder.Status, transferOrder.Status); err != nil {
+	actionType := "update"
+	actionDesc := "更新调拨单"
+	newStatus := transferOrder.Status
+	if isResubmit {
+		actionType = "resubmit"
+		actionDesc = "重新提交调拨单"
+	}
+	if err := s.helper.CreateLog(ctx, db, req.Uuid, actionType, actionDesc, oldStatus, newStatus); err != nil {
 		logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 	}
 
@@ -1230,6 +1319,13 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 			return errors.WithMessage(errors.New("更新审批节点失败"), err.Error())
 		}
 
+		// 追加批注（通过）
+		annotationType := s.helper.GetApproveAnnotationType(currentApproval.ApprovalType, transferOrder.TransferType)
+		if err := s.helper.AppendAnnotation(transferOrder, annotationType, req.Annotation); err != nil {
+			logger.Logger.Error("追加批注失败", zap.Error(err))
+			return errors.WithMessage(errors.New("追加批注失败"), err.Error())
+		}
+
 		// 查找下一个审批节点
 		nextApproval, err := approvalRepoTx.GetNextApproval(req.Uuid, currentApproval.Sequence)
 		if err != nil && err != gorm.ErrRecordNotFound {
@@ -1387,6 +1483,13 @@ func (s *transferOrderSrv) RejectTransferOrder(
 
 		if err := approvalRepoTx.Update(currentApproval); err != nil {
 			return errors.WithMessage(errors.New("更新审批节点失败"), err.Error())
+		}
+
+		// 追加批注（驳回）
+		annotationType := s.helper.GetRejectAnnotationType(currentApproval.ApprovalType, transferOrder.TransferType)
+		if err := s.helper.AppendAnnotation(transferOrder, annotationType, req.Annotation); err != nil {
+			logger.Logger.Error("追加批注失败", zap.Error(err))
+			return errors.WithMessage(errors.New("追加批注失败"), err.Error())
 		}
 
 		// 更新调拨单为已驳回状态

@@ -3617,6 +3617,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order` (
   `next_approval_company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '下一个审批门店UUID',
   `next_approval_company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '下一个审批门店名称',
   `remark` text COMMENT '备注',
+  `annotations` text COMMENT '批注列表JSON',
   `item_count` int(10) NOT NULL DEFAULT 0 COMMENT '物品种类数量',
   `erp_resp` text COMMENT 'ERP响应数据',
   `receipt_order_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '收货单ERP编码',

@@ -307,6 +307,36 @@ func (h *TransferOrderHandler) RejectTransferOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// ResubmitTransferOrder 重新提交调拨单
+// @Summary 重新提交调拨单
+// @Description 重新提交已驳回的调拨单
+// @Tags 商家端.调拨单管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.TransferOrderUpdateReq true "重新提交调拨单请求参数"
+// @Success 200 {object} dto.Response{} "成功"
+// @Router /shop/transfer/order/resubmit [post]
+func (h *TransferOrderHandler) ResubmitTransferOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var updateReq req.TransferOrderUpdateReq
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.HandleValidationError(c, err, updateReq, nil)
+		return
+	}
+
+	// 设置为重新提交操作
+	updateReq.SetIsResubmit(true)
+
+	err := h.transferOrderSrv.UpdateTransferOrder(ctx, updateReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, gin.H{})
+}
+
 // ReceiveTransferOrder 收货调拨单
 // @Summary 收货调拨单
 // @Description 确认收货完成调拨
@@ -426,6 +456,7 @@ func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 		privateApi.POST("/transfer/order/submit", wrapper.SubmitTransferOrder)
 		privateApi.POST("/transfer/order/approve", wrapper.ApproveTransferOrder)
 		privateApi.POST("/transfer/order/reject", wrapper.RejectTransferOrder)
+		privateApi.POST("/transfer/order/resubmit", wrapper.ResubmitTransferOrder)
 		privateApi.POST("/transfer/order/receive", wrapper.ReceiveTransferOrder)
 
 		// 审批流程和操作日志

@@ -49,8 +49,9 @@ type TransferOrderInfo struct {
 // TransferOrderDetailResp 调拨单详情响应
 type TransferOrderDetailResp struct {
 	TransferOrderInfo
-	Items      []TransferOrderItemInfo `json:"items"`       // 调拨明细
-	RejectInfo TransferOrderRejectInfo `json:"reject_info"` // 驳回信息
+	Items       []TransferOrderItemInfo       `json:"items"`       // 调拨明细
+	RejectInfo  TransferOrderRejectInfo       `json:"reject_info"` // 驳回信息
+	Annotations []TransferOrderAnnotationItem `json:"annotations"` // 批注列表
 }
 
 // TransferOrderItemInfo 调拨单明细信息
