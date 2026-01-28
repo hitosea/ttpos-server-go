@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/app/modules/printer/tyeps/structs"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
@@ -117,7 +118,7 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	isMerchantReceipt bool,
 ) structs.StatementOrderInfoData {
 	orderData := structs.StatementOrderInfoData{
-		Platform:     order.Platform,
+		Platform:     value_object.GetPlatformName(order.Platform),
 		OrderNo:      order.PlatformOrderId,
 		SerialNo:     fmt.Sprintf("%s: %s", order.GetCapitalPlatform(), order.ShortOrderNumber),
 		OrderType:    order.OrderType,

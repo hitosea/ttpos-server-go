@@ -1227,18 +1227,14 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 			// 1. 旧商品标记退菜
 			// 2. 创建新的生产单商品
 			if item.OldItem != nil && item.OldItem.Uuid > 0 {
-				if err := productionRepo.UpdateProductionOrderProductStatusByTakeoutItemUuid(
+				if err := productionRepo.UpdateProductionOrderProductNumByTakeoutItemUuid(
 					item.OldItem.Uuid,
-					constant.ProductionOrderProductStatusCancel,
+					0,
 				); err != nil {
 					logger.Logger.Error("变更商品标记退菜失败",
 						zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
 						zap.String("changeType", item.ChangeType.String()),
 						zap.Error(err))
-				} else {
-					logger.Logger.Info("变更商品标记退菜成功",
-						zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
-						zap.String("changeType", item.ChangeType.String()))
 				}
 			}
 
