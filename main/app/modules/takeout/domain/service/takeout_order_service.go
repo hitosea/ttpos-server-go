@@ -957,7 +957,7 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 		}
 
 		// 6. 计算并保存订单原料（提前计算，不等到接单）
-		if err := s.extractAndSaveTakeoutOrderMaterials(ctxTx, order); err != nil {
+		if err := s.extractAndSaveTakeoutOrderMaterialsWithMetadata(ctxTx, order, order.CreateTime, 0); err != nil {
 			logger.Logger.Warn("提取并保存订单原料失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 			return errors.WithMessage(err, "提取并保存订单原料失败")
 		}
@@ -1152,6 +1152,42 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 					}
 				}
 			}
+		}
+
+		// 4. 重新计算并保存原料消耗记录（删除旧记录，重新计算）
+		ctxTx := ctx.Copy()
+		ctxTx.SetDB(tx)
+
+		// 4.1 查询现有的原料消耗记录（获取原始创建时间和汇总状态）
+		materialRepo := persistence.NewTakeoutOrderMaterialRepo(tx)
+		oldMaterials, err := materialRepo.GetByOrderUuid(orderUuid)
+		if err != nil {
+			logger.Logger.Error("查询订单原料消耗记录失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+			return fmt.Errorf("查询订单原料消耗记录失败: %w", err)
+		}
+
+		// 保存原始信息（用于新记录继承）
+		var originalCreateTime int64
+		isSummarized := 0
+		if len(oldMaterials) > 0 {
+			// 使用第一条记录的创建时间（所有记录创建时间应该相同）
+			originalCreateTime = oldMaterials[0].CreateTime
+			isSummarized = oldMaterials[0].IsSummarized
+		} else {
+			// 如果没有旧记录，使用订单的创建时间
+			originalCreateTime = existingOrder.CreateTime
+		}
+
+		// 4.2 删除现有的原料消耗记录
+		if err := materialRepo.DeleteByOrderUuid(orderUuid); err != nil {
+			logger.Logger.Error("删除订单原料消耗记录失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+			return fmt.Errorf("删除订单原料消耗记录失败: %w", err)
+		}
+
+		// 4.3 重新计算并保存原料消耗（继承原始创建时间和汇总状态）
+		if err := s.extractAndSaveTakeoutOrderMaterialsWithMetadata(ctxTx, updatedOrder, originalCreateTime, isSummarized); err != nil {
+			logger.Logger.Warn("重新计算订单原料失败", zap.Error(err), zap.Uint64("orderUuid", orderUuid))
+			return errors.WithMessage(err, "重新计算订单原料失败")
 		}
 
 		return nil
@@ -1397,10 +1433,21 @@ func (s *takeoutOrderSrv) enrichItemInfo(ctx context.Context, platform string, o
 }
 
 // extractAndSaveTakeoutOrderMaterials 提取并保存外卖订单原料（在创建订单时调用）
+// 功能：根据订单商品的 BOM 配方，计算并保存原料消耗记录
+// 参数：
+//   - ctx: 上下文
+//   - order: 订单对象
+//   - createTime: 原料记录的创建时间（用于保持时间一致性，避免日终汇总漏统计）
+//   - isSummarized: 是否已汇总（用于避免重复统计）
 //
 // 功能：根据订单商品的 BOM 配方，计算并保存原料消耗记录
 // 流程：商品 → BOM配方 → 原料清单 → 计算消耗量 → 保存记录
-func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Context, order *takeoutModel.TakeoutOrder) error {
+func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterialsWithMetadata(
+	ctx context.Context,
+	order *takeoutModel.TakeoutOrder,
+	createTime int64,
+	isSummarized int,
+) error {
 	db := ctx.GetDB()
 
 	// ==================== Step 1: 构建 BOM 数量映射 ====================
@@ -1619,10 +1666,11 @@ func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Contex
 	}
 
 	// ==================== Step 5: 构建并保存原料消耗记录 ====================
+	currentTime := time.Now().Unix()
 	materialRecords := make([]*takeoutModel.TakeoutOrderMaterial, 0)
 	for _, source := range consumptionMap {
 		info := materialInfoMap[source.materialUuid]
-		materialRecords = append(materialRecords, &takeoutModel.TakeoutOrderMaterial{
+		record := &takeoutModel.TakeoutOrderMaterial{
 			TakeoutOrderUuid:             order.Uuid,
 			TakeoutOrderItemUuid:         source.takeoutOrderItemUuid,
 			TakeoutOrderItemModifierUuid: source.takeoutOrderItemModifierUuid,
@@ -1632,9 +1680,13 @@ func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Contex
 			BaseUnitUom:                  source.baseUnitUom, // 从 source 中获取
 			WarehouseUuid:                source.warehouseUuid,
 			Num:                          source.consumptionNum,
-			IsSummarized:                 0, // 初始为未统计
+			IsSummarized:                 isSummarized, // 使用传入的汇总状态（继承旧值或默认为0）
 			ProductBomUuid:               source.productBomUuid,
-		})
+		}
+		// 手动设置 BaseModel 的时间字段（绕过 GORM 的自动时间戳）
+		record.BaseModel.CreateTime = createTime  // 使用传入的创建时间（保持时间一致性）
+		record.BaseModel.UpdateTime = currentTime // 更新时间使用当前时间
+		materialRecords = append(materialRecords, record)
 	}
 
 	// 批量保存

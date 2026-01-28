@@ -453,6 +453,7 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 		updatedOrder.ShortOrderNumber,
 		updatedOrder.TakeoutOrderUuid,
 		ctx.GetCompanyUuid(),
+		existingOrder,
 		changeResult,
 	))
 

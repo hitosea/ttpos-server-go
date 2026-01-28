@@ -93,14 +93,14 @@ func (s *takeoutOrderUpdatedEventSubscriber) Handle(domainEvent event.DomainEven
 				zap.Error(err))
 		}
 
-		// Step 4: 处理库存和销量同步（异步执行）
-		if err := takeoutSrv.ProcessOrderItemsStockAndSales(
+		// Step 4: 重建订单库存和销量（采用"恢复+重建"策略）
+		if err := takeoutSrv.RebuildTakeoutOrderOutboundAndSales(
 			ctx,
 			orderUpdatedEvent.OrderUuid,
 			orderUpdatedEvent.CompanyUuid,
-			changeResult,
+			orderUpdatedEvent.ExistingOrder,
 		); err != nil {
-			logger.Logger.Error("处理订单变动库存销量失败",
+			logger.Logger.Error("重建订单库存销量失败",
 				zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
 				zap.String("platform", orderUpdatedEvent.Platform),
 				zap.Error(err))
