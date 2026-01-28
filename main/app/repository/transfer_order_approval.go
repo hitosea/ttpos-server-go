@@ -13,6 +13,7 @@ type ITransferOrderApprovalRepo interface {
 	Create(approval *model.TransferOrderApproval) error
 	CreateBatch(approvals []*model.TransferOrderApproval) error
 	Update(approval *model.TransferOrderApproval) error
+	UpdateAll(approval *model.TransferOrderApproval) error // 更新所有字段（包括零值）
 	Delete(uuid uint64) error
 	DeleteByTransferOrderUuid(transferOrderUuid uint64) error
 	GetByUuid(uuid uint64) (*model.TransferOrderApproval, error)
@@ -44,6 +45,11 @@ func (r *TransferOrderApprovalRepoImpl) CreateBatch(approvals []*model.TransferO
 
 func (r *TransferOrderApprovalRepoImpl) Update(approval *model.TransferOrderApproval) error {
 	return r.db.Model(&model.TransferOrderApproval{}).Where("uuid = ?", approval.Uuid).Updates(approval).Error
+}
+
+// UpdateAll 更新所有字段（包括零值）
+func (r *TransferOrderApprovalRepoImpl) UpdateAll(approval *model.TransferOrderApproval) error {
+	return r.db.Model(&model.TransferOrderApproval{}).Select("*").Where("uuid = ?", approval.Uuid).Updates(approval).Error
 }
 
 func (r *TransferOrderApprovalRepoImpl) Delete(uuid uint64) error {

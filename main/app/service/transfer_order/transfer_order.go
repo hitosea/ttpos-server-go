@@ -970,7 +970,8 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 					approval.ApproveTime = 0
 					approval.RejectReason = ""
 					approval.Remark = ""
-					if err := approvalRepoTx.Update(approval); err != nil {
+					// 使用 UpdateAll 确保 status=0 等零值字段能被更新
+					if err := approvalRepoTx.UpdateAll(approval); err != nil {
 						logger.Logger.Error("重置审批节点失败", zap.Error(err))
 						return errors.WithMessage(errors.New("重置审批节点失败"), err.Error())
 					}
