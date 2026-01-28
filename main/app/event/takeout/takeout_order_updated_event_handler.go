@@ -61,7 +61,7 @@ func (s *takeoutOrderUpdatedEventSubscriber) Handle(domainEvent event.DomainEven
 	if orderUpdatedEvent.HasItemChange() {
 		changeResult := orderUpdatedEvent.ChangeResult
 
-		logger.Logger.Info("订单菜品变动，开始处理打印",
+		logger.Logger.Info("订单菜品变动，开始处理",
 			zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
 			zap.String("platform", orderUpdatedEvent.Platform),
 			zap.Int("returnItemCount", changeResult.GetReturnItemCount()),
@@ -83,7 +83,7 @@ func (s *takeoutOrderUpdatedEventSubscriber) Handle(domainEvent event.DomainEven
 			s.printKitchenReceipt(ctx, takeoutSrv, orderUpdatedEvent, changeResult)
 		}
 
-		// Step 2: 同步更新生产单（厨显端数据来源）
+		// Step 3: 同步更新生产单（厨显端数据来源）
 		// - 退菜商品：标记为退菜状态
 		// - 新增商品：创建新的生产单商品
 		if err := takeoutSrv.UpdateProductionOrderForTakeout(ctx, orderUpdatedEvent.OrderUuid, changeResult); err != nil {
@@ -94,19 +94,17 @@ func (s *takeoutOrderUpdatedEventSubscriber) Handle(domainEvent event.DomainEven
 		}
 
 		// Step 4: 处理库存和销量同步（异步执行）
-		utils.Go(func() {
-			if err := takeoutSrv.ProcessOrderItemsStockAndSales(
-				ctx,
-				orderUpdatedEvent.OrderUuid,
-				orderUpdatedEvent.CompanyUuid,
-				changeResult,
-			); err != nil {
-				logger.Logger.Error("处理订单变动库存销量失败",
-					zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
-					zap.String("platform", orderUpdatedEvent.Platform),
-					zap.Error(err))
-			}
-		})
+		if err := takeoutSrv.ProcessOrderItemsStockAndSales(
+			ctx,
+			orderUpdatedEvent.OrderUuid,
+			orderUpdatedEvent.CompanyUuid,
+			changeResult,
+		); err != nil {
+			logger.Logger.Error("处理订单变动库存销量失败",
+				zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
+				zap.String("platform", orderUpdatedEvent.Platform),
+				zap.Error(err))
+		}
 	}
 
 	// 异步重新打印外卖订单小票（无论是否有变动都打印）

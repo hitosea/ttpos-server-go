@@ -1235,9 +1235,43 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 					zap.String("changeType", item.ChangeType.String()),
 					zap.Error(err))
 			}
+
+		case valueObject.ChangeTypeRemoved:
+			// 数量变更或属性变更（加料等）：退旧增新
+			// 1. 旧商品标记退菜状态
+			if item.OldItem != nil && item.OldItem.Uuid > 0 {
+				if err := productionRepo.UpdateProductionOrderProductNumByTakeoutItemUuid(
+					item.OldItem.Uuid,
+					0,
+				); err != nil {
+					logger.Logger.Error("变更商品标记退菜失败",
+						zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
+						zap.String("changeType", item.ChangeType.String()),
+						zap.Error(err))
+				}
+			}
 		}
 	}
 
+	// 2. 处理送厨商品（新增或数量/属性变更）
+	for _, item := range changeResult.ReturnItems {
+		switch item.ChangeType {
+		case valueObject.ChangeTypeRemoved:
+			// 数量变更或属性变更（加料等）：退旧增新
+			// 1. 旧商品标记退菜状态
+			if item.OldItem != nil && item.OldItem.Uuid > 0 {
+				if err := productionRepo.UpdateProductionOrderProductNumByTakeoutItemUuid(
+					item.OldItem.Uuid,
+					0,
+				); err != nil {
+					logger.Logger.Error("变更商品标记退菜失败",
+						zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
+						zap.String("changeType", item.ChangeType.String()),
+						zap.Error(err))
+				}
+			}
+		}
+	}
 	return nil
 }
 
