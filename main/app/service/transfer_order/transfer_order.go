@@ -962,6 +962,10 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 			var firstApproval *model.TransferOrderApproval
 			for i := range approvals {
 				approval := approvals[i]
+				if approval.Status == constant.TransferApprovalSkipped {
+					// 如果是跳过的节点，说明该节点不需要审批，保持跳过状态，不重置
+					continue
+				}
 				// 重置所有非待审批状态的节点
 				if approval.Status != constant.TransferApprovalPending {
 					approval.Status = constant.TransferApprovalPending
