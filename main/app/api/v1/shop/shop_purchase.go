@@ -411,7 +411,7 @@ func (h *PurchaseHandler) GetPurchaseReceiptDetail(c *gin.Context) {
 // @Param data body req.PurchaseReceiptOrderCancelReq true "取消收货单请求参数"
 // @Success 200 {object} dto.Response{} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
-// @Router /shop/purchase/receipt/cancel [post]
+// @Router /shop/purchase/receipt/cancel [delete]
 func (h *PurchaseHandler) CancelPurchaseReceipt(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var cancelReq req.PurchaseReceiptOrderCancelReq

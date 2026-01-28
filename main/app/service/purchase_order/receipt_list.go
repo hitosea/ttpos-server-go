@@ -25,9 +25,10 @@ func (s *purchaseOrderSrv) GetReceiptList(ctx context.Context, purchaseOrder *mo
 	db := ctx.GetDB()
 	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
 
-	// 获取该采购单的所有收货单
+	// 获取该采购单的所有收货单（只返回待收货和已收货状态，不返回已取消）
 	receiptOrders, err := receiptOrderRepo.GetList(
 		receiptOrderRepo.WherePurchaseOrderUuid(purchaseOrder.Uuid),
+		receiptOrderRepo.WhereStatusIn([]int{constant.ReceiptOrderStatusPending, constant.ReceiptOrderStatusReceived}),
 		receiptOrderRepo.WithItems(),
 	)
 	if err != nil {
@@ -71,7 +72,7 @@ func (s *purchaseOrderSrv) getDNReceiptList(
 	dnListResp, err := erpSrv.GetDeliveryNoteList(ctx, &delivery_note.GetDeliveryNoteListReq{
 		CompanyAbbr:  companySetting.ErpnextHeadquarterAbbr,
 		SoNo:         purchaseOrder.ErpSaleOrderNo,
-		IncludeItems: false,
+		IncludeItems: true,
 	})
 	if err != nil {
 		return nil, err
@@ -93,10 +94,10 @@ func (s *purchaseOrderSrv) getDNReceiptList(
 		// 找到关联此DN的收货单
 		relatedReceipts := s.getReceiptsForDN(dn.Name, receiptOrders)
 
-		// 计算是否完成收货
+		// 计算是否完成收货（按item_code:uom分组判断）
 		isCompleted := true
 		for _, dnItem := range dn.Items {
-			receivedQty := s.calculateReceivedQtyForDNItem(dnItem.ItemCode, relatedReceipts)
+			receivedQty := s.calculateReceivedQtyForDNItem(dnItem.ItemCode, dnItem.Uom, relatedReceipts)
 			if receivedQty < dnItem.Qty {
 				isCompleted = false
 				break
@@ -110,13 +111,14 @@ func (s *purchaseOrderSrv) getDNReceiptList(
 		}
 
 		result = append(result, resp.ReceiptListItem{
-			IsDeliveryNote:     true,
-			DeliveryNoteNo:     dn.Name,
-			IsCompleted:        isCompleted,
-			SupplierName:       purchaseOrder.SupplierName,
-			SupplierErpCode:    purchaseOrder.SupplierErpCode,
-			ErpPurchaseOrderNo: purchaseOrder.ErpOrderNo,
-			ReceiptOrders:      receiptOrderInfos,
+			IsDeliveryNote:      true,
+			DeliveryNoteNo:      dn.Name,
+			IsCompleted:         isCompleted,
+			SupplierName:        purchaseOrder.SupplierName,
+			SupplierErpCode:     purchaseOrder.SupplierErpCode,
+			ErpPurchaseOrderNo:  purchaseOrder.ErpOrderNo,
+			LocaleWarehouseName: *language.JsonToLocaleResponse(purchaseOrder.WarehouseName),
+			ReceiptOrders:       receiptOrderInfos,
 		})
 	}
 
@@ -171,13 +173,14 @@ func (s *purchaseOrderSrv) getSupplierDirectReceiptList(
 		isCompleted := s.checkSupplierReceiptCompleted(items)
 
 		result = append(result, resp.ReceiptListItem{
-			IsDeliveryNote:     false,
-			DeliveryNoteNo:     "",
-			IsCompleted:        isCompleted,
-			SupplierName:       supplierName,
-			SupplierErpCode:    supplierCode,
-			ErpPurchaseOrderNo: purchaseOrder.ErpOrderNo,
-			ReceiptOrders:      receiptOrderInfos,
+			IsDeliveryNote:      false,
+			DeliveryNoteNo:      "",
+			IsCompleted:         isCompleted,
+			SupplierName:        supplierName,
+			SupplierErpCode:     supplierCode,
+			ErpPurchaseOrderNo:  purchaseOrder.ErpOrderNo,
+			LocaleWarehouseName: *language.JsonToLocaleResponse(purchaseOrder.WarehouseName),
+			ReceiptOrders:       receiptOrderInfos,
 		})
 	}
 
@@ -201,14 +204,15 @@ func (s *purchaseOrderSrv) getLegacyReceiptList(
 	isCompleted := s.checkItemsReceiptCompleted(purchaseOrder.Items)
 
 	return resp.ReceiptListItem{
-		IsLegacy:           true,
-		IsDeliveryNote:     false,
-		DeliveryNoteNo:     "",
-		IsCompleted:        isCompleted,
-		SupplierName:       purchaseOrder.SupplierName,
-		SupplierErpCode:    purchaseOrder.SupplierErpCode,
-		ErpPurchaseOrderNo: purchaseOrder.ErpOrderNo,
-		ReceiptOrders:      receiptOrderInfos,
+		IsLegacy:            true,
+		IsDeliveryNote:      false,
+		DeliveryNoteNo:      "",
+		IsCompleted:         isCompleted,
+		SupplierName:        purchaseOrder.SupplierName,
+		SupplierErpCode:     purchaseOrder.SupplierErpCode,
+		ErpPurchaseOrderNo:  purchaseOrder.ErpOrderNo,
+		LocaleWarehouseName: *language.JsonToLocaleResponse(purchaseOrder.WarehouseName),
+		ReceiptOrders:       receiptOrderInfos,
 	}
 }
 
@@ -235,7 +239,7 @@ func (s *purchaseOrderSrv) getReceiptsForSupplier(supplierCode string, receiptOr
 }
 
 // calculateReceivedQtyForDNItem 计算DN物品的已收货数量
-func (s *purchaseOrderSrv) calculateReceivedQtyForDNItem(itemCode string, receipts []model.PurchaseReceiptOrder) float64 {
+func (s *purchaseOrderSrv) calculateReceivedQtyForDNItem(itemCode string, uom string, receipts []model.PurchaseReceiptOrder) float64 {
 	totalReceived := 0.0
 	for _, receipt := range receipts {
 		// 只计算已确认收货的
@@ -243,7 +247,17 @@ func (s *purchaseOrderSrv) calculateReceivedQtyForDNItem(itemCode string, receip
 			continue
 		}
 		for _, item := range receipt.Items {
-			if item.MaterialCode == itemCode {
+			if item.MaterialCode != itemCode {
+				continue
+			}
+			// 按单位匹配计算已收货数量
+			if len(item.Units) > 0 {
+				for _, unit := range item.Units {
+					if unit.ErpnextUom == uom {
+						totalReceived += unit.Num
+					}
+				}
+			} else if item.ErpnextUom == uom {
 				totalReceived += item.Num
 			}
 		}
@@ -334,50 +348,32 @@ func (s *purchaseOrderSrv) getDNPendingItems(
 	dnNo string,
 ) (resp.ReceiptPendingItemsResp, error) {
 	result := resp.ReceiptPendingItemsResp{
-		IsDeliveryNote:  true,
-		DeliveryNoteNo:  dnNo,
-		SupplierName:    purchaseOrder.SupplierName,
-		SupplierErpCode: purchaseOrder.SupplierErpCode,
-		Items:           make([]resp.ReceiptPendingItemInfo, 0),
+		IsDeliveryNote:      true,
+		DeliveryNoteNo:      dnNo,
+		SupplierName:        purchaseOrder.SupplierName,
+		SupplierErpCode:     purchaseOrder.SupplierErpCode,
+		LocaleWarehouseName: *language.JsonToLocaleResponse(purchaseOrder.WarehouseName),
+		OrderNo:             purchaseOrder.OrderNo,
+		Items:               make([]resp.ReceiptPendingItemInfo, 0),
 	}
 
-	companySetting := ctx.GetCompanySetting()
 	db := ctx.GetDB()
 
 	// 调用ERP获取DN详情（包含物品）
 	erpSrv := erp.NewIErpSrv(s.dbm)
-	dnListResp, err := erpSrv.GetDeliveryNoteList(ctx, &delivery_note.GetDeliveryNoteListReq{
-		CompanyAbbr:  companySetting.ErpnextHeadquarterAbbr,
-		SoNo:         purchaseOrder.ErpSaleOrderNo,
-		IncludeItems: true,
-	})
+	targetDN, err := erpSrv.GetDeliveryNote(ctx, dnNo)
 	if err != nil {
 		return result, err
 	}
 
-	// 找到指定的DN
-	var targetDN *delivery_note.DeliveryNote
-	for _, dn := range dnListResp.DeliveryNoteList {
-		if dn.Name == dnNo {
-			targetDN = dn
-			break
-		}
-	}
-	if targetDN == nil {
-		return result, errors.New("未找到指定的DN单据")
-	}
-
-	// 构建DN物品编码到物品信息的映射（包含数量和单位）
-	type dnItemInfo struct {
-		Qty float64
-		Uom string
-	}
-	dnItemMap := make(map[string]dnItemInfo)
+	// 将DN物品按item_code分组，收集每个物品的所有单位信息
+	// key: item_code, value: []dnUnitInfo (同一物品可能有多个单位)
+	dnItemUnitsMap := make(map[string][]dnUnitInfo)
 	for _, dnItem := range targetDN.Items {
-		dnItemMap[dnItem.ItemCode] = dnItemInfo{
+		dnItemUnitsMap[dnItem.ItemCode] = append(dnItemUnitsMap[dnItem.ItemCode], dnUnitInfo{
 			Qty: dnItem.Qty,
 			Uom: dnItem.Uom,
-		}
+		})
 	}
 
 	// 获取该采购单关联此DN的所有已确认收货单
@@ -392,27 +388,22 @@ func (s *purchaseOrderSrv) getDNPendingItems(
 		return result, err
 	}
 
-	// 计算每个物品已收货数量（按DN单位Uom统计）
+	// 计算每个物品每个单位的已收货数量
+	// key: "item_code:uom", value: 已收货数量
 	receivedQtyMap := make(map[string]float64)
 	for _, receipt := range receiptOrders {
 		if receipt.Status != constant.ReceiptOrderStatusReceived {
 			continue
 		}
 		for _, item := range receipt.Items {
-			dnInfo, exists := dnItemMap[item.MaterialCode]
-			if !exists {
-				continue
-			}
-			// 在收货单物品的多单位中查找与DN单位匹配的单位
 			if len(item.Units) > 0 {
 				for _, unit := range item.Units {
-					if unit.ErpnextUom == dnInfo.Uom {
-						receivedQtyMap[item.MaterialCode] += unit.Num
-					}
+					key := item.MaterialCode + ":" + unit.ErpnextUom
+					receivedQtyMap[key] += unit.Num
 				}
-			} else if item.ErpnextUom == dnInfo.Uom {
-				// 没有多单位时，检查主单位
-				receivedQtyMap[item.MaterialCode] += item.Num
+			} else {
+				key := item.MaterialCode + ":" + item.ErpnextUom
+				receivedQtyMap[key] += item.Num
 			}
 		}
 	}
@@ -424,26 +415,126 @@ func (s *purchaseOrderSrv) getDNPendingItems(
 		itemCodeMap[item.MaterialCode] = item
 	}
 
-	// 遍历DN物品，计算待收货数量
-	for _, dnItem := range targetDN.Items {
-		purchaseItem, exists := itemCodeMap[dnItem.ItemCode]
+	// 遍历DN物品（按item_code分组后），构建待收货物品信息
+	for itemCode, dnUnits := range dnItemUnitsMap {
+		purchaseItem, exists := itemCodeMap[itemCode]
 		if !exists {
 			continue
 		}
 
-		// 计算该物品的已收货数量（按DN单位）
-		receivedQty := receivedQtyMap[dnItem.ItemCode]
-		pendingQty := dnItem.Qty - receivedQty
-		if pendingQty <= 0 {
-			continue
-		}
+		// // 检查该物品是否有剩余可收货数量
+		// hasRemaining := false
+		// for _, dnUnit := range dnUnits {
+		// 	key := itemCode + ":" + dnUnit.Uom
+		// 	receivedQty := receivedQtyMap[key]
+		// 	if dnUnit.Qty-receivedQty > 0 {
+		// 		hasRemaining = true
+		// 		break
+		// 	}
+		// }
+		// if !hasRemaining {
+		// 	continue
+		// }
 
-		// 构建待收货物品信息（数量使用DN单位）
-		pendingItem := s.buildPendingItemInfo(purchaseItem, dnItem.Qty, receivedQty, pendingQty)
+		// 构建待收货物品信息
+		pendingItem := s.buildDNPendingItemInfo(purchaseItem, dnUnits, receivedQtyMap)
 		result.Items = append(result.Items, pendingItem)
 	}
 
 	return result, nil
+}
+
+// dnUnitInfo DN单位信息（用于buildDNPendingItemInfo）
+type dnUnitInfo struct {
+	Qty float64
+	Uom string
+}
+
+// buildDNPendingItemInfo 构建DN类型的待收货物品信息
+// Units 基于DN的单位，支持同一物品多个单位
+func (s *purchaseOrderSrv) buildDNPendingItemInfo(
+	item *model.PurchaseOrderItem,
+	dnUnits []dnUnitInfo,
+	receivedQtyMap map[string]float64, // key: "item_code:uom"
+) resp.ReceiptPendingItemInfo {
+	// 计算总采购数量、总到货数量、总剩余数量
+	var totalPurchaseNum, totalArrivalNum, totalPendingNum float64
+	for _, dnUnit := range dnUnits {
+		key := item.MaterialCode + ":" + dnUnit.Uom
+		receivedQty := receivedQtyMap[key]
+		pendingQty := dnUnit.Qty - receivedQty
+		if pendingQty < 0 {
+			pendingQty = 0
+		}
+		totalPurchaseNum += dnUnit.Qty
+		totalArrivalNum += receivedQty
+		totalPendingNum += pendingQty
+	}
+
+	pendingItem := resp.ReceiptPendingItemInfo{
+		PurchaseOrderItemUuid: item.Uuid,
+		MaterialUuid:          item.MaterialUuid,
+		MaterialCode:          item.MaterialCode,
+		LocaleName:            *language.JsonToLocaleResponse(item.MaterialName),
+		PurchaseNum:           totalPurchaseNum,
+		ArrivalNum:            totalArrivalNum,
+		Num:                   totalPendingNum,
+		UnitUuid:              item.UnitUuid,
+		LocaleUnitName:        *language.JsonToLocaleResponse(item.UnitName),
+		UnitConversionRate:    item.UnitConversionRate,
+		BaseUnitUuid:          item.BaseUnitUuid,
+		LocaleBaseUnitName:    *language.JsonToLocaleResponse(item.BaseUnitName),
+		UnitList:              make([]resp.PurchaseOrderItemMaterialUnit, 0),
+		Units:                 make([]resp.ReceiptPendingItemUnit, 0),
+	}
+
+	// 构建可选单位列表（从 Material 关联获取）
+	if item.Material != nil && len(item.Material.NotBaseUnitList) > 0 {
+		for _, unit := range item.Material.NotBaseUnitList {
+			pendingItem.UnitList = append(pendingItem.UnitList, resp.PurchaseOrderItemMaterialUnit{
+				Uuid:           unit.Uuid,
+				ConversionRate: unit.ConversionRate,
+				LocaleName:     *language.JsonToLocaleResponse(unit.Name),
+			})
+		}
+	}
+
+	// 构建DN每个单位的待收货信息
+	for _, dnUnit := range dnUnits {
+		key := item.MaterialCode + ":" + dnUnit.Uom
+		receivedQty := receivedQtyMap[key]
+		pendingQty := dnUnit.Qty - receivedQty
+		if pendingQty < 0 {
+			pendingQty = 0
+		}
+
+		// 查找与DN单位匹配的采购单物品单位信息
+		var unitUuid uint64
+		var unitName string
+		var conversionRate float64 = 1.0
+
+		if item.Material != nil {
+			for _, unit := range item.Material.NotBaseUnitList {
+				if unit.Unit != nil && unit.Unit.ErpnextUom == dnUnit.Uom {
+					unitUuid = unit.Uuid
+					unitName = unit.Name
+					conversionRate = unit.ConversionRate
+					break
+				}
+			}
+		}
+
+		pendingItem.Units = append(pendingItem.Units, resp.ReceiptPendingItemUnit{
+			UnitUuid:       unitUuid,
+			LocaleUnitName: *language.JsonToLocaleResponse(unitName),
+			ConversionRate: conversionRate,
+			PurchaseNum:    dnUnit.Qty,
+			ArrivalNum:     receivedQty,
+			Num:            dnUnit.Qty, // Num与PurchaseNum一致
+		})
+	}
+
+	return pendingItem
 }
 
 // getSupplierPendingItems 获取供应商直接发货类型的待收货物品
@@ -454,10 +545,12 @@ func (s *purchaseOrderSrv) getSupplierPendingItems(
 	supplierErpCode string,
 ) (resp.ReceiptPendingItemsResp, error) {
 	result := resp.ReceiptPendingItemsResp{
-		IsDeliveryNote:  false,
-		DeliveryNoteNo:  "",
-		SupplierErpCode: supplierErpCode,
-		Items:           make([]resp.ReceiptPendingItemInfo, 0),
+		IsDeliveryNote:      false,
+		DeliveryNoteNo:      "",
+		SupplierErpCode:     supplierErpCode,
+		LocaleWarehouseName: *language.JsonToLocaleResponse(purchaseOrder.WarehouseName),
+		OrderNo:             purchaseOrder.OrderNo,
+		Items:               make([]resp.ReceiptPendingItemInfo, 0),
 	}
 
 	// 获取供应商信息
@@ -512,7 +605,7 @@ func (s *purchaseOrderSrv) buildPendingItemInfo(
 		LocaleName:            *language.JsonToLocaleResponse(item.MaterialName),
 		PurchaseNum:           purchaseNum,
 		ArrivalNum:            arrivalNum,
-		PendingNum:            pendingNum,
+		Num:                   pendingNum,
 		UnitUuid:              item.UnitUuid,
 		LocaleUnitName:        *language.JsonToLocaleResponse(item.UnitName),
 		UnitConversionRate:    item.UnitConversionRate,
@@ -546,7 +639,7 @@ func (s *purchaseOrderSrv) buildPendingItemInfo(
 				ConversionRate: unit.UnitConversionRate,
 				PurchaseNum:    unit.Num,
 				ArrivalNum:     unit.ArrivalNum,
-				PendingNum:     unitPendingNum,
+				Num:            unitPendingNum,
 			})
 		}
 	}
@@ -574,7 +667,7 @@ func (s *purchaseOrderSrv) buildPendingItemInfoFromUnits(item *model.PurchaseOrd
 		LocaleName:            *language.JsonToLocaleResponse(item.MaterialName),
 		PurchaseNum:           totalPurchaseNum,
 		ArrivalNum:            totalArrivalNum,
-		PendingNum:            totalPendingNum,
+		Num:                   totalPendingNum,
 		UnitList:              make([]resp.PurchaseOrderItemMaterialUnit, 0),
 		Units:                 make([]resp.ReceiptPendingItemUnit, 0),
 	}
@@ -602,7 +695,7 @@ func (s *purchaseOrderSrv) buildPendingItemInfoFromUnits(item *model.PurchaseOrd
 			ConversionRate: unit.UnitConversionRate,
 			PurchaseNum:    unit.Num,
 			ArrivalNum:     unit.ArrivalNum,
-			PendingNum:     unitPendingNum,
+			Num:            unitPendingNum,
 		})
 	}
 
