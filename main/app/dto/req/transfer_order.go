@@ -173,9 +173,10 @@ func (r *TransferOrderRejectReq) Validate() error {
 
 // TransferOrderReceiveReq 收货调拨单请求
 type TransferOrderReceiveReq struct {
-	Uuid               uint64 `json:"uuid" binding:"required,min=1"`      // 调拨单UUID
-	Remark             string `json:"remark" binding:"omitempty,max=500"` // 收货备注
-	InWarehouseErpCode string `json:"in_warehouse_erp_code"`              // 入库仓库ERP编码
+	Uuid               uint64   `json:"uuid" binding:"required,min=1"`       // 调拨单UUID
+	Remark             string   `json:"remark" binding:"omitempty,max=500"`  // 收货备注
+	InWarehouseErpCode string   `json:"in_warehouse_erp_code"`               // 入库仓库ERP编码
+	FileUuids          []uint64 `json:"file_uuids" binding:"required,min=1"` // 附件UUID列表
 }
 
 func (r *TransferOrderReceiveReq) Validate() error {
@@ -233,4 +234,20 @@ func (r *TransferOrderMaterialListReq) Validate() error {
 // TransferOrderCompanyListReq 调拨单对方机构列表查询
 type TransferOrderCompanyListReq struct {
 	Keyword string `form:"keyword" json:"keyword"` // 关键字
+}
+
+// DeleteTransferOrderFileReq 删除调拨单附件请求
+type DeleteTransferOrderFileReq struct {
+	TransferOrderUuid uint64 `json:"transfer_order_uuid" binding:"required"` // 调拨单UUID
+	FileUuid          uint64 `json:"file_uuid" binding:"required"`           // 文件UUID
+}
+
+func (r *DeleteTransferOrderFileReq) Validate() error {
+	if r.TransferOrderUuid == 0 {
+		return errors.New("调拨单UUID不能为空")
+	}
+	if r.FileUuid == 0 {
+		return errors.New("文件UUID不能为空")
+	}
+	return nil
 }

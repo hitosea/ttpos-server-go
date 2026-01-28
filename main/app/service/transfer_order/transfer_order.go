@@ -389,6 +389,33 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		})
 	}
 
+	// 获取附件列表（待收货和已完成状态）
+	detailResp.Files = make([]resp.TransferOrderFileInfo, 0)
+	if transferOrder.Status == constant.TransferOrderStatusReceiving || transferOrder.Status == constant.TransferOrderStatusCompleted {
+		fileRepo := repository.NewTransferOrderFileRepo(db)
+		files, err := fileRepo.GetByTransferOrderUuidWithFiles(reqs.Uuid)
+		if err != nil {
+			logger.Logger.Error("查询调拨单附件失败", zap.Error(err))
+		} else {
+			baseURL := utils.GetBaseURL(ctx.GetGin().Request)
+			for _, file := range files {
+				if file.File == nil {
+					continue
+				}
+				detailResp.Files = append(detailResp.Files, resp.TransferOrderFileInfo{
+					FileUuid:   file.FileUuid,
+					FileName:   file.File.RealName,
+					FileSize:   int64(file.File.FileSize),
+					FileType:   file.File.FileType,
+					Extension:  file.File.Extension,
+					FilePath:   file.File.GetUrl(baseURL),
+					SortOrder:  file.SortOrder,
+					CreateTime: int(file.CreateTime),
+				})
+			}
+		}
+	}
+
 	return detailResp, nil
 }
 
@@ -1557,6 +1584,21 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 		return errors.New("无收货权限")
 	}
 
+	// 验证客户端版本（附件功能需要 v2.16.0+）
+	if ctx.Version(context.LT, constant.ClientVersionV2160) {
+		return errors.New("您的软件版本过低，请升级后再试")
+	}
+
+	// 验证附件必填
+	if len(req.FileUuids) == 0 {
+		return errors.New("请上传相关附件后确定收货")
+	}
+
+	// 验证附件数量限制（最多10个）
+	if len(req.FileUuids) > 10 {
+		return errors.New("最多支持10个附件")
+	}
+
 	// 验证入库仓库
 	if req.InWarehouseErpCode == "" {
 		return errors.NewWithCode(constant.CodeErrorConfirmClose, "请选择入库仓库")
@@ -1580,6 +1622,14 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
 		transferOrderRepository := repository.NewTransferOrderRepo(tx)
+
+		// 保存附件（如果有传入）
+		if len(req.FileUuids) > 0 {
+			if err := s.saveTransferOrderFilesInTx(ctx, tx, req.Uuid, req.FileUuids); err != nil {
+				return err
+			}
+		}
+
 		// 更新调拨单为已完成状态
 		transferOrder.Status = constant.TransferOrderStatusCompleted
 		if err := transferOrderRepository.Update(transferOrder); err != nil {
@@ -1635,6 +1685,51 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 		logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 	}
 	return nil
+}
+
+// saveTransferOrderFiles 保存调拨单附件（非事务）
+func (s *transferOrderSrv) saveTransferOrderFiles(ctx context.Context, db *gorm.DB, transferOrderUuid uint64, fileUuids []uint64) error {
+	if len(fileUuids) == 0 {
+		return nil
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		return s.saveTransferOrderFilesInTx(ctx, tx, transferOrderUuid, fileUuids)
+	})
+}
+
+// saveTransferOrderFilesInTx 保存调拨单附件（事务内）
+func (s *transferOrderSrv) saveTransferOrderFilesInTx(ctx context.Context, tx *gorm.DB, transferOrderUuid uint64, fileUuids []uint64) error {
+	if len(fileUuids) == 0 {
+		return nil
+	}
+
+	fileRepo := repository.NewTransferOrderFileRepo(tx)
+
+	// 先删除旧的附件关联
+	if err := fileRepo.DeleteByTransferOrderUuid(transferOrderUuid); err != nil {
+		return errors.WithMessage(errors.New("删除旧附件关联失败"), err.Error())
+	}
+
+	// 批量创建附件关联
+	var files []model.TransferOrderFile
+	for idx, fileUuid := range fileUuids {
+		uuid, err := utils.GetID()
+		if err != nil {
+			return errors.WithMessage(errors.New("生成UUID失败"), err.Error())
+		}
+
+		files = append(files, model.TransferOrderFile{
+			BaseModel: model.BaseModel{
+				Uuid: uuid,
+			},
+			TransferOrderUuid: transferOrderUuid,
+			FileUuid:          fileUuid,
+			SortOrder:         idx,
+		})
+	}
+
+	return fileRepo.BatchCreate(files)
 }
 
 // GetTransferOrderApprovalList 获取调拨单审批流程列表

@@ -52,6 +52,7 @@ type TransferOrderDetailResp struct {
 	Items       []TransferOrderItemInfo       `json:"items"`       // 调拨明细
 	RejectInfo  TransferOrderRejectInfo       `json:"reject_info"` // 驳回信息
 	Annotations []TransferOrderAnnotationItem `json:"annotations"` // 批注列表
+	Files       []TransferOrderFileInfo       `json:"files"`       // 附件列表
 }
 
 // TransferOrderItemInfo 调拨单明细信息
@@ -186,4 +187,16 @@ type TransferOrderWarehouseItem struct {
 	ErpCode string             `json:"erp_code"` // 仓库ERP编码
 	Name    dto.LocaleResponse `json:"name"`     // 仓库名称（多语言）
 	Type    string             `json:"type"`     // 仓库类型
+}
+
+// TransferOrderFileInfo 调拨单附件信息
+type TransferOrderFileInfo struct {
+	FileUuid   uint64 `json:"file_uuid"`   // 文件UUID
+	FileName   string `json:"file_name"`   // 文件名
+	FileSize   int64  `json:"file_size"`   // 文件大小（字节）
+	FileType   string `json:"file_type"`   // 文件类型（image/document）
+	Extension  string `json:"extension"`   // 文件扩展名
+	FilePath   string `json:"file_path"`   // 文件访问路径
+	SortOrder  int    `json:"sort_order"`  // 排序
+	CreateTime int    `json:"create_time"` // 创建时间
 }
