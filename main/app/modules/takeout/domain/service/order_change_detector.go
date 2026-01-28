@@ -159,11 +159,14 @@ func (d *OrderChangeDetector) handleAttributeChange(
 }
 
 // handleQuantityChange 处理数量变动
+// 采用"退旧增新"模式：无论数量增减，都将旧商品退菜，新商品送厨
+// 这样厨房能清楚看到哪些要退、哪些要新做
 func (d *OrderChangeDetector) handleQuantityChange(
 	result *value_object.OrderChangeResult,
 	oldItem, newItem *model.TakeoutOrderItem,
 ) {
-	change := value_object.ItemChange{
+	// 旧菜品退菜
+	returnChange := value_object.ItemChange{
 		ChangeType:     value_object.ChangeTypeQuantity,
 		PlatformItemId: oldItem.PlatformItemId,
 		ProductName:    oldItem.ItemName,
@@ -172,15 +175,19 @@ func (d *OrderChangeDetector) handleQuantityChange(
 		OldItem:        d.convertToChangedItem(oldItem),
 		NewItem:        d.convertToChangedItem(newItem),
 	}
+	result.AddReturnItem(returnChange)
 
-	if newItem.Quantity > oldItem.Quantity {
-		// 数量增加 → 增量部分送厨
-		result.AddKitchenItem(change)
-		result.AddChange(change)
-	} else {
-		// 数量减少 → 减量部分退菜
-		result.AddReturnItem(change)
+	// 新菜品送厨
+	kitchenChange := value_object.ItemChange{
+		ChangeType:     value_object.ChangeTypeQuantity,
+		PlatformItemId: newItem.PlatformItemId,
+		ProductName:    newItem.ItemName,
+		OldQuantity:    oldItem.Quantity,
+		NewQuantity:    newItem.Quantity,
+		OldItem:        d.convertToChangedItem(oldItem),
+		NewItem:        d.convertToChangedItem(newItem),
 	}
+	result.AddKitchenItem(kitchenChange)
 }
 
 // hasAttributeChange 检查属性是否变动

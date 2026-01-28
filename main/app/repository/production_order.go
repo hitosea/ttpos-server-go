@@ -20,6 +20,7 @@ type IProductionOrderRepo interface {
 	DeleteProductionOrderByTakeoutOrderUuid(takeoutOrderUuid uint64) error                               // 根据外卖订单UUID删除生产订单
 	GetProductionOrderByTakeoutOrderUuid(takeoutOrderUuid uint64) (*model.ProductionOrder, error)        // 根据外卖订单UUID查询生产单
 	UpdateProductionOrderProductStatusByTakeoutItemUuid(takeoutItemUuid uint64, status int) error        // 根据外卖商品UUID更新生产单商品状态
+	UpdateProductionOrderProductNumByTakeoutItemUuid(takeoutItemUuid uint64, num float64) error          // 根据外卖商品UUID更新生产单商品数量
 	WhereProductStatus(status uint) DBOption                               // 生产商品状态
 	WhereUuid(uuid uint64) DBOption                                        // Uuid 条件
 	WhereProductFinishedTime(finishedTime int64) DBOption                  // 生产商品完成时间条件
@@ -562,6 +563,14 @@ func (r *productionRepo) UpdateProductionOrderProductStatusByTakeoutItemUuid(tak
 		Where("takeout_order_item_uuid = ?", takeoutItemUuid).
 		Where("delete_time = ?", 0).
 		Update("status", status).Error
+}
+
+// UpdateProductionOrderProductNumByTakeoutItemUuid 根据外卖商品UUID更新生产单商品数量
+func (r *productionRepo) UpdateProductionOrderProductNumByTakeoutItemUuid(takeoutItemUuid uint64, num float64) error {
+	return r.db.Model(&model.ProductionOrderProduct{}).
+		Where("takeout_order_item_uuid = ?", takeoutItemUuid).
+		Where("delete_time = ?", 0).
+		Update("num", num).Error
 }
 
 // CreateProductionOrderProduct 创建生产单商品
