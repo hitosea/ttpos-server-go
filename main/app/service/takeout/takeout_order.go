@@ -1170,9 +1170,9 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 			continue
 		}
 		// 根据外卖订单商品UUID更新生产单商品状态为退菜
-		if err := productionRepo.UpdateProductionOrderProductStatusByTakeoutItemUuid(
+		if err := productionRepo.UpdateProductionOrderProductNumByTakeoutItemUuid(
 			item.OldItem.Uuid,
-			constant.ProductionOrderProductStatusCancel,
+			0,
 		); err != nil {
 			logger.Logger.Error("更新生产单商品为退菜状态失败",
 				zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
@@ -1211,41 +1211,25 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 				logger.Logger.Error("创建生产单商品失败",
 					zap.Uint64("takeoutOrderItemUuid", item.NewItem.Uuid),
 					zap.Error(err))
-			} else {
-				logger.Logger.Info("创建生产单商品成功",
-					zap.Uint64("productionOrderProductUuid", productionOrderProduct.Uuid),
-					zap.String("itemName", productionOrderProduct.Name))
 			}
 
 		case valueObject.ChangeTypeQuantity, valueObject.ChangeTypeAttribute:
 			// 数量变更或属性变更（加料等）：退旧增新
 			// 1. 旧商品标记退菜状态
 			if item.OldItem != nil && item.OldItem.Uuid > 0 {
-				if err := productionRepo.UpdateProductionOrderProductStatusByTakeoutItemUuid(
+				if err := productionRepo.UpdateProductionOrderProductNumByTakeoutItemUuid(
 					item.OldItem.Uuid,
-					constant.ProductionOrderProductStatusCancel,
+					0,
 				); err != nil {
 					logger.Logger.Error("变更商品标记退菜失败",
 						zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
 						zap.String("changeType", item.ChangeType.String()),
 						zap.Error(err))
-				} else {
-					logger.Logger.Info("变更商品标记退菜成功",
-						zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
-						zap.String("changeType", item.ChangeType.String()))
 				}
 			}
 
-			// 2. 创建新的生产单商品（使用完整字段）
-			if item.NewItem == nil || item.NewItem.Uuid == 0 {
-				logger.Logger.Warn("变更商品缺少信息，跳过创建生产单商品",
-					zap.String("platformItemId", item.PlatformItemId),
-					zap.String("changeType", item.ChangeType.String()))
-				continue
-			}
-
 			productionOrderProduct, err := s.buildProductionOrderProductFromTakeoutItem(
-				ctx, item.NewItem.Uuid, productionOrder.Uuid, orderUuid,
+				ctx, item.OldItem.Uuid, productionOrder.Uuid, orderUuid,
 			)
 			if err != nil {
 				logger.Logger.Error("构建生产单商品失败",
@@ -1255,9 +1239,6 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 				continue
 			}
 			if productionOrderProduct == nil {
-				logger.Logger.Warn("变更商品未映射，跳过创建生产单商品",
-					zap.String("platformItemId", item.PlatformItemId),
-					zap.String("changeType", item.ChangeType.String()))
 				continue
 			}
 
@@ -1266,12 +1247,6 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 					zap.Uint64("takeoutOrderItemUuid", item.NewItem.Uuid),
 					zap.String("changeType", item.ChangeType.String()),
 					zap.Error(err))
-			} else {
-				logger.Logger.Info("变更商品创建生产单商品成功",
-					zap.Uint64("productionOrderProductUuid", productionOrderProduct.Uuid),
-					zap.String("itemName", productionOrderProduct.Name),
-					zap.String("changeType", item.ChangeType.String()),
-					zap.Float64("quantity", productionOrderProduct.Num))
 			}
 		}
 	}
