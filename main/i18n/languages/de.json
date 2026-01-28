@@ -5250,6 +5250,8 @@
   "盘点单不存在": "Inventarblatt existiert nicht",
   "盘点单中有不在此仓库的物品": "Im Inventarblatt befinden sich Artikel, die sich nicht in diesem Lager befinden",
   "盘点单状态不允许驳回": "Der Status des Inventarblatts erlaubt keine Ablehnung",
+  "盘点单状态不允许重新提交": "Der Status des Inventarblatts erlaubt keine erneute Einreichung",
+  "只有发起人才能重新提交盘点单": "Nur der Initiator kann das Inventarblatt erneut einreichen",
   "盘点模板服务返回业务错误: code=%d, message=%s": "Inventarvorlagendienst gab einen Geschäftsfehler zurück: code=%d, message=%s",
   "盘点模板服务返回错误状态码: %d, 响应: %s": "Der Inventarvorlagenservice hat einen Fehlerstatuscode zurückgegeben: %d, Antwort: %s",
   "盘点目的参数错误": "Parameter für Inventurzweck fehlerhaft",

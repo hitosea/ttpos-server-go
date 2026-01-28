@@ -5250,6 +5250,8 @@
   "盘点单不存在": "Inventeringsbladet finns inte",
   "盘点单中有不在此仓库的物品": "Inventarlistan innehåller artiklar som inte finns i detta lager",
   "盘点单状态不允许驳回": "Inventeringsstatus tillåter inte avslag",
+  "盘点单状态不允许重新提交": "Inventeringsstatus tillåter inte återsändning",
+  "只有发起人才能重新提交盘点单": "Endast initieraren kan skicka in inventeringsbladet på nytt",
   "盘点模板服务返回业务错误: code=%d, message=%s": "Inventarformulärtjänsten returnerade ett affärsfel: code=%d, message=%s",
   "盘点模板服务返回错误状态码: %d, 响应: %s": "Inventar-malltjänsten returnerade felstatuskod: %d, svar: %s",
   "盘点目的参数错误": "Felaktig parameter för inventeringssyfte",

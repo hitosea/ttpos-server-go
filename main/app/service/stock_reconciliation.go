@@ -255,6 +255,10 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 	}
 	detailResp.WarehouseName = stockReconciliation.Warehouse.MultiLanguageName.GetNames()
 
+	// 是否可重新提交（已驳回状态且为发起人）
+	detailResp.IsCanResubmit = stockReconciliation.Status == constant.StockReconciliationStatusRejected &&
+		stockReconciliation.SubmitterStaffUuid == ctx.GetStaffUuid()
+
 	bookedQuantityMap, err := s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
 	if err != nil {
 		return detailResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
