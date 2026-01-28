@@ -674,32 +674,32 @@ func (s *takeoutSrv) ProcessOrderItemsStockAndSales(ctx context.Context, orderUu
 }
 
 // processReturnItemsStock 处理退菜项的库存归还和销量减少
+// 注意：此方法会部分减少出库单数量，而不是整体撤销，以支持多次数量减少的场景
 func (s *takeoutSrv) processReturnItemsStock(ctx context.Context, order *takeoutModel.TakeoutOrder, returnItems []valueObject.ItemChange) error {
 	db := ctx.GetDB()
 
-	// 收集需要处理的 BOM UUID 和对应的数量
-	bomQuantityMap := make(map[uint64]int) // map[bomUuid]quantity
+	// 收集需要处理的 BOM UUID 和对应的减少数量
+	bomReduceQuantityMap := make(map[uint64]int) // map[bomUuid]reduceQuantity
 	for _, item := range returnItems {
 		if item.OldItem != nil && item.OldItem.TtposProductPackageUuid > 0 {
-			// 计算需要处理的数量（新增或增量）
+			// 计算需要减少的数量
 			quantity := item.OldQuantity
 			if item.ChangeType == valueObject.ChangeTypeQuantity {
-				// 数量变动只处理增量部分
+				// 数量变动只处理减少的部分
 				quantity = item.OldQuantity - item.NewQuantity
 			}
 			if quantity <= 0 {
 				continue
 			}
-			// 对于退菜，使用原数量
-			bomQuantityMap[item.OldItem.TtposProductPackageUuid] += quantity
+			bomReduceQuantityMap[item.OldItem.TtposProductPackageUuid] += quantity
 		}
 	}
 
-	if len(bomQuantityMap) == 0 {
+	if len(bomReduceQuantityMap) == 0 {
 		return nil
 	}
 
-	// 查询该订单的出库单明细
+	// 查询该订单的出库单明细（未撤销的）
 	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
 	warehouseOutFormItems, err := warehouseFormRepo.GetWarehouseOutFormItem(
 		func(db *gorm.DB) *gorm.DB {
@@ -710,40 +710,85 @@ func (s *takeoutSrv) processReturnItemsStock(ctx context.Context, order *takeout
 		return errors.WithMessage(err, "查询出库单明细失败")
 	}
 
-	// 按 BOM UUID 筛选需要撤销的出库单明细
-	itemsToRevoke := make([]*model.WarehouseOutFormItem, 0)
+	// 用于恢复库存的临时列表（记录实际减少的数量）
+	itemsToRestore := make([]*model.WarehouseOutFormItem, 0)
+	currentTime := time.Now().Unix()
+
+	// 按 BOM UUID 分组出库单明细，并计算减少数量
 	for _, outItem := range warehouseOutFormItems {
-		if _, exists := bomQuantityMap[outItem.ProductBomUuid]; exists {
-			itemsToRevoke = append(itemsToRevoke, outItem)
+		reduceQty, exists := bomReduceQuantityMap[outItem.ProductBomUuid]
+		if !exists || reduceQty <= 0 {
+			continue
 		}
-	}
 
-	if len(itemsToRevoke) == 0 {
-		return nil
-	}
+		// 计算实际可以减少的数量（不能超过当前出库单的数量）
+		actualReduce := reduceQty
+		if float64(actualReduce) > outItem.Num {
+			actualReduce = int(outItem.Num)
+		}
 
-	// 撤销出库单明细
-	for _, item := range itemsToRevoke {
-		item.RevokeTime = time.Now().Unix()
-		if err := warehouseFormRepo.UpdateWarehouseOutFormItemRecord(*item); err != nil {
-			logger.Logger.Error("撤销出库单明细失败",
-				zap.Uint64("itemUuid", item.Uuid),
+		if actualReduce <= 0 {
+			continue
+		}
+
+		// 更新剩余需要减少的数量
+		bomReduceQuantityMap[outItem.ProductBomUuid] -= actualReduce
+
+		// 创建用于恢复库存的临时记录（只包含实际减少的数量）
+		restoreItem := *outItem // 复制一份
+		restoreItem.Num = float64(actualReduce)
+		itemsToRestore = append(itemsToRestore, &restoreItem)
+
+		// 更新出库单明细：减少数量或撤销
+		newNum := outItem.Num - float64(actualReduce)
+		if newNum <= 0 {
+			// 数量减到0，撤销整个明细
+			outItem.RevokeTime = currentTime
+			outItem.Num = 0
+		} else {
+			// 部分减少，更新数量
+			outItem.Num = newNum
+		}
+
+		if err := warehouseFormRepo.UpdateWarehouseOutFormItemRecord(*outItem); err != nil {
+			logger.Logger.Error("更新出库单明细失败",
+				zap.Uint64("itemUuid", outItem.Uuid),
+				zap.Float64("newNum", outItem.Num),
 				zap.Error(err))
 		}
 	}
 
-	// 恢复库存
-	if err := s.restoreTakeoutOrderStock(db, ctx.GetCompanyUuid(), itemsToRevoke); err != nil {
+	if len(itemsToRestore) == 0 {
+		return nil
+	}
+
+	// 恢复库存（使用 itemsToRestore，其中 Num 是实际减少的数量）
+	if err := s.restoreTakeoutOrderStock(db, ctx.GetCompanyUuid(), itemsToRestore); err != nil {
 		logger.Logger.Error("恢复退菜项库存失败",
 			zap.Uint64("orderUuid", order.Uuid),
 			zap.Error(err))
 	}
 
-	// 减少销量
+	// 减少销量（使用 returnItems 中的数量，而不是 bomReduceQuantityMap）
+	// 因为 bomReduceQuantityMap 可能已经被修改了
 	productBomRepo := repository.NewProductBomRepo(db)
 	productPackageRepo := repository.NewProductPackageRepo(db)
-	for bomUuid, quantity := range bomQuantityMap {
-		saleNum := float64(quantity)
+	for _, item := range returnItems {
+		if item.OldItem == nil || item.OldItem.TtposProductPackageUuid == 0 {
+			continue
+		}
+		// 计算减少的数量
+		reduceQty := item.OldQuantity
+		if item.ChangeType == valueObject.ChangeTypeQuantity {
+			reduceQty = item.OldQuantity - item.NewQuantity
+		}
+		if reduceQty <= 0 {
+			continue
+		}
+
+		bomUuid := item.OldItem.TtposProductPackageUuid
+		saleNum := float64(reduceQty)
+
 		// 减少 BOM 销量
 		if err := productBomRepo.SubActualSaleNum(bomUuid, saleNum); err != nil {
 			logger.Logger.Error("减少退菜项BOM销量失败",
@@ -751,15 +796,14 @@ func (s *takeoutSrv) processReturnItemsStock(ctx context.Context, order *takeout
 				zap.Float64("saleNum", saleNum),
 				zap.Error(err))
 		}
+
 		// 减少 Package 销量（如果是套餐）
-		for _, item := range returnItems {
-			if item.OldItem != nil && item.OldItem.TtposProductPackageUuid == bomUuid && item.OldItem.TtposProductType > 0 {
-				if err := productPackageRepo.SubActualSaleNum(bomUuid, saleNum); err != nil {
-					logger.Logger.Error("减少退菜项Package销量失败",
-						zap.Uint64("packageUuid", bomUuid),
-						zap.Float64("saleNum", saleNum),
-						zap.Error(err))
-				}
+		if item.OldItem.TtposProductType > 0 {
+			if err := productPackageRepo.SubActualSaleNum(bomUuid, saleNum); err != nil {
+				logger.Logger.Error("减少退菜项Package销量失败",
+					zap.Uint64("packageUuid", bomUuid),
+					zap.Float64("saleNum", saleNum),
+					zap.Error(err))
 			}
 		}
 	}
