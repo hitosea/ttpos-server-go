@@ -3417,7 +3417,7 @@ CREATE TABLE `ttpos_purchase_order_log` (
   `action_desc` varchar(255) DEFAULT '' COMMENT '操作描述',
   `old_status` int(10) DEFAULT 0 COMMENT '操作前状态',
   `new_status` int(10) DEFAULT 0 COMMENT '操作后状态',
-  `content` text COMMENT '操作内容详情',
+  `content` longtext COMMENT '操作内容详情',
   `remark` text COMMENT '备注',
   `create_time` int(10) unsigned DEFAULT 0 COMMENT '创建时间(时间戳)',
   `update_time` int(10) unsigned DEFAULT 0 COMMENT '更新时间(时间戳)',
