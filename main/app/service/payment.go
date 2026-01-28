@@ -522,6 +522,29 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 				},
 				MemberSaleOrderUuid: memberSaleOrder.Uuid,
 			})
+		} else if order.RelatedType == constant.PaymentOrderRelatedTypeSaleOrder {
+			// 非会员端订单支付成功（可能是 Kiosk 自助点餐机订单）
+			// 先查询销售订单获取 SaleBillUuid
+			saleOrder, err := repository.NewSaleOrderRepo(db).GetSaleOrderByUuid(order.RelatedUuid)
+			if err == nil && saleOrder != nil {
+				// 查询销售账单，判断是否是 Kiosk 订单
+				saleBill, err := repository.NewOrderRepo(db).GetSaleBill(
+					repository.CommonRepo.WhereByUuid(saleOrder.SaleBillUuid),
+				)
+				if err == nil && saleBill.Source == constant.SaleBillSourceKiosk {
+					// Kiosk 订单支付成功，发布事件触发送厨
+					event.NewSystemBus().PublishPayFinishKioskOrderEvent(event.PayFinishKioskOrderPayload{
+						BasePayload: event.BasePayload{
+							Ctx:           p.ctx,
+							CompanyUuid:   p.ctx.GetCompanyUuid(),
+							Source:        constant.SourceKiosk,
+							SaleBillUuid:  saleBill.Uuid,
+							SaleOrderUuid: order.RelatedUuid,
+						},
+						PaymentOrderUuid: paymentOrderUuid,
+					})
+				}
+			}
 		}
 
 		return nil

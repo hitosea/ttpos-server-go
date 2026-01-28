@@ -52,6 +52,11 @@ func TestMapJwtSourceToSaleBillSource(t *testing.T) {
 			jwtSource: jwt.SourceMember,
 			want:      SaleBillSourceMember,
 		},
+		{
+			name:      "kiosk",
+			jwtSource: jwt.SourceKiosk,
+			want:      SaleBillSourceKiosk,
+		},
 	}
 
 	for _, tt := range tests {
