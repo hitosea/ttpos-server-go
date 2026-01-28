@@ -36,6 +36,9 @@ type IPurchaseReceiptOrderRepo interface {
 	WhereReceiptType(receiptType int) DBOption
 	WhereStatusIn(statusIn []int) DBOption
 	WhereUuidIn(uuidIn []uint64) DBOption
+	WhereDeliveryNoteNo(dnNo string) DBOption
+	WhereIsFromDeliveryNote(isFromDN int) DBOption
+	WhereSupplierErpCode(supplierErpCode string) DBOption
 	WithItems() DBOption
 	OrderByReceiptTime(desc bool) DBOption
 	OrderByCreateTime(desc bool) DBOption
@@ -240,6 +243,27 @@ func (r *PurchaseReceiptOrderRepoImpl) WhereStatusIn(statusIn []int) DBOption {
 func (r *PurchaseReceiptOrderRepoImpl) WhereUuidIn(uuidIn []uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid IN (?)", uuidIn)
+	}
+}
+
+// WhereDeliveryNoteNo DN单号条件
+func (r *PurchaseReceiptOrderRepoImpl) WhereDeliveryNoteNo(dnNo string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("delivery_note_no = ?", dnNo)
+	}
+}
+
+// WhereIsFromDeliveryNote 是否来自DN条件
+func (r *PurchaseReceiptOrderRepoImpl) WhereIsFromDeliveryNote(isFromDN int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_from_delivery_note = ?", isFromDN)
+	}
+}
+
+// WhereSupplierErpCode 供应商ERP编码条件
+func (r *PurchaseReceiptOrderRepoImpl) WhereSupplierErpCode(supplierErpCode string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("supplier_erp_code = ?", supplierErpCode)
 	}
 }
 

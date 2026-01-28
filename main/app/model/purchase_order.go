@@ -256,6 +256,8 @@ type PurchaseReceiptOrder struct {
 	SourceWarehouseName    string  `gorm:"column:source_warehouse_name;type:text;comment:源仓库名称" json:"source_warehouse_name"`
 	TargetWarehouseErpCode string  `gorm:"column:target_warehouse_erp_code;type:varchar(255);not null;default:'';comment:目标仓库ERP编码" json:"target_warehouse_erp_code"`
 	TargetWarehouseName    string  `gorm:"column:target_warehouse_name;type:text;comment:目标仓库名称" json:"target_warehouse_name"`
+	DeliveryNoteNo         string  `gorm:"column:delivery_note_no;type:varchar(255);not null;default:'';comment:ERP Delivery Note号" json:"delivery_note_no"`
+	IsFromDeliveryNote     int     `gorm:"column:is_from_delivery_note;type:int(10);not null;default:0;comment:是否来自DN单:0-否 1-是" json:"is_from_delivery_note"`
 
 	// 关联关系
 	PurchaseOrder PurchaseOrder              `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`

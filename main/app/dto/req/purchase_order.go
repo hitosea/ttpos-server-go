@@ -130,12 +130,14 @@ type PurchaseOrderSupplierSyncReq struct {
 
 // PurchaseReceiptCreateReq 创建收货记录请求
 type PurchaseReceiptCreateReq struct {
-	PurchaseOrderUuid uint64                         `json:"purchase_order_uuid" binding:"required,min=1"` // 采购订单ID
-	ReceiveTime       int64                          `json:"receive_time" binding:"required,min=0"`        // 收货时间(时间戳)
-	ReceiptType       int                            `json:"receipt_type" binding:"required,min=1,max=2"`  // 收货类型 1-外部收货 2-内部收货
-	Items             []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`  // 收货明细
-	IsConfirm         bool                           `json:"is_confirm"`                                   // 是否确认收货
-	FileUuids         []uint64                       `json:"file_uuids" binding:"omitempty,max=10"`        // 附件UUID列表，最多10个
+	PurchaseOrderUuid  uint64                         `json:"purchase_order_uuid" binding:"required,min=1"`     // 采购订单ID
+	ReceiveTime        int64                          `json:"receive_time" binding:"required,min=0"`            // 收货时间(时间戳)
+	ReceiptType        int                            `json:"receipt_type" binding:"required,min=1,max=2"`      // 收货类型 1-外部收货 2-内部收货
+	Items              []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`      // 收货明细
+	IsConfirm          bool                           `json:"is_confirm"`                                       // 是否确认收货
+	FileUuids          []uint64                       `json:"file_uuids" binding:"omitempty,max=10"`            // 附件UUID列表，最多10个
+	DeliveryNoteNo     string                         `json:"delivery_note_no" binding:"omitempty,max=255"`     // v2.16.0+ DN单号
+	SourceSupplierCode string                         `json:"source_supplier_code" binding:"omitempty,max=255"` // v2.16.0+ 供应商编码
 }
 
 // PurchaseReceiptUpdateReq 更新收货记录请求
@@ -208,4 +210,11 @@ type PurchaseReceiptOrderCancelReq struct {
 type DeleteReceiptFileReq struct {
 	ReceiptOrderUuid uint64 `json:"receipt_order_uuid" binding:"required,min=1"` // 收货单UUID
 	FileUuid         uint64 `json:"file_uuid" binding:"required,min=1"`          // 文件UUID
+}
+
+// ReceiptPendingItemsReq 获取待收货物品请求 (v2.16.0+)
+type ReceiptPendingItemsReq struct {
+	PurchaseOrderUuid uint64 `json:"purchase_order_uuid" form:"purchase_order_uuid" binding:"required,min=1"` // 采购订单UUID
+	DeliveryNoteNo    string `json:"delivery_note_no" form:"delivery_note_no" binding:"omitempty,max=255"`    // DN单号（与SupplierErpCode二选一）
+	SupplierErpCode   string `json:"supplier_erp_code" form:"supplier_erp_code" binding:"omitempty,max=255"`  // 供应商ERP编码（与DeliveryNoteNo二选一）
 }

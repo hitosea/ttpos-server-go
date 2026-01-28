@@ -70,14 +70,57 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 		receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(tx)
 		receiptOrderItemRepo := repository.NewPurchaseReceiptOrderItemRepo(tx)
 
-		// 查询采购申请
-		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.PurchaseOrderUuid)
+		// 查询采购申请（包含物品和单位信息，用于校验）
+		purchaseOrder, err := purchaseOrderRepo.GetByUuid(
+			req.PurchaseOrderUuid,
+			purchaseOrderRepo.WithItems(),
+		)
 		if err != nil {
 			logger.Logger.Error("CreatePurchaseReceiptOrder-GetByUuid", zap.Any("purchaseOrderUuid", req.PurchaseOrderUuid), zap.Any("err", err))
 			return errors.WithMessage(errors.New("采购申请不存在"), err.Error())
 		}
 		if !purchaseOrder.CanReceive() {
 			return errors.New("采购单状态不允许收货")
+		}
+
+		// 版本与采购单类型校验
+		hasErpSaleOrderNo := purchaseOrder.ErpSaleOrderNo != ""
+
+		// 版本 < 2.16.0 且有 ErpSaleOrderNo：提示去新版处理
+		if ctx.Version(context.LT, constant.ClientVersionV2160) && hasErpSaleOrderNo {
+			return errors.New("请更新软件版本再尝试")
+		}
+
+		// v2.16.0+ 新采购单（有 ErpSaleOrderNo）收货来源校验
+		if ctx.Version(context.GTE, constant.ClientVersionV2160) && hasErpSaleOrderNo {
+			hasSourceParam := req.DeliveryNoteNo != "" || req.SourceSupplierCode != ""
+
+			// 集采订单必须指定收货来源（DN单号或供应商编码）
+			if !hasSourceParam {
+				return errors.New("集采订单必须指定收货来源（DN单号或供应商编码）")
+			}
+
+			// DN或供应商类型的详细校验
+			// 构建采购单物品UUID到物品的映射
+			purchaseOrderItemsMap := make(map[uint64]*model.PurchaseOrderItem)
+			for i := range purchaseOrder.Items {
+				item := &purchaseOrder.Items[i]
+				purchaseOrderItemsMap[item.Uuid] = item
+			}
+
+			if req.DeliveryNoteNo != "" {
+				// DN类型校验
+				_, err := s.validator.validateDNReceipt(ctx, s.dbm, purchaseOrder, req.DeliveryNoteNo, req.Items, purchaseOrderItemsMap)
+				if err != nil {
+					return err
+				}
+			} else if req.SourceSupplierCode != "" {
+				// 供应商类型校验
+				err := s.validator.validateSupplierReceipt(ctx, tx, purchaseOrder, req.SourceSupplierCode, req.Items, purchaseOrderItemsMap)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		// 总部相关信息预处理
@@ -132,6 +175,17 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			logger.Logger.Error("生成雪花ID失败", zap.Error(err))
 			return errors.WithMessage(err)
 		}
+		// 处理供应商信息（如果指定了供应商编码）
+		supplierName := purchaseOrder.SupplierName
+		supplierErpCode := purchaseOrder.SupplierErpCode
+		if req.SourceSupplierCode != "" {
+			supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(req.SourceSupplierCode)
+			if err == nil && supplier != nil {
+				supplierErpCode = supplier.ErpCode
+				supplierName = supplier.Name
+			}
+		}
+
 		receiptOrder := &model.PurchaseReceiptOrder{
 			BaseModel: model.BaseModel{
 				Uuid: receiptOrderUuid,
@@ -143,14 +197,16 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			PurchaseTime:           purchaseOrder.OrderTime,
 			Num:                    float64(len(req.Items)),
 			ExpectArrivalTime:      purchaseOrder.ExpectArrivalTime,
-			SupplierName:           purchaseOrder.SupplierName,
-			SupplierErpCode:        purchaseOrder.SupplierErpCode,
+			SupplierName:           supplierName,
+			SupplierErpCode:        supplierErpCode,
 			ReceiveTime:            req.ReceiveTime,
 			PurchaseOrder:          *purchaseOrder,
 			SourceWarehouseErpCode: purchaseOrder.WarehouseErpCode,
 			SourceWarehouseName:    purchaseOrder.WarehouseName,
 			TargetWarehouseErpCode: purchaseOrder.DefaultWarehouseErpCode,
 			TargetWarehouseName:    purchaseOrder.DefaultWarehouseName,
+			DeliveryNoteNo:         req.DeliveryNoteNo,
+			IsFromDeliveryNote:     utils.IfInt(req.DeliveryNoteNo != "", 1, 0),
 			ReceiptType: func() int {
 				if purchaseOrder.PurchaseType == 2 {
 					return 2
@@ -390,12 +446,21 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 		status = receiptOrder.Status
 
 		// 查询采购申请
-		var purchaseOrder *model.PurchaseOrder
+		purchaseOrder, err := repository.NewPurchaseOrderRepo(tx).GetByUuid(receiptOrder.PurchaseOrderUuid)
+		if err != nil {
+			return errors.WithMessage(err, "采购申请不存在")
+		}
+
+		// 版本与采购单类型校验
+		hasErpSaleOrderNo := purchaseOrder.ErpSaleOrderNo != ""
+
+		// 版本 < 2.16.0 且有 ErpSaleOrderNo：提示去新版处理
+		if ctx.Version(context.LT, constant.ClientVersionV2160) && hasErpSaleOrderNo {
+			return errors.New("请更新软件版本再尝试")
+		}
+
+		// 确认收货时的额外校验
 		if req.IsConfirm {
-			purchaseOrder, err = repository.NewPurchaseOrderRepo(tx).GetByUuid(receiptOrder.PurchaseOrderUuid)
-			if err != nil {
-				return errors.WithMessage(err, "采购申请不存在")
-			}
 			if !purchaseOrder.CanReceive() {
 				return errors.New("采购单状态不允许收货")
 			}
@@ -404,7 +469,7 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 
 		// 总部相关信息预处理
 		var headquarterInfo *HeadquarterUpdateInfo
-		if req.IsConfirm && purchaseOrder != nil && purchaseOrder.IsHeadquarterPurchase() {
+		if req.IsConfirm && purchaseOrder.IsHeadquarterPurchase() {
 			hqInfo, err := s.helper.initHeadquarterInfo(ctx, s.dbm, purchaseOrder)
 			if err != nil {
 				return err
