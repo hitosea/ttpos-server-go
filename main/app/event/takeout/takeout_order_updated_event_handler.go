@@ -110,16 +110,16 @@ func (s *takeoutOrderUpdatedEventSubscriber) Handle(domainEvent event.DomainEven
 	}
 
 	// 异步重新打印外卖订单小票（无论是否有变动都打印）
-	// utils.Go(func() {
-	// 	_, err := takeoutSrv.PrintTakeoutOrder(ctx, orderUpdatedEvent.OrderUuid, "", 0)
-	// 	if err != nil {
-	// 		logger.Logger.Error("订单更新后重新打印外卖订单小票失败",
-	// 			zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
-	// 			zap.String("takeoutOrderUuid", orderUpdatedEvent.TakeoutOrderUuid),
-	// 			zap.String("platform", orderUpdatedEvent.Platform),
-	// 			zap.Error(err))
-	// 	}
-	// })
+	utils.Go(func() {
+		_, err := takeoutSrv.PrintTakeoutOrder(ctx, orderUpdatedEvent.OrderUuid, "", 0)
+		if err != nil {
+			logger.Logger.Error("订单更新后重新打印外卖订单小票失败",
+				zap.Uint64("orderUuid", orderUpdatedEvent.OrderUuid),
+				zap.String("takeoutOrderUuid", orderUpdatedEvent.TakeoutOrderUuid),
+				zap.String("platform", orderUpdatedEvent.Platform),
+				zap.Error(err))
+		}
+	})
 
 	// 发送 WebSocket 通知
 	sendTakeoutOrderWebSocketNotification(
@@ -148,11 +148,16 @@ func (s *takeoutOrderUpdatedEventSubscriber) printKitchenReceipt(
 
 	// 构建要打印的菜品列表
 	productItems := make([]req.PrintProductItem, 0, len(changeResult.KitchenItems))
-	for _, item := range changeResult.KitchenItems {
+	for _, item := range changeResult.AllChanges {
 		if item.NewItem != nil && item.NewItem.TtposProductPackageUuid > 0 {
 			productItems = append(productItems, req.PrintProductItem{
 				ProductUuid: item.NewItem.TtposProductPackageUuid,
 				Num:         &item.NewItem.Quantity,
+			})
+		} else if item.OldItem != nil && item.OldItem.TtposProductPackageUuid > 0 {
+			productItems = append(productItems, req.PrintProductItem{
+				ProductUuid: item.OldItem.TtposProductPackageUuid,
+				Num:         &item.OldItem.Quantity,
 			})
 		}
 	}

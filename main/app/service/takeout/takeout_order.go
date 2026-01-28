@@ -1167,23 +1167,7 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 		return nil
 	}
 
-	// 2. 处理退菜商品：标记为退菜状态
-	for _, item := range changeResult.ReturnItems {
-		if item.OldItem == nil || item.OldItem.Uuid == 0 {
-			continue
-		}
-		// 根据外卖订单商品UUID更新生产单商品状态为退菜
-		if err := productionRepo.UpdateProductionOrderProductNumByTakeoutItemUuid(
-			item.OldItem.Uuid,
-			0,
-		); err != nil {
-			logger.Logger.Error("更新生产单商品为退菜状态失败",
-				zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
-				zap.Error(err))
-		}
-	}
-
-	// 3. 处理送厨商品（新增或数量/属性变更）
+	// 2. 处理送厨商品（新增或数量/属性变更）
 	for _, item := range changeResult.KitchenItems {
 		switch item.ChangeType {
 		case valueObject.ChangeTypeAdded:
@@ -1585,7 +1569,7 @@ func (s *takeoutSrv) PrintReturnOrder(ctx context.Context, orderUuid uint64, cha
 
 		// 使用 OldItem 中的信息
 		itemName := item.OldItem.ItemName
-		quantity := item.OldQuantity // 使用变更前的数量
+		quantity := item.OldQuantity
 
 		// 构建修饰符信息
 		attrList := make([]dto.LocaleResponse, 0)

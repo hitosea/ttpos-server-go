@@ -570,7 +570,9 @@ func (r *productionRepo) UpdateProductionOrderProductNumByTakeoutItemUuid(takeou
 	return r.db.Model(&model.ProductionOrderProduct{}).
 		Where("takeout_order_item_uuid = ?", takeoutItemUuid).
 		Where("delete_time = ?", 0).
-		Update("num", num).Error
+		Updates(map[string]any{
+			"num": num,
+		}).Error
 }
 
 // CreateProductionOrderProduct 创建生产单商品
