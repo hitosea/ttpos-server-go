@@ -1753,48 +1753,52 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 			order.RejectReason = message
 		}
 
-		// 4. 更新订单到数据库
+		// 判断状态是否发生变化或已完成
+		if newOrderState < oldOrderState && newOrderState != valueobject.TakeoutOrderStateCompleted {
+			logger.Logger.Info("订单状态下降，不处理", zap.String("order_uuid", orderUuid), zap.Int("old_order_state", oldOrderState), zap.Int("new_order_state", newOrderState))
+			return nil
+		}
+
+		// 更新订单到数据库
 		if err := orderRepoTx.Update(order); err != nil {
 			logger.Logger.Error("更新订单数据失败", zap.String("order_uuid", orderUuid), zap.Error(err))
 			return errors.WithMessage(err, "更新订单数据失败")
 		}
 
-		// 5. 发布订单状态更新事件（仅在状态发生变化时）
-		if oldOrderState != newOrderState {
-			switch newOrderState {
-			case valueobject.TakeoutOrderStateRiderProcessing:
-				// 骑手配送中事件
-				event.GetDispatcher().Publish(event.NewOrderRiderProcessingEvent(
-					order.Uuid,
-					order.Platform,
-					order.PlatformOrderId,
-					order.ShortOrderNumber,
-					order.TakeoutOrderUuid,
-					ctx.GetCompanyUuid(),
-				))
-			case valueobject.TakeoutOrderStateCanceled, valueobject.TakeoutOrderStateRejected:
-				// 订单取消事件
-				event.GetDispatcher().Publish(event.NewOrderCancelEvent(
-					order.Uuid,
-					order.Platform,
-					order.PlatformOrderId,
-					order.ShortOrderNumber,
-					order.TakeoutOrderUuid,
-					ctx.GetCompanyUuid(),
-					"订单已取消",
-					newOrderState,
-				))
-			case valueobject.TakeoutOrderStateCompleted:
-				// 订单完成事件
-				event.GetDispatcher().Publish(event.NewOrderCompletedEvent(
-					order.Uuid,
-					order.Platform,
-					order.PlatformOrderId,
-					order.ShortOrderNumber,
-					order.TakeoutOrderUuid,
-					ctx.GetCompanyUuid(),
-				))
-			}
+		// 发布订单状态更新事件（仅在状态发生变化时）
+		switch newOrderState {
+		case valueobject.TakeoutOrderStateRiderProcessing:
+			// 骑手配送中事件
+			event.GetDispatcher().Publish(event.NewOrderRiderProcessingEvent(
+				order.Uuid,
+				order.Platform,
+				order.PlatformOrderId,
+				order.ShortOrderNumber,
+				order.TakeoutOrderUuid,
+				ctx.GetCompanyUuid(),
+			))
+		case valueobject.TakeoutOrderStateCanceled, valueobject.TakeoutOrderStateRejected:
+			// 订单取消事件
+			event.GetDispatcher().Publish(event.NewOrderCancelEvent(
+				order.Uuid,
+				order.Platform,
+				order.PlatformOrderId,
+				order.ShortOrderNumber,
+				order.TakeoutOrderUuid,
+				ctx.GetCompanyUuid(),
+				"订单已取消",
+				newOrderState,
+			))
+		case valueobject.TakeoutOrderStateCompleted:
+			// 订单完成事件
+			event.GetDispatcher().Publish(event.NewOrderCompletedEvent(
+				order.Uuid,
+				order.Platform,
+				order.PlatformOrderId,
+				order.ShortOrderNumber,
+				order.TakeoutOrderUuid,
+				ctx.GetCompanyUuid(),
+			))
 		}
 
 		return nil
