@@ -11,9 +11,9 @@ import (
 	sync "sync"
 	unsafe "unsafe"
 
-	any1 "github.com/golang/protobuf/ptypes/any"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	anypb "google.golang.org/protobuf/types/known/anypb"
 )
 
 const (
@@ -27,7 +27,7 @@ type ResponseInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-	Data          *any1.Any              `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty" dc:"响应数据，根据实际情况定义"` // 响应数据，根据实际情况定义
+	Data          *anypb.Any             `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty" dc:"响应数据，根据实际情况定义"` // 响应数据，根据实际情况定义
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -76,7 +76,7 @@ func (x *ResponseInfo) GetMessage() string {
 	return ""
 }
 
-func (x *ResponseInfo) GetData() *any1.Any {
+func (x *ResponseInfo) GetData() *anypb.Any {
 	if x != nil {
 		return x.Data
 	}
@@ -108,7 +108,7 @@ func file_erp_proto_rawDescGZIP() []byte {
 var file_erp_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_erp_proto_goTypes = []any{
 	(*ResponseInfo)(nil), // 0: erp.ResponseInfo
-	(*any1.Any)(nil),     // 1: google.protobuf.Any
+	(*anypb.Any)(nil),    // 1: google.protobuf.Any
 }
 var file_erp_proto_depIdxs = []int32{
 	1, // 0: erp.ResponseInfo.data:type_name -> google.protobuf.Any
