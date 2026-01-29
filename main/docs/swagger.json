@@ -29651,69 +29651,6 @@
                 }
             }
         },
-        "/shop/purchase/order/receipt_progress": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "根据采购单UUID列表批量查询收货进度(per_received)。新采购单(有erp_sale_order_no)调用ERP获取实时进度，旧采购单使用本地计算",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.采购管理"
-                ],
-                "summary": "批量查询采购单收货进度",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "版本号",
-                        "name": "client-version",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "example": "\"3711133182058497,3711131722440705\"",
-                        "description": "采购单UUID列表，逗号分隔，最多100个",
-                        "name": "uuids",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.GetPurchaseReceiptProgressResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/shop/purchase/order/submit": {
             "post": {
                 "security": [
@@ -55834,18 +55771,6 @@
                 }
             }
         },
-        "resp.GetPurchaseReceiptProgressResp": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "description": "ERP收货进度列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.ReceiptProgressItem"
-                    }
-                }
-            }
-        },
         "resp.GiftOrFreeOrderReason": {
             "type": "object",
             "properties": {
@@ -61683,23 +61608,6 @@
                 "supplier_name": {
                     "description": "供应商名称",
                     "type": "string"
-                }
-            }
-        },
-        "resp.ReceiptProgressItem": {
-            "type": "object",
-            "properties": {
-                "erp_order_no": {
-                    "description": "ERP采购单号",
-                    "type": "string"
-                },
-                "receipt_progress": {
-                    "description": "ERP收货进度（百分比，如 50.00 表示 50%）",
-                    "type": "number"
-                },
-                "uuid": {
-                    "description": "采购单UUID",
-                    "type": "integer"
                 }
             }
         },

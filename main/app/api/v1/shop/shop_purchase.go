@@ -572,35 +572,6 @@ func (h *PurchaseHandler) GetPurchaseReceiptNewList(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
-// GetPurchaseReceiptProgress 批量查询采购单收货进度
-// @Summary 批量查询采购单收货进度
-// @Description 根据采购单UUID列表批量查询收货进度(per_received)。新采购单(有erp_sale_order_no)调用ERP获取实时进度，旧采购单使用本地计算
-// @Tags 商家端.采购管理
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param client-version header string true "版本号"
-// @Param uuids query string true "采购单UUID列表，逗号分隔，最多100个" example("3711133182058497,3711131722440705")
-// @Success 200 {object} dto.Response{data=resp.GetPurchaseReceiptProgressResp} "成功"
-// @Failure 400 {object} dto.Response "请求参数错误"
-// @Router /shop/purchase/order/receipt_progress [get]
-func (h *PurchaseHandler) GetPurchaseReceiptProgress(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	var batchReq req.GetPurchaseReceiptProgressReq
-	if err := c.ShouldBindQuery(&batchReq); err != nil {
-		helper.HandleValidationError(c, err, batchReq, nil)
-		return
-	}
-
-	resp, err := h.purchaseOrderSrv.GetPurchaseReceiptProgress(ctx, batchReq)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-
-	helper.Success(c, resp)
-}
-
 // GetLimitSchemeList 获取限购方案列表
 // @Summary 获取限购方案列表
 // @Description 分页获取限购方案列表
@@ -779,7 +750,6 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		// 采购订单管理
 		privateApi.GET("/purchase/order/list", wrapper.GetPurchaseOrderList)
 		privateApi.GET("/purchase/order/detail", wrapper.GetPurchaseOrderDetail)
-		privateApi.GET("/purchase/order/receipt_progress", wrapper.GetPurchaseReceiptProgress) // 批量查询收货进度
 		privateApi.POST("/purchase/order/create", wrapper.CreatePurchaseOrder)
 		privateApi.POST("/purchase/order/update", wrapper.UpdatePurchaseOrder)
 		privateApi.DELETE("/purchase/order/delete", wrapper.DeletePurchaseOrder)
