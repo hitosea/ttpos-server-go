@@ -342,6 +342,9 @@ definitions:
       avg_instant_order_amount:
         description: 点餐方式-平均订单金额
         type: number
+      avg_lineman_order_amount:
+        description: Lineman平均订单金额
+        type: number
       avg_order_amount:
         description: 平均订单金额
         type: number
@@ -360,6 +363,9 @@ definitions:
       max_instant_order_amount:
         description: 点餐方式-最大订单金额
         type: number
+      max_lineman_order_amount:
+        description: Lineman最大订单金额
+        type: number
       max_order_amount:
         description: 最大订单金额
         type: number
@@ -374,6 +380,9 @@ definitions:
         type: number
       min_instant_order_amount:
         description: 点餐方式-最小订单金额
+        type: number
+      min_lineman_order_amount:
+        description: Lineman最小订单金额
         type: number
       min_order_amount:
         description: 最小订单金额
@@ -418,6 +427,9 @@ definitions:
         type: integer
       total_instant_order_num:
         description: 点餐方式-订单数
+        type: integer
+      total_lineman_order_num:
+        description: Lineman订单数
         type: integer
       total_meal_num:
         description: 桌台方式-人数
@@ -9776,6 +9788,10 @@ definitions:
     type: object
   request.TakeoutOrderSyncReq:
     properties:
+      order_data_map:
+        additionalProperties: true
+        description: 转换后的订单数据
+        type: object
       platform:
         description: grab,foodpanda,lineman
         type: string
@@ -9784,6 +9800,7 @@ definitions:
         description: 原始订单数据
         type: object
     required:
+    - order_data_map
     - platform
     - raw_data
     type: object
@@ -11947,6 +11964,14 @@ definitions:
       payment_amount:
         description: 支付金额
         type: number
+    type: object
+  resp.GetPurchaseReceiptProgressResp:
+    properties:
+      list:
+        description: ERP收货进度列表
+        items:
+          $ref: '#/definitions/resp.ReceiptProgressItem'
+        type: array
     type: object
   resp.GiftOrFreeOrderReason:
     properties:
@@ -15853,6 +15878,18 @@ definitions:
         description: 供应商名称
         type: string
     type: object
+  resp.ReceiptProgressItem:
+    properties:
+      erp_order_no:
+        description: ERP采购单号
+        type: string
+      receipt_progress:
+        description: ERP收货进度（百分比，如 50.00 表示 50%）
+        type: number
+      uuid:
+        description: 采购单UUID
+        type: integer
+    type: object
   resp.RechargeMember:
     properties:
       balance:
@@ -18726,6 +18763,11 @@ definitions:
       total_items:
         description: 总商品数量
         type: integer
+      update_logs:
+        description: 订单更新日志
+        items:
+          $ref: '#/definitions/response.TakeoutOrderUpdateLogResp'
+        type: array
       uuid:
         description: 订单UUID
         type: integer
@@ -18815,6 +18857,9 @@ definitions:
       abnormal_detail:
         description: 异常详情
         type: string
+      additional_properties:
+        description: 附加信息
+        type: string
       campaigns:
         description: 活动信息
         items:
@@ -18878,6 +18923,11 @@ definitions:
       total_items:
         description: 总商品数量
         type: integer
+      update_logs:
+        description: 订单更新日志
+        items:
+          $ref: '#/definitions/response.TakeoutOrderUpdateLogResp'
+        type: array
       uuid:
         description: 订单UUID
         type: integer
@@ -18901,6 +18951,14 @@ definitions:
         type: integer
       submit_time:
         description: 提交时间 (提交时间，支付时间)
+        type: integer
+    type: object
+  response.TakeoutOrderUpdateLogResp:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      uuid:
         type: integer
     type: object
   response.TakeoutSettingsResp:
@@ -37539,6 +37597,44 @@ paths:
       security:
       - JwtToken: []
       summary: 获取采购订单列表
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/receipt_progress:
+    get:
+      consumes:
+      - application/json
+      description: 根据采购单UUID列表批量查询收货进度(per_received)。新采购单(有erp_sale_order_no)调用ERP获取实时进度，旧采购单使用本地计算
+      parameters:
+      - description: 版本号
+        in: header
+        name: client-version
+        required: true
+        type: string
+      - description: 采购单UUID列表，逗号分隔，最多100个
+        example: '"3711133182058497,3711131722440705"'
+        in: query
+        name: uuids
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.GetPurchaseReceiptProgressResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 批量查询采购单收货进度
       tags:
       - 商家端.采购管理
   /shop/purchase/order/submit:

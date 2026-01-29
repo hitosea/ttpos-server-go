@@ -334,3 +334,15 @@ type ReceiptPendingItemUnit struct {
 	ArrivalNum     float64            `json:"arrival_num"`      // 已到货数量
 	Num            float64            `json:"num"`              // 剩余可收货数量
 }
+
+// GetPurchaseReceiptProgressResp 批量查询采购单ERP收货进度响应
+type GetPurchaseReceiptProgressResp struct {
+	List []ReceiptProgressItem `json:"list"` // ERP收货进度列表
+}
+
+// ReceiptProgressItem ERP收货进度项
+type ReceiptProgressItem struct {
+	Uuid            uint64  `json:"uuid"`             // 采购单UUID
+	ErpOrderNo      string  `json:"erp_order_no"`     // ERP采购单号
+	ReceiptProgress float64 `json:"receipt_progress"` // ERP收货进度（百分比，如 50.00 表示 50%）
+}
