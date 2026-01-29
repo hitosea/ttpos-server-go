@@ -1660,6 +1660,7 @@ type GetPurchaseOrderCountReq struct {
 	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty" dc:"状态过滤，可选"`                                // 状态过滤，可选
 	FromDate      string                 `protobuf:"bytes,4,opt,name=from_date,json=fromDate,proto3" json:"from_date,omitempty" dc:"开始日期过滤 Y-m-d，可选"`    // 开始日期过滤 Y-m-d，可选
 	ToDate        string                 `protobuf:"bytes,5,opt,name=to_date,json=toDate,proto3" json:"to_date,omitempty" dc:"结束日期过滤 Y-m-d，可选"`          // 结束日期过滤 Y-m-d，可选
+	Name          string                 `protobuf:"bytes,6,opt,name=name,proto3" json:"name,omitempty" dc:"采购订单名称过滤，支持逗号分隔多个值进行 IN 查询，可选"`              // 采购订单名称过滤，支持逗号分隔多个值进行 IN 查询，可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1725,6 +1726,13 @@ func (x *GetPurchaseOrderCountReq) GetFromDate() string {
 func (x *GetPurchaseOrderCountReq) GetToDate() string {
 	if x != nil {
 		return x.ToDate
+	}
+	return ""
+}
+
+func (x *GetPurchaseOrderCountReq) GetName() string {
+	if x != nil {
+		return x.Name
 	}
 	return ""
 }
@@ -2441,13 +2449,14 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\n" +
 	"per_billed\x18\t \x01(\x01R\tperBilled\x12\x1a\n" +
 	"\bcurrency\x18\n" +
-	" \x01(\tR\bcurrency\"\xa7\x01\n" +
+	" \x01(\tR\bcurrency\"\xbb\x01\n" +
 	"\x18GetPurchaseOrderCountReq\x12\x1a\n" +
 	"\bsupplier\x18\x01 \x01(\tR\bsupplier\x12!\n" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06status\x18\x03 \x01(\tR\x06status\x12\x1b\n" +
 	"\tfrom_date\x18\x04 \x01(\tR\bfromDate\x12\x17\n" +
-	"\ato_date\x18\x05 \x01(\tR\x06toDate\"1\n" +
+	"\ato_date\x18\x05 \x01(\tR\x06toDate\x12\x12\n" +
+	"\x04name\x18\x06 \x01(\tR\x04name\"1\n" +
 	"\x19GetPurchaseOrderCountResp\x12\x14\n" +
 	"\x05count\x18\x01 \x01(\x05R\x05count\"\xbf\x02\n" +
 	"\x16CreatePurchaseOrderReq\x12\x1a\n" +
