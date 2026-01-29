@@ -176,12 +176,13 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 				// 根据修饰符类型分类
 				switch modifier.TtposModifierType {
 				case "commodity": // 商品类型，作为套餐子商品显示
+					productNum := float64(modifier.Quantity * item.Quantity)
 					subProduct := structs.StatementProductData{
 						Name:         modifierName,
 						Price:        t.base.Amount(modifier.Price),
-						Num:          float64(modifier.Quantity),
-						PriceNum:     fmt.Sprintf("%d", modifier.Quantity),
-						Subtotal:     t.base.Amount(modifier.Price * float64(modifier.Quantity)),
+						Num:          productNum,
+						PriceNum:     fmt.Sprintf("%v", productNum),
+						Subtotal:     t.base.Amount(modifier.Price * productNum),
 						IsSubProduct: true, // 标记为子商品
 					}
 					// 商家联：始终使用 TTPOS 规格名称

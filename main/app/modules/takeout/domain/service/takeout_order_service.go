@@ -1359,7 +1359,7 @@ func (s *takeoutOrderSrv) enrichModifiersInfo(ctx context.Context, platform stri
 					// 使用TTPOS数量覆盖平台数量
 					if info.Num > 0 {
 						modifier.Price = decimal.NewFromInt(int64(modifier.Price)).Div(decimal.NewFromInt(int64(info.Num))).InexactFloat64()
-						modifier.Quantity = int(decimal.NewFromInt(int64(info.Num)).Mul(decimal.NewFromInt(int64(item.Quantity))).InexactFloat64())
+						modifier.Quantity = int(info.Num)
 					}
 				}
 				// 检查是否异常（名称为空）
@@ -1959,24 +1959,23 @@ func (s *takeoutOrderSrv) CalculateTakeoutOrderSalesVolume(order *takeoutModel.T
 				continue
 			}
 
+			modifierQuantity := float64(modifier.Quantity) * itemQuantity
+
 			// 规格(flavor)的销量：这是主商品的 BOM 销量
 			// 规格数量 × 主商品数量
 			if modifier.IsFlavor() {
-				modifierQuantity := float64(modifier.Quantity) * itemQuantity
 				productBoms[modifier.TtposModifierUuid] += modifierQuantity
 			}
 
 			// 加料(sauce)的销量：额外添加的小料 BOM 销量
 			// 加料数量 × 主商品数量
 			if modifier.IsSauce() {
-				modifierQuantity := float64(modifier.Quantity) * itemQuantity
 				productBoms[modifier.TtposModifierUuid] += modifierQuantity
 			}
 
 			// 套餐商品(commodity)的销量：套餐内的子商品 BOM 销量
 			// 子商品数量 × 主商品数量
 			if modifier.IsCommodity() {
-				modifierQuantity := float64(modifier.Quantity) * itemQuantity
 				productBoms[modifier.TtposModifierUuid] += modifierQuantity
 			}
 		}

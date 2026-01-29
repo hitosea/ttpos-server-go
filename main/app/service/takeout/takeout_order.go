@@ -866,10 +866,10 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 				}
 
 				// 直接从 modifier 中获取已保存的数据
-				productBomUuid := commodityModifier.TtposFlavorProductBomUuid // 规格UUID
-				productBomName := commodityModifier.TtposFlavorName           // 规格名称
-				itemName := commodityModifier.TtposModifierName               // 商品名称
-				productNum := float64(commodityModifier.Quantity)             // 数量（已在创建订单时设置为 groupItem.Num * takeoutItem.Quantity）
+				productBomUuid := commodityModifier.TtposFlavorProductBomUuid            // 规格UUID
+				productBomName := commodityModifier.TtposFlavorName                      // 规格名称
+				itemName := commodityModifier.TtposModifierName                          // 商品名称
+				productNum := float64(commodityModifier.Quantity * takeoutItem.Quantity) // 数量
 
 				// 如果没有 TTPOS 商品名称，回退到平台名称
 				if itemName == "" {
@@ -1296,11 +1296,11 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 						FlavorName:      *language.JsonToLocaleResponse(modifier.TtposFlavorName),                       // 商品规格
 						Attr:            *language.JsonToLocaleResponse(modifier.TtposFlavorName),                       // 商品属性
 						ProductAttrList: []dto.LocaleResponse{*language.JsonToLocaleResponse(modifier.TtposFlavorName)}, // 规格+属性列表
-						TotalNum:        float64(modifier.Quantity),                                                     // 商品数量
+						TotalNum:        float64(modifier.Quantity * item.Quantity),                                     // 商品数量
 						ProductPrice:    modifier.Price,                                                                 // 商品价格
 						ProductType:     uint8(item.TtposProductType),                                                   // 商品类型
 						IsWrap:          order.IsTakeawayOrder(),                                                        // 是否打包
-						TotalPrice:      utils.Round(modifier.Price*float64(modifier.Quantity), 2),                      // 商品总价格
+						TotalPrice:      utils.Round(modifier.Price*float64(modifier.Quantity*item.Quantity), 2),        // 商品总价格
 					})
 					continue
 				}
