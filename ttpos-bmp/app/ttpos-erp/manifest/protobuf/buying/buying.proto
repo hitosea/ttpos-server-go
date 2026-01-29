@@ -171,6 +171,7 @@ message GetPurchaseOrderListReq {
   string to_date = 4; // 结束日期过滤Y-m-d，可选
   int32 page_no = 5; // 页码，从1开始
   int32 page_size = 6; // 每页数量
+  string name = 7; // 采购订单名称过滤，支持逗号分隔多个值进行 IN 查询，可选
 }
 
 // 获取采购订单列表响应消息
