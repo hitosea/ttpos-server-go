@@ -66,7 +66,7 @@ func ErpCancelInvoiceCallbackHandler(ctx context.Context, msg *primitive.Message
 	logger.Logger.Info("收到 ERP 发票取消成功回调",
 		zap.String("msg_id", msg.MsgId),
 		zap.String("order_no", notifyMsg.OrderNo),
-		zap.String("invoice_name", notifyMsg.InvoiceName))
+		zap.String("remark", notifyMsg.Remark))
 
 	// 2. 解析 Remark 字段获取路由信息
 	if notifyMsg.Remark == "" {
@@ -98,56 +98,52 @@ func ErpCancelInvoiceCallbackHandler(ctx context.Context, msg *primitive.Message
 		return nil // 返回 nil 避免消息重试
 	}
 
-	// 4. 获取数据库连接
-	dbm := database.GetDBManager(config.Database)
-	db := dbm.GetDB(remarkData.ShopUuid)
-	if db == nil {
-		logger.Logger.Error("获取数据库连接失败",
-			zap.Uint64("shop_uuid", remarkData.ShopUuid),
-			zap.Uint64("order_uuid", orderUuid))
-		return nil // 返回 nil 避免消息重试
-	}
+	if remarkData.OrderType == "takeout" {
+		// 4. 获取数据库连接
+		dbm := database.GetDBManager(config.Database)
+		db := dbm.GetDB(remarkData.ShopUuid)
+		if db == nil {
+			logger.Logger.Error("获取数据库连接失败",
+				zap.Uint64("shop_uuid", remarkData.ShopUuid),
+				zap.Uint64("order_uuid", orderUuid))
+			return nil // 返回 nil 避免消息重试
+		}
 
-	// 5. 获取公司信息
-	companyInfo, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(remarkData.ShopUuid)
-	if err != nil {
-		logger.Logger.Error("获取公司信息失败",
-			zap.Uint64("shop_uuid", remarkData.ShopUuid),
-			zap.Uint64("order_uuid", orderUuid),
-			zap.Error(err))
-		return nil // 返回 nil 避免消息重试
-	}
+		// 5. 获取公司信息
+		companyInfo, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(remarkData.ShopUuid)
+		if err != nil {
+			logger.Logger.Error("获取公司信息失败",
+				zap.Uint64("shop_uuid", remarkData.ShopUuid),
+				zap.Uint64("order_uuid", orderUuid),
+				zap.Error(err))
+			return nil // 返回 nil 避免消息重试
+		}
 
-	// 6. 创建上下文
-	ctxHelper := ttposContext.NewDefaultContext()
-	ctxHelper.SetBasicInfo(db, companyInfo)
+		// 6. 创建上下文
+		ctxHelper := ttposContext.NewDefaultContext()
+		ctxHelper.SetBasicInfo(db, companyInfo)
 
-	// 7. 根据 should_resync 标志决定是否重新创建发票
-	if !remarkData.ShouldResync {
-		// 订单取消场景：只取消发票，不重新创建
-		logger.Logger.Info("ERP 发票取消回调处理完成（订单取消，无需重新创建发票）",
+		// 7. 根据 should_resync 标志决定是否重新创建发票
+		if !remarkData.ShouldResync {
+			return nil
+		}
+		// 8. 订单变更场景：调用 SyncOrderToERP 创建新发票
+		erpSyncService := service.NewTakeoutErpSyncService()
+		if err := erpSyncService.SyncOrderToERP(ctxHelper, orderUuid); err != nil {
+			logger.Logger.Error("重新同步订单到 ERP 失败",
+				zap.Uint64("order_uuid", orderUuid),
+				zap.Uint64("company_uuid", remarkData.ShopUuid),
+				zap.Bool("should_resync", remarkData.ShouldResync),
+				zap.Error(err))
+			return err // 返回错误，触发消息重试
+		}
+
+		logger.Logger.Info("ERP 发票取消回调处理成功，已重新创建发票",
 			zap.Uint64("order_uuid", orderUuid),
 			zap.Uint64("company_uuid", remarkData.ShopUuid),
-			zap.String("order_type", remarkData.OrderType))
-		return nil
+			zap.String("order_type", remarkData.OrderType),
+			zap.Bool("should_resync", remarkData.ShouldResync))
 	}
-
-	// 8. 订单变更场景：调用 SyncOrderToERP 创建新发票
-	erpSyncService := service.NewTakeoutErpSyncService()
-	if err := erpSyncService.SyncOrderToERP(ctxHelper, orderUuid); err != nil {
-		logger.Logger.Error("重新同步订单到 ERP 失败",
-			zap.Uint64("order_uuid", orderUuid),
-			zap.Uint64("company_uuid", remarkData.ShopUuid),
-			zap.Bool("should_resync", remarkData.ShouldResync),
-			zap.Error(err))
-		return err // 返回错误，触发消息重试
-	}
-
-	logger.Logger.Info("ERP 发票取消回调处理成功，已重新创建发票",
-		zap.Uint64("order_uuid", orderUuid),
-		zap.Uint64("company_uuid", remarkData.ShopUuid),
-		zap.String("order_type", remarkData.OrderType),
-		zap.Bool("should_resync", remarkData.ShouldResync))
 
 	return nil
 }
