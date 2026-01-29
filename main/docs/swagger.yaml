@@ -11965,14 +11965,6 @@ definitions:
         description: 支付金额
         type: number
     type: object
-  resp.GetPurchaseReceiptProgressResp:
-    properties:
-      list:
-        description: ERP收货进度列表
-        items:
-          $ref: '#/definitions/resp.ReceiptProgressItem'
-        type: array
-    type: object
   resp.GiftOrFreeOrderReason:
     properties:
       locale_name:
@@ -15877,18 +15869,6 @@ definitions:
       supplier_name:
         description: 供应商名称
         type: string
-    type: object
-  resp.ReceiptProgressItem:
-    properties:
-      erp_order_no:
-        description: ERP采购单号
-        type: string
-      receipt_progress:
-        description: ERP收货进度（百分比，如 50.00 表示 50%）
-        type: number
-      uuid:
-        description: 采购单UUID
-        type: integer
     type: object
   resp.RechargeMember:
     properties:
@@ -37597,44 +37577,6 @@ paths:
       security:
       - JwtToken: []
       summary: 获取采购订单列表
-      tags:
-      - 商家端.采购管理
-  /shop/purchase/order/receipt_progress:
-    get:
-      consumes:
-      - application/json
-      description: 根据采购单UUID列表批量查询收货进度(per_received)。新采购单(有erp_sale_order_no)调用ERP获取实时进度，旧采购单使用本地计算
-      parameters:
-      - description: 版本号
-        in: header
-        name: client-version
-        required: true
-        type: string
-      - description: 采购单UUID列表，逗号分隔，最多100个
-        example: '"3711133182058497,3711131722440705"'
-        in: query
-        name: uuids
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.GetPurchaseReceiptProgressResp'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 批量查询采购单收货进度
       tags:
       - 商家端.采购管理
   /shop/purchase/order/submit:

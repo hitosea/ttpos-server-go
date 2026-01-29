@@ -50,11 +50,8 @@ type IPurchaseOrderSrv interface {
 	GetPurchaseReceiptOrderDetail(ctx context.Context, req req.PurchaseReceiptOrderDetailReq) (resp.PurchaseReceiptOrderDetailResp, error) // 获取收货单详情
 	UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error                                           // 更新收货单
 	CancelPurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderCancelReq) error                                           // 取消收货单
-	GetReceiptPendingItems(ctx context.Context, req req.ReceiptPendingItemsReq) (resp.ReceiptPendingItemsResp, error)                      // v2.16.0+ 获取待收货物品
-	GetPurchaseReceiptNewList(ctx context.Context, req req.PurchaseReceiptNewListReq) (resp.PurchaseReceiptNewListResp, error)             // 新收货单列表（按采购单维度）
-
-	// ERP 进度查询
-	GetPurchaseReceiptProgress(ctx context.Context, req req.GetPurchaseReceiptProgressReq) (resp.GetPurchaseReceiptProgressResp, error) // 批量查询采购单ERP收货进度
+	GetReceiptPendingItems(ctx context.Context, req req.ReceiptPendingItemsReq) (resp.ReceiptPendingItemsResp, error)          // v2.16.0+ 获取待收货物品
+	GetPurchaseReceiptNewList(ctx context.Context, req req.PurchaseReceiptNewListReq) (resp.PurchaseReceiptNewListResp, error) // 新收货单列表（按采购单维度）
 }
 
 // purchaseOrderSrv 采购申请服务实现
@@ -89,6 +86,11 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(
 	ctx context.Context,
 	req req.PurchaseOrderListReq,
 ) (resp.PurchaseOrderListResp, error) {
+	// 限制分页大小最大为20条
+	if req.PageSize > 20 {
+		return resp.PurchaseOrderListResp{}, errors.New("每页最多查询20条数据")
+	}
+
 	db := ctx.GetDB()
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
 
@@ -2117,6 +2119,11 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptNewList(
 	ctx context.Context,
 	reqData req.PurchaseReceiptNewListReq,
 ) (resp.PurchaseReceiptNewListResp, error) {
+	// 限制分页大小最大为20条
+	if reqData.PageSize > 20 {
+		return resp.PurchaseReceiptNewListResp{}, errors.New("每页最多查询20条数据")
+	}
+
 	db := ctx.GetDB()
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
 	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
@@ -2176,6 +2183,33 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptNewList(
 		return resp.PurchaseReceiptNewListResp{}, errors.WithMessage(errors.New("查询采购单列表失败"), err.Error())
 	}
 
+	// 收集需要调用ERP的新采购单（有erp_sale_order_no）
+	erpOrderNoToProgress := make(map[string]float64)
+	var erpOrderNos []string
+	for _, po := range purchaseOrders {
+		if po.ErpSaleOrderNo != "" && po.ErpOrderNo != "" {
+			erpOrderNos = append(erpOrderNos, po.ErpOrderNo)
+		}
+	}
+
+	// 批量调用ERP获取收货进度
+	if len(erpOrderNos) > 0 {
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		erpResp, err := erpSrv.GetPurchaseOrderList(ctx, &buying.GetPurchaseOrderListReq{
+			Name: strings.Join(erpOrderNos, ","),
+		})
+		if err != nil {
+			logger.Logger.Warn("GetPurchaseReceiptNewList批量调用ERP获取采购单列表失败，使用本地计算",
+				zap.Int("count", len(erpOrderNos)),
+				zap.Error(err),
+			)
+		} else {
+			for _, erpOrder := range erpResp.PurchaseOrders {
+				erpOrderNoToProgress[erpOrder.Name] = erpOrder.PerReceived
+			}
+		}
+	}
+
 	// 构建响应列表
 	list := make([]*resp.PurchaseReceiptNewListItem, 0, len(purchaseOrders))
 
@@ -2199,8 +2233,20 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptNewList(
 			receiptStatus = 1
 		}
 
-		// 计算收货进度
-		receiptProgress := fmt.Sprintf("%.2f%%", po.GetReceiptProgress())
+		// 计算收货进度：新采购单优先使用ERP返回的进度，旧采购单使用本地计算
+		var receiptProgress string
+		if po.ErpSaleOrderNo != "" && po.ErpOrderNo != "" {
+			// 新采购单：优先使用ERP返回的进度
+			if progress, ok := erpOrderNoToProgress[po.ErpOrderNo]; ok {
+				receiptProgress = fmt.Sprintf("%.2f%%", progress)
+			} else {
+				// ERP未返回时使用本地计算
+				receiptProgress = fmt.Sprintf("%.2f%%", po.GetReceiptProgress())
+			}
+		} else {
+			// 旧采购单：使用本地计算
+			receiptProgress = fmt.Sprintf("%.2f%%", po.GetReceiptProgress())
+		}
 
 		item := &resp.PurchaseReceiptNewListItem{
 			Uuid:              po.Uuid,
@@ -2222,118 +2268,5 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptNewList(
 			PageSize: reqData.PageSize,
 			Total:    total,
 		},
-	}, nil
-}
-
-// GetPurchaseReceiptProgress 批量查询采购单ERP收货进度
-// 根据采购单UUID列表查询：
-// - 新采购单（有erp_sale_order_no）：调用ERP服务获取per_received
-// - 旧采购单（无erp_sale_order_no）：使用本地Items计算收货进度
-func (s *purchaseOrderSrv) GetPurchaseReceiptProgress(
-	ctx context.Context,
-	reqData req.GetPurchaseReceiptProgressReq,
-) (resp.GetPurchaseReceiptProgressResp, error) {
-	// 解析逗号分隔的UUID字符串
-	uuidStrs := strings.Split(reqData.Uuids, ",")
-	if len(uuidStrs) > 100 {
-		return resp.GetPurchaseReceiptProgressResp{
-			List: make([]resp.ReceiptProgressItem, 0),
-		}, errors.New("UUID数量不能超过100个")
-	}
-
-	uuids := make([]uint64, 0, len(uuidStrs))
-	for _, uuidStr := range uuidStrs {
-		uuidStr = strings.TrimSpace(uuidStr)
-		if uuidStr == "" {
-			continue
-		}
-		uuid, err := strconv.ParseUint(uuidStr, 10, 64)
-		if err != nil {
-			return resp.GetPurchaseReceiptProgressResp{
-				List: make([]resp.ReceiptProgressItem, 0),
-			}, errors.WithMessage(errors.New("无效的UUID格式"), uuidStr)
-		}
-		uuids = append(uuids, uuid)
-	}
-
-	if len(uuids) == 0 {
-		return resp.GetPurchaseReceiptProgressResp{
-			List: make([]resp.ReceiptProgressItem, 0),
-		}, nil
-	}
-
-	db := ctx.GetDB()
-	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
-
-	// 1. 根据UUID列表查询采购单（包含Items用于计算本地进度）
-	purchaseOrders, err := purchaseOrderRepo.GetList(
-		purchaseOrderRepo.WhereUuidIn(uuids),
-		purchaseOrderRepo.WithSimpleItems(),
-	)
-	if err != nil {
-		return resp.GetPurchaseReceiptProgressResp{
-			List: make([]resp.ReceiptProgressItem, 0),
-		}, errors.WithMessage(errors.New("查询采购单失败"), err.Error())
-	}
-
-	if len(purchaseOrders) == 0 {
-		return resp.GetPurchaseReceiptProgressResp{
-			List: make([]resp.ReceiptProgressItem, 0),
-		}, nil
-	}
-
-	// 2. 分离新旧采购单
-	// 旧采购单：erp_sale_order_no为空，使用本地计算
-	// 新采购单：有erp_sale_order_no，需要调用ERP
-	list := make([]resp.ReceiptProgressItem, 0, len(purchaseOrders))
-	erpOrderNoToUuid := make(map[string]uint64)
-	var erpOrderNos []string
-
-	for _, po := range purchaseOrders {
-		if po.ErpSaleOrderNo == "" {
-			// 旧采购单：使用本地计算的收货进度（与GetPurchaseReceiptNewList一致）
-			list = append(list, resp.ReceiptProgressItem{
-				Uuid:            po.Uuid,
-				ErpOrderNo:      po.ErpOrderNo,
-				ReceiptProgress: po.GetReceiptProgress(),
-			})
-		} else if po.ErpOrderNo != "" {
-			// 新采购单：收集erp_order_no用于批量查询ERP
-			erpOrderNoToUuid[po.ErpOrderNo] = po.Uuid
-			erpOrderNos = append(erpOrderNos, po.ErpOrderNo)
-		}
-	}
-
-	// 3. 如果有需要查询ERP的采购单，批量调用ERP服务
-	if len(erpOrderNos) > 0 {
-		erpOrderNoStr := strings.Join(erpOrderNos, ",")
-		erpSrv := erp.NewIErpSrv(s.dbm)
-		erpResp, err := erpSrv.GetPurchaseOrderList(ctx, &buying.GetPurchaseOrderListReq{
-			Name: erpOrderNoStr,
-		})
-		if err != nil {
-			logger.Logger.Error("调用ERP获取采购单列表失败",
-				zap.String("erp_order_nos", erpOrderNoStr),
-				zap.Error(err),
-			)
-			// ERP调用失败不影响旧采购单的返回，记录日志后继续
-		} else {
-			// 合并ERP返回的数据
-			for _, erpOrder := range erpResp.PurchaseOrders {
-				uuid, exists := erpOrderNoToUuid[erpOrder.Name]
-				if !exists {
-					continue
-				}
-				list = append(list, resp.ReceiptProgressItem{
-					Uuid:            uuid,
-					ErpOrderNo:      erpOrder.Name,
-					ReceiptProgress: erpOrder.PerReceived,
-				})
-			}
-		}
-	}
-
-	return resp.GetPurchaseReceiptProgressResp{
-		List: list,
 	}, nil
 }
