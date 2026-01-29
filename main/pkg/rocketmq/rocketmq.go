@@ -9,6 +9,7 @@ import (
 	"github.com/apache/rocketmq-client-go/v2"
 	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -79,12 +80,18 @@ func (c *Consumer) Start() error {
 		return fmt.Errorf("配置验证失败: %w", err)
 	}
 
+	//自定义UnitName，默认使用GUID, 在容器中client name 可能相同
+	unitSubfix, err := uuid.NewUUID()
+	if err != nil {
+		return fmt.Errorf("生成 unitSubfix 失败: %w", err)
+	}
 	// 创建消费者选项
 	options := []consumer.Option{
 		consumer.WithGroupName(c.config.GroupName),
 		consumer.WithNsResolver(primitive.NewPassthroughResolver(c.config.NameServers)),
 		consumer.WithConsumerModel(consumer.Clustering),               // 集群消费模式
 		consumer.WithConsumeFromWhere(consumer.ConsumeFromLastOffset), // 从最新位置开始消费
+		consumer.WithUnitName(unitSubfix.String()),                    // 设置 UnitName
 	}
 
 	// 添加认证信息（如果配置了）
