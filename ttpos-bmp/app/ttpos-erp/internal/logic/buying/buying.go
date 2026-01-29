@@ -419,6 +419,7 @@ func (s *sBuying) GetPurchaseOrderList(ctx context.Context, req *buying.GetPurch
 
 	// 获取总数量
 	totalCount, err := s.GetPurchaseOrderCount(ctx, &buying.GetPurchaseOrderCountReq{
+		Name:        req.Name,
 		Supplier:    req.Supplier,
 		CompanyAbbr: req.CompanyAbbr,
 		FromDate:    req.FromDate,
