@@ -38903,6 +38903,10 @@
                     "description": "点餐方式-平均订单金额",
                     "type": "number"
                 },
+                "avg_lineman_order_amount": {
+                    "description": "Lineman平均订单金额",
+                    "type": "number"
+                },
                 "avg_order_amount": {
                     "description": "平均订单金额",
                     "type": "number"
@@ -38927,6 +38931,10 @@
                     "description": "点餐方式-最大订单金额",
                     "type": "number"
                 },
+                "max_lineman_order_amount": {
+                    "description": "Lineman最大订单金额",
+                    "type": "number"
+                },
                 "max_order_amount": {
                     "description": "最大订单金额",
                     "type": "number"
@@ -38945,6 +38953,10 @@
                 },
                 "min_instant_order_amount": {
                     "description": "点餐方式-最小订单金额",
+                    "type": "number"
+                },
+                "min_lineman_order_amount": {
+                    "description": "Lineman最小订单金额",
                     "type": "number"
                 },
                 "min_order_amount": {
@@ -39004,6 +39016,10 @@
                 },
                 "total_instant_order_num": {
                     "description": "点餐方式-订单数",
+                    "type": "integer"
+                },
+                "total_lineman_order_num": {
+                    "description": "Lineman订单数",
                     "type": "integer"
                 },
                 "total_meal_num": {
@@ -52515,10 +52531,16 @@
         "request.TakeoutOrderSyncReq": {
             "type": "object",
             "required": [
+                "order_data_map",
                 "platform",
                 "raw_data"
             ],
             "properties": {
+                "order_data_map": {
+                    "description": "转换后的订单数据",
+                    "type": "object",
+                    "additionalProperties": true
+                },
                 "platform": {
                     "description": "grab,foodpanda,lineman",
                     "type": "string"
@@ -65789,6 +65811,13 @@
                     "description": "总商品数量",
                     "type": "integer"
                 },
+                "update_logs": {
+                    "description": "订单更新日志",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderUpdateLogResp"
+                    }
+                },
                 "uuid": {
                     "description": "订单UUID",
                     "type": "integer"
@@ -65914,6 +65943,10 @@
                     "description": "异常详情",
                     "type": "string"
                 },
+                "additional_properties": {
+                    "description": "附加信息",
+                    "type": "string"
+                },
                 "campaigns": {
                     "description": "活动信息",
                     "type": "array",
@@ -66011,6 +66044,13 @@
                     "description": "总商品数量",
                     "type": "integer"
                 },
+                "update_logs": {
+                    "description": "订单更新日志",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderUpdateLogResp"
+                    }
+                },
                 "uuid": {
                     "description": "订单UUID",
                     "type": "integer"
@@ -66042,6 +66082,18 @@
                 },
                 "submit_time": {
                     "description": "提交时间 (提交时间，支付时间)",
+                    "type": "integer"
+                }
+            }
+        },
+        "response.TakeoutOrderUpdateLogResp": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "uuid": {
                     "type": "integer"
                 }
             }

@@ -1547,13 +1547,7 @@
                     "width": 60,
                     "show_currency_unit": true
                 },
-                "conditions": [
-                    {
-                        "field": "order.product_amount",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
+                "conditions": []
             }
         ],
         [

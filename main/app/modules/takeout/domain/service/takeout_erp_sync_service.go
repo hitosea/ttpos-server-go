@@ -32,7 +32,7 @@ type ITakeoutErpSyncService interface {
 	// SyncOrderToERP 同步外卖订单到 ERP
 	SyncOrderToERP(ctx appContext.Context, orderUuid uint64) error
 	// SyncOrderCancelledToERP 同步订单取消到 ERP
-	SyncOrderCancelledToERP(ctx appContext.Context, orderUuid uint64) error
+	SyncOrderCancelledToERP(ctx appContext.Context, orderUuid uint64, remarkData string) error
 	// ResyncOrderToERP 重新同步外卖订单到 ERP（订单变更后使用）
 	ResyncOrderToERP(ctx appContext.Context, orderUuid uint64) error
 }
@@ -437,9 +437,23 @@ func buildPosInvoiceMaterialItems(takeoutOrder *takeoutModel.TakeoutOrder) []*se
 }
 
 // SyncOrderCancelledToERP 同步订单取消到 ERP
-// @version v2.12.0
-// @spec story-erp-grab-invoice-sync
-func (s *takeoutErpSyncService) SyncOrderCancelledToERP(ctx appContext.Context, orderUuid uint64) error {
+// @version v2.16.0
+// @spec story-erp-invoice-cancel-notification
+//
+// 参数说明：
+//   - ctx: 上下文（包含数据库连接、公司信息等）
+//   - orderUuid: 订单UUID
+//   - remarkData: 附注数据（JSON格式字符串），包含以下字段：
+//     - shop_uuid: 商户UUID（必填，用于 MQ 回调时路由到正确的数据库）
+//     - order_type: 订单类型（可选，如 "takeout"）
+//     - should_resync: 是否需要重新创建发票（订单变更=true，订单取消=false）
+//
+// 功能说明：
+//  1. 调用 BMP CancelPosInvoice 接口取消发票
+//  2. 在 Remark 字段中传递 remarkData（JSON格式）
+//  3. BMP 取消成功后，会将 Remark 原样返回给 ttpos（通过 MQ）
+//  4. ttpos 消费者解析 Remark 获取 shop_uuid 和 should_resync，决定后续动作
+func (s *takeoutErpSyncService) SyncOrderCancelledToERP(ctx appContext.Context, orderUuid uint64, remarkData string) error {
 	// 1. 获取数据库连接
 	db := ctx.GetDB()
 	if db == nil {
@@ -511,6 +525,7 @@ func (s *takeoutErpSyncService) SyncOrderCancelledToERP(ctx appContext.Context, 
 		}(),
 		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,          // 异步模式必填
 		OrderNo:          strconv.FormatUint(takeoutOrder.Uuid, 10), // 使用订单UUID作为 ERP 订单号, 异步模式必填
+		Remark:           remarkData,                                // 附注信息（JSON格式，包含 shop_uuid 等路由信息，用于 BMP 回调）
 	})
 	if err != nil {
 		logger.Logger.Error("取消外卖订单 ERP 发票失败",
@@ -535,13 +550,16 @@ func (s *takeoutErpSyncService) SyncOrderCancelledToERP(ctx appContext.Context, 
 }
 
 // ResyncOrderToERP 重新同步外卖订单到 ERP（订单变更后使用）
-// @version v2.15.0
-// @spec feature/takeout-lineman-02
+// @version v2.16.0
+// @spec story-erp-invoice-cancel-notification
 //
-// 实现策略：
-//  1. 调用 SyncOrderCancelledToERP 取消旧发票
-//  2. 清空订单的 erp_pos_invoice_resp 字段
-//  3. 调用 SyncOrderToERP 创建新发票
+// 异步实现策略（基于 MQ 回调）：
+//  1. 调用 SyncOrderCancelledToERP 取消旧发票（在 Remark 中传递 shop_uuid 等路由信息）
+//  2. BMP 取消成功后会发送 MQ 消息（topic: erp-invoice-cancel）
+//  3. MQ 消费者（ErpCancelInvoiceCallbackHandler）收到消息，解析 Remark 获取 shop_uuid
+//  4. 消费者调用 SyncOrderToERP 创建新发票
+//
+// 注意：本方法只负责发起取消请求，不等待结果。新发票的创建由 MQ 消费者异步完成。
 func (s *takeoutErpSyncService) ResyncOrderToERP(ctx appContext.Context, orderUuid uint64) error {
 	db := ctx.GetDB()
 	if db == nil {
@@ -576,18 +594,25 @@ func (s *takeoutErpSyncService) ResyncOrderToERP(ctx appContext.Context, orderUu
 		return nil
 	}
 
-	// 4. 取消旧发票
-	if err := s.SyncOrderCancelledToERP(ctx, orderUuid); err != nil {
+	// 4. 构建 Remark 字段（包含 shop_uuid 等路由信息，用于 BMP 回调）
+	remarkData := map[string]any{
+		"shop_uuid":    ctx.GetCompanyUuid(),
+		"order_type":   "takeout",
+		"should_resync": true, // 标记需要重新创建发票
+	}
+	remarkJSON, err := json.Marshal(remarkData)
+	if err != nil {
+		logger.Logger.Error("序列化 Remark 字段失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		return errors.WithMessage(err, "序列化 Remark 字段失败")
+	}
+
+	// 5. 取消旧发票（异步模式：BMP 取消成功后会发送 MQ 消息，由消费者调用 SyncOrderToERP）
+	if err := s.SyncOrderCancelledToERP(ctx, orderUuid, string(remarkJSON)); err != nil {
 		logger.Logger.Error("取消旧发票失败",
 			zap.Uint64("orderUuid", orderUuid),
 			zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
 			zap.Error(err))
 		return errors.WithMessage(err, "取消旧发票失败")
-	}
-
-	// 5. 创建新发票
-	if err := s.SyncOrderToERP(ctx, orderUuid); err != nil {
-		return errors.WithMessage(err, "创建新发票失败")
 	}
 
 	return nil

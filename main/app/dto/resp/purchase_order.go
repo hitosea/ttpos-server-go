@@ -334,3 +334,4 @@ type ReceiptPendingItemUnit struct {
 	ArrivalNum     float64            `json:"arrival_num"`      // 已到货数量
 	Num            float64            `json:"num"`              // 剩余可收货数量
 }
+

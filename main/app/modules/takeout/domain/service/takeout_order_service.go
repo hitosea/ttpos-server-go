@@ -1359,7 +1359,7 @@ func (s *takeoutOrderSrv) enrichModifiersInfo(ctx context.Context, platform stri
 					// 使用TTPOS数量覆盖平台数量
 					if info.Num > 0 {
 						modifier.Price = decimal.NewFromInt(int64(modifier.Price)).Div(decimal.NewFromInt(int64(info.Num))).InexactFloat64()
-						modifier.Quantity = int(decimal.NewFromInt(int64(info.Num)).Mul(decimal.NewFromInt(int64(item.Quantity))).InexactFloat64())
+						modifier.Quantity = int(info.Num)
 					}
 				}
 				// 检查是否异常（名称为空）
@@ -1753,48 +1753,58 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 			order.RejectReason = message
 		}
 
-		// 4. 更新订单到数据库
+		// 判断状态是否发生变化或已完成
+		if oldOrderState == newOrderState || oldOrderState == valueobject.TakeoutOrderStateCompleted {
+			logger.Logger.Info("订单状态未发生变化或已完成", zap.String("order_uuid", orderUuid), zap.Int("old_order_state", oldOrderState), zap.Int("new_order_state", newOrderState))
+			return nil
+		}
+
+		// 判断状态是否下降
+		if newOrderState < oldOrderState && newOrderState != valueobject.TakeoutOrderStateCompleted {
+			logger.Logger.Info("订单状态下降，不处理", zap.String("order_uuid", orderUuid), zap.Int("old_order_state", oldOrderState), zap.Int("new_order_state", newOrderState))
+			return nil
+		}
+
+		// 更新订单到数据库
 		if err := orderRepoTx.Update(order); err != nil {
 			logger.Logger.Error("更新订单数据失败", zap.String("order_uuid", orderUuid), zap.Error(err))
 			return errors.WithMessage(err, "更新订单数据失败")
 		}
 
-		// 5. 发布订单状态更新事件（仅在状态发生变化时）
-		if oldOrderState != newOrderState {
-			switch newOrderState {
-			case valueobject.TakeoutOrderStateRiderProcessing:
-				// 骑手配送中事件
-				event.GetDispatcher().Publish(event.NewOrderRiderProcessingEvent(
-					order.Uuid,
-					order.Platform,
-					order.PlatformOrderId,
-					order.ShortOrderNumber,
-					order.TakeoutOrderUuid,
-					ctx.GetCompanyUuid(),
-				))
-			case valueobject.TakeoutOrderStateCanceled, valueobject.TakeoutOrderStateRejected:
-				// 订单取消事件
-				event.GetDispatcher().Publish(event.NewOrderCancelEvent(
-					order.Uuid,
-					order.Platform,
-					order.PlatformOrderId,
-					order.ShortOrderNumber,
-					order.TakeoutOrderUuid,
-					ctx.GetCompanyUuid(),
-					"订单已取消",
-					newOrderState,
-				))
-			case valueobject.TakeoutOrderStateCompleted:
-				// 订单完成事件
-				event.GetDispatcher().Publish(event.NewOrderCompletedEvent(
-					order.Uuid,
-					order.Platform,
-					order.PlatformOrderId,
-					order.ShortOrderNumber,
-					order.TakeoutOrderUuid,
-					ctx.GetCompanyUuid(),
-				))
-			}
+		// 发布订单状态更新事件（仅在状态发生变化时）
+		switch newOrderState {
+		case valueobject.TakeoutOrderStateRiderProcessing:
+			// 骑手配送中事件
+			event.GetDispatcher().Publish(event.NewOrderRiderProcessingEvent(
+				order.Uuid,
+				order.Platform,
+				order.PlatformOrderId,
+				order.ShortOrderNumber,
+				order.TakeoutOrderUuid,
+				ctx.GetCompanyUuid(),
+			))
+		case valueobject.TakeoutOrderStateCanceled, valueobject.TakeoutOrderStateRejected:
+			// 订单取消事件
+			event.GetDispatcher().Publish(event.NewOrderCancelEvent(
+				order.Uuid,
+				order.Platform,
+				order.PlatformOrderId,
+				order.ShortOrderNumber,
+				order.TakeoutOrderUuid,
+				ctx.GetCompanyUuid(),
+				"订单已取消",
+				newOrderState,
+			))
+		case valueobject.TakeoutOrderStateCompleted:
+			// 订单完成事件
+			event.GetDispatcher().Publish(event.NewOrderCompletedEvent(
+				order.Uuid,
+				order.Platform,
+				order.PlatformOrderId,
+				order.ShortOrderNumber,
+				order.TakeoutOrderUuid,
+				ctx.GetCompanyUuid(),
+			))
 		}
 
 		return nil
@@ -1949,24 +1959,23 @@ func (s *takeoutOrderSrv) CalculateTakeoutOrderSalesVolume(order *takeoutModel.T
 				continue
 			}
 
+			modifierQuantity := float64(modifier.Quantity) * itemQuantity
+
 			// 规格(flavor)的销量：这是主商品的 BOM 销量
 			// 规格数量 × 主商品数量
 			if modifier.IsFlavor() {
-				modifierQuantity := float64(modifier.Quantity) * itemQuantity
 				productBoms[modifier.TtposModifierUuid] += modifierQuantity
 			}
 
 			// 加料(sauce)的销量：额外添加的小料 BOM 销量
 			// 加料数量 × 主商品数量
 			if modifier.IsSauce() {
-				modifierQuantity := float64(modifier.Quantity) * itemQuantity
 				productBoms[modifier.TtposModifierUuid] += modifierQuantity
 			}
 
 			// 套餐商品(commodity)的销量：套餐内的子商品 BOM 销量
 			// 子商品数量 × 主商品数量
 			if modifier.IsCommodity() {
-				modifierQuantity := float64(modifier.Quantity) * itemQuantity
 				productBoms[modifier.TtposModifierUuid] += modifierQuantity
 			}
 		}
