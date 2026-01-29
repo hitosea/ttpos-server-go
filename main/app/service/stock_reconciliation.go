@@ -473,6 +473,19 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 	err = db.Transaction(func(tx *gorm.DB) error {
 		stockReconciliationRepo := repository.NewStockReconciliationRepo(tx)
 
+		// 重新提交成功后添加批注记录
+		if saveReq.GetIsResubmit() {
+			annotationRepo := repository.NewStockReconciliationAnnotationRepo(db)
+			annotation := &model.StockReconciliationAnnotation{
+				StockReconciliationUuid: stockReconciliation.Uuid,
+				AnnotationType:          constant.StockReconciliationAnnotationTypeResubmit,
+			}
+			if err := annotationRepo.Create(annotation); err != nil {
+				logger.Logger.Error("保存重新提交批注失败", zap.Error(err))
+				// 批注保存失败不影响主流程，仅记录日志
+			}
+		}
+
 		if saveReq.Uuid == 0 { // 新建
 			// 生成单据编号
 			orderNo, err := s.generateOrderNo(saasDB, companyUuid, timezone)
