@@ -181,9 +181,6 @@ func (*ReturnPosInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) 
 			}).Update(); err != nil {
 				return gerror.Wrapf(err, "退款发票失败，更新日志记录失败")
 			}
-
-			// 发送发票取消通知到 erp-invoice-cancel topic
-			sendInvoiceCancelNotify(ctx, req)
 		}
 	}
 
@@ -192,21 +189,21 @@ func (*ReturnPosInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) 
 
 // sendInvoiceCancelNotify 发送发票取消通知
 // 异步发送，失败仅记录日志，不阻塞主流程
-func sendInvoiceCancelNotify(ctx context.Context, req *selling.ReturnPosInvoiceReq) {
+func sendInvoiceCancelNotify(ctx context.Context, req *selling.CancelPosInvoiceReq) {
 	notifyMsg := &mq.InvoiceCancelNotifyMsg{
 		OrderNo:     req.OrderNo,
-		InvoiceName: req.InvoiceName,
+		InvoiceName: req.ProductsInvoiceName,
 		Remark:      req.Remark,
 	}
 
 	if err := queue.PushWithContext(ctx, string(consts.TopicErpInvoiceCancel), notifyMsg); err != nil {
 		g.Log().Errorf(ctx, "发送发票取消通知失败: order_no=%s, invoice_name=%s, err=%v",
-			req.OrderNo, req.InvoiceName, err)
+			req.OrderNo, req.ProductsInvoiceName, err)
 		return
 	}
 
 	g.Log().Infof(ctx, "发票取消通知已发送: order_no=%s, invoice_name=%s, remark=%s",
-		req.OrderNo, req.InvoiceName, req.Remark)
+		req.OrderNo, req.ProductsInvoiceName, req.Remark)
 }
 
 type CancelPosInvoice struct {
@@ -301,6 +298,9 @@ func (*CancelPosInvoice) Handle(ctx context.Context, mqMsg queue.MqMsg) (err err
 		}).Update(); err != nil {
 			return gerror.Wrapf(err, "取消发票失败，更新日志记录失败")
 		}
+
+		// 发送发票取消通知到 erp-invoice-cancel topic
+		sendInvoiceCancelNotify(ctx, req)
 	}
 
 	return nil

@@ -172,6 +172,7 @@ message CancelPosInvoiceReq {
   string material_invoice_name = 2;                         // 材料销售发票，必填
   string order_no = 3; // 订单号，传ttpos的订单号,异步模式下必填
   string open_pos_entry_name = 4; // POS开帐名称,异步模式下必填
+  string remark = 5; // 附注/备注,可选
 }
 
 message CancelPosInvoiceResp {
