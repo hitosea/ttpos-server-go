@@ -251,6 +251,9 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 	var materialListResp material_resp.MaterialListWithPaginationResp
 	var warehouseItems []model.WarehouseItem
 	if transferOrder.Status == constant.TransferOrderStatusDraft {
+		reqs.WithAvailableNum = true // 新增：待提交获取库存
+	}
+	if reqs.WithAvailableNum { // 新增：待提交、重启发起审核(此时状态为已驳回)时也获取库存
 		otherDb := s.dbm.GetDB(transferOrder.SenderCompanyUuid)
 		if otherDb == nil {
 			return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("获取其他店数据库失败"), "其他店数据库不存在")

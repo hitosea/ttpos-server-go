@@ -123,7 +123,8 @@ func (r *TransferOrderUpdateReq) Validate() error {
 
 // TransferOrderDetailReq 调拨单详情请求
 type TransferOrderDetailReq struct {
-	Uuid uint64 `json:"uuid" form:"uuid" ` // 调拨单UUID
+	Uuid             uint64 `json:"uuid" form:"uuid"`                             // 调拨单UUID
+	WithAvailableNum bool   `json:"with_available_num" form:"with_available_num"` // 是否返回可调拨数量（重新发起时使用）
 }
 
 // TransferOrderSubmitReq 提交调拨单请求
