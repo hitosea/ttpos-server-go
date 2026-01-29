@@ -227,3 +227,8 @@ type PurchaseReceiptNewListReq struct {
 	OrderNo       string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`                  // 单据编号（采购单OrderNo）
 	ErpOrderNo    string `json:"erp_order_no" form:"erp_order_no" binding:"omitempty,max=50"`          // 采购单号（ErpOrderNo）
 }
+
+// GetPurchaseReceiptProgressReq 批量查询采购单ERP收货进度请求
+type GetPurchaseReceiptProgressReq struct {
+	Uuids string `json:"uuids" form:"uuids" binding:"required"` // 采购单UUID列表，逗号分隔，最多100个
+}

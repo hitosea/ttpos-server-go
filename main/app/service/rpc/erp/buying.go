@@ -308,3 +308,32 @@ func (s *erpSrv) GetPurchaseOrder(ctx cc.Context, getPurchaseOrderReq *buying.Ge
 	}
 	return &buying.GetPurchaseOrderResp{}, nil
 }
+
+// GetPurchaseOrderList 批量获取采购单列表（支持按名称批量查询）
+func (s *erpSrv) GetPurchaseOrderList(ctx cc.Context, getPurchaseOrderListReq *buying.GetPurchaseOrderListReq) (*buying.GetPurchaseOrderListResp, error) {
+	client, conn, err := NewErpBuyingClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	companySetting := ctx.GetCompany().CompanySetting
+
+	result, err := client.GetPurchaseOrderList(WithSiteCode(context.Background(), companySetting.ErpnextSiteCode), getPurchaseOrderListReq)
+	if err != nil {
+		return nil, err
+	}
+	if result.Code != "0" {
+		logger.Logger.Error("GetPurchaseOrderList-GetPurchaseOrderList", zap.Any("err", err), zap.String("message", result.GetMessage()))
+		return nil, errors.New("调用erp接口失败-10003-" + result.GetMessage())
+	}
+	if result.Data != nil {
+		var resp buying.GetPurchaseOrderListResp
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("GetPurchaseOrderList-UnmarshalTo", zap.Any("err", err))
+			return nil, err
+		}
+		return &resp, nil
+	}
+	return &buying.GetPurchaseOrderListResp{}, nil
+}

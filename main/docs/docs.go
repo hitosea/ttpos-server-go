@@ -29657,6 +29657,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/purchase/order/receipt_progress": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据采购单UUID列表批量查询收货进度(per_received)。新采购单(有erp_sale_order_no)调用ERP获取实时进度，旧采购单使用本地计算",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.采购管理"
+                ],
+                "summary": "批量查询采购单收货进度",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "版本号",
+                        "name": "client-version",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"3711133182058497,3711131722440705\"",
+                        "description": "采购单UUID列表，逗号分隔，最多100个",
+                        "name": "uuids",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetPurchaseReceiptProgressResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/purchase/order/submit": {
             "post": {
                 "security": [
@@ -38909,6 +38972,10 @@ const docTemplate = `{
                     "description": "点餐方式-平均订单金额",
                     "type": "number"
                 },
+                "avg_lineman_order_amount": {
+                    "description": "Lineman平均订单金额",
+                    "type": "number"
+                },
                 "avg_order_amount": {
                     "description": "平均订单金额",
                     "type": "number"
@@ -38933,6 +39000,10 @@ const docTemplate = `{
                     "description": "点餐方式-最大订单金额",
                     "type": "number"
                 },
+                "max_lineman_order_amount": {
+                    "description": "Lineman最大订单金额",
+                    "type": "number"
+                },
                 "max_order_amount": {
                     "description": "最大订单金额",
                     "type": "number"
@@ -38951,6 +39022,10 @@ const docTemplate = `{
                 },
                 "min_instant_order_amount": {
                     "description": "点餐方式-最小订单金额",
+                    "type": "number"
+                },
+                "min_lineman_order_amount": {
+                    "description": "Lineman最小订单金额",
                     "type": "number"
                 },
                 "min_order_amount": {
@@ -39010,6 +39085,10 @@ const docTemplate = `{
                 },
                 "total_instant_order_num": {
                     "description": "点餐方式-订单数",
+                    "type": "integer"
+                },
+                "total_lineman_order_num": {
+                    "description": "Lineman订单数",
                     "type": "integer"
                 },
                 "total_meal_num": {
@@ -52521,10 +52600,16 @@ const docTemplate = `{
         "request.TakeoutOrderSyncReq": {
             "type": "object",
             "required": [
+                "order_data_map",
                 "platform",
                 "raw_data"
             ],
             "properties": {
+                "order_data_map": {
+                    "description": "转换后的订单数据",
+                    "type": "object",
+                    "additionalProperties": true
+                },
                 "platform": {
                     "description": "grab,foodpanda,lineman",
                     "type": "string"
@@ -55752,6 +55837,18 @@ const docTemplate = `{
                 "payment_amount": {
                     "description": "支付金额",
                     "type": "number"
+                }
+            }
+        },
+        "resp.GetPurchaseReceiptProgressResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "ERP收货进度列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ReceiptProgressItem"
+                    }
                 }
             }
         },
@@ -61595,6 +61692,23 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.ReceiptProgressItem": {
+            "type": "object",
+            "properties": {
+                "erp_order_no": {
+                    "description": "ERP采购单号",
+                    "type": "string"
+                },
+                "receipt_progress": {
+                    "description": "ERP收货进度（百分比，如 50.00 表示 50%）",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "采购单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.RechargeMember": {
             "type": "object",
             "properties": {
@@ -65795,6 +65909,13 @@ const docTemplate = `{
                     "description": "总商品数量",
                     "type": "integer"
                 },
+                "update_logs": {
+                    "description": "订单更新日志",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderUpdateLogResp"
+                    }
+                },
                 "uuid": {
                     "description": "订单UUID",
                     "type": "integer"
@@ -65920,6 +66041,10 @@ const docTemplate = `{
                     "description": "异常详情",
                     "type": "string"
                 },
+                "additional_properties": {
+                    "description": "附加信息",
+                    "type": "string"
+                },
                 "campaigns": {
                     "description": "活动信息",
                     "type": "array",
@@ -66017,6 +66142,13 @@ const docTemplate = `{
                     "description": "总商品数量",
                     "type": "integer"
                 },
+                "update_logs": {
+                    "description": "订单更新日志",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderUpdateLogResp"
+                    }
+                },
                 "uuid": {
                     "description": "订单UUID",
                     "type": "integer"
@@ -66048,6 +66180,18 @@ const docTemplate = `{
                 },
                 "submit_time": {
                     "description": "提交时间 (提交时间，支付时间)",
+                    "type": "integer"
+                }
+            }
+        },
+        "response.TakeoutOrderUpdateLogResp": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "uuid": {
                     "type": "integer"
                 }
             }
