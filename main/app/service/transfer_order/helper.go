@@ -345,6 +345,50 @@ func (h *transferOrderHelper) GetOrderDb(
 	return db, nil
 }
 
+// DeleteDataFromHeadquarter 从总部删除调拨单相关数据（硬删除）
+// 用于重新发起调拨单时，先清理 SAAS 库中的旧数据
+func (h *transferOrderHelper) DeleteDataFromHeadquarter(
+	dbm *database.DBManager,
+	transferOrderUuid uint64,
+) error {
+	// 获取总部数据库连接
+	sassDb := dbm.GetDB(0)
+	if sassDb == nil {
+		return errors.New("获取总部数据库失败")
+	}
+
+	// 在总部数据库中开启事务进行删除
+	return sassDb.Transaction(func(hqTx *gorm.DB) error {
+		// 1. 先删除审批记录（外键关联）
+		if err := hqTx.Unscoped().
+			Where("transfer_order_uuid = ?", transferOrderUuid).
+			Delete(&model.TransferOrderApproval{}).Error; err != nil {
+			logger.Logger.Error("删除总部调拨单审批记录失败",
+				zap.Uint64("transfer_order_uuid", transferOrderUuid),
+				zap.Error(err),
+			)
+			return errors.WithMessage(errors.New("删除总部调拨单审批记录失败"), err.Error())
+		}
+
+		// 2. 删除调拨单主表记录
+		if err := hqTx.Unscoped().
+			Where("uuid = ?", transferOrderUuid).
+			Delete(&model.TransferOrder{}).Error; err != nil {
+			logger.Logger.Error("删除总部调拨单失败",
+				zap.Uint64("transfer_order_uuid", transferOrderUuid),
+				zap.Error(err),
+			)
+			return errors.WithMessage(errors.New("删除总部调拨单失败"), err.Error())
+		}
+
+		logger.Logger.Info("成功从总部删除调拨单数据",
+			zap.Uint64("transfer_order_uuid", transferOrderUuid),
+		)
+
+		return nil
+	})
+}
+
 // CopyDataToHeadquarter 复制数据到总部
 // 将调拨单及其所有关联数据从门店数据库复制到总部数据库
 func (h *transferOrderHelper) CopyDataToHeadquarter(

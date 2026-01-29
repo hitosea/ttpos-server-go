@@ -1005,9 +1005,10 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 
 		// 重新提交时同步到SAAS库
 		if isResubmit {
-			if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
-				logger.Logger.Error("复制数据到总部失败", zap.Error(err))
-				return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
+			// 先删除SAAS库中的旧数据（硬删除）
+			if err := s.helper.DeleteDataFromHeadquarter(s.dbm, req.Uuid); err != nil {
+				logger.Logger.Error("删除总部调拨单数据失败", zap.Error(err))
+				return errors.WithMessage(errors.New("删除总部调拨单数据失败"), err.Error())
 			}
 		}
 
