@@ -58,4 +58,5 @@ type GetImportLogsReq struct {
 type PrintProductItem struct {
 	ProductUuid    uint64 `json:"product_uuid"`     // 商品UUID
 	ProductBomUuid uint64 `json:"product_bom_uuid"` // 规格UUID (BOM UUID)
+	Num            *int   `json:"num"`              // 数量
 }

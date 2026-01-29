@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	bizctx "ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/logger"
 )
 
 type DBManager struct {
@@ -86,6 +87,7 @@ func (m *DBManager) GetDB(index uint64) *gorm.DB {
 		if time.Since(m.lastCheck[index]) > m.checkInterval {
 			if sqlDB, err := db.DB(); err == nil {
 				if err := sqlDB.Ping(); err != nil {
+					logger.Logger.Info(fmt.Sprintf("Ping err,先关闭现有连接(shop uuid): %d", index))
 					// 先关闭现有连接
 					if closeErr := sqlDB.Close(); closeErr != nil {
 						log.Printf("关闭失效连接失败: %v", closeErr)
@@ -109,6 +111,7 @@ func (m *DBManager) GetDB(index uint64) *gorm.DB {
 	if index > 0 {
 		dbName = fmt.Sprintf("%s%d", constant.DBNamePrefix, index)
 	}
+	logger.Logger.Info(fmt.Sprintf("不存在，尝试连接数据库: %s", dbName))
 	// 不存在，尝试连接
 	companyDB, err := m.getConnection(m.conf, dbName) // 比如：shop1724054084 数据库 或 saas 库
 	if err != nil {

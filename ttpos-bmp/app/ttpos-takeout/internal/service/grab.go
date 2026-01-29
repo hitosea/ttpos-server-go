@@ -8,11 +8,13 @@ package service
 import (
 	"context"
 	"time"
-	api "ttpos-bmp/app/ttpos-takeout/api/order"
-	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
 
 	grabfood "github.com/grab/grabfood-api-sdk-go"
+
+	api "ttpos-bmp/app/ttpos-takeout/api/menu"
+	orderApi "ttpos-bmp/app/ttpos-takeout/api/order"
+	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
 )
 
 type (
@@ -32,6 +34,18 @@ type (
 		// CheckOrderCancelable 检查订单是否可取消
 		// 返回 Grab SDK 的完整响应对象
 		CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (*grabfood.CheckOrderCancelableResponse, error)
+		// ListOrders 查询 Grab 订单列表
+		// 封装 GrabFood SDK ListOrdersAPI，支持按商户、日期、订单ID等维度查询
+		// 注意：此接口在 Grab 测试环境下不可用，仅生产环境支持
+		// 参数：
+		//   - merchantID: Grab 商户 ID（必填）
+		//   - date: 日期过滤，格式 YYYY-MM-DD（可选）
+		//   - orderIDs: 订单 ID 列表过滤（可选）
+		//   - page: 分页页码（可选）
+		// 返回：
+		//   - resp: ListOrdersResponse（使用 TakeoutOrder 以获取完整 Price 含 Total）
+		//   - err: 错误信息
+		ListOrders(ctx context.Context, merchantID string, date string, orderIDs []string, page int32) (*grabDto.ListOrdersResponse, error)
 		// PauseStore 暂停门店
 		PauseStore(ctx context.Context, merchantID string, duration int) error
 		// ResumeStore 恢复门店营业
@@ -65,9 +79,6 @@ type (
 		// merchantID: Grab Merchant ID (shop_uuid)
 		// 返回: activation_url, request_id
 		CreateSelfServeJourney(ctx context.Context, merchantID string) (string, string, error)
-		// HandleMenuSyncState 处理菜单同步状态回调
-		// 使用 SDK grabfood.MenuSyncWebhookRequest
-		HandleMenuSyncState(ctx context.Context, req *grabfood.MenuSyncWebhookRequest) error
 		// SaveMenuSnapshot 保存菜单快照到数据库
 		// 使用 shop_uuid + provider_name 作为唯一键，存在则更新，不存在则插入
 		SaveMenuSnapshot(ctx context.Context, dto *grabDto.PushGrabMenuDTO) (uint64, error)
@@ -91,7 +102,7 @@ type (
 		// 返回：
 		//   - resp: 批量更新响应，包含状态和错误列表
 		//   - err: 错误信息
-		BatchUpdateMenuItems(ctx context.Context, req *grabDto.BatchUpdateMenuReq) (*grabDto.BatchUpdateMenuResp, error)
+		BatchUpdateMenuItems(ctx context.Context, req *api.BatchUpdateMenuReq) (*api.BatchUpdateMenuResp, error)
 		// HandleSubmitOrder 处理 Grab 提交订单 Webhook
 		// 签名验证已由中间件完成，此处只处理业务逻辑
 		// 使用 SDK grabfood.SubmitOrderRequest 替换自定义 DTO
@@ -125,7 +136,7 @@ type (
 		// 返回：
 		//   - res: 检查订单可取消性响应
 		//   - err: 错误信息
-		CheckOrderCancelableEntity(ctx context.Context, orderEntity *entity.Order) (*api.CheckOrderCancelableResp, error)
+		CheckOrderCancelableEntity(ctx context.Context, orderEntity *entity.Order) (*orderApi.CheckOrderCancelableResp, error)
 		// CancelOrder 取消订单
 		// 参数：
 		//   - ctx: 上下文对象
@@ -135,7 +146,7 @@ type (
 		// 返回：
 		//   - res: 取消订单响应
 		//   - err: 错误信息
-		CancelOrderEntity(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *api.CancelOrderResp, err error)
+		CancelOrderEntity(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *orderApi.CancelOrderResp, err error)
 		// GeneratePartnerToken 根据 client_id / client_secret 生成访问 Token
 		// 采用 JWT（HS256）实现
 		// 参数：
@@ -155,6 +166,9 @@ type (
 		// HandlePushGrabMenu 处理 Grab 菜单推送 Webhook
 		// 此方法组合了 SaveMenuSnapshot 和 NotifyMenuUpdate 两个操作
 		HandlePushGrabMenu(ctx context.Context, dto *grabDto.PushGrabMenuDTO) error
+		// HandleMenuSyncState 处理菜单同步状态回调
+		// 使用 SDK grabfood.MenuSyncWebhookRequest
+		HandleMenuSyncState(ctx context.Context, req *grabfood.MenuSyncWebhookRequest) error
 	}
 )
 

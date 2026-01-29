@@ -162,6 +162,7 @@ type CancelPosInvoiceReq struct {
 	MaterialInvoiceName string `form:"material_invoice_name" json:"material_invoice_name" ` // 材料销售发票 同步模式填
 	OpenPosEntryName    string `form:"open_pos_entry_name" json:"open_pos_entry_name"`      // 开账名称,异步模式必填
 	OrderNo             string `form:"order_no" json:"order_no"`                            // 销售订单号,异步模式必填
+	Remark              string `form:"remark" json:"remark"`                                // 附注/备注（JSON格式，包含 shop_uuid 等路由信息）
 
 }
 

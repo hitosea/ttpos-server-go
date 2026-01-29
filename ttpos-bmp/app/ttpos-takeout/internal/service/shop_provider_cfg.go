@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-takeout/api/grab"
+	"ttpos-bmp/app/ttpos-takeout/api/shop"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
@@ -17,6 +18,16 @@ import (
 
 type (
 	IShopProviderCfg interface {
+		// GetProviderMerchantID 从 shop_uuid 字符串获取平台商户 ID
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - shopUuidStr: 店铺 UUID 字符串
+		//   - providerName: 第三方平台名称（如 grab、lineman）
+		//
+		// 返回：
+		//   - merchantID: 平台商户 ID
+		//   - err: 错误信息（shop_uuid 格式错误、配置不存在、merchant_id 为空等）
+		GetProviderMerchantID(ctx context.Context, shopUuidStr string, providerName string) (string, error)
 		// UpsertShopProviderCfg 更新或插入门店第三方配置（幂等）
 		// shopUUID: 门店 UUID
 		// providerName: 第三方名称（如 grab）
@@ -27,6 +38,15 @@ type (
 		// shopUUID: 门店 UUID
 		// providerName: 第三方名称（如 grab），为空默认 grab
 		GetShopProviderCfg(ctx context.Context, shopUUID uint64, providerName string) (*entity.ShopProviderCfg, error)
+		// GetAllShopProviderCfg 查询门店的所有渠道配置
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - shopUUID: 门店 UUID
+		//
+		// 返回：
+		//   - cfgList: 该门店的所有渠道配置列表
+		//   - err: 操作过程中产生的错误（若有）
+		GetAllShopProviderCfg(ctx context.Context, shopUUID uint64) ([]*entity.ShopProviderCfg, error)
 		// GetShopProviderCfgByMerchantID 通过 MerchantID 查询门店第三方配置
 		// merchantID: 第三方商户 ID（如 Grab MerchantID）
 		// providerName: 第三方名称（如 grab），为空默认 grab
@@ -40,6 +60,16 @@ type (
 		// HandleIntegrationStatus 处理 Grab 门店集成状态 Webhook
 		// 包含: partnerMerchantID 解析、状态映射、配置更新、通知发送
 		HandleIntegrationStatus(ctx context.Context, req *grabfood.PushIntegrationStatusWebhookRequest) error
+		// GetShopProviderCfgForRPC 查询门店渠道配置（gRPC 接口，支持可选 providerName）
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - shopUUID: 门店 UUID
+		//   - providerName: 第三方名称（可选，为空时返回所有支持渠道的配置）
+		//
+		// 返回：
+		//   - res: 查询结果，包含门店 UUID 和渠道配置列表
+		//   - err: 操作过程中产生的错误（若有）
+		GetShopProviderCfgForRPC(ctx context.Context, shopUUID uint64, providerName string) (*shop.GetShopProviderCfgResp, error)
 	}
 )
 

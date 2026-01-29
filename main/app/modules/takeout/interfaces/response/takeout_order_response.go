@@ -25,6 +25,8 @@ type TakeoutOrderResp struct {
 	OrderState       int    `json:"order_state"`        // 订单状态 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单
 	RiderStatus      string `json:"rider_status"`       // 骑手状态 骑手待接单 - rider_pending, 骑手已接单 - rider_accepted
 	Cutlery          int    `json:"cutlery"`            // 是否需要餐具
+	// 附加信息
+	AdditionalProperties string `json:"additional_properties"` // 附加信息
 	// 订单时间
 	OrderTimes TakeoutOrderTimesResp `json:"order_times"` // 订单时间
 	// 订单异常
@@ -37,13 +39,14 @@ type TakeoutOrderResp struct {
 	// 订单优惠
 	Discounts TakeoutOrderDiscountsResp `json:"discounts"` // 订单优惠
 	// 支付类型
-	PaymentType string                     `json:"payment_type"` // 支付类型
-	OrderType   string                     `json:"order_type"`   // 订单类型  DELIVERY - 平台配送，RESTAURANT_DELIVERY - 商家配送，TAKEAWAY - 自提/打包，DINEIN - 店内就餐
-	TotalItems  int                        `json:"total_items"`  // 总商品数量
-	Items       []TakeoutOrderItemResp     `json:"items"`        // 订单商品列表
-	Campaigns   []TakeoutOrderCampaignResp `json:"campaigns"`    // 活动信息
-	Promos      []TakeoutOrderPromoResp    `json:"promos"`       // 促销信息
-	Receiver    TakeoutOrderReceiverResp   `json:"receiver"`     // 收货人信息 (联系人信息)
+	PaymentType string                      `json:"payment_type"` // 支付类型
+	OrderType   string                      `json:"order_type"`   // 订单类型  DELIVERY - 平台配送，RESTAURANT_DELIVERY - 商家配送，TAKEAWAY - 自提/打包，DINEIN - 店内就餐
+	TotalItems  int                         `json:"total_items"`  // 总商品数量
+	Items       []TakeoutOrderItemResp      `json:"items"`        // 订单商品列表
+	Campaigns   []TakeoutOrderCampaignResp  `json:"campaigns"`    // 活动信息
+	Promos      []TakeoutOrderPromoResp     `json:"promos"`       // 促销信息
+	Receiver    TakeoutOrderReceiverResp    `json:"receiver"`     // 收货人信息 (联系人信息)
+	UpdateLogs  []TakeoutOrderUpdateLogResp `json:"update_logs"`  // 订单更新日志
 }
 
 type TakeoutOrderDiscountsResp struct {
@@ -129,15 +132,21 @@ type TakeoutOrderItemModifierResp struct {
 	Price        float64            `json:"price"`
 }
 
+type TakeoutOrderUpdateLogResp struct {
+	Uuid       uint64 `json:"uuid"`
+	CreateTime int64  `json:"create_time"` // 创建时间
+}
+
 // TakeoutOrderListItemResp 订单响应
 type TakeoutOrderListItemResp struct {
-	Uuid             uint64  `json:"uuid"`               // 订单UUID
-	Platform         string  `json:"platform"`           // 平台名称
-	ShortOrderNumber string  `json:"short_order_number"` // 短订单号
-	OrderState       int     `json:"order_state"`        // 订单状态: 0=待接单,10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消
-	IsAbnormal       int     `json:"is_abnormal"`        // 是否异常
-	Subtotal         float64 `json:"subtotal"`           // 小计金额
-	TotalItems       int     `json:"total_items"`        // 总商品数量
+	Uuid             uint64                      `json:"uuid"`               // 订单UUID
+	Platform         string                      `json:"platform"`           // 平台名称
+	ShortOrderNumber string                      `json:"short_order_number"` // 短订单号
+	OrderState       int                         `json:"order_state"`        // 订单状态: 0=待接单,10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消
+	IsAbnormal       int                         `json:"is_abnormal"`        // 是否异常
+	Subtotal         float64                     `json:"subtotal"`           // 小计金额
+	TotalItems       int                         `json:"total_items"`        // 总商品数量
+	UpdateLogs       []TakeoutOrderUpdateLogResp `json:"update_logs"`        // 订单更新日志
 }
 
 // TakeoutOrderListResp 订单列表响应

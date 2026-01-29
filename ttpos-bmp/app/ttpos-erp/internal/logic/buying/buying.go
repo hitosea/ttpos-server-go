@@ -2,6 +2,7 @@ package buying
 
 import (
 	"context"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
@@ -418,6 +419,7 @@ func (s *sBuying) GetPurchaseOrderList(ctx context.Context, req *buying.GetPurch
 
 	// 获取总数量
 	totalCount, err := s.GetPurchaseOrderCount(ctx, &buying.GetPurchaseOrderCountReq{
+		Name:        req.Name,
 		Supplier:    req.Supplier,
 		CompanyAbbr: req.CompanyAbbr,
 		FromDate:    req.FromDate,
@@ -472,6 +474,17 @@ func (s *sBuying) GetPurchaseOrderCount(ctx context.Context, req *buying.GetPurc
 func (s *sBuying) buildPurchaseOrderListFilters(ctx context.Context, req *buying.GetPurchaseOrderListReq) [][]string {
 	filters := make([][]string, 0, 8) // 预分配容量，提高性能
 
+	// 按采购订单名称过滤（支持 IN 查询）
+	if len(req.Name) > 0 {
+		if strings.Contains(req.Name, ",") {
+			// 多个值使用 IN 查询
+			filters = append(filters, g.ArrayStr{"name", "in", req.Name})
+		} else {
+			// 单个值使用等值查询
+			filters = append(filters, g.ArrayStr{"name", "=", req.Name})
+		}
+	}
+
 	// 按供应商过滤
 	if len(req.Supplier) > 0 {
 		filters = append(filters, g.ArrayStr{"supplier", "=", req.Supplier})
@@ -505,6 +518,17 @@ func (s *sBuying) buildPurchaseOrderListFilters(ctx context.Context, req *buying
 //   - [][]string: 过滤条件数组
 func (s *sBuying) buildPurchaseOrderCountFilters(ctx context.Context, req *buying.GetPurchaseOrderCountReq) [][]string {
 	filters := make([][]string, 0, 8) // 预分配容量，提高性能
+
+	// 按采购订单名称过滤（支持 IN 查询）
+	if len(req.Name) > 0 {
+		if strings.Contains(req.Name, ",") {
+			// 多个值使用 IN 查询
+			filters = append(filters, g.ArrayStr{"name", "in", req.Name})
+		} else {
+			// 单个值使用等值查询
+			filters = append(filters, g.ArrayStr{"name", "=", req.Name})
+		}
+	}
 
 	// 按供应商过滤
 	if len(req.Supplier) > 0 {

@@ -38909,6 +38909,10 @@ const docTemplate = `{
                     "description": "点餐方式-平均订单金额",
                     "type": "number"
                 },
+                "avg_lineman_order_amount": {
+                    "description": "Lineman平均订单金额",
+                    "type": "number"
+                },
                 "avg_order_amount": {
                     "description": "平均订单金额",
                     "type": "number"
@@ -38933,6 +38937,10 @@ const docTemplate = `{
                     "description": "点餐方式-最大订单金额",
                     "type": "number"
                 },
+                "max_lineman_order_amount": {
+                    "description": "Lineman最大订单金额",
+                    "type": "number"
+                },
                 "max_order_amount": {
                     "description": "最大订单金额",
                     "type": "number"
@@ -38951,6 +38959,10 @@ const docTemplate = `{
                 },
                 "min_instant_order_amount": {
                     "description": "点餐方式-最小订单金额",
+                    "type": "number"
+                },
+                "min_lineman_order_amount": {
+                    "description": "Lineman最小订单金额",
                     "type": "number"
                 },
                 "min_order_amount": {
@@ -39010,6 +39022,10 @@ const docTemplate = `{
                 },
                 "total_instant_order_num": {
                     "description": "点餐方式-订单数",
+                    "type": "integer"
+                },
+                "total_lineman_order_num": {
+                    "description": "Lineman订单数",
                     "type": "integer"
                 },
                 "total_meal_num": {
@@ -52521,10 +52537,16 @@ const docTemplate = `{
         "request.TakeoutOrderSyncReq": {
             "type": "object",
             "required": [
+                "order_data_map",
                 "platform",
                 "raw_data"
             ],
             "properties": {
+                "order_data_map": {
+                    "description": "转换后的订单数据",
+                    "type": "object",
+                    "additionalProperties": true
+                },
                 "platform": {
                     "description": "grab,foodpanda,lineman",
                     "type": "string"
@@ -53756,6 +53778,10 @@ const docTemplate = `{
                 },
                 "is_open_kiosk": {
                     "description": "是否开启自助点餐机功能",
+                    "type": "boolean"
+                },
+                "is_open_lineman_delivery": {
+                    "description": "是否开启LINE MAN外卖功能",
                     "type": "boolean"
                 },
                 "is_open_map": {
@@ -65791,6 +65817,13 @@ const docTemplate = `{
                     "description": "总商品数量",
                     "type": "integer"
                 },
+                "update_logs": {
+                    "description": "订单更新日志",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderUpdateLogResp"
+                    }
+                },
                 "uuid": {
                     "description": "订单UUID",
                     "type": "integer"
@@ -65916,6 +65949,10 @@ const docTemplate = `{
                     "description": "异常详情",
                     "type": "string"
                 },
+                "additional_properties": {
+                    "description": "附加信息",
+                    "type": "string"
+                },
                 "campaigns": {
                     "description": "活动信息",
                     "type": "array",
@@ -66013,6 +66050,13 @@ const docTemplate = `{
                     "description": "总商品数量",
                     "type": "integer"
                 },
+                "update_logs": {
+                    "description": "订单更新日志",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderUpdateLogResp"
+                    }
+                },
                 "uuid": {
                     "description": "订单UUID",
                     "type": "integer"
@@ -66044,6 +66088,18 @@ const docTemplate = `{
                 },
                 "submit_time": {
                     "description": "提交时间 (提交时间，支付时间)",
+                    "type": "integer"
+                }
+            }
+        },
+        "response.TakeoutOrderUpdateLogResp": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "uuid": {
                     "type": "integer"
                 }
             }

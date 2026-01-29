@@ -140,6 +140,8 @@ func init() {
 	// 外卖订单相关事件处理器
 	// 自动注册"外卖订单创建"事件处理器
 	takeout.TakeoutOrderCreatedEventHandler()
+	// 自动注册"外卖订单更新"事件处理器（触发重新打印）
+	takeout.TakeoutOrderUpdatedEventHandler()
 	// 自动注册"外卖订单接单"事件处理器
 	takeout.TakeoutOrderAcceptEventHandler()
 	// 自动注册"外卖订单取消"事件处理器

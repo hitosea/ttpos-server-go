@@ -14,7 +14,7 @@ import (
 	"github.com/gogf/gf/v2/util/guid"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 
-	api "ttpos-bmp/app/ttpos-takeout/api/order"
+	orderApi "ttpos-bmp/app/ttpos-takeout/api/order"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
@@ -33,8 +33,6 @@ const (
 
 // sGrabOrder 订单服务
 type sGrabOrder struct{}
-
-
 
 // HandleSubmitOrder 处理 Grab 提交订单 Webhook
 // 签名验证已由中间件完成，此处只处理业务逻辑
@@ -473,7 +471,7 @@ func (s *sGrab) MarkOrderReadyEntity(ctx context.Context, orderEntity *entity.Or
 // 返回：
 //   - res: 检查订单可取消性响应
 //   - err: 错误信息
-func (s *sGrab) CheckOrderCancelableEntity(ctx context.Context, orderEntity *entity.Order) (*api.CheckOrderCancelableResp, error) {
+func (s *sGrab) CheckOrderCancelableEntity(ctx context.Context, orderEntity *entity.Order) (*orderApi.CheckOrderCancelableResp, error) {
 	// 1. 参数验证
 	if orderEntity == nil {
 		return nil, gerror.New("订单实体不能为空")
@@ -507,7 +505,7 @@ func (s *sGrab) CheckOrderCancelableEntity(ctx context.Context, orderEntity *ent
 	// 6. 返回精简响应
 	g.Log().Infof(ctx, "订单可取消性检查完成: order_uuid=%s, can_cancel=%v, reason=%s",
 		orderEntity.Uuid, canCancel, nonCancelReason)
-	return &api.CheckOrderCancelableResp{
+	return &orderApi.CheckOrderCancelableResp{
 		OrderUuid:             orderEntity.Uuid,
 		CanCancel:             canCancel,
 		NonCancellationReason: nonCancelReason,
@@ -524,7 +522,7 @@ func (s *sGrab) CheckOrderCancelableEntity(ctx context.Context, orderEntity *ent
 // 返回：
 //   - res: 取消订单响应
 //   - err: 错误信息
-func (s *sGrab) CancelOrderEntity(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *api.CancelOrderResp, err error) {
+func (s *sGrab) CancelOrderEntity(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *orderApi.CancelOrderResp, err error) {
 	// 1. 参数验证
 	if orderEntity == nil {
 		return nil, gerror.New("订单实体不能为空")
@@ -553,7 +551,7 @@ func (s *sGrab) CancelOrderEntity(ctx context.Context, orderEntity *entity.Order
 
 	// 4. 返回成功响应
 	g.Log().Infof(ctx, "订单取消成功: order_uuid=%s, order_id=%s", orderEntity.Uuid, orderEntity.ProviderOrderId)
-	return &api.CancelOrderResp{
+	return &orderApi.CancelOrderResp{
 		OrderUuid: orderEntity.Uuid,
 	}, nil
 }

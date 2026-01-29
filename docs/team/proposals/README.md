@@ -84,6 +84,20 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 ---
 
+## 🗂️ 提案索引
+
+## 2026-01
+
+| Proposal | 说明 | 状态 |
+| --- | --- | --- |
+| [erp-invoice-cancel-notification](2026-01/erp-invoice-cancel-notification.md) | ReturnPosInvoiceReq 增加 remark 字段并发送 MQ 通知 | 待评审 |
+| [takeout-order-model-refactor](2026-01/takeout-order-model-refactor.md) | TakeoutOrder 结构体重构对齐 Grab SDK | 待评审 |
+| [bmp-lineman-currency-conversion](2026-01/bmp-lineman-currency-conversion.md) | Lineman 订单金额泰铢转分 | 待评审 |
+| [v2.14-shop-lineman-trigger-sync-menu](2026-01/v2.14-shop-lineman-trigger-sync-menu.md) | Lineman TriggerSyncMenu 落库与触发 | 待评审 |
+| [shop-report-lineman-export](2026-01/shop-report-lineman-export.md) | 统计报表导出增加 LINEMAN 数据 | 待评审 |
+
+---
+
 ## 🔗 相关资源
 
 ### 工作流
@@ -98,5 +112,5 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 ---
 
-**最后更新**: 2025-11-25
+**最后更新**: 2026-01-29
 

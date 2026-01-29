@@ -111,6 +111,7 @@ type CompanySetting struct {
 	EnableDataManagement      int    `gorm:"column:enable_data_management;type:int(11);default:0;comment:是否开启数据管理: 0-否 1-是;NOT NULL" json:"enable_data_management"`
 	EnableKiosk               int    `gorm:"column:enable_kiosk;type:int(11);default:0;comment:是否开启自助点餐机: 0-否 1-是;NOT NULL" json:"enable_kiosk"`
 	EnableGrabDelivery        int    `gorm:"column:enable_grab_delivery;type:int(11);default:0;comment:是否启用Grab外卖: 0-否 1-是;NOT NULL" json:"enable_grab_delivery"`
+	EnableLinemanDelivery     int    `gorm:"column:enable_lineman_delivery;type:int(11);default:0;comment:是否启用LINE MAN外卖: 0-否 1-是;NOT NULL" json:"enable_lineman_delivery"`
 }
 
 // 连锁子店
@@ -231,6 +232,10 @@ func (model *CompanySetting) IsOpenDataManagement() bool {
 
 func (model *CompanySetting) IsOpenGrabDelivery() bool {
 	return model.EnableGrabDelivery == 1
+}
+
+func (model *CompanySetting) IsOpenLINEMANDelivery() bool {
+	return model.EnableLinemanDelivery == 1
 }
 
 // 外送配置

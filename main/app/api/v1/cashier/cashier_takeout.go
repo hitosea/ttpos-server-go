@@ -306,7 +306,7 @@ func (h *TakeoutHandler) SyncOrder(c *gin.Context) {
 		return
 	}
 
-	if err := h.orderAppSrv.SyncNewOrder(ctx, req.Platform, "req.TakeoutOrderUuid", req.RawData); err != nil {
+	if err := h.orderAppSrv.SyncNewOrder(ctx, req.Platform, "req.TakeoutOrderUuid", req.RawData, req.OrderDataMap); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}

@@ -342,6 +342,9 @@ definitions:
       avg_instant_order_amount:
         description: 点餐方式-平均订单金额
         type: number
+      avg_lineman_order_amount:
+        description: Lineman平均订单金额
+        type: number
       avg_order_amount:
         description: 平均订单金额
         type: number
@@ -360,6 +363,9 @@ definitions:
       max_instant_order_amount:
         description: 点餐方式-最大订单金额
         type: number
+      max_lineman_order_amount:
+        description: Lineman最大订单金额
+        type: number
       max_order_amount:
         description: 最大订单金额
         type: number
@@ -374,6 +380,9 @@ definitions:
         type: number
       min_instant_order_amount:
         description: 点餐方式-最小订单金额
+        type: number
+      min_lineman_order_amount:
+        description: Lineman最小订单金额
         type: number
       min_order_amount:
         description: 最小订单金额
@@ -418,6 +427,9 @@ definitions:
         type: integer
       total_instant_order_num:
         description: 点餐方式-订单数
+        type: integer
+      total_lineman_order_num:
+        description: Lineman订单数
         type: integer
       total_meal_num:
         description: 桌台方式-人数
@@ -9776,6 +9788,10 @@ definitions:
     type: object
   request.TakeoutOrderSyncReq:
     properties:
+      order_data_map:
+        additionalProperties: true
+        description: 转换后的订单数据
+        type: object
       platform:
         description: grab,foodpanda,lineman
         type: string
@@ -9784,6 +9800,7 @@ definitions:
         description: 原始订单数据
         type: object
     required:
+    - order_data_map
     - platform
     - raw_data
     type: object
@@ -10577,6 +10594,9 @@ definitions:
         type: integer
       is_open_kiosk:
         description: 是否开启自助点餐机功能
+        type: boolean
+      is_open_lineman_delivery:
+        description: 是否开启LINE MAN外卖功能
         type: boolean
       is_open_map:
         description: 是否开启地图
@@ -18723,6 +18743,11 @@ definitions:
       total_items:
         description: 总商品数量
         type: integer
+      update_logs:
+        description: 订单更新日志
+        items:
+          $ref: '#/definitions/response.TakeoutOrderUpdateLogResp'
+        type: array
       uuid:
         description: 订单UUID
         type: integer
@@ -18812,6 +18837,9 @@ definitions:
       abnormal_detail:
         description: 异常详情
         type: string
+      additional_properties:
+        description: 附加信息
+        type: string
       campaigns:
         description: 活动信息
         items:
@@ -18875,6 +18903,11 @@ definitions:
       total_items:
         description: 总商品数量
         type: integer
+      update_logs:
+        description: 订单更新日志
+        items:
+          $ref: '#/definitions/response.TakeoutOrderUpdateLogResp'
+        type: array
       uuid:
         description: 订单UUID
         type: integer
@@ -18898,6 +18931,14 @@ definitions:
         type: integer
       submit_time:
         description: 提交时间 (提交时间，支付时间)
+        type: integer
+    type: object
+  response.TakeoutOrderUpdateLogResp:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      uuid:
         type: integer
     type: object
   response.TakeoutSettingsResp:

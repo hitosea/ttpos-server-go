@@ -20,6 +20,8 @@ type ITakeoutOrderMaterialRepo interface {
 	MarkTakeoutOrderMaterialsAsSummarized(takeoutOrderUuid uint64) error
 	// GetByOrderUuid 根据订单UUID查询原料消耗记录（预加载原料信息）
 	GetByOrderUuid(takeoutOrderUuid uint64) ([]*takeoutModel.TakeoutOrderMaterial, error)
+	// DeleteByOrderUuid 根据订单UUID删除原料消耗记录（硬删除，用于订单更新时重新计算）
+	DeleteByOrderUuid(takeoutOrderUuid uint64) error
 }
 
 type takeoutOrderMaterialRepoImpl struct {
@@ -89,4 +91,12 @@ func (r *takeoutOrderMaterialRepoImpl) GetByOrderUuid(takeoutOrderUuid uint64) (
 		Preload("Material").
 		Find(&materials).Error
 	return materials, err
+}
+
+// DeleteByOrderUuid 根据订单UUID删除原料消耗记录（硬删除，用于订单更新时重新计算）
+// 注意：此方法仅用于订单更新场景，在事务中调用，删除旧记录后立即重新计算
+func (r *takeoutOrderMaterialRepoImpl) DeleteByOrderUuid(takeoutOrderUuid uint64) error {
+	return r.db.Unscoped().
+		Where("takeout_order_uuid = ?", takeoutOrderUuid).
+		Delete(&takeoutModel.TakeoutOrderMaterial{}).Error
 }

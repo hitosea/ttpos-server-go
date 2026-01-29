@@ -57,6 +57,8 @@ class AppValidate extends  BaseValidate
         'enable_kiosk|是否启用自助点餐机' => 'in:0,1',
         // Grab外卖控制
         'enable_grab_delivery|是否启用Grab外卖' => 'in:0,1',
+        // LINE MAN外卖控制
+        'enable_lineman_delivery|是否启用LINEMAN外卖' => 'in:0,1', 
     ];
 
     protected $message = [
@@ -117,6 +119,8 @@ class AppValidate extends  BaseValidate
             'enable_kiosk',
             // Grab外卖控制
             'enable_grab_delivery',
+            // LINE MAN外卖控制
+            'enable_lineman_delivery',
         ],
         'edit' => [
             'app_id',
@@ -162,6 +166,8 @@ class AppValidate extends  BaseValidate
             'enable_kiosk',
             // Grab外卖控制
             'enable_grab_delivery',
+            // LINE MAN外卖控制
+            'enable_lineman_delivery',
         ],
         'id' => [
             'app_id',
