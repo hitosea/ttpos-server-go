@@ -24,7 +24,7 @@ type TakeoutOrderItem struct {
 	TtposParentCategoryName string `gorm:"column:ttpos_parent_category_name;type:text" json:"ttpos_parent_category_name"` // TTPOS父分类名称（多语言JSON）
 
 	// 商品数量和价格
-	Quantity       int     `gorm:"column:quantity" json:"quantity"`
+	Quantity       int     `gorm:"column:quantity" json:"quantity"`                          // 数量 - 不是总数量，而是单个商品的数量
 	Price          float64 `gorm:"column:price;type:decimal(20,4)" json:"price"`             // 单价(元,4位小数) - 外卖平台价格
 	TtposPrice     float64 `gorm:"column:ttpos_price;type:decimal(20,4)" json:"ttpos_price"` // TTPOS店内价格(元,4位小数)
 	Tax            float64 `gorm:"column:tax;type:decimal(20,4)" json:"tax"`                 // 税费(元,4位小数)
