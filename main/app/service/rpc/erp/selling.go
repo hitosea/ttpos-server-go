@@ -294,6 +294,7 @@ func (s *erpSrv) CancelPosInvoice(ctx pkgCtx.Context, cancelPosInvoiceReq req.Ca
 		MaterialInvoiceName: cancelPosInvoiceReq.MaterialInvoiceName,
 		OpenPosEntryName:    cancelPosInvoiceReq.OpenPosEntryName,
 		OrderNo:             cancelPosInvoiceReq.OrderNo,
+		Remark:              cancelPosInvoiceReq.Remark,
 	}
 	res, err := client.CancelPosInvoice(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), params)
 	if err != nil {
