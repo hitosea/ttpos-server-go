@@ -180,7 +180,7 @@ func databaseConf(opt copier.Option) {
 		SlowQueryTime:   2,
 		MaxIdleConns:    20,
 		MaxOpenConns:    200,
-		ConnMaxLifetime: 300,
+		ConnMaxLifetime: 86400,
 	}
 
 	copier.CopyWithOption(&Database, DatabaseConf{
