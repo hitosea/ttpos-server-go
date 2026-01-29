@@ -3153,8 +3153,8 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in_store":    "堂食",
 			"takeaway":         "外带",
 			"grab":             "Grab",
-			// "lineman":          "LINE MAN",
-			"takeout": "外卖",
+			"lineman":          "LINE MAN",
+			"takeout":          "外卖",
 		},
 		"en": {
 			"summary":          "Total",
@@ -3177,8 +3177,8 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in_store":    "สั่งอาหารในร้าน",
 			"takeaway":         "นำอาหารกลับบ้าน",
 			"grab":             "Grab",
-			// "lineman":          "LINE MAN",
-			"takeout": "สั่งอาหารกลับบ้าน",
+			"lineman":          "LINE MAN",
+			"takeout":          "สั่งอาหารกลับบ้าน",
 		},
 		"zhtw": {
 			"summary":          "合計",
@@ -3189,8 +3189,8 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in_store":    "店內點餐",
 			"takeaway":         "外帶",
 			"grab":             "Grab",
-			// "lineman":          "LINE MAN",
-			"takeout": "外送",
+			"lineman":          "LINE MAN",
+			"takeout":          "外送",
 		},
 		"ja": {
 			"summary":          "合計",
@@ -3201,8 +3201,8 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in_store":    "店内点餐",
 			"takeaway":         "外帶",
 			"grab":             "Grab",
-			// "lineman":          "LINE MAN",
-			"takeout": "外送",
+			"lineman":          "LINE MAN",
+			"takeout":          "外送",
 		},
 		"ko": {
 			"summary":          "합계",
@@ -3213,8 +3213,8 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in_store":    "店内点餐",
 			"takeaway":         "外帶",
 			"grab":             "Grab",
-			// "lineman":          "LINE MAN",
-			"takeout": "外送",
+			"lineman":          "LINE MAN",
+			"takeout":          "外送",
 		},
 		"my": {
 			"summary":          "စုစုပေါင်း",
@@ -3225,8 +3225,8 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in_store":    "ဆိုင်တွင်မှာယူ",
 			"takeaway":         "အိမ်သို့ယူ",
 			"grab":             "Grab",
-			// "lineman":          "LINE MAN",
-			"takeout": "အိမ်သို့ယူ",
+			"lineman":          "LINE MAN",
+			"takeout":          "အိမ်သို့ယူ",
 		},
 		"tr": {
 			"summary":          "Toplam",
@@ -3237,8 +3237,8 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in_store":    "Restoranda Sipariş",
 			"takeaway":         "Paket Sipariş",
 			"grab":             "Grab",
-			// "lineman":          "LINE MAN",
-			"takeout": "Teslimat",
+			"lineman":          "LINE MAN",
+			"takeout":          "Teslimat",
 		},
 		"sv": {
 			"summary":          "Totalt",
@@ -3249,8 +3249,8 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"dine_in_store":    "Restoranda Sipariş",
 			"takeaway":         "Paket Sipariş",
 			"grab":             "Grab",
-			// "lineman":          "LINE MAN",
-			"takeout": "Teslimat",
+			"lineman":          "LINE MAN",
+			"takeout":          "Teslimat",
 		},
 	}
 	channelNames := channelNameMap[lang]
@@ -3479,8 +3479,8 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["dine_in"], params.Result.DineIn, false)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["takeout_shop"], params.Result.TakeoutShop, false)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["takeout_delivery"], params.Result.TakeoutDelivery, false)
-	_, sheet2EndRow := writeChannelData(sheet2Name, &rowIdx2, channelNames["grab"], params.Result.Grab, false)
-	// _, sheet2EndRow := writeChannelData(sheet2Name, &rowIdx2, channelNames["lineman"], params.Result.Lineman, false)
+	writeChannelData(sheet2Name, &rowIdx2, channelNames["grab"], params.Result.Grab, false)
+	_, sheet2EndRow := writeChannelData(sheet2Name, &rowIdx2, channelNames["lineman"], params.Result.Lineman, false)
 
 	// 为 Sheet2 设置样式和列宽
 	for row := 1; row <= sheet2EndRow; row++ {
