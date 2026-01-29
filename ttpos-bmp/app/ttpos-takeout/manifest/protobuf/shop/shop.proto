@@ -1,0 +1,61 @@
+// Shop 服务 Protobuf 定义文件
+// 用于定义 Shop 相关的 gRPC 服务接口和消息结构
+syntax = "proto3";
+
+package shop;
+
+import "takeout_api.proto";
+
+// Go 包路径配置
+option go_package = "ttpos-bmp/app/ttpos-takeout/api/shop";
+
+// Shop 服务接口定义
+// 提供门店管理相关的 gRPC 服务方法
+service Shop {
+  // 激活门店外卖渠道
+  // 参数：provider_name（外卖渠道）、shop_uuid（门店UUID）、request_id（追踪ID，可选）
+  // 返回：统一的 ApiResponse 格式，包含激活结果和配置信息
+  rpc ActivateShop (ActivateShopReq) returns (takeout.ApiResponse);
+
+  // 查询门店第三方配置
+  // 参数：shop_uuid（门店UUID）、provider_name（第三方名称，可选，为空时返回所有渠道配置）
+  // 返回：统一的 ApiResponse 格式，包含门店集成状态、第三方商户ID、更新时间等
+  rpc GetShopProviderCfg (GetShopProviderCfgReq) returns (takeout.ApiResponse);
+}
+
+// 激活门店外卖渠道请求消息
+message ActivateShopReq {
+  string provider_name = 1; // 外卖渠道：lineman、grab
+  string shop_uuid = 2;     // 门店 UUID
+  string request_id = 3;    // 追踪 ID，可选
+}
+
+// 激活门店外卖渠道响应消息
+message ActivateShopResp {
+  uint64 shop_uuid = 1;       // 门店 UUID
+  string provider_name = 2;   // 外卖渠道名称
+  string self_serve_url = 3;  // 自助激活链接（仅 grab 渠道返回）
+  string request_id = 4;      // 追踪 ID
+  int64  updated_at = 5;      // 更新时间（Unix 秒）
+}
+
+// 查询门店第三方配置请求消息
+message GetShopProviderCfgReq {
+  uint64 shop_uuid = 1;       // 门店 UUID
+  string provider_name = 2;   // 第三方名称（可选，为空时返回所有渠道配置）
+}
+
+// 门店第三方配置项
+message ShopProviderCfgItem {
+  string provider_name = 1;         // 第三方名称（lineman、grab）
+  string provider_merchant_id = 2;  // 第三方商户 ID
+  string provider_shop_status = 3;  // 门店集成状态 (INACTIVE/ACTIVE/SYNCING/FAILED)
+  int64  updated_at = 4;            // 更新时间（Unix 秒）
+}
+
+// 查询门店第三方配置响应消息
+message GetShopProviderCfgResp {
+  uint64 shop_uuid = 1;                         // 门店 UUID
+  repeated ShopProviderCfgItem providers = 2;   // 渠道配置列表（单个或多个）
+}
+

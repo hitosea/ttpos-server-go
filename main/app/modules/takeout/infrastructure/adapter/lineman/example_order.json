@@ -1,0 +1,62 @@
+{
+  "orderId": "LMF-221031-33879881",
+  "orderShortCode": "9881",
+  "restaurantRevenue": 250.50,
+  "orderAcceptedTime": "2022-11-01T13:08:06+07:00",
+  "items": [
+    {
+      "id": "TTPOS-ITEM-001",
+      "quantity": 2,
+      "unitPrice": 120.00,
+      "memo": "ไม่ใส่ผักชี",
+      "promotionId": "PROMO2024001",
+      "discount": 20.00,
+      "properties": [
+        {
+          "id": "size-option",
+          "values": [
+            {
+              "id": "large",
+              "price": 15.00
+            }
+          ]
+        },
+        {
+          "id": "spice-level",
+          "values": [
+            {
+              "id": "medium",
+              "price": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "TTPOS-PACKAGE-002",
+      "quantity": 1,
+      "unitPrice": 299.00,
+      "memo": "",
+      "promotionId": "",
+      "discount": 0,
+      "properties": [
+        {
+          "id": "drink-option",
+          "values": [
+            {
+              "id": "coke",
+              "price": 0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "additionalItems": [
+    {
+      "name": "ค่าบริการเพิ่มเติม"
+    }
+  ],
+  "memberId": "LINE_MAN_USER_12345",
+  "customerType": "DELIVERY"
+}

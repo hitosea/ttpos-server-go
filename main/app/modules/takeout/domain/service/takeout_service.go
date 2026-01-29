@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"ttpos-server-go/app/modules/takeout/domain/model"
+	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/utils"
@@ -201,7 +202,7 @@ func (s *TakeoutServiceImpl) GetAllPlatformStatus(ctx context.Context) ([]*model
 
 // ValidatePlatform 验证平台名称是否支持
 func (s *TakeoutServiceImpl) ValidatePlatform(platform string) error {
-	supportedPlatforms := []string{"grab", "lineman", "foodpanda", "shopeefood"}
+	supportedPlatforms := []string{valueobject.TakeoutPlatformGrab, valueobject.TakeoutPlatformLineman}
 
 	for _, p := range supportedPlatforms {
 		if p == platform {
@@ -209,7 +210,7 @@ func (s *TakeoutServiceImpl) ValidatePlatform(platform string) error {
 		}
 	}
 
-	return errors.New("不支持的平台: " + platform + "，支持的平台: grab, lineman, foodpanda, shopeefood")
+	return errors.New("不支持的平台: " + platform + "，支持的平台: grab, lineman")
 }
 
 // IsPlatformEnabled 检查平台是否开启

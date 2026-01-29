@@ -56,7 +56,7 @@ func (s *takeoutOrderCancelEventSubscriber) Handle(domainEvent event.DomainEvent
 		ctx.SetCompanyUuid(orderCancelEvent.CompanyUuid)
 
 		// 调用 service 恢复出库和销量
-		if err := takeoutSrv.RestoreTakeoutOrderOutboundAndSales(ctx, orderCancelEvent.OrderUuid, orderCancelEvent.CompanyUuid); err != nil {
+		if err := takeoutSrv.RestoreTakeoutOrderOutboundAndSales(ctx, orderCancelEvent.OrderUuid, orderCancelEvent.CompanyUuid, nil); err != nil {
 			logger.Logger.Error("恢复外卖订单出库和销量失败",
 				zap.Uint64("orderUuid", orderCancelEvent.OrderUuid),
 				zap.String("takeoutOrderUuid", orderCancelEvent.TakeoutOrderUuid),

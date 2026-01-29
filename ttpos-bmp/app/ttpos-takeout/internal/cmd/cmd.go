@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/lineman"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -41,6 +42,17 @@ var (
 				group.Middleware(middleware.MiddlewareDirectResponse, middleware.MiddlewareGrabJWTAuth)
 				group.Bind(
 					grab.NewV1(),
+				)
+			})
+
+			// 注册 Lineman 路由（OAuth 无需认证，Webhook 使用 JWT 验证）
+			s.Group("/api/v1/lmwn", func(group *ghttp.RouterGroup) {
+				group.Middleware(
+					middleware.MiddlewareDirectResponse,
+					middleware.MiddlewareLinemanJWTAuth,
+				)
+				group.Bind(
+					lineman.NewV1(),
 				)
 			})
 

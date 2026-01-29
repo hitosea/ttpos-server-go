@@ -1,26 +1,24 @@
 package value_object
 
+import "strings"
+
 // 外卖平台代码
 const (
-	TakeoutPlatformGrab       = "grab"       // Grab
-	TakeoutPlatformLineman    = "lineman"    // LINE MAN
-	TakeoutPlatformShopeefood = "shopeefood" // ShopeeFood
+	TakeoutPlatformGrab    = "grab"    // Grab
+	TakeoutPlatformLineman = "lineman" // LINE MAN
 )
 
 // 外卖平台名称映射
 var TakeoutPlatformNames = map[string]string{
-	TakeoutPlatformGrab:       "Grab",
-	TakeoutPlatformLineman:    "LINE MAN",
-	TakeoutPlatformShopeefood: "ShopeeFood",
+	TakeoutPlatformGrab:    "Grab",
+	TakeoutPlatformLineman: "LINE MAN",
 }
 
-// GetPlatformName 根据平台代码获取平台显示名称
-func GetPlatformName(platform string) string {
-	if name, ok := TakeoutPlatformNames[platform]; ok {
-		return name
-	}
-	return ""
-}
+// 外卖类型
+const (
+	TakeoutTypeGrab    = 1 // Grab
+	TakeoutTypeLineman = 2 // LINE MAN
+)
 
 // 外卖订单状态
 const (
@@ -81,4 +79,40 @@ func ConvertGrabOrderTypeToTakeoutOrderType(grabOrderType string) string {
 	default:
 		return TakeoutOrderTypeDelivery // 默认返回配送
 	}
+}
+
+// ShouldActivateShopOnEnable 判断平台是否需要在启用时激活门店外卖渠道
+// 参数：platform - 平台标识
+// 返回：true - 需要激活；false - 不需要激活
+func ShouldActivateShopOnEnable(platform string) bool {
+	// Lineman 平台需要在启用时调用 ActivateShop 接口
+	return platform == TakeoutPlatformLineman
+}
+
+// GetTakeoutTypeByPlatform 根据平台名称获取外卖类型
+func GetTakeoutTypeByPlatform(platform string) int {
+	switch platform {
+	case TakeoutPlatformGrab:
+		return TakeoutTypeGrab
+	case TakeoutPlatformLineman:
+		return TakeoutTypeLineman
+	default:
+		return TakeoutTypeGrab
+	}
+}
+
+// GetPlatformName 根据平台代码获取平台显示名称
+func GetPlatformName(platform string) string {
+	if name, ok := TakeoutPlatformNames[platform]; ok {
+		return name
+	}
+	return ""
+}
+
+// GetPlatformName 根据平台代码获取平台显示名称
+func GetNoSpacePlatformName(platform string) string {
+	if name, ok := TakeoutPlatformNames[platform]; ok {
+		return strings.ReplaceAll(name, " ", "")
+	}
+	return ""
 }

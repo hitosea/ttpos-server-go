@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/modules/printer/printer_model"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	domainService "ttpos-server-go/app/modules/takeout/domain/service"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	valueObject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
@@ -37,13 +38,22 @@ type ITakeoutOrderSrv interface {
 	// ProcessTakeoutOrderOutboundAndSales 处理外卖订单出库和销量
 	ProcessTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64, acceptedBy uint64) error
 	// RestoreTakeoutOrderOutboundAndSales 恢复外卖订单出库和销量（取消订单时调用）
-	RestoreTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64) error
+	RestoreTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64, order *takeoutModel.TakeoutOrder) error
+	// RebuildTakeoutOrderOutboundAndSales 重建外卖订单出库和销量（订单更新时调用）
+	// 采用"先恢复，再重建"策略，确保数据一致性
+	RebuildTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64, order *takeoutModel.TakeoutOrder) error
 	// CreateProductionOrderForTakeout 为外卖订单创建送厨单
 	CreateProductionOrderForTakeout(ctx context.Context, orderUuid uint64) error
+	// UpdateProductionOrderForTakeout 增量更新外卖订单的生产单
+	// 处理订单变动时的生产单同步：退菜商品标记为退菜状态，新增商品创建生产单商品
+	UpdateProductionOrderForTakeout(ctx context.Context, orderUuid uint64, changeResult *valueObject.OrderChangeResult) error
 	// PrintTakeoutOrder 打印外卖订单小票
 	PrintTakeoutOrder(ctx context.Context, orderUuid uint64, printLang string, firstExecution int) (*resp.PrinterData, error)
 	// 打印送厨单
 	PrintProductionOrder(ctx context.Context, orderUuid uint64, printType int, productItems []req.PrintProductItem) (*resp.PrinterData, error)
+	// PrintReturnOrder 打印退菜单（使用变更前的商品信息）
+	// 注意：此方法使用 changeResult.ReturnItems 中的 OldItem 数据，包含变更前的数量
+	PrintReturnOrder(ctx context.Context, orderUuid uint64, changeResult *valueObject.OrderChangeResult) error
 	// RecordTakeoutOrderPeakTime 记录外卖订单高峰期
 	// 自动根据订单状态判断是增加（inc）还是减少（dec）
 	RecordTakeoutOrderPeakTime(ctx context.Context, orderUuid uint64, companyUuid uint64) error
@@ -121,6 +131,18 @@ func (s *takeoutSrv) ProcessTakeoutOrderOutboundAndSales(ctx context.Context, or
 	s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
 		Platform:    order.Platform,
 		CompanyUuid: companyUuid,
+	})
+
+	utils.Go(func() {
+		s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
+			Platform:    value_object.TakeoutPlatformGrab,
+			CompanyUuid: companyUuid,
+		})
+
+		s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
+			Platform:    value_object.TakeoutPlatformLineman,
+			CompanyUuid: companyUuid,
+		})
 	})
 
 	return nil
@@ -374,21 +396,24 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, companyUuid uint64, ta
 }
 
 // RestoreTakeoutOrderOutboundAndSales 恢复外卖订单出库和销量（取消订单时调用）
-func (s *takeoutSrv) RestoreTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64) error {
+func (s *takeoutSrv) RestoreTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64, orderInfo *takeoutModel.TakeoutOrder) error {
 	db := s.dbm.GetDB(companyUuid)
 
 	// 设置上下文
 	ctx.SetDB(db)
 	ctx.SetCompanyUuid(companyUuid)
 
-	// 1. 查询订单信息（包含商品列表）
-	orderRepo := persistence.NewTakeoutOrderRepo(db)
-	order, err := orderRepo.GetByUuid(orderUuid, orderRepo.WithTakeoutOrderItems(), orderRepo.WithTakeoutOrderItemModifiers())
-	if err != nil {
-		return errors.WithMessage(err, "查询订单失败")
-	}
-	if order == nil {
-		return errors.New("订单不存在")
+	if orderInfo == nil {
+		// 1. 查询订单信息（包含商品列表）
+		orderRepo := persistence.NewTakeoutOrderRepo(db)
+		order, err := orderRepo.GetByUuid(orderUuid, orderRepo.WithTakeoutOrderItems(), orderRepo.WithTakeoutOrderItemModifiers())
+		if err != nil {
+			return errors.WithMessage(err, "查询订单失败")
+		}
+		if order == nil {
+			return errors.New("订单不存在")
+		}
+		orderInfo = order
 	}
 
 	// 2. 查询该订单的所有出库单（通过 takeout_order_uuid）
@@ -461,7 +486,7 @@ func (s *takeoutSrv) RestoreTakeoutOrderOutboundAndSales(ctx context.Context, or
 		}
 
 		// 5.3 减少销量
-		if err := s.reduceTakeoutOrderSalesVolume(ctxTx, order); err != nil {
+		if err := s.reduceTakeoutOrderSalesVolume(ctxTx, orderInfo); err != nil {
 			logger.Logger.Error("减少外卖订单销量失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
 			// 销量减少失败不影响流程，只记录日志
 		}
@@ -474,10 +499,11 @@ func (s *takeoutSrv) RestoreTakeoutOrderOutboundAndSales(ctx context.Context, or
 		}
 
 		// 5.5 删除关联的生产订单（ttpos_production_order 和 ttpos_production_order_product）
-		productionRepo := repository.NewProductionRepo(tx)
-		if err := productionRepo.DeleteProductionOrderByTakeoutOrderUuid(orderUuid); err != nil {
-			logger.Logger.Error("删除外卖订单关联的生产订单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
-			// 删除失败不影响流程，只记录日志
+		if orderInfo == nil {
+			if err := repository.NewProductionRepo(tx).DeleteProductionOrderByTakeoutOrderUuid(orderUuid); err != nil {
+				logger.Logger.Error("删除外卖订单关联的生产订单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+				// 删除失败不影响流程，只记录日志
+			}
 		}
 
 		return nil
@@ -488,7 +514,7 @@ func (s *takeoutSrv) RestoreTakeoutOrderOutboundAndSales(ctx context.Context, or
 
 	// 同步外卖平台
 	s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
-		Platform:    order.Platform,
+		Platform:    orderInfo.Platform,
 		CompanyUuid: companyUuid,
 	})
 
@@ -498,7 +524,7 @@ func (s *takeoutSrv) RestoreTakeoutOrderOutboundAndSales(ctx context.Context, or
 // restoreTakeoutOrderStock 恢复外卖订单库存
 func (s *takeoutSrv) restoreTakeoutOrderStock(db *gorm.DB, companyUuid uint64, warehouseOutFormItems []*model.WarehouseOutFormItem) error {
 	// 按类型分组处理
-	productBoms := make(map[uint64]*model.ProductBom)
+	// productBoms := make(map[uint64]*model.ProductBom)
 	materials := make(map[uint64]map[uint64]float64) // map[materialUuid]map[warehouseUuid]restoreStockNum
 
 	for _, item := range warehouseOutFormItems {
@@ -509,19 +535,8 @@ func (s *takeoutSrv) restoreTakeoutOrderStock(db *gorm.DB, companyUuid uint64, w
 
 		if item.IsProductBom() {
 			// 查询 BOM 信息
-			if productBoms[item.ProductBomUuid] == nil {
-				productBomRepo := repository.NewProductBomRepo(db)
-				bom, err := productBomRepo.GetFlavorProductBomByUuid(companyUuid, item.ProductBomUuid)
-				if err != nil {
-					logger.Logger.Error("查询BOM信息失败", zap.Uint64("bomUuid", item.ProductBomUuid), zap.Error(err))
-					continue
-				}
-				productBoms[item.ProductBomUuid] = bom
-			}
-
-			// 恢复 BOM 库存
-			if productBoms[item.ProductBomUuid] != nil {
-				productBoms[item.ProductBomUuid].StockNum += item.Num
+			if err := repository.NewProductBomRepo(db).AddStockNum(item.ProductBomUuid, item.Num); err != nil {
+				return errors.WithMessage(err, "恢复BOM库存失败")
 			}
 		} else if item.IsMaterial() {
 			// 恢复材料库存
@@ -529,18 +544,6 @@ func (s *takeoutSrv) restoreTakeoutOrderStock(db *gorm.DB, companyUuid uint64, w
 				materials[item.MaterialUuid] = make(map[uint64]float64)
 			}
 			materials[item.MaterialUuid][item.WarehouseUuid] += item.Num
-		}
-	}
-
-	// 更新库存
-	// 更新 BOM 库存
-	productBomList := make([]*model.ProductBom, 0, len(productBoms))
-	for _, bom := range productBoms {
-		productBomList = append(productBomList, bom)
-	}
-	if len(productBomList) > 0 {
-		if err := repository.NewProductBomRepo(db).UpdateProductBoms(productBomList); err != nil {
-			return errors.WithMessage(err, "恢复BOM库存失败")
 		}
 	}
 
@@ -559,7 +562,7 @@ func (s *takeoutSrv) restoreTakeoutOrderStock(db *gorm.DB, companyUuid uint64, w
 		materialSalesVolumes[warehouseOutFormItem.MaterialUuid] = decimal.NewFromFloat(materialSalesVolumes[warehouseOutFormItem.MaterialUuid]).Add(decimal.NewFromFloat(warehouseOutFormItem.Num)).Round(4).InexactFloat64()
 	}
 	for materialUuid, saleNum := range materialSalesVolumes {
-		if err := repository.NewMaterialRepo(db).AddActualSaleNum(materialUuid, -saleNum); err != nil {
+		if err := repository.NewMaterialRepo(db).SubActualSaleNum(materialUuid, saleNum); err != nil {
 			logger.Logger.Error("restoreTakeoutOrderStock process, AddActualSaleNum failed", zap.Any("materialUuid", materialUuid), zap.Any("saleNum", saleNum), zap.Error(err))
 			continue
 		}
@@ -595,6 +598,36 @@ func (s *takeoutSrv) reduceTakeoutOrderSalesVolume(ctx context.Context, order *t
 			logger.Logger.Error("减少Package销量失败", zap.Uint64("packageUuid", packageUuid), zap.Float64("saleNum", saleNum), zap.Error(err))
 			// 继续处理其他Package，不中断流程
 		}
+	}
+
+	return nil
+}
+
+// RebuildTakeoutOrderOutboundAndSales 重建外卖订单出库和销量（订单更新时调用）
+//
+// 采用"先恢复，再重建"策略：
+//  1. RestoreTakeoutOrderOutboundAndSales: 完全恢复旧订单（撤销出库单、恢复库存、减少销量）
+//  2. ProcessTakeoutOrderOutboundAndSales: 重新计算新订单（创建出库单、扣减库存、增加销量）
+//
+// 优势：
+//   - 逻辑简单清晰，不易出错
+//   - 数据一致性高，不会遗漏
+//   - 复用现有逻辑，维护成本低
+//
+// 使用场景：
+//   - 订单菜品数量变动（增加/减少）
+//   - 订单菜品属性变动（规格/加料变更）
+//   - 订单菜品增删
+func (s *takeoutSrv) RebuildTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64, order *takeoutModel.TakeoutOrder) error {
+	// Step 1: 先恢复旧订单的库存和销量
+	if err := s.RestoreTakeoutOrderOutboundAndSales(ctx, orderUuid, companyUuid, order); err != nil {
+		return errors.WithMessage(err, "恢复订单库存销量失败")
+	}
+
+	// Step 2: 再重新计算新订单的库存和销量
+	// 注意：这里使用 acceptedBy=0，因为订单已经接单，不需要记录具体员工
+	if err := s.ProcessTakeoutOrderOutboundAndSales(ctx, orderUuid, companyUuid, 0); err != nil {
+		return errors.WithMessage(err, "重建订单库存销量失败")
 	}
 
 	return nil
@@ -890,6 +923,253 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 	return nil
 }
 
+// UpdateProductionOrderForTakeout 增量更新外卖订单的生产单
+// 处理订单变动时的生产单同步：
+// - 退菜商品：标记为退菜状态 (Status = 3)
+// - 新增商品：创建新的生产单商品
+// - 数量变更：更新生产单商品数量
+func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderUuid uint64, changeResult *valueObject.OrderChangeResult) error {
+	if changeResult == nil || !changeResult.HasChange {
+		return nil
+	}
+
+	db := ctx.GetDB()
+	productionRepo := repository.NewProductionRepo(db)
+
+	// 1. 查询现有的生产单
+	productionOrder, err := productionRepo.GetProductionOrderByTakeoutOrderUuid(orderUuid)
+	if err != nil {
+		logger.Logger.Error("查询生产单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		return errors.WithMessage(err, "查询生产单失败")
+	}
+	if productionOrder == nil || productionOrder.Uuid == 0 {
+		logger.Logger.Warn("生产单不存在，跳过更新", zap.Uint64("orderUuid", orderUuid))
+		return nil
+	}
+
+	// 2. 处理送厨商品（新增或数量/属性变更）
+	for _, item := range changeResult.KitchenItems {
+		switch item.ChangeType {
+		case valueObject.ChangeTypeAdded:
+			// 新增商品：创建生产单商品（使用完整字段）
+			if item.NewItem == nil || item.NewItem.Uuid == 0 {
+				logger.Logger.Warn("新增商品缺少信息，跳过创建生产单商品",
+					zap.String("platformItemId", item.PlatformItemId))
+				continue
+			}
+
+			// 使用辅助方法创建完整的生产单商品
+			productionOrderProduct, err := s.buildProductionOrderProductFromTakeoutItem(
+				ctx, item.NewItem.Uuid, productionOrder.Uuid, orderUuid,
+			)
+			if err != nil {
+				logger.Logger.Error("构建生产单商品失败",
+					zap.Uint64("takeoutOrderItemUuid", item.NewItem.Uuid),
+					zap.Error(err))
+				continue
+			}
+			if productionOrderProduct == nil {
+				logger.Logger.Warn("新增商品未映射，跳过创建生产单商品",
+					zap.String("platformItemId", item.PlatformItemId))
+				continue
+			}
+
+			if err := productionRepo.CreateProductionOrderProduct(productionOrderProduct); err != nil {
+				logger.Logger.Error("创建生产单商品失败",
+					zap.Uint64("takeoutOrderItemUuid", item.NewItem.Uuid),
+					zap.Error(err))
+			}
+
+		case valueObject.ChangeTypeQuantity, valueObject.ChangeTypeAttribute:
+			// 数量变更或属性变更（加料等）：退旧增新
+			// 1. 旧商品标记退菜状态
+			if item.OldItem != nil && item.OldItem.Uuid > 0 {
+				if err := productionRepo.UpdateProductionOrderProductNumByTakeoutItemUuid(
+					item.OldItem.Uuid,
+					0,
+				); err != nil {
+					logger.Logger.Error("变更商品标记退菜失败",
+						zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
+						zap.String("changeType", item.ChangeType.String()),
+						zap.Error(err))
+				}
+			}
+
+			productionOrderProduct, err := s.buildProductionOrderProductFromTakeoutItem(
+				ctx, item.OldItem.Uuid, productionOrder.Uuid, orderUuid,
+			)
+			if err != nil {
+				logger.Logger.Error("构建生产单商品失败",
+					zap.Uint64("takeoutOrderItemUuid", item.NewItem.Uuid),
+					zap.String("changeType", item.ChangeType.String()),
+					zap.Error(err))
+				continue
+			}
+			if productionOrderProduct == nil {
+				continue
+			}
+
+			if err := productionRepo.CreateProductionOrderProduct(productionOrderProduct); err != nil {
+				logger.Logger.Error("变更商品创建生产单商品失败",
+					zap.Uint64("takeoutOrderItemUuid", item.NewItem.Uuid),
+					zap.String("changeType", item.ChangeType.String()),
+					zap.Error(err))
+			}
+
+		case valueObject.ChangeTypeRemoved:
+			// 数量变更或属性变更（加料等）：退旧增新
+			// 1. 旧商品标记退菜状态
+			if item.OldItem != nil && item.OldItem.Uuid > 0 {
+				if err := productionRepo.UpdateProductionOrderProductNumByTakeoutItemUuid(
+					item.OldItem.Uuid,
+					0,
+				); err != nil {
+					logger.Logger.Error("变更商品标记退菜失败",
+						zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
+						zap.String("changeType", item.ChangeType.String()),
+						zap.Error(err))
+				}
+			}
+		}
+	}
+
+	// 2. 处理送厨商品（新增或数量/属性变更）
+	for _, item := range changeResult.ReturnItems {
+		switch item.ChangeType {
+		case valueObject.ChangeTypeRemoved:
+			// 数量变更或属性变更（加料等）：退旧增新
+			// 1. 旧商品标记退菜状态
+			if item.OldItem != nil && item.OldItem.Uuid > 0 {
+				if err := productionRepo.UpdateProductionOrderProductNumByTakeoutItemUuid(
+					item.OldItem.Uuid,
+					0,
+				); err != nil {
+					logger.Logger.Error("变更商品标记退菜失败",
+						zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
+						zap.String("changeType", item.ChangeType.String()),
+						zap.Error(err))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// buildProductionOrderProductFromTakeoutItem 从外卖订单商品构建生产单商品
+// 用于增量更新生产单时创建新的生产单商品
+func (s *takeoutSrv) buildProductionOrderProductFromTakeoutItem(
+	ctx context.Context,
+	takeoutItemUuid uint64,
+	productionOrderUuid uint64,
+	takeoutOrderUuid uint64,
+) (*model.ProductionOrderProduct, error) {
+	db := ctx.GetDB()
+	currentTime := time.Now().Unix()
+
+	// 1. 查询外卖订单商品（包含 modifiers）
+	takeoutItemRepo := persistence.NewTakeoutOrderItemRepo(db)
+	takeoutItem, err := takeoutItemRepo.GetByUuid(takeoutItemUuid, takeoutItemRepo.WithModifiers())
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询外卖订单商品失败")
+	}
+	if takeoutItem == nil {
+		return nil, errors.New("外卖订单商品不存在")
+	}
+
+	// 如果没有映射的商品套餐，返回 nil
+	if takeoutItem.TtposProductPackageUuid == 0 {
+		return nil, nil
+	}
+
+	// 2. 生成 UUID
+	productUuid, err := utils.GetID()
+	if err != nil {
+		return nil, errors.WithMessage(err, "生成生产单商品UUID失败")
+	}
+
+	// 3. 查询 ProductPackage 获取分类信息
+	productPackageRepo := repository.NewProductPackageRepo(db)
+	productPackages, err := productPackageRepo.GetProductPackageList(
+		repository.CommonRepo.WhereInUuids([]uint64{takeoutItem.TtposProductPackageUuid}),
+		productPackageRepo.WithProductCategory(),
+	)
+	if err != nil {
+		logger.Logger.Error("查询商品套餐失败", zap.Error(err))
+	}
+
+	var firstCategoryUuid uint64
+	if len(productPackages) > 0 && productPackages[0].ProductCategory.Uuid > 0 {
+		firstCategoryUuid = productPackages[0].ProductCategory.GetFirstCategoryUuid()
+	}
+
+	// 4. 处理 modifiers，提取规格和属性
+	var productBomUuid uint64
+	var productBomName string
+	var attributeNames []string
+
+	for _, modifier := range takeoutItem.TakeoutOrderItemModifiers {
+		if modifier.IsMapped == 0 || modifier.TtposModifierUuid == 0 {
+			continue
+		}
+
+		switch modifier.TtposModifierType {
+		case string(valueObject.ModifierTypeFlavor):
+			// 规格
+			productBomUuid = modifier.TtposModifierUuid
+			productBomName = modifier.TtposModifierName
+		case string(valueObject.ModifierTypeAttr), string(valueObject.ModifierTypeSauce):
+			// 属性和加料
+			if modifier.TtposModifierName != "" {
+				attributeNames = append(attributeNames, modifier.TtposModifierName)
+			}
+		}
+	}
+
+	// 5. 合并多个属性的名称
+	var attributeNamesStr string
+	if len(attributeNames) > 0 {
+		localeResponses := make([]dto.LocaleResponse, 0, len(attributeNames))
+		for _, attrName := range attributeNames {
+			localeResp := language.JsonToLocaleResponse(attrName)
+			if localeResp != nil && !localeResp.IsNull() {
+				localeResponses = append(localeResponses, *localeResp)
+			}
+		}
+		if len(localeResponses) > 0 {
+			mergedLocale := language.MergeLocaleResponses(localeResponses, ";")
+			attributeNamesStr = mergedLocale.ToJson()
+		}
+	}
+
+	// 6. 使用商品名称（优先使用 TTPOS 商品名称）
+	itemName := takeoutItem.TtposItemName
+	if itemName == "" {
+		itemName = takeoutItem.ItemName
+	}
+
+	// 7. 构建 ProductionOrderProduct
+	productionOrderProduct := &model.ProductionOrderProduct{
+		BaseModel:             model.BaseModel{Uuid: productUuid, CreateTime: currentTime, UpdateTime: currentTime},
+		Name:                  itemName,
+		Num:                   float64(takeoutItem.Quantity),
+		InitNum:               float64(takeoutItem.Quantity),
+		FlavorName:            productBomName,
+		ProductBomUuid:        productBomUuid,
+		ProductAttributeNames: attributeNamesStr,
+		ProductSaucesNames:    "",
+		Status:                constant.ProductionOrderProductStatusCooking,
+		Remark:                "",
+		HasMaterial:           0,
+		ProductPackageUuid:    takeoutItem.TtposProductPackageUuid,
+		ProductionOrderUuid:   productionOrderUuid,
+		TakeoutOrderUuid:      takeoutOrderUuid,
+		TakeoutOrderItemUuid:  takeoutItem.Uuid,
+		FirstCategoryUuid:     firstCategoryUuid,
+	}
+
+	return productionOrderProduct, nil
+}
+
 // PrintTakeoutOrder 打印外卖订单小票
 func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, printLang string, firstExecution int) (*resp.PrinterData, error) {
 	// 1. 从领域层获取订单数据
@@ -1047,19 +1327,19 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 
 		// 2. 构建打印数据
 		printOrder := printer_model.Order{
-			Uuid:                   order.Uuid,                 // 使用外卖订单 UUID
-			SaleOrderUuid:          0,                          // 外卖订单没有 SaleOrder
-			OrderNo:                order.PlatformOrderId,      // 订单号
-			MealNum:                1,                          // 外卖订单默认1人
-			OrderSourceTakeoutText: order.GetCapitalPlatform(), // 显示平台名称（grab/lineman）
-			SerialNo:               order.ShortOrderNumber,     // 外卖订单流水号
-			OrderRemark:            nil,                        // 外卖订单备注（目前无此信息）
-			DeskUuid:               0,                          // 外卖订单无桌台
-			Desk:                   nil,                        // 外卖订单无桌台信息
-			UpdateTime:             int64(order.UpdateTime),    // 订单更新时间
-			FinishTime:             time.Now().Unix(),          // 订单完成时间
-			IsTakeout:              true,                       // 标记为第三方外卖平台订单
-			Products:               products,                   // 商品列表
+			Uuid:                   order.Uuid,                   // 使用外卖订单 UUID
+			SaleOrderUuid:          0,                            // 外卖订单没有 SaleOrder
+			OrderNo:                order.PlatformOrderId,        // 订单号
+			MealNum:                1,                            // 外卖订单默认1人
+			OrderSourceTakeoutText: order.GetSpacePlatformName(), // 显示平台名称（grab/lineman）
+			SerialNo:               order.ShortOrderNumber,       // 外卖订单流水号
+			OrderRemark:            nil,                          // 外卖订单备注（目前无此信息）
+			DeskUuid:               0,                            // 外卖订单无桌台
+			Desk:                   nil,                          // 外卖订单无桌台信息
+			UpdateTime:             int64(order.UpdateTime),      // 订单更新时间
+			FinishTime:             time.Now().Unix(),            // 订单完成时间
+			IsTakeout:              true,                         // 标记为第三方外卖平台订单
+			Products:               products,                     // 商品列表
 		}
 
 		// 3. 执行打印
@@ -1073,6 +1353,111 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 	})
 
 	return nil, nil
+}
+
+// PrintReturnOrder 打印退菜单（使用变更前的商品信息）
+// 此方法使用 changeResult.ReturnItems 中的 OldItem 数据，确保打印的是变更前的数量
+func (s *takeoutSrv) PrintReturnOrder(ctx context.Context, orderUuid uint64, changeResult *valueObject.OrderChangeResult) error {
+	if changeResult == nil || len(changeResult.ReturnItems) == 0 {
+		return nil
+	}
+
+	db := ctx.GetDB()
+	if db == nil {
+		return errors.New("数据库连接失败")
+	}
+
+	// 1. 获取订单基本信息（用于打印头信息）
+	order, err := domainService.NewTakeoutOrderSrv(s.dbm).GetOrderForPrint(ctx, orderUuid)
+	if err != nil {
+		return err
+	}
+
+	// 2. 构建退菜商品列表（使用 OldItem 中的数量）
+	products := make([]printer_model.OrderProduct, 0, len(changeResult.ReturnItems))
+
+	for _, item := range changeResult.ReturnItems {
+		if item.OldItem == nil || item.OldItem.TtposProductPackageUuid == 0 {
+			continue
+		}
+
+		// 使用 OldItem 中的信息
+		itemName := item.OldItem.ItemName
+		quantity := item.OldQuantity
+
+		// 构建修饰符信息
+		attrList := make([]dto.LocaleResponse, 0)
+		saucesList := make([]dto.LocaleResponse, 0)
+		flavorName := dto.LocaleResponse{}
+
+		for _, modifier := range item.OldItem.Modifiers {
+			modifierName := modifier.ModifierName
+			if modifierName == "" {
+				continue
+			}
+
+			localeResp := language.JsonToLocaleResponse(modifierName)
+			if localeResp == nil || localeResp.IsNull() {
+				continue
+			}
+
+			switch modifier.TtposModifierType {
+			case string(valueObject.ModifierTypeFlavor):
+				flavorName = *localeResp
+			case string(valueObject.ModifierTypeAttr):
+				attrList = append(attrList, *localeResp)
+			case string(valueObject.ModifierTypeSauce):
+				saucesList = append(saucesList, *localeResp)
+			}
+		}
+
+		product := printer_model.OrderProduct{
+			OrderProductId:        item.OldItem.Uuid,
+			ProductId:             item.OldItem.TtposProductPackageUuid,
+			ProductName:           *language.JsonToLocaleResponse(itemName),
+			ProductType:           uint8(item.OldItem.TtposProductType),
+			FlavorName:            flavorName,
+			ProductAttrList:       attrList,
+			ProductSauceNamesList: saucesList,
+			TotalNum:              float64(quantity), // 使用变更前的数量
+			ProductPrice:          item.OldItem.Price,
+			TotalPrice:            item.OldItem.Price * float64(quantity),
+			IsWrap:                order.IsTakeawayOrder(),
+		}
+		products = append(products, product)
+	}
+
+	if len(products) == 0 {
+		logger.Logger.Warn("退菜单打印：没有有效的商品",
+			zap.Uint64("orderUuid", orderUuid))
+		return nil
+	}
+
+	// 3. 构建打印数据
+	printOrder := printer_model.Order{
+		Uuid:                   order.Uuid,
+		SaleOrderUuid:          0,
+		OrderNo:                order.PlatformOrderId,
+		MealNum:                1,
+		OrderSourceTakeoutText: order.GetSpacePlatformName(),
+		SerialNo:               order.ShortOrderNumber,
+		OrderRemark:            nil,
+		DeskUuid:               0,
+		Desk:                   nil,
+		UpdateTime:             int64(order.UpdateTime),
+		FinishTime:             time.Now().Unix(),
+		IsTakeout:              true,
+		Products:               products,
+	}
+
+	// 4. 异步执行打印
+	utils.Go(func() {
+		printerRepo := printer.NewPrinterRepo(ctx, "")
+		printerRepo.SetFinishedTime(time.Now().Unix())
+		printerRepo.PrintingDishes(printerConst.PrinterProductTypeBackFood, printOrder)
+	})
+
+	return nil
 }
 
 // RecordTakeoutOrderPeakTime 记录外卖订单高峰期

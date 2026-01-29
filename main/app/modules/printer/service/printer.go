@@ -630,6 +630,10 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 		if testData["order"].(map[string]interface{})["reject_reason"] != nil && testData["order"].(map[string]interface{})["reject_reason"] != "" {
 			testData["order"].(map[string]interface{})["reject_reason"] = i18n.Translate(ctx.GetLanguage(), "这是退单原因！")
 		}
+		// 附加属性
+		if testData["order"].(map[string]interface{})["additional_properties"] != nil {
+			testData["order"].(map[string]interface{})["additional_properties"] = i18n.Translate(ctx.GetLanguage(), "如不接受塑料餐盒")
+		}
 	}
 	return testData, nil
 }

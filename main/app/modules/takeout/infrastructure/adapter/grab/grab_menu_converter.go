@@ -126,7 +126,7 @@ func (c *GrabConverter) ValidateData(platformData interface{}) error {
 }
 
 // LoadMenuFromDatabase 从数据库加载菜单数据（辅助方法）
-func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid uint64, currencyUnit string, categoryIDs []uint64) (*grabfood.GetMenuNewResponse, error) {
+func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, platform string, companyUuid uint64, currencyUnit string, categoryIDs []uint64) (*grabfood.GetMenuNewResponse, error) {
 	menu := grabfood.NewGetMenuNewResponseWithDefaults()
 	// 设置 PartnerMerchantID
 	menu.SetPartnerMerchantID(strconv.FormatUint(companyUuid, 10))
@@ -168,21 +168,21 @@ func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid ui
 	})
 
 	// 从数据库加载实际的分类和商品数据
-	categories, err := c.menuRepo.GetTakeoutCategories(ctx, companyUuid, categoryIDs)
+	categories, err := c.menuRepo.GetTakeoutCategories(ctx, categoryIDs)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询外卖分类失败")
 	}
 
 	// 转换分类和加载商品
 	for idx, cat := range categories {
-		category, err := c.convertTTPOSCategory(ctx, cat, idx+1)
+		category, err := c.convertTTPOSCategory(ctx, platform, cat, idx+1)
 		if err != nil {
 			return nil, errors.WithMessage(err, fmt.Sprintf("转换分类失败: %s", cat.Name))
 		}
 
 		// 为该分类加载商品
-		if err := c.loadCategoryProducts(ctx, companyUuid, category, cat.Uuid); err != nil {
-			return nil, errors.WithMessage(err, fmt.Sprintf("加载分类商品失败: %s", cat.Name))
+		if err := c.loadCategoryProducts(ctx, platform, category, cat.Uuid); err != nil {
+			return nil, errors.WithMessage(err, fmt.Sprintf("加载分类商品失败: %s, platform: %s", cat.Name, platform))
 		}
 
 		// 分类下无商品则不添加
@@ -198,7 +198,7 @@ func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid ui
 }
 
 // convertTTPOSCategory 从 TTPOS model 转换分类
-func (c *GrabConverter) convertTTPOSCategory(ctx context.Context, cat any, sequence int) (*grabfood.MenuCategory, error) {
+func (c *GrabConverter) convertTTPOSCategory(_ context.Context, platform string, cat any, sequence int) (*grabfood.MenuCategory, error) {
 	// 类型断言
 	category, ok := cat.(*model.ProductCategory)
 	if !ok {
@@ -224,7 +224,7 @@ func (c *GrabConverter) convertTTPOSCategory(ctx context.Context, cat any, seque
 		if category.SourceId != "" {
 			return category.SourceId
 		}
-		return fmt.Sprintf("TTPOS-CAT-%d", category.Uuid)
+		return fmt.Sprintf("%s%d", value_object.PrefixCategory.GetPrefix(platform), category.Uuid) // value_object.PrefixCategory
 	}())
 	categoryVO.SetName(c.truncateName(categoryName))
 	categoryVO.SetSequence(int32(sequence))
@@ -235,7 +235,7 @@ func (c *GrabConverter) convertTTPOSCategory(ctx context.Context, cat any, seque
 }
 
 // convertTTPOSProduct 从 TTPOS model 转换商品
-func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequence int) (*grabfood.MenuItem, error) {
+func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, platform string, pkg any, sequence int) (*grabfood.MenuItem, error) {
 	// 类型断言
 	takeoutProduct, ok := pkg.(*model.ProductPackageTakeout)
 	if !ok {
@@ -333,6 +333,13 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 	// 设置商品图片（使用 GetUrl 方法，如果没有本地图片则使用外部URL）
 	if takeoutProduct.ImageFile.Uuid != 0 && takeoutProduct.ImageFile.FileUrl != "" {
 		imageUrl := takeoutProduct.ImageFile.GetUrl(utils.GetBaseURL(nil))
+		// 判断如果是 Lineman 平台，去掉 URL 中的查询参数（? 及其后面的内容）
+		if platform == value_object.TakeoutPlatformLineman {
+			if idx := strings.Index(imageUrl, "?"); idx != -1 {
+				imageUrl = imageUrl[:idx]
+			}
+		}
+		// 设置图片URL
 		menuItem.SetPhotos([]string{imageUrl})
 	} else if takeoutProduct.ProductPackage.ImageUrl != "" {
 		// 如果没有本地图片文件，使用外部图片URL
@@ -345,20 +352,20 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 			if takeoutProduct.SourceProductId != "" {
 				return takeoutProduct.SourceProductId
 			}
-			return fmt.Sprintf("TTPOS-ITEM-%d", takeoutProduct.ProductPackageUuid)
+			return fmt.Sprintf("%s%d", value_object.PrefixItem.GetPrefix(platform), takeoutProduct.ProductPackageUuid)
 		}())
 		// 1. 处理 ProductFlavor（规格）
-		if err := c.convertProductFlavors(ctx, menuItem, takeoutProduct); err != nil {
+		if err := c.convertProductFlavors(ctx, platform, menuItem, takeoutProduct); err != nil {
 			return nil, errors.WithMessage(err, "转换商品规格失败")
 		}
 
 		// 2. 处理 ProductSauce（小料）
-		if err := c.convertProductSauces(ctx, menuItem, takeoutProduct); err != nil {
+		if err := c.convertProductSauces(ctx, platform, menuItem, takeoutProduct); err != nil {
 			return nil, errors.WithMessage(err, "转换商品小料失败")
 		}
 
 		// 3. 处理 ProductAttributeGroup（属性组）
-		if err := c.convertProductAttributeGroups(ctx, menuItem, takeoutProduct); err != nil {
+		if err := c.convertProductAttributeGroups(ctx, platform, menuItem, takeoutProduct); err != nil {
 			return nil, errors.WithMessage(err, "转换商品属性组失败")
 		}
 	} else {
@@ -366,10 +373,10 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 			if takeoutProduct.SourceProductId != "" {
 				return takeoutProduct.SourceProductId
 			}
-			return fmt.Sprintf("TTPOS-PACKAGE-%d", takeoutProduct.ProductPackageUuid)
+			return fmt.Sprintf("%s%d", value_object.PrefixPackage.GetPrefix(platform), takeoutProduct.ProductPackageUuid)
 		}())
 		// 4. 处理套餐分组（如果是套餐）
-		if err := c.convertPackageGroups(ctx, menuItem, takeoutProduct); err != nil {
+		if err := c.convertPackageGroups(ctx, platform, menuItem, takeoutProduct); err != nil {
 			return nil, errors.WithMessage(err, "转换套餐分组失败")
 		}
 	}
@@ -419,16 +426,16 @@ func (c *GrabConverter) filterSupportedLanguages(translations map[string]string,
 }
 
 // loadCategoryProducts 加载分类下的商品
-func (c *GrabConverter) loadCategoryProducts(ctx context.Context, companyUuid uint64, category *grabfood.MenuCategory, categoryUuid uint64) error {
+func (c *GrabConverter) loadCategoryProducts(ctx context.Context, platform string, category *grabfood.MenuCategory, categoryUuid uint64) error {
 	// 查询外卖商品
-	takeoutProducts, err := c.menuRepo.GetTakeoutProducts(ctx, companyUuid, categoryUuid)
+	takeoutProducts, err := c.menuRepo.GetTakeoutProducts(ctx, platform, categoryUuid)
 	if err != nil {
 		return errors.WithMessage(err, "查询外卖商品失败")
 	}
 
 	// 转换商品并添加到分类
 	for idx, pkg := range takeoutProducts {
-		menuItem, err := c.convertTTPOSProduct(ctx, pkg, idx+1)
+		menuItem, err := c.convertTTPOSProduct(ctx, platform, pkg, idx+1)
 		if err != nil {
 			return errors.WithMessage(err, fmt.Sprintf("转换商品失败: %s", pkg.Name))
 		}
@@ -476,6 +483,7 @@ func (c *GrabConverter) getCurrencyInfoBySymbol(_ string) grabfood.Currency {
 // convertProductFlavors 转换商品规格为修饰符组
 func (c *GrabConverter) convertProductFlavors(
 	_ context.Context,
+	platform string,
 	menuItem *grabfood.MenuItem,
 	takeoutProduct *model.ProductPackageTakeout,
 ) error {
@@ -535,7 +543,7 @@ func (c *GrabConverter) convertProductFlavors(
 	}
 
 	// 判断规格是否必选：通常如果有多个规格，可能是可选的；如果只有一个规格，可能是必选的
-	// 根据图片规则：必选时固定组(必选) min:1 max:1，可选时可选组(非必选) min:0 max:1
+	// 根据规则：必选时固定组(必选) min:1 max:1，可选时可选组(非必选) min:0 max:1
 	minSelection := 1
 	maxSelection := 1 // 规格只能选一个
 
@@ -573,7 +581,7 @@ func (c *GrabConverter) convertProductFlavors(
 
 	// 创建修饰符组
 	modifierGroup := grabfood.NewModifierGroupWithDefaults()
-	modifierGroup.SetId(value_object.PrefixFlavorGroup + strconv.FormatUint(takeoutProduct.ProductPackageUuid, 10))
+	modifierGroup.SetId(value_object.PrefixFlavorGroup.GetPrefix(platform) + strconv.FormatUint(takeoutProduct.ProductPackageUuid, 10))
 	modifierGroup.SetName(c.truncateName(translationLangs.GetLocale(c.defaultLanguage)))
 	modifierGroup.SetNameTranslation(c.filterSupportedLanguages(translations))
 	modifierGroup.SetSequence(1)
@@ -618,7 +626,7 @@ func (c *GrabConverter) convertProductFlavors(
 			if takeoutModifierId, exists := takeoutModifierIdMap[bom.Uuid]; exists && takeoutModifierId != "" {
 				return takeoutModifierId
 			}
-			return value_object.PrefixFlavor + strconv.FormatUint(bom.Uuid, 10)
+			return value_object.PrefixFlavor.GetPrefix(platform) + strconv.FormatUint(bom.Uuid, 10)
 		}())
 		modifier.SetName(c.truncateName(flavorName))
 		modifier.SetSequence(int32(idx + 1))
@@ -636,7 +644,7 @@ func (c *GrabConverter) convertProductFlavors(
 }
 
 // convertProductSauces 转换商品小料为修饰符组
-func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grabfood.MenuItem, takeoutProduct *model.ProductPackageTakeout) error {
+func (c *GrabConverter) convertProductSauces(ctx context.Context, platform string, menuItem *grabfood.MenuItem, takeoutProduct *model.ProductPackageTakeout) error {
 	// 检查是否有小料
 	if takeoutProduct.ProductPackage.Uuid == 0 {
 		return nil
@@ -700,7 +708,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 
 	// 创建修饰符组
 	modifierGroup := grabfood.NewModifierGroupWithDefaults()
-	modifierGroup.SetId(fmt.Sprintf("TTPOS-SAUCE-GROUP-%d", takeoutProduct.ProductPackage.Uuid))
+	modifierGroup.SetId(value_object.PrefixSauceGroup.GetPrefix(platform) + strconv.FormatUint(takeoutProduct.ProductPackage.Uuid, 10))
 	modifierGroup.SetName(c.truncateName(translationLangs.GetLocale(c.defaultLanguage)))
 	modifierGroup.SetNameTranslation(c.filterSupportedLanguages(translations))
 	modifierGroup.SetSequence(2)
@@ -732,7 +740,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 		}
 
 		modifier := grabfood.NewMenuModifierWithDefaults()
-		modifier.SetId(value_object.PrefixSauce + strconv.FormatUint(bom.Uuid, 10))
+		modifier.SetId(value_object.PrefixSauce.GetPrefix(platform) + strconv.FormatUint(bom.Uuid, 10))
 		modifier.SetName(c.truncateName(sauceName))
 		modifier.SetSequence(int32(idx + 1))
 		modifier.SetAvailableStatus(string(modifierStatus))
@@ -754,7 +762,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 }
 
 // convertProductAttributeGroups 转换商品属性组为修饰符组
-func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuItem *grabfood.MenuItem, takeoutProduct *model.ProductPackageTakeout) error {
+func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, platform string, menuItem *grabfood.MenuItem, takeoutProduct *model.ProductPackageTakeout) error {
 	// 检查是否有属性组
 	if takeoutProduct.ProductPackage.Uuid == 0 || len(takeoutProduct.ProductPackage.ProductPackageAttributeGroups) == 0 {
 		return nil
@@ -798,7 +806,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 			if packageAttrGroup.ProductAttributeGroup.SourceId != "" {
 				return packageAttrGroup.ProductAttributeGroup.SourceId
 			}
-			return value_object.PrefixAttrGroup + strconv.FormatUint(packageAttrGroup.ProductAttributeGroup.Uuid, 10)
+			return value_object.PrefixAttrGroup.GetPrefix(platform) + strconv.FormatUint(packageAttrGroup.ProductAttributeGroup.Uuid, 10)
 		}())
 		modifierGroup.SetName(c.truncateName(groupName))
 		modifierGroup.SetNameTranslation(c.filterSupportedLanguages(packageAttrGroup.ProductAttributeGroup.MultiLanguageName.ToMap()))
@@ -830,7 +838,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 				if packageAttr.Attribute.SourceId != "" {
 					return packageAttr.Attribute.SourceId
 				}
-				return value_object.PrefixAttr + strconv.FormatUint(packageAttr.Uuid, 10)
+				return value_object.PrefixAttr.GetPrefix(platform) + strconv.FormatUint(packageAttr.Uuid, 10)
 			}())
 			modifier.SetName(c.truncateName(attrName))
 			modifier.SetSequence(int32(idx + 1))
@@ -860,7 +868,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 }
 
 // convertPackageGroups 转换套餐分组为修饰符组
-func (c *GrabConverter) convertPackageGroups(_ context.Context, menuItem *grabfood.MenuItem, takeoutProduct *model.ProductPackageTakeout) error {
+func (c *GrabConverter) convertPackageGroups(_ context.Context, platform string, menuItem *grabfood.MenuItem, takeoutProduct *model.ProductPackageTakeout) error {
 	// 检查是否有套餐分组
 	if takeoutProduct.ProductPackage.Uuid == 0 || len(takeoutProduct.ProductPackage.ProductPackageGroups) == 0 {
 		return nil
@@ -970,7 +978,7 @@ func (c *GrabConverter) convertPackageGroups(_ context.Context, menuItem *grabfo
 
 		// 创建修饰符组
 		modifierGroup := grabfood.NewModifierGroupWithDefaults()
-		modifierGroup.SetId(value_object.PrefixPackageGroup + strconv.FormatUint(packageGroup.Uuid, 10))
+		modifierGroup.SetId(value_object.PrefixPackageGroup.GetPrefix(platform) + strconv.FormatUint(packageGroup.Uuid, 10))
 		modifierGroup.SetName(c.truncateName(groupName))
 		modifierGroup.SetNameTranslation(nameTranslation)
 		modifierGroup.SetSequence(int32(sequence))
@@ -1005,7 +1013,7 @@ func (c *GrabConverter) convertPackageGroups(_ context.Context, menuItem *grabfo
 
 			// 创建修饰符
 			modifier := grabfood.NewMenuModifierWithDefaults()
-			modifier.SetId(value_object.PrefixPackageItem + strconv.FormatUint(groupItem.Uuid, 10))
+			modifier.SetId(value_object.PrefixPackageItem.GetPrefix(platform) + strconv.FormatUint(groupItem.Uuid, 10))
 			modifier.SetName(c.truncateName(itemName))
 			modifier.SetSequence(int32(idx + 1))
 			modifier.SetAvailableStatus(string(value_object.AvailableStatusAvailable))

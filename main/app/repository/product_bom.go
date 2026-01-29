@@ -21,6 +21,8 @@ type IProductBomRepo interface {
 	GetProductBomCardByUuid(productBomUuid uint64) (*model.ProductBomCard, error)                  // 获取成本卡
 	AddActualSaleNum(productBomUuid uint64, saleNum float64) error                                 // 增加实际销量
 	SubActualSaleNum(productBomUuid uint64, saleNum float64) error                                 // 减少实际销量
+	AddStockNum(productBomUuid uint64, stockNum float64) error                                     // 增加库存
+	SubStockNum(productBomUuid uint64, stockNum float64) error                                     // 减少库存
 	DestroyProductBom(opts ...DBOption) error
 }
 
@@ -605,6 +607,20 @@ func (r *productBomRepoImpl) AddActualSaleNum(productBomUuid uint64, saleNum flo
 
 func (r *productBomRepoImpl) SubActualSaleNum(productBomUuid uint64, saleNum float64) error {
 	if err := r.db.Model(&model.ProductBom{}).Where("uuid = ?", productBomUuid).Update("actual_sale_num", gorm.Expr("actual_sale_num - ?", saleNum)).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+func (r *productBomRepoImpl) AddStockNum(productBomUuid uint64, stockNum float64) error {
+	if err := r.db.Model(&model.ProductBom{}).Where("uuid = ?", productBomUuid).Update("stock_num", gorm.Expr("stock_num + ?", stockNum)).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+func (r *productBomRepoImpl) SubStockNum(productBomUuid uint64, stockNum float64) error {
+	if err := r.db.Model(&model.ProductBom{}).Where("uuid = ?", productBomUuid).Update("stock_num", gorm.Expr("stock_num - ?", stockNum)).Error; err != nil {
 		return errors.WithMessage(err)
 	}
 	return nil

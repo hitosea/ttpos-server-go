@@ -20,6 +20,7 @@ message GetOrderInfoResp {
   string order_type = 3;    // 订单类型
   string raw_data = 4;      // 原始JSON数据
   string provider_name = 5; // 渠道名称: grab, foodpanda, lineman
+  string order_data = 6;    // 转换后的统一订单数据（TakeoutOrder JSON）
 }
 
 // 准备订单请求（接受/拒绝）

@@ -3,6 +3,7 @@ package grab
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/errors"
@@ -53,7 +54,7 @@ func ConvertPlatformStateToOrderState(platformState string, ttposOrderState int)
 		}
 		return valueobject.TakeoutOrderStateRiderProcessing // 3 - 骑手配送中（已到店/已取餐/配送中）
 
-	case "DELIVERED":
+	case "DELIVERED", "COMPLETED":
 		if ttposOrderState == valueobject.TakeoutOrderStateAccepted {
 			return ttposOrderState // 不合法状态，不能从已接单配餐中到店
 		}
@@ -79,10 +80,49 @@ func ConvertPlatformStateToOrderState(platformState string, ttposOrderState int)
 //
 // 本方法会自动识别并处理这两种格式，统一返回 GrabOrderWebhook 结构
 func (c *GrabConverter) ParseOrderWebhook(rawData []byte) (interface{}, error) {
+	// 预处理：处理 additionalProperties 字段类型不匹配的情况
+	// Grab SDK 期望 map[string]interface{}，但实际可能是 string 或 array
+	var tempMap map[string]interface{}
+	var additionalPropsValue interface{} // 保存原始值
+
+	if err := json.Unmarshal(rawData, &tempMap); err == nil {
+		if addProps, exists := tempMap["additionalProperties"]; exists {
+			additionalPropsValue = addProps // 保存原始值供后续使用
+
+			// 检查类型，如果不是 map，则删除该字段避免解析错误
+			switch addProps.(type) {
+			case map[string]interface{}:
+				// 正确的类型，不需要处理
+			default:
+				// 是 string 或 array，删除该字段
+				delete(tempMap, "additionalProperties")
+				// 重新序列化
+				var err error
+				rawData, err = json.Marshal(tempMap)
+				if err != nil {
+					return nil, fmt.Errorf("预处理 Grab 订单数据失败: %w", err)
+				}
+			}
+		}
+	}
+
 	// 先尝试解析为 SubmitOrderRequest（Grab SDK 类型）
 	var submitOrderReq grabfood.SubmitOrderRequest
 	if err := json.Unmarshal(rawData, &submitOrderReq); err != nil {
 		return nil, fmt.Errorf("解析 Grab 订单数据失败: %w", err)
+	}
+
+	// 如果原始 additionalProperties 是数组，手动恢复并转换为 map 格式
+	if additionalPropsValue != nil {
+		if arrayValue, ok := additionalPropsValue.([]interface{}); ok {
+			for index, value := range arrayValue {
+				if valueMap, ok := value.(map[string]interface{}); ok {
+					if name, ok := valueMap["name"].(string); ok {
+						submitOrderReq.AdditionalProperties[name+"_"+strconv.Itoa(index)] = valueMap["name"]
+					}
+				}
+			}
+		}
 	}
 
 	// 检查是否解析成功（通过必填字段判断）
@@ -208,6 +248,24 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 		estimation := submitOrderReq.GetOrderReadyEstimation()
 		order.EstimatedReadyTime = estimation.GetEstimatedOrderReadyTime().Unix()
 		order.MaxReadyTime = estimation.GetMaxOrderReadyTime().Unix()
+	}
+
+	// 附加项目映射 (additionalProperties -> additional_properties)
+	// Grab SDK 的 AdditionalProperties 是 map[string]interface{}
+	if len(submitOrderReq.AdditionalProperties) > 0 {
+		additionalItemNames := make([]string, 0, len(submitOrderReq.AdditionalProperties))
+		for _, value := range submitOrderReq.AdditionalProperties {
+			if value != nil {
+				// 将值转换为字符串
+				valueStr := fmt.Sprintf("%v", value)
+				if valueStr != "" {
+					additionalItemNames = append(additionalItemNames, valueStr)
+				}
+			}
+		}
+		if len(additionalItemNames) > 0 {
+			order.AdditionalProperties = strings.Join(additionalItemNames, ", ")
+		}
 	}
 
 	// 解析商品数据并填充到 order.TakeoutOrderItems

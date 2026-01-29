@@ -51,26 +51,35 @@ func (s *erpSrv) GetDeliveryNoteList(ctx pkgCtx.Context, getDeliveryNoteListReq 
 }
 
 // GetDeliveryNote 获取单个送货单详情
-func (s *erpSrv) GetDeliveryNote(ctx pkgCtx.Context, companyAbbr, dnName string, includeItems bool) (*delivery_note.DeliveryNote, error) {
-	// 通过 GetDeliveryNoteList 获取，然后根据 Name 过滤
-	listResp, err := s.GetDeliveryNoteList(ctx, &delivery_note.GetDeliveryNoteListReq{
-		CompanyAbbr:  companyAbbr,
-		IncludeItems: includeItems,
+func (s *erpSrv) GetDeliveryNote(ctx pkgCtx.Context, dnName string) (*delivery_note.DeliveryNote, error) {
+	client, conn, err := NewErpDeliveryNoteClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	companySetting := ctx.GetCompany().CompanySetting
+
+	result, err := client.GetDeliveryNote(WithSiteCode(context.Background(), companySetting.ErpnextSiteCode), &delivery_note.GetDeliveryNoteReq{
+		DeliveryNoteName: dnName,
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	if listResp == nil || len(listResp.DeliveryNoteList) == 0 {
-		return nil, errors.New("送货单不存在")
+	if result.Code != "0" {
+		logger.Logger.Error("GetDeliveryNote-GetDeliveryNote", zap.Any("err", err), zap.String("message", result.GetMessage()))
+		return nil, errors.New("调用erp接口失败-30002-" + result.GetMessage())
 	}
-
-	// 根据 Name 查找目标 DN
-	for _, dn := range listResp.DeliveryNoteList {
-		if dn.Name == dnName {
-			return dn, nil
+	if result.Data != nil {
+		var resp delivery_note.GetDeliveryNoteResp
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("GetDeliveryNote-UnmarshalTo", zap.Any("err", err))
+			return nil, err
 		}
+		if resp.DeliveryNote == nil {
+			return nil, errors.New("送货单不存在: " + dnName)
+		}
+		return resp.DeliveryNote, nil
 	}
-
 	return nil, errors.New("送货单不存在: " + dnName)
 }

@@ -263,10 +263,12 @@ func migrateDatabaseConf(opt copier.Option) {
 
 func takeoutConf(opt copier.Option) {
 	Takeout = TakeoutConf{
-		TakeoutTtposSecret: "",
+		TakeoutTtposSecret:    "",
+		TakeoutLinemanStoreId: 0,
 	}
 	copier.CopyWithOption(&Takeout, TakeoutConf{
-		TakeoutTtposSecret: viper.GetString("TAKEOUT_TTPOS_SECRET"),
+		TakeoutTtposSecret:    viper.GetString("TAKEOUT_TTPOS_SECRET"),
+		TakeoutLinemanStoreId: viper.GetUint64("TAKEOUT_LINEMAN_STORE_ID"),
 	}, opt)
 }
 
