@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -80,7 +81,15 @@ func (h *orderCancelledEventHandler) Handle(domainEvent event.DomainEvent) error
 
 	// 异步同步到 ERP
 	utils.Go(func() {
-		if err := service.NewTakeoutErpSyncService().SyncOrderCancelledToERP(ctx, orderUuid); err != nil {
+		// 订单取消场景：只取消发票，不需要重新创建（should_resync: false）
+		remarkData := map[string]any{
+			"shop_uuid":     company.Uuid,
+			"order_type":    "takeout",
+			"should_resync": false, // 订单取消，不需要重新创建发票
+		}
+		remarkJSON, _ := json.Marshal(remarkData)
+
+		if err := service.NewTakeoutErpSyncService().SyncOrderCancelledToERP(ctx, orderUuid, string(remarkJSON)); err != nil {
 			logger.Logger.Error("同步 Grab 订单取消到 ERP 失败",
 				zap.Uint64("orderUuid", orderUuid),
 				zap.Error(err))
