@@ -18680,6 +18680,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/kiosk/order/pay/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "用于 KBank 等需要主动上报支付结果的场景。Kiosk 调用此接口确认支付完成后，系统会自动执行送厨、打印送厨单和完成订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.订单"
+                ],
+                "summary": "Kiosk 支付完成确认",
+                "parameters": [
+                    {
+                        "description": "支付确认参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.KioskPaymentConfirmReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/kiosk/order/pay/status": {
             "get": {
                 "security": [
@@ -29714,7 +29756,7 @@ const docTemplate = `{
             }
         },
         "/shop/purchase/receipt/cancel": {
-            "post": {
+            "delete": {
                 "security": [
                     {
                         "JwtToken": []
@@ -45310,6 +45352,41 @@ const docTemplate = `{
                 "company_uuid": {
                     "description": "商户UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "req.KioskPaymentConfirmReq": {
+            "type": "object",
+            "required": [
+                "payment_amount",
+                "payment_method_uuid",
+                "sale_bill_uuid",
+                "sale_order_uuid"
+            ],
+            "properties": {
+                "payment_amount": {
+                    "description": "实际支付金额, 必填",
+                    "type": "number"
+                },
+                "payment_info": {
+                    "description": "支付信息（KBank 返回的完整支付信息 JSON）",
+                    "type": "string"
+                },
+                "payment_method_uuid": {
+                    "description": "支付方式UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID, 必填",
+                    "type": "integer"
+                },
+                "transaction_number": {
+                    "description": "交易流水号（KBank 返回的交易号）",
+                    "type": "string"
                 }
             }
         },
@@ -61027,6 +61104,14 @@ const docTemplate = `{
                         "$ref": "#/definitions/resp.PurchaseReceiptItemInfo"
                     }
                 },
+                "locale_warehouse_name": {
+                    "description": "来源仓库名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "num": {
                     "description": "物品数量",
                     "type": "integer"
@@ -61050,14 +61135,6 @@ const docTemplate = `{
                 "receive_time": {
                     "description": "收货日期",
                     "type": "integer"
-                },
-                "source_warehouse_name": {
-                    "description": "来源仓库名称（多语言）",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
                 },
                 "status": {
                     "description": "状态 0-待收货 1-已收货 2-已取消",
@@ -61096,6 +61173,14 @@ const docTemplate = `{
                     "description": "是否来自DN单据",
                     "type": "boolean"
                 },
+                "locale_warehouse_name": {
+                    "description": "来源仓库名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "num": {
                     "description": "物品数量",
                     "type": "integer"
@@ -61119,14 +61204,6 @@ const docTemplate = `{
                 "receive_time": {
                     "description": "收货日期",
                     "type": "integer"
-                },
-                "source_warehouse_name": {
-                    "description": "来源仓库名称（多语言）",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
                 },
                 "status": {
                     "description": "状态 0-待收货 1-已收货 2-已取消",
@@ -61308,6 +61385,14 @@ const docTemplate = `{
                     "description": "是否为旧采购单收货清单（无ErpSaleOrderNo）",
                     "type": "boolean"
                 },
+                "locale_warehouse_name": {
+                    "description": "仓库名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "receipt_orders": {
                     "description": "收货单列表",
                     "type": "array",
@@ -61397,8 +61482,8 @@ const docTemplate = `{
                     "description": "物料UUID",
                     "type": "integer"
                 },
-                "pending_num": {
-                    "description": "待收货数量",
+                "num": {
+                    "description": "剩余可收货数量",
                     "type": "number"
                 },
                 "purchase_num": {
@@ -61452,8 +61537,8 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "pending_num": {
-                    "description": "待收货数量",
+                "num": {
+                    "description": "剩余可收货数量",
                     "type": "number"
                 },
                 "purchase_num": {
@@ -61483,6 +61568,18 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.ReceiptPendingItemInfo"
                     }
+                },
+                "locale_warehouse_name": {
+                    "description": "仓库名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "order_no": {
+                    "description": "采购单号",
+                    "type": "string"
                 },
                 "supplier_erp_code": {
                     "description": "供应商ERP编码",

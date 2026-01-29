@@ -762,8 +762,58 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 
 	// 补充收货单额外字段
 	detailResp.SupplierName = receipt.SupplierName
-	detailResp.SourceWarehouseName = *language.JsonToLocaleResponse(receipt.SourceWarehouseName)
+	detailResp.LocaleWarehouseName = *language.JsonToLocaleResponse(receipt.SourceWarehouseName)
 	detailResp.IsFromDeliveryNote = receipt.IsFromDeliveryNote == 1
+
+	// 如果是DN收货单，预先获取DN数据和同DN的已到货数据
+	// key: "material_code:erpnext_uom", value: {dnQty, arrivedQty}
+	type dnUnitData struct {
+		DnQty      float64 // DN中的采购数量
+		ArrivedQty float64 // 同DN已确认收货单的到货数量
+	}
+	dnUnitDataMap := make(map[string]dnUnitData)
+
+	if receipt.IsFromDeliveryNote == 1 && receipt.DeliveryNoteNo != "" {
+		// 获取DN详情
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		targetDN, err := erpSrv.GetDeliveryNote(ctx, receipt.DeliveryNoteNo)
+		if err == nil && targetDN != nil {
+			// 构建DN物品单位数量映射
+			for _, dnItem := range targetDN.Items {
+				key := dnItem.ItemCode + ":" + dnItem.Uom
+				data := dnUnitDataMap[key]
+				data.DnQty += dnItem.Qty
+				dnUnitDataMap[key] = data
+			}
+
+			// 获取同DN的所有已确认收货单，计算已到货数量
+			sameReceiptOrders, err := receiptOrderRepo.GetList(
+				receiptOrderRepo.WherePurchaseOrderUuid(receipt.PurchaseOrderUuid),
+				receiptOrderRepo.WhereDeliveryNoteNo(receipt.DeliveryNoteNo),
+				receiptOrderRepo.WhereStatusIn([]int{constant.ReceiptOrderStatusReceived}),
+				receiptOrderRepo.WithItems(),
+			)
+			if err == nil {
+				for _, ro := range sameReceiptOrders {
+					for _, item := range ro.Items {
+						if len(item.Units) > 0 {
+							for _, unit := range item.Units {
+								key := item.MaterialCode + ":" + unit.ErpnextUom
+								data := dnUnitDataMap[key]
+								data.ArrivedQty += unit.Num
+								dnUnitDataMap[key] = data
+							}
+						} else {
+							key := item.MaterialCode + ":" + item.ErpnextUom
+							data := dnUnitDataMap[key]
+							data.ArrivedQty += item.Num
+							dnUnitDataMap[key] = data
+						}
+					}
+				}
+			}
+		}
+	}
 
 	// 转换收货明细数据
 	detailResp.Items = make([]resp.PurchaseReceiptItemInfo, 0, len(receipt.Items))
@@ -806,13 +856,23 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 			return unitList
 		}(item)
 		// 单位列表
-		itemInfo.Units = func(item model.PurchaseReceiptOrderItem) []resp.PurchaseOrderItemUnit {
+		itemInfo.Units = func() []resp.PurchaseOrderItemUnit {
 			unitList := []resp.PurchaseOrderItemUnit{}
 			if len(item.Units) == 0 {
+				// DN收货单：从DN数据获取采购数量和已到货数量
+				purchaseNum := item.PurchaseOrderItem.Num
+				arrivalNum := item.PurchaseOrderItem.ArrivalNum
+				if receipt.IsFromDeliveryNote == 1 {
+					key := item.MaterialCode + ":" + item.ErpnextUom
+					if data, exists := dnUnitDataMap[key]; exists {
+						purchaseNum = data.DnQty
+						arrivalNum = data.ArrivedQty
+					}
+				}
 				unitList = append(unitList, resp.PurchaseOrderItemUnit{
 					Num:         item.Num,
-					ArrivalNum:  item.PurchaseOrderItem.ArrivalNum,
-					PurchaseNum: item.PurchaseOrderItem.Num,
+					ArrivalNum:  arrivalNum,
+					PurchaseNum: purchaseNum,
 					UnitUuid:    item.UnitUuid,
 					LocaleName:  *language.JsonToLocaleResponse(item.UnitName),
 				})
@@ -820,16 +880,26 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 				for _, unit := range item.Units {
 					purchaseNum := 0.0
 					arrivalNum := 0.0
-					for _, purchaseOrderItemUnit := range item.PurchaseOrderItem.Units {
-						if purchaseOrderItemUnit.UnitUuid == unit.UnitUuid {
-							purchaseNum += purchaseOrderItemUnit.Num
-							arrivalNum += purchaseOrderItemUnit.ArrivalNum
+					if receipt.IsFromDeliveryNote == 1 {
+						// DN收货单：从DN数据获取采购数量和已到货数量
+						key := item.MaterialCode + ":" + unit.ErpnextUom
+						if data, exists := dnUnitDataMap[key]; exists {
+							purchaseNum = data.DnQty
+							arrivalNum = data.ArrivedQty
+						}
+					} else {
+						// 非DN收货单：从采购单物品单位获取
+						for _, purchaseOrderItemUnit := range item.PurchaseOrderItem.Units {
+							if purchaseOrderItemUnit.UnitUuid == unit.UnitUuid {
+								purchaseNum += purchaseOrderItemUnit.Num
+								arrivalNum += purchaseOrderItemUnit.ArrivalNum
+							}
 						}
 					}
 					unitList = append(unitList, resp.PurchaseOrderItemUnit{
-						Num:         unit.Num,
-						ArrivalNum:  arrivalNum,
-						PurchaseNum: purchaseNum,
+						Num:         unit.Num,    // 当前收货单对应物品单位的数量
+						ArrivalNum:  arrivalNum,  // 同DN已确认收货单的到货数量
+						PurchaseNum: purchaseNum, // DN中的采购数量
 						UnitUuid:    unit.UnitUuid,
 						LocaleName: func() dto.LocaleResponse {
 							if unit.UnitName == "" && unit.MaterialUnit != nil {
@@ -841,7 +911,7 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 				}
 			}
 			return unitList
-		}(item)
+		}()
 
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}

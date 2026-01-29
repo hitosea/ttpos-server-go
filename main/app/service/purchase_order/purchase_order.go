@@ -440,11 +440,10 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 	}
 	detailResp.ReceiptBatchNum = int(receiptBatchNum)
 
+	// 初始化为空数组，确保始终返回该字段
+	detailResp.ReceiptList = make([]resp.ReceiptListItem, 0)
 	// 版本判断：v2.16.0+ 返回收货清单字段（仅子店）
 	if ctx.Version(context.GTE, constant.ClientVersionV2160) && !companySetting.IsHeadquarter() {
-		// 初始化为空数组，确保始终返回该字段
-		detailResp.ReceiptList = make([]resp.ReceiptListItem, 0)
-
 		// 仅当 WithReceiptList=true 时才查询收货清单数据
 		if req.WithReceiptList {
 			// 检查是否需要获取收货清单数据（有ErpSaleOrderNo或是品牌采购）
