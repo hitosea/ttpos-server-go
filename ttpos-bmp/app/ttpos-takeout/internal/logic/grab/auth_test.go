@@ -168,7 +168,7 @@ func TestComputeHMAC_Format(t *testing.T) {
 	verifier := grabclient.NewSignatureVerifier("test-key")
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	body := []byte("test-message")
-	
+
 	// 使用公开方法 GenerateSignature 来测试
 	result := verifier.GenerateSignature(timestamp, body)
 

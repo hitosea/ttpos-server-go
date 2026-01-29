@@ -53758,6 +53758,10 @@ const docTemplate = `{
                     "description": "是否开启自助点餐机功能",
                     "type": "boolean"
                 },
+                "is_open_lineman_delivery": {
+                    "description": "是否开启LINE MAN外卖功能",
+                    "type": "boolean"
+                },
                 "is_open_map": {
                     "description": "是否开启地图",
                     "type": "boolean"

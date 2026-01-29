@@ -23,6 +23,7 @@ class SurveyService
         // 授权无会员权限
         $isOpenMember = request()->licenses['is_open_member'] ?? 0;
         $isOpenGrabDelivery = request()->licenses['enable_grab_delivery'] ?? 0;
+        $isOpenLinemanDelivery = request()->licenses['enable_lineman_delivery'] ?? 0;
 
         // 所有区域数据
         $allRegionData = [];
@@ -139,6 +140,14 @@ class SurveyService
             $sheet->setCellValue('A' . ($index = $index + 1), __('最大订单金额'));
             $sheet->setCellValue('A' . ($index = $index + 1), __('平均订单金额'));
         }
+        // v2.16.0新增 Lineman 数据
+        if ($isOpenLinemanDelivery) {
+            $sheet->setCellValue('A' . ($index = $index + 1), __('LINE MAN'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('订单数'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('最小订单金额'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('最大订单金额'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('平均订单金额'));
+        }
         $sheet->setCellValue('A' . ($index = $payRow = $index + 1), __('支付数据'));
         // 纵向的支付数据
         foreach ($paymentType as $value) {
@@ -228,6 +237,13 @@ class SurveyService
                 $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_grab_order_amount']); // Grab最小订单金额
                 $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_grab_order_amount']); // Grab最大订单金额
                 $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_grab_order_amount']); // Grab平均订单金额
+            }
+            // v2.16.0新增 LINE MAN 数据
+            if ($isOpenLinemanDelivery) {
+                $sheet->setCellValue($columnLetter . ($index = $index + 2), $data['total_lineman_order_num']); // LINE MAN订单数
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_lineman_order_amount']); // LINE MAN最小订单金额
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_lineman_order_amount']); // LINE MAN最大订单金额
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_lineman_order_amount']); // LINE MAN平均订单金额
             }
             // 支付数据
             // 支付金额应该从 $payRow + 1 开始（与支付方式名称的行号对应）

@@ -304,7 +304,12 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 				item.SerialNo = product.TakeoutOrder.GetKdsTakeoutPlatformAndOrderNumber()
 				item.IsSaleBillDeleted = product.TakeoutOrder.IsDeletedOrCanceled()
 				item.TakeoutPlatform = product.TakeoutOrder.GetToLowerPlatform()
-				remark = product.TakeoutOrderItem.Specifications
+				remark = func() string {
+					if product.TakeoutOrderItem != nil {
+						return product.TakeoutOrderItem.Specifications
+					}
+					return remark
+				}()
 				item.DiningMethod = func() uint {
 					if product.TakeoutOrder.IsTakeawayOrder() {
 						return uint(constant.SaleBillDiningMethodTakeout)
@@ -437,7 +442,12 @@ func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProduct
 		if product.TakeoutOrderUuid > 0 {
 			item.LocaleName = *pkgLanguage.JsonToLocaleResponse(product.Name)
 			item.SerialNo = product.TakeoutOrder.GetKdsTakeoutPlatformAndOrderNumber()
-			remark = product.TakeoutOrderItem.Specifications
+			remark = func() string {
+				if product.TakeoutOrderItem != nil {
+					return product.TakeoutOrderItem.Specifications
+				}
+				return remark
+			}()
 		} else {
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.SerialNo = product.SaleBill.SerialNo
@@ -583,7 +593,12 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 				item.ProductAttributeNames = *pkgLanguage.JsonToLocaleResponse(product.ProductAttributeNames)
 				item.SerialNo = product.TakeoutOrder.GetKdsTakeoutPlatformAndOrderNumber()
 				item.IsSaleBillDeleted = product.TakeoutOrder.IsDeletedOrCanceled()
-				remark = product.TakeoutOrderItem.Specifications
+				remark = func() string {
+					if product.TakeoutOrderItem != nil {
+						return product.TakeoutOrderItem.Specifications
+					}
+					return remark
+				}()
 			} else {
 				item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 				item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()

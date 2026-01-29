@@ -64,6 +64,15 @@ func (s *takeoutSrv) ToggleTakeoutStatus(ctx context.Context, req request.Toggle
 
 // SyncMenuChanges 同步菜单变更
 func (s *takeoutSrv) SyncMenuChanges(ctx context.Context, platform string) (*response.MenuSyncResult, error) {
+	// 判断是否开启外卖平台
+	status, err := s.takeoutAppSrv.GetTakeoutStatus(ctx, platform)
+	if err != nil {
+		return nil, errors.WithMessage(errors.New("获取外卖平台状态失败"), err.Error())
+	}
+	if !status.Enabled {
+		return nil, nil
+	}
+	// 同步菜单变更
 	return s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
 		Platform:    platform,
 		CompanyUuid: ctx.GetCompanyUuid(),
@@ -110,36 +119,29 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 			zap.Error(err),
 		)
 		// 标记推送失败
-		_ = progressService.CompleteImport(ctx, importLog.Uuid, false, "获取货币设置失败: "+err.Error())
+		progressService.CompleteImport(ctx, importLog.Uuid, false, "获取货币设置失败: "+err.Error())
 		return errors.WithMessage(errors.New("获取货币设置失败"), err.Error())
 	}
 
 	// 更新进度到 20%
-	_ = progressService.UpdateProgress(ctx, importLog.Uuid, 20, 100)
+	progressService.UpdateProgress(ctx, importLog.Uuid, 20, 100)
 
 	// 4. 推送菜单到平台 (进度 20-100%)
 	err = s.takeoutAppSrv.PushMenu(ctx, platform, currencySetting.Unit)
 	if err != nil {
-		logger.Logger.Error("推送菜单到平台失败",
-			zap.String("platform", platform),
-			zap.Error(err),
-		)
+		logger.Logger.Error("推送菜单到平台失败", zap.String("platform", platform), zap.Error(err))
 		// 标记推送失败
-		_ = progressService.CompleteImport(ctx, importLog.Uuid, false, "推送菜单失败: "+err.Error())
+		progressService.CompleteImport(ctx, importLog.Uuid, false, "推送菜单失败: "+err.Error())
 		return errors.WithMessage(errors.New("推送菜单失败"), err.Error())
 	}
 
 	// 更新进度到 100%
-	_ = progressService.UpdateProgress(ctx, importLog.Uuid, 100, 100)
+	progressService.UpdateProgress(ctx, importLog.Uuid, 100, 100)
 
 	// 5. 标记推送成功
 	err = progressService.CompleteImport(ctx, importLog.Uuid, true, "")
 	if err != nil {
-		logger.Logger.Warn("标记推送成功失败",
-			zap.String("platform", platform),
-			zap.Uint64("import_log_uuid", importLog.Uuid),
-			zap.Error(err),
-		)
+		logger.Logger.Warn("标记推送成功失败", zap.String("platform", platform), zap.Uint64("import_log_uuid", importLog.Uuid), zap.Error(err))
 	}
 
 	return nil
@@ -490,8 +492,8 @@ func (s *takeoutSrv) syncCategories(ctx context.Context, platform string, catego
 			return nil, errors.WithMessage(errors.New("分类ID不能为空"), fmt.Sprintf("分类ID不能为空: %s", category.GetName()))
 		}
 
-		// 去掉 TTPOS-CAT- 前缀
-		platformCategoryID = strings.TrimPrefix(platformCategoryID, "TTPOS-CAT-")
+		// 去掉 分类前缀
+		platformCategoryID = strings.TrimPrefix(platformCategoryID, value_object.PrefixCategory.GetPrefix(platform)) // value_object.PrefixCategory
 
 		// 检查分类是否已存在
 		if existingCat, exists := existingMapTtposCat[platformCategoryID]; exists {
@@ -1110,7 +1112,7 @@ func (s *takeoutSrv) syncProducts(
 		if len(category.GetItems()) == 0 {
 			continue
 		}
-		categoryID := strings.TrimPrefix(category.GetId(), "TTPOS-CAT-")
+		categoryID := strings.TrimPrefix(category.GetId(), value_object.PrefixCategory.GetPrefix(platform)) // value_object.PrefixCategory
 
 		// 获取本地分类 UUID
 		localCategoryUuid, ok := categoryMap[categoryID]

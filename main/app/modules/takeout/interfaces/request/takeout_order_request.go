@@ -40,8 +40,9 @@ type TakeoutOrderDetailReq struct {
 
 // TakeoutOrderSyncReq 同步订单请求
 type TakeoutOrderSyncReq struct {
-	Platform string                 `json:"platform" binding:"required"` // grab,foodpanda,lineman
-	RawData  map[string]interface{} `json:"raw_data" binding:"required"` // 原始订单数据
+	Platform     string                 `json:"platform" binding:"required"`       // grab,foodpanda,lineman
+	RawData      map[string]interface{} `json:"raw_data" binding:"required"`       // 原始订单数据
+	OrderDataMap map[string]interface{} `json:"order_data_map" binding:"required"` // 转换后的订单数据
 }
 
 // TakeoutOrderAcceptReq 接单请求

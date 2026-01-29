@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 	api "ttpos-bmp/app/ttpos-takeout/api/menu"
+	"ttpos-bmp/app/ttpos-takeout/api/takeout"
 )
 
 type (
@@ -20,6 +21,21 @@ type (
 		GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnapshotReq) (*api.GetMenuSnapshotResp, error)
 		// SaveMenuSnapshot 保存菜单快照
 		SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSnapshotReq) (*api.SaveMenuSnapshotResp, error)
+		// LogMenuSync 记录菜单同步日志
+		// 通用方法，供各个渠道（grab、lineman 等）调用
+		// 参数：
+		//   - ctx: 上下文
+		//   - merchantID: 商户ID
+		//   - providerName: 渠道名称（grab/lineman）
+		//   - syncType: 同步类型（FULL/PARTIAL/BATCH_UPDATE_ITEM等）
+		//   - requestID: 请求ID（来自第三方API响应）
+		//   - success: 是否成功
+		//   - menuSnapshot: 菜单快照（JSON 字符串，可选）
+		//   - errMsg: 错误信息（失败时）
+		LogMenuSync(ctx context.Context, merchantID string, providerName string, syncType string, requestID string, success bool, menuSnapshot string, errMsg string) error
+		// NotifyMenuUpdate 通知菜单更新（统一路由入口）
+		// 实现 IMenu 接口，根据 provider_name 路由到对应平台的菜单同步服务
+		NotifyMenuUpdate(ctx context.Context, req *api.NotifyMenuUpdateReq) (*takeout.ApiResponse, error)
 	}
 )
 

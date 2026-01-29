@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// HandleIntegrationStatus 处理Grab订单更新消息
+// HandleIntegrationStatus 处理门店集成状态变更消息
 func HandleIntegrationStatus(ctx context.Context, msg *primitive.MessageExt) error {
 	defer func() {
 		if err := recover(); err != nil {

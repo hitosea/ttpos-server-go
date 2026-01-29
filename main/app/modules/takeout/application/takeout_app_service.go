@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	"ttpos-server-go/app/modules/takeout/interfaces/response"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -117,7 +119,7 @@ func NewTakeoutAppService(
 	converters := make(map[string]service.IPlatformConverter)
 	grabConverter := grab.NewGrabConverter(dbm)
 	converters["grab"] = grabConverter
-	// 后续可添加其他平台：converters["lineman"] = lineman.NewLinemanConverter(dbm)
+	converters["lineman"] = grabConverter
 
 	// 初始化订单服务
 	orderService := service.NewTakeoutOrderSrv(dbm)
@@ -315,7 +317,7 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	var platformData interface{}
 	if grabConverter, ok := converter.(*grab.GrabConverter); ok {
 		// Grab 平台使用专用的加载方法（直接返回 Grab 格式）
-		platformData, err = grabConverter.LoadMenuFromDatabase(ctx, companyUuid, req.CurrencyUnit, []uint64{})
+		platformData, err = grabConverter.LoadMenuFromDatabase(ctx, req.Platform, companyUuid, req.CurrencyUnit, []uint64{})
 		if err != nil {
 			return nil, errors.New("加载菜单数据失败")
 		}
@@ -392,6 +394,13 @@ func (s *takeoutAppService) ConvertMenuData(ctx context.Context, req request.Imp
 func (s *takeoutAppService) PushMenu(ctx context.Context, platform string, currencyUnit string) error {
 	platform = strings.ToLower(platform)
 	companyUuid := ctx.GetCompanyUuid()
+
+	// 判断是否开发模式，如果是开发模式，则使用 6293997752320000
+	if config.Server.Mode == "debug" && platform == value_object.TakeoutPlatformLineman {
+		if config.Takeout.TakeoutLinemanStoreId != 0 {
+			companyUuid = config.Takeout.TakeoutLinemanStoreId
+		}
+	}
 
 	menu, err := s.ExportMenu(ctx, request.ExportMenuRequest{
 		Platform:     platform,
@@ -581,8 +590,15 @@ func (s *takeoutAppService) handleDebouncedMenuSync(ctx context.Context, req req
 	}
 
 	// 创建新的 timer，2秒后执行同步
-	timer := time.AfterFunc(2*time.Second, func() {
-		_, err := s.directSyncMenuChanges(ctx, req)
+	// 注意：timer 回调在独立 goroutine 中执行，不能复用原请求的 ctx（其数据库连接已关闭）
+	// 需要创建新的 context 并重新获取数据库连接
+	companyUuid := req.CompanyUuid
+	timer := time.AfterFunc(1*time.Second, func() {
+		// 重新获取数据库连接
+		newCtx := ctx.Copy()
+		newCtx.SetDB(s.dbm.GetDB(companyUuid))
+
+		_, err := s.directSyncMenuChanges(newCtx, req)
 		if err != nil {
 			logger.Logger.Error("防抖菜单同步失败",
 				zap.Error(err),
@@ -749,17 +765,18 @@ func (s *takeoutAppService) compareAndSyncMenu(
 	}
 
 	// 获取商户 ID
-	_, _, merchantID, _, err := s.rpcService.CheckBindingStatusWithMerchantId(ctx, platform, companyUuid)
-	if err != nil {
-		return fmt.Errorf("获取商户ID失败: %w", err)
-	}
-	if merchantID == "" {
-		return fmt.Errorf("商户ID为空，请检查平台绑定状态")
+	shopUuidStr := strconv.FormatUint(companyUuid, 10)
+
+	// 判断是否开发模式，如果是开发模式，则使用 6293997752320000
+	if config.Server.Mode == "debug" && platform == value_object.TakeoutPlatformLineman {
+		if config.Takeout.TakeoutLinemanStoreId != 0 {
+			shopUuidStr = strconv.FormatUint(config.Takeout.TakeoutLinemanStoreId, 10)
+		}
 	}
 
 	// 批量更新商品（每批最多 100 个）
 	if len(changedItems) > 0 {
-		err := s.batchUpdateItems(ctx, merchantID, changedItems, result)
+		err := s.batchUpdateItems(ctx, platform, shopUuidStr, changedItems, result)
 		if err != nil {
 			logger.Logger.Error("批量更新商品失败", zap.Error(err))
 		}
@@ -767,7 +784,7 @@ func (s *takeoutAppService) compareAndSyncMenu(
 
 	// 逐个更新修饰符（Grab API 暂不支持批量更新修饰符）
 	if len(changedModifiers) > 0 {
-		s.updateModifiersOneByOne(ctx, merchantID, changedModifiers, result)
+		s.updateModifiersOneByOne(ctx, platform, shopUuidStr, changedModifiers, result)
 	}
 
 	return nil
@@ -776,7 +793,8 @@ func (s *takeoutAppService) compareAndSyncMenu(
 // batchUpdateItems 批量更新商品
 func (s *takeoutAppService) batchUpdateItems(
 	ctx context.Context,
-	merchantID string,
+	platform string,
+	shopUuid string,
 	items []struct {
 		old *grabfood.MenuItem
 		new *grabfood.MenuItem
@@ -820,9 +838,11 @@ func (s *takeoutAppService) batchUpdateItems(
 			}
 			entity := &menuApi.MenuEntity{
 				Id:              item.new.Id,
-				Price:           &item.new.Price,
 				AvailableStatus: &item.new.AvailableStatus,
-				MaxStock:        &maxStock,
+			}
+			if platform != value_object.TakeoutPlatformLineman {
+				entity.Price = &item.new.Price
+				entity.MaxStock = &maxStock
 			}
 			entities = append(entities, entity)
 		}
@@ -837,10 +857,11 @@ func (s *takeoutAppService) batchUpdateItems(
 
 		// 调用 RPC 批量更新接口
 		req := &menuApi.BatchUpdateMenuReq{
-			MerchantId:   merchantID,
+			ShopUuid:     shopUuid,
 			Field:        "ITEM",
 			MenuEntities: entities,
 			RequestId:    uuid.New().String(),
+			ProviderName: &platform,
 		}
 
 		resp, err := client.GetMenuClient().BatchUpdateMenu(ctx, req)
@@ -900,6 +921,7 @@ func (s *takeoutAppService) batchUpdateItems(
 // FIXME: 让6哥弄队列处理，6哥说后面时间空了再说
 func (s *takeoutAppService) updateModifiersOneByOne(
 	ctx context.Context,
+	platform string,
 	merchantID string,
 	modifiers []struct {
 		old *grabfood.MenuModifier
@@ -961,6 +983,7 @@ func (s *takeoutAppService) updateModifiersOneByOne(
 			// 调用 RPC 更新单个修饰符
 			err = s.rpcService.UpdateMenuModifier(
 				ctx,
+				platform,
 				merchantID,
 				modifier.new.Id,
 				modifier.new.Name,

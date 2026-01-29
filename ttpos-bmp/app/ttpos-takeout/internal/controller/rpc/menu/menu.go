@@ -2,14 +2,17 @@ package menu
 
 import (
 	"context"
+	"fmt"
 
 	api "ttpos-bmp/app/ttpos-takeout/api/menu"
 	"ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
+	"ttpos-bmp/app/ttpos-takeout/utility"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -73,14 +76,14 @@ func (c *Controller) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSnap
 }
 
 // UpdateMenuItem 更新菜单项
-// 参数：merchant_id、item_id 必填，其他字段可选
+// 参数：shop_uuid、item_id 必填，其他字段可选
 // 返回：takeout.ApiResponse 统一响应格式
 func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItemReq) (*takeout.ApiResponse, error) {
-	// 1. 参数校验
-	if req.MerchantId == "" {
+	// 1. 基础参数校验
+	if req.ShopUuid == "" {
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeInvalidParam),
-			Message: consts.MsgMerchantIDEmpty,
+			Message: "shop_uuid 不能为空",
 		}, nil
 	}
 	if req.ItemId == "" {
@@ -90,9 +93,43 @@ func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItem
 		}, nil
 	}
 
-	// 2. Proto → DTO 转换
+	// 2. 获取 provider_name，默认为 grab
+	providerName := "grab"
+	if req.ProviderName != nil && *req.ProviderName != "" {
+		providerName = *req.ProviderName
+	}
+
+	g.Log().Infof(ctx, "[Menu] UpdateMenuItem: provider=%s, shopUUID=%s, itemID=%s",
+		providerName, req.ShopUuid, req.ItemId)
+
+	// 3. 根据平台路由到对应处理逻辑
+	switch providerName {
+	case "grab":
+		return c.handleGrabUpdate(ctx, req)
+	case "lineman":
+		return c.handleLinemanUpdate(ctx, req)
+	default:
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "不支持的平台: " + providerName,
+		}, nil
+	}
+}
+
+// handleGrabUpdate Grab 平台菜单更新处理（保持现有逻辑）
+func (c *Controller) handleGrabUpdate(ctx context.Context, req *api.UpdateMenuItemReq) (*takeout.ApiResponse, error) {
+	// 1. 从 shop_provider_cfg 获取 Grab merchant_id
+	merchantID, err := service.ShopProviderCfg().GetProviderMerchantID(ctx, req.ShopUuid, "grab")
+	if err != nil {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeServiceError),
+			Message: err.Error(),
+		}, nil
+	}
+
+	// 2. Proto → DTO 转换（使用查询到的 merchantID）
 	updateReq := &grabDto.UpdateMenuItemReq{
-		MerchantID: req.MerchantId,
+		MerchantID: merchantID,
 		ItemID:     req.ItemId,
 	}
 
@@ -129,8 +166,8 @@ func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItem
 
 	// 3. 调用 Service 层
 	if err := service.Grab().UpdateMenuItem(ctx, updateReq); err != nil {
-		g.Log().Errorf(ctx, "[Menu] UpdateMenuItem failed: merchantID=%s, itemID=%s, error=%v",
-			req.MerchantId, req.ItemId, err)
+		g.Log().Errorf(ctx, "[Menu] UpdateMenuItem failed: shopUUID=%s, merchantID=%s, itemID=%s, error=%v",
+			req.ShopUuid, merchantID, req.ItemId, err)
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeServiceError),
 			Message: "更新菜单项失败: " + err.Error(),
@@ -139,7 +176,7 @@ func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItem
 
 	// 4. DTO → Proto 响应转换
 	resp := &api.UpdateMenuItemResp{
-		MerchantId: req.MerchantId,
+		ShopUuid:   req.ShopUuid,
 		RecordId:   req.ItemId,
 		RecordType: string(grabDto.MenuItemUpdateFieldItem),
 		// success, error_code 和 error_message 已移除，由 ApiResponse 统一处理
@@ -154,8 +191,8 @@ func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItem
 		}, nil
 	}
 
-	g.Log().Infof(ctx, "[Menu] UpdateMenuItem success: merchantID=%s, itemID=%s",
-		req.MerchantId, req.ItemId)
+	g.Log().Infof(ctx, "[Menu] UpdateMenuItem success: shopUUID=%s, merchantID=%s, itemID=%s",
+		req.ShopUuid, merchantID, req.ItemId)
 	return &takeout.ApiResponse{
 		Code:    string(consts.CodeSuccess),
 		Message: consts.MsgSuccess,
@@ -163,15 +200,107 @@ func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItem
 	}, nil
 }
 
-// UpdateMenuModifier 更新菜单修饰符
-// 参数：merchant_id、modifier_id、modifier_name 必填，其他字段可选
+// handleLinemanUpdate Lineman 平台菜单更新处理（新增）
+func (c *Controller) handleLinemanUpdate(ctx context.Context, req *api.UpdateMenuItemReq) (*takeout.ApiResponse, error) {
+	// 1. 从 shop_provider_cfg 获取 Lineman merchant_id (storeId)
+	// merchantID, err := service.ShopProviderCfg().GetProviderMerchantID(ctx, req.ShopUuid, "lineman")
+	// if err != nil {
+	// 	return &takeout.ApiResponse{
+	// 		Code:    string(consts.CodeServiceError),
+	// 		Message: err.Error(),
+	// 	}, nil
+	// }
+
+	// 2. Lineman 字段校验（仅允许 available_status）
+	if err := c.validateLinemanRequest(req); err != nil {
+		g.Log().Warningf(ctx, "[Menu] Lineman 字段校验失败: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: err.Error(),
+		}, nil
+	}
+
+	// 3. 状态映射
+	if req.AvailableStatus == nil || *req.AvailableStatus == "" {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "available_status 不能为空",
+		}, nil
+	}
+
+	linemanStatus, err := utility.MapStatusToLineman(*req.AvailableStatus)
+	if err != nil {
+		g.Log().Warningf(ctx, "[Menu] 状态映射失败: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: err.Error(),
+		}, nil
+	}
+
+	// 4. 调用 Lineman Service 层
+	if err := service.Lineman().UpdateMenuItemStatus(ctx, req.ShopUuid, req.ItemId, linemanStatus); err != nil {
+		g.Log().Errorf(ctx, "[Menu] Lineman UpdateMenuItem failed: shopUUID=%s, itemID=%s, error=%v",
+			req.ShopUuid, req.ItemId, err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeServiceError),
+			Message: "更新菜单项失败: " + err.Error(),
+		}, nil
+	}
+
+	// 5. 构造响应
+	resp := &api.UpdateMenuItemResp{
+		ShopUuid:   req.ShopUuid,
+		RecordId:   req.ItemId,
+		RecordType: "ITEM",
+	}
+
+	// 6. 包装为 ApiResponse
+	dataAny, err := anypb.New(resp)
+	if err != nil {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeSerializeError),
+			Message: consts.MsgSerializeFailed,
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "[Menu] Lineman UpdateMenuItem success: shopUUID=%s, itemID=%s, status=%s",
+		req.ShopUuid, req.ItemId, linemanStatus)
+	return &takeout.ApiResponse{
+		Code:    string(consts.CodeSuccess),
+		Message: consts.MsgSuccess,
+		Data:    dataAny,
+	}, nil
+}
+
+// validateLinemanRequest 校验 Lineman 请求（仅允许 available_status）
+func (c *Controller) validateLinemanRequest(req *api.UpdateMenuItemReq) error {
+	if req.Price != nil {
+		return gerror.New("Lineman 平台仅支持更新 available_status 字段，不支持 price 字段")
+	}
+	if req.MaxStock != nil {
+		return gerror.New("Lineman 平台仅支持更新 available_status 字段，不支持 max_stock 字段")
+	}
+	if len(req.AdvancedPricings) > 0 {
+		return gerror.New("Lineman 平台仅支持更新 available_status 字段，不支持 advanced_pricings 字段")
+	}
+	if len(req.Purchasabilities) > 0 {
+		return gerror.New("Lineman 平台仅支持更新 available_status 字段，不支持 purchasabilities 字段")
+	}
+	if req.AvailableStatus == nil || *req.AvailableStatus == "" {
+		return gerror.New("available_status 字段为必填")
+	}
+	return nil
+}
+
+// UpdateMenuModifier 更新菜单修饰符（支持多平台）
+// 参数：shop_uuid、modifier_id、modifier_name 必填，其他字段可选
 // 返回：takeout.ApiResponse 统一响应格式
 func (c *Controller) UpdateMenuModifier(ctx context.Context, req *api.UpdateMenuModifierReq) (*takeout.ApiResponse, error) {
 	// 1. 参数校验
-	if req.MerchantId == "" {
+	if req.ShopUuid == "" {
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeInvalidParam),
-			Message: consts.MsgMerchantIDEmpty,
+			Message: "shop_uuid 不能为空",
 		}, nil
 	}
 	if req.ModifierId == "" {
@@ -187,9 +316,41 @@ func (c *Controller) UpdateMenuModifier(ctx context.Context, req *api.UpdateMenu
 		}, nil
 	}
 
-	// 2. Proto → DTO 转换
+	// 2. 获取 provider_name（默认为 "grab"）
+	providerName := "grab"
+	if req.ProviderName != nil && *req.ProviderName != "" {
+		providerName = *req.ProviderName
+	}
+
+	// 3. 根据平台路由
+	switch providerName {
+	case "grab":
+		return c.handleGrabModifierUpdate(ctx, req)
+	case "lineman":
+		return c.handleLinemanModifierUpdate(ctx, req)
+	default:
+		g.Log().Errorf(ctx, "[Menu] UpdateMenuModifier unsupported provider: %s", providerName)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "不支持的平台: " + providerName,
+		}, nil
+	}
+}
+
+// handleGrabModifierUpdate 处理 Grab 修饰符更新（现有逻辑）
+func (c *Controller) handleGrabModifierUpdate(ctx context.Context, req *api.UpdateMenuModifierReq) (*takeout.ApiResponse, error) {
+	// 1. 从 shop_provider_cfg 获取 Grab merchant_id
+	merchantID, err := service.ShopProviderCfg().GetProviderMerchantID(ctx, req.ShopUuid, "grab")
+	if err != nil {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeServiceError),
+			Message: err.Error(),
+		}, nil
+	}
+
+	// 2. Proto → DTO 转换（使用查询到的 merchantID）
 	updateReq := &grabDto.UpdateMenuModifierReq{
-		MerchantID:   req.MerchantId,
+		MerchantID:   merchantID,
 		ModifierID:   req.ModifierId,
 		ModifierName: req.ModifierName,
 	}
@@ -216,22 +377,87 @@ func (c *Controller) UpdateMenuModifier(ctx context.Context, req *api.UpdateMenu
 			})
 	}
 
-	// 3. 调用 Service 层
+	// 调用 Service 层
 	if err := service.Grab().UpdateMenuModifier(ctx, updateReq); err != nil {
-		g.Log().Errorf(ctx, "[Menu] UpdateMenuModifier failed: merchantID=%s, modifierID=%s, error=%v",
-			req.MerchantId, req.ModifierId, err)
+		g.Log().Errorf(ctx, "[Menu] Grab UpdateMenuModifier failed: shopUUID=%s, merchantID=%s, modifierID=%s, error=%v",
+			req.ShopUuid, merchantID, req.ModifierId, err)
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeServiceError),
 			Message: "更新菜单修饰符失败: " + err.Error(),
 		}, nil
 	}
 
-	// 4. DTO → Proto 响应转换
+	// DTO → Proto 响应转换
 	resp := &api.UpdateMenuModifierResp{
-		MerchantId: req.MerchantId,
+		ShopUuid:   req.ShopUuid,
 		RecordId:   req.ModifierId,
 		RecordType: string(grabDto.MenuItemUpdateFieldModifier),
-		// success, error_code 和 error_message 已移除，由 ApiResponse 统一处理
+	}
+
+	// 包装为 ApiResponse
+	dataAny, err := anypb.New(resp)
+	if err != nil {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeSerializeError),
+			Message: consts.MsgSerializeFailed,
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "[Menu] Grab UpdateMenuModifier success: shopUUID=%s, merchantID=%s, modifierID=%s",
+		req.ShopUuid, merchantID, req.ModifierId)
+	return &takeout.ApiResponse{
+		Code:    string(consts.CodeSuccess),
+		Message: consts.MsgSuccess,
+		Data:    dataAny,
+	}, nil
+}
+
+// handleLinemanModifierUpdate 处理 Lineman 修饰符更新
+func (c *Controller) handleLinemanModifierUpdate(ctx context.Context, req *api.UpdateMenuModifierReq) (*takeout.ApiResponse, error) {
+	// 1. 字段校验
+	if err := c.validateLinemanModifierRequest(req); err != nil {
+		g.Log().Errorf(ctx, "[Menu] Lineman UpdateMenuModifier validation failed: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: err.Error(),
+		}, nil
+	}
+
+	// 2. 状态映射（string → int）
+	availableStatus := ""
+	if req.AvailableStatus != nil {
+		availableStatus = *req.AvailableStatus
+	}
+	linemanStatus, err := utility.MapStatusToLinemanModifier(availableStatus)
+	if err != nil {
+		g.Log().Errorf(ctx, "[Menu] Lineman status mapping failed: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "状态映射失败: " + err.Error(),
+		}, nil
+	}
+
+	// 3. 调用 Lineman Service
+	err = service.Lineman().UpdateModifierStatus(
+		ctx,
+		req.ShopUuid,   // storeId (Lineman 场景下 shopUuid 就是 storeId)
+		req.ModifierId, // modifierId
+		linemanStatus,  // status (int)
+	)
+	if err != nil {
+		g.Log().Errorf(ctx, "[Menu] Lineman UpdateMenuModifier failed: shopUUID=%s, modifierID=%s, error=%v",
+			req.ShopUuid, req.ModifierId, err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeServiceError),
+			Message: "更新 Lineman 修饰符状态失败: " + err.Error(),
+		}, nil
+	}
+
+	// 4. DTO → Proto 响应转换
+	resp := &api.UpdateMenuModifierResp{
+		ShopUuid:   req.ShopUuid,
+		RecordId:   req.ModifierId,
+		RecordType: string(grabDto.MenuItemUpdateFieldModifier),
 	}
 
 	// 5. 包装为 ApiResponse
@@ -243,8 +469,8 @@ func (c *Controller) UpdateMenuModifier(ctx context.Context, req *api.UpdateMenu
 		}, nil
 	}
 
-	g.Log().Infof(ctx, "[Menu] UpdateMenuModifier success: merchantID=%s, modifierID=%s",
-		req.MerchantId, req.ModifierId)
+	g.Log().Infof(ctx, "[Menu] Lineman UpdateMenuModifier success: shopUUID=%s, modifierID=%s",
+		req.ShopUuid, req.ModifierId)
 	return &takeout.ApiResponse{
 		Code:    string(consts.CodeSuccess),
 		Message: consts.MsgSuccess,
@@ -252,123 +478,71 @@ func (c *Controller) UpdateMenuModifier(ctx context.Context, req *api.UpdateMenu
 	}, nil
 }
 
+// validateLinemanModifierRequest 校验 Lineman 请求字段
+func (c *Controller) validateLinemanModifierRequest(req *api.UpdateMenuModifierReq) error {
+	// Lineman 仅支持更新 available_status
+	// 禁止包含：price, is_free, advanced_pricings
+
+	// 检查 available_status 是否为空
+	if req.AvailableStatus == nil || *req.AvailableStatus == "" {
+		return gerror.New("Lineman 平台的 available_status 字段为必填")
+	}
+
+	// 检查禁止字段
+	if req.Price != nil {
+		return gerror.New("Lineman 平台不支持更新 price 字段，仅支持 available_status")
+	}
+	if req.IsFree != nil {
+		return gerror.New("Lineman 平台不支持更新 is_free 字段，仅支持 available_status")
+	}
+	if len(req.AdvancedPricings) > 0 {
+		return gerror.New("Lineman 平台不支持更新 advanced_pricings 字段，仅支持 available_status")
+	}
+
+	return nil
+}
+
 // BatchUpdateMenu 批量更新菜单
-// 参数：merchant_id、field、menu_entities 必填
+// 参数：shop_uuid、field、menu_entities 必填
 // 返回：takeout.ApiResponse 统一响应格式
 func (c *Controller) BatchUpdateMenu(ctx context.Context, req *api.BatchUpdateMenuReq) (*takeout.ApiResponse, error) {
-	// 1. 参数校验
-	if req.MerchantId == "" {
+	// 1. 获取 provider_name，默认为 grab
+	providerName := "grab"
+	if req.ProviderName != nil && *req.ProviderName != "" {
+		providerName = *req.ProviderName
+	}
+
+	g.Log().Infof(ctx, "[Menu] BatchUpdateMenu: provider=%s, shopUUID=%s, field=%s, count=%d",
+		providerName, req.ShopUuid, req.Field, len(req.MenuEntities))
+
+	// 2. 根据平台路由到对应处理逻辑
+	switch providerName {
+	case "grab":
+		return c.handleGrabBatchUpdate(ctx, req)
+	case "lineman":
+		return c.handleLinemanBatchUpdate(ctx, req)
+	default:
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeInvalidParam),
-			Message: consts.MsgMerchantIDEmpty,
+			Message: fmt.Sprintf("不支持的平台: %s", providerName),
 		}, nil
 	}
-	if req.Field == "" {
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeInvalidParam),
-			Message: "field 不能为空",
-		}, nil
-	}
-	if req.Field != grabDto.MenuItemUpdateFieldItem && req.Field != grabDto.MenuItemUpdateFieldModifier {
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeInvalidParam),
-			Message: "field 必须是 ITEM 或 MODIFIER",
-		}, nil
-	}
-	if len(req.MenuEntities) == 0 {
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeInvalidParam),
-			Message: "menu_entities 不能为空",
-		}, nil
-	}
-	if len(req.MenuEntities) > 100 {
-		return &takeout.ApiResponse{
-			Code:    string(consts.CodeInvalidParam),
-			Message: "menu_entities 数量不能超过 100 个",
-		}, nil
-	}
+}
 
-	// 2. Proto → DTO 转换
-	dtoReq := &grabDto.BatchUpdateMenuReq{
-		MerchantID:   req.MerchantId,
-		Field:        req.Field,
-		MenuEntities: make([]grabDto.MenuEntity, 0, len(req.MenuEntities)),
-	}
-
-	// 转换 MenuEntities
-	for _, protoEntity := range req.MenuEntities {
-		dtoEntity := grabDto.MenuEntity{
-			ID: protoEntity.Id,
-		}
-
-		// 处理可选字段 - Price
-		if protoEntity.Price != nil {
-			price := *protoEntity.Price
-			dtoEntity.Price = &price
-		}
-
-		// 处理可选字段 - AvailableStatus
-		if protoEntity.AvailableStatus != nil {
-			dtoEntity.AvailableStatus = *protoEntity.AvailableStatus
-		}
-
-		// 处理可选字段 - MaxStock（仅商品支持）
-		if protoEntity.MaxStock != nil {
-			stock := *protoEntity.MaxStock
-			dtoEntity.MaxStock = &stock
-		}
-
-		// 转换高级定价配置
-		for _, ap := range protoEntity.AdvancedPricings {
-			dtoEntity.AdvancedPricings = append(dtoEntity.AdvancedPricings,
-				grabDto.UpdateAdvancedPricingReq{
-					Key:   ap.Key,
-					Price: ap.Price,
-				})
-		}
-
-		// 转换购买能力配置（仅商品支持）
-		for _, p := range protoEntity.Purchasabilities {
-			dtoEntity.Purchasabilities = append(dtoEntity.Purchasabilities,
-				grabDto.UpdatePurchasabilityReq{
-					Key:         p.Key,
-					Purchasable: p.Purchasable,
-				})
-		}
-
-		dtoReq.MenuEntities = append(dtoReq.MenuEntities, dtoEntity)
-	}
-
-	// 3. 调用 Service 层
-	dtoResp, err := service.Grab().BatchUpdateMenuItems(ctx, dtoReq)
+// handleGrabBatchUpdate Grab 平台批量更新处理
+func (c *Controller) handleGrabBatchUpdate(ctx context.Context, req *api.BatchUpdateMenuReq) (*takeout.ApiResponse, error) {
+	// 调用 Grab Service 层
+	protoResp, err := service.Grab().BatchUpdateMenuItems(ctx, req)
 	if err != nil {
-		g.Log().Errorf(ctx, "[Menu] BatchUpdateMenu failed: merchantID=%s, field=%s, count=%d, error=%v",
-			req.MerchantId, req.Field, len(req.MenuEntities), err)
+		g.Log().Errorf(ctx, "[Menu] Grab BatchUpdateMenu failed: shopUUID=%s, field=%s, count=%d, error=%v",
+			req.ShopUuid, req.Field, len(req.MenuEntities), err)
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeServiceError),
 			Message: "批量更新菜单失败: " + err.Error(),
 		}, nil
 	}
 
-	// 4. DTO → Proto 响应转换
-	protoResp := &api.BatchUpdateMenuResp{
-		MerchantId: dtoResp.MerchantID,
-		Status:     dtoResp.Status,
-	}
-
-	// 转换错误列表
-	if len(dtoResp.Errors) > 0 {
-		protoResp.Errors = make([]*api.MenuEntityError, 0, len(dtoResp.Errors))
-		for _, dtoErr := range dtoResp.Errors {
-			protoResp.Errors = append(protoResp.Errors, &api.MenuEntityError{
-				Id:           dtoErr.ID,
-				ErrorCode:    dtoErr.ErrorCode,
-				ErrorMessage: dtoErr.ErrorMessage,
-			})
-		}
-	}
-
-	// 5. 包装为 ApiResponse
+	// 包装为 ApiResponse
 	dataAny, err := anypb.New(protoResp)
 	if err != nil {
 		return &takeout.ApiResponse{
@@ -377,11 +551,48 @@ func (c *Controller) BatchUpdateMenu(ctx context.Context, req *api.BatchUpdateMe
 		}, nil
 	}
 
-	g.Log().Infof(ctx, "[Menu] BatchUpdateMenu success: merchantID=%s, field=%s, status=%s, count=%d, errorCount=%d",
-		req.MerchantId, req.Field, dtoResp.Status, len(req.MenuEntities), len(dtoResp.Errors))
+	g.Log().Infof(ctx, "[Menu] Grab BatchUpdateMenu success: shopUUID=%s, field=%s, status=%s, count=%d, errorCount=%d",
+		req.ShopUuid, req.Field, protoResp.Status, len(req.MenuEntities), len(protoResp.Errors))
 	return &takeout.ApiResponse{
 		Code:    string(consts.CodeSuccess),
 		Message: consts.MsgSuccess,
 		Data:    dataAny,
 	}, nil
+}
+
+// handleLinemanBatchUpdate Lineman 平台批量更新处理
+func (c *Controller) handleLinemanBatchUpdate(ctx context.Context, req *api.BatchUpdateMenuReq) (*takeout.ApiResponse, error) {
+	// 调用 Lineman Service 层
+	protoResp, err := service.Lineman().BatchUpdateMenuItems(ctx, req)
+	if err != nil {
+		g.Log().Errorf(ctx, "[Menu] Lineman BatchUpdateMenu failed: shopUUID=%s, field=%s, count=%d, error=%v",
+			req.ShopUuid, req.Field, len(req.MenuEntities), err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeServiceError),
+			Message: "批量更新菜单失败: " + err.Error(),
+		}, nil
+	}
+
+	// 包装为 ApiResponse
+	dataAny, err := anypb.New(protoResp)
+	if err != nil {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeSerializeError),
+			Message: consts.MsgSerializeFailed,
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "[Menu] Lineman BatchUpdateMenu success: shopUUID=%s, field=%s, status=%s, count=%d, errorCount=%d",
+		req.ShopUuid, req.Field, protoResp.Status, len(req.MenuEntities), len(protoResp.Errors))
+	return &takeout.ApiResponse{
+		Code:    string(consts.CodeSuccess),
+		Message: consts.MsgSuccess,
+		Data:    dataAny,
+	}, nil
+}
+
+// NotifyMenuUpdate 通知菜单更新（统一入口）
+// 根据 provider_name 路由到对应平台的菜单同步服务
+func (c *Controller) NotifyMenuUpdate(ctx context.Context, req *api.NotifyMenuUpdateReq) (*takeout.ApiResponse, error) {
+	return service.Menu().NotifyMenuUpdate(ctx, req)
 }

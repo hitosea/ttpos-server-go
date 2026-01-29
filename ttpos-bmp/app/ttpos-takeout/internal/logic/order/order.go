@@ -2,15 +2,23 @@ package order
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 
+	linemanv1 "ttpos-bmp/app/ttpos-takeout/api/lineman/v1"
 	api "ttpos-bmp/app/ttpos-takeout/api/order"
+	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
+	"ttpos-bmp/app/ttpos-takeout/utility"
+
+	"ttpos-api/ttpos-takeout/message"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	grabsdk "github.com/grab/grabfood-api-sdk-go"
 )
 
 type sOrder struct{}
@@ -50,23 +58,56 @@ func (s *sOrder) GetOrderInfo(ctx context.Context, req *api.GetOrderInfoReq) (re
 		return nil, gerror.New("订单不存在")
 	}
 
-	// 处理 RawData: 解析 JSON 并在 price 对象中添加 total 字段
-	rawData := orderEntity.RawData
-	if rawData != "" {
-		j, parseErr := gjson.DecodeToJson(rawData)
-		if parseErr == nil && j != nil {
-			// 读取 price 对象中的字段值
-			subTotal := j.Get("price.subtotal").Int64()
-			merchantChargeFee := j.Get("price.merchantChargeFee").Int64()
-			merchantFundPromo := j.Get("price.merchantFundPromo").Int64()
+	// 转换订单数据为统一格式（TakeoutOrder）
+	var orderData string
+	var takeoutOrder *message.TakeoutOrder
+	startTime := time.Now()
 
-			// 计算 total: 商品小计 + 商户收取费用 - 商户承担促销
-			total := subTotal + merchantChargeFee - merchantFundPromo
+	switch orderEntity.ProviderName {
+	case string(consts.ProviderGrab):
+		// Grab 订单：反序列化 raw_data 并转换为统一模型
+		var grabReq grabsdk.SubmitOrderRequest
+		if unmarshalErr := gjson.DecodeTo(orderEntity.RawData, &grabReq); unmarshalErr != nil {
+			g.Log().Errorf(ctx, "Grab订单数据反序列化失败, orderId=%s, error=%v",
+				req.OrderUuid, unmarshalErr)
+		} else {
+			//特殊处理 price.total
+			takeoutOrder, err = utility.FromGrabSDK(&grabReq)
+		}
+	case string(consts.ProviderLineman):
+		// Lineman 订单：反序列化 raw_data 并转换为统一模型
+		var linemanReq linemanv1.PlaceOrderReq
+		if unmarshalErr := gjson.DecodeTo(orderEntity.RawData, &linemanReq); unmarshalErr != nil {
+			g.Log().Errorf(ctx, "Lineman订单数据反序列化失败, orderId=%s, error=%v",
+				req.OrderUuid, unmarshalErr)
+		} else {
+			takeoutOrder, err = utility.FromLinemanPlaceOrder(&linemanReq)
+		}
+	default:
+		g.Log().Warningf(ctx, "不支持的外卖平台: %s, orderId=%s", orderEntity.ProviderName, req.OrderUuid)
+	}
 
-			// 设置 total 到 price 对象
-			if setErr := j.Set("price.total", total); setErr == nil {
-				rawData = j.MustToJsonString()
-			}
+	if err != nil {
+		// 转换失败，记录错误日志但不影响接口返回（优雅降级）
+		g.Log().Errorf(ctx, "订单数据转换失败, orderId=%s, provider=%s, error=%v",
+			req.OrderUuid, orderEntity.ProviderName, err)
+		orderData = "" // 返回空字符串
+	} else if takeoutOrder != nil {
+		// 序列化为 JSON 字符串
+		// 使用 json.Marshal 而非 gjson.New().ToJsonString()
+		// 因为 gjson 使用反射序列化，会忽略自定义的 MarshalJSON 方法
+		// 而 json.Marshal 会调用 TakeoutOrder.MarshalJSON() 来正确处理 AdditionalProperties
+		jsonBytes, marshalErr := json.Marshal(takeoutOrder)
+		if marshalErr != nil {
+			g.Log().Errorf(ctx, "订单数据序列化失败, orderId=%s, error=%v",
+				req.OrderUuid, marshalErr)
+			orderData = ""
+		} else {
+			orderData = string(jsonBytes)
+			// 记录转换耗时（用于性能监控）
+			duration := time.Since(startTime).Milliseconds()
+			g.Log().Debugf(ctx, "订单数据转换完成, orderId=%s, provider=%s, duration=%dms",
+				req.OrderUuid, orderEntity.ProviderName, duration)
 		}
 	}
 
@@ -74,8 +115,9 @@ func (s *sOrder) GetOrderInfo(ctx context.Context, req *api.GetOrderInfoReq) (re
 		ShopUuid:     orderEntity.ShopUuid,
 		OrderStatus:  orderEntity.OrderStatus,
 		OrderType:    orderEntity.OrderType,
-		RawData:      rawData,
+		RawData:      orderEntity.RawData,
 		ProviderName: orderEntity.ProviderName,
+		OrderData:    orderData, // 转换后的统一订单数据（TakeoutOrder JSON）
 	}
 
 	return res, nil
@@ -109,7 +151,7 @@ func (s *sOrder) PrepareOrder(ctx context.Context, req *api.PrepareOrderReq) (re
 
 	// 根据 provider_name 路由到不同平台的处理逻辑
 	switch orderEntity.ProviderName {
-	case "grab":
+	case string(consts.ProviderGrab):
 		// 调用 Grab 订单处理逻辑
 		err = service.Grab().PrepareOrder(ctx, orderEntity, req.ToState)
 		if err != nil {
@@ -156,7 +198,7 @@ func (s *sOrder) MarkOrderReady(ctx context.Context, takeoutOrderUuid string, re
 
 	// 根据 provider_name 路由到不同平台的处理逻辑
 	switch orderEntity.ProviderName {
-	case "grab":
+	case string(consts.ProviderGrab):
 		// 调用 Grab 订单处理逻辑
 		err = service.Grab().MarkOrderReadyEntity(ctx, orderEntity)
 		if err != nil {
@@ -203,7 +245,7 @@ func (s *sOrder) CancelOrder(ctx context.Context, req *api.CancelOrderReq) (res 
 
 	// 根据 provider_name 路由到不同平台的处理逻辑
 	switch orderEntity.ProviderName {
-	case "grab":
+	case string(consts.ProviderGrab):
 		// 调用 Grab 订单处理逻辑
 		res, err = service.Grab().CancelOrderEntity(ctx, orderEntity, req.CancelCode)
 		if err != nil {
@@ -250,7 +292,7 @@ func (s *sOrder) CheckOrderCancelable(ctx context.Context, req *api.CheckOrderCa
 
 	// 根据 provider_name 路由到不同平台的处理逻辑
 	switch orderEntity.ProviderName {
-	case "grab":
+	case string(consts.ProviderGrab):
 		// 调用 Grab 订单处理逻辑
 		res, err = service.Grab().CheckOrderCancelableEntity(ctx, orderEntity)
 		if err != nil {

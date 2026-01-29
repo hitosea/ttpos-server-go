@@ -53,6 +53,7 @@ type IMaterialRepo interface {
 	UpdateMaterialVisibleBatch(uuids []uint64, visible int) error                     // 批量更新物品可见性
 	UpdateMaterialStockNum(materials []*model.Material) error                         // 更新物品库存数量
 	AddActualSaleNum(materialUuid uint64, saleNum float64) error                      // 增加材料销量
+	SubActualSaleNum(materialUuid uint64, saleNum float64) error                      // 减少材料销量
 	GetMaterialByErpCode(erpCode string, opts ...DBOption) (*model.Material, error)   // 根据erp_code获取物品
 	GetMaterialDetailByErpCode(erpCode string) (*model.Material, error)               // 根据erp_code获取物品详情
 	UpdateMaterialWarehouseUuid(uuid uint64, warehouseUuid uint64) error              // 更新物品仓库uuid
@@ -570,6 +571,13 @@ func (r *MaterialRepoImpl) UpdateMaterialStockNum(materials []*model.Material) e
 
 func (r *MaterialRepoImpl) AddActualSaleNum(materialUuid uint64, saleNum float64) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", materialUuid).Update("actual_sale_num", gorm.Expr("actual_sale_num + ?", saleNum)).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) SubActualSaleNum(materialUuid uint64, saleNum float64) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", materialUuid).Update("actual_sale_num", gorm.Expr("actual_sale_num - ?", saleNum)).Error; err != nil {
 		return errors.WithMessage(err)
 	}
 	return nil

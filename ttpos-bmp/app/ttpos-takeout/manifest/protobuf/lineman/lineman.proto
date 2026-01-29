@@ -1,0 +1,13 @@
+// LINE MAN 服务 Protobuf 定义文件（占位文件）
+// 用于定义 LINE MAN 相关的 gRPC 服务接口和消息结构
+syntax = "proto3";
+
+package lineman;
+
+// Go 包路径配置
+option go_package = "ttpos-bmp/app/ttpos-takeout/api/lineman";
+
+// 占位服务（暂未实现）
+service Lineman {
+}
+

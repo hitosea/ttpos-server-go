@@ -2,6 +2,7 @@ package event
 
 import (
 	"sync"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	takeoutService "ttpos-server-go/app/service/takeout"
@@ -35,9 +36,14 @@ func ProductSoldOutEventHandler() {
 
 			utils.Go(func() {
 				// 推送菜单到Grab平台
-				_, err := takeoutSrv.SyncMenuChanges(payload.Ctx, "grab")
+				_, err := takeoutSrv.SyncMenuChanges(payload.Ctx, value_object.TakeoutPlatformGrab)
 				if err != nil {
 					logger.Logger.Error("推送菜单到Grab平台失败", zap.Error(err))
+				}
+				// 推送菜单到Lineman平台
+				_, err = takeoutSrv.SyncMenuChanges(payload.Ctx, value_object.TakeoutPlatformLineman)
+				if err != nil {
+					logger.Logger.Error("推送菜单到Lineman平台失败", zap.Error(err))
 				}
 			})
 		})
