@@ -50,8 +50,8 @@ type IPurchaseOrderSrv interface {
 	GetPurchaseReceiptOrderDetail(ctx context.Context, req req.PurchaseReceiptOrderDetailReq) (resp.PurchaseReceiptOrderDetailResp, error) // 获取收货单详情
 	UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error                                           // 更新收货单
 	CancelPurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderCancelReq) error                                           // 取消收货单
-	GetReceiptPendingItems(ctx context.Context, req req.ReceiptPendingItemsReq) (resp.ReceiptPendingItemsResp, error)          // v2.16.0+ 获取待收货物品
-	GetPurchaseReceiptNewList(ctx context.Context, req req.PurchaseReceiptNewListReq) (resp.PurchaseReceiptNewListResp, error) // 新收货单列表（按采购单维度）
+	GetReceiptPendingItems(ctx context.Context, req req.ReceiptPendingItemsReq) (resp.ReceiptPendingItemsResp, error)                      // v2.16.0+ 获取待收货物品
+	GetPurchaseReceiptNewList(ctx context.Context, req req.PurchaseReceiptNewListReq) (resp.PurchaseReceiptNewListResp, error)             // 新收货单列表（按采购单维度）
 }
 
 // purchaseOrderSrv 采购申请服务实现
@@ -86,10 +86,6 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(
 	ctx context.Context,
 	req req.PurchaseOrderListReq,
 ) (resp.PurchaseOrderListResp, error) {
-	// 限制分页大小最大为20条
-	if req.PageSize > 20 {
-		return resp.PurchaseOrderListResp{}, errors.New("每页最多查询20条数据")
-	}
 
 	db := ctx.GetDB()
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
@@ -519,6 +515,13 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 				} else if len(receiptList) > 0 {
 					detailResp.ReceiptList = receiptList
 				}
+			}
+			// 旧品牌采购单，如果没有确认收货记录，则返回空数据
+			if purchaseOrder.ErpSaleOrderNo == "" && purchaseOrder.PurchaseType == constant.PurchaseTypeBrand && len(detailResp.ReceiptList) == 0 {
+				detailResp.ReceiptList = append(detailResp.ReceiptList, resp.ReceiptListItem{
+					IsLegacy:    true,
+					IsCompleted: false,
+				})
 			}
 		}
 	}
@@ -2119,10 +2122,6 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptNewList(
 	ctx context.Context,
 	reqData req.PurchaseReceiptNewListReq,
 ) (resp.PurchaseReceiptNewListResp, error) {
-	// 限制分页大小最大为20条
-	if reqData.PageSize > 20 {
-		return resp.PurchaseReceiptNewListResp{}, errors.New("每页最多查询20条数据")
-	}
 
 	db := ctx.GetDB()
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
