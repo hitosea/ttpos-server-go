@@ -84,24 +84,43 @@ func (s *purchaseOrderSrv) getDNReceiptList(
 
 	result := make([]resp.ReceiptListItem, 0, len(dnListResp.DeliveryNoteList))
 
+	// 构建采购单物品编码集合（用于判断 DN 物品是否在采购单中存在）
+	purchaseItemCodes := make(map[string]bool)
+	for _, item := range purchaseOrder.Items {
+		purchaseItemCodes[item.MaterialCode] = true
+	}
+
 	// 过滤重复的 DN（按 Name 去重）
 	seenDN := make(map[string]bool)
 	for _, dn := range dnListResp.DeliveryNoteList {
 		if seenDN[dn.Name] {
 			continue
 		}
+		if dn.Status != "To Bill" {
+			continue
+		}
 		seenDN[dn.Name] = true
 		// 找到关联此DN的收货单
 		relatedReceipts := s.getReceiptsForDN(dn.Name, receiptOrders)
 
-		// 计算是否完成收货（按item_code:uom分组判断）
+		// 计算是否完成收货（只检查同时存在于 DN 和采购单中的物品）
 		isCompleted := true
+		hasMatchingItems := false
 		for _, dnItem := range dn.Items {
+			// 只检查在采购单中存在的物品
+			if !purchaseItemCodes[dnItem.ItemCode] {
+				continue
+			}
+			hasMatchingItems = true
 			receivedQty := s.calculateReceivedQtyForDNItem(dnItem.ItemCode, dnItem.Uom, relatedReceipts)
 			if receivedQty < dnItem.Qty {
 				isCompleted = false
 				break
 			}
+		}
+		// 如果没有匹配的物品，标记为未完成
+		if !hasMatchingItems {
+			isCompleted = false
 		}
 
 		// 构建收货单显示列表

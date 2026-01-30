@@ -531,13 +531,12 @@ func (v *purchaseOrderValidator) validateDNReceipt(
 // 校验收货物品关联的Material是否DeliveredBySupplier=1且SupplierErpCode匹配
 func (v *purchaseOrderValidator) validateSupplierReceipt(
 	ctx context.Context,
-	db *gorm.DB,
+	_ *gorm.DB,
 	_ *model.PurchaseOrder,
 	supplierErpCode string,
 	receiptItems []req.PurchaseReceiptItemCreateReq,
 	purchaseOrderItems map[uint64]*model.PurchaseOrderItem,
 ) error {
-	materialRepo := repository.NewMaterialRepo(db)
 
 	for _, receiptItem := range receiptItems {
 		orderItem, exists := purchaseOrderItems[receiptItem.PurchaseOrderItemUuid]
@@ -559,20 +558,13 @@ func (v *purchaseOrderValidator) validateSupplierReceipt(
 
 		materialName := language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage())
 
-		// 获取物品关联的Material
-		material, err := materialRepo.GetMaterialByUuid(orderItem.MaterialUuid)
-		if err != nil {
-			logger.Logger.Error("validateSupplierReceipt-GetMaterialByUuid", zap.Error(err), zap.Uint64("material_uuid", orderItem.MaterialUuid))
-			return errors.New(fmt.Sprintf("获取物品 %s 信息失败", materialName))
-		}
-
 		// 校验DeliveredBySupplier=1
-		if material.DeliveredBySupplier != 1 {
+		if orderItem.DeliveredBySupplier != 1 {
 			return errors.New(fmt.Sprintf("物品 %s 不是供应商直接配送物品", materialName))
 		}
 
 		// 校验SupplierErpCode匹配
-		if material.SupplierErpCode != supplierErpCode {
+		if orderItem.SupplierErpCode != supplierErpCode {
 			return errors.New(fmt.Sprintf("物品 %s 不属于该供应商(%s)", materialName, supplierErpCode))
 		}
 	}
