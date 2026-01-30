@@ -138,7 +138,7 @@ func (s *purchaseOrderSrv) checkItemLimitByScheme(
 		for _, unit := range orderItem.Units {
 			// 只累加限购单位的数量
 			if unit.UnitUuid != quotaUnitUuid {
-				return errors.NewWithCode(constant.CodeErrorConfirmRefresh, "订单物品超出限购/单位变动，请检查物品和数量。")
+				return errors.NewWithCode(constant.CodeErrorConfirmRefresh, fmt.Sprintf("物品 %s 超出限购/单位变动，请检查物品和数量。", materialName))
 			}
 			key := orderItem.MaterialCode
 			if summary, exists := materialSummaryMap[key]; exists {
@@ -168,7 +168,7 @@ func (s *purchaseOrderSrv) checkItemLimitByScheme(
 		quotaLimit := quotaMap[summary.MaterialCode]
 		// 校验是否超限
 		if summary.TotalQty > quotaLimit {
-			return errors.NewWithCode(constant.CodeErrorConfirmRefresh, "订单物品超出限购/单位变动，请检查物品和数量。")
+			return errors.NewWithCode(constant.CodeErrorConfirmRefresh, fmt.Sprintf("物品 %s 超出限购/单位变动，请检查物品和数量。", summary.MaterialName))
 		}
 	}
 

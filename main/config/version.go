@@ -1,7 +1,7 @@
 package config
 
 var (
-	Version   = "2.15.0"
-	CommitSHA = "a03b13d91"
-	BuildTime = "2026-01-08"
+	Version = "2.16.1"
+	CommitSHA = "87a4ac7cf"
+	BuildTime = "2026-01-30"
 )

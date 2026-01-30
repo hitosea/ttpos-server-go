@@ -48,10 +48,12 @@ class AddTakeoutOrderUpdateLogTable extends Migrator
                 'comment' => '外卖订单UUID',
             ])
             ->addColumn('old_data', 'text', [
+                'limit' => \Phinx\Db\Adapter\MysqlAdapter::TEXT_LONG,
                 'null' => true,
                 'comment' => '更新前订单数据(JSON格式,包含订单主表、商品、修饰符等完整数据)',
             ])
             ->addColumn('new_data', 'text', [
+                'limit' => \Phinx\Db\Adapter\MysqlAdapter::TEXT_LONG,
                 'null' => true,
                 'comment' => '更新后订单数据(JSON格式,包含订单主表、商品、修饰符等完整数据)',
             ])
