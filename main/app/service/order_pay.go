@@ -2217,19 +2217,20 @@ func (s *orderSrv) KioskPaymentConfirm(ctx context.Context, params req.KioskPaym
 		zap.Uint64("sale_order_uuid", params.SaleOrderUuid),
 		zap.Float64("payment_amount", params.PaymentAmount))
 
+	// 暂时不使用这种方式
 	// 发布 Kiosk 订单支付完成事件，触发送厨和结账流程
-	utils.Go(func() {
-		event.NewSystemBus().PublishPayFinishKioskOrderEvent(event.PayFinishKioskOrderPayload{
-			BasePayload: event.BasePayload{
-				Ctx:           ctx,
-				CompanyUuid:   companyUuid,
-				Source:        constant.SourceKiosk,
-				SaleBillUuid:  params.SaleBillUuid,
-				SaleOrderUuid: params.SaleOrderUuid,
-			},
-			PaymentOrderUuid: paymentOrder.Uuid,
-		})
-	})
+	// utils.Go(func() {
+	// 	event.NewSystemBus().PublishPayFinishKioskOrderEvent(event.PayFinishKioskOrderPayload{
+	// 		BasePayload: event.BasePayload{
+	// 			Ctx:           ctx,
+	// 			CompanyUuid:   companyUuid,
+	// 			Source:        constant.SourceKiosk,
+	// 			SaleBillUuid:  params.SaleBillUuid,
+	// 			SaleOrderUuid: params.SaleOrderUuid,
+	// 		},
+	// 		PaymentOrderUuid: paymentOrder.Uuid,
+	// 	})
+	// })
 
 	return nil
 }
