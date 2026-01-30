@@ -1688,6 +1688,57 @@ func (s *purchaseOrderSrv) syncToSubShop(purchaseOrder *model.PurchaseOrder) err
 		return errors.WithMessage(errors.New("更新子店采购申请失败"), err.Error())
 	}
 
+	// 同步物品的供应商配送字段（从总部 Material 复制到子店 PurchaseOrderItem）
+	if err := s.syncItemSupplierFieldsToSubShop(subDb, purchaseOrder); err != nil {
+		return errors.WithMessage(errors.New("同步物品供应商字段失败"), err.Error())
+	}
+
+	return nil
+}
+
+// syncItemSupplierFieldsToSubShop 同步物品供应商字段到子商户
+func (s *purchaseOrderSrv) syncItemSupplierFieldsToSubShop(subDb *gorm.DB, purchaseOrder *model.PurchaseOrder) error {
+	// 构建 MaterialCode -> 供应商字段 的映射
+	materialSupplierMap := make(map[string]struct {
+		DeliveredBySupplier int
+		SupplierErpCode     string
+	})
+	for _, item := range purchaseOrder.Items {
+		if item.Material != nil {
+			materialSupplierMap[item.MaterialCode] = struct {
+				DeliveredBySupplier int
+				SupplierErpCode     string
+			}{
+				DeliveredBySupplier: item.Material.DeliveredBySupplier,
+				SupplierErpCode:     item.Material.SupplierErpCode,
+			}
+		}
+	}
+
+	if len(materialSupplierMap) == 0 {
+		return nil
+	}
+
+	// 获取子店采购单的物品
+	subItems, err := repository.NewPurchaseOrderItemRepo(subDb).GetByPurchaseOrderUuid(purchaseOrder.SubUuid)
+	if err != nil {
+		return err
+	}
+
+	// 批量更新子店物品的供应商字段
+	for _, subItem := range subItems {
+		if supplierInfo, ok := materialSupplierMap[subItem.MaterialCode]; ok {
+			if err := subDb.Model(&model.PurchaseOrderItem{}).
+				Where("uuid = ?", subItem.Uuid).
+				Updates(map[string]any{
+					"delivered_by_supplier": supplierInfo.DeliveredBySupplier,
+					"supplier_erp_code":     supplierInfo.SupplierErpCode,
+				}).Error; err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 

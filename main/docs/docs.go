@@ -18603,6 +18603,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/kiosk/order/finish": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "检查订单实付是否符合完成支付条件，执行送厨和完成订单状态。用于客户端主动触发订单完成流程",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.订单"
+                ],
+                "summary": "Kiosk 订单完成",
+                "parameters": [
+                    {
+                        "description": "订单完成参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.KioskOrderFinishReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.KioskOrderFinishResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/kiosk/order/pay": {
             "post": {
                 "security": [
@@ -35987,6 +36041,62 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/transfer/file/upload": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "上传调拨单附件（文件保存到发起方商户数据库的ttpos_file表）",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "上传调拨单附件",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "调拨单UUID",
+                        "name": "transfer_order_uuid",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "文件",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UploadFileResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/transfer/material/list": {
             "get": {
                 "security": [
@@ -45367,6 +45477,23 @@ const docTemplate = `{
             "properties": {
                 "company_uuid": {
                     "description": "商户UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.KioskOrderFinishReq": {
+            "type": "object",
+            "required": [
+                "sale_bill_uuid",
+                "sale_order_uuid"
+            ],
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID, 必填",
                     "type": "integer"
                 }
             }
@@ -56639,6 +56766,15 @@ const docTemplate = `{
                 },
                 "username": {
                     "description": "登录账号",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.KioskOrderFinishResp": {
+            "type": "object",
+            "properties": {
+                "serial_no": {
+                    "description": "订单流水号",
                     "type": "string"
                 }
             }

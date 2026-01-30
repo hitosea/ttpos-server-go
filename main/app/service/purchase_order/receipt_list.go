@@ -135,12 +135,27 @@ func (s *purchaseOrderSrv) getSupplierDirectReceiptList(
 	// 收集所有 delivered_by_supplier=1 的物品，按 supplier_erp_code 分组
 	supplierItemsMap := make(map[string][]model.PurchaseOrderItem)
 
+	// 判断是否使用 PurchaseOrderItem 的供应商字段（总部审核通过后使用 item 字段）
+	useItemSupplierFields := purchaseOrder.HeadquarterStatus == constant.HeadquarterStatusApproved
+
 	for _, item := range purchaseOrder.Items {
-		if item.Material != nil && item.Material.DeliveredBySupplier == 1 {
-			supplierCode := item.Material.SupplierErpCode
-			if supplierCode == "" {
+		var deliveredBySupplier int
+		var supplierCode string
+
+		if useItemSupplierFields {
+			// 总部审核通过，从 PurchaseOrderItem 读取
+			deliveredBySupplier = item.DeliveredBySupplier
+			supplierCode = item.SupplierErpCode
+		} else {
+			// 未审核通过，从 Material 读取
+			if item.Material == nil {
 				continue
 			}
+			deliveredBySupplier = item.Material.DeliveredBySupplier
+			supplierCode = item.Material.SupplierErpCode
+		}
+
+		if deliveredBySupplier == 1 && supplierCode != "" {
 			supplierItemsMap[supplierCode] = append(supplierItemsMap[supplierCode], item)
 		}
 	}
@@ -546,16 +561,33 @@ func (s *purchaseOrderSrv) getSupplierPendingItems(
 		result.SupplierName = supplier.Name
 	}
 
+	// 判断是否使用 PurchaseOrderItem 的供应商字段（总部审核通过后使用 item 字段）
+	useItemSupplierFields := purchaseOrder.HeadquarterStatus == constant.HeadquarterStatusApproved
+
 	// 筛选属于该供应商的物品（delivered_by_supplier=1 且 supplier_erp_code 匹配）
 	for i := range purchaseOrder.Items {
 		item := &purchaseOrder.Items[i]
-		if item.Material == nil {
+
+		var deliveredBySupplier int
+		var itemSupplierCode string
+
+		if useItemSupplierFields {
+			// 总部审核通过，从 PurchaseOrderItem 读取
+			deliveredBySupplier = item.DeliveredBySupplier
+			itemSupplierCode = item.SupplierErpCode
+		} else {
+			// 未审核通过，从 Material 读取
+			if item.Material == nil {
+				continue
+			}
+			deliveredBySupplier = item.Material.DeliveredBySupplier
+			itemSupplierCode = item.Material.SupplierErpCode
+		}
+
+		if deliveredBySupplier != 1 {
 			continue
 		}
-		if item.Material.DeliveredBySupplier != 1 {
-			continue
-		}
-		if item.Material.SupplierErpCode != supplierErpCode {
+		if itemSupplierCode != supplierErpCode {
 			continue
 		}
 
