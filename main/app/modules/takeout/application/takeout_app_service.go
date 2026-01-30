@@ -172,6 +172,22 @@ func (s *takeoutAppService) GetTakeoutStatus(ctx context.Context, platform strin
 
 // ToggleTakeoutStatus 切换指定平台外卖状态
 func (s *takeoutAppService) ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
+	// 如果开启，则推送菜单到LINE MAN
+	if req.Enabled && req.Platform == value_object.TakeoutPlatformLineman {
+		takeout, err := s.takeoutService.GetByPlatform(ctx, req.Platform)
+		if err != nil {
+			return nil, fmt.Errorf("获取平台状态失败: %w", err)
+		}
+		// 如果开启，则推送菜单到LINE MAN
+		err = s.rpcService.ActivateShop(ctx.GetContext(), value_object.TakeoutPlatformLineman, ctx.GetCompanyUuid())
+		if err != nil {
+			return nil, errors.WithMessage(errors.New("推送菜单到LINE MAN失败"), err.Error())
+		}
+		err = s.takeoutService.UpdatePlatformBoundStatus(ctx, takeout.Uuid, true)
+		if err != nil {
+			return nil, fmt.Errorf("更新平台状态失败: %w", err)
+		}
+	}
 	// 更新状态
 	err := s.takeoutService.UpdatePlatformStatusByPlatform(ctx, req.Platform, req.Enabled)
 	if err != nil {
