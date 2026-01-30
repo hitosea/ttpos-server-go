@@ -1,6 +1,7 @@
 package service
 
 import (
+	"io"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -30,22 +31,27 @@ type ITransferOrderFileSrv interface {
 
 	// ValidateTransferOrderStatus 验证调拨单状态（待收货状态才能编辑）
 	ValidateTransferOrderStatus(ctx context.Context, transferOrderUuid uint64) error
+
+	// UploadFile 上传调拨单附件（文件保存到发起方商户数据库）
+	UploadFile(ctx context.Context, transferOrderUuid uint64, fileReader io.Reader, fileName string, fileSize int64) (*resp.UploadFileResp, error)
 }
 
 // transferOrderFileSrv 调拨单附件服务实现
 type transferOrderFileSrv struct {
-	dbm *database.DBManager
+	dbm           *database.DBManager
+	uploadFileSrv IUploadFileSrv
 }
 
 // NewTransferOrderFileSrv 创建调拨单附件服务
 func NewTransferOrderFileSrv(dbm *database.DBManager) ITransferOrderFileSrv {
-	return NewTransferOrderFileSrvImpl(dbm)
+	return NewTransferOrderFileSrvImpl(dbm, NewUploadFileSrv(dbm))
 }
 
 // NewTransferOrderFileSrvImpl 创建调拨单附件服务实现
-func NewTransferOrderFileSrvImpl(dbm *database.DBManager) ITransferOrderFileSrv {
+func NewTransferOrderFileSrvImpl(dbm *database.DBManager, uploadFileSrv IUploadFileSrv) ITransferOrderFileSrv {
 	return &transferOrderFileSrv{
-		dbm: dbm,
+		dbm:           dbm,
+		uploadFileSrv: uploadFileSrv,
 	}
 }
 
@@ -171,4 +177,42 @@ func (s *transferOrderFileSrv) ValidateTransferOrderStatus(ctx context.Context, 
 	}
 
 	return nil
+}
+
+// UploadFile 上传调拨单附件（文件保存到发起方商户数据库）
+func (s *transferOrderFileSrv) UploadFile(ctx context.Context, transferOrderUuid uint64, fileReader io.Reader, fileName string, fileSize int64) (*resp.UploadFileResp, error) {
+	// 从 SAAS 主库查询调拨单，获取发起方 companyUuid
+	// 这样可以确保跨商户场景下也能正确获取发起方信息
+	saasDb := s.dbm.GetDB(0)
+	if saasDb == nil {
+		return nil, errors.New("获取主库连接失败")
+	}
+
+	initiatorCompanyUuid := ctx.GetCompanyUuid()
+	headquarterTransferOrder, err := repository.NewTransferOrderRepo(saasDb).GetByUuid(transferOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "调拨单不存在")
+	}
+	if headquarterTransferOrder != nil {
+		initiatorCompanyUuid = headquarterTransferOrder.CompanyUuid
+	}
+
+	// 获取发起方商户的数据库
+	initiatorDb := s.dbm.GetDB(initiatorCompanyUuid)
+	if initiatorDb == nil {
+		return nil, errors.New("获取发起方数据库失败")
+	}
+
+	// 复制上下文并设置为发起方的数据库信息
+	// uploadFileSrv.UploadDocument 内部使用 ctx.GetDbId() 获取数据库
+	uploadCtx := ctx.Copy()
+	uploadCtx.SetCompanyUuid(initiatorCompanyUuid)
+	uploadCtx.SetDB(initiatorDb)
+
+	// 上传文件到发起方数据库
+	uploadResp, err := s.uploadFileSrv.UploadDocument(uploadCtx, fileReader, fileName, fileSize, 0)
+	if err != nil {
+		return nil, errors.WithMessage(err, "上传文件失败")
+	}
+	return uploadResp, nil
 }
