@@ -53,7 +53,7 @@ func (s *sLineman) HandlePlaceOrder(ctx context.Context, req *v1.PlaceOrderReq) 
 		return gerror.Wrap(err, "保存订单失败")
 	}
 
-	// 3. 发送 MQ 消息
+	// 3. 发送 MQ 消息（使用订单号作为 key，便于消息追踪）
 	event := &grab.OrderEvent{
 		Action:       string(consts.OrderActionCreate),
 		ProviderName: ProviderNameLineman,
@@ -64,7 +64,7 @@ func (s *sLineman) HandlePlaceOrder(ctx context.Context, req *v1.PlaceOrderReq) 
 		Status:       string(consts.OrderStatusAccepted),
 		Timestamp:    gtime.Now().Unix(),
 	}
-	if err := queue.PushWithContext(ctx, TopicLinemanOrder, event); err != nil {
+	if err := queue.PushWithKey(ctx, TopicLinemanOrder, req.OrderId, event); err != nil {
 		// MQ 发送失败只记录日志，不影响主流程（订单已入库）
 		g.Log().Warningf(ctx, "发送订单 MQ 事件失败 %s: %v", orderUUID, err)
 	}
@@ -219,7 +219,7 @@ func (s *sLineman) HandleOrderUpdate(ctx context.Context, req *v1.OrderUpdateReq
 		return gerror.Wrap(err, "更新订单失败")
 	}
 
-	// 4. 发送 RocketMQ 事件
+	// 4. 发送 RocketMQ 事件（使用订单号作为 key，便于消息追踪）
 	event := &grab.OrderEvent{
 		Action:       string(consts.OrderActionUpdate),
 		ProviderName: ProviderNameLineman,
@@ -230,7 +230,7 @@ func (s *sLineman) HandleOrderUpdate(ctx context.Context, req *v1.OrderUpdateReq
 		Status:    string(consts.OrderStatusAccepted),
 		Timestamp: gtime.Now().Unix(),
 	}
-	if err := queue.PushWithContext(ctx, TopicLinemanOrder, event); err != nil {
+	if err := queue.PushWithKey(ctx, TopicLinemanOrder, req.OrderId, event); err != nil {
 		// RocketMQ 发送失败只记录日志，不影响主流程（订单已入库）
 		g.Log().Warningf(ctx, "发送订单更新 RocketMQ 事件失败 %s: %v", orderUUID, err)
 	}
@@ -380,7 +380,7 @@ func (s *sLineman) HandleOrderStatusUpdate(ctx context.Context, req *v1.OrderSta
 		return gerror.Wrap(err, "更新订单状态失败")
 	}
 
-	// 5. 发送 RocketMQ 事件
+	// 5. 发送 RocketMQ 事件（使用订单号作为 key，便于消息追踪）
 	event := &grab.OrderEvent{
 		Action:       string(consts.OrderActionStatusUpdate),
 		ProviderName: ProviderNameLineman,
@@ -390,7 +390,7 @@ func (s *sLineman) HandleOrderStatusUpdate(ctx context.Context, req *v1.OrderSta
 		Status:       ttposStatus,
 		Timestamp:    gtime.Now().Unix(),
 	}
-	if err := queue.PushWithContext(ctx, TopicLinemanOrder, event); err != nil {
+	if err := queue.PushWithKey(ctx, TopicLinemanOrder, req.OrderId, event); err != nil {
 		// RocketMQ 发送失败只记录日志，不影响主流程（订单状态已更新）
 		g.Log().Warningf(ctx, "发送订单状态更新 MQ 事件失败 %s: %v", orderUUID, err)
 	}
