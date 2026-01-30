@@ -468,6 +468,31 @@ func (h *OrderHandler) PayOrderConfirm(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// OrderPrint 打印小票
+// @Summary 订单打印小票
+// @Description 订单打印小票
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderPrintReq true "参数"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
+// @Router /kiosk/order/print [post]
+func (h *OrderHandler) OrderPrint(c *gin.Context) {
+	var printReq req.OrderPrintReq
+	if err := c.ShouldBindJSON(&printReq); err != nil {
+		helper.HandleValidationError(c, err, printReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderSrv.OrderPrint(ctx, printReq, true)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res, "发送成功")
+}
+
 // FinishOrder Kiosk 订单完成
 // @Summary Kiosk 订单完成
 // @Description 检查订单实付是否符合完成支付条件，执行送厨和完成订单状态。用于客户端主动触发订单完成流程
@@ -537,5 +562,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                      // 获取支付状态
 		privateApi.POST("/order/pay/confirm", wrapper.PayOrderConfirm)                   // 支付完成确认（KBank 等主动上报场景）
 		privateApi.POST("/order/finish", wrapper.FinishOrder)                            // 订单完成（检查支付、送厨、结账）
+		privateApi.POST("/order/print", wrapper.OrderPrint)                              // 打印小票
 	}
 }
