@@ -276,6 +276,13 @@ type KioskPaymentConfirmReq struct {
 	PaymentInfo       string  `json:"payment_info"`                           // 支付信息（KBank 返回的完整支付信息 JSON）
 }
 
+// KioskOrderFinishReq Kiosk 自助点餐机订单完成请求
+// 用于检查订单实付是否符合完成支付条件，并执行送厨和完成订单状态
+type KioskOrderFinishReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID, 必填
+	SaleOrderUuid uint64 `json:"sale_order_uuid" binding:"required"` // 销售订单UUID, 必填
+}
+
 type OrderGetOrderMemberListReq struct {
 	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID, 必填
 }
