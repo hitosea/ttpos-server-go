@@ -4211,6 +4211,24 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖平台配置表(多平台)';
 
 -- ----------------------------
+-- Table structure for ttpos_takeout_order_update_log (外卖订单更新日志表)
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_update_log` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '日志UUID',
+    `takeout_order_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '外卖订单UUID',
+    `old_data` longtext COMMENT '更新前订单数据(JSON格式,包含订单主表、商品、修饰符等完整数据)',
+    `new_data` longtext COMMENT '更新后订单数据(JSON格式,包含订单主表、商品、修饰符等完整数据)',
+    `create_time` int unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` int unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` int unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_takeout_order_uuid` (`takeout_order_uuid`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖订单更新日志表';
+
+-- ----------------------------
 -- Table structure for ttpos_purchase_limit_scheme (限购方案主表)
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_limit_scheme` (
