@@ -95,7 +95,9 @@ help:
 	@printf "\033[1;32m"
 	@echo "📦 版本管理"
 	@printf "\033[0m"
-	@printf "\033[1;33m  %-25s\033[0m - %s\n" "add-ver" "增加版本号"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "add-ver" "交互式更新版本号"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "add-ver-patch" "自动增加补丁版本号 (patch +1)"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "ver-show" "显示当前版本号"
 	@echo ""
 	@printf "\033[1;32m"
 	@echo "🧹 清理命令"
@@ -219,8 +221,45 @@ build-web:
 build-run:
 	make build
 
-# 快速增加版本号
-add-version:
+# 显示当前版本号
+ver-show:
+	@printf "\033[1;36m当前版本号:\033[0m\n"
+	@printf "  main/config/version.go:           \033[1;33m%s\033[0m\n" "$$(grep 'Version' main/config/version.go | sed 's/.*"\(.*\)".*/\1/')"
+	@printf "  admin/version.json:               \033[1;33m%s\033[0m\n" "$$(cat admin/version.json | grep version | sed 's/.*"\([0-9.]*\)".*/\1/')"
+	@printf "  admin/views/shop/.env.production: \033[1;33m%s\033[0m\n" "$$(grep 'VITE_BASIC_VERSION' admin/views/shop/.env.production | cut -d'=' -f2)"
+
+# 交互式更新版本号
+add-ver:
+	@printf "\033[1;36m"
+	@echo "📦 TTPOS 版本号更新工具"
+	@printf "\033[0m"
+	@echo ""
+	@printf "\033[1;32m当前版本:\033[0m\n"
+	@CURRENT_VERSION=$$(grep 'Version' main/config/version.go | sed 's/.*"\(.*\)".*/\1/'); \
+	printf "  → \033[1;33m$$CURRENT_VERSION\033[0m\n"; \
+	echo ""; \
+	printf "\033[1;32m请输入新版本号:\033[0m "; \
+	read NEW_VERSION; \
+	if [ -z "$$NEW_VERSION" ]; then \
+		printf "\033[1;31m错误: 版本号不能为空\033[0m\n"; \
+		exit 1; \
+	fi; \
+	echo ""; \
+	printf "\033[1;36m正在更新版本号为: \033[1;33m$$NEW_VERSION\033[0m\n"; \
+	echo ""; \
+	CURRENT_DATE=$$(date +%Y-%m-%d); \
+	CURRENT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
+	cd main && go run ./main.go version --version=$$NEW_VERSION --commit=$$CURRENT_COMMIT --build-time=$$CURRENT_DATE; \
+	cd ..; \
+	sed -i 's/"version": ".*"/"version": "'$$NEW_VERSION'"/' admin/version.json; \
+	printf "  ✓ admin/version.json\n"; \
+	sed -i 's/VITE_BASIC_VERSION=.*/VITE_BASIC_VERSION='$$NEW_VERSION'/' admin/views/shop/.env.production; \
+	printf "  ✓ admin/views/shop/.env.production\n"; \
+	echo ""; \
+	printf "\033[1;32m✅ 版本号已更新为 \033[1;33m$$NEW_VERSION\033[0m\n"
+
+# 快速增加版本号 (patch +1)
+add-ver-patch:
 	@echo "快速增加版本号..."
 	@CURRENT_VERSION=$$(grep 'Version.*=.*"' main/config/version.go | sed 's/.*"\(.*\)".*/\1/'); \
 	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1); \
@@ -232,6 +271,9 @@ add-version:
 	CURRENT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
 	echo "当前版本: $$CURRENT_VERSION, 新版本: $$NEW_VERSION"; \
 	cd main && go run ./main.go version --version=$$NEW_VERSION --commit=$$CURRENT_COMMIT --build-time=$$CURRENT_DATE
+
+# 兼容旧命令
+add-version: add-ver-patch
 
 # 清空redis的cluster的data-*目录
 redis-clear-data-node-conf:
