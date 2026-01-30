@@ -197,7 +197,15 @@ func (c *LineManConverter) ConvertOrderToTakeoutOrder(
 	}
 
 	// 布尔字段转整数
-	if takeoutOrder.GetCutlery() {
+	// 检查 AdditionalProperties 是否包含 "รับช้อนส้อมพลาสติก"（需要餐具）
+	needCutlery := takeoutOrder.GetCutlery()
+	for _, value := range takeoutOrder.AdditionalProperties {
+		if fmt.Sprintf("%v", value) == "รับช้อนส้อมพลาสติก" {
+			needCutlery = true
+			break
+		}
+	}
+	if needCutlery {
 		order.Cutlery = 1
 	}
 	if featureFlags.HasIsMexEditOrder() && featureFlags.GetIsMexEditOrder() {
@@ -255,7 +263,7 @@ func (c *LineManConverter) ConvertOrderToTakeoutOrder(
 		additionalItemNames := make([]string, 0, len(takeoutOrder.AdditionalProperties))
 		for _, value := range takeoutOrder.AdditionalProperties {
 			if value != nil {
-				// 将值转换为字符串
+				// 将值转换为字符串，并去掉回车符号
 				valueStr := fmt.Sprintf("%v", value)
 				if valueStr != "" {
 					additionalItemNames = append(additionalItemNames, valueStr)
@@ -424,21 +432,24 @@ func (c *LineManConverter) parseRFC3339Time(timeStr string) int64 {
 		return 0
 	}
 
-	// 判断如果是 2026-01-23 09:26:59 格式，直接解析
+	// LineMan 是泰国平台，使用泰国时区
+	loc, _ := time.LoadLocation("Asia/Bangkok")
+
+	// 判断如果是 2026-01-23 09:26:59 格式，使用本地时区解析
 	if strings.Contains(timeStr, " ") && !strings.Contains(timeStr, "T") {
 		// 尝试解析标准日期时间格式
-		t, err := time.Parse("2006-01-02 15:04:05", timeStr)
+		t, err := time.ParseInLocation("2006-01-02 15:04:05", timeStr, loc)
 		if err == nil {
 			return t.Unix()
 		}
 		// 尝试带毫秒的格式
-		t, err = time.Parse("2006-01-02 15:04:05.000", timeStr)
+		t, err = time.ParseInLocation("2006-01-02 15:04:05.000", timeStr, loc)
 		if err == nil {
 			return t.Unix()
 		}
 	}
 
-	// 尝试多种时间格式
+	// 带时区信息的格式直接解析（Z 表示 UTC，-07:00 表示时区偏移）
 	formats := []string{
 		time.RFC3339,
 		"2006-01-02T15:04:05Z",
@@ -449,6 +460,18 @@ func (c *LineManConverter) parseRFC3339Time(timeStr string) int64 {
 
 	for _, format := range formats {
 		if t, err := time.Parse(format, timeStr); err == nil {
+			return t.Unix()
+		}
+	}
+
+	// 不带时区信息的 ISO 格式，使用泰国时区解析
+	noTzFormats := []string{
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04:05.000",
+	}
+
+	for _, format := range noTzFormats {
+		if t, err := time.ParseInLocation(format, timeStr, loc); err == nil {
 			return t.Unix()
 		}
 	}

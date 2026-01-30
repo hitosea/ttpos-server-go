@@ -10,6 +10,7 @@ import (
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // IWarehouseItemRepo 仓库商品库存Repository接口
@@ -27,6 +28,7 @@ type IWarehouseItemRepo interface {
 	GetByWarehouseUuid(warehouseUuid uint64, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetByMaterialUuid(materialUuid uint64, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetByWarehouseAndMaterial(warehouseUuid, materialUuid uint64, opts ...DBOption) (*model.WarehouseItem, error)
+	GetByWarehouseAndMaterialForUpdate(warehouseUuid, materialUuid uint64) (*model.WarehouseItem, error)
 	GetByWarehouseAndMaterialOrCreate(warehouseUuid, materialUuid uint64, materialCode string, valuation float64, opts ...DBOption) (*model.WarehouseItem, error)
 	GetByMaterialCode(materialCode string, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetByWarehouseErpCode(warehouseErpCode string, opts ...DBOption) ([]model.WarehouseItem, error)
@@ -181,6 +183,19 @@ func (r *WarehouseItemRepoImpl) GetByWarehouseAndMaterial(warehouseUuid, materia
 		query = opt(query)
 	}
 	err := query.First(&warehouseItem).Error
+	if err != nil {
+		return nil, err
+	}
+	return &warehouseItem, nil
+}
+
+// GetByWarehouseAndMaterialForUpdate 根据仓库UUID和商品UUID获取库存（悲观锁 FOR UPDATE）
+func (r *WarehouseItemRepoImpl) GetByWarehouseAndMaterialForUpdate(warehouseUuid, materialUuid uint64) (*model.WarehouseItem, error) {
+	var warehouseItem model.WarehouseItem
+	err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("warehouse_uuid = ? AND material_uuid = ?", warehouseUuid, materialUuid).
+		Scopes(NotDeleted).
+		First(&warehouseItem).Error
 	if err != nil {
 		return nil, err
 	}

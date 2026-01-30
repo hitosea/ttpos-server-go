@@ -301,5 +301,16 @@ func (o *TakeoutOrder) GetAdditionalProperties(language string) string {
 			return i18n.Translate(language, "不需要餐具")
 		}
 	}
-	return o.AdditionalProperties
+
+	// 替换泰语餐具文案为 i18n 翻译
+	result := o.AdditionalProperties
+	result = strings.ReplaceAll(result, "ไม่รับช้อนส้อมพลาสติก", i18n.Translate(language, "不需要餐具"))
+	result = strings.ReplaceAll(result, "รับช้อนส้อมพลาสติก", i18n.Translate(language, "需要餐具"))
+
+	// 去掉回车符号
+	result = strings.ReplaceAll(result, "\r\n", " ")
+	result = strings.ReplaceAll(result, "\n", " ")
+	result = strings.ReplaceAll(result, "\r", " ")
+
+	return result
 }

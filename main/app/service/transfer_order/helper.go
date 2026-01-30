@@ -825,8 +825,8 @@ func (h *transferOrderHelper) UpdateStockInTransit(
 			// 发货门店
 			if approval.ApprovalType == constant.TransferApprovalTypeSender {
 
-				// 获取仓库物品
-				warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(outTargetWarehouse.Uuid, material.Uuid)
+				// 获取仓库物品（悲观锁，防止并发扣减）
+				warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterialForUpdate(outTargetWarehouse.Uuid, material.Uuid)
 				if err != nil || warehouseItem == nil || warehouseItem.Stock < actualNum {
 					logger.Logger.Error("查询仓库存失败", zap.Error(err), zap.Any("transferOrder", transferOrder), zap.Any("item", item))
 					return nil, errors.NewWithCodeAndData(
