@@ -1179,6 +1179,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item` (
     `total_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '总价',
     `erpnext_uom` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext单位',
     `base_erpnext_uom` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext基准单位',
+    `delivered_by_supplier` INT(10) NOT NULL DEFAULT 0 COMMENT '是否由供应商配送，0-否，1-是',
+    `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商ERP编码',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
