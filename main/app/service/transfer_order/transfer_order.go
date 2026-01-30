@@ -1589,6 +1589,11 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 		return err
 	}
 
+	// 验证客户端版本（附件功能需要 v2.16.0+）
+	if ctx.Version(context.LT, constant.ClientVersionV2160) && len(req.FileUuids) == 0 {
+		return errors.New("您的软件版本过低，请升级后再试")
+	}
+
 	// 加锁
 	s.lock.LockUuid(req.Uuid)
 	defer s.lock.UnlockUuid(req.Uuid)
@@ -1617,11 +1622,6 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 	// 验证收货权限（只有收货门店可以收货）
 	if transferOrder.ReceiverCompanyUuid != ctx.GetCompanyUuid() {
 		return errors.New("无收货权限")
-	}
-
-	// 验证客户端版本（附件功能需要 v2.16.0+）
-	if ctx.Version(context.LT, constant.ClientVersionV2160) {
-		return errors.New("您的软件版本过低，请升级后再试")
 	}
 
 	// 验证附件必填
