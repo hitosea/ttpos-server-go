@@ -96,6 +96,17 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 
 	opts = append(opts, stockReconciliationRepo.WithWarehouseMultiLanguageName())
 
+	// 如果版本号大于等于v2.16.0,则按照提交时间排序
+	if ctx.Version(context.GTE, constant.ClientVersionV2160) {
+		opts = append(opts, func(db *gorm.DB) *gorm.DB {
+			return db.Order("submit_time DESC")
+		})
+	} else {
+		opts = append(opts, func(db *gorm.DB) *gorm.DB {
+			return db.Order("create_time DESC") // 默认按照创建时间排序. 由于之前版本未提交的盘点单没有提交时间,所以按照创建时间排序.
+		})
+	}
+
 	// 查询数据
 	list, total, err := stockReconciliationRepo.GetStockReconciliationListWithPagination(req.PageNo, req.PageSize, opts...)
 	if err != nil {
@@ -500,6 +511,7 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 				Purpose:            saveReq.Purpose,
 				Status:             constant.StockReconciliationStatusSaved, // 0-已保存
 				SubmitterStaffUuid: ctx.GetStaffUuid(),                      // 记录发起人
+				SubmitTime:         int(time.Now().Unix()),                  // 记录提交时间,为了能按照时间排序(最后真正提交时会再更新提交时间)
 			}
 			if err := stockReconciliationRepo.CreateStockReconciliation(stockReconciliation); err != nil {
 				return errors.WithMessage(errors.New("创建盘点单失败"), err.Error())
@@ -511,6 +523,7 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 			stockReconciliation.WarehouseUuid = saveReq.WarehouseUuid
 			stockReconciliation.Purpose = saveReq.Purpose
 			stockReconciliation.Type = saveReq.Type
+			stockReconciliation.SubmitTime = int(time.Now().Unix()) // 记录提交时间,为了能按照时间排序(最后真正提交时会再更新提交时间)
 
 			if err := stockReconciliationRepo.UpdateStockReconciliation(stockReconciliation); err != nil {
 				return errors.WithMessage(err, "更新盘点单失败")
