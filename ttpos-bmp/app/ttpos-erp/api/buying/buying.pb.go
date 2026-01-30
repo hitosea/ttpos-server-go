@@ -1294,11 +1294,12 @@ func (x *PurchaseReceiptItem) GetQty() float64 {
 }
 
 type SavePurchaseReceiptReq struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	PurchaseOrderName string                 `protobuf:"bytes,1,opt,name=purchase_order_name,json=purchaseOrderName,proto3" json:"purchase_order_name,omitempty" dc:"采购订单名称,必填"` // 采购订单名称,必填
-	Items             []*PurchaseOrderItem   `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty" dc:"采购订单物品列表,必填"`                                                  // 采购订单物品列表,必填
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	PurchaseOrderName     string                 `protobuf:"bytes,1,opt,name=purchase_order_name,json=purchaseOrderName,proto3" json:"purchase_order_name,omitempty" dc:"采购订单名称,必填"`         // 采购订单名称,必填
+	Items                 []*PurchaseOrderItem   `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty" dc:"采购订单物品列表,必填"`                                                          // 采购订单物品列表,必填
+	InterCompanyReference string                 `protobuf:"bytes,3,opt,name=inter_company_reference,json=interCompanyReference,proto3" json:"inter_company_reference,omitempty" dc:"跨公司引用"` // 跨公司引用
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *SavePurchaseReceiptReq) Reset() {
@@ -1343,6 +1344,13 @@ func (x *SavePurchaseReceiptReq) GetItems() []*PurchaseOrderItem {
 		return x.Items
 	}
 	return nil
+}
+
+func (x *SavePurchaseReceiptReq) GetInterCompanyReference() string {
+	if x != nil {
+		return x.InterCompanyReference
+	}
+	return ""
 }
 
 type SavePurchaseReceiptResp struct {
@@ -2418,10 +2426,11 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\titem_name\x18\x02 \x01(\tR\bitemName\x12\x1b\n" +
 	"\tstock_uom\x18\x03 \x01(\tR\bstockUom\x12\x10\n" +
 	"\x03uom\x18\x04 \x01(\tR\x03uom\x12\x10\n" +
-	"\x03qty\x18\x05 \x01(\x01R\x03qty\"y\n" +
+	"\x03qty\x18\x05 \x01(\x01R\x03qty\"\xb1\x01\n" +
 	"\x16SavePurchaseReceiptReq\x12.\n" +
 	"\x13purchase_order_name\x18\x01 \x01(\tR\x11purchaseOrderName\x12/\n" +
-	"\x05items\x18\x02 \x03(\v2\x19.buying.PurchaseOrderItemR\x05items\"a\n" +
+	"\x05items\x18\x02 \x03(\v2\x19.buying.PurchaseOrderItemR\x05items\x126\n" +
+	"\x17inter_company_reference\x18\x03 \x01(\tR\x15interCompanyReference\"a\n" +
 	"\x17SavePurchaseReceiptResp\x12F\n" +
 	"\x10purchase_receipt\x18\x01 \x01(\v2\x1b.buying.PurchaseReceiptInfoR\x0fpurchaseReceipt\"\xd8\x01\n" +
 	"\x17GetPurchaseOrderListReq\x12\x1a\n" +
