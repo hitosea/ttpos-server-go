@@ -530,7 +530,7 @@ func (s *purchaseOrderSrv) buildDNPendingItemInfo(
 			ConversionRate: conversionRate,
 			PurchaseNum:    dnUnit.Qty,
 			ArrivalNum:     receivedQty,
-			Num:            dnUnit.Qty, // Num与PurchaseNum一致
+			Num:            pendingQty,
 		})
 	}
 
