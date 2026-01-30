@@ -263,8 +263,11 @@ func (c *LineManConverter) ConvertOrderToTakeoutOrder(
 		additionalItemNames := make([]string, 0, len(takeoutOrder.AdditionalProperties))
 		for _, value := range takeoutOrder.AdditionalProperties {
 			if value != nil {
-				// 将值转换为字符串
+				// 将值转换为字符串，并去掉回车符号
 				valueStr := fmt.Sprintf("%v", value)
+				valueStr = strings.ReplaceAll(valueStr, "\r\n", "")
+				valueStr = strings.ReplaceAll(valueStr, "\n", "")
+				valueStr = strings.ReplaceAll(valueStr, "\r", "")
 				if valueStr != "" {
 					additionalItemNames = append(additionalItemNames, valueStr)
 				}
