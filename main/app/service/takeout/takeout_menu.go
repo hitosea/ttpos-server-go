@@ -130,9 +130,14 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 	err = s.takeoutAppSrv.PushMenu(ctx, platform, currencySetting.Unit)
 	if err != nil {
 		logger.Logger.Error("推送菜单到平台失败", zap.String("platform", platform), zap.Error(err))
+		// 判断是否是门店ID无效的错误
+		errMsg := "推送菜单失败"
+		if strings.Contains(err.Error(), "Invalid store ID") {
+			errMsg = "门店ID无效，请检查门店是否已在外卖平台绑定"
+		}
 		// 标记推送失败
-		progressService.CompleteImport(ctx, importLog.Uuid, false, "推送菜单失败: "+err.Error())
-		return errors.WithMessage(errors.New("推送菜单失败"), err.Error())
+		progressService.CompleteImport(ctx, importLog.Uuid, false, errMsg+": "+err.Error())
+		return errors.WithMessage(errors.New(errMsg), err.Error())
 	}
 
 	// 更新进度到 100%
