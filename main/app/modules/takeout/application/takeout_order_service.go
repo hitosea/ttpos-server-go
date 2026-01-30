@@ -29,6 +29,7 @@ import (
 
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // ITakeoutOrderAppService 外卖订单应用服务接口
@@ -436,7 +437,10 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 			zap.Int("totalChanges", len(changeResult.AllChanges)))
 	}
 
-	// 7. 调用 Domain Service 进行增量更新
+	// 7. 保存订单更新日志（记录更新前后的订单数据）
+	s.saveOrderUpdateLog(db, orderUuid, existingOrder, updatedOrder)
+
+	// 8. 调用 Domain Service 进行增量更新
 	err = s.orderService.IncrementalUpdateOrder(ctx, existingOrder, updatedOrder, changeResult)
 	if err != nil {
 		logger.Logger.Error("更新订单事务失败",
@@ -458,4 +462,43 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 	))
 
 	return nil
+}
+
+// saveOrderUpdateLog 保存订单更新日志（记录更新前后的订单数据）
+func (s *takeoutOrderAppService) saveOrderUpdateLog(db *gorm.DB, orderUuid uint64, existingOrder, updatedOrder *model.TakeoutOrder) {
+	// 序列化旧订单数据
+	oldDataJSON, err := json.Marshal(existingOrder)
+	if err != nil {
+		logger.Logger.Warn("序列化旧订单数据失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		return
+	}
+
+	// 序列化新订单数据
+	newDataJSON, err := json.Marshal(updatedOrder)
+	if err != nil {
+		logger.Logger.Warn("序列化新订单数据失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		return
+	}
+
+	// 生成日志 UUID
+	logUuid, err := utils.GetID()
+	if err != nil {
+		logger.Logger.Warn("生成日志UUID失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		return
+	}
+
+	// 创建更新日志记录
+	updateLog := &model.TakeoutOrderUpdateLog{
+		BaseModel: model.BaseModel{
+			Uuid: logUuid,
+		},
+		TakeoutOrderUuid: orderUuid,
+		OldData:          string(oldDataJSON),
+		NewData:          string(newDataJSON),
+	}
+
+	// 保存到数据库
+	if err := db.Create(updateLog).Error; err != nil {
+		logger.Logger.Warn("保存订单更新日志失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+	}
 }
