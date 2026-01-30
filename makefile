@@ -131,10 +131,6 @@ repassword:
 mod-tidy:
 	@cd main && go mod tidy
 
-# 增加版本号
-add-ver:
-	@make add-version
-
 # 执行think命令
 think:
 	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh think $(filter-out $@,$(MAKECMDGOALS)) 
