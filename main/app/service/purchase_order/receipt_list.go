@@ -422,20 +422,6 @@ func (s *purchaseOrderSrv) getDNPendingItems(
 			continue
 		}
 
-		// // 检查该物品是否有剩余可收货数量
-		// hasRemaining := false
-		// for _, dnUnit := range dnUnits {
-		// 	key := itemCode + ":" + dnUnit.Uom
-		// 	receivedQty := receivedQtyMap[key]
-		// 	if dnUnit.Qty-receivedQty > 0 {
-		// 		hasRemaining = true
-		// 		break
-		// 	}
-		// }
-		// if !hasRemaining {
-		// 	continue
-		// }
-
 		// 构建待收货物品信息
 		pendingItem := s.buildDNPendingItemInfo(purchaseItem, dnUnits, receivedQtyMap)
 		result.Items = append(result.Items, pendingItem)
@@ -570,18 +556,6 @@ func (s *purchaseOrderSrv) getSupplierPendingItems(
 			continue
 		}
 		if item.Material.SupplierErpCode != supplierErpCode {
-			continue
-		}
-
-		// 判断是否有待收货数量（只基于 ttpos_purchase_order_item_unit）
-		hasPendingQty := false
-		for _, unit := range item.Units {
-			if unit.ArrivalNum < unit.Num {
-				hasPendingQty = true
-				break
-			}
-		}
-		if !hasPendingQty {
 			continue
 		}
 
