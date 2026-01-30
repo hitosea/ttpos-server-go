@@ -380,7 +380,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 				}
 			}
 			// 添加物料库存
-			err = s.updateMaterialStock(ctx, tx, receiptOrder)
+			err = s.updateMaterialStock(ctx, tx, receiptOrder, req.DeliveryNoteNo)
 			if err != nil {
 				return err
 			}
@@ -640,7 +640,7 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 				}
 			}
 			// 添加物料库存
-			err = s.updateMaterialStock(ctx, tx, receiptOrder)
+			err = s.updateMaterialStock(ctx, tx, receiptOrder, receiptOrder.DeliveryNoteNo)
 			if err != nil {
 				return err
 			}
@@ -964,6 +964,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 	ctx context.Context,
 	db *gorm.DB,
 	receiptOrder *model.PurchaseReceiptOrder,
+	dn string,
 ) error {
 	if receiptOrder.Status != constant.ReceiptOrderStatusReceived {
 		return nil
@@ -1040,8 +1041,9 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 	if ctx.GetCompany().IsOpenErp() {
 		// 调用erp接口
 		erpReq := buying.SavePurchaseReceiptReq{
-			PurchaseOrderName: receiptOrder.PurchaseOrder.ErpOrderNo,
-			Items:             make([]*buying.PurchaseOrderItem, 0, len(receiptOrder.Items)),
+			PurchaseOrderName:     receiptOrder.PurchaseOrder.ErpOrderNo,
+			InterCompanyReference: dn,
+			Items:                 make([]*buying.PurchaseOrderItem, 0, len(receiptOrder.Items)),
 		}
 		for _, item := range receiptOrder.Items {
 			if item.GetUnitsTotalConversionRateNum() <= 0 {

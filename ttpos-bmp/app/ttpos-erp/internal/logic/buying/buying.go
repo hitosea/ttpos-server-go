@@ -338,6 +338,12 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 		receipt.Items = receiptItems
 	}
 
+	// 设置跨公司订单引用
+	if req.InterCompanyReference != "" {
+		receipt.IsInternalSupplier = true
+		receipt.InterCompanyReference = req.InterCompanyReference
+	}
+
 	//创建采购收货订单
 	resp, err = service.Document().Create(ctx, erp.DocTypePurchaseReceipt, receipt)
 	if err != nil {

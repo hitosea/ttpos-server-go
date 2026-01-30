@@ -637,6 +637,8 @@ type PurchaseReceipt struct {
 	IsOldSubcontractingFlow bool `json:"is_old_subcontracting_flow,omitempty"` // 是否旧分包流程
 	DisableRoundedTotal     bool `json:"disable_rounded_total,omitempty"`      // 禁用舍入总额
 
+	InterCompanyReference string `json:"inter_company_reference,omitempty"` // 跨公司订单引用
+
 	// 货币和汇率
 	Currency          string  `json:"currency,omitempty"`            // 货币
 	ConversionRate    float64 `json:"conversion_rate,omitempty"`     // 转换汇率

@@ -157,6 +157,7 @@ message PurchaseReceiptItem {
 message SavePurchaseReceiptReq {
   string purchase_order_name = 1; // 采购订单名称,必填
   repeated PurchaseOrderItem items = 2; // 采购订单物品列表,必填
+  string inter_company_reference = 3; // 跨公司引用
 }
 
 message SavePurchaseReceiptResp {

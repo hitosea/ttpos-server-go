@@ -29,6 +29,7 @@ import (
 
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // ITakeoutOrderAppService 外卖订单应用服务接口
@@ -445,6 +446,20 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 		return fmt.Errorf("更新订单事务失败: %w", err)
 	}
 
+	// 8. 保存订单更新日志（记录更新前后的订单数据）
+	existingOrderForLog, err := orderRepo.GetByUuid(
+		orderUuid,
+		orderRepo.WithTakeoutOrderItems(),
+		orderRepo.WithTakeoutOrderItemModifiers(),
+		orderRepo.WithTakeoutOrderReceiver(),
+		orderRepo.WithTakeoutOrderCampaigns(),
+		orderRepo.WithTakeoutOrderPromos(),
+		orderRepo.WithTakeoutOrderMaterials(),
+	)
+	if err == nil && existingOrderForLog != nil {
+		s.saveOrderUpdateLog(db, orderUuid, existingOrderForLog, existingOrderForLog)
+	}
+
 	// 发布订单更新事件（带变动信息）
 	event.GetDispatcher().Publish(event.NewOrderUpdatedEventWithChange(
 		orderUuid,
@@ -458,4 +473,43 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 	))
 
 	return nil
+}
+
+// saveOrderUpdateLog 保存订单更新日志（记录更新前后的订单数据）
+func (s *takeoutOrderAppService) saveOrderUpdateLog(db *gorm.DB, orderUuid uint64, existingOrder, updatedOrder *model.TakeoutOrder) {
+	// 序列化旧订单数据
+	oldDataJSON, err := json.Marshal(existingOrder)
+	if err != nil {
+		logger.Logger.Warn("序列化旧订单数据失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		return
+	}
+
+	// 序列化新订单数据
+	newDataJSON, err := json.Marshal(updatedOrder)
+	if err != nil {
+		logger.Logger.Warn("序列化新订单数据失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		return
+	}
+
+	// 生成日志 UUID
+	logUuid, err := utils.GetID()
+	if err != nil {
+		logger.Logger.Warn("生成日志UUID失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		return
+	}
+
+	// 创建更新日志记录
+	updateLog := &model.TakeoutOrderUpdateLog{
+		BaseModel: model.BaseModel{
+			Uuid: logUuid,
+		},
+		TakeoutOrderUuid: orderUuid,
+		OldData:          string(oldDataJSON),
+		NewData:          string(newDataJSON),
+	}
+
+	// 保存到数据库
+	if err := db.Create(updateLog).Error; err != nil {
+		logger.Logger.Warn("保存订单更新日志失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+	}
 }
