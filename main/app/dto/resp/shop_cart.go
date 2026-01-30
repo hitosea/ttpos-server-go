@@ -394,7 +394,7 @@ type OrderFinishResp struct {
 
 // KioskOrderFinishResp Kiosk 自助点餐机订单完成响应
 type KioskOrderFinishResp struct {
-	SerialNo string `json:"order_no"` // 订单流水号
+	SerialNo string `json:"serial_no"` // 订单流水号
 }
 
 type PayAmountInfo struct {
