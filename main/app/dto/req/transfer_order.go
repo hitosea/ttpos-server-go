@@ -174,10 +174,10 @@ func (r *TransferOrderRejectReq) Validate() error {
 
 // TransferOrderReceiveReq 收货调拨单请求
 type TransferOrderReceiveReq struct {
-	Uuid               uint64   `json:"uuid" binding:"required,min=1"`       // 调拨单UUID
-	Remark             string   `json:"remark" binding:"omitempty,max=500"`  // 收货备注
-	InWarehouseErpCode string   `json:"in_warehouse_erp_code"`               // 入库仓库ERP编码
-	FileUuids          []uint64 `json:"file_uuids" binding:"required,min=1"` // 附件UUID列表
+	Uuid               uint64   `json:"uuid" binding:"required,min=1"`      // 调拨单UUID
+	Remark             string   `json:"remark" binding:"omitempty,max=500"` // 收货备注
+	InWarehouseErpCode string   `json:"in_warehouse_erp_code"`              // 入库仓库ERP编码
+	FileUuids          []uint64 `json:"file_uuids"`                         // 附件UUID列表
 }
 
 func (r *TransferOrderReceiveReq) Validate() error {
