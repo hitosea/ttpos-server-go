@@ -16,6 +16,9 @@ type MqProducer interface {
 	SendMsg(ctx context.Context, topic string, body string) (mqMsg MqMsg, err error)
 	// SendByteMsg 发送字节消息
 	SendByteMsg(ctx context.Context, topic string, body []byte) (mqMsg MqMsg, err error)
+	// SendMsgWithKey 发送带 key 的字符串消息
+	// key 用于消息追踪和顺序消费（相同 key 路由到同一队列）
+	SendMsgWithKey(ctx context.Context, topic, key, body string) (mqMsg MqMsg, err error)
 	// SendDelayMsg 发送延时消息
 	SendDelayMsg(ctx context.Context, topic string, body string, delay time.Duration) (mqMsg MqMsg, err error)
 	// Close 关闭生产者连接

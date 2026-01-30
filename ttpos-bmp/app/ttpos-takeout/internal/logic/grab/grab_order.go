@@ -45,7 +45,7 @@ func (s *sGrab) HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrder
 		return gerror.Wrap(err, "保存订单失败")
 	}
 
-	// 3. 发送 MQ 消息
+	// 3. 发送 MQ 消息（使用订单号作为 key，便于消息追踪）
 	event := &grab.OrderEvent{
 		Action:       "create",
 		ProviderName: string(consts.ProviderGrab),
@@ -56,7 +56,7 @@ func (s *sGrab) HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrder
 		Status:       req.GetOrderState(),
 		Timestamp:    gtime.Now().Unix(),
 	}
-	if err := queue.PushWithContext(ctx, TopicGrabOrder, event); err != nil {
+	if err := queue.PushWithKey(ctx, TopicGrabOrder, req.GetOrderID(), event); err != nil {
 		// MQ 发送失败只记录日志，不影响主流程（订单已入库）
 		g.Log().Warningf(ctx, "发送订单 MQ 事件失败 %s: %v", orderUUID, err)
 	}
@@ -263,7 +263,7 @@ func (s *sGrab) HandlePushOrderState(ctx context.Context, req *grabfood.OrderSta
 		return gerror.Wrap(err, "更新订单状态失败")
 	}
 
-	// 6. 发送 MQ 消息
+	// 6. 发送 MQ 消息（使用订单号作为 key，便于消息追踪）
 	event := &grab.OrderEvent{
 		Action:       "status_update",
 		ProviderName: string(consts.ProviderGrab),
@@ -275,7 +275,7 @@ func (s *sGrab) HandlePushOrderState(ctx context.Context, req *grabfood.OrderSta
 		Timestamp:    gtime.Now().Unix(),
 		Message:      req.GetMessage(),
 	}
-	if err := queue.PushWithContext(ctx, TopicGrabOrder, event); err != nil {
+	if err := queue.PushWithKey(ctx, TopicGrabOrder, req.GetOrderID(), event); err != nil {
 		g.Log().Warningf(ctx, "发送订单状态更新 MQ 事件失败 %s: %v", order.Uuid, err)
 	}
 

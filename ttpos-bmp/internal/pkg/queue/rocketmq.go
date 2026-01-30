@@ -123,6 +123,61 @@ func (r *RocketMq) SendMsg(ctx context.Context, topic string, body string) (mqMs
 	return r.SendByteMsg(ctx, topic, []byte(body))
 }
 
+// SendMsgWithKey 发送带 key 的字符串消息
+// key 用于消息追踪和顺序消费（相同 key 路由到同一队列）
+func (r *RocketMq) SendMsgWithKey(ctx context.Context, topic, key, body string) (mqMsg MqMsg, err error) {
+	// 参数验证
+	if r.producerIns == nil {
+		return mqMsg, gerror.New("RocketMQ生产者未初始化")
+	}
+	if topic == "" {
+		return mqMsg, gerror.New("主题名称不能为空")
+	}
+	if len(body) == 0 {
+		return mqMsg, gerror.New("消息内容不能为空")
+	}
+
+	// 自动创建主题
+	if err = r.createTopicIfNotExists(topic); err != nil {
+		return mqMsg, gerror.Wrapf(err, "创建主题失败 [%s]", topic)
+	}
+
+	// 创建消息并设置 key
+	msg := primitive.NewMessage(topic, []byte(body))
+	if key != "" {
+		msg.WithKeys([]string{key})
+	}
+
+	// 发送消息
+	startTime := time.Now()
+	result, err := r.producerIns.SendSync(ctx, msg)
+	duration := time.Since(startTime)
+
+	if err != nil {
+		return mqMsg, gerror.Wrapf(err, "RocketMQ发送消息失败 [%s]", topic)
+	}
+	if result.Status != primitive.SendOK {
+		return mqMsg, gerror.Newf("RocketMQ发送消息状态异常 [%s]: %v", topic, result.Status)
+	}
+
+	// 构建返回消息
+	mqMsg = MqMsg{
+		RunType:   MsgTypeSend,
+		Topic:     topic,
+		MsgId:     result.MsgID,
+		Body:      []byte(body),
+		Timestamp: time.Now(),
+	}
+
+	// 记录性能监控
+	if duration > 500*time.Millisecond {
+		Logger().Warningf(ctx, "RocketMQ发送消息耗时 [%s] key=%s - 消息ID: %s, 耗时: %v",
+			topic, key, result.MsgID, duration)
+	}
+
+	return mqMsg, nil
+}
+
 // SendByteMsg 生产数据
 func (r *RocketMq) SendByteMsg(ctx context.Context, topic string, body []byte) (mqMsg MqMsg, err error) {
 	// 参数验证

@@ -392,6 +392,11 @@ type OrderFinishResp struct {
 	PayMethodList PayMethodList `json:"pay_methods"`     // 支付方式列表
 }
 
+// KioskOrderFinishResp Kiosk 自助点餐机订单完成响应
+type KioskOrderFinishResp struct {
+	SerialNo string `json:"order_no"` // 订单流水号
+}
+
 type PayAmountInfo struct {
 	OrderAmount  float64 `json:"order_amount"`  // 订单应收金额
 	PayAmount    float64 `json:"pay_amount"`    // 订单实收金额

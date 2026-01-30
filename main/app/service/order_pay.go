@@ -2233,3 +2233,146 @@ func (s *orderSrv) KioskPaymentConfirm(ctx context.Context, params req.KioskPaym
 
 	return nil
 }
+
+// KioskOrderFinish Kiosk 自助点餐机订单完成
+// 检查订单实付是否符合完成支付条件，执行送厨和完成订单状态
+func (s *orderSrv) KioskOrderFinish(ctx context.Context, params req.KioskOrderFinishReq) (*resp.KioskOrderFinishResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	companyUuid := ctx.GetCompanyUuid()
+
+	// 加锁
+	if ctx.NoLock() {
+		s.lock.LockUuid(params.SaleBillUuid)
+		defer s.lock.UnlockUuid(params.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	// 获取销售账单信息（包含商品列表）
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(params.SaleBillUuid)
+	if err != nil {
+		logger.Logger.Error("KioskOrderFinish GetSaleBillAllInfo failed",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+			zap.Error(err))
+		return nil, errors.WithMessage(err, "销售账单不存在")
+	}
+
+	// 验证销售账单是否为 Kiosk 来源
+	if saleBill.Source != constant.SaleBillSourceKiosk {
+		logger.Logger.Error("KioskOrderFinish sale bill source is not kiosk",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+			zap.Uint64("source", uint64(saleBill.Source)))
+		return nil, errors.New("该订单不是自助点餐机订单")
+	}
+
+	// 获取销售订单
+	saleOrder := saleBill.GetSaleOrder(params.SaleOrderUuid)
+	if saleOrder == nil {
+		logger.Logger.Error("KioskOrderFinish GetSaleOrder failed",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_order_uuid", params.SaleOrderUuid))
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 检查订单是否已完成，幂等返回成功（包含订单流水号）
+	if saleOrder.IsSettled() {
+		logger.Logger.Info("KioskOrderFinish order already finished",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+			zap.Uint64("sale_order_uuid", params.SaleOrderUuid))
+		return &resp.KioskOrderFinishResp{
+			SerialNo: saleBill.SerialNo,
+		}, nil
+	}
+
+	// 获取结账页面信息，检查支付状态
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, saleBill, params.SaleBillUuid, params.SaleOrderUuid)
+	if err != nil {
+		logger.Logger.Error("KioskOrderFinish InstantOrderPaymentInfo failed",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+			zap.Uint64("sale_order_uuid", params.SaleOrderUuid),
+			zap.Error(err))
+		return nil, errors.WithMessage(err, "获取支付信息失败")
+	}
+
+	// 检查未付款金额是否为0
+	var unpaidAmount float64
+	for index, amountItem := range infoResp.Amounts.List {
+		if index == 0 {
+			unpaidAmount = amountItem.UnpaidAmount
+			continue
+		}
+		if amountItem.UnpaidAmount < unpaidAmount {
+			unpaidAmount = amountItem.UnpaidAmount
+		}
+	}
+	if unpaidAmount > 0 {
+		logger.Logger.Warn("KioskOrderFinish unpaid amount > 0",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+			zap.Uint64("sale_order_uuid", params.SaleOrderUuid),
+			zap.Float64("unpaid_amount", unpaidAmount))
+		return nil, errors.New(fmt.Sprintf("订单未付清，待付金额: %.2f", unpaidAmount))
+	}
+
+	logger.Logger.Info("KioskOrderFinish payment check passed",
+		zap.Uint64("company_uuid", companyUuid),
+		zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+		zap.Uint64("sale_order_uuid", params.SaleOrderUuid))
+
+	// 设置上下文来源为 kiosk
+	ctx.SetSource(constant.SourceKiosk)
+
+	// 检查是否有未送厨的商品，有则执行送厨
+	unCookingProducts := saleBill.GetSaleOrderProductUnCooking()
+	if len(unCookingProducts) > 0 {
+		// 执行送厨
+		_, checkRes, err := s.InstantOrderCartProductCooking(ctx, req.OrderCartProductCookingReq{
+			SaleBillUuid: params.SaleBillUuid,
+			IgnoreMust:   true, // Kiosk 订单忽略必点方案检查
+		})
+		if err != nil {
+			logger.Logger.Error("KioskOrderFinish InstantOrderCartProductCooking failed",
+				zap.Uint64("company_uuid", companyUuid),
+				zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+				zap.Error(err))
+			return nil, errors.WithMessage(err, "送厨失败")
+		}
+		if checkRes != nil {
+			logger.Logger.Warn("KioskOrderFinish InstantOrderCartProductCooking check failed",
+				zap.Uint64("company_uuid", companyUuid),
+				zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+				zap.Any("checkRes", checkRes))
+			return nil, errors.New("送厨检查未通过")
+		}
+		logger.Logger.Info("KioskOrderFinish cooking success",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_bill_uuid", params.SaleBillUuid))
+	}
+
+	// 完成订单（结账）
+	_, err = s.InstantOrderPaymentFinish(ctx, req.InstantOrderPaymentFinishReq{
+		SaleBillUuid:  params.SaleBillUuid,
+		SaleOrderUuid: params.SaleOrderUuid,
+	})
+	if err != nil {
+		logger.Logger.Error("KioskOrderFinish InstantOrderPaymentFinish failed",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+			zap.Uint64("sale_order_uuid", params.SaleOrderUuid),
+			zap.Error(err))
+		return nil, errors.WithMessage(err, "订单结账失败")
+	}
+
+	logger.Logger.Info("KioskOrderFinish order completed",
+		zap.Uint64("company_uuid", companyUuid),
+		zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+		zap.Uint64("sale_order_uuid", params.SaleOrderUuid),
+		zap.String("order_no", saleOrder.OrderNo))
+
+	return &resp.KioskOrderFinishResp{
+		SerialNo: saleBill.SerialNo,
+	}, nil
+}

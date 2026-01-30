@@ -448,6 +448,38 @@ func (h *OrderHandler) PayOrderConfirm(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// FinishOrder Kiosk 订单完成
+// @Summary Kiosk 订单完成
+// @Description 检查订单实付是否符合完成支付条件，执行送厨和完成订单状态。用于客户端主动触发订单完成流程
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.KioskOrderFinishReq true "订单完成参数"
+// @Success 200 {object} dto.Response{data=resp.KioskOrderFinishResp} "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /kiosk/order/finish [post]
+func (h *OrderHandler) FinishOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.KioskOrderFinishReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("kiosk订单完成", zap.Any("params", params))
+
+	// 调用 service 层处理订单完成
+	res, err := h.orderSrv.KioskOrderFinish(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	// 返回结果（包含订单流水号）
+	helper.Success(c, res)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -484,5 +516,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/pay", wrapper.PayOrder)                                  // 发起支付
 		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                      // 获取支付状态
 		privateApi.POST("/order/pay/confirm", wrapper.PayOrderConfirm)                   // 支付完成确认（KBank 等主动上报场景）
+		privateApi.POST("/order/finish", wrapper.FinishOrder)                            // 订单完成（检查支付、送厨、结账）
 	}
 }

@@ -174,12 +174,12 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(
 		// 计算收货进度：新采购单优先使用ERP返回的进度，旧采购单使用本地计算
 		if po.ErpSaleOrderNo != "" && po.ErpOrderNo != "" {
 			if progress, ok := erpOrderNoToProgress[po.ErpOrderNo]; ok {
-				poInfo.ReceiptProgress = fmt.Sprintf("%.0f%%", progress)
+				poInfo.ReceiptProgress = fmt.Sprintf("%.2f%%", progress)
 			} else {
-				poInfo.ReceiptProgress = fmt.Sprintf("%.0f%%", po.GetReceiptProgress())
+				poInfo.ReceiptProgress = fmt.Sprintf("%.2f%%", po.GetReceiptProgress())
 			}
 		} else {
-			poInfo.ReceiptProgress = fmt.Sprintf("%.0f%%", po.GetReceiptProgress())
+			poInfo.ReceiptProgress = fmt.Sprintf("%.2f%%", po.GetReceiptProgress())
 		}
 		listResp = append(listResp, poInfo)
 	}
@@ -279,15 +279,15 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 				zap.String("erp_order_no", purchaseOrder.ErpOrderNo),
 				zap.Error(err),
 			)
-			detailResp.ReceiptProgress = fmt.Sprintf("%.0f%%", purchaseOrder.GetReceiptProgress())
+			detailResp.ReceiptProgress = fmt.Sprintf("%.2f%%", purchaseOrder.GetReceiptProgress())
 		} else if erpResp.PurchaseOrder != nil {
-			detailResp.ReceiptProgress = fmt.Sprintf("%.0f%%", erpResp.PurchaseOrder.PerReceived)
+			detailResp.ReceiptProgress = fmt.Sprintf("%.2f%%", erpResp.PurchaseOrder.PerReceived)
 		} else {
-			detailResp.ReceiptProgress = fmt.Sprintf("%.0f%%", purchaseOrder.GetReceiptProgress())
+			detailResp.ReceiptProgress = fmt.Sprintf("%.2f%%", purchaseOrder.GetReceiptProgress())
 		}
 	} else {
 		// 旧采购单：使用本地计算
-		detailResp.ReceiptProgress = fmt.Sprintf("%.0f%%", purchaseOrder.GetReceiptProgress())
+		detailResp.ReceiptProgress = fmt.Sprintf("%.2f%%", purchaseOrder.GetReceiptProgress())
 	}
 
 	// 品牌采购：批量查询限购配置（避免 N+1 查询问题）

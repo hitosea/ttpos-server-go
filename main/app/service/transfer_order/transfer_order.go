@@ -121,6 +121,15 @@ func (s *transferOrderSrv) GetTransferOrderList(
 			}
 			return false
 		}()
+		// 是否可重新提交（已驳回状态且为发起门店的发起人）
+		toInfo.IsCanResubmit = func() bool {
+			if to.Status == constant.TransferOrderStatusRejected &&
+				to.CompanyUuid == ctx.GetCompanyUuid() &&
+				to.CreatorUuid == ctx.GetStaffUuid() {
+				return true
+			}
+			return false
+		}()
 		// 是否可收货
 		toInfo.IsCanReceive = func() bool {
 			if to.Status == constant.TransferOrderStatusReceiving && to.ReceiverCompanyUuid == companyUuid {
