@@ -312,6 +312,7 @@ type ReceiptPendingItemInfo struct {
 	PurchaseOrderItemUuid uint64                          `json:"purchase_order_item_uuid"` // 采购单物品UUID
 	MaterialUuid          uint64                          `json:"material_uuid"`            // 物料UUID
 	MaterialCode          string                          `json:"material_code"`            // 物料编码
+	InternalCode          string                          `json:"internal_code"`            // 内部编码
 	LocaleName            dto.LocaleResponse              `json:"locale_name"`              // 物料名称
 	PurchaseNum           float64                         `json:"purchase_num"`             // 采购数量
 	ArrivalNum            float64                         `json:"arrival_num"`              // 已到货数量
@@ -334,4 +335,3 @@ type ReceiptPendingItemUnit struct {
 	ArrivalNum     float64            `json:"arrival_num"`      // 已到货数量
 	Num            float64            `json:"num"`              // 剩余可收货数量
 }
-
