@@ -41,7 +41,7 @@ static_resources:
                         - match:
                             prefix: "/lmwn_staging"
                           route:
-                            cluster: local_cluster
+                            cluster: primary_cluster
                             timeout: 60s
                             prefix_rewrite: "/"
                             auto_host_rewrite: true
