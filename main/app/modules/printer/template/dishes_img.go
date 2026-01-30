@@ -691,8 +691,6 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 
 			// 退菜原因
 			if !isSubProduct {
-				img.AppendSplitLine()
-				img.LineFeed(1, 34)
 				// 获取退菜原因文本
 				reasonText := product.Reason.GetLocale(t.base.Lang)
 				// 如果有自定义原因，则添加
@@ -702,7 +700,11 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 					}
 					reasonText += product.CustomReason
 				}
-				img.AppendText(fmt.Sprintf("%s： %s", t.base.Translate("退菜原因"), reasonText))
+				if reasonText != "" {
+					img.AppendSplitLine()
+					img.LineFeed(1, 34)
+					img.AppendText(fmt.Sprintf("%s： %s", t.base.Translate("退菜原因"), reasonText))
+				}
 			}
 
 		}
