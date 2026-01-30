@@ -1418,7 +1418,7 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 			dbList, err := s.helper.UpdateStockInTransit(ctx, s.dbm, tx, transferOrder)
 			if err != nil {
 				logger.Logger.Error("更新在途仓库存失败", zap.Error(err))
-				return errors.WithMessage(errors.New("更新在途仓库存失败"), err.Error())
+				return err
 			}
 			// 调用erp接口
 			if ctx.GetCompany().IsOpenErp() {
