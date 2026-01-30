@@ -144,19 +144,40 @@ func (s *takeoutOrderUpdatedEventSubscriber) printKitchenReceipt(
 	changeResult *value_object.OrderChangeResult,
 ) {
 
-	// 构建要打印的菜品列表
+	// 构建要打印的菜品列表（包括套餐子商品）
 	productItems := make([]req.PrintProductItem, 0, len(changeResult.KitchenItems))
 	for _, item := range changeResult.AllChanges {
+		// 获取当前使用的商品信息
+		var currentItem *value_object.ChangedItem
 		if item.NewItem != nil && item.NewItem.TtposProductPackageUuid > 0 {
-			productItems = append(productItems, req.PrintProductItem{
-				ProductUuid: item.NewItem.TtposProductPackageUuid,
-				Num:         &item.NewItem.Quantity,
-			})
+			currentItem = item.NewItem
 		} else if item.OldItem != nil && item.OldItem.TtposProductPackageUuid > 0 {
+			currentItem = item.OldItem
+		}
+
+		if currentItem == nil {
+			continue
+		}
+
+		// 判断是普通商品还是套餐商品
+		if currentItem.TtposProductType == 0 {
+			// 普通商品：添加主商品
 			productItems = append(productItems, req.PrintProductItem{
-				ProductUuid: item.OldItem.TtposProductPackageUuid,
-				Num:         &item.OldItem.Quantity,
+				ProductUuid: currentItem.TtposProductPackageUuid,
+				Num:         &currentItem.Quantity,
 			})
+		} else {
+			// 套餐商品：添加所有子商品（commodity 类型的 modifier）
+			for _, modifier := range currentItem.Modifiers {
+				if modifier.TtposModifierType == string(value_object.ModifierTypeCommodity) && modifier.TtposProductPackageUuid > 0 {
+					quantity := modifier.Quantity * currentItem.Quantity
+					productItems = append(productItems, req.PrintProductItem{
+						ProductUuid:    modifier.TtposProductPackageUuid,
+						ProductBomUuid: modifier.TtposFlavorProductBomUuid, // 规格UUID，用于精确匹配子商品
+						Num:            &quantity,
+					})
+				}
+			}
 		}
 	}
 	if len(productItems) > 0 {

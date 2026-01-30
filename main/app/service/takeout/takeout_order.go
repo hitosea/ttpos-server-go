@@ -951,15 +951,15 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 	for _, item := range changeResult.KitchenItems {
 		switch item.ChangeType {
 		case valueObject.ChangeTypeAdded:
-			// 新增商品：创建生产单商品（使用完整字段）
+			// 新增商品：创建生产单商品（使用完整字段，支持套餐子商品）
 			if item.NewItem == nil || item.NewItem.Uuid == 0 {
 				logger.Logger.Warn("新增商品缺少信息，跳过创建生产单商品",
 					zap.String("platformItemId", item.PlatformItemId))
 				continue
 			}
 
-			// 使用辅助方法创建完整的生产单商品
-			productionOrderProduct, err := s.buildProductionOrderProductFromTakeoutItem(
+			// 使用辅助方法创建完整的生产单商品列表（包括套餐子商品）
+			productionOrderProducts, err := s.buildProductionOrderProductsFromTakeoutItem(
 				ctx, item.NewItem.Uuid, productionOrder.Uuid, orderUuid,
 			)
 			if err != nil {
@@ -968,16 +968,18 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 					zap.Error(err))
 				continue
 			}
-			if productionOrderProduct == nil {
+			if len(productionOrderProducts) == 0 {
 				logger.Logger.Warn("新增商品未映射，跳过创建生产单商品",
 					zap.String("platformItemId", item.PlatformItemId))
 				continue
 			}
 
-			if err := productionRepo.CreateProductionOrderProduct(productionOrderProduct); err != nil {
-				logger.Logger.Error("创建生产单商品失败",
-					zap.Uint64("takeoutOrderItemUuid", item.NewItem.Uuid),
-					zap.Error(err))
+			for _, productionOrderProduct := range productionOrderProducts {
+				if err := productionRepo.CreateProductionOrderProduct(productionOrderProduct); err != nil {
+					logger.Logger.Error("创建生产单商品失败",
+						zap.Uint64("takeoutOrderItemUuid", item.NewItem.Uuid),
+						zap.Error(err))
+				}
 			}
 
 		case valueObject.ChangeTypeQuantity, valueObject.ChangeTypeAttribute:
@@ -995,7 +997,8 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 				}
 			}
 
-			productionOrderProduct, err := s.buildProductionOrderProductFromTakeoutItem(
+			// 2. 创建新的生产单商品（支持套餐子商品）
+			productionOrderProducts, err := s.buildProductionOrderProductsFromTakeoutItem(
 				ctx, item.OldItem.Uuid, productionOrder.Uuid, orderUuid,
 			)
 			if err != nil {
@@ -1005,15 +1008,17 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 					zap.Error(err))
 				continue
 			}
-			if productionOrderProduct == nil {
+			if len(productionOrderProducts) == 0 {
 				continue
 			}
 
-			if err := productionRepo.CreateProductionOrderProduct(productionOrderProduct); err != nil {
-				logger.Logger.Error("变更商品创建生产单商品失败",
-					zap.Uint64("takeoutOrderItemUuid", item.NewItem.Uuid),
-					zap.String("changeType", item.ChangeType.String()),
-					zap.Error(err))
+			for _, productionOrderProduct := range productionOrderProducts {
+				if err := productionRepo.CreateProductionOrderProduct(productionOrderProduct); err != nil {
+					logger.Logger.Error("变更商品创建生产单商品失败",
+						zap.Uint64("takeoutOrderItemUuid", item.NewItem.Uuid),
+						zap.String("changeType", item.ChangeType.String()),
+						zap.Error(err))
+				}
 			}
 
 		case valueObject.ChangeTypeRemoved:
@@ -1033,18 +1038,17 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 		}
 	}
 
-	// 2. 处理送厨商品（新增或数量/属性变更）
+	// 3. 处理退菜商品（删除、数量变更、属性变更）
 	for _, item := range changeResult.ReturnItems {
 		switch item.ChangeType {
 		case valueObject.ChangeTypeRemoved:
-			// 数量变更或属性变更（加料等）：退旧增新
-			// 1. 旧商品标记退菜状态
+			// 退菜：标记旧商品为退菜状态（包括套餐的所有子商品）
 			if item.OldItem != nil && item.OldItem.Uuid > 0 {
 				if err := productionRepo.UpdateProductionOrderProductNumByTakeoutItemUuid(
 					item.OldItem.Uuid,
 					0,
 				); err != nil {
-					logger.Logger.Error("变更商品标记退菜失败",
+					logger.Logger.Error("退菜商品标记失败",
 						zap.Uint64("takeoutOrderItemUuid", item.OldItem.Uuid),
 						zap.String("changeType", item.ChangeType.String()),
 						zap.Error(err))
@@ -1055,14 +1059,15 @@ func (s *takeoutSrv) UpdateProductionOrderForTakeout(ctx context.Context, orderU
 	return nil
 }
 
-// buildProductionOrderProductFromTakeoutItem 从外卖订单商品构建生产单商品
+// buildProductionOrderProductsFromTakeoutItem 从外卖订单商品构建生产单商品列表
 // 用于增量更新生产单时创建新的生产单商品
-func (s *takeoutSrv) buildProductionOrderProductFromTakeoutItem(
+// 返回：普通商品返回单个商品，套餐商品返回所有子商品
+func (s *takeoutSrv) buildProductionOrderProductsFromTakeoutItem(
 	ctx context.Context,
 	takeoutItemUuid uint64,
 	productionOrderUuid uint64,
 	takeoutOrderUuid uint64,
-) (*model.ProductionOrderProduct, error) {
+) ([]*model.ProductionOrderProduct, error) {
 	db := ctx.GetDB()
 	currentTime := time.Now().Unix()
 
@@ -1076,98 +1081,203 @@ func (s *takeoutSrv) buildProductionOrderProductFromTakeoutItem(
 		return nil, errors.New("外卖订单商品不存在")
 	}
 
-	// 如果没有映射的商品套餐，返回 nil
+	// 如果没有映射的商品套餐，返回空列表
 	if takeoutItem.TtposProductPackageUuid == 0 {
 		return nil, nil
 	}
 
-	// 2. 生成 UUID
-	productUuid, err := utils.GetID()
-	if err != nil {
-		return nil, errors.WithMessage(err, "生成生产单商品UUID失败")
-	}
-
-	// 3. 查询 ProductPackage 获取分类信息
 	productPackageRepo := repository.NewProductPackageRepo(db)
-	productPackages, err := productPackageRepo.GetProductPackageList(
-		repository.CommonRepo.WhereInUuids([]uint64{takeoutItem.TtposProductPackageUuid}),
-		productPackageRepo.WithProductCategory(),
-	)
-	if err != nil {
-		logger.Logger.Error("查询商品套餐失败", zap.Error(err))
-	}
+	bomMappingRepo := persistence.NewTakeoutBomMappingRepo(db)
+	products := make([]*model.ProductionOrderProduct, 0)
 
-	var firstCategoryUuid uint64
-	if len(productPackages) > 0 && productPackages[0].ProductCategory.Uuid > 0 {
-		firstCategoryUuid = productPackages[0].ProductCategory.GetFirstCategoryUuid()
-	}
-
-	// 4. 处理 modifiers，提取规格和属性
-	var productBomUuid uint64
-	var productBomName string
-	var attributeNames []string
-
-	for _, modifier := range takeoutItem.TakeoutOrderItemModifiers {
-		if modifier.IsMapped == 0 || modifier.TtposModifierUuid == 0 {
-			continue
+	// 判断是普通商品还是套餐商品
+	if takeoutItem.TtposProductType == 0 {
+		// 普通商品处理
+		productUuid, err := utils.GetID()
+		if err != nil {
+			return nil, errors.WithMessage(err, "生成生产单商品UUID失败")
 		}
 
-		switch modifier.TtposModifierType {
-		case string(valueObject.ModifierTypeFlavor):
-			// 规格
-			productBomUuid = modifier.TtposModifierUuid
-			productBomName = modifier.TtposModifierName
-		case string(valueObject.ModifierTypeAttr), string(valueObject.ModifierTypeSauce):
-			// 属性和加料
-			if modifier.TtposModifierName != "" {
-				attributeNames = append(attributeNames, modifier.TtposModifierName)
+		// 查询 ProductPackage 获取分类信息
+		productPackages, err := productPackageRepo.GetProductPackageList(
+			repository.CommonRepo.WhereInUuids([]uint64{takeoutItem.TtposProductPackageUuid}),
+			productPackageRepo.WithProductCategory(),
+		)
+		if err != nil {
+			logger.Logger.Error("查询商品套餐失败", zap.Error(err))
+		}
+
+		var firstCategoryUuid uint64
+		if len(productPackages) > 0 && productPackages[0].ProductCategory.Uuid > 0 {
+			firstCategoryUuid = productPackages[0].ProductCategory.GetFirstCategoryUuid()
+		}
+
+		// 处理 modifiers，提取规格和属性
+		var productBomUuid uint64
+		var productBomName string
+		var attributeNames []string
+
+		for _, modifier := range takeoutItem.TakeoutOrderItemModifiers {
+			if modifier.IsMapped == 0 || modifier.TtposModifierUuid == 0 {
+				continue
+			}
+
+			switch modifier.TtposModifierType {
+			case string(valueObject.ModifierTypeFlavor):
+				productBomUuid = modifier.TtposModifierUuid
+				productBomName = modifier.TtposModifierName
+			case string(valueObject.ModifierTypeAttr), string(valueObject.ModifierTypeSauce):
+				if modifier.TtposModifierName != "" {
+					attributeNames = append(attributeNames, modifier.TtposModifierName)
+				}
 			}
 		}
-	}
 
-	// 5. 合并多个属性的名称
-	var attributeNamesStr string
-	if len(attributeNames) > 0 {
-		localeResponses := make([]dto.LocaleResponse, 0, len(attributeNames))
-		for _, attrName := range attributeNames {
-			localeResp := language.JsonToLocaleResponse(attrName)
-			if localeResp != nil && !localeResp.IsNull() {
-				localeResponses = append(localeResponses, *localeResp)
+		// 合并多个属性的名称
+		var attributeNamesStr string
+		if len(attributeNames) > 0 {
+			localeResponses := make([]dto.LocaleResponse, 0, len(attributeNames))
+			for _, attrName := range attributeNames {
+				localeResp := language.JsonToLocaleResponse(attrName)
+				if localeResp != nil && !localeResp.IsNull() {
+					localeResponses = append(localeResponses, *localeResp)
+				}
+			}
+			if len(localeResponses) > 0 {
+				mergedLocale := language.MergeLocaleResponses(localeResponses, ";")
+				attributeNamesStr = mergedLocale.ToJson()
 			}
 		}
-		if len(localeResponses) > 0 {
-			mergedLocale := language.MergeLocaleResponses(localeResponses, ";")
-			attributeNamesStr = mergedLocale.ToJson()
+
+		// 使用商品名称（优先使用 TTPOS 商品名称）
+		itemName := takeoutItem.TtposItemName
+		if itemName == "" {
+			itemName = takeoutItem.ItemName
+		}
+
+		products = append(products, &model.ProductionOrderProduct{
+			BaseModel:             model.BaseModel{Uuid: productUuid, CreateTime: currentTime, UpdateTime: currentTime},
+			Name:                  itemName,
+			Num:                   float64(takeoutItem.Quantity),
+			InitNum:               float64(takeoutItem.Quantity),
+			FlavorName:            productBomName,
+			ProductBomUuid:        productBomUuid,
+			ProductAttributeNames: attributeNamesStr,
+			ProductSaucesNames:    "",
+			Status:                constant.ProductionOrderProductStatusCooking,
+			Remark:                "",
+			HasMaterial:           0,
+			ProductPackageUuid:    takeoutItem.TtposProductPackageUuid,
+			ProductionOrderUuid:   productionOrderUuid,
+			TakeoutOrderUuid:      takeoutOrderUuid,
+			TakeoutOrderItemUuid:  takeoutItem.Uuid,
+			FirstCategoryUuid:     firstCategoryUuid,
+		})
+	} else {
+		// 套餐商品处理：为每个 commodity modifier 创建生产单商品
+		// 收集所有 commodity modifiers
+		commodityModifiers := make([]*takeoutModel.TakeoutOrderItemModifier, 0)
+		packageGroupItemUuids := make([]uint64, 0)
+		for i := range takeoutItem.TakeoutOrderItemModifiers {
+			modifier := &takeoutItem.TakeoutOrderItemModifiers[i]
+			if modifier.IsMapped == 1 && modifier.TtposModifierType == "commodity" && modifier.TtposModifierUuid > 0 {
+				commodityModifiers = append(commodityModifiers, modifier)
+				packageGroupItemUuids = append(packageGroupItemUuids, modifier.TtposModifierUuid)
+			}
+		}
+
+		if len(commodityModifiers) == 0 {
+			return nil, nil
+		}
+
+		// 批量查询套餐商品的 BOM 映射
+		groupItemBomMapping, err := bomMappingRepo.GetGroupItemBomMapping(packageGroupItemUuids)
+		if err != nil {
+			logger.Logger.Error("批量查询套餐商品BOM映射失败", zap.Error(err))
+			return nil, errors.WithMessage(err, "批量查询套餐商品BOM映射失败")
+		}
+
+		// 收集套餐子商品的 ProductPackage UUID
+		packageSubProductPackageUuids := make([]uint64, 0)
+		for _, mapping := range groupItemBomMapping {
+			if mapping.RelatedUuid > 0 {
+				packageSubProductPackageUuids = append(packageSubProductPackageUuids, mapping.RelatedUuid)
+			}
+		}
+
+		// 批量查询套餐子商品的 ProductPackage
+		packageSubProductPackages, err := productPackageRepo.GetProductPackageList(
+			repository.CommonRepo.WhereInUuids(packageSubProductPackageUuids),
+			productPackageRepo.WithProductCategory(),
+		)
+		if err != nil {
+			logger.Logger.Error("批量查询套餐子商品套餐失败", zap.Error(err))
+			return nil, errors.WithMessage(err, "批量查询套餐子商品套餐失败")
+		}
+		packageSubProductPackageMap := make(map[uint64]*model.ProductPackage)
+		for _, pkg := range packageSubProductPackages {
+			packageSubProductPackageMap[pkg.Uuid] = pkg
+		}
+
+		// 为每个 commodity modifier 创建一个 ProductionOrderProduct
+		for _, commodityModifier := range commodityModifiers {
+			groupItemUuid := commodityModifier.TtposModifierUuid
+			mapping, ok := groupItemBomMapping[groupItemUuid]
+			if !ok {
+				logger.Logger.Warn("未找到套餐商品BOM映射", zap.Uint64("groupItemUuid", groupItemUuid))
+				continue
+			}
+
+			// 获取子商品的 ProductPackage
+			subProductPackage, ok := packageSubProductPackageMap[mapping.RelatedUuid]
+			if !ok {
+				logger.Logger.Error("未找到子商品套餐", zap.Uint64("relatedUuid", mapping.RelatedUuid))
+				continue
+			}
+
+			var firstCategoryUuid uint64
+			if subProductPackage.ProductCategory.Uuid > 0 {
+				firstCategoryUuid = subProductPackage.ProductCategory.GetFirstCategoryUuid()
+			}
+
+			// 直接从 modifier 中获取已保存的数据
+			productBomUuid := commodityModifier.TtposFlavorProductBomUuid
+			productBomName := commodityModifier.TtposFlavorName
+			itemName := commodityModifier.TtposModifierName
+			productNum := float64(commodityModifier.Quantity * takeoutItem.Quantity)
+
+			if itemName == "" {
+				itemName = commodityModifier.ModifierName
+			}
+
+			productUuid, err := utils.GetID()
+			if err != nil {
+				logger.Logger.Error("生成送厨商品UUID失败", zap.Error(err))
+				continue
+			}
+
+			products = append(products, &model.ProductionOrderProduct{
+				BaseModel:             model.BaseModel{Uuid: productUuid, CreateTime: currentTime, UpdateTime: currentTime},
+				Name:                  itemName,
+				Num:                   productNum,
+				InitNum:               productNum,
+				FlavorName:            productBomName,
+				ProductBomUuid:        productBomUuid,
+				ProductAttributeNames: productBomName,
+				ProductSaucesNames:    "",
+				Status:                constant.ProductionOrderProductStatusCooking,
+				Remark:                "",
+				HasMaterial:           0,
+				ProductPackageUuid:    subProductPackage.Uuid,
+				ProductionOrderUuid:   productionOrderUuid,
+				TakeoutOrderUuid:      takeoutOrderUuid,
+				TakeoutOrderItemUuid:  takeoutItem.Uuid,
+				FirstCategoryUuid:     firstCategoryUuid,
+			})
 		}
 	}
 
-	// 6. 使用商品名称（优先使用 TTPOS 商品名称）
-	itemName := takeoutItem.TtposItemName
-	if itemName == "" {
-		itemName = takeoutItem.ItemName
-	}
-
-	// 7. 构建 ProductionOrderProduct
-	productionOrderProduct := &model.ProductionOrderProduct{
-		BaseModel:             model.BaseModel{Uuid: productUuid, CreateTime: currentTime, UpdateTime: currentTime},
-		Name:                  itemName,
-		Num:                   float64(takeoutItem.Quantity),
-		InitNum:               float64(takeoutItem.Quantity),
-		FlavorName:            productBomName,
-		ProductBomUuid:        productBomUuid,
-		ProductAttributeNames: attributeNamesStr,
-		ProductSaucesNames:    "",
-		Status:                constant.ProductionOrderProductStatusCooking,
-		Remark:                "",
-		HasMaterial:           0,
-		ProductPackageUuid:    takeoutItem.TtposProductPackageUuid,
-		ProductionOrderUuid:   productionOrderUuid,
-		TakeoutOrderUuid:      takeoutOrderUuid,
-		TakeoutOrderItemUuid:  takeoutItem.Uuid,
-		FirstCategoryUuid:     firstCategoryUuid,
-	}
-
-	return productionOrderProduct, nil
+	return products, nil
 }
 
 // PrintTakeoutOrder 打印外卖订单小票
@@ -1389,6 +1499,7 @@ func (s *takeoutSrv) PrintReturnOrder(ctx context.Context, orderUuid uint64, cha
 		attrList := make([]dto.LocaleResponse, 0)
 		saucesList := make([]dto.LocaleResponse, 0)
 		flavorName := dto.LocaleResponse{}
+		subProducts := make([]printer_model.OrderProduct, 0)
 
 		for _, modifier := range item.OldItem.Modifiers {
 			modifierName := modifier.ModifierName
@@ -1408,6 +1519,21 @@ func (s *takeoutSrv) PrintReturnOrder(ctx context.Context, orderUuid uint64, cha
 				attrList = append(attrList, *localeResp)
 			case string(valueObject.ModifierTypeSauce):
 				saucesList = append(saucesList, *localeResp)
+			case string(valueObject.ModifierTypeCommodity):
+				// 套餐子商品
+				subProducts = append(subProducts, printer_model.OrderProduct{
+					OrderProductId:  modifier.Uuid,
+					ProductId:       modifier.TtposProductPackageUuid,
+					ProductName:     *localeResp,
+					FlavorName:      *language.JsonToLocaleResponse(modifier.TtposFlavorName),
+					Attr:            *language.JsonToLocaleResponse(modifier.TtposFlavorName),
+					ProductAttrList: []dto.LocaleResponse{*language.JsonToLocaleResponse(modifier.TtposFlavorName)},
+					TotalNum:        float64(modifier.Quantity * quantity),
+					ProductPrice:    modifier.Price,
+					ProductType:     uint8(item.OldItem.TtposProductType),
+					IsWrap:          order.IsTakeawayOrder(),
+					TotalPrice:      utils.Round(modifier.Price*float64(modifier.Quantity*quantity), 2),
+				})
 			}
 		}
 
@@ -1423,6 +1549,7 @@ func (s *takeoutSrv) PrintReturnOrder(ctx context.Context, orderUuid uint64, cha
 			ProductPrice:          item.OldItem.Price,
 			TotalPrice:            item.OldItem.Price * float64(quantity),
 			IsWrap:                order.IsTakeawayOrder(),
+			SubProducts:           subProducts, // 套餐子商品列表
 		}
 		products = append(products, product)
 	}
