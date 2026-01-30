@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,6 +24,7 @@ type TransferOrderHandler struct {
 	transferOrderSrv     transfer_order.ITransferOrderSrv
 	materialSrv          service.IMaterialSrv
 	transferOrderFileSrv service.ITransferOrderFileSrv
+	dbm                  *database.DBManager
 }
 
 // GetTransferOrderList 获取调拨单列表
@@ -419,6 +421,57 @@ func (h *TransferOrderHandler) GetTransferOrderLogList(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
+// UploadFile 上传调拨单附件
+// @Summary 上传调拨单附件
+// @Description 上传调拨单附件（文件保存到发起方商户数据库的ttpos_file表）
+// @Tags 商家端.调拨单管理
+// @Accept multipart/form-data
+// @Produce json
+// @Security JwtToken
+// @Param transfer_order_uuid formData int true "调拨单UUID"
+// @Param file formData file true "文件"
+// @Success 200 {object} dto.Response{data=resp.UploadFileResp} "成功"
+// @Router /shop/transfer/file/upload [post]
+func (h *TransferOrderHandler) UploadFile(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 获取上传的文件
+	file, err := c.FormFile("file")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "请选择要上传的文件"))
+		return
+	}
+
+	// 打开文件
+	src, err := file.Open()
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "打开文件失败"))
+		return
+	}
+	defer src.Close()
+
+	// 获取调拨单UUID
+	transferOrderUuidStr := c.PostForm("transfer_order_uuid")
+	if transferOrderUuidStr == "" {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("调拨单UUID不能为空"))
+		return
+	}
+	transferOrderUuid, err := utils.StringToUint64(transferOrderUuidStr)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "调拨单UUID格式错误"))
+		return
+	}
+
+	// 上传文件
+	resp, err := h.transferOrderFileSrv.UploadFile(ctx, transferOrderUuid, src, file.Filename, file.Size)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
 // RegisterTransferOrderHandlers 注册调拨单相关路由
 func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -444,6 +497,7 @@ func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 		authSrv:              authSrv,
 		transferOrderSrv:     transfer_order.NewTransferOrderSrv(dbm, materialSrv, settingSrv),
 		transferOrderFileSrv: service.NewTransferOrderFileSrv(dbm),
+		dbm:                  dbm,
 	}
 
 	// 需要认证
@@ -469,5 +523,8 @@ func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 		privateApi.GET("/transfer/company/list", wrapper.GetTransferOrderCompanyList)     // 获取门店列表
 		privateApi.GET("/transfer/warehouse/list", wrapper.GetTransferOrderWarehouseList) // 获取仓库列表
 		privateApi.GET("/transfer/material/list", wrapper.GetTransferOrderMaterialList)   // 获取调拨单物品列表
+
+		// 附件管理
+		privateApi.POST("/transfer/file/upload", wrapper.UploadFile) // 上传调拨单附件
 	}
 }
