@@ -533,16 +533,17 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 				)
 				if err == nil && saleBill.Source == constant.SaleBillSourceKiosk {
 					// Kiosk 订单支付成功，发布事件触发送厨
-					event.NewSystemBus().PublishPayFinishKioskOrderEvent(event.PayFinishKioskOrderPayload{
-						BasePayload: event.BasePayload{
-							Ctx:           p.ctx,
-							CompanyUuid:   p.ctx.GetCompanyUuid(),
-							Source:        constant.SourceKiosk,
-							SaleBillUuid:  saleBill.Uuid,
-							SaleOrderUuid: order.RelatedUuid,
-						},
-						PaymentOrderUuid: paymentOrderUuid,
-					})
+					// 暂时不使用这种方式
+					// event.NewSystemBus().PublishPayFinishKioskOrderEvent(event.PayFinishKioskOrderPayload{
+					// 	BasePayload: event.BasePayload{
+					// 		Ctx:           p.ctx,
+					// 		CompanyUuid:   p.ctx.GetCompanyUuid(),
+					// 		Source:        constant.SourceKiosk,
+					// 		SaleBillUuid:  saleBill.Uuid,
+					// 		SaleOrderUuid: order.RelatedUuid,
+					// 	},
+					// 	PaymentOrderUuid: paymentOrderUuid,
+					// })
 				}
 			}
 		}
