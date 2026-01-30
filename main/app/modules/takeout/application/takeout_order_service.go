@@ -437,16 +437,27 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 			zap.Int("totalChanges", len(changeResult.AllChanges)))
 	}
 
-	// 7. 保存订单更新日志（记录更新前后的订单数据）
-	s.saveOrderUpdateLog(db, orderUuid, existingOrder, updatedOrder)
-
-	// 8. 调用 Domain Service 进行增量更新
+	// 7. 调用 Domain Service 进行增量更新
 	err = s.orderService.IncrementalUpdateOrder(ctx, existingOrder, updatedOrder, changeResult)
 	if err != nil {
 		logger.Logger.Error("更新订单事务失败",
 			zap.Uint64("orderUuid", orderUuid),
 			zap.Error(err))
 		return fmt.Errorf("更新订单事务失败: %w", err)
+	}
+
+	// 8. 保存订单更新日志（记录更新前后的订单数据）
+	existingOrderForLog, err := orderRepo.GetByUuid(
+		orderUuid,
+		orderRepo.WithTakeoutOrderItems(),
+		orderRepo.WithTakeoutOrderItemModifiers(),
+		orderRepo.WithTakeoutOrderReceiver(),
+		orderRepo.WithTakeoutOrderCampaigns(),
+		orderRepo.WithTakeoutOrderPromos(),
+		orderRepo.WithTakeoutOrderMaterials(),
+	)
+	if err == nil && existingOrderForLog != nil {
+		s.saveOrderUpdateLog(db, orderUuid, existingOrderForLog, existingOrderForLog)
 	}
 
 	// 发布订单更新事件（带变动信息）
