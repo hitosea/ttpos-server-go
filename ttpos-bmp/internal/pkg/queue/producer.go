@@ -43,6 +43,36 @@ func PushWithContext(ctx context.Context, topic string, data interface{}) error 
 	return err
 }
 
+// PushWithKey 使用指定 Context 和 Key 推送队列消息
+// key 用于消息追踪和顺序消费（相同 key 路由到同一队列）
+func PushWithKey(ctx context.Context, topic, key string, data interface{}) error {
+	// 参数验证
+	if topic == "" {
+		return gerror.New("主题名称不能为空")
+	}
+	if data == nil {
+		return gerror.New("消息内容不能为空")
+	}
+
+	// 初始化生产者
+	producer, err := InstanceProducer()
+	if err != nil {
+		return gerror.Wrap(err, "初始化消息生产者失败")
+	}
+
+	// 序列化消息内容
+	body, err := gjson.EncodeString(data)
+	if err != nil {
+		return gerror.Wrap(err, "消息体序列化失败")
+	}
+
+	// 发送消息（带 key）
+	mqMsg, err := producer.SendMsgWithKey(ctx, topic, key, body)
+	// 记录日志（包含 key）
+	ProducerLogWithKey(ctx, topic, key, mqMsg, err)
+	return err
+}
+
 // DelayPush 推送延时队列消息
 func DelayPush(topic string, data interface{}, delay time.Duration) error {
 	return DelayPushWithContext(gctx.GetInitCtx(), topic, data, delay)

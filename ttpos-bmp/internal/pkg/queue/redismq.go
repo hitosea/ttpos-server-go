@@ -29,6 +29,12 @@ func (r *RedisMq) SendMsg(ctx context.Context, topic string, body string) (mqMsg
 	return r.SendByteMsg(ctx, topic, []byte(body))
 }
 
+// SendMsgWithKey 发送带 key 的字符串消息
+// Redis 不支持消息 key，此方法忽略 key 参数，直接调用 SendMsg 保持兼容
+func (r *RedisMq) SendMsgWithKey(ctx context.Context, topic, key, body string) (mqMsg MqMsg, err error) {
+	return r.SendMsg(ctx, topic, body)
+}
+
 // SendByteMsg 生产数据
 func (r *RedisMq) SendByteMsg(ctx context.Context, topic string, body []byte) (mqMsg MqMsg, err error) {
 	// 参数验证

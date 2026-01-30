@@ -95,6 +95,7 @@ touch docs/team/proposals/2025-11/quick-payment.md
 | [bmp-lineman-currency-conversion](2026-01/bmp-lineman-currency-conversion.md) | Lineman 订单金额泰铢转分 | 待评审 |
 | [v2.14-shop-lineman-trigger-sync-menu](2026-01/v2.14-shop-lineman-trigger-sync-menu.md) | Lineman TriggerSyncMenu 落库与触发 | 待评审 |
 | [shop-report-lineman-export](2026-01/shop-report-lineman-export.md) | 统计报表导出增加 LINEMAN 数据 | 待评审 |
+| [bmp-queue-message-key](2026-01/bmp-queue-message-key.md) | 队列消息 Key 支持（消息追踪优化） | 待评审 |
 
 ---
 
