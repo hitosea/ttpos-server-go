@@ -13,7 +13,7 @@ type StockReconciliation struct {
 	WarehouseUuid      uint64 `gorm:"column:warehouse_uuid;not null;default:0;index:idx_warehouse_uuid;comment:仓库ID" json:"warehouse_uuid"`
 	Purpose            int    `gorm:"column:purpose;not null;default:1;comment:盘点目的 1-库存盘点 2-期初盘点" json:"purpose"`
 	Status             int    `gorm:"column:status;not null;default:0;index:idx_status;comment:状态 0-已保存 1-已提交 2-已审核 3-已驳回" json:"status"`
-	SubmitTime         int    `gorm:"column:submit_time;not null;default:0;comment:提交时间(时间戳)" json:"submit_time"`
+	SubmitTime         int    `gorm:"column:submit_time;not null;default:0;comment:提交时间(时间戳)" json:"submit_time"` // 为了能按照这个时间排序,保存时先记录一个时间,最后真正提交时会再更新提交时间
 	SubmitterStaffUuid uint64 `gorm:"column:submitter_staff_uuid;not null;default:0;comment:发起人员工UUID" json:"submitter_staff_uuid"`
 
 	// 关联仓库
