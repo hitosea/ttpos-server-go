@@ -1273,6 +1273,7 @@ type ReturnPosInvoiceReq struct {
 	Taxes            []*PosInvoiceTax       `protobuf:"bytes,7,rep,name=taxes,proto3" json:"taxes,omitempty" dc:"税费列表 必填"`                                                               // 税费列表 必填
 	Payments         []*PosInvoicePayment   `protobuf:"bytes,8,rep,name=payments,proto3" json:"payments,omitempty" dc:"付款列表 必填"`                                                         // 付款列表 必填
 	InvoiceType      int64                  `protobuf:"varint,9,opt,name=invoice_type,json=invoiceType,proto3" json:"invoice_type,omitempty" dc:"发票类型 1=商品发票 2=原材料发票 异步模式下必填"`           // 发票类型 1=商品发票 2=原材料发票 异步模式下必填
+	Remark           string                 `protobuf:"bytes,10,opt,name=remark,proto3" json:"remark,omitempty" dc:"附注/备注,可选"`                                                           // 附注/备注,可选
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1370,6 +1371,13 @@ func (x *ReturnPosInvoiceReq) GetInvoiceType() int64 {
 	return 0
 }
 
+func (x *ReturnPosInvoiceReq) GetRemark() string {
+	if x != nil {
+		return x.Remark
+	}
+	return ""
+}
+
 // ReturnPosInvoiceResp 退款POS发票响应消息
 type ReturnPosInvoiceResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1430,6 +1438,7 @@ type CancelPosInvoiceReq struct {
 	MaterialInvoiceName string                 `protobuf:"bytes,2,opt,name=material_invoice_name,json=materialInvoiceName,proto3" json:"material_invoice_name,omitempty" dc:"材料销售发票，必填"` // 材料销售发票，必填
 	OrderNo             string                 `protobuf:"bytes,3,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty" dc:"订单号，传ttpos的订单号,异步模式下必填"`                          // 订单号，传ttpos的订单号,异步模式下必填
 	OpenPosEntryName    string                 `protobuf:"bytes,4,opt,name=open_pos_entry_name,json=openPosEntryName,proto3" json:"open_pos_entry_name,omitempty" dc:"POS开帐名称,异步模式下必填"`  // POS开帐名称,异步模式下必填
+	Remark              string                 `protobuf:"bytes,5,opt,name=remark,proto3" json:"remark,omitempty" dc:"附注/备注,可选"`                                                         // 附注/备注,可选
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -1488,6 +1497,13 @@ func (x *CancelPosInvoiceReq) GetOrderNo() string {
 func (x *CancelPosInvoiceReq) GetOpenPosEntryName() string {
 	if x != nil {
 		return x.OpenPosEntryName
+	}
+	return ""
+}
+
+func (x *CancelPosInvoiceReq) GetRemark() string {
+	if x != nil {
+		return x.Remark
 	}
 	return ""
 }
@@ -2072,7 +2088,7 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x06amount\x18\x02 \x01(\x01R\x06amount\x12\"\n" +
 	"\n" +
 	"payment_id\x18\x03 \x01(\tH\x00R\tpaymentId\x88\x01\x01B\r\n" +
-	"\v_payment_id\"\x88\x03\n" +
+	"\v_payment_id\"\xa0\x03\n" +
 	"\x13ReturnPosInvoiceReq\x12\x19\n" +
 	"\border_no\x18\x01 \x01(\tR\aorderNo\x12-\n" +
 	"\x13open_pos_entry_name\x18\x02 \x01(\tR\x10openPosEntryName\x12)\n" +
@@ -2082,15 +2098,18 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x05items\x18\x06 \x03(\v2\x17.selling.PosInvoiceItemR\x05items\x12,\n" +
 	"\x05taxes\x18\a \x03(\v2\x16.selling.PosInvoiceTaxR\x05taxes\x126\n" +
 	"\bpayments\x18\b \x03(\v2\x1a.selling.PosInvoicePaymentR\bpayments\x12!\n" +
-	"\finvoice_type\x18\t \x01(\x03R\vinvoiceType\"a\n" +
+	"\finvoice_type\x18\t \x01(\x03R\vinvoiceType\x12\x16\n" +
+	"\x06remark\x18\n" +
+	" \x01(\tR\x06remark\"a\n" +
 	"\x14ReturnPosInvoiceResp\x12!\n" +
 	"\finvoice_name\x18\x01 \x01(\tR\vinvoiceName\x12&\n" +
-	"\x0fasync_record_id\x18\x02 \x01(\tR\rasyncRecordId\"\xc7\x01\n" +
+	"\x0fasync_record_id\x18\x02 \x01(\tR\rasyncRecordId\"\xdf\x01\n" +
 	"\x13CancelPosInvoiceReq\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
 	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\x12\x19\n" +
 	"\border_no\x18\x03 \x01(\tR\aorderNo\x12-\n" +
-	"\x13open_pos_entry_name\x18\x04 \x01(\tR\x10openPosEntryName\"\xa6\x01\n" +
+	"\x13open_pos_entry_name\x18\x04 \x01(\tR\x10openPosEntryName\x12\x16\n" +
+	"\x06remark\x18\x05 \x01(\tR\x06remark\"\xa6\x01\n" +
 	"\x14CancelPosInvoiceResp\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
 	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\x12&\n" +

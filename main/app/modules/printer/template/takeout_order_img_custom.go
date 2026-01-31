@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"ttpos-server-go/app/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/app/modules/printer/tyeps/structs"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
@@ -76,11 +76,6 @@ func (t *platformTakeoutImgTemplate) GetPrintContent(
 		return ""
 	}
 
-	// TODO: 临时处理，后续需要去掉
-	if config.Server.Mode == constant.ServerModeDebug {
-		img.SegmentationHeight = 200000
-	}
-
 	// 保存图片
 	return img.Save("", !t.base.IsSunMi && settingPrinterInfo.IsEnableSound(), 0)
 }
@@ -123,9 +118,9 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	isMerchantReceipt bool,
 ) structs.StatementOrderInfoData {
 	orderData := structs.StatementOrderInfoData{
-		Platform:     order.Platform,
+		Platform:     value_object.GetPlatformName(order.Platform),
 		OrderNo:      order.PlatformOrderId,
-		SerialNo:     fmt.Sprintf("%s: %s", order.GetCapitalPlatform(), order.ShortOrderNumber),
+		SerialNo:     fmt.Sprintf("%s: %s", order.GetSpacePlatformName(), order.ShortOrderNumber),
 		OrderType:    order.OrderType,
 		CreateTime:   t.base.FormatUnixTimeDefault(order.OrderTime),     // 下单时间
 		FinishTime:   t.base.FormatUnixTimeDefault(order.CompletedTime), // 完成时间
@@ -181,12 +176,13 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 				// 根据修饰符类型分类
 				switch modifier.TtposModifierType {
 				case "commodity": // 商品类型，作为套餐子商品显示
+					productNum := float64(modifier.Quantity * item.Quantity)
 					subProduct := structs.StatementProductData{
 						Name:         modifierName,
 						Price:        t.base.Amount(modifier.Price),
-						Num:          float64(modifier.Quantity),
-						PriceNum:     fmt.Sprintf("%d", modifier.Quantity),
-						Subtotal:     t.base.Amount(modifier.Price * float64(modifier.Quantity)),
+						Num:          productNum,
+						PriceNum:     fmt.Sprintf("%v", productNum),
+						Subtotal:     t.base.Amount(modifier.Price * productNum),
 						IsSubProduct: true, // 标记为子商品
 					}
 					// 商家联：始终使用 TTPOS 规格名称
@@ -245,6 +241,9 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	orderData.PaymentName = order.PaymentType
 	orderData.PaidAmount = t.base.Amount(order.PlatformTotal) // 使用平台结算总额
 
+	// 附加属性
+	orderData.AdditionalProperties = order.GetAdditionalProperties(t.base.Lang)
+
 	// 收货人信息
 	if order.TakeoutOrderReceiver != nil {
 		orderData.CustomerName = order.TakeoutOrderReceiver.ReceiverName
@@ -254,18 +253,23 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 
 	// 异常提示
 	if order.IsAbnormal == 1 {
-		orderData.WarningMessage = "该订单菜单信息异常,请前去Grab查看!!!"
 		if order.Platform == "Grab" {
 			orderData.WarningMessage = t.base.Translate("该订单菜单信息异常,请前去 Grab 查看!!!")
 		} else if order.Platform == "LINEMAN" {
 			orderData.WarningMessage = t.base.Translate("该订单菜单信息异常,请前去 LINEMAN 查看!!!")
 		}
-		// 判断是否58打印机，如果是则使用58打印机分隔符
-		if is58mmPrinter {
-			orderData.WarningMessageSeparator = "**************************************************************"
-		} else {
-			orderData.WarningMessageSeparator = "**********************************************************************************************"
-		}
+	}
+
+	// 从订单更新日志表查询是否有更新记录
+	if len(order.TakeoutOrderUpdateLogs) > 0 {
+		orderData.OrderUpdatedMessage = t.base.Translate("订单变更！！请查看最新的订单信息")
+	}
+
+	// 判断是否58打印机，如果是则使用58打印机分隔符
+	if is58mmPrinter {
+		orderData.WarningMessageSeparator = "**************************************************************"
+	} else {
+		orderData.WarningMessageSeparator = "**********************************************************************************************"
 	}
 
 	return orderData

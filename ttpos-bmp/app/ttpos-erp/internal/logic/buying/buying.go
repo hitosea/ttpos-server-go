@@ -2,13 +2,14 @@ package buying
 
 import (
 	"context"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
-	"github.com/gogf/gf/v2/container/garray"
+	"github.com/gogf/gf/v2/container/gvar"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -290,30 +291,57 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 	if req.Items != nil && len(req.Items) > 0 {
 		receiptItems := make([]*erp.PurchaseReceiptItem, 0)
 		//获取采购单中所有物品编码
-		purchaseItemCodeList := make([]string, len(receipt.Items))
-		_warehouse := receipt.SetWarehouse
-		for _, item := range receipt.Items {
-			purchaseItemCodeList = append(purchaseItemCodeList, item.ItemCode)
-			if len(item.Warehouse) > 0 {
-				_warehouse = item.Warehouse
-			}
-		}
-		gPurchaseItemCodeList := garray.NewStrArrayFrom(purchaseItemCodeList)
+		// purchaseItemCodeList := make([]string, len(receipt.Items))
+		// _warehouse := receipt.SetWarehouse
+		// for _, item := range receipt.Items {
+		// 	purchaseItemCodeList = append(purchaseItemCodeList, item.ItemCode)
+		// 	if len(item.Warehouse) > 0 {
+		// 		_warehouse = item.Warehouse
+		// 	}
+		// }
+		// gPurchaseItemCodeList := garray.NewStrArrayFrom(purchaseItemCodeList)
 		for _, itemReq := range req.Items {
-			if gPurchaseItemCodeList.Contains(itemReq.ItemCode) {
-				if len(itemReq.Warehouse) > 0 {
-					_warehouse = itemReq.Warehouse
+			//获取已有物品
+			var existsItem *erp.PurchaseReceiptItem
+			for _, item := range receipt.Items {
+				if item.ItemCode == itemReq.ItemCode && item.Uom == itemReq.Uom {
+					existsItem = item
+					break
 				}
-				receiptItems = append(receiptItems, &erp.PurchaseReceiptItem{
-					ItemCode:      itemReq.ItemCode,
-					Qty:           itemReq.Qty,
-					Uom:           itemReq.Uom,
-					Warehouse:     _warehouse,
-					PurchaseOrder: req.PurchaseOrderName,
-				})
 			}
+
+			// 校验：请求的物品必须在采购单中存在
+			if existsItem == nil {
+				g.Log().Warningf(ctx, "物品 %s 不在采购单中，跳过", itemReq.ItemCode)
+				continue
+			}
+
+			//复制已有物品，根据请求参数设置收货数量和单位
+			receiptItem := &erp.PurchaseReceiptItem{}
+			gvar.New(existsItem).Clone().Scan(receiptItem)
+			receiptItem.Qty = itemReq.Qty
+			receiptItems = append(receiptItems, receiptItem)
+
+			// if gPurchaseItemCodeList.Contains(itemReq.ItemCode) {
+			// 	if len(itemReq.Warehouse) > 0 {
+			// 		_warehouse = itemReq.Warehouse
+			// 	}
+			// 	receiptItems = append(receiptItems, &erp.PurchaseReceiptItem{
+			// 		ItemCode:      itemReq.ItemCode,
+			// 		Qty:           itemReq.Qty,
+			// 		Uom:           itemReq.Uom,
+			// 		Warehouse:     _warehouse,
+			// 		PurchaseOrder: req.PurchaseOrderName,
+			// 	})
+			// }
 		}
 		receipt.Items = receiptItems
+	}
+
+	// 设置跨公司订单引用
+	if req.InterCompanyReference != "" {
+		receipt.IsInternalSupplier = true
+		receipt.InterCompanyReference = req.InterCompanyReference
 	}
 
 	//创建采购收货订单
@@ -397,6 +425,7 @@ func (s *sBuying) GetPurchaseOrderList(ctx context.Context, req *buying.GetPurch
 
 	// 获取总数量
 	totalCount, err := s.GetPurchaseOrderCount(ctx, &buying.GetPurchaseOrderCountReq{
+		Name:        req.Name,
 		Supplier:    req.Supplier,
 		CompanyAbbr: req.CompanyAbbr,
 		FromDate:    req.FromDate,
@@ -451,6 +480,17 @@ func (s *sBuying) GetPurchaseOrderCount(ctx context.Context, req *buying.GetPurc
 func (s *sBuying) buildPurchaseOrderListFilters(ctx context.Context, req *buying.GetPurchaseOrderListReq) [][]string {
 	filters := make([][]string, 0, 8) // 预分配容量，提高性能
 
+	// 按采购订单名称过滤（支持 IN 查询）
+	if len(req.Name) > 0 {
+		if strings.Contains(req.Name, ",") {
+			// 多个值使用 IN 查询
+			filters = append(filters, g.ArrayStr{"name", "in", req.Name})
+		} else {
+			// 单个值使用等值查询
+			filters = append(filters, g.ArrayStr{"name", "=", req.Name})
+		}
+	}
+
 	// 按供应商过滤
 	if len(req.Supplier) > 0 {
 		filters = append(filters, g.ArrayStr{"supplier", "=", req.Supplier})
@@ -484,6 +524,17 @@ func (s *sBuying) buildPurchaseOrderListFilters(ctx context.Context, req *buying
 //   - [][]string: 过滤条件数组
 func (s *sBuying) buildPurchaseOrderCountFilters(ctx context.Context, req *buying.GetPurchaseOrderCountReq) [][]string {
 	filters := make([][]string, 0, 8) // 预分配容量，提高性能
+
+	// 按采购订单名称过滤（支持 IN 查询）
+	if len(req.Name) > 0 {
+		if strings.Contains(req.Name, ",") {
+			// 多个值使用 IN 查询
+			filters = append(filters, g.ArrayStr{"name", "in", req.Name})
+		} else {
+			// 单个值使用等值查询
+			filters = append(filters, g.ArrayStr{"name", "=", req.Name})
+		}
+	}
 
 	// 按供应商过滤
 	if len(req.Supplier) > 0 {

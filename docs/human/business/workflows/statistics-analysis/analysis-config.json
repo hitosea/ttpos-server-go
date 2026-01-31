@@ -1,0 +1,15 @@
+{
+  "type": "methods",
+  "depth": "detailed",
+  "scope": "main/app/service/**/business*.go,main/app/service/**/statistics*.go,main/app/repository/**/statistics*.go",
+  "focus_areas": ["Core Algorithms", "Critical Paths", "Public APIs", "Complex Logic"],
+  "topic": "数据统计相关功能",
+  "target_modules": [
+    "业务统计服务 (business.go)",
+    "统计服务 (statistics.go)",
+    "统计仓库层 (statistics_repo.go)",
+    "导出功能",
+    "报表计算逻辑"
+  ],
+  "created_at": "2026-01-27T03:25:00Z"
+}

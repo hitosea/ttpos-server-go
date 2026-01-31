@@ -68,4 +68,3 @@ func RegisterCountryRoutes(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/country/list", handler.GetList)
 	}
 }
-

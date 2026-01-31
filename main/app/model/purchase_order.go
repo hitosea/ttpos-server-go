@@ -13,6 +13,7 @@ type PurchaseOrder struct {
 	OrderNo                 string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:单号" json:"order_no"`
 	SubUuid                 uint64  `gorm:"column:sub_uuid;type:bigint(20) unsigned;not null;default:0;comment:子订单UUID" json:"sub_uuid"`
 	ErpOrderNo              string  `gorm:"column:erp_order_no;type:varchar(255);not null;default:'';comment:ERP采购单号" json:"erp_order_no"`
+	ErpSaleOrderNo          string  `gorm:"column:erp_sale_order_no;type:varchar(255);not null;default:'';comment:ERP销售单号" json:"erp_sale_order_no"`
 	OrderType               int     `gorm:"column:order_type;type:int(10);not null;default:0;comment:申请类型, 0-仓库调拨" json:"order_type"`
 	SupplierName            string  `gorm:"column:supplier_name;type:varchar(100);not null;default:'';comment:供应商名称" json:"supplier_name"`
 	SupplierErpCode         string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商编码" json:"supplier_erp_code"`
@@ -154,8 +155,10 @@ type PurchaseOrderItem struct {
 	BaseUnitName       string  `gorm:"column:base_unit_name;type:text;not null;default:'';comment:基准单位名称JSON, 提交采购时记录后不再修改" json:"base_unit_name"`
 	Valuation          float64 `gorm:"column:valuation;type:decimal(14,2);not null;default:0.00;comment:估值单价" json:"valuation"`
 	TotalPrice         float64 `gorm:"column:total_price;type:decimal(14,2);not null;default:0.00;comment:总价" json:"total_price"`
-	ErpnextUom         string  `gorm:"column:erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext单位" json:"erpnext_uom"`
-	BaseErpnextUom     string  `gorm:"column:base_erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext基准单位" json:"base_erpnext_uom"`
+	ErpnextUom          string  `gorm:"column:erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext单位" json:"erpnext_uom"`
+	BaseErpnextUom      string  `gorm:"column:base_erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext基准单位" json:"base_erpnext_uom"`
+	DeliveredBySupplier int     `gorm:"column:delivered_by_supplier;type:int(10);not null;default:0;comment:是否由供应商配送，0-否，1-是" json:"delivered_by_supplier"`
+	SupplierErpCode     string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商ERP编码" json:"supplier_erp_code"`
 
 	// 关联关系
 	PurchaseOrder *PurchaseOrder          `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`
@@ -223,7 +226,7 @@ type PurchaseOrderLog struct {
 	ActionDesc        string `gorm:"column:action_desc;type:varchar(255);not null;default:'';comment:操作描述" json:"action_desc"`
 	OldStatus         int    `gorm:"column:old_status;type:int(10);not null;default:0;comment:操作前状态" json:"old_status"`
 	NewStatus         int    `gorm:"column:new_status;type:int(10);not null;default:0;comment:操作后状态" json:"new_status"`
-	Content           string `gorm:"column:content;type:text;comment:操作内容详情" json:"content"`
+	Content           string `gorm:"column:content;type:longtext;comment:操作内容详情" json:"content"`
 	Remark            string `gorm:"column:remark;type:text;comment:备注" json:"remark"`
 
 	// 关联关系
@@ -255,6 +258,8 @@ type PurchaseReceiptOrder struct {
 	SourceWarehouseName    string  `gorm:"column:source_warehouse_name;type:text;comment:源仓库名称" json:"source_warehouse_name"`
 	TargetWarehouseErpCode string  `gorm:"column:target_warehouse_erp_code;type:varchar(255);not null;default:'';comment:目标仓库ERP编码" json:"target_warehouse_erp_code"`
 	TargetWarehouseName    string  `gorm:"column:target_warehouse_name;type:text;comment:目标仓库名称" json:"target_warehouse_name"`
+	DeliveryNoteNo         string  `gorm:"column:delivery_note_no;type:varchar(255);not null;default:'';comment:ERP Delivery Note号" json:"delivery_note_no"`
+	IsFromDeliveryNote     int     `gorm:"column:is_from_delivery_note;type:int(10);not null;default:0;comment:是否来自DN单:0-否 1-是" json:"is_from_delivery_note"`
 
 	// 关联关系
 	PurchaseOrder PurchaseOrder              `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`

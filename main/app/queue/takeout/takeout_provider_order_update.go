@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"ttpos-server-go/app/modules/takeout/application"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
@@ -24,6 +25,27 @@ func TakeoutProviderOrderUpdateHandler(ctx context.Context, msg *primitive.Messa
 		}
 	}()
 
+	// 调试代码
+	// // 构造测试事件
+	// events := request.TakeoutOrderEvent{
+	// 	Action:       "status_update",
+	// 	ProviderName: value_object.TakeoutPlatformLineman,
+	// 	MerchantId:   "",
+	// 	ShopUuid:     "8609817471094784", // 使用实际存在的店铺UUID
+	// 	OrderUuid:    "19yx3qw1p00dfz5wjmbtus92w0bz6s8a",
+	// 	OrderId:      "LMF-260127-343306443",
+	// 	Status:       "COMPLETED",
+	// 	Message:      "",
+	// 	Timestamp:    time.Now().Unix(),
+	// }
+	// // 序列化为JSON
+	// body, err := json.Marshal(events)
+	// if err != nil {
+	// 	logger.Logger.Error("序列化供应商订单更新消息失败", zap.Error(err))
+	// 	return err
+	// }
+	// msg.Body = body
+
 	var event request.TakeoutOrderEvent
 	if err := json.Unmarshal(msg.Body, &event); err != nil {
 		logger.Logger.Error("解析供应商订单更新消息失败",
@@ -31,6 +53,18 @@ func TakeoutProviderOrderUpdateHandler(ctx context.Context, msg *primitive.Messa
 			zap.Error(err),
 			zap.String("body", string(msg.Body)))
 		return err
+	}
+
+	// 判断是否开发模式，如果是开发模式，则使用 6293997752320000
+	if config.Server.Mode == "debug" && event.ProviderName == value_object.TakeoutPlatformLineman {
+		shopUuid, err := strconv.ParseUint(event.ShopUuid, 10, 64)
+		if err != nil {
+			logger.Logger.Error("转换ShopUuid失败", zap.Error(err))
+			return err
+		}
+		if config.Takeout.TakeoutLinemanStoreId == shopUuid {
+			event.ShopUuid = "8609817471094784"
+		}
 	}
 
 	logger.Logger.Info("收到供应商订单更新事件",

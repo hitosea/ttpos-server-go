@@ -96,6 +96,18 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 
 	opts = append(opts, stockReconciliationRepo.WithWarehouseMultiLanguageName())
 
+	// 如果版本号大于等于v2.16.0,则按照提交时间排序
+	// if ctx.Version(context.GTE, constant.ClientVersionV2160) {
+	// 	opts = append(opts, func(db *gorm.DB) *gorm.DB {
+	// 		return db.Order("submit_time DESC")
+	// 	})
+	// } else {
+	// 暂时都是按照创建时间排序. 等过几期后所有商家中的调拨单都提交时间不为0时再改回去.
+	opts = append(opts, func(db *gorm.DB) *gorm.DB {
+		return db.Order("create_time DESC") // 默认按照创建时间排序. 由于之前版本未提交的盘点单没有提交时间,所以按照创建时间排序.
+	})
+	// }
+
 	// 查询数据
 	list, total, err := stockReconciliationRepo.GetStockReconciliationListWithPagination(req.PageNo, req.PageSize, opts...)
 	if err != nil {
@@ -255,6 +267,10 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 	}
 	detailResp.WarehouseName = stockReconciliation.Warehouse.MultiLanguageName.GetNames()
 
+	// 是否可重新提交（已驳回状态且为发起人）
+	detailResp.IsCanResubmit = stockReconciliation.Status == constant.StockReconciliationStatusRejected &&
+		stockReconciliation.SubmitterStaffUuid == ctx.GetStaffUuid()
+
 	bookedQuantityMap, err := s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
 	if err != nil {
 		return detailResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
@@ -348,6 +364,24 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 	}
 	detailResp.Items = itemsResp
 
+	// 查询批注列表
+	annotationRepo := repository.NewStockReconciliationAnnotationRepo(db)
+	annotations, err := annotationRepo.GetListByStockReconciliationUuid(req.Uuid)
+	if err != nil {
+		logger.Logger.Error("查询批注列表失败", zap.Error(err))
+	}
+	annotationsResp := make([]*resp.StockReconciliationAnnotationInfo, 0, len(annotations))
+	for _, annotation := range annotations {
+		annotationsResp = append(annotationsResp, &resp.StockReconciliationAnnotationInfo{
+			Uuid:           annotation.Uuid,
+			AnnotationType: annotation.AnnotationType,
+			LocaleName:     constant.GetStockReconciliationAnnotationTypeLocaleName(annotation.AnnotationType),
+			Content:        annotation.Content,
+			CreateTime:     int64(annotation.CreateTime),
+		})
+	}
+	detailResp.Annotations = annotationsResp
+
 	return detailResp, nil
 }
 
@@ -382,12 +416,23 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 			return stockReconciliationUuid, errors.New("盘点单不存在")
 		}
 
-		// 只有已保存状态的盘点单才能修改
-		if stockReconciliation.Status != constant.StockReconciliationStatusSaved {
-			if saveReq.IsSubmit {
-				return stockReconciliationUuid, errors.New("当前状态不允许提交")
-			} else {
-				return stockReconciliationUuid, errors.New("当前状态不允许修改")
+		// 重新提交场景：只有已驳回状态才能重新提交
+		if saveReq.GetIsResubmit() {
+			if stockReconciliation.Status != constant.StockReconciliationStatusRejected {
+				return stockReconciliationUuid, errors.New("盘点单状态不允许重新提交")
+			}
+			// 验证只有提交人才能重新提交
+			if stockReconciliation.SubmitterStaffUuid != ctx.GetStaffUuid() {
+				return stockReconciliationUuid, errors.New("只有发起人才能重新提交")
+			}
+		} else {
+			// 只有已保存状态的盘点单才能修改
+			if stockReconciliation.Status != constant.StockReconciliationStatusSaved {
+				if saveReq.IsSubmit {
+					return stockReconciliationUuid, errors.New("当前状态不允许提交")
+				} else {
+					return stockReconciliationUuid, errors.New("当前状态不允许修改")
+				}
 			}
 		}
 	}
@@ -440,6 +485,19 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 	err = db.Transaction(func(tx *gorm.DB) error {
 		stockReconciliationRepo := repository.NewStockReconciliationRepo(tx)
 
+		// 重新提交成功后添加批注记录
+		if saveReq.GetIsResubmit() {
+			annotationRepo := repository.NewStockReconciliationAnnotationRepo(db)
+			annotation := &model.StockReconciliationAnnotation{
+				StockReconciliationUuid: stockReconciliation.Uuid,
+				AnnotationType:          constant.StockReconciliationAnnotationTypeResubmit,
+			}
+			if err := annotationRepo.Create(annotation); err != nil {
+				logger.Logger.Error("保存重新提交批注失败", zap.Error(err))
+				// 批注保存失败不影响主流程，仅记录日志
+			}
+		}
+
 		if saveReq.Uuid == 0 { // 新建
 			// 生成单据编号
 			orderNo, err := s.generateOrderNo(saasDB, companyUuid, timezone)
@@ -448,11 +506,13 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 			}
 			// 创建盘点单
 			stockReconciliation = &model.StockReconciliation{
-				OrderNo:       orderNo,
-				Type:          saveReq.Type,
-				WarehouseUuid: saveReq.WarehouseUuid,
-				Purpose:       saveReq.Purpose,
-				Status:        constant.StockReconciliationStatusSaved, // 0-已保存
+				OrderNo:            orderNo,
+				Type:               saveReq.Type,
+				WarehouseUuid:      saveReq.WarehouseUuid,
+				Purpose:            saveReq.Purpose,
+				Status:             constant.StockReconciliationStatusSaved, // 0-已保存
+				SubmitterStaffUuid: ctx.GetStaffUuid(),                      // 记录发起人
+				SubmitTime:         int(time.Now().Unix()),                  // 记录提交时间,为了能按照时间排序(最后真正提交时会再更新提交时间)
 			}
 			if err := stockReconciliationRepo.CreateStockReconciliation(stockReconciliation); err != nil {
 				return errors.WithMessage(errors.New("创建盘点单失败"), err.Error())
@@ -464,6 +524,7 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 			stockReconciliation.WarehouseUuid = saveReq.WarehouseUuid
 			stockReconciliation.Purpose = saveReq.Purpose
 			stockReconciliation.Type = saveReq.Type
+			stockReconciliation.SubmitTime = int(time.Now().Unix()) // 记录提交时间,为了能按照时间排序(最后真正提交时会再更新提交时间)
 
 			if err := stockReconciliationRepo.UpdateStockReconciliation(stockReconciliation); err != nil {
 				return errors.WithMessage(err, "更新盘点单失败")
@@ -534,14 +595,14 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 
 	if err != nil {
 		errMsg := "保存失败"
-		if saveReq.IsSubmit {
+		if saveReq.IsSubmit || saveReq.GetIsResubmit() {
 			errMsg = "提交失败"
 		}
 		return stockReconciliationUuid, errors.WithMessage(errors.New(errMsg), err.Error())
 	}
 
-	// 提交盘点单
-	if saveReq.IsSubmit && ctx.GetCompany().IsOpenErp() {
+	// 提交盘点单（包括首次提交和重新提交）
+	if (saveReq.IsSubmit || saveReq.GetIsResubmit()) && ctx.GetCompany().IsOpenErp() {
 		err = s.submitStockReconciliation(ctx, stockReconciliation.Uuid, false)
 		if err != nil {
 			return stockReconciliationUuid, errors.WithMessage(err, "提交盘点单失败")
@@ -700,6 +761,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 		stockReconciliation.ErpCode = erpReq.StockReconciliationName
 		stockReconciliation.SubmitTime = int(time.Now().Unix())
 		stockReconciliation.Status = constant.StockReconciliationStatusSubmitted
+		stockReconciliation.SubmitterStaffUuid = ctx.GetStaffUuid() // 记录提交人
 		if err := stockReconciliationRepo.UpdateStockReconciliation(stockReconciliation); err != nil {
 			return errors.WithMessage(errors.New("更新盘点单状态失败"), err.Error())
 		}
@@ -821,6 +883,18 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 		if err := stockReconciliationRepo.UpdateStockReconciliationData(updateData, stockReconciliationRepo.WhereUuid(req.Uuid)); err != nil {
 			return errors.WithMessage(errors.New("审核盘点单失败"), err.Error())
 		}
+
+		// 保存批注记录（审核通过必须创建批注记录）
+		annotationRepo := repository.NewStockReconciliationAnnotationRepo(tx)
+		annotation := &model.StockReconciliationAnnotation{
+			StockReconciliationUuid: req.Uuid,
+			AnnotationType:          constant.StockReconciliationAnnotationTypeApprove,
+			Content:                 req.Annotation,
+		}
+		if err := annotationRepo.Create(annotation); err != nil {
+			return errors.WithMessage(err, "保存批注失败")
+		}
+
 		// 遍历所有物品
 		var warehouseLogs []*model.WarehouseInOutLog
 		for _, item := range stockReconciliation.StockReconciliationItems {
@@ -965,13 +1039,34 @@ func (s *stockReconciliationSrv) RejectStockReconciliation(ctx context.Context, 
 		return errors.New("盘点单状态不允许驳回")
 	}
 
-	// 更新盘点单状态为已驳回
-	updateData := map[string]any{
-		"status":      constant.StockReconciliationStatusRejected, // 3-已驳回
-		"update_time": int(time.Now().Unix()),
-	}
-	if err := stockReconciliationRepo.UpdateStockReconciliationData(updateData, stockReconciliationRepo.WhereUuid(req.Uuid)); err != nil {
-		return errors.WithMessage(err, "驳回盘点单失败")
+	// 开启事务
+	err = db.Transaction(func(tx *gorm.DB) error {
+		stockReconciliationRepo := repository.NewStockReconciliationRepo(tx)
+
+		// 更新盘点单状态为已驳回
+		updateData := map[string]any{
+			"status":      constant.StockReconciliationStatusRejected, // 3-已驳回
+			"update_time": int(time.Now().Unix()),
+		}
+		if err := stockReconciliationRepo.UpdateStockReconciliationData(updateData, stockReconciliationRepo.WhereUuid(req.Uuid)); err != nil {
+			return errors.WithMessage(errors.New("驳回盘点单失败"), err.Error())
+		}
+
+		// 保存批注记录（驳回必须创建批注记录）
+		annotationRepo := repository.NewStockReconciliationAnnotationRepo(tx)
+		annotation := &model.StockReconciliationAnnotation{
+			StockReconciliationUuid: req.Uuid,
+			AnnotationType:          constant.StockReconciliationAnnotationTypeReject,
+			Content:                 req.Annotation,
+		}
+		if err := annotationRepo.Create(annotation); err != nil {
+			return errors.WithMessage(err, "保存批注失败")
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return nil

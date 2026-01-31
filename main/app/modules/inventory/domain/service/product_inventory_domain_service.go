@@ -347,6 +347,15 @@ func (s *productInventoryDomainService) GetProductPackageInventoriesBatch(
 			continue
 		}
 
+		// 过滤掉已经删除的BOM
+		if productBom.IsDelete() {
+			continue
+		}
+		// 过滤掉小料的BOM
+		if productBom.IsSauce() {
+			continue
+		}
+
 		packageUuid := productBom.ProductPackageUuid
 		bomUuid := productBom.Uuid
 

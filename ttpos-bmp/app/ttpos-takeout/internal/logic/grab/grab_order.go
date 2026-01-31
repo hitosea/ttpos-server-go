@@ -14,7 +14,7 @@ import (
 	"github.com/gogf/gf/v2/util/guid"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 
-	api "ttpos-bmp/app/ttpos-takeout/api/order"
+	orderApi "ttpos-bmp/app/ttpos-takeout/api/order"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
@@ -34,8 +34,6 @@ const (
 // sGrabOrder 订单服务
 type sGrabOrder struct{}
 
-
-
 // HandleSubmitOrder 处理 Grab 提交订单 Webhook
 // 签名验证已由中间件完成，此处只处理业务逻辑
 // 使用 SDK grabfood.SubmitOrderRequest 替换自定义 DTO
@@ -47,7 +45,7 @@ func (s *sGrab) HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrder
 		return gerror.Wrap(err, "保存订单失败")
 	}
 
-	// 3. 发送 MQ 消息
+	// 3. 发送 MQ 消息（使用订单号作为 key，便于消息追踪）
 	event := &grab.OrderEvent{
 		Action:       "create",
 		ProviderName: string(consts.ProviderGrab),
@@ -58,7 +56,7 @@ func (s *sGrab) HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrder
 		Status:       req.GetOrderState(),
 		Timestamp:    gtime.Now().Unix(),
 	}
-	if err := queue.PushWithContext(ctx, TopicGrabOrder, event); err != nil {
+	if err := queue.PushWithKey(ctx, TopicGrabOrder, req.GetOrderID(), event); err != nil {
 		// MQ 发送失败只记录日志，不影响主流程（订单已入库）
 		g.Log().Warningf(ctx, "发送订单 MQ 事件失败 %s: %v", orderUUID, err)
 	}
@@ -265,7 +263,7 @@ func (s *sGrab) HandlePushOrderState(ctx context.Context, req *grabfood.OrderSta
 		return gerror.Wrap(err, "更新订单状态失败")
 	}
 
-	// 6. 发送 MQ 消息
+	// 6. 发送 MQ 消息（使用订单号作为 key，便于消息追踪）
 	event := &grab.OrderEvent{
 		Action:       "status_update",
 		ProviderName: string(consts.ProviderGrab),
@@ -277,7 +275,7 @@ func (s *sGrab) HandlePushOrderState(ctx context.Context, req *grabfood.OrderSta
 		Timestamp:    gtime.Now().Unix(),
 		Message:      req.GetMessage(),
 	}
-	if err := queue.PushWithContext(ctx, TopicGrabOrder, event); err != nil {
+	if err := queue.PushWithKey(ctx, TopicGrabOrder, req.GetOrderID(), event); err != nil {
 		g.Log().Warningf(ctx, "发送订单状态更新 MQ 事件失败 %s: %v", order.Uuid, err)
 	}
 
@@ -473,7 +471,7 @@ func (s *sGrab) MarkOrderReadyEntity(ctx context.Context, orderEntity *entity.Or
 // 返回：
 //   - res: 检查订单可取消性响应
 //   - err: 错误信息
-func (s *sGrab) CheckOrderCancelableEntity(ctx context.Context, orderEntity *entity.Order) (*api.CheckOrderCancelableResp, error) {
+func (s *sGrab) CheckOrderCancelableEntity(ctx context.Context, orderEntity *entity.Order) (*orderApi.CheckOrderCancelableResp, error) {
 	// 1. 参数验证
 	if orderEntity == nil {
 		return nil, gerror.New("订单实体不能为空")
@@ -507,7 +505,7 @@ func (s *sGrab) CheckOrderCancelableEntity(ctx context.Context, orderEntity *ent
 	// 6. 返回精简响应
 	g.Log().Infof(ctx, "订单可取消性检查完成: order_uuid=%s, can_cancel=%v, reason=%s",
 		orderEntity.Uuid, canCancel, nonCancelReason)
-	return &api.CheckOrderCancelableResp{
+	return &orderApi.CheckOrderCancelableResp{
 		OrderUuid:             orderEntity.Uuid,
 		CanCancel:             canCancel,
 		NonCancellationReason: nonCancelReason,
@@ -524,7 +522,7 @@ func (s *sGrab) CheckOrderCancelableEntity(ctx context.Context, orderEntity *ent
 // 返回：
 //   - res: 取消订单响应
 //   - err: 错误信息
-func (s *sGrab) CancelOrderEntity(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *api.CancelOrderResp, err error) {
+func (s *sGrab) CancelOrderEntity(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *orderApi.CancelOrderResp, err error) {
 	// 1. 参数验证
 	if orderEntity == nil {
 		return nil, gerror.New("订单实体不能为空")
@@ -553,7 +551,7 @@ func (s *sGrab) CancelOrderEntity(ctx context.Context, orderEntity *entity.Order
 
 	// 4. 返回成功响应
 	g.Log().Infof(ctx, "订单取消成功: order_uuid=%s, order_id=%s", orderEntity.Uuid, orderEntity.ProviderOrderId)
-	return &api.CancelOrderResp{
+	return &orderApi.CancelOrderResp{
 		OrderUuid: orderEntity.Uuid,
 	}, nil
 }

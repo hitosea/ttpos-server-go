@@ -24,7 +24,6 @@ type CacheHitRateStatsDataResp struct {
 
 // CacheHitRateStatsResp 缓存命中率统计响应
 type CacheHitRateStatsResp struct {
-	Stats   CacheHitRateStatsDataResp      `json:"stats"`    // 总体统计信息
-	TopKeys []CacheHitRateKeyStatsResp     `json:"top_keys"` // Top N 的 key 统计信息
+	Stats   CacheHitRateStatsDataResp  `json:"stats"`    // 总体统计信息
+	TopKeys []CacheHitRateKeyStatsResp `json:"top_keys"` // Top N 的 key 统计信息
 }
-

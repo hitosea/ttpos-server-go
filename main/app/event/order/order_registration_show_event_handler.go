@@ -16,6 +16,7 @@ import (
 )
 
 var once_show_sale_bill_event_handler sync.Once
+
 // showSaleBillEventHandler "取单"事件处理器
 func ShowSaleBillEventHandler() {
 	once_show_sale_bill_event_handler.Do(func() {

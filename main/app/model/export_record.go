@@ -9,7 +9,7 @@ const (
 	ExportTypeProductSales              = 6 // 商品销售统计
 	ExportTypeChannelSales              = 7 // 渠道营业统计
 	ExportTypeUserAnalysis              = 8 // 用户分析统计
-	ExportTypeCompanyBusinessSummary   = 9 // 门店汇总统计
+	ExportTypeCompanyBusinessSummary    = 9 // 门店汇总统计
 )
 
 const (

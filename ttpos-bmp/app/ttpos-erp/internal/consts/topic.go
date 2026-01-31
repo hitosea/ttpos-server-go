@@ -16,4 +16,6 @@ const (
 	TopicClosePosEntry    = Topic("close-pos-entry")
 	//TopicRedoPos 重做发票订单
 	TopicRedoPos = Topic("redo-pos")
+	//TopicErpInvoiceCancel 发票取消通知（退票处理完成后发送）
+	TopicErpInvoiceCancel = Topic("erp-invoice-cancel")
 )

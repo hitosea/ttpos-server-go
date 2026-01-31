@@ -24,6 +24,7 @@ const (
 	EventCancelMemberOrder         EventName = "Event_Cancel_Member_Order"           // 整单取消事件
 	EventCookFinishMemberSaleOrder EventName = "Event_Cook_Finish_Member_Sale_Order" // 外送订单备餐完成事件
 	EventPayFinishMemberSaleOrder  EventName = "Event_Pay_Finish_Member_Sale_Order"  // 支付完成会员端销售订单事件
+	EventPayFinishKioskOrder       EventName = "Event_Pay_Finish_Kiosk_Order"        // 自助点餐机订单支付完成事件
 
 	// =============================================================================
 	// 骑手配送事件

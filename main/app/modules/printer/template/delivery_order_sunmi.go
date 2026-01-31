@@ -4,9 +4,9 @@ package template
 import (
 	"fmt"
 	"strconv"
-	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/config"
 

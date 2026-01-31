@@ -122,6 +122,23 @@
             "verify-db-structure"
         ],
         "group": "build",
+    },
+    {
+        "label": "Go项目-更新版本号",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "add-ver"
+        ],
+        "group": "build",
+        "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": true,
+            "panel": "dedicated",
+            "showReuseMessage": false,
+            "clear": true
+        }
     }
 ]
 } 

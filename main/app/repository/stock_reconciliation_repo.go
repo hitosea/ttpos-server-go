@@ -175,7 +175,7 @@ func (r *StockReconciliationRepoImpl) GetStockReconciliationListWithPagination(p
 
 	// 分页查询
 	offset := (pageNo - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("create_time DESC").Find(&list).Error; err != nil {
+	if err := query.Offset(offset).Limit(pageSize).Find(&list).Error; err != nil {
 		return nil, 0, errors.WithMessage(err, "查询盘点单列表失败")
 	}
 

@@ -121,6 +121,15 @@ func (s *transferOrderSrv) GetTransferOrderList(
 			}
 			return false
 		}()
+		// 是否可重新提交（已驳回状态且为发起门店的发起人）
+		toInfo.IsCanResubmit = func() bool {
+			if to.Status == constant.TransferOrderStatusRejected &&
+				to.CompanyUuid == ctx.GetCompanyUuid() &&
+				to.CreatorUuid == ctx.GetStaffUuid() {
+				return true
+			}
+			return false
+		}()
 		// 是否可收货
 		toInfo.IsCanReceive = func() bool {
 			if to.Status == constant.TransferOrderStatusReceiving && to.ReceiverCompanyUuid == companyUuid {
@@ -198,6 +207,16 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		return false
 	}()
 
+	// 是否可重新提交（已驳回状态且为发起门店的发起人）
+	detailResp.IsCanResubmit = func() bool {
+		if transferOrder.Status == constant.TransferOrderStatusRejected &&
+			transferOrder.CompanyUuid == ctx.GetCompanyUuid() &&
+			transferOrder.CreatorUuid == ctx.GetStaffUuid() {
+			return true
+		}
+		return false
+	}()
+
 	// 是否需要选择仓库
 	detailResp.ErpOrderNo = func() string {
 		if transferOrder.ErpResp != "" {
@@ -241,6 +260,9 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 	var materialListResp material_resp.MaterialListWithPaginationResp
 	var warehouseItems []model.WarehouseItem
 	if transferOrder.Status == constant.TransferOrderStatusDraft {
+		reqs.WithAvailableNum = true // 新增：待提交获取库存
+	}
+	if reqs.WithAvailableNum { // 新增：待提交、重启发起审核(此时状态为已驳回)时也获取库存
 		otherDb := s.dbm.GetDB(transferOrder.SenderCompanyUuid)
 		if otherDb == nil {
 			return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("获取其他店数据库失败"), "其他店数据库不存在")
@@ -373,6 +395,45 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 				Title:        i18n.Translate(ctx.GetLanguage(), title),
 				RejectReason: approval.RejectReason,
 				RejectTime:   approval.ApproveTime,
+			}
+		}
+	}
+
+	// 解析批注列表
+	annotations := s.helper.GetAnnotationList(transferOrder)
+	detailResp.Annotations = make([]resp.TransferOrderAnnotationItem, 0, len(annotations))
+	for _, annotation := range annotations {
+		detailResp.Annotations = append(detailResp.Annotations, resp.TransferOrderAnnotationItem{
+			AnnotationType: annotation.AnnotationType,
+			LocaleName:     constant.GetTransferOrderAnnotationTypeLocaleName(annotation.AnnotationType),
+			Content:        annotation.Content,
+			CreateTime:     annotation.CreateTime,
+		})
+	}
+
+	// 获取附件列表（待收货和已完成状态）
+	detailResp.Files = make([]resp.TransferOrderFileInfo, 0)
+	if transferOrder.Status == constant.TransferOrderStatusReceiving || transferOrder.Status == constant.TransferOrderStatusCompleted {
+		fileRepo := repository.NewTransferOrderFileRepo(db)
+		files, err := fileRepo.GetByTransferOrderUuidWithFiles(reqs.Uuid)
+		if err != nil {
+			logger.Logger.Error("查询调拨单附件失败", zap.Error(err))
+		} else {
+			baseURL := utils.GetBaseURL(ctx.GetGin().Request)
+			for _, file := range files {
+				if file.File == nil {
+					continue
+				}
+				detailResp.Files = append(detailResp.Files, resp.TransferOrderFileInfo{
+					FileUuid:   file.FileUuid,
+					FileName:   file.File.RealName,
+					FileSize:   int64(file.File.FileSize),
+					FileType:   file.File.FileType,
+					Extension:  file.File.Extension,
+					FilePath:   file.File.GetUrl(baseURL),
+					SortOrder:  file.SortOrder,
+					CreateTime: int(file.CreateTime),
+				})
 			}
 		}
 	}
@@ -778,9 +839,21 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 		return errors.WithMessage(errors.New("查询调拨单失败"), err.Error())
 	}
 
-	// 验证状态
-	if transferOrder.Status != constant.TransferOrderStatusDraft {
-		return errors.New("只有待提交状态的调拨单才能修改")
+	// 验证状态：待提交或已驳回状态可修改
+	isResubmit := req.GetIsResubmit()
+	if transferOrder.Status != constant.TransferOrderStatusDraft && transferOrder.Status != constant.TransferOrderStatusRejected {
+		return errors.New("只有待提交或已驳回状态的调拨单才能修改")
+	}
+	// 非重新提交操作时，只允许待提交状态修改
+	if transferOrder.Status == constant.TransferOrderStatusRejected && !isResubmit {
+		return errors.New("已驳回的调拨单只能重新提交")
+	}
+
+	// 重新提交时，验证当前用户是否是发起人
+	if isResubmit {
+		if transferOrder.CompanyUuid != companyUuid && transferOrder.CreatorUuid != ctx.GetStaffUuid() {
+			return errors.New(i18n.Translate(ctx.GetLanguage(), "只有发起人才能重新提交调拨单"), fmt.Sprintf(":%s", transferOrder.CreatorName))
+		}
 	}
 
 	if transferOrder.TransferType == 1 {
@@ -857,8 +930,13 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 		req.SenderCompanyUuid = companyUuid
 	}
 
+	// 保存旧状态用于日志
+	oldStatus := transferOrder.Status
+
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
+		transferOrderRepoTx := repository.NewTransferOrderRepo(tx)
+
 		// 更新主表
 		transferOrder.OrderTime = req.OrderTime
 		transferOrder.ItemCount = len(req.Items)
@@ -872,14 +950,80 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
 		transferOrder.InWarehouseName = inWarehouse.Name
 		transferOrder.Remark = req.Remark
+
+		// 重新提交逻辑
+		if isResubmit {
+			// 追加重新提交批注
+			if err := s.helper.AppendAnnotation(transferOrder, constant.TransferOrderAnnotationTypeResubmit, ""); err != nil {
+				logger.Logger.Error("追加批注失败", zap.Error(err))
+				return errors.WithMessage(errors.New("追加批注失败"), err.Error())
+			}
+
+			// 更新状态为待审核
+			transferOrder.Status = constant.TransferOrderStatusPending
+
+			// 重置审批流程：所有审批节点都重置为待审批状态，从第一个节点重新开始
+			approvalRepoTx := repository.NewTransferOrderApprovalRepo(tx)
+			approvals, err := approvalRepoTx.GetListByTransferOrderUuid(req.Uuid)
+			if err != nil {
+				logger.Logger.Error("查询审批流程失败", zap.Error(err))
+				return errors.WithMessage(errors.New("查询审批流程失败"), err.Error())
+			}
+
+			// 找到 Sequence 最小的节点作为第一个审批节点
+			var firstApproval *model.TransferOrderApproval
+			for i := range approvals {
+				approval := approvals[i]
+				if approval.Status == constant.TransferApprovalSkipped {
+					// 如果是跳过的节点，说明该节点不需要审批，保持跳过状态，不重置
+					continue
+				}
+				// 重置所有非待审批状态的节点
+				if approval.Status != constant.TransferApprovalPending {
+					approval.Status = constant.TransferApprovalPending
+					approval.ApproverUuid = 0
+					approval.ApproverName = ""
+					approval.ApproveTime = 0
+					approval.RejectReason = ""
+					approval.Remark = ""
+					// 使用 UpdateAll 确保 status=0 等零值字段能被更新
+					if err := approvalRepoTx.UpdateAll(approval); err != nil {
+						logger.Logger.Error("重置审批节点失败", zap.Error(err))
+						return errors.WithMessage(errors.New("重置审批节点失败"), err.Error())
+					}
+				}
+				// 记录 Sequence 最小的节点
+				if firstApproval == nil || approval.Sequence < firstApproval.Sequence {
+					firstApproval = approval
+				}
+			}
+
+			// 设置下一个审批门店为第一个节点
+			if firstApproval != nil {
+				transferOrder.NextApprovalCompanyUuid = firstApproval.ApprovalCompanyUuid
+				transferOrder.NextApprovalCompanyName = firstApproval.ApprovalCompanyName
+			}
+		}
+
 		transferOrder.SetNil()
-		if err := transferOrderRepo.Update(transferOrder); err != nil {
+		if err := transferOrderRepoTx.Update(transferOrder); err != nil {
 			return errors.WithMessage(errors.New("更新调拨单失败"), err.Error())
 		}
+
 		// 创建调拨单明细
 		if err := s.createItems(ctx, tx, transferOrder.Uuid, req.Items, materials); err != nil {
 			return errors.WithMessage(errors.New("创建调拨单明细失败"), err.Error())
 		}
+
+		// 重新提交时同步到SAAS库
+		if isResubmit {
+			// 先删除SAAS库中的旧数据（硬删除）
+			if err := s.helper.DeleteDataFromHeadquarter(s.dbm, req.Uuid); err != nil {
+				logger.Logger.Error("删除总部调拨单数据失败", zap.Error(err))
+				return errors.WithMessage(errors.New("删除总部调拨单数据失败"), err.Error())
+			}
+		}
+
 		return nil
 	})
 
@@ -888,7 +1032,14 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 	}
 
 	// 记录操作日志
-	if err := s.helper.CreateLog(ctx, db, req.Uuid, "update", "更新调拨单", transferOrder.Status, transferOrder.Status); err != nil {
+	actionType := "update"
+	actionDesc := "更新调拨单"
+	newStatus := transferOrder.Status
+	if isResubmit {
+		actionType = "resubmit"
+		actionDesc = "重新提交调拨单"
+	}
+	if err := s.helper.CreateLog(ctx, db, req.Uuid, actionType, actionDesc, oldStatus, newStatus); err != nil {
 		logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 	}
 
@@ -1230,6 +1381,13 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 			return errors.WithMessage(errors.New("更新审批节点失败"), err.Error())
 		}
 
+		// 追加批注（通过）
+		annotationType := s.helper.GetApproveAnnotationType(currentApproval.ApprovalType, transferOrder.TransferType)
+		if err := s.helper.AppendAnnotation(transferOrder, annotationType, req.Annotation); err != nil {
+			logger.Logger.Error("追加批注失败", zap.Error(err))
+			return errors.WithMessage(errors.New("追加批注失败"), err.Error())
+		}
+
 		// 查找下一个审批节点
 		nextApproval, err := approvalRepoTx.GetNextApproval(req.Uuid, currentApproval.Sequence)
 		if err != nil && err != gorm.ErrRecordNotFound {
@@ -1260,7 +1418,7 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 			dbList, err := s.helper.UpdateStockInTransit(ctx, s.dbm, tx, transferOrder)
 			if err != nil {
 				logger.Logger.Error("更新在途仓库存失败", zap.Error(err))
-				return errors.WithMessage(errors.New("更新在途仓库存失败"), err.Error())
+				return err
 			}
 			// 调用erp接口
 			if ctx.GetCompany().IsOpenErp() {
@@ -1389,6 +1547,13 @@ func (s *transferOrderSrv) RejectTransferOrder(
 			return errors.WithMessage(errors.New("更新审批节点失败"), err.Error())
 		}
 
+		// 追加批注（驳回）
+		annotationType := s.helper.GetRejectAnnotationType(currentApproval.ApprovalType, transferOrder.TransferType)
+		if err := s.helper.AppendAnnotation(transferOrder, annotationType, req.Annotation); err != nil {
+			logger.Logger.Error("追加批注失败", zap.Error(err))
+			return errors.WithMessage(errors.New("追加批注失败"), err.Error())
+		}
+
 		// 更新调拨单为已驳回状态
 		transferOrder.Status = constant.TransferOrderStatusRejected
 		transferOrder.NextApprovalCompanyUuid = 0
@@ -1424,6 +1589,11 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 		return err
 	}
 
+	// 验证客户端版本（附件功能需要 v2.16.0+）
+	if ctx.Version(context.LT, constant.ClientVersionV2160) && len(req.FileUuids) == 0 {
+		return errors.New("您的软件版本过低，请升级后再试")
+	}
+
 	// 加锁
 	s.lock.LockUuid(req.Uuid)
 	defer s.lock.UnlockUuid(req.Uuid)
@@ -1454,6 +1624,16 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 		return errors.New("无收货权限")
 	}
 
+	// 验证附件必填
+	if len(req.FileUuids) == 0 {
+		return errors.New("请上传相关附件后确定收货")
+	}
+
+	// 验证附件数量限制（最多10个）
+	if len(req.FileUuids) > 10 {
+		return errors.New("最多支持10个附件")
+	}
+
 	// 验证入库仓库
 	if req.InWarehouseErpCode == "" {
 		return errors.NewWithCode(constant.CodeErrorConfirmClose, "请选择入库仓库")
@@ -1477,6 +1657,14 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
 		transferOrderRepository := repository.NewTransferOrderRepo(tx)
+
+		// 保存附件（如果有传入）
+		if len(req.FileUuids) > 0 {
+			if err := s.saveTransferOrderFilesInTx(ctx, tx, req.Uuid, req.FileUuids); err != nil {
+				return err
+			}
+		}
+
 		// 更新调拨单为已完成状态
 		transferOrder.Status = constant.TransferOrderStatusCompleted
 		if err := transferOrderRepository.Update(transferOrder); err != nil {
@@ -1532,6 +1720,51 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 		logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 	}
 	return nil
+}
+
+// saveTransferOrderFiles 保存调拨单附件（非事务）
+func (s *transferOrderSrv) saveTransferOrderFiles(ctx context.Context, db *gorm.DB, transferOrderUuid uint64, fileUuids []uint64) error {
+	if len(fileUuids) == 0 {
+		return nil
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		return s.saveTransferOrderFilesInTx(ctx, tx, transferOrderUuid, fileUuids)
+	})
+}
+
+// saveTransferOrderFilesInTx 保存调拨单附件（事务内）
+func (s *transferOrderSrv) saveTransferOrderFilesInTx(ctx context.Context, tx *gorm.DB, transferOrderUuid uint64, fileUuids []uint64) error {
+	if len(fileUuids) == 0 {
+		return nil
+	}
+
+	fileRepo := repository.NewTransferOrderFileRepo(tx)
+
+	// 先删除旧的附件关联
+	if err := fileRepo.DeleteByTransferOrderUuid(transferOrderUuid); err != nil {
+		return errors.WithMessage(errors.New("删除旧附件关联失败"), err.Error())
+	}
+
+	// 批量创建附件关联
+	var files []model.TransferOrderFile
+	for idx, fileUuid := range fileUuids {
+		uuid, err := utils.GetID()
+		if err != nil {
+			return errors.WithMessage(errors.New("生成UUID失败"), err.Error())
+		}
+
+		files = append(files, model.TransferOrderFile{
+			BaseModel: model.BaseModel{
+				Uuid: uuid,
+			},
+			TransferOrderUuid: transferOrderUuid,
+			FileUuid:          fileUuid,
+			SortOrder:         idx,
+		})
+	}
+
+	return fileRepo.BatchCreate(files)
 }
 
 // GetTransferOrderApprovalList 获取调拨单审批流程列表

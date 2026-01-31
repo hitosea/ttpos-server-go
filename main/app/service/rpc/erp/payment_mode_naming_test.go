@@ -15,17 +15,17 @@ func TestGetChannelBySource(t *testing.T) {
 	}{
 		{
 			name:     "LianLianPay source",
-			source:    constant.PaymentMethodSourceLianLianPay,
+			source:   constant.PaymentMethodSourceLianLianPay,
 			expected: "LianLianPay",
 		},
 		{
 			name:     "Default source",
-			source:    constant.PaymentMethodSourceDefault,
+			source:   constant.PaymentMethodSourceDefault,
 			expected: "",
 		},
 		{
 			name:     "System source",
-			source:    constant.PaymentMethodSourceSystem,
+			source:   constant.PaymentMethodSourceSystem,
 			expected: "",
 		},
 	}
@@ -39,4 +39,3 @@ func TestGetChannelBySource(t *testing.T) {
 		})
 	}
 }
-

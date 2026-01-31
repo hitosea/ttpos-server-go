@@ -266,6 +266,23 @@ func (r *InstantOrderPaymentQrcodeReq) Validate() error {
 	return nil
 }
 
+// KioskPaymentConfirmReq Kiosk 自助点餐机支付完成确认请求（用于 KBank 等需要主动上报的支付方式）
+type KioskPaymentConfirmReq struct {
+	SaleBillUuid      uint64  `json:"sale_bill_uuid" binding:"required"`      // 销售账单UUID, 必填
+	SaleOrderUuid     uint64  `json:"sale_order_uuid" binding:"required"`     // 销售订单UUID, 必填
+	PaymentMethodUuid uint64  `json:"payment_method_uuid" binding:"required"` // 支付方式UUID, 必填
+	PaymentAmount     float64 `json:"payment_amount" binding:"required"`      // 实际支付金额, 必填
+	TransactionNumber string  `json:"transaction_number"`                     // 交易流水号（KBank 返回的交易号）
+	PaymentInfo       string  `json:"payment_info"`                           // 支付信息（KBank 返回的完整支付信息 JSON）
+}
+
+// KioskOrderFinishReq Kiosk 自助点餐机订单完成请求
+// 用于检查订单实付是否符合完成支付条件，并执行送厨和完成订单状态
+type KioskOrderFinishReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID, 必填
+	SaleOrderUuid uint64 `json:"sale_order_uuid" binding:"required"` // 销售订单UUID, 必填
+}
+
 type OrderGetOrderMemberListReq struct {
 	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID, 必填
 }

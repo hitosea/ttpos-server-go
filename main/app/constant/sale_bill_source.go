@@ -6,8 +6,8 @@ import (
 )
 
 // MapJwtSourceToSaleBillSource 将 JWT Source 映射到 SaleBill.source 字段值
-// 参数: jwtSource - JWT token 中的 source 值（如 "cashier", "assistant" 等）
-// 返回: SaleBill.source 字段值（0-5）
+// 参数: jwtSource - JWT token 中的 source 值（如 "cashier", "assistant", "kiosk" 等）
+// 返回: SaleBill.source 字段值（0-6）
 // 注意: SaleBillSource 常量已在 device.go 中定义
 func MapJwtSourceToSaleBillSource(jwtSource string) uint {
 	switch jwtSource {
@@ -21,6 +21,8 @@ func MapJwtSourceToSaleBillSource(jwtSource string) uint {
 		return SaleBillSourceH5
 	case jwt.SourceMember:
 		return SaleBillSourceMember
+	case jwt.SourceKiosk:
+		return SaleBillSourceKiosk
 	default:
 		return SaleBillSourceDefault
 	}

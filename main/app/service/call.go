@@ -3,12 +3,12 @@ package service
 import (
 	"time"
 	"ttpos-server-go/app/constant"
-	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	takeoutPersistence "ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/i18n"

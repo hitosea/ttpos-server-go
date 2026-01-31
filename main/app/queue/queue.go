@@ -4,6 +4,7 @@ import (
 	"context"
 	websocketConstant "ttpos-api/ttpos-websocket/constant"
 	baseQueue "ttpos-server-go/app/queue/base"
+	erpQueue "ttpos-server-go/app/queue/erp"
 	printerQueue "ttpos-server-go/app/queue/printer"
 	takeoutQueue "ttpos-server-go/app/queue/takeout"
 	"ttpos-server-go/app/service"
@@ -18,8 +19,9 @@ import (
 const TAKEOUT = "takeout"
 
 const (
-	TopicItemChange = "erp-item-change"
-	TopicDocChange  = "erp-doc-change"
+	TopicItemChange               = "erp-item-change"
+	TopicDocChange                = "erp-doc-change"
+	TopicErpCancelInvoiceCallback = "erp-invoice-cancel" // ERP 取消发票成功回调
 )
 
 const (
@@ -72,6 +74,12 @@ func Init() {
 	err = manager.Subscribe(config.Rocketmq.GroupName, TopicProviderOrderUpdate, takeoutQueue.TakeoutProviderOrderUpdateHandler)
 	if err != nil {
 		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicProviderOrderUpdate))
+	}
+
+	// 订阅 ERP 取消发票成功回调消息
+	err = manager.Subscribe(config.Rocketmq.GroupName, TopicErpCancelInvoiceCallback, erpQueue.ErpCancelInvoiceCallbackHandler)
+	if err != nil {
+		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicErpCancelInvoiceCallback))
 	}
 
 }

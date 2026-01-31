@@ -3,6 +3,8 @@ package shop_provider_cfg
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -11,6 +13,7 @@ import (
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 
 	"ttpos-bmp/app/ttpos-takeout/api/grab"
+	"ttpos-bmp/app/ttpos-takeout/api/shop"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
@@ -36,6 +39,49 @@ type sShopProviderCfg struct{}
 
 func init() {
 	service.RegisterShopProviderCfg(ShopProviderCfg)
+}
+
+// GetProviderMerchantID 从 shop_uuid 字符串获取平台商户 ID
+// 参数：
+//   - ctx: 上下文对象
+//   - shopUuidStr: 店铺 UUID 字符串
+//   - providerName: 第三方平台名称（如 grab、lineman）
+//
+// 返回：
+//   - merchantID: 平台商户 ID
+//   - err: 错误信息（shop_uuid 格式错误、配置不存在、merchant_id 为空等）
+func (s *sShopProviderCfg) GetProviderMerchantID(ctx context.Context, shopUuidStr string, providerName string) (string, error) {
+	// 1. 解析 shop_uuid 字符串为 uint64
+	shopUUID, err := strconv.ParseUint(shopUuidStr, 10, 64)
+	if err != nil {
+		g.Log().Warningf(ctx, "[ShopProviderCfg] shop_uuid 格式错误: shopUuid=%s, error=%v", shopUuidStr, err)
+		return "", gerror.NewCode(gcode.CodeInvalidParameter, "shop_uuid 格式错误")
+	}
+
+	// 2. 查询店铺配置
+	shopCfg, err := s.GetShopProviderCfg(ctx, shopUUID, providerName)
+	if err != nil {
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 获取配置失败: shopUUID=%s, provider=%s, error=%v",
+			shopUuidStr, providerName, err)
+		return "", gerror.Wrap(err, fmt.Sprintf("获取店铺 %s 配置失败", providerName))
+	}
+
+	// 3. 验证配置是否存在
+	if shopCfg == nil {
+		g.Log().Warningf(ctx, "[ShopProviderCfg] 配置不存在: shopUUID=%s, provider=%s", shopUuidStr, providerName)
+		return "", gerror.NewCodef(gcode.CodeNotFound, "店铺未配置 %s", providerName)
+	}
+
+	// 4. 验证 merchant_id 是否为空 Grab分支
+	if providerName == string(consts.ProviderGrab) && shopCfg.ProviderMerchantId == "" {
+		g.Log().Warningf(ctx, "[ShopProviderCfg] merchant_id 为空: shopUUID=%s, provider=%s", shopUuidStr, providerName)
+		return "", gerror.NewCodef(gcode.CodeInvalidParameter, "店铺未配置 %s merchant_id", providerName)
+	}
+
+	g.Log().Debugf(ctx, "[ShopProviderCfg] 获取 merchant_id 成功: shopUUID=%s, provider=%s, merchantID=%s",
+		shopUuidStr, providerName, shopCfg.ProviderMerchantId)
+
+	return shopCfg.ProviderMerchantId, nil
 }
 
 // UpsertShopProviderCfg 更新或插入门店第三方配置（幂等）
@@ -97,26 +143,59 @@ func (s *sShopProviderCfg) GetShopProviderCfg(ctx context.Context, shopUUID uint
 		providerName = string(consts.ProviderGrab)
 	}
 
-	var cfg entity.ShopProviderCfg
-	err := dao.ShopProviderCfg.Ctx(ctx).
+	// 使用 One() 查询单条记录
+	record, err := dao.ShopProviderCfg.Ctx(ctx).
 		Where(dao.ShopProviderCfg.Columns().ShopUuid, shopUUID).
 		Where(dao.ShopProviderCfg.Columns().ProviderName, providerName).
 		Where(dao.ShopProviderCfg.Columns().DeletedAt, 0).
-		Scan(&cfg)
+		One()
 
 	if err != nil {
 		g.Log().Errorf(ctx, "[ShopProviderCfg] 查询失败: shop_uuid=%d, provider=%s, error: %v",
 			shopUUID, providerName, err)
-		return nil, nil
+		return nil, err
 	}
 
-	// 检查是否找到记录
-	if cfg.Id == 0 {
+	// 检查记录是否存在
+	if record.IsEmpty() {
 		g.Log().Debugf(ctx, "[ShopProviderCfg] 未找到: shop_uuid=%d, provider=%s", shopUUID, providerName)
 		return nil, nil
 	}
 
+	// 转换为实体
+	var cfg entity.ShopProviderCfg
+	err = record.Struct(&cfg)
+	if err != nil {
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 数据转换失败: shop_uuid=%d, provider=%s, error: %v",
+			shopUUID, providerName, err)
+		return nil, err
+	}
+
 	return &cfg, nil
+}
+
+// GetAllShopProviderCfg 查询门店的所有渠道配置
+// 参数：
+//   - ctx: 上下文对象
+//   - shopUUID: 门店 UUID
+//
+// 返回：
+//   - cfgList: 该门店的所有渠道配置列表
+//   - err: 操作过程中产生的错误（若有）
+func (s *sShopProviderCfg) GetAllShopProviderCfg(ctx context.Context, shopUUID uint64) ([]*entity.ShopProviderCfg, error) {
+	var cfgList []*entity.ShopProviderCfg
+	err := dao.ShopProviderCfg.Ctx(ctx).
+		Where(dao.ShopProviderCfg.Columns().ShopUuid, shopUUID).
+		Where(dao.ShopProviderCfg.Columns().DeletedAt, 0).
+		Scan(&cfgList)
+
+	if err != nil {
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 批量查询失败: shop_uuid=%d, error: %v", shopUUID, err)
+		return nil, gerror.Wrap(err, "批量查询门店渠道配置失败")
+	}
+
+	g.Log().Debugf(ctx, "[ShopProviderCfg] 批量查询成功: shop_uuid=%d, 记录数=%d", shopUUID, len(cfgList))
+	return cfgList, nil
 }
 
 // GetShopProviderCfgByMerchantID 通过 MerchantID 查询门店第三方配置
@@ -127,22 +206,32 @@ func (s *sShopProviderCfg) GetShopProviderCfgByMerchantID(ctx context.Context, m
 		providerName = string(consts.ProviderGrab)
 	}
 
-	var cfg entity.ShopProviderCfg
-	err := dao.ShopProviderCfg.Ctx(ctx).
+	// 使用 One() 查询单条记录
+	record, err := dao.ShopProviderCfg.Ctx(ctx).
 		Where(dao.ShopProviderCfg.Columns().ProviderMerchantId, merchantID).
 		Where(dao.ShopProviderCfg.Columns().ProviderName, providerName).
 		Where(dao.ShopProviderCfg.Columns().DeletedAt, 0).
-		Scan(&cfg)
+		One()
 
 	if err != nil {
 		g.Log().Errorf(ctx, "[ShopProviderCfg] 通过 MerchantID 查询失败: merchant_id=%s, provider=%s, error: %v",
 			merchantID, providerName, err)
+		return nil, err
+	}
+
+	// 检查记录是否存在
+	if record.IsEmpty() {
+		g.Log().Debugf(ctx, "[ShopProviderCfg] 通过 MerchantID 未找到: merchant_id=%s, provider=%s", merchantID, providerName)
 		return nil, nil
 	}
 
-	if cfg.Id == 0 {
-		g.Log().Debugf(ctx, "[ShopProviderCfg] 通过 MerchantID 未找到: merchant_id=%s, provider=%s", merchantID, providerName)
-		return nil, nil
+	// 转换为实体
+	var cfg entity.ShopProviderCfg
+	err = record.Struct(&cfg)
+	if err != nil {
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 数据转换失败: merchant_id=%s, provider=%s, error: %v",
+			merchantID, providerName, err)
+		return nil, err
 	}
 
 	return &cfg, nil
@@ -247,4 +336,68 @@ func (s *sShopProviderCfg) HandleIntegrationStatus(ctx context.Context, req *gra
 
 	// 3. 更新配置并发送通知
 	return s.UpsertAndNotify(ctx, shopUUID, string(consts.ProviderGrab), grabMerchantID, internalStatus)
+}
+
+// GetShopProviderCfgForRPC 查询门店渠道配置（gRPC 接口，支持可选 providerName）
+// 参数：
+//   - ctx: 上下文对象
+//   - shopUUID: 门店 UUID
+//   - providerName: 第三方名称（可选，为空时返回所有支持渠道的配置）
+//
+// 返回：
+//   - res: 查询结果，包含门店 UUID 和渠道配置列表
+//   - err: 操作过程中产生的错误（若有）
+func (s *sShopProviderCfg) GetShopProviderCfgForRPC(ctx context.Context, shopUUID uint64, providerName string) (*shop.GetShopProviderCfgResp, error) {
+	// 参数校验
+	if shopUUID == 0 {
+		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "shop_uuid 不能为 0")
+	}
+
+	var cfgItems []*shop.ShopProviderCfgItem
+
+	// 如果指定了 provider_name，只查询该渠道
+	if providerName != "" {
+		cfg, err := s.GetShopProviderCfg(ctx, shopUUID, providerName)
+		if err != nil {
+			return nil, err
+		}
+
+		// 如果配置不存在，返回默认 INACTIVE 状态
+		if cfg == nil {
+			cfgItems = append(cfgItems, &shop.ShopProviderCfgItem{
+				ProviderName:       providerName,
+				ProviderMerchantId: "",
+				ProviderShopStatus: string(consts.ProviderShopStatusInactive),
+				UpdatedAt:          0,
+			})
+		} else {
+			cfgItems = append(cfgItems, &shop.ShopProviderCfgItem{
+				ProviderName:       cfg.ProviderName,
+				ProviderMerchantId: cfg.ProviderMerchantId,
+				ProviderShopStatus: cfg.ProviderShopStatus,
+				UpdatedAt:          int64(cfg.UpdatedAt),
+			})
+		}
+	} else {
+		// 未指定 provider_name，批量查询该门店的所有渠道配置
+		cfgList, err := s.GetAllShopProviderCfg(ctx, shopUUID)
+		if err != nil {
+			return nil, err
+		}
+
+		// 直接返回数据库中已有的全部配置
+		for _, cfg := range cfgList {
+			cfgItems = append(cfgItems, &shop.ShopProviderCfgItem{
+				ProviderName:       cfg.ProviderName,
+				ProviderMerchantId: cfg.ProviderMerchantId,
+				ProviderShopStatus: cfg.ProviderShopStatus,
+				UpdatedAt:          int64(cfg.UpdatedAt),
+			})
+		}
+	}
+
+	return &shop.GetShopProviderCfgResp{
+		ShopUuid:  shopUUID,
+		Providers: cfgItems,
+	}, nil
 }

@@ -124,6 +124,11 @@ type CountSaleResp struct {
 	GrabMinOrderAmount float64 `json:"grab_min_order_amount"` // Grab 最小订单金额
 	GrabMaxOrderAmount float64 `json:"grab_max_order_amount"` // Grab 最大订单金额
 	GrabAvgOrderAmount float64 `json:"grab_avg_order_amount"` // Grab 平均订单金额
+	// LINEMAN 平台统计指标
+	LinemanOrderNum       int64   `json:"lineman_order_num"`        // LINEMAN 订单数
+	LinemanMinOrderAmount float64 `json:"lineman_min_order_amount"` // LINEMAN 最小订单金额
+	LinemanMaxOrderAmount float64 `json:"lineman_max_order_amount"` // LINEMAN 最大订单金额
+	LinemanAvgOrderAmount float64 `json:"lineman_avg_order_amount"` // LINEMAN 平均订单金额
 }
 
 // CountSale 统计销售
@@ -238,11 +243,12 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 	saleData := repo.CountSaleDays(timezone, opts...)
 	memberData := repo.CountMemberDays(timezone, opts...)
 
-	// 获取 Grab 的统计数据
+	// 获取 Grab 和 LINEMAN 的统计数据
 	takeoutRepo := repository.NewStatisticsTakeoutRepo(ctx.GetDB())
 	timezoneUtil := utils.SetTimezone(timezone)
 	shopSetting := ctx.GetCompanySetting()
 	enableGrabDelivery := shopSetting.IsOpenGrabDelivery()
+	enableLineManDelivery := shopSetting.IsOpenLINEMANDelivery()
 
 	list := make([]CountSaleDaysResp, 0, len(days))
 	for _, day := range days {
@@ -294,6 +300,11 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			grabMinOrderAmount decimal.Decimal
 			grabMaxOrderAmount decimal.Decimal
 			grabAvgOrderAmount decimal.Decimal
+			// LINEMAN 统计指标
+			linemanOrderNum       int64
+			linemanMinOrderAmount decimal.Decimal
+			linemanMaxOrderAmount decimal.Decimal
+			linemanAvgOrderAmount decimal.Decimal
 		)
 
 		// 计算当天的开始和结束时间
@@ -321,6 +332,31 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 				}
 				if grabOrderNum > 0 && grabSaleData.TotalOrderAmount > 0 {
 					grabAvgOrderAmount = decimal.NewFromFloat(grabSaleData.TotalOrderAmount).Div(decimal.NewFromInt(grabOrderNum)).Round(2)
+				}
+			}
+		}
+
+		// 使用 CountTakeoutSale 方法获取 LINEMAN 的统计数据（按天分别查询）
+		var linemanSaleData model.StatisticsTakeoutSaleData
+		if dayStartTime > 0 && dayEndTime > 0 {
+			if enableLineManDelivery {
+				linemanSaleData = takeoutRepo.CountTakeoutSale(repository.CountTakeoutReq{
+					TimeStart: dayStartTime,
+					TimeEnd:   dayEndTime,
+					Platform:  "lineman",
+				})
+
+				// 提取 LINEMAN 统计指标
+				linemanOrderNum = linemanSaleData.TotalOrderNum
+				// 即使 MinOrderAmount 为 0，如果有订单，也应该记录（允许0值作为最小值）
+				if linemanOrderNum > 0 {
+					linemanMinOrderAmount = decimal.NewFromFloat(linemanSaleData.MinOrderAmount)
+				}
+				if linemanSaleData.MaxOrderAmount > 0 {
+					linemanMaxOrderAmount = decimal.NewFromFloat(linemanSaleData.MaxOrderAmount)
+				}
+				if linemanOrderNum > 0 && linemanSaleData.TotalOrderAmount > 0 {
+					linemanAvgOrderAmount = decimal.NewFromFloat(linemanSaleData.TotalOrderAmount).Div(decimal.NewFromInt(linemanOrderNum)).Round(2)
 				}
 			}
 		}
@@ -394,24 +430,41 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			grabTotalProductNum = decimal.NewFromInt(grabSaleData.TotalProductNum)
 		}
 
+		// 累加 LINEMAN 的订单数和金额到总的统计中（参考 Grab 累加逻辑）
+		var linemanTotalSaleAmount, linemanTotalPayAmount, linemanTotalBusinessAmount, linemanTotalOrderAmount decimal.Decimal
+		var linemanTotalProductOriginPrice, linemanTotalTax, linemanTotalRefundAmount, linemanTotalDiscount decimal.Decimal
+		var linemanTotalProductNum decimal.Decimal
+
+		if enableLineManDelivery {
+			linemanTotalSaleAmount = decimal.NewFromFloat(linemanSaleData.TotalSaleAmount)
+			linemanTotalPayAmount = decimal.NewFromFloat(linemanSaleData.TotalPayAmount)
+			linemanTotalBusinessAmount = decimal.NewFromFloat(linemanSaleData.TotalBusinessAmount)
+			linemanTotalOrderAmount = decimal.NewFromFloat(linemanSaleData.TotalOrderAmount)
+			linemanTotalProductOriginPrice = decimal.NewFromFloat(linemanSaleData.TotalProductOriginPrice)
+			linemanTotalTax = decimal.NewFromFloat(linemanSaleData.TotalTax)
+			linemanTotalRefundAmount = decimal.NewFromFloat(linemanSaleData.TotalRefundAmount)
+			linemanTotalDiscount = decimal.NewFromFloat(linemanSaleData.TotalDiscount)
+			linemanTotalProductNum = decimal.NewFromInt(linemanSaleData.TotalProductNum)
+		}
+
 		// 1. 累加订单数（只累加到总订单数，不累加到外卖订单数）
-		totalOrderNum = totalOrderNum + grabOrderNum
+		totalOrderNum = totalOrderNum + grabOrderNum + linemanOrderNum
 
 		// 2. 累加销售额（只累加到总销售额，不累加到外卖销售额）
-		totalSaleAmount = totalSaleAmount.Add(grabTotalSaleAmount)
+		totalSaleAmount = totalSaleAmount.Add(grabTotalSaleAmount).Add(linemanTotalSaleAmount)
 
 		// 3. 累加实付金额到总实收金额和总营业收入（参考 MergeTakeoutStatistics 方法）
-		totalReceivedAmount = totalReceivedAmount.Add(grabTotalPayAmount)
-		totalBusinessAmount = totalBusinessAmount.Add(grabTotalBusinessAmount)
+		totalReceivedAmount = totalReceivedAmount.Add(grabTotalPayAmount).Add(linemanTotalPayAmount)
+		totalBusinessAmount = totalBusinessAmount.Add(grabTotalBusinessAmount).Add(linemanTotalBusinessAmount)
 
 		// 4. 累加原商品金额
-		totalProductPrice = totalProductPrice.Add(grabTotalProductOriginPrice)
+		totalProductPrice = totalProductPrice.Add(grabTotalProductOriginPrice).Add(linemanTotalProductOriginPrice)
 
 		// 5. 累加其他指标（参考 MergeTakeoutStatistics 方法）
-		totalTax = totalTax.Add(grabTotalTax)
-		totalRefundAmount = totalRefundAmount.Add(grabTotalRefundAmount)
-		totalDiscount = totalDiscount.Add(grabTotalDiscount)
-		totalProductNum = totalProductNum.Add(grabTotalProductNum)
+		totalTax = totalTax.Add(grabTotalTax).Add(linemanTotalTax)
+		totalRefundAmount = totalRefundAmount.Add(grabTotalRefundAmount).Add(linemanTotalRefundAmount)
+		totalDiscount = totalDiscount.Add(grabTotalDiscount).Add(linemanTotalDiscount)
+		totalProductNum = totalProductNum.Add(grabTotalProductNum).Add(linemanTotalProductNum)
 
 		// 6. 更新最小订单金额（只更新总的最小订单金额，不更新外卖最小订单金额）
 		// 允许0值作为最小值（如果有订单数）
@@ -436,15 +489,33 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			}
 		}
 
+		// 7.1 更新 LINEMAN 最小订单金额
+		if linemanOrderNum > 0 {
+			if minOrderAmount.IsZero() {
+				minOrderAmount = linemanMinOrderAmount
+			} else if linemanMinOrderAmount.LessThanOrEqual(minOrderAmount) {
+				minOrderAmount = linemanMinOrderAmount
+			}
+		}
+
+		// 7.2 更新 LINEMAN 最大订单金额
+		if linemanOrderNum > 0 && linemanMaxOrderAmount.IsPositive() {
+			if maxOrderAmount.IsZero() {
+				maxOrderAmount = linemanMaxOrderAmount
+			} else if linemanMaxOrderAmount.GreaterThan(maxOrderAmount) {
+				maxOrderAmount = linemanMaxOrderAmount
+			}
+		}
+
 		// 8. 重新计算总平均订单金额（总订单金额 / 总订单数）
 		if totalOrderNum > 0 {
-			// 总订单金额 = 原有订单金额 + Grab 的 TotalOrderAmount
+			// 总订单金额 = 原有订单金额 + Grab 的 TotalOrderAmount + LINEMAN 的 TotalOrderAmount
 			// 注意：这里使用 TotalOrderAmount（与 MergeTakeoutStatistics 中的逻辑一致）
 			var totalOrderAmountForAvg decimal.Decimal
 			if ok {
-				totalOrderAmountForAvg = decimal.NewFromFloat(saleResult.TotalOrderAmount.Float64).Add(grabTotalOrderAmount)
+				totalOrderAmountForAvg = decimal.NewFromFloat(saleResult.TotalOrderAmount.Float64).Add(grabTotalOrderAmount).Add(linemanTotalOrderAmount)
 			} else {
-				totalOrderAmountForAvg = grabTotalOrderAmount
+				totalOrderAmountForAvg = grabTotalOrderAmount.Add(linemanTotalOrderAmount)
 			}
 			avgOrderAmount = totalOrderAmountForAvg.Div(decimal.NewFromInt(totalOrderNum)).Round(2)
 		}
@@ -515,6 +586,11 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 				GrabMinOrderAmount: grabMinOrderAmount.InexactFloat64(),
 				GrabMaxOrderAmount: grabMaxOrderAmount.InexactFloat64(),
 				GrabAvgOrderAmount: grabAvgOrderAmount.InexactFloat64(),
+				// LINEMAN 平台统计指标
+				LinemanOrderNum:       linemanOrderNum,
+				LinemanMinOrderAmount: linemanMinOrderAmount.InexactFloat64(),
+				LinemanMaxOrderAmount: linemanMaxOrderAmount.InexactFloat64(),
+				LinemanAvgOrderAmount: linemanAvgOrderAmount.InexactFloat64(),
 			},
 			Day: day,
 		})
@@ -729,11 +805,12 @@ func (s *statisticsSrv) CountPaymentDays(ctx context.Context, req CountReq, days
 	timezone := ctx.GetCompanySetting().Timezone
 	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPaymentDays(timezone, opts...)
 
-	// 获取 Grab 的支付统计数据
+	// 获取 Grab 和 LINEMAN 的支付统计数据
 	takeoutRepo := repository.NewStatisticsTakeoutRepo(ctx.GetDB())
 	timezoneUtil := utils.SetTimezone(timezone)
 	shopSetting := ctx.GetCompanySetting()
 	enableGrabDelivery := shopSetting.IsOpenGrabDelivery()
+	enableLineManDelivery := shopSetting.IsOpenLINEMANDelivery()
 
 	list := make([]CountPaymentDaysResp, 0)
 	for _, day := range days {
@@ -798,6 +875,39 @@ func (s *statisticsSrv) CountPaymentDays(ctx context.Context, req CountReq, days
 							TotalPaymentAmount: grabPayment.TotalPaymentAmount,
 						})
 						break // 只取第一个匹配的（应该只有一个 Grab）
+					}
+				}
+			}
+		}
+
+		// 使用 CountTakeoutPayment 方法获取 LINEMAN 的支付统计数据（按天分别查询）
+		if enableLineManDelivery {
+			// 计算当天的开始和结束时间
+			dayStartTime, _ := timezoneUtil.FormatTimeToUnix(day)
+			dayEndTime := dayStartTime + 86399 // 23:59:59
+
+			if dayStartTime > 0 && dayEndTime > 0 {
+				// 获取 LINEMAN 的支付统计数据
+				linemanPaymentDataList := takeoutRepo.CountTakeoutPayment(repository.CountTakeoutReq{
+					TimeStart: dayStartTime,
+					TimeEnd:   dayEndTime,
+					Platform:  "lineman",
+				})
+
+				// 查找 LINEMAN 的支付数据
+				for _, linemanPayment := range linemanPaymentDataList {
+					if linemanPayment.PaymentName == constant.PaymentMethodNameLineMan || linemanPayment.PaymentCode == constant.PaymentMethodCodeLineMan {
+						// 追加 LINEMAN 支付数据到 PaymentList（在排序后追加，确保排在最后，在 Grab 之后）
+						paymentList = append(paymentList, CountPaymentRespList{
+							ID:                 linemanPayment.ID,
+							Sort:               linemanPayment.Sort,
+							CreateTime:         linemanPayment.CreateTime,
+							PaymentName:        linemanPayment.PaymentName,
+							PaymentCode:        linemanPayment.PaymentCode,
+							TotalOrderNum:      linemanPayment.TotalOrderNum,
+							TotalPaymentAmount: linemanPayment.TotalPaymentAmount,
+						})
+						break // 只取第一个匹配的（应该只有一个 LINEMAN）
 					}
 				}
 			}
@@ -2552,6 +2662,10 @@ type CountExportData struct {
 	MinGrabOrderAmount         float64                  `json:"min_grab_order_amount"`
 	MaxGrabOrderAmount         float64                  `json:"max_grab_order_amount"`
 	AvgGrabOrderAmount         float64                  `json:"avg_grab_order_amount"`
+	TotalLinemanOrderNum       int64                    `json:"total_lineman_order_num"`
+	MinLinemanOrderAmount      float64                  `json:"min_lineman_order_amount"`
+	MaxLinemanOrderAmount      float64                  `json:"max_lineman_order_amount"`
+	AvgLinemanOrderAmount      float64                  `json:"avg_lineman_order_amount"`
 	AreaList                   []CountExportAreaData    `json:"area_list"`
 	PaymentList                []CountExportPaymentData `json:"payment_list"`
 }
@@ -2702,6 +2816,10 @@ func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExp
 			MinGrabOrderAmount:         sale.GrabMinOrderAmount,
 			MaxGrabOrderAmount:         sale.GrabMaxOrderAmount,
 			AvgGrabOrderAmount:         sale.GrabAvgOrderAmount,
+			TotalLinemanOrderNum:       sale.LinemanOrderNum,
+			MinLinemanOrderAmount:      sale.LinemanMinOrderAmount,
+			MaxLinemanOrderAmount:      sale.LinemanMaxOrderAmount,
+			AvgLinemanOrderAmount:      sale.LinemanAvgOrderAmount,
 			AreaList:                   areaList,
 			PaymentList:                paymentList,
 		})

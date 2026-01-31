@@ -17,6 +17,9 @@ type ITakeoutOrderItemRepo interface {
 	GetByUuid(uuid uint64, options ...DBOption) (*model.TakeoutOrderItem, error)
 	GetByOrderUuid(orderUuid uint64, options ...DBOption) ([]*model.TakeoutOrderItem, error)
 	Delete(uuid uint64) error
+	UpdateQuantity(uuid uint64, quantity int) error
+	// 选项方法
+	WithModifiers() DBOption
 }
 
 // NewTakeoutOrderItemRepo 创建外卖订单商品仓储
@@ -85,4 +88,22 @@ func (r *TakeoutOrderItemRepoImpl) Delete(uuid uint64) error {
 			Where("uuid = ? AND delete_time = ?", uuid, constant.NotDeleted).
 			Update("delete_time", time.Now().Unix()).Error,
 	)
+}
+
+// UpdateQuantity 更新商品数量
+func (r *TakeoutOrderItemRepoImpl) UpdateQuantity(uuid uint64, quantity int) error {
+	return errors.WithMessage(
+		r.db.Model(&model.TakeoutOrderItem{}).
+			Where("uuid = ?", uuid).
+			Update("quantity", quantity).Error,
+	)
+}
+
+// WithModifiers 预加载修饰符
+func (r *TakeoutOrderItemRepoImpl) WithModifiers() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("TakeoutOrderItemModifiers", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", 0)
+		})
+	}
 }

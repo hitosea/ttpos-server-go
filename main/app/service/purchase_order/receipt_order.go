@@ -70,14 +70,57 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 		receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(tx)
 		receiptOrderItemRepo := repository.NewPurchaseReceiptOrderItemRepo(tx)
 
-		// 查询采购申请
-		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.PurchaseOrderUuid)
+		// 查询采购申请（包含物品和单位信息，用于校验）
+		purchaseOrder, err := purchaseOrderRepo.GetByUuid(
+			req.PurchaseOrderUuid,
+			purchaseOrderRepo.WithItems(),
+		)
 		if err != nil {
 			logger.Logger.Error("CreatePurchaseReceiptOrder-GetByUuid", zap.Any("purchaseOrderUuid", req.PurchaseOrderUuid), zap.Any("err", err))
 			return errors.WithMessage(errors.New("采购申请不存在"), err.Error())
 		}
 		if !purchaseOrder.CanReceive() {
 			return errors.New("采购单状态不允许收货")
+		}
+
+		// 版本与采购单类型校验
+		hasErpSaleOrderNo := purchaseOrder.ErpSaleOrderNo != ""
+
+		// 版本 < 2.16.0 且有 ErpSaleOrderNo：提示去新版处理
+		if ctx.Version(context.LT, constant.ClientVersionV2160) && hasErpSaleOrderNo {
+			return errors.New("请更新软件版本再尝试")
+		}
+
+		// v2.16.0+ 新采购单（有 ErpSaleOrderNo）收货来源校验
+		if ctx.Version(context.GTE, constant.ClientVersionV2160) && hasErpSaleOrderNo {
+			hasSourceParam := req.DeliveryNoteNo != "" || req.SourceSupplierCode != ""
+
+			// 集采订单必须指定收货来源（DN单号或供应商编码）
+			if !hasSourceParam {
+				return errors.New("集采订单必须指定收货来源（DN单号或供应商编码）")
+			}
+
+			// DN或供应商类型的详细校验
+			// 构建采购单物品UUID到物品的映射
+			purchaseOrderItemsMap := make(map[uint64]*model.PurchaseOrderItem)
+			for i := range purchaseOrder.Items {
+				item := &purchaseOrder.Items[i]
+				purchaseOrderItemsMap[item.Uuid] = item
+			}
+
+			if req.DeliveryNoteNo != "" {
+				// DN类型校验
+				_, err := s.validator.validateDNReceipt(ctx, s.dbm, purchaseOrder, req.DeliveryNoteNo, req.Items, purchaseOrderItemsMap)
+				if err != nil {
+					return err
+				}
+			} else if req.SourceSupplierCode != "" {
+				// 供应商类型校验
+				err := s.validator.validateSupplierReceipt(ctx, tx, purchaseOrder, req.SourceSupplierCode, req.Items, purchaseOrderItemsMap)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		// 总部相关信息预处理
@@ -132,6 +175,17 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			logger.Logger.Error("生成雪花ID失败", zap.Error(err))
 			return errors.WithMessage(err)
 		}
+		// 处理供应商信息（如果指定了供应商编码）
+		supplierName := purchaseOrder.SupplierName
+		supplierErpCode := purchaseOrder.SupplierErpCode
+		if req.SourceSupplierCode != "" {
+			supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(req.SourceSupplierCode)
+			if err == nil && supplier != nil {
+				supplierErpCode = supplier.ErpCode
+				supplierName = supplier.Name
+			}
+		}
+
 		receiptOrder := &model.PurchaseReceiptOrder{
 			BaseModel: model.BaseModel{
 				Uuid: receiptOrderUuid,
@@ -143,14 +197,16 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			PurchaseTime:           purchaseOrder.OrderTime,
 			Num:                    float64(len(req.Items)),
 			ExpectArrivalTime:      purchaseOrder.ExpectArrivalTime,
-			SupplierName:           purchaseOrder.SupplierName,
-			SupplierErpCode:        purchaseOrder.SupplierErpCode,
+			SupplierName:           supplierName,
+			SupplierErpCode:        supplierErpCode,
 			ReceiveTime:            req.ReceiveTime,
 			PurchaseOrder:          *purchaseOrder,
 			SourceWarehouseErpCode: purchaseOrder.WarehouseErpCode,
 			SourceWarehouseName:    purchaseOrder.WarehouseName,
 			TargetWarehouseErpCode: purchaseOrder.DefaultWarehouseErpCode,
 			TargetWarehouseName:    purchaseOrder.DefaultWarehouseName,
+			DeliveryNoteNo:         req.DeliveryNoteNo,
+			IsFromDeliveryNote:     utils.IfInt(req.DeliveryNoteNo != "", 1, 0),
 			ReceiptType: func() int {
 				if purchaseOrder.PurchaseType == 2 {
 					return 2
@@ -324,7 +380,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 				}
 			}
 			// 添加物料库存
-			err = s.updateMaterialStock(ctx, tx, receiptOrder)
+			err = s.updateMaterialStock(ctx, tx, receiptOrder, req.DeliveryNoteNo)
 			if err != nil {
 				return err
 			}
@@ -390,12 +446,21 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 		status = receiptOrder.Status
 
 		// 查询采购申请
-		var purchaseOrder *model.PurchaseOrder
+		purchaseOrder, err := repository.NewPurchaseOrderRepo(tx).GetByUuid(receiptOrder.PurchaseOrderUuid)
+		if err != nil {
+			return errors.WithMessage(err, "采购申请不存在")
+		}
+
+		// 版本与采购单类型校验
+		hasErpSaleOrderNo := purchaseOrder.ErpSaleOrderNo != ""
+
+		// 版本 < 2.16.0 且有 ErpSaleOrderNo：提示去新版处理
+		if ctx.Version(context.LT, constant.ClientVersionV2160) && hasErpSaleOrderNo {
+			return errors.New("请更新软件版本再尝试")
+		}
+
+		// 确认收货时的额外校验
 		if req.IsConfirm {
-			purchaseOrder, err = repository.NewPurchaseOrderRepo(tx).GetByUuid(receiptOrder.PurchaseOrderUuid)
-			if err != nil {
-				return errors.WithMessage(err, "采购申请不存在")
-			}
 			if !purchaseOrder.CanReceive() {
 				return errors.New("采购单状态不允许收货")
 			}
@@ -404,7 +469,7 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 
 		// 总部相关信息预处理
 		var headquarterInfo *HeadquarterUpdateInfo
-		if req.IsConfirm && purchaseOrder != nil && purchaseOrder.IsHeadquarterPurchase() {
+		if req.IsConfirm && purchaseOrder.IsHeadquarterPurchase() {
 			hqInfo, err := s.helper.initHeadquarterInfo(ctx, s.dbm, purchaseOrder)
 			if err != nil {
 				return err
@@ -575,7 +640,7 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 				}
 			}
 			// 添加物料库存
-			err = s.updateMaterialStock(ctx, tx, receiptOrder)
+			err = s.updateMaterialStock(ctx, tx, receiptOrder, receiptOrder.DeliveryNoteNo)
 			if err != nil {
 				return err
 			}
@@ -695,6 +760,61 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 		return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(errors.New("数据转换失败"), err.Error())
 	}
 
+	// 补充收货单额外字段
+	detailResp.SupplierName = receipt.SupplierName
+	detailResp.LocaleWarehouseName = *language.JsonToLocaleResponse(receipt.SourceWarehouseName)
+	detailResp.IsFromDeliveryNote = receipt.IsFromDeliveryNote == 1
+
+	// 如果是DN收货单，预先获取DN数据和同DN的已到货数据
+	// key: "material_code:erpnext_uom", value: {dnQty, arrivedQty}
+	type dnUnitData struct {
+		DnQty      float64 // DN中的采购数量
+		ArrivedQty float64 // 同DN已确认收货单的到货数量
+	}
+	dnUnitDataMap := make(map[string]dnUnitData)
+
+	if receipt.IsFromDeliveryNote == 1 && receipt.DeliveryNoteNo != "" {
+		// 获取DN详情
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		targetDN, err := erpSrv.GetDeliveryNote(ctx, receipt.DeliveryNoteNo)
+		if err == nil && targetDN != nil {
+			// 构建DN物品单位数量映射
+			for _, dnItem := range targetDN.Items {
+				key := dnItem.ItemCode + ":" + dnItem.Uom
+				data := dnUnitDataMap[key]
+				data.DnQty += dnItem.Qty
+				dnUnitDataMap[key] = data
+			}
+
+			// 获取同DN的所有已确认收货单，计算已到货数量
+			sameReceiptOrders, err := receiptOrderRepo.GetList(
+				receiptOrderRepo.WherePurchaseOrderUuid(receipt.PurchaseOrderUuid),
+				receiptOrderRepo.WhereDeliveryNoteNo(receipt.DeliveryNoteNo),
+				receiptOrderRepo.WhereStatusIn([]int{constant.ReceiptOrderStatusReceived}),
+				receiptOrderRepo.WithItems(),
+			)
+			if err == nil {
+				for _, ro := range sameReceiptOrders {
+					for _, item := range ro.Items {
+						if len(item.Units) > 0 {
+							for _, unit := range item.Units {
+								key := item.MaterialCode + ":" + unit.ErpnextUom
+								data := dnUnitDataMap[key]
+								data.ArrivedQty += unit.Num
+								dnUnitDataMap[key] = data
+							}
+						} else {
+							key := item.MaterialCode + ":" + item.ErpnextUom
+							data := dnUnitDataMap[key]
+							data.ArrivedQty += item.Num
+							dnUnitDataMap[key] = data
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// 转换收货明细数据
 	detailResp.Items = make([]resp.PurchaseReceiptItemInfo, 0, len(receipt.Items))
 	for _, item := range receipt.Items {
@@ -736,13 +856,23 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 			return unitList
 		}(item)
 		// 单位列表
-		itemInfo.Units = func(item model.PurchaseReceiptOrderItem) []resp.PurchaseOrderItemUnit {
+		itemInfo.Units = func() []resp.PurchaseOrderItemUnit {
 			unitList := []resp.PurchaseOrderItemUnit{}
 			if len(item.Units) == 0 {
+				// DN收货单：从DN数据获取采购数量和已到货数量
+				purchaseNum := item.PurchaseOrderItem.Num
+				arrivalNum := item.PurchaseOrderItem.ArrivalNum
+				if receipt.IsFromDeliveryNote == 1 {
+					key := item.MaterialCode + ":" + item.ErpnextUom
+					if data, exists := dnUnitDataMap[key]; exists {
+						purchaseNum = data.DnQty
+						arrivalNum = data.ArrivedQty
+					}
+				}
 				unitList = append(unitList, resp.PurchaseOrderItemUnit{
 					Num:         item.Num,
-					ArrivalNum:  item.PurchaseOrderItem.ArrivalNum,
-					PurchaseNum: item.PurchaseOrderItem.Num,
+					ArrivalNum:  arrivalNum,
+					PurchaseNum: purchaseNum,
 					UnitUuid:    item.UnitUuid,
 					LocaleName:  *language.JsonToLocaleResponse(item.UnitName),
 				})
@@ -750,16 +880,26 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 				for _, unit := range item.Units {
 					purchaseNum := 0.0
 					arrivalNum := 0.0
-					for _, purchaseOrderItemUnit := range item.PurchaseOrderItem.Units {
-						if purchaseOrderItemUnit.UnitUuid == unit.UnitUuid {
-							purchaseNum += purchaseOrderItemUnit.Num
-							arrivalNum += purchaseOrderItemUnit.ArrivalNum
+					if receipt.IsFromDeliveryNote == 1 {
+						// DN收货单：从DN数据获取采购数量和已到货数量
+						key := item.MaterialCode + ":" + unit.ErpnextUom
+						if data, exists := dnUnitDataMap[key]; exists {
+							purchaseNum = data.DnQty
+							arrivalNum = data.ArrivedQty
+						}
+					} else {
+						// 非DN收货单：从采购单物品单位获取
+						for _, purchaseOrderItemUnit := range item.PurchaseOrderItem.Units {
+							if purchaseOrderItemUnit.UnitUuid == unit.UnitUuid {
+								purchaseNum += purchaseOrderItemUnit.Num
+								arrivalNum += purchaseOrderItemUnit.ArrivalNum
+							}
 						}
 					}
 					unitList = append(unitList, resp.PurchaseOrderItemUnit{
-						Num:         unit.Num,
-						ArrivalNum:  arrivalNum,
-						PurchaseNum: purchaseNum,
+						Num:         unit.Num,    // 当前收货单对应物品单位的数量
+						ArrivalNum:  arrivalNum,  // 同DN已确认收货单的到货数量
+						PurchaseNum: purchaseNum, // DN中的采购数量
 						UnitUuid:    unit.UnitUuid,
 						LocaleName: func() dto.LocaleResponse {
 							if unit.UnitName == "" && unit.MaterialUnit != nil {
@@ -771,7 +911,7 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 				}
 			}
 			return unitList
-		}(item)
+		}()
 
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
@@ -824,6 +964,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 	ctx context.Context,
 	db *gorm.DB,
 	receiptOrder *model.PurchaseReceiptOrder,
+	dn string,
 ) error {
 	if receiptOrder.Status != constant.ReceiptOrderStatusReceived {
 		return nil
@@ -900,8 +1041,9 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 	if ctx.GetCompany().IsOpenErp() {
 		// 调用erp接口
 		erpReq := buying.SavePurchaseReceiptReq{
-			PurchaseOrderName: receiptOrder.PurchaseOrder.ErpOrderNo,
-			Items:             make([]*buying.PurchaseOrderItem, 0, len(receiptOrder.Items)),
+			PurchaseOrderName:     receiptOrder.PurchaseOrder.ErpOrderNo,
+			InterCompanyReference: dn,
+			Items:                 make([]*buying.PurchaseOrderItem, 0, len(receiptOrder.Items)),
 		}
 		for _, item := range receiptOrder.Items {
 			if item.GetUnitsTotalConversionRateNum() <= 0 {

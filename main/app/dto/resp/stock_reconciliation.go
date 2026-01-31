@@ -26,18 +26,20 @@ type StockReconciliationInfo struct {
 
 // StockReconciliationDetailResp 盘点单详情响应
 type StockReconciliationDetailResp struct {
-	Uuid          uint64                         `json:"uuid"`           // 盘点单UUID
-	OrderNo       string                         `json:"order_no"`       // 单据编号
-	ErpCode       string                         `json:"erp_code"`       // ERP盘点单号
-	Type          int                            `json:"type"`           // 盘点类型 1-指定物品盘点 2-全部物品盘点
-	WarehouseUuid uint64                         `json:"warehouse_uuid"` // 仓库UUID
-	WarehouseName dto.LocaleResponse             `json:"warehouse_name"` // 仓库名称
-	Purpose       int                            `json:"purpose"`        // 盘点目的 1-库存盘点 2-期初盘点
-	Status        int                            `json:"status"`         // 状态 0-已保存 1-已提交 2-已审核 3-已驳回
-	Items         []*StockReconciliationItemInfo `json:"items"`          // 盘点单物品明细
-	SubmitTime    int                            `json:"submit_time"`    // 提交时间
-	CreateTime    int                            `json:"create_time"`    // 创建时间
-	UpdateTime    int                            `json:"update_time"`    // 更新时间
+	Uuid          uint64                               `json:"uuid"`            // 盘点单UUID
+	OrderNo       string                               `json:"order_no"`        // 单据编号
+	ErpCode       string                               `json:"erp_code"`        // ERP盘点单号
+	Type          int                                  `json:"type"`            // 盘点类型 1-指定物品盘点 2-全部物品盘点
+	WarehouseUuid uint64                               `json:"warehouse_uuid"`  // 仓库UUID
+	WarehouseName dto.LocaleResponse                   `json:"warehouse_name"`  // 仓库名称
+	Purpose       int                                  `json:"purpose"`         // 盘点目的 1-库存盘点 2-期初盘点
+	Status        int                                  `json:"status"`          // 状态 0-已保存 1-已提交 2-已审核 3-已驳回
+	Items         []*StockReconciliationItemInfo       `json:"items"`           // 盘点单物品明细
+	Annotations   []*StockReconciliationAnnotationInfo `json:"annotations"`     // 批注列表（按创建时间倒序）
+	SubmitTime    int                                  `json:"submit_time"`     // 提交时间
+	CreateTime    int                                  `json:"create_time"`     // 创建时间
+	UpdateTime    int                                  `json:"update_time"`     // 更新时间
+	IsCanResubmit bool                                 `json:"is_can_resubmit"` // 是否可重新提交（已驳回状态且为发起人）
 }
 
 // StockReconciliationItemInfo 盘点单物品明细信息
@@ -100,4 +102,18 @@ type StockReconciliationTemplateData struct {
 	Daily   []string `json:"daily"`   // 日盘物品编号列表
 	Weekly  []string `json:"weekly"`  // 周盘物品编号列表
 	Monthly []string `json:"monthly"` // 月盘物品编号列表
+}
+
+// StockReconciliationAnnotationListResp 盘点单批注列表响应
+type StockReconciliationAnnotationListResp struct {
+	List []*StockReconciliationAnnotationInfo `json:"list"` // 批注列表
+}
+
+// StockReconciliationAnnotationInfo 盘点单批注信息
+type StockReconciliationAnnotationInfo struct {
+	Uuid           uint64             `json:"uuid"`            // 批注UUID
+	AnnotationType int                `json:"annotation_type"` // 批注类型 1-重新发起 2-驳回 3-通过
+	LocaleName     dto.LocaleResponse `json:"locale_name"`     // 批注类型名称（多语言）
+	Content        string             `json:"content"`         // 批注内容
+	CreateTime     int64              `json:"create_time"`     // 创建时间
 }

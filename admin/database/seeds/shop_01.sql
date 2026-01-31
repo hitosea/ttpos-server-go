@@ -1053,6 +1053,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `allow_substore_visible` INT(1) NOT NULL DEFAULT 1 COMMENT '允许子店可见：1-允许，0-不允许',
     `origin_country_code` VARCHAR(10) NOT NULL DEFAULT '' COMMENT '原产地国家编码（ISO 3166-1 alpha-2，如：CN, US, TH）',
     `allow_negative_stock` INT(1) NOT NULL DEFAULT 0 COMMENT '允许负库存, 0-不允许 1-允许',
+    `delivered_by_supplier` INT(1) NOT NULL DEFAULT 0 COMMENT '是否由供应商配送，0-否，1-是',
+    `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商ERP编码',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1127,6 +1129,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `sub_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '子订单UUID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单号',
     `erp_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP采购单号',
+    `erp_sale_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP销售单号',
     `order_type` INT(10) NOT NULL DEFAULT 0 COMMENT '申请类型, 0-仓库调拨',
     `supplier_name` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '供应商名称',
     `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商编码',
@@ -1176,6 +1179,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item` (
     `total_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '总价',
     `erpnext_uom` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext单位',
     `base_erpnext_uom` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext基准单位',
+    `delivered_by_supplier` INT(10) NOT NULL DEFAULT 0 COMMENT '是否由供应商配送，0-否，1-是',
+    `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商ERP编码',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1225,10 +1230,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order` (
     `source_warehouse_name` TEXT COMMENT '源仓库名称',
     `target_warehouse_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '目标仓库ERP编码',
     `target_warehouse_name` TEXT COMMENT '目标仓库名称',
+    `delivery_note_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP Delivery Note号',
+    `is_from_delivery_note` INT(10) NOT NULL DEFAULT 0 COMMENT '是否来自DN单:0-否 1-是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_delivery_note_no` (`delivery_note_no`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order_item` (
@@ -2565,6 +2573,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `enable_data_management` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用数据管理能力：0-否；1-是',
     `enable_kiosk` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用自助点餐机：0-否；1-是',
     `enable_grab_delivery` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用Grab外卖：0-否；1-是',
+    `enable_lineman_delivery` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用LINE MAN外卖：0-否；1-是',
     `is_open_kitchen_kds` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
     `is_open_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
     `is_open_h5_order` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
@@ -3414,7 +3423,7 @@ CREATE TABLE `ttpos_purchase_order_log` (
   `action_desc` varchar(255) DEFAULT '' COMMENT '操作描述',
   `old_status` int(10) DEFAULT 0 COMMENT '操作前状态',
   `new_status` int(10) DEFAULT 0 COMMENT '操作后状态',
-  `content` text COMMENT '操作内容详情',
+  `content` longtext COMMENT '操作内容详情',
   `remark` text COMMENT '备注',
   `create_time` int(10) unsigned DEFAULT 0 COMMENT '创建时间(时间戳)',
   `update_time` int(10) unsigned DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -3502,6 +3511,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation` (
   `purpose` int(10) NOT NULL DEFAULT 1 COMMENT '盘点目的 1-库存盘点 2-期初盘点',
   `status` int(10) NOT NULL DEFAULT 0 COMMENT '状态 0-已保存 1-已提交 2-已审核 3-已驳回',
   `submit_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '提交时间(时间戳)',
+  `submitter_staff_uuid` bigint NOT NULL DEFAULT 0 COMMENT '提交人员工UUID',
   `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
   `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
   `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -3546,6 +3556,21 @@ CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation_item_unit` (
   KEY `idx_material_unit_uuid` (`material_unit_uuid`),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点单物品单位明细表';
+
+-- 盘点单批注表
+CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation_annotation` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '批注ID',
+  `stock_reconciliation_uuid` bigint NOT NULL DEFAULT 0 COMMENT '盘点单UUID',
+  `annotation_type` int(1) NOT NULL DEFAULT 0 COMMENT '批注类型 1-重新发起 2-驳回 3-通过',
+  `content` text COMMENT '批注内容',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_stock_reconciliation_uuid` (`stock_reconciliation_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点单批注表';
 
 -- 原料供应商关联表
 CREATE TABLE IF NOT EXISTS `ttpos_material_supplier` (
@@ -3598,6 +3623,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order` (
   `next_approval_company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '下一个审批门店UUID',
   `next_approval_company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '下一个审批门店名称',
   `remark` text COMMENT '备注',
+  `annotations` text COMMENT '批注列表JSON',
   `item_count` int(10) NOT NULL DEFAULT 0 COMMENT '物品种类数量',
   `erp_resp` text COMMENT 'ERP响应数据',
   `receipt_order_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '收货单ERP编码',
@@ -3714,6 +3740,21 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_log` (
   KEY `idx_action` (`action`),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单操作日志表';
+
+-- 调拨单附件表
+CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_file` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '附件关联ID',
+    `transfer_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '调拨单UUID',
+    `file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '文件UUID',
+    `sort_order` INT(11) NOT NULL DEFAULT 0 COMMENT '排序顺序',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `idx_uuid` (`uuid`),
+    KEY `idx_transfer_order_uuid` (`transfer_order_uuid`),
+    KEY `idx_file_uuid` (`file_uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '调拨单附件表';
 
 -- 导出记录表
 CREATE TABLE IF NOT EXISTS `ttpos_export_record` (
@@ -3959,6 +4000,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order` (
     `membership_id` varchar(50) NOT NULL DEFAULT '' COMMENT '会员ID (membershipID)',
     `driver_eta` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '司机预计到达时间 (driverETA)',
     `raw_data` mediumtext COMMENT '平台原始订单数据(JSON)',
+    `additional_properties` varchar(1000) NOT NULL DEFAULT '' COMMENT '订单额外属性信息',
     `accepted_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '接单人UUID',
     `staff_shift_log_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '员工班次日志UUID',
     `erp_pos_invoice_resp` text COMMENT 'ERP POS Invoice响应数据(JSON)',
@@ -4169,6 +4211,24 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_settings` (
     UNIQUE KEY `uk_platform` (`platform`, `delete_time`),
     KEY `idx_platform` (`platform`, `delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖平台配置表(多平台)';
+
+-- ----------------------------
+-- Table structure for ttpos_takeout_order_update_log (外卖订单更新日志表)
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_update_log` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '日志UUID',
+    `takeout_order_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '外卖订单UUID',
+    `old_data` longtext COMMENT '更新前订单数据(JSON格式,包含订单主表、商品、修饰符等完整数据)',
+    `new_data` longtext COMMENT '更新后订单数据(JSON格式,包含订单主表、商品、修饰符等完整数据)',
+    `create_time` int unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` int unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` int unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_takeout_order_uuid` (`takeout_order_uuid`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖订单更新日志表';
 
 -- ----------------------------
 -- Table structure for ttpos_purchase_limit_scheme (限购方案主表)

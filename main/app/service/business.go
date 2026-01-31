@@ -1235,6 +1235,10 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 			MinGrabOrderAmount:         export.MinGrabOrderAmount,
 			MaxGrabOrderAmount:         export.MaxGrabOrderAmount,
 			AvgGrabOrderAmount:         export.AvgGrabOrderAmount,
+			TotalLinemanOrderNum:       export.TotalLinemanOrderNum,
+			MinLinemanOrderAmount:      export.MinLinemanOrderAmount,
+			MaxLinemanOrderAmount:      export.MaxLinemanOrderAmount,
+			AvgLinemanOrderAmount:      export.AvgLinemanOrderAmount,
 			AreaList:                   areaList,
 			PaymentList:                paymentList,
 			TotalRechargeAmount:        export.TotalRechargeAmount,
@@ -3449,7 +3453,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 	_, sheet1EndRow := writeChannelData(sheet1Name, &rowIdx1, channelNames["takeout"], params.Result.Takeout, false)
 
 	// 为 Sheet1 设置样式和列宽
-	for row := 1; row < sheet1EndRow; row++ {
+	for row := 1; row <= sheet1EndRow; row++ {
 		cellA, _ := excelize.CoordinatesToCellName(1, row)
 		xlsxFile.SetCellStyle(sheet1Name, cellA, cellA, aColumnStyle)
 		cellB, _ := excelize.CoordinatesToCellName(2, row)
@@ -3479,7 +3483,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 	_, sheet2EndRow := writeChannelData(sheet2Name, &rowIdx2, channelNames["lineman"], params.Result.Lineman, false)
 
 	// 为 Sheet2 设置样式和列宽
-	for row := 1; row < sheet2EndRow; row++ {
+	for row := 1; row <= sheet2EndRow; row++ {
 		cellA, _ := excelize.CoordinatesToCellName(1, row)
 		xlsxFile.SetCellStyle(sheet2Name, cellA, cellA, aColumnStyle)
 		cellB, _ := excelize.CoordinatesToCellName(2, row)

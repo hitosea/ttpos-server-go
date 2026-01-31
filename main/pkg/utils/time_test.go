@@ -121,7 +121,7 @@ func TestFormatDateTimeToUnix(t *testing.T) {
 			checkFunc: func(t *testing.T, got int64, timezone string, timeStr string) {
 				// 获取上海时区的时间戳
 				shanghaiTimestamp := got
-				
+
 				// 转换为泰国时区，应该显示为 11:00:00（UTC+7 vs UTC+8，差1小时）
 				bangkokUtil := SetTimezone("Asia/Bangkok")
 				bangkokTimeStr := bangkokUtil.FormatUnixTime(shanghaiTimestamp, "2006-01-02 15:04:05")
@@ -276,7 +276,7 @@ func TestFormatDateTimeToTime(t *testing.T) {
 			checkFunc: func(t *testing.T, got time.Time, timezone string, timeStr string) {
 				// 转换为 UTC 时间戳
 				utcTimestamp := got.Unix()
-				
+
 				// 使用泰国时区转换回时间
 				bangkokUtil := SetTimezone("Asia/Bangkok")
 				bangkokTimeStr := bangkokUtil.FormatUnixTime(utcTimestamp, "2006-01-02 15:04:05")
@@ -404,4 +404,3 @@ func BenchmarkFormatDateTimeToTime(b *testing.B) {
 		})
 	}
 }
-

@@ -16,4 +16,6 @@ const (
 	ClientVersionV2140 = "2.14.0"
 	// 采购单最低版本号
 	ClientVersionV2150 = "2.15.0"
+	// 新版采购收货
+	ClientVersionV2160 = "2.16.0"
 )

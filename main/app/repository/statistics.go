@@ -3129,11 +3129,12 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 			result["summary"] = &model.ChannelSaleRepoResult{}
 		}
 		summary := result["summary"]
+		summaryTotalOrderNum := summary.TotalOrderNum.Int64
 
 		summary.TotalOrderNum.Int64 += takeoutRawData.TotalOrderNum
 
 		minOrderAmount := summary.MinOrderAmount.Float64
-		if takeoutRawData.MinOrderAmount < minOrderAmount {
+		if summaryTotalOrderNum == 0 || takeoutRawData.MinOrderAmount < minOrderAmount {
 			minOrderAmount = takeoutRawData.MinOrderAmount
 		}
 
@@ -3141,7 +3142,7 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 		summary.MinOrderAmount.Valid = true
 
 		maxOrderAmount := summary.MaxOrderAmount.Float64
-		if takeoutRawData.MaxOrderAmount > maxOrderAmount {
+		if summaryTotalOrderNum == 0 || takeoutRawData.MaxOrderAmount > maxOrderAmount {
 			maxOrderAmount = takeoutRawData.MaxOrderAmount
 		}
 

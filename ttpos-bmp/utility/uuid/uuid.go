@@ -39,8 +39,6 @@ var (
 // 示例：
 //   - ttpos-erp 实例1：(1 << 6) | 1 = 65
 //   - ttpos-message 实例1：(2 << 6) | 1 = 129
-//
-// 为避免多实例在同一秒生成 ID 时发生冲突，初始化时会设置随机增量
 func InitIdGenerator(ctx context.Context, appType uint32) {
 	// 创建 ID 生成器实例
 	idGenerator = goid.NewID()
@@ -64,6 +62,17 @@ func InitIdGenerator(ctx context.Context, appType uint32) {
 	// 设置节点（10 位 nodeBits）
 	idGenerator.SetNode(nodeID, totalNodeBits)
 
+	// 注意：不使用 SetRandomDelta()
+	// SetRandomDelta 会导致每次 Generate() 调用 crypto/rand.Int()（加密安全随机数）
+	// 这会产生系统调用开销，在高并发场景下严重影响性能
+	//
+	// 多实例冲突避免策略：
+	// - 不同应用通过 appType 区分（占用高 4 位）
+	// - 同应用不同实例通过 instanceID 区分（占用低 6 位）
+	// - 组合后的 nodeID 已经唯一标识每个实例，无需额外的随机增量
+
+	g.Log().Infof(ctx, "[UUID] Initialized: appType=%d, instanceID=%d, nodeID=%d",
+		appType, instanceID, nodeID)
 }
 
 // GetID 获取id

@@ -75,7 +75,8 @@ type MigrateDatabaseConf struct {
 }
 
 type TakeoutConf struct {
-	TakeoutTtposSecret string // 导出密钥
+	TakeoutTtposSecret    string // 导出密钥
+	TakeoutLinemanStoreId uint64 // Lineman 门店ID
 }
 
 type SMSConf struct {

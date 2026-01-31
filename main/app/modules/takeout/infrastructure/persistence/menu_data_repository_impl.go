@@ -100,7 +100,7 @@ func isLikelyBase64(s string) bool {
 }
 
 // GetTakeoutCategories 获取外卖分类列表
-func (r *menuDataRepositoryImpl) GetTakeoutCategories(ctx context.Context, companyUuid uint64, categoryIDs []uint64) ([]*model.ProductCategory, error) {
+func (r *menuDataRepositoryImpl) GetTakeoutCategories(ctx context.Context, categoryIDs []uint64) ([]*model.ProductCategory, error) {
 	db := ctx.GetDB()
 	var categories []*model.ProductCategory
 
@@ -122,11 +122,12 @@ func (r *menuDataRepositoryImpl) GetTakeoutCategories(ctx context.Context, compa
 }
 
 // GetTakeoutProducts 获取指定分类下的外卖商品
-func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, companyUuid uint64, categoryUuid uint64) ([]*model.ProductPackageTakeout, error) {
+func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, platform string, categoryUuid uint64) ([]*model.ProductPackageTakeout, error) {
 	db := ctx.GetDB()
 	var products []*model.ProductPackageTakeout
 
 	err := db.Model(&model.ProductPackageTakeout{}).
+		Where("takeout_type = ?", value_object.GetTakeoutTypeByPlatform(platform)).
 		Where("category_uuid = ?", categoryUuid).
 		Preload("ProductPackage", func(db *gorm.DB) *gorm.DB {
 			return db.Where("delete_time = ?", 0).
@@ -951,7 +952,7 @@ func (r *menuDataRepositoryImpl) FetchTakeoutMenuByPlatform(ctx context.Context,
 
 	// 解析菜单数据为 grabfood 结构
 	var grabMenu grabfood.GetMenuNewResponse
-	if takeoutMenu.Menu != nil {
+	if takeoutMenu.Menu != nil && platform == value_object.TakeoutPlatformGrab {
 		// 使用统一的解析函数
 		menuBytes, err := parseMenuJSON(takeoutMenu.Menu)
 		if err != nil {

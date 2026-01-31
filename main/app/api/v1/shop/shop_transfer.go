@@ -13,15 +13,18 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
 
 // TransferOrderHandler 调拨单控制器
 type TransferOrderHandler struct {
-	authSrv          service.IAuthSrv
-	transferOrderSrv transfer_order.ITransferOrderSrv
-	materialSrv      service.IMaterialSrv
+	authSrv              service.IAuthSrv
+	transferOrderSrv     transfer_order.ITransferOrderSrv
+	materialSrv          service.IMaterialSrv
+	transferOrderFileSrv service.ITransferOrderFileSrv
+	dbm                  *database.DBManager
 }
 
 // GetTransferOrderList 获取调拨单列表
@@ -307,6 +310,36 @@ func (h *TransferOrderHandler) RejectTransferOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// ResubmitTransferOrder 重新提交调拨单
+// @Summary 重新提交调拨单
+// @Description 重新提交已驳回的调拨单
+// @Tags 商家端.调拨单管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.TransferOrderUpdateReq true "重新提交调拨单请求参数"
+// @Success 200 {object} dto.Response{} "成功"
+// @Router /shop/transfer/order/resubmit [post]
+func (h *TransferOrderHandler) ResubmitTransferOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var updateReq req.TransferOrderUpdateReq
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.HandleValidationError(c, err, updateReq, nil)
+		return
+	}
+
+	// 设置为重新提交操作
+	updateReq.SetIsResubmit(true)
+
+	err := h.transferOrderSrv.UpdateTransferOrder(ctx, updateReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, gin.H{})
+}
+
 // ReceiveTransferOrder 收货调拨单
 // @Summary 收货调拨单
 // @Description 确认收货完成调拨
@@ -388,6 +421,57 @@ func (h *TransferOrderHandler) GetTransferOrderLogList(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
+// UploadFile 上传调拨单附件
+// @Summary 上传调拨单附件
+// @Description 上传调拨单附件（文件保存到发起方商户数据库的ttpos_file表）
+// @Tags 商家端.调拨单管理
+// @Accept multipart/form-data
+// @Produce json
+// @Security JwtToken
+// @Param transfer_order_uuid formData int true "调拨单UUID"
+// @Param file formData file true "文件"
+// @Success 200 {object} dto.Response{data=resp.UploadFileResp} "成功"
+// @Router /shop/transfer/file/upload [post]
+func (h *TransferOrderHandler) UploadFile(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 获取上传的文件
+	file, err := c.FormFile("file")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "请选择要上传的文件"))
+		return
+	}
+
+	// 打开文件
+	src, err := file.Open()
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "打开文件失败"))
+		return
+	}
+	defer src.Close()
+
+	// 获取调拨单UUID
+	transferOrderUuidStr := c.PostForm("transfer_order_uuid")
+	if transferOrderUuidStr == "" {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("调拨单UUID不能为空"))
+		return
+	}
+	transferOrderUuid, err := utils.StringToUint64(transferOrderUuidStr)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "调拨单UUID格式错误"))
+		return
+	}
+
+	// 上传文件
+	resp, err := h.transferOrderFileSrv.UploadFile(ctx, transferOrderUuid, src, file.Filename, file.Size)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
 // RegisterTransferOrderHandlers 注册调拨单相关路由
 func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -410,31 +494,37 @@ func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 	)
 	// 调拨单服务
 	wrapper := &TransferOrderHandler{
-		authSrv:          authSrv,
-		transferOrderSrv: transfer_order.NewTransferOrderSrv(dbm, materialSrv, settingSrv),
+		authSrv:              authSrv,
+		transferOrderSrv:     transfer_order.NewTransferOrderSrv(dbm, materialSrv, settingSrv),
+		transferOrderFileSrv: service.NewTransferOrderFileSrv(dbm),
+		dbm:                  dbm,
 	}
 
 	// 需要认证
 	privateApi := router.Group("", middleware.MinVersionCheck(settingSrv, middleware.TypeTransferOrder, constant.ClientVersionV2090), middleware.Auth(authSrv, dbm))
 	{
 		// 调拨单管理
-		privateApi.GET("/transfer/order/list", wrapper.GetTransferOrderList)
-		privateApi.GET("/transfer/order/detail", wrapper.GetTransferOrderDetail)
-		privateApi.POST("/transfer/order/create", wrapper.CreateTransferOrder)
-		privateApi.POST("/transfer/order/update", wrapper.UpdateTransferOrder)
-		privateApi.DELETE("/transfer/order/delete", wrapper.DeleteTransferOrder)
-		privateApi.POST("/transfer/order/submit", wrapper.SubmitTransferOrder)
-		privateApi.POST("/transfer/order/approve", wrapper.ApproveTransferOrder)
-		privateApi.POST("/transfer/order/reject", wrapper.RejectTransferOrder)
-		privateApi.POST("/transfer/order/receive", wrapper.ReceiveTransferOrder)
+		privateApi.GET("/transfer/order/list", wrapper.GetTransferOrderList)       // 获取调拨单列表
+		privateApi.GET("/transfer/order/detail", wrapper.GetTransferOrderDetail)   // 获取调拨单详情
+		privateApi.POST("/transfer/order/create", wrapper.CreateTransferOrder)     // 创建调拨单
+		privateApi.POST("/transfer/order/update", wrapper.UpdateTransferOrder)     // 更新调拨单
+		privateApi.DELETE("/transfer/order/delete", wrapper.DeleteTransferOrder)   // 删除调拨单
+		privateApi.POST("/transfer/order/submit", wrapper.SubmitTransferOrder)     // 提交调拨单
+		privateApi.POST("/transfer/order/approve", wrapper.ApproveTransferOrder)   // 审批通过调拨单
+		privateApi.POST("/transfer/order/reject", wrapper.RejectTransferOrder)     // 驳回调拨单
+		privateApi.POST("/transfer/order/resubmit", wrapper.ResubmitTransferOrder) // 重新提交调拨单
+		privateApi.POST("/transfer/order/receive", wrapper.ReceiveTransferOrder)   // 收货调拨单
 
 		// 审批流程和操作日志
-		privateApi.GET("/transfer/order/approval/list", wrapper.GetTransferOrderApprovalList)
-		privateApi.GET("/transfer/order/log/list", wrapper.GetTransferOrderLogList)
+		privateApi.GET("/transfer/order/approval/list", wrapper.GetTransferOrderApprovalList) // 获取调拨单审批流程列表
+		privateApi.GET("/transfer/order/log/list", wrapper.GetTransferOrderLogList)           // 获取调拨单操作日志列表
 
 		// 下拉列表
 		privateApi.GET("/transfer/company/list", wrapper.GetTransferOrderCompanyList)     // 获取门店列表
 		privateApi.GET("/transfer/warehouse/list", wrapper.GetTransferOrderWarehouseList) // 获取仓库列表
 		privateApi.GET("/transfer/material/list", wrapper.GetTransferOrderMaterialList)   // 获取调拨单物品列表
+
+		// 附件管理
+		privateApi.POST("/transfer/file/upload", wrapper.UploadFile) // 上传调拨单附件
 	}
 }

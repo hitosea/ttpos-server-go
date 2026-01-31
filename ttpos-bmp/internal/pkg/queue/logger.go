@@ -53,6 +53,15 @@ func ProducerLog(ctx context.Context, topic string, mqMsg MqMsg, err error) {
 	ProducerLogWithDuration(ctx, topic, mqMsg, err, 0)
 }
 
+// ProducerLogWithKey 记录带 key 的生产者日志
+func ProducerLogWithKey(ctx context.Context, topic, key string, mqMsg MqMsg, err error) {
+	if err != nil {
+		Logger().Errorf(ctx, "[MQ] 发送失败 topic=%s key=%s error=%v", topic, key, err)
+		return
+	}
+	Logger().Infof(ctx, "[MQ] 发送成功 topic=%s key=%s msgId=%s", topic, key, mqMsg.MsgId)
+}
+
 // ProducerLogWithDuration 带执行耗时的生产者日志记录
 func ProducerLogWithDuration(ctx context.Context, topic string, mqMsg MqMsg, err error, duration time.Duration) {
 	if err != nil {

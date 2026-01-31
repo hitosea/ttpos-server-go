@@ -131,10 +131,6 @@ repassword:
 mod-tidy:
 	@cd main && go mod tidy
 
-# 增加版本号
-add-ver:
-	@make add-version
-
 # 执行think命令
 think:
 	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh think $(filter-out $@,$(MAKECMDGOALS)) 
@@ -171,7 +167,8 @@ chown-all:
 
 # 更新 MCP Token
 update-mcp-token:
-	bash /home/coder/workspaces/update_mcp_token.sh
+	@echo "🔄 更新 MCP Token..."
+	bash ./ttpos-scripts/dootask.sh
 
 # 验证数据库结构
 verify-db-structure:

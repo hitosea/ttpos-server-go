@@ -6,6 +6,7 @@ import (
 	"strconv"
 	menuApi "ttpos-bmp/app/ttpos-takeout/api/menu"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/pkg/logger"
 
 	"github.com/google/uuid"
@@ -165,7 +166,7 @@ func (s *TakeoutRPCService) SaveMenuSnapshot(ctx context.Context, providerName s
 }
 
 // UpdateMenuItem 更新菜单项（商品）
-func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, merchantId string, itemId string, price *int64, availableStatus string, maxStock *int64) error {
+func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, shopUuid string, itemId string, price *int64, availableStatus string, maxStock *int64) error {
 	// 创建客户端
 	client, err := NewBMPTakeoutClient()
 	if err != nil {
@@ -180,7 +181,7 @@ func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, merchantId strin
 
 	// 构造请求
 	req := &menuApi.UpdateMenuItemReq{
-		MerchantId:      merchantId,
+		ShopUuid:        shopUuid,
 		ItemId:          itemId,
 		Price:           price,
 		AvailableStatus: &availableStatus,
@@ -193,7 +194,7 @@ func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, merchantId strin
 	if err != nil {
 		logger.Logger.Error("更新菜单项失败",
 			zap.Error(err),
-			zap.String("merchantId", merchantId),
+			zap.String("shopUuid", shopUuid),
 			zap.String("itemId", itemId))
 		return errors.WithMessage(err, "更新菜单项失败")
 	}
@@ -202,7 +203,7 @@ func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, merchantId strin
 }
 
 // UpdateMenuModifier 更新菜单修饰符
-func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, merchantId string, modifierId string, modifierName string, price *int64, availableStatus string) error {
+func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, platform string, shopUuid string, modifierId string, modifierName string, price *int64, availableStatus string) error {
 	// 创建客户端
 	client, err := NewBMPTakeoutClient()
 	if err != nil {
@@ -217,12 +218,16 @@ func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, merchantId s
 
 	// 构造请求
 	req := &menuApi.UpdateMenuModifierReq{
-		MerchantId:      merchantId,
+		ProviderName:    &platform,
+		ShopUuid:        shopUuid,
 		ModifierId:      modifierId,
 		ModifierName:    modifierName,
-		Price:           price,
 		AvailableStatus: &availableStatus,
 		RequestId:       uuid.New().String(),
+	}
+
+	if platform != value_object.TakeoutPlatformLineman {
+		req.Price = price
 	}
 
 	// 调用 RPC 接口
@@ -234,13 +239,16 @@ func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, merchantId s
 	return nil
 }
 
-// GetOrderInfo 获取订单信息
-func (s *TakeoutRPCService) GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (map[string]interface{}, error) {
+// ActivateShop 激活门店外卖渠道
+func (s *TakeoutRPCService) ActivateShop(ctx context.Context, providerName string, shopUuid uint64) error {
 	// 创建客户端
 	client, err := NewBMPTakeoutClient()
 	if err != nil {
-		logger.Logger.Error("创建 RPC 客户端失败", zap.Error(err), zap.String("shopUuid", shopUuid), zap.String("orderUuid", orderUuid))
-		return nil, errors.WithMessage(err, "创建 RPC 客户端失败")
+		logger.Logger.Error("创建 RPC 客户端失败",
+			zap.Error(err),
+			zap.String("providerName", providerName),
+			zap.Uint64("shopUuid", shopUuid))
+		return errors.WithMessage(err, "创建 RPC 客户端失败")
 	}
 	defer func() {
 		if closeErr := client.Close(); closeErr != nil {
@@ -249,11 +257,38 @@ func (s *TakeoutRPCService) GetOrderInfo(ctx context.Context, shopUuid string, o
 	}()
 
 	// 调用 RPC 接口
-	orderData, err := client.GetOrderInfo(ctx, shopUuid, orderUuid)
+	err = client.ActivateShop(ctx, providerName, shopUuid)
 	if err != nil {
-		logger.Logger.Error("获取订单信息失败", zap.Error(err), zap.String("shopUuid", shopUuid), zap.String("orderUuid", orderUuid))
-		return nil, errors.WithMessage(err, "获取订单信息失败")
+		logger.Logger.Error("激活门店外卖渠道失败",
+			zap.Error(err),
+			zap.String("providerName", providerName),
+			zap.Uint64("shopUuid", shopUuid))
+		return errors.WithMessage(err, "激活门店外卖渠道失败")
 	}
 
-	return orderData, nil
+	return nil
+}
+
+// GetOrderInfo 获取订单信息
+func (s *TakeoutRPCService) GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (rawData map[string]interface{}, orderDataMap map[string]interface{}, err error) {
+	// 创建客户端
+	client, err := NewBMPTakeoutClient()
+	if err != nil {
+		logger.Logger.Error("创建 RPC 客户端失败", zap.Error(err), zap.String("shopUuid", shopUuid), zap.String("orderUuid", orderUuid))
+		return nil, nil, errors.WithMessage(err, "创建 RPC 客户端失败")
+	}
+	defer func() {
+		if closeErr := client.Close(); closeErr != nil {
+			logger.Logger.Warn("关闭 RPC 客户端失败", zap.Error(closeErr))
+		}
+	}()
+
+	// 调用 RPC 接口
+	rawData, orderDataMap, err = client.GetOrderInfo(ctx, shopUuid, orderUuid)
+	if err != nil {
+		logger.Logger.Error("获取订单信息失败", zap.Error(err), zap.String("shopUuid", shopUuid), zap.String("orderUuid", orderUuid))
+		return nil, nil, errors.WithMessage(err, "获取订单信息失败")
+	}
+
+	return rawData, orderDataMap, nil
 }

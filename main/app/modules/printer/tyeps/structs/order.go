@@ -84,7 +84,9 @@ type StatementOrderInfoData struct {
 	CustomerAddress         string `json:"customer_address"`          // 顾客地址
 	WarningMessage          string `json:"warning_message"`           // 异常提示信息
 	WarningMessageSeparator string `json:"warning_message_separator"` // 异常提示信息分隔符
+	OrderUpdatedMessage     string `json:"order_updated_message"`     // 订单变更提示信息
 	PaidAmount              string `json:"paid_amount"`               // 实付金额
+	AdditionalProperties    string `json:"additional_properties"`     // 附加属性
 }
 
 // StatementBuffetData 自助餐数据结构体

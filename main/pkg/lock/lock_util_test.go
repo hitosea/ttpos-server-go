@@ -7,7 +7,7 @@ import (
 
 // mockLock 用于测试的锁实现
 type mockLock struct {
-	lockedUuids []uint64
+	lockedUuids   []uint64
 	unlockedUuids []uint64
 }
 
@@ -263,4 +263,3 @@ func TestLockUnlockConsistency(t *testing.T) {
 		})
 	}
 }
-

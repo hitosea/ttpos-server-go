@@ -843,7 +843,11 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		}
 		// 更新物品数据, 根据NotForSale判断是否删除
 		materialRepo := repository.NewMaterialRepo(tx)
-		updateData := map[string]any{"code": request.ItemCode}
+		updateData := map[string]any{
+			"code":                  request.ItemCode,
+			"delivered_by_supplier": request.DeliveredBySupplier,
+			"supplier_erp_code":     request.SupplierErpCode,
+		}
 		if request.NotForSale {
 			updateData["delete_time"] = time.Now().Unix()
 		} else {
@@ -1472,8 +1476,10 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		materialUnitRepo := repository.NewMaterialUnitRepo(tx)
 
 		updateData := map[string]any{
-			"barcode_value": request.BarcodeValue, // 条形码值
-			"internal_code": request.InternalCode, // 内部编码
+			"barcode_value":         request.BarcodeValue,        // 条形码值
+			"internal_code":         request.InternalCode,        // 内部编码
+			"delivered_by_supplier": request.DeliveredBySupplier, // 是否由供应商配送
+			"supplier_erp_code":     request.SupplierErpCode,     // 供应商ERP编码
 			"status": func() int {
 				if request.Disabled {
 					return 0
@@ -3142,27 +3148,44 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 				commonRepo.WhereByErpCode(itemInfo.ItemCode),
 				materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 			)
+
+			var deliveredBySupplier int
+			if itemInfo.DeliveredBySupplier {
+				deliveredBySupplier = 1
+			}
+
+			// 获取供应商ERP编码：从 SupplierItems 中获取 idx=1 的供应商编码
+			supplierErpCode := ""
+			for _, si := range itemInfo.SupplierItems {
+				if si.Idx == 1 {
+					supplierErpCode = si.Supplier
+					break
+				}
+			}
+
 			if existingMaterial.Uuid != 0 { // 如果物品已存在
 				defaultSalesUnit := ""
 				if itemInfo.SalesUom != nil && *itemInfo.SalesUom != "" {
 					defaultSalesUnit = *itemInfo.SalesUom
 				}
 				if err := s.UpdateMaterialByEprItem(copyCtx, req.MaterialEditErpReq{
-					Uuid:               existingMaterial.Uuid,
-					ItemCode:           itemInfo.ItemCode,
-					ItemName:           itemInfo.ItemName,
-					StockUom:           itemInfo.StockUom,
-					Disabled:           itemInfo.Disabled,
-					ValuationRate:      itemInfo.ValuationRate,
-					OpeningStock:       itemInfo.OpeningStock,
-					InternalCode:       itemInfo.InternalCode,
-					Classification:     itemInfo.Classification,
-					ClassificationCode: itemInfo.ClassificationCode,
-					Uoms:               uoms,
-					PurchaseUom:        itemInfo.PurchaseUom,
-					DefaultSalesUnit:   defaultSalesUnit,
-					NotForSale:         itemInfo.NotForSale,
-					AllowNegativeStock: itemInfo.AllowNegativeStock,
+					Uuid:                existingMaterial.Uuid,
+					ItemCode:            itemInfo.ItemCode,
+					ItemName:            itemInfo.ItemName,
+					StockUom:            itemInfo.StockUom,
+					Disabled:            itemInfo.Disabled,
+					ValuationRate:       itemInfo.ValuationRate,
+					OpeningStock:        itemInfo.OpeningStock,
+					InternalCode:        itemInfo.InternalCode,
+					Classification:      itemInfo.Classification,
+					ClassificationCode:  itemInfo.ClassificationCode,
+					Uoms:                uoms,
+					PurchaseUom:         itemInfo.PurchaseUom,
+					DefaultSalesUnit:    defaultSalesUnit,
+					NotForSale:          itemInfo.NotForSale,
+					AllowNegativeStock:  itemInfo.AllowNegativeStock,
+					DeliveredBySupplier: deliveredBySupplier,
+					SupplierErpCode:     supplierErpCode,
 				}); err != nil {
 					logger.Logger.Error("同步erp物品列表失败-01", zap.Error(err))
 				}
@@ -3217,6 +3240,8 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					NotForSale:           itemInfo.NotForSale,
 					AllowNegativeStock:   itemInfo.AllowNegativeStock, // 是否允许负库存：true-允许，false-不允许
 					AllowSubstoreVisible: true,
+					DeliveredBySupplier:  deliveredBySupplier,
+					SupplierErpCode:      supplierErpCode,
 				})
 				if err != nil {
 					logger.Logger.Error("同步erp物品列表失败-02", zap.Error(err))
@@ -3306,6 +3331,8 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					AllowSubstoreVisible:  material.AllowSubstoreVisible, // 同步可见性字段
 					AllowNegativeStock:    material.AllowNegativeStock,
 					OriginCountryCode:     material.OriginCountryCode,
+					DeliveredBySupplier:   material.DeliveredBySupplier,
+					SupplierErpCode:       material.SupplierErpCode,
 				})
 				for _, unit := range material.NotBaseUnitList {
 					addMaterialUnitList = append(addMaterialUnitList, model.MaterialUnit{

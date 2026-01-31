@@ -1069,7 +1069,7 @@ COMMIT;
 BEGIN;
 INSERT INTO `ttpos_multi_language_name` (`uuid`, `zh_name`, `en_name`, `zh_tw_name`, `th_name`, `my_name`, `ja_name`, `ko_name`, `tr_name`, `sv_name`, `create_time`, `update_time`, `delete_time`) VALUES
 (8267304538112001, 'Grab', 'Grab', 'Grab', 'Grab', 'Grab', 'Grab', 'Grab', 'Grab', 'Grab', @nowTime, @nowTime, 0),
-(8267304538112002, 'Line Man', 'Line Man', 'Line Man', 'Line Man', 'Line Man', 'Line Man', 'Line Man', 'Line Man', 'Line Man', @nowTime, @nowTime, 0),
+(8267304538112002, 'LINE MAN', 'LINE MAN', 'LINE MAN', 'LINE MAN', 'LINE MAN', 'LINE MAN', 'LINE MAN', 'LINE MAN', 'LINE MAN', @nowTime, @nowTime, 0),
 (8267304538112003, '悟空外卖', 'Wukong Delivery', '悟空外賣', 'Wukong Delivery', 'Wukong Delivery', 'Wukong Delivery', 'Wukong Delivery', 'Wukong Delivery', 'Wukong Delivery', @nowTime, @nowTime, 0),
 (8267304538112004, 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', @nowTime, @nowTime, 0),
 (8267304538112005, '泰国', 'Thailand', '泰國', 'ไทย', 'ထိုင်း', 'タイ', '태국', 'Tayland', 'Thailand', @nowTime, @nowTime, 0),

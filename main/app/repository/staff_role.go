@@ -10,8 +10,8 @@ import (
 type IStaffRoleRepo interface {
 	CreateStaffRole(staffRole model.StaffRole) error
 	GetRoleUuidsByStaffUuid(staffUuid uint64) ([]uint64, error)
-	GetStaffUuidsByRoleUuid(roleUuid uint64) ([]uint64, error) // 根据角色UUID查询关联的员工UUID列表
-	DeleteStaffRolesByRoleUuid(roleUuid uint64) error          // 删除角色的所有员工关联
+	GetStaffUuidsByRoleUuid(roleUuid uint64) ([]uint64, error)   // 根据角色UUID查询关联的员工UUID列表
+	DeleteStaffRolesByRoleUuid(roleUuid uint64) error            // 删除角色的所有员工关联
 	CreateStaffRoles(staffUuid uint64, roleUuids []uint64) error // 批量创建员工角色关联
 }
 

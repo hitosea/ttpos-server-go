@@ -11,6 +11,8 @@ cancel-pos-invoice
 close-pos-entry
 #重做pos订单
 redo-pos
+#退款通知回调
+erp-invoice-cancel
 #--- END ERP
 
 #---- Message ttpos-message ----

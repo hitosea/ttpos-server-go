@@ -2,14 +2,17 @@ package purchase_order
 
 import (
 	"fmt"
+	"ttpos-bmp/app/ttpos-erp/api/delivery_note"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
@@ -360,4 +363,211 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItem(
 		InexactFloat64()
 
 	return item
+}
+
+// dnItemInfo DN物品信息
+type dnItemInfo struct {
+	Qty float64 // DN数量
+	Uom string  // DN单位（与TTPOS的ErpnextUom一致）
+}
+
+// DNReceiptValidationResult DN收货校验结果
+type DNReceiptValidationResult struct {
+	DNItemMap map[string]dnItemInfo // DN物品编码 -> DN物品信息
+}
+
+// validateDNReceipt 校验DN类型收货 (v2.16.0+)
+// 校验收货物品是否在DN中，且收货数量不超过DN待收数量
+// 注意：数量比较使用DN的Uom单位（与采购单物品的ErpnextUom匹配）
+func (v *purchaseOrderValidator) validateDNReceipt(
+	ctx context.Context,
+	dbm *database.DBManager,
+	purchaseOrder *model.PurchaseOrder,
+	dnNo string,
+	receiptItems []req.PurchaseReceiptItemCreateReq,
+	purchaseOrderItems map[uint64]*model.PurchaseOrderItem,
+) (*DNReceiptValidationResult, error) {
+	companySetting := ctx.GetCompanySetting()
+	db := ctx.GetDB()
+
+	// 调用ERP获取DN详情
+	erpSrv := erp.NewIErpSrv(dbm)
+	dnListResp, err := erpSrv.GetDeliveryNoteList(ctx, &delivery_note.GetDeliveryNoteListReq{
+		CompanyAbbr:  companySetting.ErpnextHeadquarterAbbr,
+		SoNo:         purchaseOrder.ErpSaleOrderNo,
+		IncludeItems: true,
+	})
+	if err != nil {
+		logger.Logger.Error("validateDNReceipt-GetDeliveryNoteList", zap.Error(err))
+		return nil, errors.WithMessage(errors.New("获取DN信息失败"), err.Error())
+	}
+
+	// 找到指定的DN
+	var targetDN *delivery_note.DeliveryNote
+	for _, dn := range dnListResp.DeliveryNoteList {
+		if dn.Name == dnNo {
+			targetDN = dn
+			break
+		}
+	}
+	if targetDN == nil {
+		return nil, errors.New("未找到指定的DN单据")
+	}
+
+	// 构建DN物品编码到物品信息的映射（包含数量和单位）
+	dnItemMap := make(map[string]dnItemInfo)
+	for _, dnItem := range targetDN.Items {
+		dnItemMap[dnItem.ItemCode] = dnItemInfo{
+			Qty: dnItem.Qty,
+			Uom: dnItem.Uom,
+		}
+	}
+
+	// 获取该DN已确认收货的收货单（需要包含收货单物品的Units）
+	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
+	existingReceipts, err := receiptOrderRepo.GetList(
+		receiptOrderRepo.WherePurchaseOrderUuid(purchaseOrder.Uuid),
+		receiptOrderRepo.WhereDeliveryNoteNo(dnNo),
+		receiptOrderRepo.WhereStatusIn([]int{constant.ReceiptOrderStatusReceived}),
+		receiptOrderRepo.WithItems(),
+	)
+	if err != nil {
+		logger.Logger.Error("validateDNReceipt-GetList", zap.Error(err))
+		return nil, errors.WithMessage(errors.New("查询已收货记录失败"), err.Error())
+	}
+
+	// 计算每个物品已收货数量（按DN单位Uom统计）
+	receivedQtyMap := make(map[string]float64)
+	for _, receipt := range existingReceipts {
+		for _, item := range receipt.Items {
+			dnInfo, exists := dnItemMap[item.MaterialCode]
+			if !exists {
+				continue
+			}
+			// 在收货单物品的多单位中查找与DN单位匹配的单位
+			if len(item.Units) > 0 {
+				for _, unit := range item.Units {
+					if unit.ErpnextUom == dnInfo.Uom {
+						receivedQtyMap[item.MaterialCode] += unit.Num
+					}
+				}
+			} else if item.ErpnextUom == dnInfo.Uom {
+				// 没有多单位时，检查主单位
+				receivedQtyMap[item.MaterialCode] += item.Num
+			}
+		}
+	}
+
+	// 校验每个收货物品
+	for _, receiptItem := range receiptItems {
+		orderItem, exists := purchaseOrderItems[receiptItem.PurchaseOrderItemUuid]
+		if !exists {
+			return nil, errors.New(fmt.Sprintf("采购单物品不存在，UUID: %d", receiptItem.PurchaseOrderItemUuid))
+		}
+
+		// 如果请求参数中物品的所有单位Num都为0，则跳过验证
+		allUnitsZero := true
+		for _, unit := range receiptItem.UnitList {
+			if unit.Num > 0 {
+				allUnitsZero = false
+				break
+			}
+		}
+		if allUnitsZero {
+			continue
+		}
+
+		materialCode := orderItem.MaterialCode
+		materialName := language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage())
+
+		// 校验物品是否在DN中
+		dnInfo, inDN := dnItemMap[materialCode]
+		if !inDN {
+			return nil, errors.New(fmt.Sprintf("物品 %s 不在DN单据中", materialName))
+		}
+
+		// 计算本次收货数量（找到与DN单位Uom匹配的单位）
+		thisReceiptQty := 0.0
+		foundMatchingUnit := false
+		if len(orderItem.Units) > 0 {
+			for _, unit := range receiptItem.UnitList {
+				for _, orderUnit := range orderItem.Units {
+					if orderUnit.UnitUuid == unit.Uuid && orderUnit.ErpnextUom == dnInfo.Uom {
+						thisReceiptQty += unit.Num
+						foundMatchingUnit = true
+					}
+				}
+			}
+		}
+		// 如果没有多单位，检查主单位
+		if !foundMatchingUnit && orderItem.ErpnextUom == dnInfo.Uom {
+			for _, unit := range receiptItem.UnitList {
+				if unit.Uuid == orderItem.UnitUuid {
+					thisReceiptQty += unit.Num
+					foundMatchingUnit = true
+				}
+			}
+		}
+
+		// 如果没有找到匹配DN单位的收货单位，跳过校验（可能是用其他单位收货）
+		if !foundMatchingUnit {
+			continue
+		}
+
+		// 校验收货数量不超过DN待收数量
+		alreadyReceived := receivedQtyMap[materialCode]
+		pendingQty := dnInfo.Qty - alreadyReceived
+		if thisReceiptQty > pendingQty {
+			return nil, errors.New(fmt.Sprintf("物品 %s 收货数量(%.2f)超过DN待收数量(%.2f)", materialName, thisReceiptQty, pendingQty))
+		}
+	}
+
+	return &DNReceiptValidationResult{
+		DNItemMap: dnItemMap,
+	}, nil
+}
+
+// validateSupplierReceipt 校验供应商类型收货 (v2.16.0+)
+// 校验收货物品关联的Material是否DeliveredBySupplier=1且SupplierErpCode匹配
+func (v *purchaseOrderValidator) validateSupplierReceipt(
+	ctx context.Context,
+	_ *gorm.DB,
+	_ *model.PurchaseOrder,
+	supplierErpCode string,
+	receiptItems []req.PurchaseReceiptItemCreateReq,
+	purchaseOrderItems map[uint64]*model.PurchaseOrderItem,
+) error {
+
+	for _, receiptItem := range receiptItems {
+		orderItem, exists := purchaseOrderItems[receiptItem.PurchaseOrderItemUuid]
+		if !exists {
+			return errors.New(fmt.Sprintf("采购单物品不存在，UUID: %d", receiptItem.PurchaseOrderItemUuid))
+		}
+
+		// 如果请求参数中物品的所有单位Num都为0，则跳过验证
+		allUnitsZero := true
+		for _, unit := range receiptItem.UnitList {
+			if unit.Num > 0 {
+				allUnitsZero = false
+				break
+			}
+		}
+		if allUnitsZero {
+			continue
+		}
+
+		materialName := language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage())
+
+		// 校验DeliveredBySupplier=1
+		if orderItem.DeliveredBySupplier != 1 {
+			return errors.New(fmt.Sprintf("物品 %s 不是供应商直接配送物品", materialName))
+		}
+
+		// 校验SupplierErpCode匹配
+		if orderItem.SupplierErpCode != supplierErpCode {
+			return errors.New(fmt.Sprintf("物品 %s 不属于该供应商(%s)", materialName, supplierErpCode))
+		}
+	}
+
+	return nil
 }

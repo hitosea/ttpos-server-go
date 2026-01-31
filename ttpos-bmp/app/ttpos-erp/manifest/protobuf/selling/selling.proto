@@ -157,6 +157,7 @@ message ReturnPosInvoiceReq {
   repeated PosInvoiceTax taxes = 7;              // 税费列表 必填
   repeated PosInvoicePayment payments = 8;       // 付款列表 必填
   int64 invoice_type = 9; // 发票类型 1=商品发票 2=原材料发票 异步模式下必填
+  string remark = 10; // 附注/备注,可选
 }
 
 // ReturnPosInvoiceResp 退款POS发票响应消息
@@ -171,6 +172,7 @@ message CancelPosInvoiceReq {
   string material_invoice_name = 2;                         // 材料销售发票，必填
   string order_no = 3; // 订单号，传ttpos的订单号,异步模式下必填
   string open_pos_entry_name = 4; // POS开帐名称,异步模式下必填
+  string remark = 5; // 附注/备注,可选
 }
 
 message CancelPosInvoiceResp {

@@ -77,6 +77,96 @@
                 "conditions": []
             }
         ],
+        
+        [
+            {
+                "group_block_id": "warning_message",
+                "block_id": "order.warning_message_separator",
+                "block_type": "value",
+                "block_label": {},
+                "block_name": {},
+                "block_attr": {
+                    "font_size": 18,
+                    "align": "center",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 1,
+                    "line_height": 20,
+                    "width": 100
+                },
+                "conditions": [
+                    {
+                        "field": "order.order_updated_message",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "group_block_id": "order_updated_message",
+                "block_id": "order.order_updated_message",
+                "block_type": "value",
+                "block_label": {},
+                "block_name": {
+                    "en": "Order Updated Message",
+                    "ja": "注文更新メッセージ",
+                    "ko": "주문 업데이트 메시지",
+                    "my": "ข้อความอัปเดตคำสั่งซื้อ",
+                    "th": "ข้อความอัปเดตคำสั่งซื้อ",
+                    "tr": "Sipariş Güncelleme Mesajı",
+                    "zh": "订单更新消息",
+                    "zhtw": "訂單更新消息",
+                    "de": "Bestellungsaktualisierungsmeldung",
+                    "sv": "Beställningsuppdateringsmeddelande"
+                },
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "center",
+                    "font_bold": true,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "conditions": [
+                    {
+                        "field": "order.order_updated_message",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "group_block_id": "warning_message",
+                "block_id": "order.warning_message_separator",
+                "block_type": "value",
+                "block_label": {},
+                "block_name": {},
+                "block_attr": {
+                    "font_size": 18,
+                    "align": "center",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 2,
+                    "line_height": 20,
+                    "width": 100
+                },
+                "conditions": [
+                    {
+                        "field": "order.order_updated_message",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+
         [
             {
                 "group_block_id": "store_name",
@@ -404,7 +494,13 @@
                     "trailing_blank_lines": 0,
                     "width": 100
                 },
-                "conditions": []
+                "conditions": [
+                    {
+                        "field": "order.customer_name",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
             }
         ],
         [
@@ -445,7 +541,13 @@
                     "trailing_blank_lines": 0,
                     "width": 100
                 },
-                "conditions": []
+                "conditions": [
+                    {
+                        "field": "order.customer_phone",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
             }
         ],
         [
@@ -487,10 +589,15 @@
                     "line_height": 32,
                     "width": 100
                 },
-                "conditions": []
+                "conditions": [
+                    {
+                        "field": "order.customer_name",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
             }
         ],
-
         [
             {
                 "group_block_id": "order_no",
@@ -627,7 +734,54 @@
                 "conditions": []
             }
         ],
-
+        [
+            {
+                "group_block_id": "additional_properties",
+                "block_id": "order.additional_properties",
+                "block_type": "label:value",
+                "block_label": {
+                    "de": "Zusätzliche Artikel: ",
+                    "en": "Additional Items: ",
+                    "ja": "追加項目: ",
+                    "ko": "추가 항목: ",
+                    "my": "နောက်ထပ်ပစ္စည်းများ: ",
+                    "sv": "Ytterligare artiklar: ",
+                    "th": "รายการเพิ่มเติม: ",
+                    "tr": "Ek Öğeler: ",
+                    "zh": "附加项目: ",
+                    "zhtw": "附加項目: "
+                },
+                "block_name": {
+                    "en": "Additional Items",
+                    "ja": "追加項目",
+                    "ko": "추가 항목",
+                    "my": "နောက်ထပ်ပစ္စည်းများ",
+                    "th": "รายการเพิ่มเติม",
+                    "tr": "Ek Öğeler",
+                    "zh": "附加项目",
+                    "zhtw": "附加項目",
+                    "de": "Zusätzliche Artikel",
+                    "sv": "Ytterligare artiklar"
+                },
+                "block_attr": {
+                    "font_size": 18,
+                    "align": "left",
+                    "font_bold": false,
+                    "dividing_line": true,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 1,
+                    "line_height": 32,
+                    "width": 100
+                },
+                "conditions": [
+                    {
+                        "field": "order.additional_properties",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
         [
             {
                 "group_block_id": "commodity",
@@ -1393,13 +1547,7 @@
                     "width": 60,
                     "show_currency_unit": true
                 },
-                "conditions": [
-                    {
-                        "field": "order.product_amount",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
+                "conditions": []
             }
         ],
         [

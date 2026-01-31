@@ -78,4 +78,3 @@ func (r *FullReductionActivityRuleRepoImpl) Delete(uuid uint64) error {
 			Update("delete_time", time.Now().Unix()).Error,
 	)
 }
-

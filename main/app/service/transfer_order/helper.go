@@ -1,9 +1,12 @@
 package transfer_order
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
+	"time"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
 	"ttpos-server-go/app/constant"
@@ -340,6 +343,50 @@ func (h *transferOrderHelper) GetOrderDb(
 		return nil, errors.WithMessage(errors.New("获取调拨单数据库失败"), "数据库不存在")
 	}
 	return db, nil
+}
+
+// DeleteDataFromHeadquarter 从总部删除调拨单相关数据（硬删除）
+// 用于重新发起调拨单时，先清理 SAAS 库中的旧数据
+func (h *transferOrderHelper) DeleteDataFromHeadquarter(
+	dbm *database.DBManager,
+	transferOrderUuid uint64,
+) error {
+	// 获取总部数据库连接
+	sassDb := dbm.GetDB(0)
+	if sassDb == nil {
+		return errors.New("获取总部数据库失败")
+	}
+
+	// 在总部数据库中开启事务进行删除
+	return sassDb.Transaction(func(hqTx *gorm.DB) error {
+		// 1. 先删除审批记录（外键关联）
+		if err := hqTx.Unscoped().
+			Where("transfer_order_uuid = ?", transferOrderUuid).
+			Delete(&model.TransferOrderApproval{}).Error; err != nil {
+			logger.Logger.Error("删除总部调拨单审批记录失败",
+				zap.Uint64("transfer_order_uuid", transferOrderUuid),
+				zap.Error(err),
+			)
+			return errors.WithMessage(errors.New("删除总部调拨单审批记录失败"), err.Error())
+		}
+
+		// 2. 删除调拨单主表记录
+		if err := hqTx.Unscoped().
+			Where("uuid = ?", transferOrderUuid).
+			Delete(&model.TransferOrder{}).Error; err != nil {
+			logger.Logger.Error("删除总部调拨单失败",
+				zap.Uint64("transfer_order_uuid", transferOrderUuid),
+				zap.Error(err),
+			)
+			return errors.WithMessage(errors.New("删除总部调拨单失败"), err.Error())
+		}
+
+		logger.Logger.Info("成功从总部删除调拨单数据",
+			zap.Uint64("transfer_order_uuid", transferOrderUuid),
+		)
+
+		return nil
+	})
 }
 
 // CopyDataToHeadquarter 复制数据到总部
@@ -778,8 +825,8 @@ func (h *transferOrderHelper) UpdateStockInTransit(
 			// 发货门店
 			if approval.ApprovalType == constant.TransferApprovalTypeSender {
 
-				// 获取仓库物品
-				warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(outTargetWarehouse.Uuid, material.Uuid)
+				// 获取仓库物品（悲观锁，防止并发扣减）
+				warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterialForUpdate(outTargetWarehouse.Uuid, material.Uuid)
 				if err != nil || warehouseItem == nil || warehouseItem.Stock < actualNum {
 					logger.Logger.Error("查询仓库存失败", zap.Error(err), zap.Any("transferOrder", transferOrder), zap.Any("item", item))
 					return nil, errors.NewWithCodeAndData(
@@ -1317,4 +1364,116 @@ func (h *transferOrderHelper) joinNames(names []string) string {
 		result += name
 	}
 	return result
+}
+
+// AppendAnnotation 追加批注到调拨单
+func (h *transferOrderHelper) AppendAnnotation(
+	transferOrder *model.TransferOrder,
+	annotationType int,
+	content string,
+) error {
+	// 解析现有批注列表
+	var annotations []model.TransferOrderAnnotationJSON
+	if transferOrder.Annotations != "" {
+		if err := json.Unmarshal([]byte(transferOrder.Annotations), &annotations); err != nil {
+			logger.Logger.Error("解析批注列表失败", zap.Error(err))
+			annotations = []model.TransferOrderAnnotationJSON{}
+		}
+	}
+
+	// 追加新批注
+	annotations = append(annotations, model.TransferOrderAnnotationJSON{
+		AnnotationType: annotationType,
+		Content:        content,
+		CreateTime:     time.Now().Unix(),
+	})
+
+	// 按创建时间倒序排序（最新的在前面）
+	sort.Slice(annotations, func(i, j int) bool {
+		return annotations[i].CreateTime > annotations[j].CreateTime
+	})
+
+	// 序列化回 JSON
+	annotationsJSON, err := json.Marshal(annotations)
+	if err != nil {
+		return errors.WithMessage(errors.New("序列化批注列表失败"), err.Error())
+	}
+
+	transferOrder.Annotations = string(annotationsJSON)
+	return nil
+}
+
+// GetAnnotationList 从调拨单获取批注列表
+func (h *transferOrderHelper) GetAnnotationList(
+	transferOrder *model.TransferOrder,
+) []model.TransferOrderAnnotationJSON {
+	if transferOrder.Annotations == "" {
+		return []model.TransferOrderAnnotationJSON{}
+	}
+
+	var annotations []model.TransferOrderAnnotationJSON
+	if err := json.Unmarshal([]byte(transferOrder.Annotations), &annotations); err != nil {
+		logger.Logger.Error("解析批注列表失败", zap.Error(err))
+		return []model.TransferOrderAnnotationJSON{}
+	}
+
+	return annotations
+}
+
+// GetApproveAnnotationType 根据审批类型和调拨类型获取通过批注类型
+func (h *transferOrderHelper) GetApproveAnnotationType(approvalType string, transferType int) int {
+	switch approvalType {
+	case constant.TransferApprovalTypeSender:
+		// 发货门店
+		if transferType == constant.TransferTypeIn {
+			// 调入：发货门店审批
+			return constant.TransferOrderAnnotationTypeShipperApprove
+		}
+		// 调出：门店审批
+		return constant.TransferOrderAnnotationTypeShopApprove
+	case constant.TransferApprovalTypeSenderParent:
+		// 发货门店上级
+		return constant.TransferOrderAnnotationTypeParentApprove
+	case constant.TransferApprovalTypeReceiver:
+		// 收货门店
+		if transferType == constant.TransferTypeIn {
+			// 调入：门店审批
+			return constant.TransferOrderAnnotationTypeShopApprove
+		}
+		// 调出：收货门店审批
+		return constant.TransferOrderAnnotationTypeReceiverApprove
+	case constant.TransferApprovalTypeReceiverParent:
+		// 收货门店上级
+		return constant.TransferOrderAnnotationTypeParentApprove
+	}
+	return constant.TransferOrderAnnotationTypeShopApprove
+}
+
+// GetRejectAnnotationType 根据审批类型和调拨类型获取驳回批注类型
+func (h *transferOrderHelper) GetRejectAnnotationType(approvalType string, transferType int) int {
+	switch approvalType {
+	case constant.TransferApprovalTypeSender:
+		// 发货门店
+		if transferType == constant.TransferTypeIn {
+			// 调入：发货门店驳回
+			return constant.TransferOrderAnnotationTypeShipperReject
+		}
+		// 调出：门店驳回
+		return constant.TransferOrderAnnotationTypeShopReject
+	case constant.TransferApprovalTypeSenderParent:
+		// 发货门店上级
+		return constant.TransferOrderAnnotationTypeParentReject
+	case constant.TransferApprovalTypeReceiver:
+		// 收货门店
+		if transferType == constant.TransferTypeIn {
+			// 调入：门店驳回
+			return constant.TransferOrderAnnotationTypeShopReject
+		}
+		// 调出：收货门店驳回
+		return constant.TransferOrderAnnotationTypeReceiverReject
+	case constant.TransferApprovalTypeReceiverParent:
+		// 收货门店上级
+		return constant.TransferOrderAnnotationTypeParentReject
+	}
+	return constant.TransferOrderAnnotationTypeShopReject
 }

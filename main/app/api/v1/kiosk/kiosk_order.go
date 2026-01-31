@@ -6,19 +6,36 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nacos-group/nacos-sdk-go/v2/common/logger"
 	"go.uber.org/zap"
 )
 
 // OrderHandler 订单相关控制器
 type OrderHandler struct {
 	orderSrv service.IOrderSrv
+}
+
+// InvalidateSaleBillSettingCache 失效销售单设置缓存（辅助函数）
+// 参数：
+//   - ctx: 上下文, 用于提取 companyUuid
+func (h *OrderHandler) InvalidateSaleBillSettingCache(ctx context.Context) {
+	if !adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		return
+	}
+	if err := controller.GetSaleBillSettingController().Invalidate(ctx, persistence.GlobalObjectUuid); err != nil {
+		logger.Error("失效销售单设置缓存失败", zap.Error(err))
+	}
 }
 
 // GetCartInfo 查询购物车信息
@@ -279,6 +296,9 @@ func (h *OrderHandler) OrderCheck(c *gin.Context) {
 		return
 	}
 	if checkRes != nil {
+		// 如果开启缓存,要失效sale_bill_setting的缓存
+		h.InvalidateSaleBillSettingCache(ctx)
+
 		ctx.Log().Debug("kiosk检查不通过", zap.Any("res", checkRes))
 		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
@@ -416,6 +436,95 @@ func (h *OrderHandler) PayOrderStatus(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// PayOrderConfirm Kiosk 支付完成确认
+// @Summary Kiosk 支付完成确认
+// @Description 用于 KBank 等需要主动上报支付结果的场景。Kiosk 调用此接口确认支付完成后，系统会自动执行送厨、打印送厨单和完成订单
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.KioskPaymentConfirmReq true "支付确认参数"
+// @Success 200 {object} dto.Response "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /kiosk/order/pay/confirm [post]
+func (h *OrderHandler) PayOrderConfirm(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.KioskPaymentConfirmReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("kiosk支付确认", zap.Any("params", params))
+
+	// 调用 service 层处理支付确认
+	err := h.orderSrv.KioskPaymentConfirm(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	// 返回结果
+	helper.Success(c, nil)
+}
+
+// OrderPrint 打印小票
+// @Summary 订单打印小票
+// @Description 订单打印小票
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderPrintReq true "参数"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
+// @Router /kiosk/order/print [post]
+func (h *OrderHandler) OrderPrint(c *gin.Context) {
+	var printReq req.OrderPrintReq
+	if err := c.ShouldBindJSON(&printReq); err != nil {
+		helper.HandleValidationError(c, err, printReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderSrv.OrderPrint(ctx, printReq, true)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res, "发送成功")
+}
+
+// FinishOrder Kiosk 订单完成
+// @Summary Kiosk 订单完成
+// @Description 检查订单实付是否符合完成支付条件，执行送厨和完成订单状态。用于客户端主动触发订单完成流程
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.KioskOrderFinishReq true "订单完成参数"
+// @Success 200 {object} dto.Response{data=resp.KioskOrderFinishResp} "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /kiosk/order/finish [post]
+func (h *OrderHandler) FinishOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.KioskOrderFinishReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("kiosk订单完成", zap.Any("params", params))
+
+	// 调用 service 层处理订单完成
+	res, err := h.orderSrv.KioskOrderFinish(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	// 返回结果（包含订单流水号）
+	helper.Success(c, res)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -451,5 +560,8 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/payment/info", wrapper.OrderPaymentInfo)                  // 获取结账页面信息
 		privateApi.POST("/order/pay", wrapper.PayOrder)                                  // 发起支付
 		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                      // 获取支付状态
+		privateApi.POST("/order/pay/confirm", wrapper.PayOrderConfirm)                   // 支付完成确认（KBank 等主动上报场景）
+		privateApi.POST("/order/finish", wrapper.FinishOrder)                            // 订单完成（检查支付、送厨、结账）
+		privateApi.POST("/order/print", wrapper.OrderPrint)                              // 打印小票
 	}
 }

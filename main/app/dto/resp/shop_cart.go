@@ -157,6 +157,7 @@ func (item *OrderRemarkItem) GetOrderRemarkResponse() dto.LocaleResponse {
 
 // 桌台购物车
 type ShopCart struct {
+	SerialNo        string               `json:"serial_no"`              // 桌位编号 (点餐流水号)
 	SaleBillUuid    uint64               `json:"sale_bill_uuid"`         // 销售账单ID
 	Takeout         *bool                `json:"takeout,omitempty"`      // 是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段
 	IsDeskOrder     bool                 `json:"is_desk_order"`          // 购物车类型 true:桌台购物车 false:点餐购物车
@@ -389,6 +390,11 @@ type OrderFinishResp struct {
 	SaleOrderUuid uint64        `json:"sale_order_uuid"` // 销售订单uuid
 	AmountInfo    PayAmountInfo `json:"amount_info"`     // 金额信息
 	PayMethodList PayMethodList `json:"pay_methods"`     // 支付方式列表
+}
+
+// KioskOrderFinishResp Kiosk 自助点餐机订单完成响应
+type KioskOrderFinishResp struct {
+	SerialNo string `json:"serial_no"` // 订单流水号
 }
 
 type PayAmountInfo struct {

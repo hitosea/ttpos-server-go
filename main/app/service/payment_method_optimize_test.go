@@ -314,4 +314,3 @@ func TestPaymentMethodSrv_GetManagementList_FilterFreeMealAndFreeMealForErp(t *t
 		t.Errorf("Cash payment method should be in the list")
 	}
 }
-
