@@ -663,7 +663,12 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	defer func() { // 送厨结束后，执行分批送厨
 		if !req.IsCheckCooking { // 只有真送厨时才会送厨预送厨的商品. IsCheckCooking为true时,表示助手端在进行送厨检查,不需要实际进行送厨
 			// 助手端前置模式：分批送厨（每次点击下单都送优先级最高的分批类型）
-			if ctx.GetSource() == constant.SourceAssistant {
+			// 任务39416:减少分批送厨步骤（收银机）. 收银机也参考助手端的逻辑进行分批送厨. 如果客户端版本大于等于v2.17.0 则使用该逻辑
+			useFeature := false // 是否使用该功能,默认不使用.为了兼容旧版本的收银机
+			if ctx.GetSource() == constant.SourceCashier && utils.CompareVersion(ctx.GetVersion(), utils.VersionGTE, constant.ClientVersionV2170) {
+				useFeature = true
+			}
+			if ctx.GetSource() == constant.SourceAssistant || useFeature {
 				db := s.dbm.GetDB(ctx.GetDbId())
 				batchCookingMode, err := repository.NewOrderRepo(db).GetSaleBillBatchCookingMode(req.SaleBillUuid)
 				if err != nil {
