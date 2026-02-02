@@ -63,6 +63,23 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 		data.SetWarehouse = warehouseName
 	}
 
+	// 方案D: 批量预查询整个仓库的 Bin 记录，避免 N+1 查询问题
+	binValuationMap := make(map[string]float64) // key: item_code, value: valuation_rate
+	if len(warehouseName) > 0 {
+		binResp, err := s.GetBin(ctx, &stock.GetBinReq{
+			Warehouse: warehouseName,
+			// 不传 ItemCode，返回该仓库所有 Bin 记录
+		})
+		if err == nil && binResp != nil && len(binResp.Items) > 0 {
+			for _, bin := range binResp.Items {
+				binValuationMap[bin.ItemCode] = bin.ValuationRate
+			}
+			g.Log().Infof(ctx, "批量查询 Bin 记录成功: warehouse=%s, count=%d", warehouseName, len(binResp.Items))
+		} else {
+			g.Log().Warningf(ctx, "批量查询 Bin 记录失败或为空: warehouse=%s, err=%v", warehouseName, err)
+		}
+	}
+
 	// 构建明细项目
 	itemList := make([]erp.StockReconciliationItem, 0)
 	for _, item := range req.Items {
@@ -102,28 +119,24 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 			itemData.Warehouse = warehouseName
 		}
 
-		// 设置估值价格
+		// 设置估值价格（方案A+D整合逻辑）
 		if item.ValuationRate > 0 {
-			// 用户提供了估值率，直接使用
+			// 优先级1: 用户提供了估值率，直接使用
 			itemData.ValuationRate = item.ValuationRate
 			g.Log().Infof(ctx, "使用用户提供的估值率: item_code=%s, valuation_rate=%.2f",
 				item.ItemCode, item.ValuationRate)
+		} else if rate, ok := binValuationMap[item.ItemCode]; ok && rate > 0 {
+			// 优先级2: 从预查询的 Bin map 中获取估值率（方案D）
+			itemData.ValuationRate = rate
+			g.Log().Infof(ctx, "从 Bin 表获取估值率: item_code=%s, warehouse=%s, valuation_rate=%.2f",
+				item.ItemCode, itemData.Warehouse, rate)
 		} else {
-			// 估值率为 0，从 Bin 表查询
-			binResp, err := s.GetBin(ctx, &stock.GetBinReq{
-				ItemCode:  item.ItemCode,
-				Warehouse: itemData.Warehouse,
-			})
-
-			if err == nil && binResp != nil && len(binResp.Items) > 0 {
-				// 使用 Bin 表中的估值率（因为指定了 item_code 和 warehouse，应该只有一条记录）
-				itemData.ValuationRate = binResp.Items[0].ValuationRate
-				g.Log().Infof(ctx, "从 Bin 表获取估值率: item_code=%s, warehouse=%s, valuation_rate=%.2f",
-					item.ItemCode, itemData.Warehouse, binResp.Items[0].ValuationRate)
-			} else {
-				// Bin 表中没有估值率，返回异常
-				return nil, gerror.New("缺少对应仓库的入库记录,无估值率!")
-			}
+			// 优先级3: 兜底方案 - 设置 AllowZeroValuationRate=1（方案A）
+			// 触发条件: Bin 表中没有该物品记录，或估值率为 0
+			itemData.AllowZeroValuationRate = 1
+			itemData.ValuationRate = 0
+			g.Log().Warningf(ctx, "物品[%s]在仓库[%s]无估值率或估值率为0，启用 AllowZeroValuationRate 兜底",
+				item.ItemCode, itemData.Warehouse)
 		}
 
 		itemList = append(itemList, itemData)
