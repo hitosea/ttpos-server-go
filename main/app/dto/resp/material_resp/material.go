@@ -51,6 +51,7 @@ type MaterialQuotaConfig struct {
 	QuotaUnitUuid       uint64             `json:"quota_unit_uuid"`        // 限购单位UUID
 	QuotaUnitName       string             `json:"quota_unit_name"`        // 限购单位名称
 	QuotaUnitLocaleName dto.LocaleResponse `json:"quota_unit_locale_name"` // 限购单位名称
+	IsAllowPurchase     string             `json:"is_allow_purchase"`      // 是否允许采购 yes/no
 }
 
 type NotBasicUnitStockList struct {

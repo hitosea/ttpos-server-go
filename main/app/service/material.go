@@ -232,8 +232,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(err, "获取物品列表失败")
 	}
 
-	// 品牌采购：批量查询限购配置（避免 N+1 查询问题）
+	// 品牌采购：批量查询限购配置和禁止采购物品（避免 N+1 查询问题）
 	var quotaLimitMap map[string]float64
+	var disallowedSet map[string]bool
 	if req.PurchaseType == 2 && len(materials) > 0 {
 		// 提取所有物品编码
 		materialCodes := make([]string, 0, len(materials))
@@ -256,6 +257,21 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			)
 			if err != nil {
 				logger.Logger.Error("批量查询限购配置失败", zap.Error(err))
+			}
+
+			// 批量查询禁止采购的物品
+			disallowedCodes, err := schemeRepo.GetDisallowedPurchaseMaterialCodes(
+				companySetting.CompanyUuid,
+				materialCodes,
+				currentWeekday,
+			)
+			if err != nil {
+				logger.Logger.Error("批量查询禁止采购物品失败", zap.Error(err))
+			} else {
+				disallowedSet = make(map[string]bool)
+				for _, code := range disallowedCodes {
+					disallowedSet[code] = true
+				}
 			}
 		}
 	}
@@ -446,25 +462,49 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 						QuotaUnitUuid:       0,
 						QuotaUnitName:       "",
 						QuotaUnitLocaleName: dto.LocaleResponse{},
+						IsAllowPurchase:     "",
 					}
 				}
 
-				// 从批量查询的结果中获取限购数量（无需再次查询数据库）
-				quotaLimit, exists := quotaLimitMap[material.Code]
-				if !exists || quotaLimit == 0 {
+				// 从批量查询的结果中获取限购数量和禁止采购状态
+				quotaLimit, hasQuotaLimit := quotaLimitMap[material.Code]
+				isDisallowed := disallowedSet[material.Code]
+
+				// 设置是否允许采购
+				isAllowPurchase := "yes"
+				if isDisallowed {
+					isAllowPurchase = "no"
+				}
+
+				// 没有限购配置且允许采购时，返回默认配置
+				if !hasQuotaLimit && !isDisallowed {
 					return material_resp.MaterialQuotaConfig{
 						QuotaLimit:          0,
 						QuotaUnitUuid:       0,
 						QuotaUnitName:       "",
 						QuotaUnitLocaleName: dto.LocaleResponse{},
+						IsAllowPurchase:     "yes",
 					}
 				}
 
+				// 有限购数量时，返回完整配置
+				if hasQuotaLimit && quotaLimit > 0 {
+					return material_resp.MaterialQuotaConfig{
+						QuotaLimit:          quotaLimit,
+						QuotaUnitUuid:       quotaUnit.Uuid,
+						QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+						QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
+						IsAllowPurchase:     isAllowPurchase,
+					}
+				}
+
+				// 只有禁止采购状态，没有限购数量
 				return material_resp.MaterialQuotaConfig{
-					QuotaLimit:          quotaLimit,
-					QuotaUnitUuid:       quotaUnit.Uuid,
-					QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-					QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
+					QuotaLimit:          0,
+					QuotaUnitUuid:       0,
+					QuotaUnitName:       "",
+					QuotaUnitLocaleName: dto.LocaleResponse{},
+					IsAllowPurchase:     isAllowPurchase,
 				}
 			}(),
 		}

@@ -75,6 +75,7 @@ type PurchaseOrderItemQuotaConfig struct {
 	QuotaUnitName       string             `json:"quota_unit_name"`        // 限购单位名称
 	QuotaUnitLocaleName dto.LocaleResponse `json:"quota_unit_locale_name"` // 限购单位名称
 	ErrorMessage        string             `json:"error_message"`          // 错误信息，用于出现感叹号提示用户，如果为空则不显示
+	IsAllowPurchase     string             `json:"is_allow_purchase"`      // 是否允许采购 yes/no
 }
 
 // PurchaseOrderItemInfo 采购订单商品明细信息

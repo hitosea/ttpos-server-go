@@ -90,6 +90,7 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 | Proposal | 说明 | 状态 |
 | --- | --- | --- |
+| [shop-purchase-allow-control](2026-02/shop-purchase-allow-control.md) | 采购限制方案-是否允许采购控制 | 待评审 |
 | [shop-material-category-visibility](2026-02/shop-material-category-visibility.md) | 物品分类可见性配置（按类别+角色控制物品可见范围） | 待评审 |
 
 ## 2026-01

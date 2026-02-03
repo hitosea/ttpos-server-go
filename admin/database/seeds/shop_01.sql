@@ -4259,6 +4259,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_limit_scheme_item` (
     `material_code` varchar(50) NOT NULL DEFAULT '' COMMENT '物品编码',
     `unit_code` varchar(50) NOT NULL DEFAULT '' COMMENT '单位编码',
     `quota_limit` decimal(20,8) NOT NULL DEFAULT 0 COMMENT '限购数量（0=不限制）',
+    `is_allow_purchase` varchar(10) NOT NULL DEFAULT 'yes' COMMENT '是否允许采购 yes/no',
     `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
