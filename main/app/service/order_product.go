@@ -673,7 +673,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 				batchCookingMode, err := repository.NewOrderRepo(db).GetSaleBillBatchCookingMode(req.SaleBillUuid)
 				if err != nil {
 					ctx.Log().Info("获取销售账单的分批送厨模式失败,导致不能分批送厨", zap.Error(err))
-				} else if batchCookingMode == constant.BatchCookingModePre {
+				} else if batchCookingMode == constant.BatchCookingModePre { // 前置模式时，才执行分批送厨
 					// 异步执行分批送厨，不阻塞流程
 					utils.Go(func() {
 						ctx := ctx.Copy()

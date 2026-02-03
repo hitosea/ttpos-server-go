@@ -29,6 +29,7 @@ const (
 	StockService_SubmitStockReconciliation_FullMethodName  = "/stock.StockService/SubmitStockReconciliation"
 	StockService_CancelStockReconciliation_FullMethodName  = "/stock.StockService/CancelStockReconciliation"
 	StockService_GetBin_FullMethodName                     = "/stock.StockService/GetBin"
+	StockService_SubmitStockEntry_FullMethodName           = "/stock.StockService/SubmitStockEntry"
 )
 
 // StockServiceClient is the client API for StockService service.
@@ -67,6 +68,10 @@ type StockServiceClient interface {
 	// 参数：仓库名称（必填）、物品代码（可选，为空时返回该仓库所有物品的 Bin 记录）
 	// 返回：货位库存信息列表，包括实际库存数量、估值率、库存价值
 	GetBin(ctx context.Context, in *GetBinReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 提交库存变动（物料出库）
+	// 参数：库存变动信息，包含公司、仓库、物品列表
+	// 返回：库存变动单号
+	SubmitStockEntry(ctx context.Context, in *SubmitStockEntryReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type stockServiceClient struct {
@@ -157,6 +162,16 @@ func (c *stockServiceClient) GetBin(ctx context.Context, in *GetBinReq, opts ...
 	return out, nil
 }
 
+func (c *stockServiceClient) SubmitStockEntry(ctx context.Context, in *SubmitStockEntryReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, StockService_SubmitStockEntry_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StockServiceServer is the server API for StockService service.
 // All implementations must embed UnimplementedStockServiceServer
 // for forward compatibility.
@@ -193,6 +208,10 @@ type StockServiceServer interface {
 	// 参数：仓库名称（必填）、物品代码（可选，为空时返回该仓库所有物品的 Bin 记录）
 	// 返回：货位库存信息列表，包括实际库存数量、估值率、库存价值
 	GetBin(context.Context, *GetBinReq) (*api.ResponseInfo, error)
+	// 提交库存变动（物料出库）
+	// 参数：库存变动信息，包含公司、仓库、物品列表
+	// 返回：库存变动单号
+	SubmitStockEntry(context.Context, *SubmitStockEntryReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedStockServiceServer()
 }
 
@@ -226,6 +245,9 @@ func (UnimplementedStockServiceServer) CancelStockReconciliation(context.Context
 }
 func (UnimplementedStockServiceServer) GetBin(context.Context, *GetBinReq) (*api.ResponseInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetBin not implemented")
+}
+func (UnimplementedStockServiceServer) SubmitStockEntry(context.Context, *SubmitStockEntryReq) (*api.ResponseInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method SubmitStockEntry not implemented")
 }
 func (UnimplementedStockServiceServer) mustEmbedUnimplementedStockServiceServer() {}
 func (UnimplementedStockServiceServer) testEmbeddedByValue()                      {}
@@ -392,6 +414,24 @@ func _StockService_GetBin_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StockService_SubmitStockEntry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitStockEntryReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StockServiceServer).SubmitStockEntry(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StockService_SubmitStockEntry_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StockServiceServer).SubmitStockEntry(ctx, req.(*SubmitStockEntryReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // StockService_ServiceDesc is the grpc.ServiceDesc for StockService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -430,6 +470,10 @@ var StockService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBin",
 			Handler:    _StockService_GetBin_Handler,
+		},
+		{
+			MethodName: "SubmitStockEntry",
+			Handler:    _StockService_SubmitStockEntry_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

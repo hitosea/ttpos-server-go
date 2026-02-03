@@ -9,6 +9,7 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	dtoSelling "ttpos-bmp/app/ttpos-erp/internal/model/dto/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
@@ -22,6 +23,77 @@ type (
 		ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error)
 		ClosePosEntry(ctx context.Context, req *selling.ClosePosEntryReq) (*selling.ClosePosEntryResp, error)
 		GetLatestReceivePosInvoice(ctx context.Context, req *do.ReceivePosInvoice) (*entity.ReceivePosInvoice, error)
+	}
+	IDeliveryNote interface {
+		// CreateDeliveryNote 创建送货单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 创建送货单请求
+		//
+		// 返回：
+		//   - res: 创建送货单响应
+		//   - err: 错误信息
+		CreateDeliveryNote(ctx context.Context, req *delivery_note.CreateDeliveryNoteReq) (res *delivery_note.CreateDeliveryNoteResp, err error)
+		// GetDeliveryNote 获取送货单详情
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 获取送货单详情请求
+		//
+		// 返回：
+		//   - res: 获取送货单详情响应
+		//   - err: 错误信息
+		GetDeliveryNote(ctx context.Context, req *delivery_note.GetDeliveryNoteReq) (res *delivery_note.GetDeliveryNoteResp, err error)
+		// GetDeliveryNoteList 获取送货单列表
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 获取送货单列表请求
+		//
+		// 返回：
+		//   - res: 获取送货单列表响应
+		//   - err: 错误信息
+		GetDeliveryNoteList(ctx context.Context, req *delivery_note.GetDeliveryNoteListReq) (res *delivery_note.GetDeliveryNoteListResp, err error)
+		// UpdateDeliveryNote 更新送货单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 更新送货单请求
+		//
+		// 返回：
+		//   - res: 更新送货单响应
+		//   - err: 错误信息
+		UpdateDeliveryNote(ctx context.Context, req *delivery_note.UpdateDeliveryNoteReq) (res *delivery_note.UpdateDeliveryNoteResp, err error)
+		// SubmitDeliveryNote 提交送货单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - deliveryNoteName: 送货单号
+		//
+		// 返回：
+		//   - err: 错误信息
+		SubmitDeliveryNote(ctx context.Context, deliveryNoteName string) error
+		// CancelDeliveryNote 取消送货单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - deliveryNoteName: 送货单号
+		//
+		// 返回：
+		//   - err: 错误信息
+		CancelDeliveryNote(ctx context.Context, deliveryNoteName string) error
+		// DeleteDeliveryNote 删除送货单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - deliveryNoteName: 送货单号
+		//
+		// 返回：
+		//   - err: 错误信息
+		DeleteDeliveryNote(ctx context.Context, deliveryNoteName string) error
+		// CreateDeliveryNoteFromSaleOrder 从销售订单创建送货单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 从销售订单创建送货单请求
+		//
+		// 返回：
+		//   - res: 送货单信息
+		//   - err: 错误信息
+		CreateDeliveryNoteFromSaleOrder(ctx context.Context, req *delivery_note.CreateDeliveryNoteFromSaleOrderReq) (res *delivery_note.CreateDeliveryNoteFromSaleOrderResp, err error)
 	}
 	ISelling interface {
 		// CreateSalesOrder 创建销售订单
@@ -289,6 +361,7 @@ type (
 
 var (
 	localAsyncSelling IAsyncSelling
+	localDeliveryNote IDeliveryNote
 	localSelling      ISelling
 )
 
@@ -301,6 +374,17 @@ func AsyncSelling() IAsyncSelling {
 
 func RegisterAsyncSelling(i IAsyncSelling) {
 	localAsyncSelling = i
+}
+
+func DeliveryNote() IDeliveryNote {
+	if localDeliveryNote == nil {
+		panic("implement not found for interface IDeliveryNote, forgot register?")
+	}
+	return localDeliveryNote
+}
+
+func RegisterDeliveryNote(i IDeliveryNote) {
+	localDeliveryNote = i
 }
 
 func Selling() ISelling {
