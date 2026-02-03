@@ -18912,6 +18912,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/kiosk/order/print": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "订单打印小票",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.订单"
+                ],
+                "summary": "订单打印小票",
+                "parameters": [
+                    {
+                        "description": "参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderPrintReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "打印数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/kiosk/order/product/package/detail": {
             "get": {
                 "security": [
@@ -24334,6 +24385,253 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/material_category_visibility/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建物品分类可见性配置（仅总店可用，创建后自动同步到子店）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "创建可见性配置",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.VisibilityCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/material_category_visibility/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除物品分类可见性配置（仅总店可用，删除后自动同步到子店）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "删除可见性配置",
+                "parameters": [
+                    {
+                        "description": "删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.VisibilityDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/material_category_visibility/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取物品分类可见性配置详情（仅总店可用）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "获取可见性配置详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "配置UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.VisibilityDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/material_category_visibility/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取物品分类可见性配置列表（仅总店可用）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "获取可见性配置列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.VisibilityListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/material_category_visibility/sub_shop_roles": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取所有子店的角色列表（仅总店可用，用于配置可见性规则）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "获取子店角色列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SubShopRolesResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/material_category_visibility/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更新物品分类可见性配置（仅总店可用，更新后自动同步到子店）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "更新可见性配置",
+                "parameters": [
+                    {
+                        "description": "更新请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.VisibilityUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
                     }
                 }
             }
@@ -51552,14 +51850,12 @@ const docTemplate = `{
         "req.TransferOrderReceiveReq": {
             "type": "object",
             "required": [
-                "file_uuids",
                 "uuid"
             ],
             "properties": {
                 "file_uuids": {
                     "description": "附件UUID列表",
                     "type": "array",
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -52458,6 +52754,106 @@ const docTemplate = `{
                 "password": {
                     "description": "密码",
                     "type": "string"
+                }
+            }
+        },
+        "req.VisibilityCreateReq": {
+            "type": "object",
+            "properties": {
+                "category_uuids": {
+                    "description": "物品类别UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "is_all_roles": {
+                    "description": "是否全部门店角色：1-全部，0-部分",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "locale_name": {
+                    "description": "配置名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "role_configs": {
+                    "description": "角色配置列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.VisibilityRoleConfig"
+                    }
+                }
+            }
+        },
+        "req.VisibilityDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "配置UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.VisibilityRoleConfig": {
+            "type": "object",
+            "properties": {
+                "company_uuid": {
+                    "type": "integer"
+                },
+                "role_uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "req.VisibilityUpdateReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "category_uuids": {
+                    "description": "物品类别UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "is_all_roles": {
+                    "description": "是否全部门店角色：1-全部，0-部分",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "locale_name": {
+                    "description": "配置名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "role_configs": {
+                    "description": "角色配置列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.VisibilityRoleConfig"
+                    }
+                },
+                "uuid": {
+                    "description": "配置UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -53960,6 +54356,18 @@ const docTemplate = `{
                     "description": "平均客单价（实付金额/用餐人数，保留2位小数）",
                     "type": "number"
                 },
+                "cash_ac": {
+                    "description": "现金AC（现金金额/现金TC，保留2位小数）",
+                    "type": "number"
+                },
+                "cash_amount": {
+                    "description": "现金金额（现金支付总金额，保留2位小数）",
+                    "type": "number"
+                },
+                "cash_tc": {
+                    "description": "现金TC（现金支付订单数）",
+                    "type": "integer"
+                },
                 "company_name": {
                     "description": "门店名称",
                     "type": "string"
@@ -54378,6 +54786,10 @@ const docTemplate = `{
                 "company_uuid": {
                     "description": "门店UUID",
                     "type": "integer"
+                },
+                "store_code": {
+                    "description": "店铺编号（用于排序和格式化）",
+                    "type": "string"
                 }
             }
         },
@@ -61612,6 +62024,10 @@ const docTemplate = `{
                     "description": "基准单位UUID",
                     "type": "integer"
                 },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
+                },
                 "locale_base_unit_name": {
                     "description": "基准单位名称",
                     "allOf": [
@@ -63156,6 +63572,30 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.ShopRoles": {
+            "type": "object",
+            "properties": {
+                "company_code": {
+                    "description": "门店编码",
+                    "type": "string"
+                },
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                },
+                "roles": {
+                    "description": "角色列表（复用 saas_staff.go 中的 RoleItem）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.RoleItem"
+                    }
+                }
+            }
+        },
         "resp.SimpleAmountInfo": {
             "type": "object",
             "properties": {
@@ -63736,6 +64176,17 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.SubProductItem"
+                    }
+                }
+            }
+        },
+        "resp.SubShopRolesResp": {
+            "type": "object",
+            "properties": {
+                "shops": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ShopRoles"
                     }
                 }
             }
@@ -65375,6 +65826,92 @@ const docTemplate = `{
                 "verified": {
                     "description": "验证结果: true-成功, false-失败",
                     "type": "boolean"
+                }
+            }
+        },
+        "resp.VisibilityDetailResp": {
+            "type": "object",
+            "properties": {
+                "category_uuids": {
+                    "description": "物品类别UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "is_all_roles": {
+                    "description": "是否全部门店角色",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "配置名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "role_configs": {
+                    "description": "角色配置列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.VisibilityRoleConfig"
+                    }
+                },
+                "uuid": {
+                    "description": "配置UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.VisibilityListItem": {
+            "type": "object",
+            "properties": {
+                "category_count": {
+                    "description": "类别数量",
+                    "type": "integer"
+                },
+                "is_all_roles": {
+                    "description": "是否全部门店角色",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "配置名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "role_count": {
+                    "description": "角色数量（-1表示全部）",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "配置UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.VisibilityListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.VisibilityListItem"
+                    }
+                }
+            }
+        },
+        "resp.VisibilityRoleConfig": {
+            "type": "object",
+            "properties": {
+                "company_uuid": {
+                    "type": "integer"
+                },
+                "role_uuid": {
+                    "type": "integer"
                 }
             }
         },

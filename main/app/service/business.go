@@ -3801,6 +3801,7 @@ func (s *businessSrv) GetCompanyList(ctx context.Context) (*resp.CompanySummaryL
 	dbm := database.GetDBManager(config.Database)
 	saasDB := dbm.GetDB(constant.DefaultDB)
 	companyRepo := repository.NewCompanyRepo(saasDB)
+	settingSrv := setting.NewSrv(dbm, cache.Global)
 
 	// 总店：使用 GetVisibleCompanyList 获取本店及下级所有子店
 	if companySetting.IsHeadquarter() {
@@ -3822,7 +3823,6 @@ func (s *businessSrv) GetCompanyList(ctx context.Context) (*resp.CompanySummaryL
 		// 创建必要的服务实例
 		captchaSrv := NewCaptchaSrv(nil) // 这里不需要验证码服务，传 nil
 		roleAccessSrv := NewRoleAccessSrv(dbm)
-		settingSrv := setting.NewSrv(dbm, cache.Global)
 		deviceSrv := NewDeviceSrv(settingSrv, dbm)
 		cashBoxSrv := NewCashBoxSrv(dbm)
 		statisticsSrv := NewStatisticsSrv()
@@ -3840,6 +3840,101 @@ func (s *businessSrv) GetCompanyList(ctx context.Context) (*resp.CompanySummaryL
 			})
 		}
 	}
+
+	// 并发获取每个门店的 store_code 并格式化名称
+	// 使用带缓冲的 channel 控制并发数量，最多10个协程，避免资源消耗过大
+	maxConcurrent := 10
+	semaphore := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+	type storeCodeResult struct {
+		index     int
+		storeCode string
+	}
+	resultChan := make(chan storeCodeResult, len(companyList))
+
+	for i, item := range companyList {
+		wg.Add(1)
+		utils.Go(func() {
+			func(idx int, companyUuid uint64) {
+				defer wg.Done()
+
+				// 获取信号量，控制并发数
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
+
+				// 获取门店数据库连接
+				shopDB := dbm.GetDB(companyUuid)
+				if shopDB == nil {
+					resultChan <- storeCodeResult{index: idx, storeCode: ""}
+					return
+				}
+
+				// 创建门店 context
+				shopCtx := ctx.Copy()
+				shopCtx.SetDB(shopDB)
+
+				// 获取 store_setting
+				storeSetting, err := settingSrv.GetStoreSetting(shopCtx)
+				if err != nil {
+					resultChan <- storeCodeResult{index: idx, storeCode: ""}
+					return
+				}
+
+				resultChan <- storeCodeResult{index: idx, storeCode: storeSetting.StoreCode}
+			}(i, item.CompanyUuid)
+		})
+	}
+
+	// 等待所有查询完成
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// 收集结果并更新 companyList
+	for result := range resultChan {
+		if result.storeCode != "" {
+			companyList[result.index].StoreCode = result.storeCode
+			// 格式化店铺名称：{店铺编号} {商家名称}
+			companyList[result.index].CompanyName = result.storeCode + " " + companyList[result.index].CompanyName
+		}
+	}
+
+	// 按店铺编号排序：1. 无编号优先 2. 数字(0-9)优先 3. 字母(a-z)其次
+	sort.Slice(companyList, func(i, j int) bool {
+		codeI := companyList[i].StoreCode
+		codeJ := companyList[j].StoreCode
+
+		// 无编号优先
+		if codeI == "" && codeJ != "" {
+			return true
+		}
+		if codeI != "" && codeJ == "" {
+			return false
+		}
+		if codeI == "" && codeJ == "" {
+			// 都无编号时按名称排序
+			return companyList[i].CompanyName < companyList[j].CompanyName
+		}
+
+		// 获取首字符进行类型判断
+		firstI := rune(codeI[0])
+		firstJ := rune(codeJ[0])
+
+		// 数字优先于字母
+		isDigitI := firstI >= '0' && firstI <= '9'
+		isDigitJ := firstJ >= '0' && firstJ <= '9'
+
+		if isDigitI && !isDigitJ {
+			return true // i 是数字，j 不是，i 优先
+		}
+		if !isDigitI && isDigitJ {
+			return false // j 是数字，i 不是，j 优先
+		}
+
+		// 同类型按字符串排序（大小写不敏感）
+		return strings.ToLower(codeI) < strings.ToLower(codeJ)
+	})
 
 	return &resp.CompanySummaryListResp{
 		List: companyList,
@@ -4140,15 +4235,67 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 
 				statisticsData := s.statisticsSrv.CountBusinessSummary(shopCtx, statisticsReq)
 
+				// 额外查询现金支付统计数据
+				cashPaymentReq := req.StatisticsPaymentMethodReq{
+					PageReq: dto.PageReq{
+						PageNo:   1,
+						PageSize: 1000, // 获取所有数据，不分页
+					},
+					QueryStartDate:     queryStartDate,
+					QueryEndDate:       queryEndDate,
+					Cycle:              request.Cycle,
+					ExcludeDataManage:  excludeDataManage,
+					OrderDelivery:      1,
+					Source:             1,
+					PaymentMethodNames: []string{"Cash"}, // 只查询现金支付
+				}
+				cashPaymentData := s.statisticsSrv.CountBusinessPaymentMethod(shopCtx, cashPaymentReq)
+
+				// 构建日期到现金统计的映射（使用 decimal 避免精度问题）
+				cashStatsByDate := make(map[string]struct {
+					CashTC     int64
+					CashAmount decimal.Decimal
+				})
+				for _, cashItem := range cashPaymentData.StatisticsPaymentMethodList {
+					if existing, ok := cashStatsByDate[cashItem.Date]; ok {
+						// 累加同一天的数据（理论上每天只有一条 Cash 记录，但为安全起见做累加）
+						cashStatsByDate[cashItem.Date] = struct {
+							CashTC     int64
+							CashAmount decimal.Decimal
+						}{
+							CashTC:     existing.CashTC + cashItem.PaymentNum,
+							CashAmount: existing.CashAmount.Add(decimal.NewFromFloat(cashItem.PaymentAmount)),
+						}
+					} else {
+						cashStatsByDate[cashItem.Date] = struct {
+							CashTC     int64
+							CashAmount decimal.Decimal
+						}{
+							CashTC:     cashItem.PaymentNum,
+							CashAmount: decimal.NewFromFloat(cashItem.PaymentAmount),
+						}
+					}
+				}
+
 				// 转换为响应格式
 				items := make([]resp.CompanyBusinessSummaryItem, 0, len(statisticsData.StatisticsComprehensiveList))
 				for _, statItem := range statisticsData.StatisticsComprehensiveList {
+					// 获取当天的现金统计
+					cashStats := cashStatsByDate[statItem.Date]
+					var cashAC float64
+					if cashStats.CashTC > 0 {
+						cashAC = utils.Round(cashStats.CashAmount.InexactFloat64()/float64(cashStats.CashTC), 2)
+					}
+
 					items = append(items, resp.CompanyBusinessSummaryItem{
 						Date:               statItem.Date,
 						CompanyName:        companyName, // 使用 GetCompanyList 返回的 CompanyName，避免重复查询
 						OrderAmount:        statItem.OrderAmount,
 						PayAmount:          statItem.PayAmount,
 						OrderNum:           statItem.OrderNum,
+						CashTC:             cashStats.CashTC,
+						CashAmount:         utils.Round(cashStats.CashAmount.InexactFloat64(), 2),
+						CashAC:             cashAC,
 						MealNum:            statItem.MealNum,
 						DeskNum:            statItem.DeskNum,
 						AvgCustomerPrice:   statItem.PayAmountMealAvg,
@@ -4200,9 +4347,11 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 			InstantOrderAmount decimal.Decimal
 			DeskOrderAmount    decimal.Decimal
 			TakeoutOrderAmount decimal.Decimal
+			CashAmount         decimal.Decimal
 			OrderNum           int64
 			MealNum            int64
 			DeskNum            int64
+			CashTC             int64
 		}
 		dateDecimalMap := make(map[string]*dateSummaryDecimal)
 
@@ -4214,9 +4363,11 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 				dateDecimal.InstantOrderAmount = dateDecimal.InstantOrderAmount.Add(decimal.NewFromFloat(item.InstantOrderAmount))
 				dateDecimal.DeskOrderAmount = dateDecimal.DeskOrderAmount.Add(decimal.NewFromFloat(item.DeskOrderAmount))
 				dateDecimal.TakeoutOrderAmount = dateDecimal.TakeoutOrderAmount.Add(decimal.NewFromFloat(item.TakeoutOrderAmount))
+				dateDecimal.CashAmount = dateDecimal.CashAmount.Add(decimal.NewFromFloat(item.CashAmount))
 				dateDecimal.OrderNum += item.OrderNum
 				dateDecimal.MealNum += item.MealNum
 				dateDecimal.DeskNum += item.DeskNum
+				dateDecimal.CashTC += item.CashTC
 				// 收集商家名称
 				if dateCompanyNamesMap[item.Date] == nil {
 					dateCompanyNamesMap[item.Date] = make(map[string]bool)
@@ -4230,9 +4381,11 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 					InstantOrderAmount: decimal.NewFromFloat(item.InstantOrderAmount),
 					DeskOrderAmount:    decimal.NewFromFloat(item.DeskOrderAmount),
 					TakeoutOrderAmount: decimal.NewFromFloat(item.TakeoutOrderAmount),
+					CashAmount:         decimal.NewFromFloat(item.CashAmount),
 					OrderNum:           item.OrderNum,
 					MealNum:            item.MealNum,
 					DeskNum:            item.DeskNum,
+					CashTC:             item.CashTC,
 				}
 				// 初始化商家名称集合
 				if dateCompanyNamesMap[item.Date] == nil {
@@ -4245,12 +4398,21 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 		// 转换为列表并计算人均和单均，设置商家名称
 		finalList = make([]resp.CompanyBusinessSummaryItem, 0, len(dateDecimalMap))
 		for date, dateDecimal := range dateDecimalMap {
+			// 计算现金AC
+			var cashAC float64
+			if dateDecimal.CashTC > 0 {
+				cashAC = utils.Round(dateDecimal.CashAmount.InexactFloat64()/float64(dateDecimal.CashTC), 2)
+			}
+
 			dateItem := resp.CompanyBusinessSummaryItem{
 				Date:               date,
 				CompanyName:        "", // 稍后设置
 				OrderAmount:        dateDecimal.OrderAmount.InexactFloat64(),
 				PayAmount:          dateDecimal.PayAmount.InexactFloat64(),
 				OrderNum:           dateDecimal.OrderNum,
+				CashTC:             dateDecimal.CashTC,
+				CashAmount:         dateDecimal.CashAmount.InexactFloat64(),
+				CashAC:             cashAC,
 				MealNum:            dateDecimal.MealNum,
 				DeskNum:            dateDecimal.DeskNum,
 				InstantOrderAmount: dateDecimal.InstantOrderAmount.InexactFloat64(),
@@ -4288,8 +4450,8 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 		})
 
 		// 计算总汇总行（使用 decimal）
-		var totalOrderAmount, totalPayAmount, totalInstantOrderAmount, totalDeskOrderAmount, totalTakeoutOrderAmount decimal.Decimal
-		var totalOrderNum, totalMealNum, totalDeskNum int64
+		var totalOrderAmount, totalPayAmount, totalInstantOrderAmount, totalDeskOrderAmount, totalTakeoutOrderAmount, totalCashAmount decimal.Decimal
+		var totalOrderNum, totalMealNum, totalDeskNum, totalCashTC int64
 
 		for _, item := range finalList {
 			totalOrderAmount = totalOrderAmount.Add(decimal.NewFromFloat(item.OrderAmount))
@@ -4297,6 +4459,8 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 			totalOrderNum += item.OrderNum
 			totalMealNum += item.MealNum
 			totalDeskNum += item.DeskNum
+			totalCashTC += item.CashTC
+			totalCashAmount = totalCashAmount.Add(decimal.NewFromFloat(item.CashAmount))
 			totalInstantOrderAmount = totalInstantOrderAmount.Add(decimal.NewFromFloat(item.InstantOrderAmount))
 			totalDeskOrderAmount = totalDeskOrderAmount.Add(decimal.NewFromFloat(item.DeskOrderAmount))
 			totalTakeoutOrderAmount = totalTakeoutOrderAmount.Add(decimal.NewFromFloat(item.TakeoutOrderAmount))
@@ -4304,6 +4468,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 
 		// 计算总汇总行的人均和单均（使用 decimal）
 		var avgCustomerPrice, orderAmountMealAvg, orderAmountAvg, payAmountAvg decimal.Decimal
+		var totalCashAC float64
 
 		if totalMealNum > 0 {
 			avgCustomerPrice = totalPayAmount.Div(decimal.NewFromInt(totalMealNum))
@@ -4312,6 +4477,9 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 		if totalOrderNum > 0 {
 			orderAmountAvg = totalOrderAmount.Div(decimal.NewFromInt(totalOrderNum))
 			payAmountAvg = totalPayAmount.Div(decimal.NewFromInt(totalOrderNum))
+		}
+		if totalCashTC > 0 {
+			totalCashAC = utils.Round(totalCashAmount.InexactFloat64()/float64(totalCashTC), 2)
 		}
 
 		// 收集所有商家名称（用于汇总行）
@@ -4333,6 +4501,9 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 			OrderAmount:        utils.Round(totalOrderAmount.InexactFloat64(), 2),
 			PayAmount:          utils.Round(totalPayAmount.InexactFloat64(), 2),
 			OrderNum:           totalOrderNum,
+			CashTC:             totalCashTC,
+			CashAmount:         utils.Round(totalCashAmount.InexactFloat64(), 2),
+			CashAC:             totalCashAC,
 			MealNum:            totalMealNum,
 			DeskNum:            totalDeskNum,
 			AvgCustomerPrice:   utils.Round(avgCustomerPrice.InexactFloat64(), 2),
@@ -5404,34 +5575,34 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		return errors.New("数据类型错误")
 	}
 
-	// 表头映射
+	// 表头映射（字段顺序：营业日、店铺名称、总营业额、实收金额、TC、AC、现金TC、现金金额、现金AC、用餐人数、消费桌数、平均客单价、订单金额人均、订单金额单均、实付金额单均、点餐订单金额、桌台订单金额、外送订单金额）
 	headerMap := map[string][]string{
 		"zh": { // 中文
-			"营业日", "门店名称", "订单金额", "实付金额", "订单量", "用餐人数", "消费桌数", "平均客单价", "订单金额人均", "订单金额单均", "实付金额单均", "点餐订单金额", "桌台订单金额", "外送订单金额",
+			"营业日", "店铺名称", "总营业额", "实收金额", "TC", "AC", "现金TC", "现金金额", "现金AC", "用餐人数", "消费桌数", "平均客单价", "订单金额人均", "订单金额单均", "实付金额单均", "点餐订单金额", "桌台订单金额", "外送订单金额",
 		},
 		"en": { // 英文
-			"Business Day", "Store Name", "Order Amount", "Paid Amount", "Order Count", "Number of Diners", "Number of Tables Consumed", "Average Customer Price", "Order Amount Per Person", "Order Amount Per Order", "Paid Amount Per Order", "Meal Order Amount", "Table Order Amount", "Takeout Order Amount",
+			"Business Day", "Store Name", "Total Revenue", "Actual Amount", "TC", "AC", "Cash TC", "Cash Amount", "Cash AC", "Number of Diners", "Number of Tables Consumed", "Average Customer Price", "Order Amount Per Person", "Order Amount Per Order", "Paid Amount Per Order", "Meal Order Amount", "Table Order Amount", "Takeout Order Amount",
 		},
 		"th": { // 泰语
-			"วันดำเนินธุรกิจ", "ชื่อร้าน", "ยอดคำสั่งซื้อ", "ยอดชำระเงิน", "จำนวนออเดอร์", "จำนวนลูกค้า", "จำนวนโต๊ะที่ใช้", "ราคาเฉลี่ยต่อลูกค้า", "ยอดคำสั่งซื้อต่อคน", "ยอดคำสั่งซื้อต่อบิล", "ยอดชำระเงินต่อบิล", "ยอดคำสั่งซื้อรับประทานอาหาร", "ยอดคำสั่งซื้อโต๊ะ", "ยอดคำสั่งซื้อนำกลับบ้าน",
+			"วันดำเนินธุรกิจ", "ชื่อร้าน", "ยอดขายรวม", "ยอดรับจริง", "TC", "AC", "Cash TC", "ยอดเงินสด", "Cash AC", "จำนวนลูกค้า", "จำนวนโต๊ะที่ใช้", "ราคาเฉลี่ยต่อลูกค้า", "ยอดคำสั่งซื้อต่อคน", "ยอดคำสั่งซื้อต่อบิล", "ยอดชำระเงินต่อบิล", "ยอดคำสั่งซื้อรับประทานอาหาร", "ยอดคำสั่งซื้อโต๊ะ", "ยอดคำสั่งซื้อนำกลับบ้าน",
 		},
 		"zhtw": { // 繁体中文
-			"營業日", "門店名稱", "訂單金額", "實付金額", "訂單量", "用餐人數", "消費桌數", "平均客單價", "訂單金額人均", "訂單金額單均", "實付金額單均", "點餐訂單金額", "桌台訂單金額", "外送訂單金額",
+			"營業日", "店鋪名稱", "總營業額", "實收金額", "TC", "AC", "現金TC", "現金金額", "現金AC", "用餐人數", "消費桌數", "平均客單價", "訂單金額人均", "訂單金額單均", "實付金額單均", "點餐訂單金額", "桌台訂單金額", "外送訂單金額",
 		},
 		"ja": { // 日语
-			"営業日", "店舗名", "注文金額", "支払い金額", "注文数", "来店人数", "利用テーブル数", "平均客単価", "一人当たり注文金額", "一件当たり注文金額", "一件当たり支払い金額", "食事注文金額", "テーブル注文金額", "テイクアウト注文金額",
+			"営業日", "店舗名", "総売上高", "実収金額", "TC", "AC", "現金TC", "現金金額", "現金AC", "来店人数", "利用テーブル数", "平均客単価", "一人当たり注文金額", "一件当たり注文金額", "一件当たり支払い金額", "食事注文金額", "テーブル注文金額", "テイクアウト注文金額",
 		},
 		"ko": { // 韩语
-			"영업일", "매장명", "주문 금액", "실제 결제 금액", "주문 건수", "식사 인원", "소비 테이블 수", "평균 고객 단가", "인당 주문 금액", "주문당 주문 금액", "주문당 실제 결제 금액", "식사 주문 금액", "테이블 주문 금액", "포장 주문 금액",
+			"영업일", "매장명", "총 매출액", "실수령액", "TC", "AC", "현금 TC", "현금 금액", "현금 AC", "식사 인원", "소비 테이블 수", "평균 고객 단가", "인당 주문 금액", "주문당 주문 금액", "주문당 실제 결제 금액", "식사 주문 금액", "테이블 주문 금액", "포장 주문 금액",
 		},
 		"my": { // 缅甸语
-			"လုပ်ငန်းသက်တမ်းနေ့", "ဆိုင်အမည်", "အော်ဒါစုစုပေါင်းပမာဏ", "ပေးသွင်းငွေ", "အော်ဒါအရေအတွက်", "စားသုံးသူအရေအတွက်", "စားသုံးထားသောစားပွဲအရေအတွက်", "ပျမ်းမျှဖောက်သည်စျေးနှုန်း", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်ပေးသွင်းငွေ", "အစားအသောက်အော်ဒါပမာဏ", "စားပွဲအော်ဒါပမာဏ", "ယူဆောင်အော်ဒါပမာဏ",
+			"လုပ်ငန်းသက်တမ်းနေ့", "ဆိုင်အမည်", "စုစုပေါင်းဝင်ငွေ", "အမှန်တကယ်ရငွေ", "TC", "AC", "ငွေသား TC", "ငွေသားပမာဏ", "ငွေသား AC", "စားသုံးသူအရေအတွက်", "စားသုံးထားသောစားပွဲအရေအတွက်", "ပျမ်းမျှဖောက်သည်စျေးနှုန်း", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်ပေးသွင်းငွေ", "အစားအသောက်အော်ဒါပမာဏ", "စားပွဲအော်ဒါပမာဏ", "ယူဆောင်အော်ဒါပမာဏ",
 		},
 		"tr": { // 土耳其语
-			"İşletme Günü", "Mağaza Adı", "Sipariş Tutarı", "Ödenen Tutar", "Sipariş Sayısı", "Yemek Yiyen Kişi Sayısı", "Tüketilen Masa Sayısı", "Ortalama Müşteri Fiyatı", "Kişi Başına Sipariş Tutarı", "Sipariş Başına Sipariş Tutarı", "Sipariş Başına Ödenen Tutar", "Yemek Sipariş Tutarı", "Masa Sipariş Tutarı", "Paket Sipariş Tutarı",
+			"İşletme Günü", "Mağaza Adı", "Toplam Gelir", "Gerçek Tutar", "TC", "AC", "Nakit TC", "Nakit Tutar", "Nakit AC", "Yemek Yiyen Kişi Sayısı", "Tüketilen Masa Sayısı", "Ortalama Müşteri Fiyatı", "Kişi Başına Sipariş Tutarı", "Sipariş Başına Sipariş Tutarı", "Sipariş Başına Ödenen Tutar", "Yemek Sipariş Tutarı", "Masa Sipariş Tutarı", "Paket Sipariş Tutarı",
 		},
 		"sv": { // 瑞典语
-			"Affärsdag", "Butiksnamn", "Orderbelopp", "Betalt Belopp", "Antal Order", "Antal Gäster", "Antal Konsumerade Bord", "Genomsnittligt Kundpris", "Orderbelopp per Person", "Orderbelopp per Order", "Betalt Belopp per Order", "Matbeställningsbelopp", "Bordsorderbelopp", "Takeaway Orderbelopp",
+			"Affärsdag", "Butiksnamn", "Total Omsättning", "Faktiskt Belopp", "TC", "AC", "Kontant TC", "Kontant Belopp", "Kontant AC", "Antal Gäster", "Antal Konsumerade Bord", "Genomsnittligt Kundpris", "Orderbelopp per Person", "Orderbelopp per Order", "Betalt Belopp per Order", "Matbeställningsbelopp", "Bordsorderbelopp", "Takeaway Orderbelopp",
 		},
 	}
 
@@ -5461,7 +5632,7 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellStyle(sheet1Name, cell, cell, style)
 	}
 
-	// 写入明细表数据
+	// 写入明细表数据（字段顺序：营业日、店铺名称、总营业额、实收金额、TC、AC、现金TC、现金金额、现金AC、用餐人数、消费桌数、平均客单价、订单金额人均、订单金额单均、实付金额单均、点餐订单金额、桌台订单金额、外送订单金额）
 	for rowIdx, item := range detailResp.List {
 		offsetRow := rowIdx + 2
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("A%d", offsetRow), item.Date)
@@ -5469,15 +5640,19 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("C%d", offsetRow), item.OrderAmount)
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("D%d", offsetRow), item.PayAmount)
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("E%d", offsetRow), item.OrderNum)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("F%d", offsetRow), item.MealNum)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("G%d", offsetRow), item.DeskNum)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("H%d", offsetRow), item.AvgCustomerPrice)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("I%d", offsetRow), item.OrderAmountMealAvg)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("J%d", offsetRow), item.OrderAmountAvg)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("K%d", offsetRow), item.PayAmountAvg)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("L%d", offsetRow), item.InstantOrderAmount)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("M%d", offsetRow), item.DeskOrderAmount)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("N%d", offsetRow), item.TakeoutOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("F%d", offsetRow), item.OrderAmountAvg) // AC = 订单金额单均
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("G%d", offsetRow), item.CashTC)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("H%d", offsetRow), item.CashAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("I%d", offsetRow), item.CashAC)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("J%d", offsetRow), item.MealNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("K%d", offsetRow), item.DeskNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("L%d", offsetRow), item.AvgCustomerPrice)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("M%d", offsetRow), item.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("N%d", offsetRow), item.OrderAmountAvg) // 订单金额单均
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("O%d", offsetRow), item.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("P%d", offsetRow), item.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("Q%d", offsetRow), item.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("R%d", offsetRow), item.TakeoutOrderAmount)
 	}
 
 	// 自动调整明细表列宽
@@ -5503,7 +5678,7 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellStyle(sheet2Name, cell, cell, style)
 	}
 
-	// 写入汇总表数据
+	// 写入汇总表数据（字段顺序与明细表一致）
 	for rowIdx, item := range summaryResp.List {
 		offsetRow := rowIdx + 2
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", offsetRow), item.Date)
@@ -5511,18 +5686,22 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", offsetRow), item.OrderAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", offsetRow), item.PayAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", offsetRow), item.OrderNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", offsetRow), item.MealNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", offsetRow), item.DeskNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", offsetRow), item.AvgCustomerPrice)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", offsetRow), item.OrderAmountMealAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", offsetRow), item.OrderAmountAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", offsetRow), item.PayAmountAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", offsetRow), item.InstantOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", offsetRow), item.DeskOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", offsetRow), item.TakeoutOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", offsetRow), item.OrderAmountAvg) // AC = 订单金额单均
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", offsetRow), item.CashTC)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", offsetRow), item.CashAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", offsetRow), item.CashAC)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", offsetRow), item.MealNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", offsetRow), item.DeskNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", offsetRow), item.AvgCustomerPrice)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", offsetRow), item.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", offsetRow), item.OrderAmountAvg) // 订单金额单均
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("O%d", offsetRow), item.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("P%d", offsetRow), item.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("Q%d", offsetRow), item.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("R%d", offsetRow), item.TakeoutOrderAmount)
 	}
 
-	// 写入汇总行
+	// 写入汇总行（字段顺序与数据行一致）
 	if summaryResp.SummaryRow.Date != "" || summaryResp.SummaryRow.CompanyName != "" {
 		summaryRow := len(summaryResp.List) + 2
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", summaryRow), summaryResp.SummaryRow.Date)
@@ -5530,15 +5709,19 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", summaryRow), summaryResp.SummaryRow.OrderAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", summaryRow), summaryResp.SummaryRow.PayAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", summaryRow), summaryResp.SummaryRow.OrderNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", summaryRow), summaryResp.SummaryRow.MealNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", summaryRow), summaryResp.SummaryRow.DeskNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", summaryRow), summaryResp.SummaryRow.AvgCustomerPrice)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", summaryRow), summaryResp.SummaryRow.OrderAmountMealAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", summaryRow), summaryResp.SummaryRow.OrderAmountAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", summaryRow), summaryResp.SummaryRow.PayAmountAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", summaryRow), summaryResp.SummaryRow.InstantOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", summaryRow), summaryResp.SummaryRow.DeskOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", summaryRow), summaryResp.SummaryRow.TakeoutOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", summaryRow), summaryResp.SummaryRow.OrderAmountAvg) // AC
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", summaryRow), summaryResp.SummaryRow.CashTC)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", summaryRow), summaryResp.SummaryRow.CashAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", summaryRow), summaryResp.SummaryRow.CashAC)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", summaryRow), summaryResp.SummaryRow.MealNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", summaryRow), summaryResp.SummaryRow.DeskNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", summaryRow), summaryResp.SummaryRow.AvgCustomerPrice)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", summaryRow), summaryResp.SummaryRow.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", summaryRow), summaryResp.SummaryRow.OrderAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("O%d", summaryRow), summaryResp.SummaryRow.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("P%d", summaryRow), summaryResp.SummaryRow.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("Q%d", summaryRow), summaryResp.SummaryRow.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("R%d", summaryRow), summaryResp.SummaryRow.TakeoutOrderAmount)
 	}
 
 	// 自动调整汇总表列宽
@@ -5551,7 +5734,7 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 }
 
 // exportPaymentMethodSummaryToExcel 导出支付方式汇总到Excel
-func (s *businessSrv) exportPaymentMethodSummaryToExcel(xlsxFile *excelize.File, detailResult, summaryResult interface{}, lang string) error {
+func (s *businessSrv) exportPaymentMethodSummaryToExcel(xlsxFile *excelize.File, detailResult, summaryResult any, lang string) error {
 	detailResp, ok1 := detailResult.(*resp.CompanyPaymentMethodSummaryResp)
 	summaryResp, ok2 := summaryResult.(*resp.CompanyPaymentMethodSummaryResp)
 	if !ok1 || !ok2 {
@@ -5703,7 +5886,7 @@ func (s *businessSrv) exportPaymentMethodSummaryToExcel(xlsxFile *excelize.File,
 }
 
 // exportRefundSummaryToExcel 导出退款金额汇总到Excel
-func (s *businessSrv) exportRefundSummaryToExcel(xlsxFile *excelize.File, detailResult, summaryResult interface{}, lang string) error {
+func (s *businessSrv) exportRefundSummaryToExcel(xlsxFile *excelize.File, detailResult, summaryResult any, lang string) error {
 	detailResp, ok1 := detailResult.(*resp.CompanyRefundSummaryResp)
 	summaryResp, ok2 := summaryResult.(*resp.CompanyRefundSummaryResp)
 	if !ok1 || !ok2 {
