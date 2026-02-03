@@ -446,7 +446,7 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 	// B、在详情中保存或者提交
 
 	// 验证仓库和物品明细
-	warehouseItems, materials, err := s.validateWarehouseAndItems(db, saveReq)
+	warehouseItems, materials, err := s.validateWarehouseAndItems(ctx, db, saveReq)
 	if err != nil {
 		return stockReconciliationUuid, err
 	}
@@ -664,6 +664,16 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 	warehouseMaterialUUidMap, err := s.getWarehouseMaterialUuidMap(db, stockReconciliation.WarehouseUuid)
 	if err != nil {
 		return errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+	}
+
+	lang := ctx.GetLanguage()
+	existsMaterialUuidMap := make(map[uint64]bool)
+	for _, reqItem := range stockReconciliation.StockReconciliationItems {
+		if _, exists := existsMaterialUuidMap[reqItem.MaterialUuid]; exists {
+			materialName := *language.JsonToLocaleResponse(reqItem.MaterialName)
+			return fmt.Errorf(i18n.Translate(lang, "物品 %s 重复"), materialName.GetLocale(lang))
+		}
+		existsMaterialUuidMap[reqItem.MaterialUuid] = true
 	}
 
 	companySetting := ctx.GetCompanySetting()
@@ -1104,7 +1114,7 @@ func (s *stockReconciliationSrv) generateOrderNo(
 // 1. 仓库是否存在且类型为 normal
 // 2. 物品是否属于该仓库
 // 3. 物品单位是否正确
-func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.StockReconciliationSaveReq) ([]model.WarehouseItem, []*model.Material, error) {
+func (s *stockReconciliationSrv) validateWarehouseAndItems(ctx context.Context, db *gorm.DB, req req.StockReconciliationSaveReq) ([]model.WarehouseItem, []*model.Material, error) {
 	warehouseUuid := req.WarehouseUuid
 	if warehouseUuid == 0 {
 		return nil, nil, errors.New("仓库参数错误")
@@ -1148,6 +1158,15 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 		for _, material := range materials {
 			materialMap[material.Uuid] = material
 		}
+	}
+
+	language := ctx.GetLanguage()
+	existsMaterialUuidMap := make(map[uint64]bool)
+	for _, reqItem := range req.Items {
+		if _, exists := existsMaterialUuidMap[reqItem.MaterialUuid]; exists {
+			return nil, nil, fmt.Errorf(i18n.Translate(language, "物品 %s 重复"), materialMap[reqItem.MaterialUuid].MultiLanguageName.GetNameByLang(language))
+		}
+		existsMaterialUuidMap[reqItem.MaterialUuid] = true
 	}
 
 	// 验证请求中的物品和单位

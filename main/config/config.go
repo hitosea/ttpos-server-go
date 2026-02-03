@@ -26,6 +26,7 @@ var GoogleBucket GoogleBucketConf
 var Google GoogleConf
 var Nacos NacosConf
 var Takeout TakeoutConf
+var Bmp BmpConf
 var Rocketmq rocketmq.Config
 var Otlp *otlp.OtlpConfig
 
@@ -53,6 +54,7 @@ func Init() error {
 	nacosConf(opt)           // nacos配置
 	rocketmqConf(opt)        // rocketmq配置
 	takeoutConf(opt)         // 外卖配置
+	bmpConf(opt)             // BMP服务直连配置
 	// 验证码
 	Captcha = CaptchaConf{CachePrefix: "captcha:"}
 	// 接口加密相关
@@ -109,6 +111,21 @@ func nacosConf(opt copier.Option) {
 		Password:  viper.GetString("NACOS_PASSWORD"),
 		DataId:    viper.GetString("NACOS_DATAID"),
 		Group:     viper.GetString("NACOS_GROUP"),
+	}, opt)
+}
+
+func bmpConf(opt copier.Option) {
+	Bmp = BmpConf{
+		ErpGrpcAddr:       "",
+		TakeoutGrpcAddr:   "",
+		MessageGrpcAddr:   "",
+		WebsocketGrpcAddr: "",
+	}
+	copier.CopyWithOption(&Bmp, BmpConf{
+		ErpGrpcAddr:       viper.GetString("BMP_ERP_GRPC_ADDR"),       // ttpos-erp gRPC直连地址
+		TakeoutGrpcAddr:   viper.GetString("BMP_TAKEOUT_GRPC_ADDR"),   // ttpos-takeout gRPC直连地址
+		MessageGrpcAddr:   viper.GetString("BMP_MESSAGE_GRPC_ADDR"),   // ttpos-message gRPC直连地址
+		WebsocketGrpcAddr: viper.GetString("BMP_WEBSOCKET_GRPC_ADDR"), // ttpos-websocket gRPC直连地址
 	}, opt)
 }
 

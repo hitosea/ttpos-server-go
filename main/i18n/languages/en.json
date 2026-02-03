@@ -3321,6 +3321,7 @@
   "报损单不存在": "The damage report does not exist",
   "报损数量大于剩余库存数量": "Report damage quantity is greater than the inventory quantity",
   "报损记录": "Damage/Loss Records",
+  "报损管理": "Stock Loss Management",
   "报表": "Report",
   "报表中心": "Report Center",
   "抹元": "Mo Yuan",
@@ -5145,6 +5146,7 @@
   "物品 %s 的状态已关闭。\\n\\n提交后将移除该物品，是否继续提交？": "The item %s is disabled.\\n\\nAfter submission the item will be removed. Continue to submit?",
   "物品 %s 的状态已关闭。\\n\\n请修改物品状态": "The status of item %s has been closed.\\n\\nPlease modify the item status",
   "物品 %s 超出限购/单位变动，请检查物品和数量。": "Item %s exceeds purchase limit/unit change, please check the item and quantity.",
+  "物品 %s 重复": "Item %s is duplicated",
   "物品%s已禁用": "Item %s has been disabled",
   "物品%s状态已关闭，请修改物品状态": "The status of item %s has been closed. Please update the item status.",
   "物品%s申请总数（%.2f）已超过限购数（%.2f），请调整数量后提交。": "The total requested quantity for item %s (%.2f) exceeds the purchase limit (%.2f). Please adjust the quantity and submit again.",
@@ -7664,4 +7666,10 @@
   "點餐-店內": "Order - Dine-in",
   "龘": "龘",
   "龙": "Dragon"
+,
+  "物品%s未找到": "Item %s not found",
+  "审核报损单失败": "Failed to approve stock loss"
+,
+  "物品%s的状态已关闭。请修改物品状态": "Item %s is disabled. Please update the item status",
+  "物品%s的库存不足": "Insufficient stock for item %s"
 }

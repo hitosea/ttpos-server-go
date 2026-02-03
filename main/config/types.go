@@ -106,6 +106,14 @@ type NacosConf struct {
 	Group     string // 配置Group
 }
 
+// BmpConf BMP服务直连地址配置（调试模式使用）
+type BmpConf struct {
+	ErpGrpcAddr       string // ttpos-erp gRPC直连地址（如：localhost:14022）
+	TakeoutGrpcAddr   string // ttpos-takeout gRPC直连地址
+	MessageGrpcAddr   string // ttpos-message gRPC直连地址
+	WebsocketGrpcAddr string // ttpos-websocket gRPC直连地址
+}
+
 func (c *GoogleBucketConf) Verification() bool {
 	if c.GoogleApplicationCredentialsFileName == "" || c.GooglePrintBucketName == "" {
 		return false

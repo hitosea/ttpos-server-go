@@ -34704,6 +34704,510 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/stock_loss/annotation_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据报损单UUID获取批注列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报损管理"
+                ],
+                "summary": "获取报损单批注列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "报损单UUID",
+                        "name": "stock_loss_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockLossAnnotationListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_loss/approve": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "审核通过报损单，扣减仓库库存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报损管理"
+                ],
+                "summary": "审核通过报损单",
+                "parameters": [
+                    {
+                        "description": "审核报损单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockLossApproveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_loss/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除报损单（软删除，仅已保存状态可删除）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报损管理"
+                ],
+                "summary": "删除报损单",
+                "parameters": [
+                    {
+                        "description": "删除报损单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockLossDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_loss/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据UUID获取报损单详情，包含物品明细、附件、批注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报损管理"
+                ],
+                "summary": "获取报损单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "报损单UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockLossDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_loss/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "分页获取报损单列表，支持多仓库筛选、关键字搜索、创建时间范围筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报损管理"
+                ],
+                "summary": "获取报损单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "仓库UUID列表",
+                        "name": "warehouse_uuids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "关键字（搜索单据编号和ERP单据编号）",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "创建开始时间（时间戳）",
+                        "name": "start_create_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "创建结束时间（时间戳）",
+                        "name": "end_create_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "状态列表 0:已保存 1:已提交 2:已审核通过 3:已驳回",
+                        "name": "status_in",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "报损类型 1:物品损坏 2:物品报废 3:物品过期",
+                        "name": "loss_type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockLossListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_loss/reject": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "驳回报损单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报损管理"
+                ],
+                "summary": "驳回报损单",
+                "parameters": [
+                    {
+                        "description": "驳回报损单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockLossRejectReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_loss/resubmit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "将已驳回的报损单重新提交审核，支持修改报损单信息后提交",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报损管理"
+                ],
+                "summary": "重新提交报损单",
+                "parameters": [
+                    {
+                        "description": "重新提交报损单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockLossSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockLossUuidResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_loss/save": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "保存报损单信息（新建或修改）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报损管理"
+                ],
+                "summary": "保存报损单",
+                "parameters": [
+                    {
+                        "description": "保存报损单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockLossSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockLossUuidResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_loss/submit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "提交报损单进行审核",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报损管理"
+                ],
+                "summary": "提交报损单",
+                "parameters": [
+                    {
+                        "description": "提交报损单请求参数（is_submit设为true）",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockLossSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockLossUuidResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/stock_reconciliation/approve": {
             "post": {
                 "security": [
@@ -51282,6 +51786,126 @@ const docTemplate = `{
                 }
             }
         },
+        "req.StockLossApproveReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "annotation": {
+                    "description": "批注内容（非必填）",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "报损单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.StockLossDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "报损单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.StockLossItemReq": {
+            "type": "object",
+            "required": [
+                "material_uuid",
+                "units"
+            ],
+            "properties": {
+                "material_uuid": {
+                    "description": "物料UUID",
+                    "type": "integer"
+                },
+                "units": {
+                    "description": "报损单物品单位明细",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/req.StockLossItemUnitReq"
+                    }
+                }
+            }
+        },
+        "req.StockLossItemUnitReq": {
+            "type": "object",
+            "required": [
+                "material_unit_uuid"
+            ],
+            "properties": {
+                "material_unit_uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
+                },
+                "quantity": {
+                    "description": "单位数量",
+                    "type": "number"
+                }
+            }
+        },
+        "req.StockLossRejectReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "annotation": {
+                    "description": "批注内容（非必填）",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "报损单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.StockLossSaveReq": {
+            "type": "object",
+            "properties": {
+                "file_uuids": {
+                    "description": "附件UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "is_submit": {
+                    "description": "是否提交",
+                    "type": "boolean"
+                },
+                "items": {
+                    "description": "报损单物品明细（新建时必填）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.StockLossItemReq"
+                    }
+                },
+                "loss_type": {
+                    "description": "报损类型 1:物品损坏 2:物品报废 3:物品过期（新建时必填）",
+                    "type": "integer"
+                },
+                "reason": {
+                    "description": "报损原因",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "报损单UUID，如果为0，表示新建",
+                    "type": "integer"
+                },
+                "warehouse_uuid": {
+                    "description": "仓库UUID（新建时必填）",
+                    "type": "integer"
+                }
+            }
+        },
         "req.StockReconciliationApproveReq": {
             "type": "object",
             "required": [
@@ -63770,6 +64394,320 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "角色UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.StockLossAnnotationInfo": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "操作类型 submit/resubmit/approve/reject",
+                    "type": "string"
+                },
+                "content": {
+                    "description": "批注内容",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "操作类型名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "operator_name": {
+                    "description": "操作人姓名",
+                    "type": "string"
+                },
+                "operator_uuid": {
+                    "description": "操作人UUID",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "批注UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.StockLossAnnotationListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "批注列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockLossAnnotationInfo"
+                    }
+                }
+            }
+        },
+        "resp.StockLossDetailResp": {
+            "type": "object",
+            "properties": {
+                "annotations": {
+                    "description": "批注列表（按创建时间倒序）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockLossAnnotationInfo"
+                    }
+                },
+                "approve_time": {
+                    "description": "审核通过时间",
+                    "type": "integer"
+                },
+                "code": {
+                    "description": "单据编号",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "erp_code": {
+                    "description": "ERP单据编号",
+                    "type": "string"
+                },
+                "files": {
+                    "description": "附件列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockLossFileInfo"
+                    }
+                },
+                "is_can_resubmit": {
+                    "description": "是否可重新提交（已驳回状态且为发起人）",
+                    "type": "boolean"
+                },
+                "items": {
+                    "description": "报损单物品明细",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockLossItemInfo"
+                    }
+                },
+                "loss_type": {
+                    "description": "报损类型 1:物品损坏 2:物品报废 3:物品过期",
+                    "type": "integer"
+                },
+                "reason": {
+                    "description": "报损原因",
+                    "type": "string"
+                },
+                "reject_time": {
+                    "description": "驳回时间",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态 0:已保存 1:已提交 2:已审核通过 3:已驳回",
+                    "type": "integer"
+                },
+                "submit_time": {
+                    "description": "提交时间",
+                    "type": "integer"
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "报损单UUID",
+                    "type": "integer"
+                },
+                "warehouse_name": {
+                    "description": "仓库名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "warehouse_uuid": {
+                    "description": "仓库UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.StockLossFileInfo": {
+            "type": "object",
+            "properties": {
+                "file_type": {
+                    "description": "文件类型",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "文件名称",
+                    "type": "string"
+                },
+                "sort_order": {
+                    "description": "排序顺序",
+                    "type": "integer"
+                },
+                "url": {
+                    "description": "文件URL",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "文件UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.StockLossInfo": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "单据编号",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "erp_code": {
+                    "description": "ERP单据编号",
+                    "type": "string"
+                },
+                "items_count": {
+                    "description": "物品明细数量",
+                    "type": "integer"
+                },
+                "loss_type": {
+                    "description": "报损类型 1:物品损坏 2:物品报废 3:物品过期",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态 0:已保存 1:已提交 2:已审核通过 3:已驳回",
+                    "type": "integer"
+                },
+                "submit_time": {
+                    "description": "提交时间",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "报损单UUID",
+                    "type": "integer"
+                },
+                "warehouse_locale_name": {
+                    "description": "仓库多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "warehouse_uuid": {
+                    "description": "仓库UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.StockLossItemInfo": {
+            "type": "object",
+            "properties": {
+                "base_quantity": {
+                    "description": "基准单位数量（所有单位转换后的总量）",
+                    "type": "number"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
+                },
+                "item_units": {
+                    "description": "报损单物品单位明细",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockLossItemUnitInfo"
+                    }
+                },
+                "locale_name": {
+                    "description": "物料名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "material_barcode": {
+                    "description": "物料条码",
+                    "type": "string"
+                },
+                "material_code": {
+                    "description": "物料编码",
+                    "type": "string"
+                },
+                "material_uuid": {
+                    "description": "物料UUID",
+                    "type": "integer"
+                },
+                "units": {
+                    "description": "所有单位（包含基准单位）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MaterialUnitInfo"
+                    }
+                }
+            }
+        },
+        "resp.StockLossItemUnitInfo": {
+            "type": "object",
+            "properties": {
+                "conversion_rate": {
+                    "description": "转换率（相对于基准单位）",
+                    "type": "number"
+                },
+                "locale_name": {
+                    "description": "单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "material_unit_uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
+                },
+                "quantity": {
+                    "description": "单位数量",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.StockLossListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "报损单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockLossInfo"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.StockLossUuidResp": {
+            "type": "object",
+            "properties": {
+                "uuid": {
+                    "description": "报损单UUID",
                     "type": "integer"
                 }
             }

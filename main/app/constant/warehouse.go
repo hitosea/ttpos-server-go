@@ -60,13 +60,14 @@ const (
 
 // WarehouseInOutLogType 出入库日志类型
 const (
-	WarehouseInOutLogTypePurchase    = "purchase"     // 采购入库 0
-	WarehouseInOutLogTypeSale        = "sale"         // 销售出库 1
-	WarehouseInOutLogTypeDelivery    = "delivery"     // 发货出库 2
-	WarehouseInOutLogTypeProfitIn    = "profit_in"    // 盘盈入库 3
-	WarehouseInOutLogTypeLossOut     = "loss_out"     // 盘亏出库 4
-	WarehouseInOutLogTypeTransferIn  = "transfer_in"  // 调拨入库 5
-	WarehouseInOutLogTypeTransferOut = "transfer_out" // 调拨出库 6
+	WarehouseInOutLogTypePurchase     = "purchase"       // 采购入库 0
+	WarehouseInOutLogTypeSale         = "sale"           // 销售出库 1
+	WarehouseInOutLogTypeDelivery     = "delivery"       // 发货出库 2
+	WarehouseInOutLogTypeProfitIn     = "profit_in"      // 盘盈入库 3
+	WarehouseInOutLogTypeLossOut      = "loss_out"       // 盘亏出库 4
+	WarehouseInOutLogTypeTransferIn   = "transfer_in"    // 调拨入库 5
+	WarehouseInOutLogTypeTransferOut  = "transfer_out"   // 调拨出库 6
+	WarehouseInOutLogTypeStockLossOut = "stock_loss_out" // 报损出库 22
 )
 
 const (
@@ -91,26 +92,29 @@ const (
 	WarehouseInOutLogSceneTransferIn  = 5 // 调拨入库
 	WarehouseInOutLogSceneTransferOut = 6 // 调拨出库
 
-	WarehouseInOutLogSceneTransitIn  = 20 // 在途入库
-	WarehouseInOutLogSceneTransitOut = 21 // 在途出库
+	WarehouseInOutLogSceneTransitIn      = 20 // 在途入库
+	WarehouseInOutLogSceneTransitOut     = 21 // 在途出库
+	WarehouseInOutLogSceneStockLossOut   = 22 // 报损出库
 )
 
 func WarehouseInOutLogTypeToInt(typ string) int {
 	switch typ {
 	case WarehouseInOutLogTypePurchase:
-		return 0
+		return WarehouseInOutLogScenePurchase
 	case WarehouseInOutLogTypeSale:
-		return 1
+		return WarehouseInOutLogSceneSale
 	case WarehouseInOutLogTypeDelivery:
-		return 2
+		return WarehouseInOutLogSceneDelivery
 	case WarehouseInOutLogTypeProfitIn:
-		return 3
+		return WarehouseInOutLogSceneProfitIn
 	case WarehouseInOutLogTypeLossOut:
-		return 4
+		return WarehouseInOutLogSceneLossOut
 	case WarehouseInOutLogTypeTransferIn:
-		return 5
+		return WarehouseInOutLogSceneTransferIn
 	case WarehouseInOutLogTypeTransferOut:
-		return 6
+		return WarehouseInOutLogSceneTransferOut
+	case WarehouseInOutLogTypeStockLossOut:
+		return WarehouseInOutLogSceneStockLossOut
 	}
 	return -1
 }

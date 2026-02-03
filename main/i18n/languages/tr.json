@@ -3321,6 +3321,7 @@
   "报损单不存在": "Zarar beyanı mevcut değil",
   "报损数量大于剩余库存数量": "Kayıp olarak rapor edilen miktar kalan stok miktarından fazla",
   "报损记录": "Zarar Kayıtları",
+  "报损管理": "Kayıp Yönetimi",
   "报表": "Rapor",
   "报表中心": "Rapor Merkezi",
   "抹元": "Mo Yuan",
@@ -5145,6 +5146,7 @@
   "物品 %s 的状态已关闭。\\n\\n提交后将移除该物品，是否继续提交？": "Öğe %s'in durumu kapalı.\\n\\nGönderildikten sonra öğe kaldırılacaktır, göndermeye devam edilsin mi?",
   "物品 %s 的状态已关闭。\\n\\n请修改物品状态": "Öğe %s'nin durumu kapatıldı.\\n\\nLütfen öğe durumunu değiştirin",
   "物品 %s 超出限购/单位变动，请检查物品和数量。": "Ürün %s satın alma limitini/açılan birimi aşıyor, lütfen ürünü ve miktarı kontrol edin.",
+  "物品 %s 重复": "Ürün %s mükerrer",
   "物品%s已禁用": "Ürün %s devre dışı bırakıldı",
   "物品%s状态已关闭，请修改物品状态": "Öğe %s durumu kapatıldı, lütfen öğe durumunu değiştirin",
   "物品%s申请总数（%.2f）已超过限购数（%.2f），请调整数量后提交。": "Ürün %s için toplam başvuru miktarı (%.2f), limit (%.2f) değerini aştı. Lütfen gönderimden önce miktarı düzenleyin.",
@@ -7664,4 +7666,10 @@
   "點餐-店內": "주문 - 매장 내",
   "龘": "龘",
   "龙": "Ejderha"
+,
+  "物品%s未找到": "Öğe %s bulunamadı",
+  "审核报损单失败": "Kayıp raporu onayı başarısız"
+,
+  "物品%s的状态已关闭。请修改物品状态": "Öğe %s devre dışı. Lütfen öğe durumunu güncelleyin",
+  "物品%s的库存不足": "Öğe %s için yetersiz stok"
 }

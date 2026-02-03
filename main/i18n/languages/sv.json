@@ -3321,6 +3321,7 @@
   "报损单不存在": "Skaderapport finns inte",
   "报损数量大于剩余库存数量": "Den rapporterade förlustkvantiteten överstiger det återstående lagersaldot",
   "报损记录": "Skade-/förlustregister",
+  "报损管理": "Förlusthantering",
   "报表": "Rapport",
   "报表中心": "Rapportcenter",
   "抹元": "Mo Yuan",
@@ -5145,6 +5146,7 @@
   "物品 %s 的状态已关闭。\\n\\n提交后将移除该物品，是否继续提交？": "Produktet %s är inaktiverat.\\n\\nEfter inskick kommer produkten att tas bort. Fortsätta skicka?",
   "物品 %s 的状态已关闭。\\n\\n请修改物品状态": "Statusen för objektet %s har stängts.\\n\\nVänligen ändra objektets status",
   "物品 %s 超出限购/单位变动，请检查物品和数量。": "Artikel %s överskrider köpgräns/enhetsändring, kontrollera varan och kvantiteten。",
+  "物品 %s 重复": "Artikel %s är duplicerad",
   "物品%s已禁用": "Varan %s har inaktiverats",
   "物品%s状态已关闭，请修改物品状态": "Statusen för objektet %s har stängts. Vänligen ändra objektets status.",
   "物品%s申请总数（%.2f）已超过限购数（%.2f），请调整数量后提交。": "Den totala begärda mängden för artikel %s (%.2f) överstiger inköpsgränsen (%.2f). Justera mängden och skicka igen.",
@@ -7664,4 +7666,10 @@
   "點餐-店內": "Beställning - På plats",
   "龘": "龘",
   "龙": "Drake"
+,
+  "物品%s未找到": "Artikel %s hittades inte",
+  "审核报损单失败": "Godkännande av förlustrapport misslyckades"
+,
+  "物品%s的状态已关闭。请修改物品状态": "Artikel %s är inaktiverad. Vänligen uppdatera artikelstatusen",
+  "物品%s的库存不足": "Otillräckligt lager för artikel %s"
 }

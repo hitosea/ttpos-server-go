@@ -285,8 +285,16 @@ class InitManagementAppAccess extends Migrator
             ['uuid' => 2858875359232000, 'name' => '删除', 'path' => 'transfer_order_delete', 'api_path' => '', 'parent_uuid' => 2858825027584000, 'sort' => 3, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 收货
             ['uuid' => 2858892136448000, 'name' => '收货', 'path' => 'transfer_order_receive', 'api_path' => '', 'parent_uuid' => 2858825027584000, 'sort' => 4, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 报损管理
+            ['uuid' => 2860100000000000, 'name' => '报损管理', 'path' => 'stock_loss_management', 'api_path' => '', 'parent_uuid' => 2857919057920000, 'sort' => 14, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 添加
+            ['uuid' => 2860100000001000, 'name' => '添加', 'path' => 'stock_loss_add', 'api_path' => '', 'parent_uuid' => 2860100000000000, 'sort' => 1, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 删除
+            ['uuid' => 2860100000003000, 'name' => '删除', 'path' => 'stock_loss_delete', 'api_path' => '', 'parent_uuid' => 2860100000000000, 'sort' => 2, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 审核
+            ['uuid' => 2860100000004000, 'name' => '审核', 'path' => 'stock_loss_approve', 'api_path' => '', 'parent_uuid' => 2860100000000000, 'sort' => 3, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 参数设置
-            ['uuid' => 2858908913663000, 'name' => '参数设置', 'path' => 'parameter_setting', 'api_path' => '', 'parent_uuid' => 2857919057920000, 'sort' => 14, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            ['uuid' => 2858908913663000, 'name' => '参数设置', 'path' => 'parameter_setting', 'api_path' => '', 'parent_uuid' => 2857919057920000, 'sort' => 15, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 营销管理
             ['uuid' => 2858908913664000, 'name' => '营销管理', 'path' => 'marketing_management', 'api_path' => '', 'parent_uuid' => 2856757235712000, 'sort' => 4, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 菜品营销
@@ -519,6 +527,10 @@ class InitManagementAppAccess extends Migrator
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2858875359232000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2858892136448000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2858908913663000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2860100000000000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2860100000001000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2860100000003000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2860100000004000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2858908913664000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2858925690880000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2858950856704000', 'create_time' => time()],

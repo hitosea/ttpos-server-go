@@ -8,5 +8,6 @@ const (
 	NumberTypeBrandPurchase   = "brand_purchase"   // 品牌采购（内部）
 	NumberTypeBrandReceipt    = "brand_receipt"    // 品采收货（内部）
 	NumberTypeStockTake       = "stock_take"       // 盘点单
+	NumberTypeStockLoss       = "stock_loss"       // 报损单
 	NumberTypeTransfer        = "transfer"         // 调拨单
 )

@@ -3321,6 +3321,7 @@
   "报损单不存在": "Schadensmeldung existiert nicht",
   "报损数量大于剩余库存数量": "Gemeldete Verlustmenge übersteigt den verbleibenden Lagerbestand",
   "报损记录": "Schadensaufzeichnungen",
+  "报损管理": "Verlustmanagement",
   "报表": "Bericht",
   "报表中心": "Berichtszentrum",
   "抹元": "Matcha",
@@ -5145,6 +5146,7 @@
   "物品 %s 的状态已关闭。\\n\\n提交后将移除该物品，是否继续提交？": "Der Artikel %s ist deaktiviert.\\n\\nNach dem Absenden wird der Artikel entfernt. Fortfahren?",
   "物品 %s 的状态已关闭。\\n\\n请修改物品状态": "Der Status des Artikels %s wurde geschlossen.\\n\\nBitte ändern Sie den Artikelstatus",
   "物品 %s 超出限购/单位变动，请检查物品和数量。": "Artikel %s überschreitet das Kauflimit/Einheitenänderung, bitte prüfen Sie den Artikel und die Menge.",
+  "物品 %s 重复": "Artikel %s ist doppelt vorhanden",
   "物品%s已禁用": "Artikel %s wurde deaktiviert",
   "物品%s状态已关闭，请修改物品状态": "Der Status des Artikels %s wurde geschlossen. Bitte ändern Sie den Artikelstatus.",
   "物品%s申请总数（%.2f）已超过限购数（%.2f），请调整数量后提交。": "Die beantragte Gesamtmenge für Artikel %s (%.2f) überschreitet das Kauflimit (%.2f). Bitte passen Sie die Menge an und senden Sie erneut.",
@@ -7664,4 +7666,10 @@
   "點餐-店內": "Bestellung - Vor Ort",
   "龘": "龘",
   "龙": "Drache"
+,
+  "物品%s未找到": "Artikel %s nicht gefunden",
+  "审核报损单失败": "Genehmigung des Verlustberichts fehlgeschlagen"
+,
+  "物品%s的状态已关闭。请修改物品状态": "Artikel %s ist deaktiviert. Bitte aktualisieren Sie den Artikelstatus",
+  "物品%s的库存不足": "Unzureichender Bestand für Artikel %s"
 }
