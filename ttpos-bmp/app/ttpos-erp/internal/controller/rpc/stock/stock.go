@@ -256,3 +256,35 @@ func (c *Controller) GetBin(ctx context.Context, req *stock.GetBinReq) (*api.Res
 	// 包装为 ResponseInfo
 	return rpc.ApiSuccessWithData("查询成功", binData), nil
 }
+
+// SubmitStockEntry 提交库存变动（物料出库）
+// 参数：ctx 上下文，req 提交库存变动请求
+// 返回：操作结果和库存变动单号
+func (*Controller) SubmitStockEntry(ctx context.Context, req *stock.SubmitStockEntryReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if len(req.CompanyAbbr) == 0 {
+		return rpc.ApiError("公司简称不能为空"), nil
+	}
+	if len(req.Items) == 0 {
+		return rpc.ApiError("变动明细不能为空"), nil
+	}
+
+	// 验证明细项目
+	for i, item := range req.Items {
+		if len(item.ItemCode) == 0 {
+			return rpc.ApiError(g.I18n().Tf(ctx, "第{%d}项物品编码不能为空", i+1)), nil
+		}
+		if item.Qty <= 0 {
+			return rpc.ApiError(g.I18n().Tf(ctx, "第{%d}项物品数量必须大于0", i+1)), nil
+		}
+	}
+
+	// 调用服务层处理业务逻辑
+	resp, err := service.Stock().SubmitStockEntry(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData(resp.Message, resp), nil
+}
