@@ -395,83 +395,72 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 					}
 				}
 			}
-			// 限购配置：有限购数量或禁止采购时才显示
+			// 限购配置和单位限制检查
 			hasQuotaLimit := quotaLimitMap[item.MaterialCode] > 0
 			isDisallowed := disallowedSet[item.MaterialCode]
-			if hasQuotaLimit || isDisallowed {
-				// 设置是否允许采购
-				isAllowPurchase := "yes"
-				if isDisallowed {
-					isAllowPurchase = "no"
+
+			// 设置是否允许采购
+			isAllowPurchase := "yes"
+			if isDisallowed {
+				isAllowPurchase = "no"
+			}
+
+			// 获取物品名称（用于错误提示）
+			materialName := language.JsonToLocaleResponse(item.MaterialName).GetLocale(lang)
+
+			// 获取限购配置单位（单位限制逻辑不依赖限购方案，始终检查）
+			quotaUnit := item.Material.GetUnitByUuidForQuotaConfig()
+
+			// 构建 QuotaConfig
+			if quotaUnit != nil && quotaUnit.Unit != nil {
+				itemInfo.QuotaConfig = resp.PurchaseOrderItemQuotaConfig{
+					QuotaLimit:          quotaLimitMap[item.MaterialCode],
+					QuotaUnitUuid:       quotaUnit.Uuid,
+					QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+					QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
+					IsAllowPurchase:     isAllowPurchase,
 				}
 
-				// 获取物品名称（用于错误提示）
-				materialName := language.JsonToLocaleResponse(item.MaterialName).GetLocale(lang)
-
-				// 有限购数量时，需要获取限购单位信息
-				if hasQuotaLimit {
-					quotaUnit := item.Material.GetUnitByUuidForQuotaConfig()
-					if quotaUnit == nil || quotaUnit.Unit == nil {
-						logger.Logger.Warn("未找到目标单位", zap.Uint64("material_uuid", item.MaterialUuid), zap.Uint64("default_sales_unit_uuid", item.Material.DefaultSalesUnitUuid))
-						// 即使没有限购单位，也要设置 IsAllowPurchase 和 ErrorMessage
-						errorMessage := ""
-						if isDisallowed && purchaseOrder.IsStorePendingOrDraft() {
-							detailResp.IsUpdateQuotaScheme = true
-							errorMessage = fmt.Sprintf(i18n.Translate(lang, "物品 %s 禁止采购，请移除后重试"), materialName)
-						}
-						itemInfo.QuotaConfig = resp.PurchaseOrderItemQuotaConfig{
-							IsAllowPurchase: isAllowPurchase,
-							ErrorMessage:    errorMessage,
-						}
-						detailResp.Items = append(detailResp.Items, itemInfo)
-						continue
-					}
-					itemInfo.QuotaConfig = resp.PurchaseOrderItemQuotaConfig{
-						QuotaLimit:          quotaLimitMap[item.MaterialCode],
-						QuotaUnitUuid:       quotaUnit.Uuid,
-						QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-						QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
-						IsAllowPurchase:     isAllowPurchase,
-					}
-					// 是否更新限购方案
-					if purchaseOrder.IsStorePendingOrDraft() {
-						// 禁止采购优先级最高
-						if isDisallowed {
-							detailResp.IsUpdateQuotaScheme = true
-							itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(i18n.Translate(lang, "物品 %s 禁止采购，请移除后重试"), materialName)
-						} else {
-							// 检查是否使用限购单位
-							for _, unit := range item.Units {
-								if unit.UnitUuid != itemInfo.QuotaConfig.QuotaUnitUuid {
-									detailResp.IsUpdateQuotaScheme = true
-									itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(
-										i18n.Translate(lang, "物品%s的单位限制已变更，当前使用的单位（%s）不在允许范围内，请更新。"),
-										materialName, language.JsonToLocaleResponse(unit.UnitName).GetLocale(lang),
-									)
-									break
-								}
-								if unit.Num > itemInfo.QuotaConfig.QuotaLimit {
-									detailResp.IsUpdateQuotaScheme = true
-									itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(
-										i18n.Translate(lang, "物品%s申请总数（%.2f）已超过限购数（%.2f），请调整数量后提交。"),
-										materialName, item.Num, itemInfo.QuotaConfig.QuotaLimit,
-									)
-									break
-								}
+				// 检查是否需要更新（草稿或待门店审核状态）
+				if purchaseOrder.IsStorePendingOrDraft() {
+					// 禁止采购优先级最高
+					if isDisallowed {
+						detailResp.IsUpdateQuotaScheme = true
+						itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(i18n.Translate(lang, "物品 %s 禁止采购，请移除后重试"), materialName)
+					} else {
+						// 单位限制检查（不依赖限购方案，始终检查）
+						for _, unit := range item.Units {
+							if unit.UnitUuid != itemInfo.QuotaConfig.QuotaUnitUuid {
+								detailResp.IsUpdateQuotaScheme = true
+								itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(
+									i18n.Translate(lang, "物品%s的单位限制已变更，当前使用的单位（%s）不在允许范围内，请更新。"),
+									materialName, language.JsonToLocaleResponse(unit.UnitName).GetLocale(lang),
+								)
+								break
+							}
+							// 限购数量检查（仅在有限购方案时检查）
+							if hasQuotaLimit && unit.Num > itemInfo.QuotaConfig.QuotaLimit {
+								detailResp.IsUpdateQuotaScheme = true
+								itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(
+									i18n.Translate(lang, "物品%s申请总数（%.2f）已超过限购数（%.2f），请调整数量后提交。"),
+									materialName, item.Num, itemInfo.QuotaConfig.QuotaLimit,
+								)
+								break
 							}
 						}
 					}
-				} else {
-					// 只有禁止采购，没有限购数量
-					errorMessage := ""
-					if isDisallowed && purchaseOrder.IsStorePendingOrDraft() {
-						detailResp.IsUpdateQuotaScheme = true
-						errorMessage = fmt.Sprintf(i18n.Translate(lang, "物品 %s 禁止采购，请移除后重试"), materialName)
-					}
-					itemInfo.QuotaConfig = resp.PurchaseOrderItemQuotaConfig{
-						IsAllowPurchase: isAllowPurchase,
-						ErrorMessage:    errorMessage,
-					}
+				}
+			} else {
+				// 未找到限购配置单位时，只设置基本信息
+				logger.Logger.Warn("未找到目标单位", zap.Uint64("material_uuid", item.MaterialUuid), zap.Uint64("default_sales_unit_uuid", item.Material.DefaultSalesUnitUuid))
+				errorMessage := ""
+				if isDisallowed && purchaseOrder.IsStorePendingOrDraft() {
+					detailResp.IsUpdateQuotaScheme = true
+					errorMessage = fmt.Sprintf(i18n.Translate(lang, "物品 %s 禁止采购，请移除后重试"), materialName)
+				}
+				itemInfo.QuotaConfig = resp.PurchaseOrderItemQuotaConfig{
+					IsAllowPurchase: isAllowPurchase,
+					ErrorMessage:    errorMessage,
 				}
 			}
 		}
