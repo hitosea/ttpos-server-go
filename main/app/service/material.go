@@ -260,6 +260,19 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		}
 	}
 
+	// 获取可见性过滤配置
+	var visibleCategoryUuidSet map[uint64]struct{}
+	var needVisibilityFilter bool
+	visibilitySrv := NewMaterialCategoryVisibilitySrv(s.dbm)
+	visibleCategoryUuids, needFilter := visibilitySrv.GetVisibleCategoryUuidsForStaff(ctx)
+	if needFilter {
+		needVisibilityFilter = true
+		visibleCategoryUuidSet = make(map[uint64]struct{}, len(visibleCategoryUuids))
+		for _, uuid := range visibleCategoryUuids {
+			visibleCategoryUuidSet[uuid] = struct{}{}
+		}
+	}
+
 	// 转换为响应格式
 	var materialList []material_resp.Material
 	for _, material := range materials {
@@ -462,6 +475,13 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 					respMaterial.AvailableQuantity = decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 					respMaterial.StoreQuantity = decimal.NewFromFloat(stockNum).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 				}
+			}
+		}
+
+		// 应用物品分类可见性过滤
+		if needVisibilityFilter {
+			if _, ok := visibleCategoryUuidSet[material.CategoryUuid]; !ok {
+				continue // 跳过不可见的物品
 			}
 		}
 

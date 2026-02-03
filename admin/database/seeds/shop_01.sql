@@ -4283,4 +4283,23 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_limit_scheme_shop` (
     KEY `idx_scheme_company` (`scheme_uuid`, `company_uuid`, `delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='限购方案门店配置表';
 
+-- ----------------------------
+-- Table structure for ttpos_material_category_visibility (物品分类可见性配置表)
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `ttpos_material_category_visibility` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一ID',
+    `name` text COMMENT '配置名称（多语言JSON）',
+    `is_all_roles` tinyint NOT NULL DEFAULT 0 COMMENT '是否全部门店角色：1-全部，0-部分',
+    `category_uuids` text COMMENT '物品类别UUID列表，JSON数组格式',
+    `role_configs` text COMMENT '角色配置，JSON数组格式 [{role_uuid, company_uuid}]',
+    `headquarter_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '总部UUID，0=当前店创建，>0=来自总部',
+    `create_time` int unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_headquarter_uuid` (`headquarter_uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物品分类可见性配置表';
+
 SET FOREIGN_KEY_CHECKS = 1;

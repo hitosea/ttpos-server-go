@@ -444,9 +444,9 @@ func buildPosInvoiceMaterialItems(takeoutOrder *takeoutModel.TakeoutOrder) []*se
 //   - ctx: 上下文（包含数据库连接、公司信息等）
 //   - orderUuid: 订单UUID
 //   - remarkData: 附注数据（JSON格式字符串），包含以下字段：
-//     - shop_uuid: 商户UUID（必填，用于 MQ 回调时路由到正确的数据库）
-//     - order_type: 订单类型（可选，如 "takeout"）
-//     - should_resync: 是否需要重新创建发票（订单变更=true，订单取消=false）
+//   - shop_uuid: 商户UUID（必填，用于 MQ 回调时路由到正确的数据库）
+//   - order_type: 订单类型（可选，如 "takeout"）
+//   - should_resync: 是否需要重新创建发票（订单变更=true，订单取消=false）
 //
 // 功能说明：
 //  1. 调用 BMP CancelPosInvoice 接口取消发票
@@ -596,8 +596,8 @@ func (s *takeoutErpSyncService) ResyncOrderToERP(ctx appContext.Context, orderUu
 
 	// 4. 构建 Remark 字段（包含 shop_uuid 等路由信息，用于 BMP 回调）
 	remarkData := map[string]any{
-		"shop_uuid":    ctx.GetCompanyUuid(),
-		"order_type":   "takeout",
+		"shop_uuid":     ctx.GetCompanyUuid(),
+		"order_type":    "takeout",
 		"should_resync": true, // 标记需要重新创建发票
 	}
 	remarkJSON, err := json.Marshal(remarkData)
