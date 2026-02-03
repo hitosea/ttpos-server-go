@@ -47,6 +47,10 @@ func (s *sStock) SubmitStockEntry(ctx context.Context, req *stock.SubmitStockEnt
 		DocType:        erp.DocTypeStockEntry,
 	}
 
+	if len(req.Remarks) > 0 {
+		data.Remarks = req.Remarks
+	}
+
 	// 设置过账时间
 	if len(req.PostingTime) > 0 {
 		data.PostingTime = req.PostingTime

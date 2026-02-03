@@ -35,6 +35,7 @@ type StockEntry struct {
 	DocType               string             `json:"doctype,omitempty"`                 // 文档类型
 	Items                 []StockEntryDetail `json:"items,omitempty"`                   // 明细项目
 	AdditionalCosts       []interface{}      `json:"additional_costs,omitempty"`        // 额外成本
+	Remarks               string             `json:"remarks,omitempty"`                 // 备注/报损原因
 }
 
 // StockEntryDetail 库存变动明细

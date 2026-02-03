@@ -1766,6 +1766,7 @@ type SubmitStockEntryReq struct {
 	Items           []*StockEntryItem      `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty" dc:"变动明细，必填"`                                                               // 变动明细，必填
 	PostingDate     string                 `protobuf:"bytes,6,opt,name=posting_date,json=postingDate,proto3" json:"posting_date,omitempty" dc:"过账日期，可选，格式：YYYY-MM-DD"`                  // 过账日期，可选，格式：YYYY-MM-DD
 	PostingTime     string                 `protobuf:"bytes,7,opt,name=posting_time,json=postingTime,proto3" json:"posting_time,omitempty" dc:"过账时间，可选，格式：HH:MM:SS"`                    // 过账时间，可选，格式：HH:MM:SS
+	Remarks         string                 `protobuf:"bytes,8,opt,name=remarks,proto3" json:"remarks,omitempty" dc:"备注，可选"`                                                             // 备注，可选
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1845,6 +1846,13 @@ func (x *SubmitStockEntryReq) GetPostingDate() string {
 func (x *SubmitStockEntryReq) GetPostingTime() string {
 	if x != nil {
 		return x.PostingTime
+	}
+	return ""
+}
+
+func (x *SubmitStockEntryReq) GetRemarks() string {
+	if x != nil {
+		return x.Remarks
 	}
 	return ""
 }
@@ -2053,7 +2061,7 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x10\n" +
 	"\x03qty\x18\x02 \x01(\x01R\x03qty\x12\x1b\n" +
 	"\titem_name\x18\x03 \x01(\tR\bitemName\x12\x1c\n" +
-	"\twarehouse\x18\x04 \x01(\tR\twarehouse\"\x98\x02\n" +
+	"\twarehouse\x18\x04 \x01(\tR\twarehouse\"\xb2\x02\n" +
 	"\x13SubmitStockEntryReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12(\n" +
@@ -2061,7 +2069,8 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\x10source_warehouse\x18\x04 \x01(\tR\x0fsourceWarehouse\x12+\n" +
 	"\x05items\x18\x05 \x03(\v2\x15.stock.StockEntryItemR\x05items\x12!\n" +
 	"\fposting_date\x18\x06 \x01(\tR\vpostingDate\x12!\n" +
-	"\fposting_time\x18\a \x01(\tR\vpostingTime\"Z\n" +
+	"\fposting_time\x18\a \x01(\tR\vpostingTime\x12\x18\n" +
+	"\aremarks\x18\b \x01(\tR\aremarks\"Z\n" +
 	"\x14SubmitStockEntryResp\x12(\n" +
 	"\x10stock_entry_name\x18\x01 \x01(\tR\x0estockEntryName\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage2\xa9\x05\n" +

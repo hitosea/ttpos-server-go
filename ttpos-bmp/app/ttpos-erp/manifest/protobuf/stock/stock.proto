@@ -213,6 +213,7 @@ message SubmitStockEntryReq {
   repeated StockEntryItem items = 5;                  // 变动明细，必填
   string posting_date = 6;                            // 过账日期，可选，格式：YYYY-MM-DD
   string posting_time = 7;                            // 过账时间，可选，格式：HH:MM:SS
+  string remarks = 8;                                 // 备注，可选
 }
 
 // 提交库存变动响应
