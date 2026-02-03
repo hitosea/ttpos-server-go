@@ -386,6 +386,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			LocaleName:         material.MultiLanguageName.GetNames(),
 			ErpCode:            material.Code,
 			InternalCode:       material.InternalCode,
+			Specification:      material.Specification,
 			BarcodeValue:       material.BarcodeValue,
 			Num:                stockNum,
 			SafetyStock:        material.SafetyStock,

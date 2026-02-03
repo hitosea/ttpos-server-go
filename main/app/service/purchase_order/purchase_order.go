@@ -320,6 +320,12 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 			}
 			return item.Material.InternalCode
 		}(item)
+		itemInfo.Specification = func(item model.PurchaseOrderItem) string {
+			if item.Material == nil {
+				return ""
+			}
+			return item.Material.Specification
+		}(item)
 		itemInfo.BarcodeValue = func(item model.PurchaseOrderItem) string {
 			if item.Material == nil {
 				return ""
