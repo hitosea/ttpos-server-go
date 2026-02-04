@@ -1777,39 +1777,41 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		}
 
 		// 发布订单状态更新事件（仅在状态发生变化时）
-		switch newOrderState {
-		case valueobject.TakeoutOrderStateRiderProcessing:
-			// 骑手配送中事件
-			event.GetDispatcher().Publish(event.NewOrderRiderProcessingEvent(
-				order.Uuid,
-				order.Platform,
-				order.PlatformOrderId,
-				order.ShortOrderNumber,
-				order.TakeoutOrderUuid,
-				ctx.GetCompanyUuid(),
-			))
-		case valueobject.TakeoutOrderStateCanceled, valueobject.TakeoutOrderStateRejected:
-			// 订单取消事件
-			event.GetDispatcher().Publish(event.NewOrderCancelEvent(
-				order.Uuid,
-				order.Platform,
-				order.PlatformOrderId,
-				order.ShortOrderNumber,
-				order.TakeoutOrderUuid,
-				ctx.GetCompanyUuid(),
-				"订单已取消",
-				newOrderState,
-			))
-		case valueobject.TakeoutOrderStateCompleted:
-			// 订单完成事件
-			event.GetDispatcher().Publish(event.NewOrderCompletedEvent(
-				order.Uuid,
-				order.Platform,
-				order.PlatformOrderId,
-				order.ShortOrderNumber,
-				order.TakeoutOrderUuid,
-				ctx.GetCompanyUuid(),
-			))
+		if newOrderState != oldOrderState {
+			switch newOrderState {
+			case valueobject.TakeoutOrderStateRiderProcessing:
+				// 骑手配送中事件
+				event.GetDispatcher().Publish(event.NewOrderRiderProcessingEvent(
+					order.Uuid,
+					order.Platform,
+					order.PlatformOrderId,
+					order.ShortOrderNumber,
+					order.TakeoutOrderUuid,
+					ctx.GetCompanyUuid(),
+				))
+			case valueobject.TakeoutOrderStateCanceled, valueobject.TakeoutOrderStateRejected:
+				// 订单取消事件
+				event.GetDispatcher().Publish(event.NewOrderCancelEvent(
+					order.Uuid,
+					order.Platform,
+					order.PlatformOrderId,
+					order.ShortOrderNumber,
+					order.TakeoutOrderUuid,
+					ctx.GetCompanyUuid(),
+					"订单已取消",
+					newOrderState,
+				))
+			case valueobject.TakeoutOrderStateCompleted:
+				// 订单完成事件
+				event.GetDispatcher().Publish(event.NewOrderCompletedEvent(
+					order.Uuid,
+					order.Platform,
+					order.PlatformOrderId,
+					order.ShortOrderNumber,
+					order.TakeoutOrderUuid,
+					ctx.GetCompanyUuid(),
+				))
+			}
 		}
 
 		return nil
