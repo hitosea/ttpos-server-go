@@ -3,6 +3,7 @@ package selling
 import (
 	"context"
 	"fmt"
+	"time"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
@@ -142,8 +143,38 @@ func (*ReturnPosInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) 
 		}
 		return gerror.Wrapf(err, "退款发票失败，请求参数: %v", req)
 	}
-	//开始退款
-	if receivePosInvoice == nil {
+
+	// 检查发票是否存在或状态是否为 Draft（创建中）
+	// 注意：GetLatestReceivePosInvoice 查不到记录时返回空结构体（Id=0），不是 nil
+	invoiceNotExistOrDraft := receivePosInvoice == nil || receivePosInvoice.Id == 0 || receivePosInvoice.Docstatus == erp.DocstatusDraft
+	if invoiceNotExistOrDraft {
+		// 检查是否超时（超过2分钟不再重试）
+		elapsed := time.Now().Unix() - int64(cachedRecord.CreatedAt)
+		if elapsed > 120 {
+			respMessage := fmt.Sprintf("退款发票超时，发票记录不存在或创建未完成: OrderNo=%s, elapsed=%ds", req.OrderNo, elapsed)
+			g.Log().Errorf(ctx, respMessage)
+			if _, err := returnDao.Data(do.ReceiveReturnPosInvoice{
+				RespBody: respMessage,
+			}).Update(); err != nil {
+				g.Log().Errorf(ctx, "更新退款发票记录失败: %v", err)
+			}
+			return nil // 超时不再重试
+		}
+		g.Log().Infof(ctx, "发票记录不存在或正在创建中，5秒后重试: OrderNo=%s, OpenPosEntryName=%s, elapsed=%ds",
+			req.OrderNo, req.OpenPosEntryName, elapsed)
+		// 发送延时消息，5秒后重试
+		if err := queue.DelayPush(string(consts.TopicReturnPosInvoice), &mq.AsyncSellingMsg{
+			RecordId: msg.RecordId,
+			MsgType:  mq.MsgTypeReturnPosInvoice,
+		}, 5*time.Second); err != nil {
+			g.Log().Errorf(ctx, "发送延时重试消息失败: %v", err)
+			return gerror.Wrapf(err, "发送延时重试消息失败")
+		}
+		return nil // 当前消息处理完成，等待延时消息重试
+	}
+
+	//开始退款（此时发票记录已存在且状态为 Submitted）
+	if receivePosInvoice == nil || receivePosInvoice.Id == 0 {
 		respMessage := fmt.Sprintf("退款发票失败，未查询到原POS记录，请求参数: %v", req)
 		if _, updateErr := returnDao.Data(do.ReceiveReturnPosInvoice{
 			RespBody: respMessage,
@@ -261,7 +292,37 @@ func (*CancelPosInvoice) Handle(ctx context.Context, mqMsg queue.MqMsg) (err err
 		}
 		return gerror.Wrapf(err, "取消发票失败，请求参数: %v", req)
 	}
-	if receivePosInvoice != nil {
+
+	// 检查发票是否存在或状态是否为 Draft（创建中）
+	// 注意：GetLatestReceivePosInvoice 查不到记录时返回空结构体（Id=0），不是 nil
+	invoiceNotExistOrDraft := receivePosInvoice == nil || receivePosInvoice.Id == 0 || receivePosInvoice.Docstatus == erp.DocstatusDraft
+	if invoiceNotExistOrDraft {
+		// 检查是否超时（超过2分钟不再重试）
+		elapsed := time.Now().Unix() - int64(cachedRecord.CreatedAt)
+		if elapsed > 120 {
+			respMessage := fmt.Sprintf("取消发票超时，发票记录不存在或创建未完成: OrderNo=%s, elapsed=%ds", req.OrderNo, elapsed)
+			g.Log().Errorf(ctx, respMessage)
+			if _, err := cancelDao.Data(do.ReceiveCancelPosInvoice{
+				RespBody: respMessage,
+			}).Update(); err != nil {
+				g.Log().Errorf(ctx, "更新取消发票记录失败: %v", err)
+			}
+			return nil // 超时不再重试
+		}
+		g.Log().Infof(ctx, "发票记录不存在或正在创建中，5秒后重试: OrderNo=%s, OpenPosEntryName=%s, elapsed=%ds",
+			req.OrderNo, req.OpenPosEntryName, elapsed)
+		// 发送延时消息，5秒后重试
+		if err := queue.DelayPush(string(consts.TopicCancelPosInvoice), &mq.AsyncSellingMsg{
+			RecordId: msg.RecordId,
+			MsgType:  mq.MsgTypeCancelPosInvoice,
+		}, 5*time.Second); err != nil {
+			g.Log().Errorf(ctx, "发送延时重试消息失败: %v", err)
+			return gerror.Wrapf(err, "发送延时重试消息失败")
+		}
+		return nil // 当前消息处理完成，等待延时消息重试
+	}
+
+	if receivePosInvoice != nil && receivePosInvoice.Id > 0 {
 		// 调用服务层取消商品发票
 		if len(receivePosInvoice.ProductsInvoiceName) > 0 {
 			err := service.Selling().CancelPosInvoice(ctx, receivePosInvoice.ProductsInvoiceName)
