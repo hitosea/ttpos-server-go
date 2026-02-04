@@ -8,3 +8,7 @@ const (
 	No  = 0  // 否, false
 	All = -1 // 全选
 )
+
+// NoPaginationPageSize 不分页的 PageSize 阈值
+// 当 PageSize >= 此值时，Repository 层跳过分页逻辑，返回所有数据
+const NoPaginationPageSize = 10000

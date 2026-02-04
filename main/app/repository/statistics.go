@@ -2634,6 +2634,12 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 
 	// 4. 分页
 	total := int64(len(result))
+
+	// 如果 PageSize >= NoPaginationPageSize，不分页，返回所有数据（用于内部汇总查询）
+	if req.PageSize >= constant.NoPaginationPageSize {
+		return total, result
+	}
+
 	start := (req.PageNo - 1) * req.PageSize
 	end := start + req.PageSize
 	if start > len(result) {
@@ -2956,6 +2962,12 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 
 	// 4. 分页
 	total := int64(len(paymentResult))
+
+	// 如果 PageSize >= NoPaginationPageSize，不分页，返回所有数据（用于内部汇总查询）
+	if req.PageSize >= constant.NoPaginationPageSize {
+		return total, paymentResult
+	}
+
 	start := (req.PageNo - 1) * req.PageSize
 	end := start + req.PageSize
 	if start > len(paymentResult) {
@@ -3611,6 +3623,12 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 
 	// 5. 分页
 	total := int64(len(result))
+
+	// 如果 PageSize >= NoPaginationPageSize，不分页，返回所有数据（用于内部汇总查询）
+	if req.PageSize >= constant.NoPaginationPageSize {
+		return total, result
+	}
+
 	start := (req.PageNo - 1) * req.PageSize
 	end := start + req.PageSize
 	if start > len(result) {

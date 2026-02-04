@@ -4270,7 +4270,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 				statisticsReq := req.StatisticsSummaryReq{
 					PageReq: dto.PageReq{
 						PageNo:   1,
-						PageSize: 1000, // 获取所有数据，不分页
+						PageSize: constant.NoPaginationPageSize, // 获取所有数据，不分页
 					},
 					QueryStartDate:    queryStartDate,
 					QueryEndDate:      queryEndDate,
@@ -4284,7 +4284,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 				cashPaymentReq := req.StatisticsPaymentMethodReq{
 					PageReq: dto.PageReq{
 						PageNo:   1,
-						PageSize: 1000, // 获取所有数据，不分页
+						PageSize: constant.NoPaginationPageSize, // 获取所有数据，不分页
 					},
 					QueryStartDate:     queryStartDate,
 					QueryEndDate:       queryEndDate,
@@ -4735,7 +4735,7 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 				statisticsReq := req.StatisticsPaymentMethodReq{
 					PageReq: dto.PageReq{
 						PageNo:   1,
-						PageSize: 1000, // 获取所有数据，不分页
+						PageSize: constant.NoPaginationPageSize, // 获取所有数据，不分页
 					},
 					QueryStartDate:    queryStartDate,
 					QueryEndDate:      queryEndDate,
@@ -5169,7 +5169,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 				statisticsReq := req.StatisticsSummaryReq{
 					PageReq: dto.PageReq{
 						PageNo:   1,
-						PageSize: 1000, // 获取所有数据，不分页
+						PageSize: constant.NoPaginationPageSize, // 获取所有数据，不分页
 					},
 					QueryStartDate:    queryStartDate,
 					QueryEndDate:      queryEndDate,
