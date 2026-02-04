@@ -3573,6 +3573,100 @@ CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation_annotation` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点单批注表';
 
+-- 报损单主表
+CREATE TABLE IF NOT EXISTS `ttpos_stock_loss` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '报损单ID',
+  `code` varchar(50) NOT NULL DEFAULT '' COMMENT '单据编号 SL+时间戳+序列号',
+  `erp_code` varchar(50) NOT NULL DEFAULT '' COMMENT 'ERP单据编号',
+  `loss_type` int(1) NOT NULL DEFAULT 1 COMMENT '报损类型 1:物品损坏 2:物品报废 3:物品过期',
+  `warehouse_uuid` bigint NOT NULL DEFAULT 0 COMMENT '报损仓库UUID',
+  `reason` text COMMENT '报损原因',
+  `status` int(1) NOT NULL DEFAULT 0 COMMENT '状态 0:已保存 1:已提交 2:已审核通过 3:已驳回',
+  `submit_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '提交时间',
+  `approve_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '审核通过时间',
+  `reject_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '驳回时间',
+  `submitter_uuid` bigint NOT NULL DEFAULT 0 COMMENT '提交人UUID',
+  `approver_uuid` bigint NOT NULL DEFAULT 0 COMMENT '审核人UUID',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_code` (`code`),
+  KEY `idx_erp_code` (`erp_code`),
+  KEY `idx_warehouse_uuid` (`warehouse_uuid`),
+  KEY `idx_status` (`status`),
+  KEY `idx_delete_time` (`delete_time`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报损单主表';
+
+-- 报损单明细表
+CREATE TABLE IF NOT EXISTS `ttpos_stock_loss_item` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '明细ID',
+  `stock_loss_uuid` bigint NOT NULL DEFAULT 0 COMMENT '报损单UUID',
+  `material_uuid` bigint NOT NULL DEFAULT 0 COMMENT '物料UUID',
+  `material_name` text COMMENT '物料名称（多语言JSON备份）',
+  `base_quantity` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '基准单位数量（所有单位转换后的总量）',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_stock_loss_uuid` (`stock_loss_uuid`),
+  KEY `idx_material_uuid` (`material_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报损单明细表';
+
+-- 报损单物品单位明细表
+CREATE TABLE IF NOT EXISTS `ttpos_stock_loss_item_unit` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '报损单物品单位明细UUID',
+  `stock_loss_item_uuid` bigint NOT NULL DEFAULT 0 COMMENT '报损单物品明细UUID',
+  `material_unit_uuid` bigint NOT NULL DEFAULT 0 COMMENT '物料单位UUID',
+  `material_unit_name` text COMMENT '物料单位名称（多语言JSON备份）',
+  `quantity` decimal(22,4) DEFAULT NULL COMMENT '单位数量',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_stock_loss_item_uuid` (`stock_loss_item_uuid`),
+  KEY `idx_material_unit_uuid` (`material_unit_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报损单物品单位明细表';
+
+-- 报损单批注表
+CREATE TABLE IF NOT EXISTS `ttpos_stock_loss_annotation` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '批注ID',
+  `stock_loss_uuid` bigint NOT NULL DEFAULT 0 COMMENT '报损单UUID',
+  `action` varchar(20) NOT NULL DEFAULT '' COMMENT '操作类型 submit/resubmit/approve/reject',
+  `content` text COMMENT '批注内容',
+  `operator_uuid` bigint NOT NULL DEFAULT 0 COMMENT '操作人UUID',
+  `operator_name` varchar(100) NOT NULL DEFAULT '' COMMENT '操作人姓名',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_stock_loss_uuid` (`stock_loss_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报损单批注表';
+
+-- 报损单附件关联表
+CREATE TABLE IF NOT EXISTS `ttpos_stock_loss_file` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '关联ID',
+  `stock_loss_uuid` bigint NOT NULL DEFAULT 0 COMMENT '报损单UUID',
+  `file_uuid` bigint NOT NULL DEFAULT 0 COMMENT '文件UUID',
+  `sort_order` int(10) NOT NULL DEFAULT 0 COMMENT '排序顺序',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_stock_loss_uuid` (`stock_loss_uuid`),
+  KEY `idx_file_uuid` (`file_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报损单附件关联表';
+
 -- 原料供应商关联表
 CREATE TABLE IF NOT EXISTS `ttpos_material_supplier` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',

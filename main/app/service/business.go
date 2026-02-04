@@ -3872,6 +3872,7 @@ func (s *businessSrv) GetCompanyList(ctx context.Context) (*resp.CompanySummaryL
 				// 创建门店 context
 				shopCtx := ctx.Copy()
 				shopCtx.SetDB(shopDB)
+				shopCtx.SetCompanyUuid(companyUuid)
 
 				// 获取 store_setting
 				storeSetting, err := settingSrv.GetStoreSetting(shopCtx)
@@ -3995,7 +3996,7 @@ func (s *businessSrv) GetCompanyPaymentMethods(ctx context.Context) (*resp.Compa
 				shopDB := dbm.GetDB(companyUuid)
 				if shopDB == nil {
 					logger.Logger.Warn("获取门店数据库连接失败", zap.Uint64("company_uuid", companyUuid))
-					resultChan <- resultItem{paymentMethods: nil, err: errors.New("获取门店数据库连接失败")}
+					resultChan <- resultItem{paymentMethods: nil, err: fmt.Errorf("获取门店数据库连接失败, company_uuid=%d", companyUuid)}
 					return
 				}
 
@@ -4094,6 +4095,49 @@ func (s *businessSrv) GetCompanyPaymentMethods(ctx context.Context) (*resp.Compa
 	}, nil
 }
 
+// compareStoreCode 店铺编号排序比较函数
+// 规则：1. 空值排最前 2. 数字优先(0-9) 3. 字母次之(a-z，不区分大小写)
+func compareStoreCode(a, b string) bool {
+	// 空值排最前
+	if a == "" && b == "" {
+		return false
+	}
+	if a == "" {
+		return true
+	}
+	if b == "" {
+		return false
+	}
+
+	// 逐字符比较：数字 < 字母
+	aLower := strings.ToLower(a)
+	bLower := strings.ToLower(b)
+	minLen := len(aLower)
+	if len(bLower) < minLen {
+		minLen = len(bLower)
+	}
+
+	for i := 0; i < minLen; i++ {
+		ca, cb := aLower[i], bLower[i]
+		aIsDigit := ca >= '0' && ca <= '9'
+		bIsDigit := cb >= '0' && cb <= '9'
+
+		if aIsDigit && !bIsDigit {
+			return true // 数字优先
+		}
+		if !aIsDigit && bIsDigit {
+			return false
+		}
+
+		// 同类型字符比较
+		if ca != cb {
+			return ca < cb
+		}
+	}
+
+	return len(a) < len(b)
+}
+
 // CountCompanyBusinessSummary 获取门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
 func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request req.StatisticsCompanySummaryReq) (interface{}, error) {
 	// 根据指标类型调用不同的处理逻辑
@@ -4164,18 +4208,18 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 	semaphore := make(chan struct{}, maxConcurrent)
 	var wg sync.WaitGroup
 
-	// 使用 channel 收集结果，避免竞态条件
+	// 使用带索引的结果收集，确保顺序稳定（修复分页数据不一致问题）
 	type resultItem struct {
 		items []resp.CompanyBusinessSummaryItem
 		err   error
 	}
-	resultChan := make(chan resultItem, len(companyList))
+	results := make([]resultItem, len(companyList))
 
 	// 并发查询各个门店
-	for _, companyItem := range companyList {
+	for idx, companyItem := range companyList {
 		wg.Add(1)
 		utils.Go(func() {
-			func(item *resp.CompanySummaryItem) {
+			func(i int, item *resp.CompanySummaryItem) {
 				defer wg.Done()
 
 				// 获取信号量，控制并发数
@@ -4184,12 +4228,13 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 
 				companyUuid := item.CompanyUuid
 				companyName := item.CompanyName
+				storeCode := item.StoreCode
 
 				// 获取完整的 Company 信息（用于 SetCompany）
 				company, err := companyRepo.GetCompanyInfoByUuid(companyUuid)
 				if err != nil {
 					logger.Logger.Warn("获取门店信息失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
-					resultChan <- resultItem{items: nil, err: err}
+					results[i] = resultItem{items: nil, err: err}
 					return
 				}
 
@@ -4197,7 +4242,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 				shopDB := dbm.GetDB(companyUuid)
 				if shopDB == nil {
 					logger.Logger.Warn("获取门店数据库连接失败", zap.Uint64("company_uuid", companyUuid))
-					resultChan <- resultItem{items: nil, err: errors.New("获取门店数据库连接失败")}
+					results[i] = resultItem{items: nil, err: fmt.Errorf("获取门店数据库连接失败, company_uuid=%d", companyUuid)}
 					return
 				}
 
@@ -4214,7 +4259,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 				})
 				if err != nil {
 					logger.Logger.Warn("获取门店设置失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
-					resultChan <- resultItem{items: nil, err: err}
+					results[i] = resultItem{items: nil, err: err}
 					return
 				}
 				shopCtx.SetCompanySetting(shopCompanySetting)
@@ -4225,7 +4270,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 				statisticsReq := req.StatisticsSummaryReq{
 					PageReq: dto.PageReq{
 						PageNo:   1,
-						PageSize: 1000, // 获取所有数据，不分页
+						PageSize: constant.NoPaginationPageSize, // 获取所有数据，不分页
 					},
 					QueryStartDate:    queryStartDate,
 					QueryEndDate:      queryEndDate,
@@ -4239,7 +4284,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 				cashPaymentReq := req.StatisticsPaymentMethodReq{
 					PageReq: dto.PageReq{
 						PageNo:   1,
-						PageSize: 1000, // 获取所有数据，不分页
+						PageSize: constant.NoPaginationPageSize, // 获取所有数据，不分页
 					},
 					QueryStartDate:     queryStartDate,
 					QueryEndDate:       queryEndDate,
@@ -4290,6 +4335,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 					items = append(items, resp.CompanyBusinessSummaryItem{
 						Date:               statItem.Date,
 						CompanyName:        companyName, // 使用 GetCompanyList 返回的 CompanyName，避免重复查询
+						StoreCode:          storeCode,   // 店铺编号（用于排序）
 						OrderAmount:        statItem.OrderAmount,
 						PayAmount:          statItem.PayAmount,
 						OrderNum:           statItem.OrderNum,
@@ -4308,20 +4354,17 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 					})
 				}
 
-				resultChan <- resultItem{items: items, err: nil}
-			}(companyItem)
+				results[i] = resultItem{items: items, err: nil}
+			}(idx, companyItem)
 		})
 	}
 
 	// 等待所有 goroutine 完成
-	utils.Go(func() {
-		wg.Wait()
-		close(resultChan)
-	})
+	wg.Wait()
 
-	// 收集所有门店的统计数据
+	// 收集所有门店的统计数据（按原始顺序）
 	allItems := make([]resp.CompanyBusinessSummaryItem, 0)
-	for result := range resultChan {
+	for _, result := range results {
 		if result.err != nil {
 			// 记录错误但继续处理其他门店
 			continue
@@ -4396,8 +4439,16 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 		}
 
 		// 转换为列表并计算人均和单均，设置商家名称
+		// 先提取并排序日期 key，避免 Map 遍历顺序不确定导致分页数据不一致
+		dateKeys := make([]string, 0, len(dateDecimalMap))
+		for date := range dateDecimalMap {
+			dateKeys = append(dateKeys, date)
+		}
+		sort.Strings(dateKeys)
+
 		finalList = make([]resp.CompanyBusinessSummaryItem, 0, len(dateDecimalMap))
-		for date, dateDecimal := range dateDecimalMap {
+		for _, date := range dateKeys {
+			dateDecimal := dateDecimalMap[date]
 			// 计算现金AC
 			var cashAC float64
 			if dateDecimal.CashTC > 0 {
@@ -4516,9 +4567,17 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 		}
 	} else {
 		// 明细表：返回每个营业日每个商家的数据，不包括汇总行（SummaryRow 返回默认值）
-		// 按日期排序
+		// 按日期+店铺编号+商家名称排序（修复分页数据不一致问题）
 		sort.Slice(allItems, func(i, j int) bool {
-			return allItems[i].Date < allItems[j].Date
+			if allItems[i].Date != allItems[j].Date {
+				return allItems[i].Date < allItems[j].Date
+			}
+			// 二级排序：店铺编号
+			if allItems[i].StoreCode != allItems[j].StoreCode {
+				return compareStoreCode(allItems[i].StoreCode, allItems[j].StoreCode)
+			}
+			// 三级排序：商家名称（编号相同或都为空时）
+			return allItems[i].CompanyName < allItems[j].CompanyName
 		})
 		finalList = allItems
 		// 明细表返回默认值
@@ -4614,18 +4673,18 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 	semaphore := make(chan struct{}, maxConcurrent)
 	var wg sync.WaitGroup
 
-	// 使用 channel 收集结果，避免竞态条件
+	// 使用带索引的结果收集，确保顺序稳定（修复分页数据不一致问题）
 	type resultItem struct {
 		items []resp.CompanyPaymentMethodSummaryItem
 		err   error
 	}
-	resultChan := make(chan resultItem, len(companyList))
+	results := make([]resultItem, len(companyList))
 
 	// 并发查询各个门店
-	for _, companyItem := range companyList {
+	for idx, companyItem := range companyList {
 		wg.Add(1)
 		utils.Go(func() {
-			func(item *resp.CompanySummaryItem) {
+			func(i int, item *resp.CompanySummaryItem) {
 				defer wg.Done()
 
 				// 获取信号量，控制并发数
@@ -4634,12 +4693,13 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 
 				companyUuid := item.CompanyUuid
 				companyName := item.CompanyName
+				storeCode := item.StoreCode
 
 				// 获取完整的 Company 信息（用于 SetCompany）
 				company, err := companyRepo.GetCompanyInfoByUuid(companyUuid)
 				if err != nil {
 					logger.Logger.Warn("获取门店信息失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
-					resultChan <- resultItem{items: nil, err: err}
+					results[i] = resultItem{items: nil, err: err}
 					return
 				}
 
@@ -4647,7 +4707,7 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 				shopDB := dbm.GetDB(companyUuid)
 				if shopDB == nil {
 					logger.Logger.Warn("获取门店数据库连接失败", zap.Uint64("company_uuid", companyUuid))
-					resultChan <- resultItem{items: nil, err: errors.New("获取门店数据库连接失败")}
+					results[i] = resultItem{items: nil, err: fmt.Errorf("获取门店数据库连接失败, company_uuid=%d", companyUuid)}
 					return
 				}
 
@@ -4664,7 +4724,7 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 				})
 				if err != nil {
 					logger.Logger.Warn("获取门店设置失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
-					resultChan <- resultItem{items: nil, err: err}
+					results[i] = resultItem{items: nil, err: err}
 					return
 				}
 				shopCtx.SetCompanySetting(shopCompanySetting)
@@ -4675,7 +4735,7 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 				statisticsReq := req.StatisticsPaymentMethodReq{
 					PageReq: dto.PageReq{
 						PageNo:   1,
-						PageSize: 1000, // 获取所有数据，不分页
+						PageSize: constant.NoPaginationPageSize, // 获取所有数据，不分页
 					},
 					QueryStartDate:    queryStartDate,
 					QueryEndDate:      queryEndDate,
@@ -4699,6 +4759,7 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 					items = append(items, resp.CompanyPaymentMethodSummaryItem{
 						Date:          statItem.Date,
 						CompanyName:   companyName, // 使用 GetCompanyList 返回的 CompanyName，避免重复查询
+						StoreCode:     storeCode,   // 店铺编号（用于排序）
 						PaymentName:   statItem.PaymentName,
 						PaymentAmount: statItem.PaymentAmount,
 						PaymentNum:    statItem.PaymentNum,
@@ -4706,20 +4767,17 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 					})
 				}
 
-				resultChan <- resultItem{items: items, err: nil}
-			}(companyItem)
+				results[i] = resultItem{items: items, err: nil}
+			}(idx, companyItem)
 		})
 	}
 
 	// 等待所有 goroutine 完成
-	utils.Go(func() {
-		wg.Wait()
-		close(resultChan)
-	})
+	wg.Wait()
 
-	// 收集所有门店的统计数据
+	// 收集所有门店的统计数据（按原始顺序）
 	allItems := make([]resp.CompanyPaymentMethodSummaryItem, 0)
-	for result := range resultChan {
+	for _, result := range results {
 		if result.err != nil {
 			// 记录错误但继续处理其他门店
 			continue
@@ -4940,11 +4998,15 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 		})
 	} else {
 		// 明细表：返回每个营业日每个商家每个支付方式的数据，不包括汇总行（SummaryRow 返回空数组）
-		// 按日期、商家名称、支付方式排序
+		// 按日期、店铺编号、商家名称、支付方式排序（修复分页数据不一致问题）
 		sort.Slice(allItems, func(i, j int) bool {
 			if allItems[i].Date != allItems[j].Date {
 				return allItems[i].Date < allItems[j].Date
 			}
+			if allItems[i].StoreCode != allItems[j].StoreCode {
+				return compareStoreCode(allItems[i].StoreCode, allItems[j].StoreCode)
+			}
+			// 编号相同时按商家名称排序
 			if allItems[i].CompanyName != allItems[j].CompanyName {
 				return allItems[i].CompanyName < allItems[j].CompanyName
 			}
@@ -5044,19 +5106,19 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 	semaphore := make(chan struct{}, maxConcurrent)
 	var wg sync.WaitGroup
 
-	// 使用 channel 收集结果，避免竞态条件
+	// 使用带索引的结果收集，确保顺序稳定（修复分页数据不一致问题）
 	type resultItem struct {
 		items     []resp.CompanyRefundSummaryItem
 		orderNums map[string]int64 // 日期 -> 订单数，用于汇总时计算退款率
 		err       error
 	}
-	resultChan := make(chan resultItem, len(companyList))
+	results := make([]resultItem, len(companyList))
 
 	// 并发查询各个门店
-	for _, companyItem := range companyList {
+	for idx, companyItem := range companyList {
 		wg.Add(1)
 		utils.Go(func() {
-			func(item *resp.CompanySummaryItem) {
+			func(i int, item *resp.CompanySummaryItem) {
 				defer wg.Done()
 
 				// 获取信号量，控制并发数
@@ -5065,12 +5127,13 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 
 				companyUuid := item.CompanyUuid
 				companyName := item.CompanyName
+				storeCode := item.StoreCode
 
 				// 获取完整的 Company 信息（用于 SetCompany）
 				company, err := companyRepo.GetCompanyInfoByUuid(companyUuid)
 				if err != nil {
 					logger.Logger.Warn("获取门店信息失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
-					resultChan <- resultItem{items: nil, err: err}
+					results[i] = resultItem{items: nil, err: err}
 					return
 				}
 
@@ -5078,7 +5141,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 				shopDB := dbm.GetDB(companyUuid)
 				if shopDB == nil {
 					logger.Logger.Warn("获取门店数据库连接失败", zap.Uint64("company_uuid", companyUuid))
-					resultChan <- resultItem{items: nil, err: errors.New("获取门店数据库连接失败")}
+					results[i] = resultItem{items: nil, err: fmt.Errorf("获取门店数据库连接失败, company_uuid=%d", companyUuid)}
 					return
 				}
 
@@ -5095,7 +5158,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 				})
 				if err != nil {
 					logger.Logger.Warn("获取门店设置失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
-					resultChan <- resultItem{items: nil, err: err}
+					results[i] = resultItem{items: nil, err: err}
 					return
 				}
 				shopCtx.SetCompanySetting(shopCompanySetting)
@@ -5106,7 +5169,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 				statisticsReq := req.StatisticsSummaryReq{
 					PageReq: dto.PageReq{
 						PageNo:   1,
-						PageSize: 1000, // 获取所有数据，不分页
+						PageSize: constant.NoPaginationPageSize, // 获取所有数据，不分页
 					},
 					QueryStartDate:    queryStartDate,
 					QueryEndDate:      queryEndDate,
@@ -5123,6 +5186,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 					items = append(items, resp.CompanyRefundSummaryItem{
 						Date:                statItem.Date,
 						CompanyName:         companyName, // 使用 GetCompanyList 返回的 CompanyName，避免重复查询
+						StoreCode:           storeCode,   // 店铺编号（用于排序）
 						RefundAmount:        statItem.RefundAmount,
 						RefundNum:           statItem.RefundNum,
 						RefundRate:          statItem.RefundRate,
@@ -5135,21 +5199,18 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 					orderNums[statItem.Date] += statItem.OrderNum
 				}
 
-				resultChan <- resultItem{items: items, orderNums: orderNums, err: nil}
-			}(companyItem)
+				results[i] = resultItem{items: items, orderNums: orderNums, err: nil}
+			}(idx, companyItem)
 		})
 	}
 
 	// 等待所有 goroutine 完成
-	utils.Go(func() {
-		wg.Wait()
-		close(resultChan)
-	})
+	wg.Wait()
 
-	// 收集所有门店的统计数据，同时收集订单数信息
+	// 收集所有门店的统计数据（按原始顺序），同时收集订单数信息
 	allItems := make([]resp.CompanyRefundSummaryItem, 0)
 	dateOrderNumMap := make(map[string]int64) // 日期 -> 订单数总和（所有商家累加）
-	for result := range resultChan {
+	for _, result := range results {
 		if result.err != nil {
 			// 记录错误但继续处理其他门店
 			continue
@@ -5218,8 +5279,16 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 		}
 
 		// 转换为列表并计算退款率，设置商家名称
+		// 先提取并排序日期 key，避免 Map 遍历顺序不确定导致分页数据不一致
+		dateKeys := make([]string, 0, len(dateDecimalMap))
+		for date := range dateDecimalMap {
+			dateKeys = append(dateKeys, date)
+		}
+		sort.Strings(dateKeys)
+
 		finalList = make([]resp.CompanyRefundSummaryItem, 0, len(dateDecimalMap))
-		for date, dateDecimal := range dateDecimalMap {
+		for _, date := range dateKeys {
+			dateDecimal := dateDecimalMap[date]
 			// 计算退款率：退款笔数 / 订单数量 * 100
 			var refundRate decimal.Decimal
 			if dateDecimal.OrderNum > 0 {
@@ -5303,9 +5372,17 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 		}
 	} else {
 		// 明细表：返回每个营业日每个商家的数据，不包括汇总行（SummaryRow 返回默认值）
-		// 按日期排序
+		// 按日期+店铺编号+商家名称排序（修复分页数据不一致问题）
 		sort.Slice(allItems, func(i, j int) bool {
-			return allItems[i].Date < allItems[j].Date
+			if allItems[i].Date != allItems[j].Date {
+				return allItems[i].Date < allItems[j].Date
+			}
+			// 二级排序：店铺编号
+			if allItems[i].StoreCode != allItems[j].StoreCode {
+				return compareStoreCode(allItems[i].StoreCode, allItems[j].StoreCode)
+			}
+			// 三级排序：商家名称（编号相同或都为空时）
+			return allItems[i].CompanyName < allItems[j].CompanyName
 		})
 		finalList = allItems
 		// 明细表返回默认值

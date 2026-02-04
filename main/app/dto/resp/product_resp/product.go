@@ -201,6 +201,10 @@ func (list *ProductFlavorList) InjectStockNum(stockNumMap map[uint64]float64) {
 		if !ok {
 			stockNum = constant.ProductBomInfiniteStock // 无限库存,如果没有设置就无限库存
 		}
+		// 如果库存为0，则设置为0
+		if stockNum <= 0 {
+			stockNum = 0 // 库存为0
+		}
 		list.List[index].StockNum = stockNum
 	}
 }

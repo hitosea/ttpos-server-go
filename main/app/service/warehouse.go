@@ -501,13 +501,14 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 
 	// 类型
 	typeStrMap := map[int]string{
-		constant.WarehouseInOutLogScenePurchase:    "purchase",
-		constant.WarehouseInOutLogSceneSale:        "sale",
-		constant.WarehouseInOutLogSceneDelivery:    "delivery",
-		constant.WarehouseInOutLogSceneProfitIn:    "profit_in",
-		constant.WarehouseInOutLogSceneLossOut:     "loss_out",
-		constant.WarehouseInOutLogSceneTransferIn:  "transfer_in",
-		constant.WarehouseInOutLogSceneTransferOut: "transfer_out",
+		constant.WarehouseInOutLogScenePurchase:     "purchase",
+		constant.WarehouseInOutLogSceneSale:         "sale",
+		constant.WarehouseInOutLogSceneDelivery:     "delivery",
+		constant.WarehouseInOutLogSceneProfitIn:     "profit_in",
+		constant.WarehouseInOutLogSceneLossOut:      "loss_out",
+		constant.WarehouseInOutLogSceneTransferIn:   "transfer_in",
+		constant.WarehouseInOutLogSceneTransferOut:  "transfer_out",
+		constant.WarehouseInOutLogSceneStockLossOut: "stock_loss_out",
 	}
 
 	// 格式化日期
