@@ -224,7 +224,7 @@ func (s *materialCategoryVisibilitySrv) Delete(ctx context.Context, uuid uint64)
 	return nil
 }
 
-// GetSubShopRoles 获取子店角色列表（跨库查询）
+// GetSubShopRoles 获取子店角色列表（跨库查询），不包括总店
 func (s *materialCategoryVisibilitySrv) GetSubShopRoles(ctx context.Context) (*resp.SubShopRolesResp, error) {
 	companySetting := ctx.GetCompanySetting()
 
@@ -233,10 +233,12 @@ func (s *materialCategoryVisibilitySrv) GetSubShopRoles(ctx context.Context) (*r
 		return nil, errors.New("只有总店可以查询子店角色")
 	}
 
-	// 获取所有子店
+	headquarterUuid := ctx.GetDbId()
+
+	// 获取所有子店（包含总店，后续过滤）
 	saasDb := s.dbm.GetDB(constant.DefaultDB)
 	companyRepo := repository.NewCompanyRepo(saasDb)
-	subShops, err := companyRepo.GetAllSubShopsAndHeadquarterListByCompanyUuid(ctx.GetDbId())
+	subShops, err := companyRepo.GetAllSubShopsAndHeadquarterListByCompanyUuid(headquarterUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取子店列表失败")
 	}
@@ -251,6 +253,10 @@ func (s *materialCategoryVisibilitySrv) GetSubShopRoles(ctx context.Context) (*r
 	shopRolesChan := make(chan resp.ShopRoles, len(subShops))
 
 	for _, shop := range subShops {
+		// 跳过总店，只查询子店
+		if shop.Uuid == headquarterUuid {
+			continue
+		}
 		wg.Add(1)
 		utils.Go(func() {
 			defer wg.Done()
