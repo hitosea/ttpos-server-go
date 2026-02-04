@@ -61,6 +61,7 @@ message ItemInfo {
   optional string sales_uom = 26; // 销售单位，可选
   bool delivered_by_supplier = 27; // 是否由供应商直接配送
   repeated SupplierItem supplier_items = 28; // 关联的供应商列表
+  string custom_specification = 29; // 自定义规格
 }
 
 // SupplierItem 供应商商品关联信息

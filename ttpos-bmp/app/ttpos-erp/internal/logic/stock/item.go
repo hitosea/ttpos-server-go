@@ -129,7 +129,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeItem,
 	}, &erp.RequestParams{
-		Fields:  g.ArrayStr{"item_name", "item_code", "item_group", "custom_branch", "disabled", "custom_company", "custom_specification", "stock_uom"},
+		Fields:  g.ArrayStr{"item_name", "item_code", "item_group", "custom_branch", "disabled", "custom_company", "custom_specification", "stock_uom", "custom_specification"},
 		Filters: filters,
 		Limit:   consts.Limit9999,
 	})
@@ -196,6 +196,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			ItemGroup:           utility.ParseItemGroupFromString(data.Get("item_group").String()),
 			StockUom:            data.Get("stock_uom").String(),
 			Disabled:            data.Get("disabled").Bool(),
+			CustomSpecification: data.Get("custom_specification").String(),
 			PurchaseUom:         itemInfo.PurchaseUom,
 			SalesUom:            proto.String(itemInfo.SalesUom),
 			Uoms:                uomDetails,

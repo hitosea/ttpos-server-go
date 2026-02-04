@@ -274,6 +274,7 @@ type ItemInfo struct {
 	SalesUom            *string                `protobuf:"bytes,26,opt,name=sales_uom,json=salesUom,proto3,oneof" json:"sales_uom,omitempty" dc:"销售单位，可选"`                                                                                                             // 销售单位，可选
 	DeliveredBySupplier bool                   `protobuf:"varint,27,opt,name=delivered_by_supplier,json=deliveredBySupplier,proto3" json:"delivered_by_supplier,omitempty" dc:"是否由供应商直接配送"`                                                                            // 是否由供应商直接配送
 	SupplierItems       []*SupplierItem        `protobuf:"bytes,28,rep,name=supplier_items,json=supplierItems,proto3" json:"supplier_items,omitempty" dc:"关联的供应商列表"`                                                                                                   // 关联的供应商列表
+	CustomSpecification string                 `protobuf:"bytes,29,opt,name=custom_specification,json=customSpecification,proto3" json:"custom_specification,omitempty" dc:"自定义规格"`                                                                                    // 自定义规格
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -502,6 +503,13 @@ func (x *ItemInfo) GetSupplierItems() []*SupplierItem {
 		return x.SupplierItems
 	}
 	return nil
+}
+
+func (x *ItemInfo) GetCustomSpecification() string {
+	if x != nil {
+		return x.CustomSpecification
+	}
+	return ""
 }
 
 // SupplierItem 供应商商品关联信息
@@ -2302,7 +2310,7 @@ const file_item_item_proto_rawDesc = "" +
 	"variant_of\x18\n" +
 	" \x01(\tR\tvariantOf\">\n" +
 	"\x0fGetItemListResp\x12+\n" +
-	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xdf\b\n" +
+	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\x92\t\n" +
 	"\bItemInfo\x12\x1b\n" +
 	"\titem_name\x18\x01 \x01(\tR\bitemName\x12.\n" +
 	"\n" +
@@ -2337,7 +2345,8 @@ const file_item_item_proto_rawDesc = "" +
 	"\x14allow_negative_stock\x18\x19 \x01(\bH\x00R\x12allowNegativeStock\x88\x01\x01\x12 \n" +
 	"\tsales_uom\x18\x1a \x01(\tH\x01R\bsalesUom\x88\x01\x01\x122\n" +
 	"\x15delivered_by_supplier\x18\x1b \x01(\bR\x13deliveredBySupplier\x129\n" +
-	"\x0esupplier_items\x18\x1c \x03(\v2\x12.item.SupplierItemR\rsupplierItemsB\x17\n" +
+	"\x0esupplier_items\x18\x1c \x03(\v2\x12.item.SupplierItemR\rsupplierItems\x121\n" +
+	"\x14custom_specification\x18\x1d \x01(\tR\x13customSpecificationB\x17\n" +
 	"\x15_allow_negative_stockB\f\n" +
 	"\n" +
 	"_sales_uom\"<\n" +
