@@ -1747,6 +1747,11 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		}
 		order.PlatformOrderState = status // 更新平台原始状态
 
+		// 更新完成时间
+		if newOrderState == valueobject.TakeoutOrderStateCompleted && order.CompletedTime == 0 {
+			order.CompletedTime = time.Now().Unix()
+		}
+
 		// 更新取消时间
 		if newOrderState == valueobject.TakeoutOrderStateCanceled || newOrderState == valueobject.TakeoutOrderStateRejected {
 			order.RejectedTime = time.Now().Unix()
@@ -1760,7 +1765,7 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		}
 
 		// 判断状态是否下降
-		if newOrderState < oldOrderState && newOrderState != valueobject.TakeoutOrderStateCompleted {
+		if newOrderState < oldOrderState {
 			logger.Logger.Info("订单状态下降，不处理", zap.String("order_uuid", orderUuid), zap.Int("old_order_state", oldOrderState), zap.Int("new_order_state", newOrderState))
 			return nil
 		}
