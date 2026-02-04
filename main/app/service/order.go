@@ -5052,9 +5052,14 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	if option.OpenPosEntryName != "" {
 		openPosEntryName = option.OpenPosEntryName
 	}
+	// 根据反结账次数生成 OrderNo：首次使用原始 OrderNo，反结账后加后缀 -1, -2...
+	orderNo := saleOrder.OrderNo
+	if saleBill.ReverseSettleCount > 0 {
+		orderNo = fmt.Sprintf("%s-%d", saleOrder.OrderNo, saleBill.ReverseSettleCount)
+	}
 	param := req.SavePosInvoiceReq{
 		SiteCode:         companySetting.ErpnextSiteCode,
-		OrderNo:          saleOrder.OrderNo,
+		OrderNo:          orderNo,
 		OpenPosEntryName: openPosEntryName,
 		PostingDatetime:  saleOrder.FinishTime,
 		CustomerUuid:     customerUuid,
