@@ -258,7 +258,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 	detailResp.WarehouseName = *language.JsonToLocaleResponse(purchaseOrder.WarehouseName)
 
 	// 是否可重新提交
-	detailResp.CanRecommit = purchaseOrder.Status == constant.PurchaseOrderStatusRejected && purchaseOrder.ApplicantUuid == ctx.GetStaffUuid() && companySetting.IsSubShop()
+	detailResp.CanRecommit = purchaseOrder.Status == constant.PurchaseOrderStatusRejected && purchaseOrder.ApplicantUuid == ctx.GetStaffUuid()
 
 	// 是否更新限购方案
 	detailResp.IsUpdateQuotaScheme = false

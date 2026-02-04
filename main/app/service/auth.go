@@ -1910,6 +1910,7 @@ func (s *authSrv) GetCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 			CompanyUuid: cs.CompanyUuid,
 			CompanyName: company.Name,
 			StoreCode:   storeCode,
+			CreateTime:  company.CreateTime,
 			Roles:       roleNames,
 			IsSuper:     cs.IsSuper,
 		})
