@@ -51828,10 +51828,6 @@ const docTemplate = `{
         },
         "req.StockLossItemReq": {
             "type": "object",
-            "required": [
-                "material_uuid",
-                "units"
-            ],
             "properties": {
                 "material_uuid": {
                     "description": "物料UUID",
@@ -51840,7 +51836,6 @@ const docTemplate = `{
                 "units": {
                     "description": "报损单物品单位明细",
                     "type": "array",
-                    "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/req.StockLossItemUnitReq"
                     }

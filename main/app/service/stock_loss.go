@@ -343,7 +343,7 @@ func (s *stockLossSrv) SaveStockLoss(ctx context.Context, saveReq req.StockLossS
 	// 仅提交模式：直接提交已保存的报损单，不更新数据
 	if isSubmitOnly {
 		if !saveReq.IsSubmit {
-			return stockLossUuid, errors.New("仅提交模式下必须设置 is_submit 为 true")
+			return stockLossUuid, errors.New("参数错误")
 		}
 		// 直接提交，跳过数据验证和更新
 		staffName := ""

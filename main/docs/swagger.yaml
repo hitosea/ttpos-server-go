@@ -8613,11 +8613,7 @@ definitions:
         description: 报损单物品单位明细
         items:
           $ref: '#/definitions/req.StockLossItemUnitReq'
-        minItems: 1
         type: array
-    required:
-    - material_uuid
-    - units
     type: object
   req.StockLossItemUnitReq:
     properties:
