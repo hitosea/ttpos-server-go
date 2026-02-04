@@ -91,9 +91,9 @@ func (s *ReportSrv) formatStoreName(storeCode, storeName string) string {
 
 // 新增：店铺排序
 func (s *ReportSrv) sortStores(stores []StoreData) []StoreData {
-    // 1. 无编号优先
-    // 2. 数字(0-9)优先
-    // 3. 字母(a-z)其次
+    // 1. 无编号优先，按创建时间顺序
+    // 2. 有编号：数字(0-9)优先，字母(a-z)其次
+    // 3. 编号相同时按创建时间顺序
 }
 ```
 

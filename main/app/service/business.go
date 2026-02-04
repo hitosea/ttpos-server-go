@@ -3816,6 +3816,7 @@ func (s *businessSrv) GetCompanyList(ctx context.Context) (*resp.CompanySummaryL
 			companyList = append(companyList, &resp.CompanySummaryItem{
 				CompanyUuid: c.Uuid,
 				CompanyName: c.Name,
+				CreateTime:  c.CreateTime,
 			})
 		}
 	} else {
@@ -3837,6 +3838,7 @@ func (s *businessSrv) GetCompanyList(ctx context.Context) (*resp.CompanySummaryL
 			companyList = append(companyList, &resp.CompanySummaryItem{
 				CompanyUuid: c.CompanyUuid,
 				CompanyName: c.CompanyName,
+				CreateTime:  c.CreateTime,
 			})
 		}
 	}
@@ -3901,7 +3903,10 @@ func (s *businessSrv) GetCompanyList(ctx context.Context) (*resp.CompanySummaryL
 		}
 	}
 
-	// 按店铺编号排序：1. 无编号优先 2. 数字(0-9)优先 3. 字母(a-z)其次
+	// 按店铺编号排序：
+	// 1. 无编号优先，按创建时间顺序排序
+	// 2. 有编号：数字(0-9)优先，字母(a-z)其次
+	// 3. 编号相同时按创建时间顺序排序
 	sort.Slice(companyList, func(i, j int) bool {
 		codeI := companyList[i].StoreCode
 		codeJ := companyList[j].StoreCode
@@ -3914,8 +3919,8 @@ func (s *businessSrv) GetCompanyList(ctx context.Context) (*resp.CompanySummaryL
 			return false
 		}
 		if codeI == "" && codeJ == "" {
-			// 都无编号时按名称排序
-			return companyList[i].CompanyName < companyList[j].CompanyName
+			// 都无编号时按创建时间顺序排序
+			return companyList[i].CreateTime < companyList[j].CreateTime
 		}
 
 		// 获取首字符进行类型判断
@@ -3934,7 +3939,13 @@ func (s *businessSrv) GetCompanyList(ctx context.Context) (*resp.CompanySummaryL
 		}
 
 		// 同类型按字符串排序（大小写不敏感）
-		return strings.ToLower(codeI) < strings.ToLower(codeJ)
+		lowerI := strings.ToLower(codeI)
+		lowerJ := strings.ToLower(codeJ)
+		if lowerI != lowerJ {
+			return lowerI < lowerJ
+		}
+		// 编号相同时按创建时间顺序排序
+		return companyList[i].CreateTime < companyList[j].CreateTime
 	})
 
 	return &resp.CompanySummaryListResp{
@@ -4229,6 +4240,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 				companyUuid := item.CompanyUuid
 				companyName := item.CompanyName
 				storeCode := item.StoreCode
+				createTime := item.CreateTime
 
 				// 获取完整的 Company 信息（用于 SetCompany）
 				company, err := companyRepo.GetCompanyInfoByUuid(companyUuid)
@@ -4336,6 +4348,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 						Date:               statItem.Date,
 						CompanyName:        companyName, // 使用 GetCompanyList 返回的 CompanyName，避免重复查询
 						StoreCode:          storeCode,   // 店铺编号（用于排序）
+						CreateTime:         createTime,  // 创建时间（用于排序）
 						OrderAmount:        statItem.OrderAmount,
 						PayAmount:          statItem.PayAmount,
 						OrderNum:           statItem.OrderNum,
@@ -4567,7 +4580,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 		}
 	} else {
 		// 明细表：返回每个营业日每个商家的数据，不包括汇总行（SummaryRow 返回默认值）
-		// 按日期+店铺编号+商家名称排序（修复分页数据不一致问题）
+		// 按日期+店铺编号+创建时间排序（修复分页数据不一致问题）
 		sort.Slice(allItems, func(i, j int) bool {
 			if allItems[i].Date != allItems[j].Date {
 				return allItems[i].Date < allItems[j].Date
@@ -4576,8 +4589,8 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 			if allItems[i].StoreCode != allItems[j].StoreCode {
 				return compareStoreCode(allItems[i].StoreCode, allItems[j].StoreCode)
 			}
-			// 三级排序：商家名称（编号相同或都为空时）
-			return allItems[i].CompanyName < allItems[j].CompanyName
+			// 三级排序：创建时间（编号相同或都为空时）
+			return allItems[i].CreateTime < allItems[j].CreateTime
 		})
 		finalList = allItems
 		// 明细表返回默认值
@@ -4694,6 +4707,7 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 				companyUuid := item.CompanyUuid
 				companyName := item.CompanyName
 				storeCode := item.StoreCode
+				createTime := item.CreateTime
 
 				// 获取完整的 Company 信息（用于 SetCompany）
 				company, err := companyRepo.GetCompanyInfoByUuid(companyUuid)
@@ -4760,6 +4774,7 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 						Date:          statItem.Date,
 						CompanyName:   companyName, // 使用 GetCompanyList 返回的 CompanyName，避免重复查询
 						StoreCode:     storeCode,   // 店铺编号（用于排序）
+						CreateTime:    createTime,  // 创建时间（用于排序）
 						PaymentName:   statItem.PaymentName,
 						PaymentAmount: statItem.PaymentAmount,
 						PaymentNum:    statItem.PaymentNum,
@@ -4998,7 +5013,7 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 		})
 	} else {
 		// 明细表：返回每个营业日每个商家每个支付方式的数据，不包括汇总行（SummaryRow 返回空数组）
-		// 按日期、店铺编号、商家名称、支付方式排序（修复分页数据不一致问题）
+		// 按日期、店铺编号、创建时间、支付方式排序（修复分页数据不一致问题）
 		sort.Slice(allItems, func(i, j int) bool {
 			if allItems[i].Date != allItems[j].Date {
 				return allItems[i].Date < allItems[j].Date
@@ -5006,9 +5021,9 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 			if allItems[i].StoreCode != allItems[j].StoreCode {
 				return compareStoreCode(allItems[i].StoreCode, allItems[j].StoreCode)
 			}
-			// 编号相同时按商家名称排序
-			if allItems[i].CompanyName != allItems[j].CompanyName {
-				return allItems[i].CompanyName < allItems[j].CompanyName
+			// 编号相同时按创建时间排序
+			if allItems[i].CreateTime != allItems[j].CreateTime {
+				return allItems[i].CreateTime < allItems[j].CreateTime
 			}
 			return allItems[i].PaymentName < allItems[j].PaymentName
 		})
@@ -5128,6 +5143,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 				companyUuid := item.CompanyUuid
 				companyName := item.CompanyName
 				storeCode := item.StoreCode
+				createTime := item.CreateTime
 
 				// 获取完整的 Company 信息（用于 SetCompany）
 				company, err := companyRepo.GetCompanyInfoByUuid(companyUuid)
@@ -5187,6 +5203,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 						Date:                statItem.Date,
 						CompanyName:         companyName, // 使用 GetCompanyList 返回的 CompanyName，避免重复查询
 						StoreCode:           storeCode,   // 店铺编号（用于排序）
+						CreateTime:          createTime,  // 创建时间（用于排序）
 						RefundAmount:        statItem.RefundAmount,
 						RefundNum:           statItem.RefundNum,
 						RefundRate:          statItem.RefundRate,
@@ -5372,7 +5389,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 		}
 	} else {
 		// 明细表：返回每个营业日每个商家的数据，不包括汇总行（SummaryRow 返回默认值）
-		// 按日期+店铺编号+商家名称排序（修复分页数据不一致问题）
+		// 按日期+店铺编号+创建时间排序（修复分页数据不一致问题）
 		sort.Slice(allItems, func(i, j int) bool {
 			if allItems[i].Date != allItems[j].Date {
 				return allItems[i].Date < allItems[j].Date
@@ -5381,8 +5398,8 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 			if allItems[i].StoreCode != allItems[j].StoreCode {
 				return compareStoreCode(allItems[i].StoreCode, allItems[j].StoreCode)
 			}
-			// 三级排序：商家名称（编号相同或都为空时）
-			return allItems[i].CompanyName < allItems[j].CompanyName
+			// 三级排序：创建时间（编号相同或都为空时）
+			return allItems[i].CreateTime < allItems[j].CreateTime
 		})
 		finalList = allItems
 		// 明细表返回默认值

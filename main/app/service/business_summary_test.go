@@ -9,59 +9,72 @@ import (
 )
 
 // TestStoreCodeSorting 测试店铺编号排序逻辑
+// 排序规则：
+// 1. 无编号优先，按创建时间顺序排序
+// 2. 有编号：数字(0-9)优先，字母(a-z)其次
+// 3. 编号相同时按创建时间顺序排序
 func TestStoreCodeSorting(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    []*resp.CompanySummaryItem
-		expected []string // 排序后的 StoreCode 顺序
+		expected []uint64 // 排序后的 CompanyUuid 顺序（用于验证完整排序结果）
 	}{
 		{
-			name: "无编号优先",
+			name: "无编号优先，按创建时间排序",
 			input: []*resp.CompanySummaryItem{
-				{CompanyUuid: 1, CompanyName: "Store A", StoreCode: "001"},
-				{CompanyUuid: 2, CompanyName: "Store B", StoreCode: ""},
-				{CompanyUuid: 3, CompanyName: "Store C", StoreCode: "002"},
+				{CompanyUuid: 1, CompanyName: "Store A", StoreCode: "001", CreateTime: 100},
+				{CompanyUuid: 2, CompanyName: "Store B", StoreCode: "", CreateTime: 300},
+				{CompanyUuid: 3, CompanyName: "Store C", StoreCode: "", CreateTime: 200},
 			},
-			expected: []string{"", "001", "002"},
+			expected: []uint64{3, 2, 1}, // 无编号按创建时间排序：200 < 300，然后是有编号的
 		},
 		{
 			name: "数字优先于字母",
 			input: []*resp.CompanySummaryItem{
-				{CompanyUuid: 1, CompanyName: "Store A", StoreCode: "ABC"},
-				{CompanyUuid: 2, CompanyName: "Store B", StoreCode: "123"},
-				{CompanyUuid: 3, CompanyName: "Store C", StoreCode: "XYZ"},
+				{CompanyUuid: 1, CompanyName: "Store A", StoreCode: "ABC", CreateTime: 100},
+				{CompanyUuid: 2, CompanyName: "Store B", StoreCode: "123", CreateTime: 200},
+				{CompanyUuid: 3, CompanyName: "Store C", StoreCode: "XYZ", CreateTime: 300},
 			},
-			expected: []string{"123", "ABC", "XYZ"},
+			expected: []uint64{2, 1, 3}, // 数字优先：123, ABC, XYZ
 		},
 		{
-			name: "综合排序：无编号 > 数字 > 字母",
+			name: "综合排序：无编号按创建时间 > 数字 > 字母",
 			input: []*resp.CompanySummaryItem{
-				{CompanyUuid: 1, CompanyName: "Store A", StoreCode: "B01"},
-				{CompanyUuid: 2, CompanyName: "Store B", StoreCode: ""},
-				{CompanyUuid: 3, CompanyName: "Store C", StoreCode: "001"},
-				{CompanyUuid: 4, CompanyName: "Store D", StoreCode: "A02"},
-				{CompanyUuid: 5, CompanyName: "Store E", StoreCode: ""},
-				{CompanyUuid: 6, CompanyName: "Store F", StoreCode: "002"},
+				{CompanyUuid: 1, CompanyName: "Store A", StoreCode: "B01", CreateTime: 100},
+				{CompanyUuid: 2, CompanyName: "Store B", StoreCode: "", CreateTime: 500},
+				{CompanyUuid: 3, CompanyName: "Store C", StoreCode: "001", CreateTime: 200},
+				{CompanyUuid: 4, CompanyName: "Store D", StoreCode: "A02", CreateTime: 300},
+				{CompanyUuid: 5, CompanyName: "Store E", StoreCode: "", CreateTime: 400},
+				{CompanyUuid: 6, CompanyName: "Store F", StoreCode: "002", CreateTime: 600},
 			},
-			expected: []string{"", "", "001", "002", "A02", "B01"},
+			expected: []uint64{5, 2, 3, 6, 4, 1}, // 无编号按创建时间(400,500)，数字(001,002)，字母(A02,B01)
 		},
 		{
-			name: "大小写不敏感排序",
+			name: "编号相同时按创建时间排序",
 			input: []*resp.CompanySummaryItem{
-				{CompanyUuid: 1, CompanyName: "Store A", StoreCode: "abc"},
-				{CompanyUuid: 2, CompanyName: "Store B", StoreCode: "ABC"},
-				{CompanyUuid: 3, CompanyName: "Store C", StoreCode: "Abc"},
+				{CompanyUuid: 1, CompanyName: "Store A", StoreCode: "001", CreateTime: 300},
+				{CompanyUuid: 2, CompanyName: "Store B", StoreCode: "001", CreateTime: 100},
+				{CompanyUuid: 3, CompanyName: "Store C", StoreCode: "001", CreateTime: 200},
 			},
-			expected: []string{"abc", "ABC", "Abc"}, // 按字典序，大小写相同的按原始顺序
+			expected: []uint64{2, 3, 1}, // 编号相同，按创建时间排序：100 < 200 < 300
 		},
 		{
-			name: "数字排序",
+			name: "大小写不敏感排序，相同时按创建时间",
 			input: []*resp.CompanySummaryItem{
-				{CompanyUuid: 1, CompanyName: "Store A", StoreCode: "10"},
-				{CompanyUuid: 2, CompanyName: "Store B", StoreCode: "2"},
-				{CompanyUuid: 3, CompanyName: "Store C", StoreCode: "1"},
+				{CompanyUuid: 1, CompanyName: "Store A", StoreCode: "abc", CreateTime: 300},
+				{CompanyUuid: 2, CompanyName: "Store B", StoreCode: "ABC", CreateTime: 100},
+				{CompanyUuid: 3, CompanyName: "Store C", StoreCode: "Abc", CreateTime: 200},
 			},
-			expected: []string{"1", "10", "2"}, // 字符串排序，非数值排序
+			expected: []uint64{2, 3, 1}, // 大小写相同，按创建时间排序
+		},
+		{
+			name: "数字排序（字符串排序）",
+			input: []*resp.CompanySummaryItem{
+				{CompanyUuid: 1, CompanyName: "Store A", StoreCode: "10", CreateTime: 100},
+				{CompanyUuid: 2, CompanyName: "Store B", StoreCode: "2", CreateTime: 200},
+				{CompanyUuid: 3, CompanyName: "Store C", StoreCode: "1", CreateTime: 300},
+			},
+			expected: []uint64{3, 1, 2}, // 字符串排序：1 < 10 < 2
 		},
 	}
 
@@ -74,6 +87,7 @@ func TestStoreCodeSorting(t *testing.T) {
 					CompanyUuid: item.CompanyUuid,
 					CompanyName: item.CompanyName,
 					StoreCode:   item.StoreCode,
+					CreateTime:  item.CreateTime,
 				}
 			}
 
@@ -90,8 +104,8 @@ func TestStoreCodeSorting(t *testing.T) {
 					return false
 				}
 				if codeI == "" && codeJ == "" {
-					// 都无编号时按名称排序
-					return companyList[i].CompanyName < companyList[j].CompanyName
+					// 都无编号时按创建时间顺序排序
+					return companyList[i].CreateTime < companyList[j].CreateTime
 				}
 
 				// 获取首字符进行类型判断
@@ -110,13 +124,20 @@ func TestStoreCodeSorting(t *testing.T) {
 				}
 
 				// 同类型按字符串排序（大小写不敏感）
-				return strings.ToLower(codeI) < strings.ToLower(codeJ)
+				lowerI := strings.ToLower(codeI)
+				lowerJ := strings.ToLower(codeJ)
+				if lowerI != lowerJ {
+					return lowerI < lowerJ
+				}
+				// 编号相同时按创建时间顺序排序
+				return companyList[i].CreateTime < companyList[j].CreateTime
 			})
 
 			// 验证结果
-			for i, expected := range tt.expected {
-				if companyList[i].StoreCode != expected {
-					t.Errorf("位置 %d: 期望 StoreCode=%q, 实际 StoreCode=%q", i, expected, companyList[i].StoreCode)
+			for i, expectedUuid := range tt.expected {
+				if companyList[i].CompanyUuid != expectedUuid {
+					t.Errorf("位置 %d: 期望 CompanyUuid=%d, 实际 CompanyUuid=%d (StoreCode=%q, CreateTime=%d)",
+						i, expectedUuid, companyList[i].CompanyUuid, companyList[i].StoreCode, companyList[i].CreateTime)
 				}
 			}
 		})
