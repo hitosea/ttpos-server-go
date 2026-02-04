@@ -21,8 +21,8 @@ type StockLossDetailReq struct {
 
 // StockLossItemReq 报损单物品明细请求
 type StockLossItemReq struct {
-	MaterialUuid uint64                    `json:"material_uuid" binding:"required"`    // 物料UUID
-	Units        []*StockLossItemUnitReq `json:"units" binding:"required,min=1,dive"` // 报损单物品单位明细
+	MaterialUuid uint64                  `json:"material_uuid"` // 物料UUID
+	Units        []*StockLossItemUnitReq `json:"units"`         // 报损单物品单位明细
 }
 
 // StockLossItemUnitReq 报损单物品单位明细请求
@@ -35,13 +35,13 @@ type StockLossItemUnitReq struct {
 // 当 Uuid > 0 时，可以只传 Uuid 直接提交已保存的报损单，不需要传递 Items 等字段
 // 当 Uuid == 0 时，WarehouseUuid、LossType、Items 为必填
 type StockLossSaveReq struct {
-	Uuid          uint64              `json:"uuid"`                    // 报损单UUID，如果为0，表示新建
-	IsSubmit      bool                `json:"is_submit"`               // 是否提交
-	WarehouseUuid uint64              `json:"warehouse_uuid"`          // 仓库UUID（新建时必填）
-	LossType      int                 `json:"loss_type"`               // 报损类型 1:物品损坏 2:物品报废 3:物品过期（新建时必填）
-	Reason        string              `json:"reason"`                  // 报损原因
-	Items         []*StockLossItemReq `json:"items" binding:"dive"`    // 报损单物品明细（新建时必填）
-	FileUuids     []uint64            `json:"file_uuids"`              // 附件UUID列表
+	Uuid          uint64              `json:"uuid"`           // 报损单UUID，如果为0，表示新建
+	IsSubmit      bool                `json:"is_submit"`      // 是否提交
+	WarehouseUuid uint64              `json:"warehouse_uuid"` // 仓库UUID（新建时必填）
+	LossType      int                 `json:"loss_type"`      // 报损类型 1:物品损坏 2:物品报废 3:物品过期（新建时必填）
+	Reason        string              `json:"reason"`         // 报损原因
+	Items         []*StockLossItemReq `json:"items"`          // 报损单物品明细（新建时必填）
+	FileUuids     []uint64            `json:"file_uuids"`     // 附件UUID列表
 
 	isResubmit bool // 是否重新提交（内部使用，不暴露到接口文档）
 }

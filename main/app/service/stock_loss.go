@@ -789,6 +789,10 @@ func (s *stockLossSrv) ApproveStockLoss(ctx context.Context, approveReq req.Stoc
 				if itemCode == "" {
 					continue
 				}
+				// 跳过数量为 0 的物品
+				if item.BaseQuantity.IsZero() {
+					continue
+				}
 				erpItems = append(erpItems, &stock.StockEntryItem{
 					ItemCode:  itemCode,
 					Qty:       item.BaseQuantity.InexactFloat64(),
