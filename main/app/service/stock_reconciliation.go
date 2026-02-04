@@ -539,7 +539,10 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 			}
 		}
 
-		var stockReconciliationItemUnits []*model.StockReconciliationItemUnit
+		// 步骤1：构建所有物品明细对象，同时保存每个物品对应的单位请求
+		var stockReconciliationItems []*model.StockReconciliationItem
+		itemUnitsMapping := make([][]*req.StockReconciliationItemUnitReq, 0, len(saveReq.Items))
+
 		for _, reqItem := range saveReq.Items {
 			// 计算实盘数量（基准单位）
 			countedQuantity := decimal.Zero
@@ -559,17 +562,25 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 				StockReconciliationUuid: stockReconciliation.Uuid,
 				MaterialUuid:            reqItem.MaterialUuid,
 				MaterialName:            materialNameMap[reqItem.MaterialUuid],
-				BookedQuantity:          decimal.NewFromFloat(bookedQuantityMap[reqItem.MaterialUuid]), // 每次保存都实时读取账面库存数量
+				BookedQuantity:          decimal.NewFromFloat(bookedQuantityMap[reqItem.MaterialUuid]),
 				CountedQuantity:         countedQuantity,
 			}
+			stockReconciliationItems = append(stockReconciliationItems, item)
+			itemUnitsMapping = append(itemUnitsMapping, reqItem.Units)
+		}
 
-			// 先创建item以获取自动生成的uuid
-			if err := stockReconciliationRepo.CreateStockReconciliationItem(item); err != nil {
+		// 步骤2：批量插入物品明细（BeforeCreate 钩子会自动生成 UUID）
+		if len(stockReconciliationItems) > 0 {
+			if err := stockReconciliationRepo.CreateStockReconciliationItemBatch(stockReconciliationItems); err != nil {
 				return errors.WithMessage(errors.New("创建盘点单物品明细失败"), err.Error())
 			}
+		}
 
-			// 创建单位明细
-			for _, unitItem := range reqItem.Units {
+		// 步骤3：使用回填的 UUID 构建单位明细
+		var stockReconciliationItemUnits []*model.StockReconciliationItemUnit
+		for i, item := range stockReconciliationItems {
+			materialUuid := item.MaterialUuid
+			for _, unitItem := range itemUnitsMapping[i] {
 				var quantity *float64
 				if unitItem.Quantity != nil {
 					quantityDecimal := unitItem.Quantity.InexactFloat64()
@@ -578,12 +589,13 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 				stockReconciliationItemUnits = append(stockReconciliationItemUnits, &model.StockReconciliationItemUnit{
 					StockReconciliationItemUuid: item.Uuid,
 					MaterialUnitUuid:            unitItem.MaterialUnitUuid,
-					MaterialUnitName:            materialUnitNameMap[reqItem.MaterialUuid][unitItem.MaterialUnitUuid],
+					MaterialUnitName:            materialUnitNameMap[materialUuid][unitItem.MaterialUnitUuid],
 					Quantity:                    quantity,
 				})
 			}
 		}
 
+		// 步骤4：批量插入单位明细
 		if len(stockReconciliationItemUnits) > 0 {
 			if err := stockReconciliationRepo.CreateStockReconciliationItemUnitBatch(stockReconciliationItemUnits); err != nil {
 				return errors.WithMessage(errors.New("创建盘点单物品单位明细失败"), err.Error())
