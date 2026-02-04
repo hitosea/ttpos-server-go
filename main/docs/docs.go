@@ -40854,6 +40854,10 @@ const docTemplate = `{
                     "description": "安全库存数量",
                     "type": "number"
                 },
+                "specification": {
+                    "description": "规格",
+                    "type": "string"
+                },
                 "status": {
                     "description": "状态 1-启用 0-停用",
                     "type": "integer"
@@ -41130,6 +41134,10 @@ const docTemplate = `{
         "material_resp.MaterialQuotaConfig": {
             "type": "object",
             "properties": {
+                "is_allow_purchase": {
+                    "description": "是否允许采购 yes/no",
+                    "type": "string"
+                },
                 "quota_limit": {
                     "description": "限购数量",
                     "type": "number"
@@ -50725,6 +50733,10 @@ const docTemplate = `{
                 "material_uuid"
             ],
             "properties": {
+                "is_allow_purchase": {
+                    "description": "是否允许采购 yes/no，默认 yes",
+                    "type": "string"
+                },
                 "material_uuid": {
                     "description": "物品UUID",
                     "type": "integer"
@@ -61544,6 +61556,9 @@ const docTemplate = `{
         "resp.PurchaseLimitSchemeItemResp": {
             "type": "object",
             "properties": {
+                "is_allow_purchase": {
+                    "type": "string"
+                },
                 "material_uuid": {
                     "type": "integer"
                 },
@@ -61948,6 +61963,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "specification": {
+                    "description": "规格",
+                    "type": "string"
+                },
                 "store_quantity": {
                     "description": "门店数量",
                     "type": "number"
@@ -62006,6 +62025,10 @@ const docTemplate = `{
             "properties": {
                 "error_message": {
                     "description": "错误信息，用于出现感叹号提示用户，如果为空则不显示",
+                    "type": "string"
+                },
+                "is_allow_purchase": {
+                    "description": "是否允许采购 yes/no",
                     "type": "string"
                 },
                 "quota_limit": {
@@ -62179,6 +62202,10 @@ const docTemplate = `{
                 "purchase_order_item_uuid": {
                     "description": "采购订单明细ID",
                     "type": "integer"
+                },
+                "specification": {
+                    "description": "规格",
+                    "type": "string"
                 },
                 "unit_conversion_rate": {
                     "description": "基准单位转换率",
@@ -62695,6 +62722,10 @@ const docTemplate = `{
                 "purchase_order_item_uuid": {
                     "description": "采购单物品UUID",
                     "type": "integer"
+                },
+                "specification": {
+                    "description": "规格",
+                    "type": "string"
                 },
                 "unit_conversion_rate": {
                     "description": "单位转换率",

@@ -368,8 +368,7 @@ func (s *stockLossSrv) SaveStockLoss(ctx context.Context, saveReq req.StockLossS
 	}
 
 	// 验证仓库和物品
-	defaultLang := companySetting.GetDefaultLanguage()
-	materials, err := s.validateWarehouseAndItems(db, saveReq, defaultLang)
+	materials, err := s.validateWarehouseAndItems(db, saveReq, ctx.GetLanguage())
 	if err != nil {
 		return stockLossUuid, err
 	}
@@ -564,6 +563,7 @@ func (s *stockLossSrv) submitStockLoss(ctx context.Context, stockLossUuid uint64
 		stockLossRepo.WithItems(),
 		stockLossRepo.WithItemsMaterial(),
 		stockLossRepo.WithItemsItemUnits(),
+		stockLossRepo.WithFiles(),
 	}
 	stockLoss, err := stockLossRepo.GetStockLoss(opts...)
 	if err != nil {
@@ -571,6 +571,11 @@ func (s *stockLossSrv) submitStockLoss(ctx context.Context, stockLossUuid uint64
 	}
 	if stockLoss == nil {
 		return errors.New("报损单不存在")
+	}
+
+	// 检查是否上传了附件
+	if len(stockLoss.StockLossFiles) == 0 {
+		return errors.New("请上传附件")
 	}
 
 	// 检查仓库状态
@@ -797,11 +802,14 @@ func (s *stockLossSrv) ApproveStockLoss(ctx context.Context, approveReq req.Stoc
 				approveTime := int(time.Now().Unix())
 				erpRemarks := buildStockLossErpRemarks(annotations, model.StockLossActionApprove, approveReq.Annotation, approveTime)
 
+				now := utils.SetTimezone(companySetting.GetTimezone()).Now()
 				erpResp, err := erpSrv.SubmitStockEntry(ctx, companySetting, &stock.SubmitStockEntryReq{
 					StockEntryType:  "Material Issue", // 物料出库
 					SourceWarehouse: stockLoss.Warehouse.ErpCode,
 					Items:           erpItems,
 					Remarks:         erpRemarks,
+					PostingDate:     now.Format("2006-01-02"),
+					PostingTime:     now.Format("15:04:05"),
 				})
 				if err != nil {
 					logger.Logger.Error("调用ERP创建出库单失败", zap.Error(err), zap.Uint64("stock_loss_uuid", stockLoss.Uuid))
@@ -1289,9 +1297,8 @@ func buildStockLossErpRemarks(annotations []*model.StockLossAnnotation, currentA
 		}
 	}
 
-	// 倒序遍历历史批注（从最新到最旧）
-	for i := len(annotations) - 1; i >= 0; i-- {
-		annotation := annotations[i]
+	// 正序遍历历史批注（数据库已按 create_time DESC 排序，最新在前）
+	for _, annotation := range annotations {
 		actionName := getStockLossAnnotationErpActionName(annotation.Action)
 		if actionName == "" {
 			continue

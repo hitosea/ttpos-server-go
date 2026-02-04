@@ -590,9 +590,11 @@ func (r *StockLossRepoImpl) WithFilesFile() DBOption {
 	}
 }
 
-// WithAnnotations 预加载批注
+// WithAnnotations 预加载批注（按创建时间倒序）
 func (r *StockLossRepoImpl) WithAnnotations() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("StockLossAnnotations", "delete_time = 0")
+		return db.Preload("StockLossAnnotations", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = 0").Order("create_time DESC")
+		})
 	}
 }
