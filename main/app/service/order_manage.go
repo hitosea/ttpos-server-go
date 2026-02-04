@@ -2274,7 +2274,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 				// 根据反结账次数生成 OrderNo：首次使用原始 OrderNo，反结账后加后缀 -1, -2...
 				orderNo := saleOrder.OrderNo
 				if reverseSettleCount > 0 {
-					orderNo = fmt.Sprintf("%s-%d", saleOrder.OrderNo, saleBill.ReverseSettleCount)
+					orderNo = fmt.Sprintf("%s-%d", saleOrder.OrderNo, reverseSettleCount)
 				}
 				err := erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
 					ProductsInvoiceName: saleOrder.ErpProductsInvoiceName,
