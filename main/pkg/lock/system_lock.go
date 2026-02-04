@@ -7,6 +7,11 @@ const (
 	KitchenEfficiencyAnalysisLock = 2 // 后厨效率分析锁
 )
 
+// 字符串锁 key 前缀
+const (
+	SyncErpDataLockPrefix = "sync_erp_lock:" // ERP 同步锁前缀
+)
+
 type Lock interface {
 	LockUuid(uuid uint64)
 	UnlockUuid(uuid uint64)

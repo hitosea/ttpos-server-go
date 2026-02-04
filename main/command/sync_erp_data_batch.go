@@ -41,8 +41,24 @@ type SyncResult struct {
 	CompanyUuid uint64
 	CompanyName string
 	Success     bool
+	Skipped     bool // 是否因锁冲突被跳过
 	Error       error
 	Duration    time.Duration
+}
+
+// getSyncLockKey 生成同步锁 key
+func getSyncLockKey(companyUuid uint64) string {
+	return fmt.Sprintf("%s%d", lock.SyncErpDataLockPrefix, companyUuid)
+}
+
+// tryAcquireSyncLock 尝试获取同步锁（非阻塞）
+func tryAcquireSyncLock(companyUuid uint64) bool {
+	return lock.NewSystemLock().TryLockUuidString(getSyncLockKey(companyUuid))
+}
+
+// releaseSyncLock 释放同步锁
+func releaseSyncLock(companyUuid uint64) {
+	lock.NewSystemLock().UnlockUuidString(getSyncLockKey(companyUuid))
 }
 
 func init() {
@@ -277,6 +293,17 @@ func syncOneCompany(companyUuid uint64, syncSrv service.ISyncSrv) SyncResult {
 	start := time.Now()
 	result := SyncResult{CompanyUuid: companyUuid}
 
+	// 尝试获取同步锁（非阻塞）
+	if !tryAcquireSyncLock(companyUuid) {
+		result.Skipped = true
+		result.Error = fmt.Errorf("门店正在同步中，已跳过")
+		logger.Logger.Warn("跳过同步：门店正在同步中",
+			zap.Uint64("company_uuid", companyUuid),
+		)
+		return result
+	}
+	defer releaseSyncLock(companyUuid)
+
 	logger.Logger.Info("开始同步门店",
 		zap.Uint64("company_uuid", companyUuid),
 	)
@@ -351,9 +378,13 @@ func syncOneCompany(companyUuid uint64, syncSrv service.ISyncSrv) SyncResult {
 
 // printBatchSyncProgress 打印单个门店同步进度
 func printBatchSyncProgress(completed, total int, result SyncResult) {
-	status := greenColor + "✓" + resetColor
-	if !result.Success {
-		status = redColor + "✗" + resetColor
+	var status string
+	if result.Skipped {
+		status = yellowColor + "⊘" + resetColor // 跳过
+	} else if result.Success {
+		status = greenColor + "✓" + resetColor // 成功
+	} else {
+		status = redColor + "✗" + resetColor // 失败
 	}
 
 	name := result.CompanyName
@@ -363,7 +394,11 @@ func printBatchSyncProgress(completed, total int, result SyncResult) {
 
 	errMsg := ""
 	if result.Error != nil {
-		errMsg = fmt.Sprintf(" | %s%v%s", redColor, result.Error, resetColor)
+		if result.Skipped {
+			errMsg = fmt.Sprintf(" | %s%v%s", yellowColor, result.Error, resetColor)
+		} else {
+			errMsg = fmt.Sprintf(" | %s%v%s", redColor, result.Error, resetColor)
+		}
 	}
 
 	fmt.Printf("[%d/%d] %s %d (%s) %v%s\n",
@@ -376,12 +411,15 @@ func printBatchSyncProgress(completed, total int, result SyncResult) {
 
 // printSummary 打印同步结果汇总
 func printSummary(results []SyncResult) {
-	var success, failed int
-	var failedList []SyncResult
+	var success, failed, skipped int
+	var failedList, skippedList []SyncResult
 	var totalDuration time.Duration
 
 	for _, r := range results {
-		if r.Success {
+		if r.Skipped {
+			skipped++
+			skippedList = append(skippedList, r)
+		} else if r.Success {
 			success++
 			totalDuration += r.Duration
 		} else {
@@ -391,15 +429,28 @@ func printSummary(results []SyncResult) {
 	}
 
 	fmt.Printf("\n%s========== 同步完成 ==========%s\n", blueColor, resetColor)
-	fmt.Printf("总数: %d, %s成功: %d%s, %s失败: %d%s\n",
+	fmt.Printf("总数: %d, %s成功: %d%s, %s失败: %d%s, %s跳过: %d%s\n",
 		len(results),
 		greenColor, success, resetColor,
 		redColor, failed, resetColor,
+		yellowColor, skipped, resetColor,
 	)
 
 	if success > 0 {
 		avgDuration := totalDuration / time.Duration(success)
 		fmt.Printf("平均耗时: %v\n", avgDuration.Round(time.Millisecond))
+	}
+
+	if skipped > 0 {
+		fmt.Printf("\n%s跳过门店列表（正在同步中）:%s\n", yellowColor, resetColor)
+		for _, r := range skippedList {
+			name := r.CompanyName
+			if name == "" {
+				name = "-"
+			}
+			fmt.Printf("  - %d (%s)\n", r.CompanyUuid, name)
+		}
+		fmt.Printf("\n%s提示: 被跳过的门店正在由其他进程同步，无需重试%s\n", yellowColor, resetColor)
 	}
 
 	if failed > 0 {

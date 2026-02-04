@@ -60,8 +60,12 @@ graph TD
 4. 初始化服务依赖链（SyncSrv 及其依赖）
 5. 创建 Worker Pool（默认 5 个 worker）
 6. 分发同步任务到 workers
+   6.1 尝试获取同步锁（非阻塞）
+   6.2 获取失败则跳过，标记为"跳过"状态
+   6.3 获取成功则执行同步
+   6.4 同步完成后释放锁
 7. 收集执行结果，实时显示进度
-8. 汇总输出成功/失败统计
+8. 汇总输出成功/失败/跳过统计
 ```
 
 ---
@@ -115,6 +119,7 @@ type SyncResult struct {
     CompanyUuid uint64
     CompanyName string
     Success     bool
+    Skipped     bool          // 是否因锁冲突被跳过
     Error       error
     Duration    time.Duration
 }
@@ -162,12 +167,54 @@ func (b *BatchSyncer) Run(ctx context.Context, companies []uint64) []SyncResult 
 }
 ```
 
+### 同步锁设计
+
+**锁常量定义** (`main/pkg/lock/system_lock.go`):
+```go
+// 字符串锁 key 前缀
+const (
+    SyncErpDataLockPrefix = "sync_erp_lock:" // ERP 同步锁前缀
+)
+```
+
+**锁操作函数** (`main/command/sync_erp_data_batch.go`):
+```go
+// getSyncLockKey 生成同步锁 key
+func getSyncLockKey(companyUuid uint64) string {
+    return fmt.Sprintf("%s%d", lock.SyncErpDataLockPrefix, companyUuid)
+}
+
+// tryAcquireSyncLock 尝试获取同步锁（非阻塞）
+func tryAcquireSyncLock(companyUuid uint64) bool {
+    return lock.NewSystemLock().TryLockUuidString(getSyncLockKey(companyUuid))
+}
+
+// releaseSyncLock 释放同步锁
+func releaseSyncLock(companyUuid uint64) {
+    lock.NewSystemLock().UnlockUuidString(getSyncLockKey(companyUuid))
+}
+```
+
+**锁机制说明**：
+- 使用 Redis 分布式锁（redsync），支持跨进程/跨服务器的锁检测
+- 锁 key 格式：`sync_erp_lock:{company_uuid}`
+- 锁过期时间：15 分钟（由 `lock_redsync.go` 中 `getUuidLockString` 配置）
+- 非阻塞获取：使用 `TryLockUuidString`，获取失败立即返回，不会阻塞 worker
+
 ### 单门店同步（复用现有逻辑）
 
 ```go
 func (b *BatchSyncer) syncOne(companyUuid uint64) SyncResult {
     start := time.Now()
     result := SyncResult{CompanyUuid: companyUuid}
+
+    // 0. 尝试获取同步锁（非阻塞）
+    if !tryAcquireSyncLock(companyUuid) {
+        result.Skipped = true
+        result.Error = fmt.Errorf("门店正在同步中，已跳过")
+        return result
+    }
+    defer releaseSyncLock(companyUuid)
 
     // 1. 连接门店数据库
     companyDB, err := database.NewMySQLConnection(
@@ -231,11 +278,14 @@ func printProgress(completed, total int, current SyncResult) {
 }
 
 func printSummary(results []SyncResult) {
-    var success, failed int
-    var failedList []SyncResult
+    var success, failed, skipped int
+    var failedList, skippedList []SyncResult
 
     for _, r := range results {
-        if r.Success {
+        if r.Skipped {
+            skipped++
+            skippedList = append(skippedList, r)
+        } else if r.Success {
             success++
         } else {
             failed++
@@ -244,7 +294,14 @@ func printSummary(results []SyncResult) {
     }
 
     fmt.Printf("\n========== 同步完成 ==========\n")
-    fmt.Printf("总数: %d, 成功: %d, 失败: %d\n", len(results), success, failed)
+    fmt.Printf("总数: %d, 成功: %d, 失败: %d, 跳过: %d\n", len(results), success, failed, skipped)
+
+    if skipped > 0 {
+        fmt.Printf("\n跳过门店列表（正在同步中）:\n")
+        for _, r := range skippedList {
+            fmt.Printf("  - %d (%s)\n", r.CompanyUuid, r.CompanyName)
+        }
+    }
 
     if failed > 0 {
         fmt.Printf("\n失败门店列表:\n")
@@ -264,6 +321,7 @@ func printSummary(results []SyncResult) {
 | 并发过高导致数据库过载 | 中   | 默认 workers=5，文档说明生产环境推荐配置         |
 | 单门店同步耗时过长     | 低   | 各门店独立执行，不影响其他门店                   |
 | 内存占用（大量门店）   | 低   | 使用 channel 控制任务分发，避免一次性加载        |
+| 重复同步导致数据冲突   | 中   | 使用分布式锁，跳过正在同步中的门店               |
 
 ---
 
@@ -363,12 +421,24 @@ cd main && go test -coverprofile=coverage.out ./command/...
 **部分失败时的输出：**
 ```
 ========== 同步完成 ==========
-总数: 3, 成功: 2, 失败: 1
+总数: 3, 成功: 2, 失败: 1, 跳过: 0
 
 失败门店列表:
   - 1234567890 (门店X): 同步执行失败: ERP 连接超时
 
 提示: 可将失败的 UUID 重新执行同步
+```
+
+**存在跳过（正在同步）时的输出：**
+```
+========== 同步完成 ==========
+总数: 3, 成功: 1, 失败: 0, 跳过: 2
+
+跳过门店列表（正在同步中）:
+  - 2345678901 (门店B)
+  - 3456789012 (门店C)
+
+提示: 被跳过的门店正在由其他进程同步，无需重试
 ```
 
 ### 并发数建议
@@ -398,6 +468,12 @@ A: 将失败门店的 UUID 重新组成参数执行即可，例如：
 
 **Q: 同步过程中可以中断吗？**
 A: 可以使用 `Ctrl+C` 中断，但已开始的同步任务会继续完成。
+
+**Q: 为什么有些门店显示"跳过"状态？**
+A: 当门店正在被其他进程同步时，系统会自动跳过该门店以避免重复同步导致的数据冲突。被跳过的门店无需手动重试，等待当前同步完成即可。
+
+**Q: 同步锁多久会自动释放？**
+A: 同步锁有 15 分钟的自动过期时间。正常情况下，同步完成后会立即释放锁。如果进程异常终止，锁会在 15 分钟后自动释放。
 
 ---
 
