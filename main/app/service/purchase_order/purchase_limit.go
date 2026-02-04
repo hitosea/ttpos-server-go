@@ -24,6 +24,7 @@ import (
 // 逻辑：
 //   - 查询所有启用的限购方案
 //   - 校验当前星期是否在限购周期内
+//   - 校验是否包含禁止采购的物品
 //   - 校验每日申请次数限制
 //   - 校验物品数量限制
 func (s *purchaseOrderSrv) checkPurchaseLimit(ctx context.Context, order *model.PurchaseOrder) error {
@@ -34,7 +35,15 @@ func (s *purchaseOrderSrv) checkPurchaseLimit(ctx context.Context, order *model.
 		return nil
 	}
 
-	// 1 检查每日申请次数限制
+	// 1 检查是否包含禁止采购的物品
+	disallowedMaterials := s.helper.getDisallowedPurchaseMaterials(ctx, s.dbm, order)
+	if len(disallowedMaterials) > 0 {
+		if err := s.checkDisallowedPurchase(ctx, order, disallowedMaterials); err != nil {
+			return err
+		}
+	}
+
+	// 2 检查每日申请次数限制
 	minDailyLimit := s.helper.getMinDailyLimit(ctx, s.dbm, order)
 	if minDailyLimit != -1 {
 		if order.IsStorePending() && minDailyLimit > 0 {
@@ -45,7 +54,7 @@ func (s *purchaseOrderSrv) checkPurchaseLimit(ctx context.Context, order *model.
 		}
 	}
 
-	// 2 检查物品数量限制
+	// 3 检查物品数量限制
 	quotaMap := s.helper.getQuotaLimitMap(ctx, s.dbm, order)
 	if len(quotaMap) > 0 {
 		if err := s.checkItemLimitByScheme(ctx, order, quotaMap); err != nil {
@@ -76,6 +85,39 @@ func (s *purchaseOrderSrv) isWeekdayInScheme(currentWeekday int8, weekdaysStr st
 	return false
 }
 
+// checkDisallowedPurchase 检查是否包含禁止采购的物品
+func (s *purchaseOrderSrv) checkDisallowedPurchase(
+	ctx context.Context,
+	order *model.PurchaseOrder,
+	disallowedMaterials []string,
+) error {
+	lang := ctx.GetLanguage()
+
+	// 构建禁止采购物品编码集合
+	disallowedSet := make(map[string]bool)
+	for _, code := range disallowedMaterials {
+		disallowedSet[code] = true
+	}
+
+	// 检查订单中是否包含禁止采购的物品
+	var disallowedNames []string
+	for _, item := range order.Items {
+		if disallowedSet[item.MaterialCode] {
+			materialName := language.JsonToLocaleResponse(item.MaterialName).GetLocale(lang)
+			disallowedNames = append(disallowedNames, materialName)
+		}
+	}
+
+	if len(disallowedNames) > 0 {
+		return errors.NewWithCode(
+			constant.CodeErrorConfirmRefresh,
+			fmt.Sprintf(i18n.Translate(lang, "物品 %s 禁止采购，请移除后重试"), strings.Join(disallowedNames, "、")),
+		)
+	}
+
+	return nil
+}
+
 // checkDailyLimitByScheme 检查每日申请次数限制（按方案）
 func (s *purchaseOrderSrv) checkDailyLimitByScheme(ctx context.Context, dailyLimit int) error {
 	lang := ctx.GetLanguage()
@@ -92,7 +134,7 @@ func (s *purchaseOrderSrv) checkDailyLimitByScheme(ctx context.Context, dailyLim
 
 	// 校验是否超限
 	if count >= int64(dailyLimit) {
-		return errors.New(i18n.Translate(lang, "今日申请次数已达上限（%s次），请明天再试", fmt.Sprintf("%d", dailyLimit)))
+		return errors.New(fmt.Sprintf(i18n.Translate(lang, "今日申请次数已达上限（%s次），请明天再试"), fmt.Sprintf("%d", dailyLimit)))
 	}
 
 	return nil
@@ -138,7 +180,7 @@ func (s *purchaseOrderSrv) checkItemLimitByScheme(
 		for _, unit := range orderItem.Units {
 			// 只累加限购单位的数量
 			if unit.UnitUuid != quotaUnitUuid {
-				return errors.NewWithCode(constant.CodeErrorConfirmRefresh, fmt.Sprintf("物品 %s 超出限购/单位变动，请检查物品和数量。", materialName))
+				return errors.NewWithCode(constant.CodeErrorConfirmRefresh, fmt.Sprintf(i18n.Translate(lang, "物品 %s 超出限购/单位变动，请检查物品和数量"), materialName))
 			}
 			key := orderItem.MaterialCode
 			if summary, exists := materialSummaryMap[key]; exists {
@@ -168,7 +210,7 @@ func (s *purchaseOrderSrv) checkItemLimitByScheme(
 		quotaLimit := quotaMap[summary.MaterialCode]
 		// 校验是否超限
 		if summary.TotalQty > quotaLimit {
-			return errors.NewWithCode(constant.CodeErrorConfirmRefresh, fmt.Sprintf("物品 %s 超出限购/单位变动，请检查物品和数量。", summary.MaterialName))
+			return errors.NewWithCode(constant.CodeErrorConfirmRefresh, fmt.Sprintf(i18n.Translate(lang, "物品 %s 超出限购/单位变动，请检查物品和数量"), summary.MaterialName))
 		}
 	}
 

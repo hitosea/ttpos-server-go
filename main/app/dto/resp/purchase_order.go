@@ -75,6 +75,7 @@ type PurchaseOrderItemQuotaConfig struct {
 	QuotaUnitName       string             `json:"quota_unit_name"`        // 限购单位名称
 	QuotaUnitLocaleName dto.LocaleResponse `json:"quota_unit_locale_name"` // 限购单位名称
 	ErrorMessage        string             `json:"error_message"`          // 错误信息，用于出现感叹号提示用户，如果为空则不显示
+	IsAllowPurchase     string             `json:"is_allow_purchase"`      // 是否允许采购 yes/no
 }
 
 // PurchaseOrderItemInfo 采购订单商品明细信息
@@ -91,6 +92,7 @@ type PurchaseOrderItemInfo struct {
 	BaseUnitName       string                          `json:"base_unit_name"`        // 基准单位名称
 	LocaleBaseUnitName dto.LocaleResponse              `json:"locale_base_unit_name"` // 基准单位名称
 	InternalCode       string                          `json:"internal_code"`         // 内部编码
+	Specification      string                          `json:"specification"`         // 规格
 	BarcodeValue       string                          `json:"barcode_value"`         // 条形码值
 	UnitList           []PurchaseOrderItemMaterialUnit `json:"unit_list"`             // 基准单位列表
 	Units              []PurchaseOrderItemUnit         `json:"units"`                 // 已经选中的采购单位列表
@@ -231,6 +233,7 @@ type PurchaseReceiptItemInfo struct {
 	BaseUnitName          string                          `json:"base_unit_name"`           // 基准单位名称
 	LocaleBaseUnitName    dto.LocaleResponse              `json:"locale_base_unit_name"`    // 基准单位名称
 	InternalCode          string                          `json:"internal_code"`            // 商品Bom内部编码
+	Specification         string                          `json:"specification"`            // 规格
 	BarcodeValue          string                          `json:"barcode_value"`            // 条形码值
 	UnitList              []PurchaseOrderItemMaterialUnit `json:"unit_list"`                // 单位列表
 	Units                 []PurchaseOrderItemUnit         `json:"units"`                    // 单位列表
@@ -313,6 +316,7 @@ type ReceiptPendingItemInfo struct {
 	MaterialUuid          uint64                          `json:"material_uuid"`            // 物料UUID
 	MaterialCode          string                          `json:"material_code"`            // 物料编码
 	InternalCode          string                          `json:"internal_code"`            // 内部编码
+	Specification         string                          `json:"specification"`            // 规格
 	LocaleName            dto.LocaleResponse              `json:"locale_name"`              // 物料名称
 	PurchaseNum           float64                         `json:"purchase_num"`             // 采购数量
 	ArrivalNum            float64                         `json:"arrival_num"`              // 已到货数量

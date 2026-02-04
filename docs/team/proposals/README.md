@@ -86,6 +86,14 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 ## 🗂️ 提案索引
 
+## 2026-02
+
+| Proposal | 说明 | 状态 |
+| --- | --- | --- |
+| [shop-purchase-allow-control](2026-02/shop-purchase-allow-control.md) | 采购限制方案-是否允许采购控制 | 待评审 |
+| [shop-store-summary-fields](2026-02/shop-store-summary-fields.md) | 门店汇总统计字段优化（名称、排序、现金统计、导出） | 待评审 |
+| [shop-material-category-visibility](2026-02/shop-material-category-visibility.md) | 物品分类可见性配置（按类别+角色控制物品可见范围） | 待评审 |
+
 ## 2026-01
 
 | Proposal | 说明 | 状态 |
@@ -113,5 +121,5 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 ---
 
-**最后更新**: 2026-01-29
+**最后更新**: 2026-02-03
 

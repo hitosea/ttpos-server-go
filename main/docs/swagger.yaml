@@ -8989,7 +8989,6 @@ definitions:
         description: 附件UUID列表
         items:
           type: integer
-        minItems: 1
         type: array
       in_warehouse_erp_code:
         description: 入库仓库ERP编码
@@ -9003,7 +9002,6 @@ definitions:
         minimum: 1
         type: integer
     required:
-    - file_uuids
     - uuid
     type: object
   req.TransferOrderRejectReq:
@@ -9657,6 +9655,72 @@ definitions:
         type: string
     required:
     - password
+    type: object
+  req.VisibilityCreateReq:
+    properties:
+      category_uuids:
+        description: 物品类别UUID列表
+        items:
+          type: integer
+        type: array
+      is_all_roles:
+        description: 是否全部门店角色：1-全部，0-部分
+        enum:
+        - 0
+        - 1
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 配置名称（多语言）
+      role_configs:
+        description: 角色配置列表
+        items:
+          $ref: '#/definitions/req.VisibilityRoleConfig'
+        type: array
+    type: object
+  req.VisibilityDeleteReq:
+    properties:
+      uuid:
+        description: 配置UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.VisibilityRoleConfig:
+    properties:
+      company_uuid:
+        type: integer
+      role_uuid:
+        type: integer
+    type: object
+  req.VisibilityUpdateReq:
+    properties:
+      category_uuids:
+        description: 物品类别UUID列表
+        items:
+          type: integer
+        type: array
+      is_all_roles:
+        description: 是否全部门店角色：1-全部，0-部分
+        enum:
+        - 0
+        - 1
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 配置名称（多语言）
+      role_configs:
+        description: 角色配置列表
+        items:
+          $ref: '#/definitions/req.VisibilityRoleConfig'
+        type: array
+      uuid:
+        description: 配置UUID
+        type: integer
+    required:
+    - uuid
     type: object
   req.VisitorLoginReq:
     properties:
@@ -10646,6 +10710,15 @@ definitions:
       avg_customer_price:
         description: 平均客单价（实付金额/用餐人数，保留2位小数）
         type: number
+      cash_ac:
+        description: 现金AC（现金金额/现金TC，保留2位小数）
+        type: number
+      cash_amount:
+        description: 现金金额（现金支付总金额，保留2位小数）
+        type: number
+      cash_tc:
+        description: 现金TC（现金支付订单数）
+        type: integer
       company_name:
         description: 门店名称
         type: string
@@ -10938,6 +11011,9 @@ definitions:
       company_uuid:
         description: 门店UUID
         type: integer
+      store_code:
+        description: 店铺编号（用于排序和格式化）
+        type: string
     type: object
   resp.CompanySummaryListResp:
     properties:
@@ -15795,6 +15871,9 @@ definitions:
       base_unit_uuid:
         description: 基准单位UUID
         type: integer
+      internal_code:
+        description: 内部编码
+        type: string
       locale_base_unit_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -16840,6 +16919,23 @@ definitions:
           $ref: '#/definitions/setting.TimeZoneItem'
         type: array
     type: object
+  resp.ShopRoles:
+    properties:
+      company_code:
+        description: 门店编码
+        type: string
+      company_name:
+        description: 门店名称
+        type: string
+      company_uuid:
+        description: 门店UUID
+        type: integer
+      roles:
+        description: 角色列表（复用 saas_staff.go 中的 RoleItem）
+        items:
+          $ref: '#/definitions/resp.RoleItem'
+        type: array
+    type: object
   resp.SimpleAmountInfo:
     properties:
       product_amount:
@@ -17232,6 +17328,13 @@ definitions:
       list:
         items:
           $ref: '#/definitions/resp.SubProductItem'
+        type: array
+    type: object
+  resp.SubShopRolesResp:
+    properties:
+      shops:
+        items:
+          $ref: '#/definitions/resp.ShopRoles'
         type: array
     type: object
   resp.SupplierCreateResp:
@@ -18362,6 +18465,62 @@ definitions:
       verified:
         description: '验证结果: true-成功, false-失败'
         type: boolean
+    type: object
+  resp.VisibilityDetailResp:
+    properties:
+      category_uuids:
+        description: 物品类别UUID列表
+        items:
+          type: integer
+        type: array
+      is_all_roles:
+        description: 是否全部门店角色
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 配置名称（多语言）
+      role_configs:
+        description: 角色配置列表
+        items:
+          $ref: '#/definitions/resp.VisibilityRoleConfig'
+        type: array
+      uuid:
+        description: 配置UUID
+        type: integer
+    type: object
+  resp.VisibilityListItem:
+    properties:
+      category_count:
+        description: 类别数量
+        type: integer
+      is_all_roles:
+        description: 是否全部门店角色
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 配置名称（多语言）
+      role_count:
+        description: 角色数量（-1表示全部）
+        type: integer
+      uuid:
+        description: 配置UUID
+        type: integer
+    type: object
+  resp.VisibilityListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.VisibilityListItem'
+        type: array
+    type: object
+  resp.VisibilityRoleConfig:
+    properties:
+      company_uuid:
+        type: integer
+      role_uuid:
+        type: integer
     type: object
   resp.WarehouseInOutListResp:
     properties:
@@ -31089,6 +31248,35 @@ paths:
       summary: 获取结账页面信息
       tags:
       - 自助点餐机.订单
+  /kiosk/order/print:
+    post:
+      consumes:
+      - application/json
+      description: 订单打印小票
+      parameters:
+      - description: 参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderPrintReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterData'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 订单打印小票
+      tags:
+      - 自助点餐机.订单
   /kiosk/order/product/package/detail:
     get:
       consumes:
@@ -34341,6 +34529,151 @@ paths:
       security:
       - JwtToken: []
       summary: 修改物品安全库存
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建物品分类可见性配置（仅总店可用，创建后自动同步到子店）
+      parameters:
+      - description: 创建请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VisibilityCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建可见性配置
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除物品分类可见性配置（仅总店可用，删除后自动同步到子店）
+      parameters:
+      - description: 删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VisibilityDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除可见性配置
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品分类可见性配置详情（仅总店可用）
+      parameters:
+      - description: 配置UUID
+        format: int64
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.VisibilityDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取可见性配置详情
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品分类可见性配置列表（仅总店可用）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.VisibilityListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取可见性配置列表
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/sub_shop_roles:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有子店的角色列表（仅总店可用，用于配置可见性规则）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SubShopRolesResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取子店角色列表
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新物品分类可见性配置（仅总店可用，更新后自动同步到子店）
+      parameters:
+      - description: 更新请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VisibilityUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新可见性配置
       tags:
       - 商家端.物品管理
   /shop/member_order/cancel:

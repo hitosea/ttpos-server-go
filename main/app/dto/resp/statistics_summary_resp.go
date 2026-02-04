@@ -6,6 +6,7 @@ import "ttpos-server-go/app/dto"
 type CompanySummaryItem struct {
 	CompanyUuid uint64 `json:"company_uuid"` // 门店UUID
 	CompanyName string `json:"company_name"` // 门店名称
+	StoreCode   string `json:"store_code"`   // 店铺编号（用于排序和格式化）
 }
 
 // CompanySummaryListResp 门店列表响应
@@ -27,6 +28,9 @@ type CompanyBusinessSummaryItem struct {
 	OrderAmount        float64 `json:"order_amount"`          // 订单金额（含优惠前，保留2位小数）
 	PayAmount          float64 `json:"pay_amount"`            // 实付金额（保留2位小数）
 	OrderNum           int64   `json:"order_num"`             // 订单数量
+	CashTC             int64   `json:"cash_tc"`               // 现金TC（现金支付订单数）
+	CashAmount         float64 `json:"cash_amount"`           // 现金金额（现金支付总金额，保留2位小数）
+	CashAC             float64 `json:"cash_ac"`               // 现金AC（现金金额/现金TC，保留2位小数）
 	MealNum            int64   `json:"meal_num"`              // 用餐人数
 	DeskNum            int64   `json:"desk_num"`              // 消费桌数
 	AvgCustomerPrice   float64 `json:"avg_customer_price"`    // 平均客单价（实付金额/用餐人数，保留2位小数）

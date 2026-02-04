@@ -63,30 +63,31 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterRechargeOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterStatisticsHandlers(shopGroup, dbm, cache)
 			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
-			shop.RegisterAuthHandlers(shopGroup, dbm, cache)                // 认证
-			shop.RegisterStaffHandlers(shopGroup, dbm, cache)               // 管理员管理
-			shop.RegisterRoleHandlers(shopGroup, dbm, cache)                // 角色管理
-			shop.RegisterSettingHandlers(shopGroup, dbm, cache)             // 设置
-			shop.RegisterPaymentMethodHandlers(shopGroup, dbm, cache)       // 支付方式管理
-			shop.RegisterProductHandlers(shopGroup, dbm, cache)             // 商品
-			shop.RegisterProductLabelHandlers(shopGroup, dbm, cache)        // 商品标签
-			shop.RegisterMaterialHandlers(shopGroup, dbm, cache)            // 物品管理
-			shop.RegisterMiscHandlers(shopGroup, dbm, cache)                // 杂项
-			shop.RegisterPurchaseHandlers(shopGroup, dbm, cache)            // 采购
-			shop.RegisterSupplierHandlers(shopGroup, dbm, cache)            // 供应商
-			shop.RegisterCallBoardHandlers(shopGroup, dbm, cache)           // 叫号展示
-			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache)           // 仓库管理
-			shop.RegisterPrintHandlers(shopGroup, dbm, cache)               // 打印管理
-			shop.RegisterStockReconciliationHandlers(shopGroup, dbm, cache) // 盘点
-			shop.RegisterBatchProductHandlers(shopGroup, dbm, cache)        // 分批商品
-			shop.RegisterTransferOrderHandlers(shopGroup, dbm, cache)       // 调拨单
-			shop.RegisterExportRecordHandlers(shopGroup, dbm, cache)        // 导出记录
-			shop.RegisterDeskMapHandlers(shopGroup, dbm, cache)             // 桌台地图
-			shop.RegisterNationalityRoutes(shopGroup, dbm, cache)           // 国籍管理
-			shop.RegisterCountryRoutes(shopGroup, dbm, cache)               // 国家管理
-			shop.RegisterOrderSourceRoutes(shopGroup, dbm, cache)           // 外卖来源管理
-			shop.RegisterFullReductionActivityRoutes(shopGroup, dbm, cache) // 满减活动管理
-			shop.RegisterTakeoutHandlers(shopGroup, dbm, cache)             // 外卖平台集成
+			shop.RegisterAuthHandlers(shopGroup, dbm, cache)                       // 认证
+			shop.RegisterStaffHandlers(shopGroup, dbm, cache)                      // 管理员管理
+			shop.RegisterRoleHandlers(shopGroup, dbm, cache)                       // 角色管理
+			shop.RegisterSettingHandlers(shopGroup, dbm, cache)                    // 设置
+			shop.RegisterPaymentMethodHandlers(shopGroup, dbm, cache)              // 支付方式管理
+			shop.RegisterProductHandlers(shopGroup, dbm, cache)                    // 商品
+			shop.RegisterProductLabelHandlers(shopGroup, dbm, cache)               // 商品标签
+			shop.RegisterMaterialHandlers(shopGroup, dbm, cache)                   // 物品管理
+			shop.RegisterMaterialCategoryVisibilityHandlers(shopGroup, dbm, cache) // 物品分类可见性
+			shop.RegisterMiscHandlers(shopGroup, dbm, cache)                       // 杂项
+			shop.RegisterPurchaseHandlers(shopGroup, dbm, cache)                   // 采购
+			shop.RegisterSupplierHandlers(shopGroup, dbm, cache)                   // 供应商
+			shop.RegisterCallBoardHandlers(shopGroup, dbm, cache)                  // 叫号展示
+			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache)                  // 仓库管理
+			shop.RegisterPrintHandlers(shopGroup, dbm, cache)                      // 打印管理
+			shop.RegisterStockReconciliationHandlers(shopGroup, dbm, cache)        // 盘点
+			shop.RegisterBatchProductHandlers(shopGroup, dbm, cache)               // 分批商品
+			shop.RegisterTransferOrderHandlers(shopGroup, dbm, cache)              // 调拨单
+			shop.RegisterExportRecordHandlers(shopGroup, dbm, cache)               // 导出记录
+			shop.RegisterDeskMapHandlers(shopGroup, dbm, cache)                    // 桌台地图
+			shop.RegisterNationalityRoutes(shopGroup, dbm, cache)                  // 国籍管理
+			shop.RegisterCountryRoutes(shopGroup, dbm, cache)                      // 国家管理
+			shop.RegisterOrderSourceRoutes(shopGroup, dbm, cache)                  // 外卖来源管理
+			shop.RegisterFullReductionActivityRoutes(shopGroup, dbm, cache)        // 满减活动管理
+			shop.RegisterTakeoutHandlers(shopGroup, dbm, cache)                    // 外卖平台集成
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")

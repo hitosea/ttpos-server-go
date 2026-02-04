@@ -1055,6 +1055,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `allow_negative_stock` INT(1) NOT NULL DEFAULT 0 COMMENT '允许负库存, 0-不允许 1-允许',
     `delivered_by_supplier` INT(1) NOT NULL DEFAULT 0 COMMENT '是否由供应商配送，0-否，1-是',
     `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商ERP编码',
+    `specification` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '规格，来自 ERPNext Item 的 Specification 字段',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -4259,6 +4260,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_limit_scheme_item` (
     `material_code` varchar(50) NOT NULL DEFAULT '' COMMENT '物品编码',
     `unit_code` varchar(50) NOT NULL DEFAULT '' COMMENT '单位编码',
     `quota_limit` decimal(20,8) NOT NULL DEFAULT 0 COMMENT '限购数量（0=不限制）',
+    `is_allow_purchase` varchar(10) NOT NULL DEFAULT 'yes' COMMENT '是否允许采购 yes/no',
     `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
@@ -4282,5 +4284,24 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_limit_scheme_shop` (
     UNIQUE KEY `uk_uuid` (`uuid`),
     KEY `idx_scheme_company` (`scheme_uuid`, `company_uuid`, `delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='限购方案门店配置表';
+
+-- ----------------------------
+-- Table structure for ttpos_material_category_visibility (物品分类可见性配置表)
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `ttpos_material_category_visibility` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一ID',
+    `name` text COMMENT '配置名称（多语言JSON）',
+    `is_all_roles` tinyint NOT NULL DEFAULT 0 COMMENT '是否全部门店角色：1-全部，0-部分',
+    `category_uuids` text COMMENT '物品类别UUID列表，JSON数组格式',
+    `role_configs` text COMMENT '角色配置，JSON数组格式 [{role_uuid, company_uuid}]',
+    `headquarter_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '总部UUID，0=当前店创建，>0=来自总部',
+    `create_time` int unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_headquarter_uuid` (`headquarter_uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物品分类可见性配置表';
 
 SET FOREIGN_KEY_CHECKS = 1;

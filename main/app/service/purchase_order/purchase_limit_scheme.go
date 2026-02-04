@@ -111,10 +111,16 @@ func (s *purchaseLimitSchemeSrv) Create(ctx context.Context, req req.PurchaseLim
 		// 4.2 批量插入物品配置
 		items := make([]*model.PurchaseLimitSchemeItem, 0, len(req.Items))
 		for _, item := range req.Items {
+			// 处理 IsAllowPurchase 默认值
+			isAllowPurchase := item.IsAllowPurchase
+			if isAllowPurchase == "" {
+				isAllowPurchase = "yes"
+			}
 			itemModel := &model.PurchaseLimitSchemeItem{
-				SchemeUuid:   scheme.Uuid,
-				MaterialCode: itemCodes[item.MaterialUuid],
-				QuotaLimit:   item.QuotaLimit,
+				SchemeUuid:      scheme.Uuid,
+				MaterialCode:    itemCodes[item.MaterialUuid],
+				QuotaLimit:      item.QuotaLimit,
+				IsAllowPurchase: isAllowPurchase,
 			}
 			itemModel.CreateTime = currentTime
 			itemModel.UpdateTime = currentTime
@@ -226,10 +232,16 @@ func (s *purchaseLimitSchemeSrv) Update(ctx context.Context, req req.PurchaseLim
 		// 5.3 插入新的物品配置
 		items := make([]*model.PurchaseLimitSchemeItem, 0, len(req.Items))
 		for _, item := range req.Items {
+			// 处理 IsAllowPurchase 默认值
+			isAllowPurchase := item.IsAllowPurchase
+			if isAllowPurchase == "" {
+				isAllowPurchase = "yes"
+			}
 			itemModel := &model.PurchaseLimitSchemeItem{
-				SchemeUuid:   scheme.Uuid,
-				MaterialCode: itemCodes[item.MaterialUuid],
-				QuotaLimit:   item.QuotaLimit,
+				SchemeUuid:      scheme.Uuid,
+				MaterialCode:    itemCodes[item.MaterialUuid],
+				QuotaLimit:      item.QuotaLimit,
+				IsAllowPurchase: isAllowPurchase,
 			}
 			itemModel.CreateTime = currentTime
 			itemModel.UpdateTime = currentTime
@@ -337,8 +349,9 @@ func (s *purchaseLimitSchemeSrv) GetByUuid(ctx context.Context, uuid uint64) (*r
 		}
 
 		result.Items = append(result.Items, resp.PurchaseLimitSchemeItemResp{
-			MaterialUuid: material.Uuid,
-			QuotaLimit:   item.QuotaLimit,
+			MaterialUuid:    material.Uuid,
+			QuotaLimit:      item.QuotaLimit,
+			IsAllowPurchase: item.IsAllowPurchase,
 		})
 	}
 

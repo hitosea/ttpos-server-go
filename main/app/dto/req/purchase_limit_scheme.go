@@ -15,8 +15,9 @@ type PurchaseLimitSchemeCreateReq struct {
 
 // PurchaseLimitSchemeItemReq 限购方案物品配置请求
 type PurchaseLimitSchemeItemReq struct {
-	MaterialUuid uint64  `json:"material_uuid" binding:"required"` // 物品UUID
-	QuotaLimit   float64 `json:"quota_limit"`                      // 限购数量
+	MaterialUuid    uint64  `json:"material_uuid" binding:"required"` // 物品UUID
+	QuotaLimit      float64 `json:"quota_limit"`                      // 限购数量
+	IsAllowPurchase string  `json:"is_allow_purchase"`                // 是否允许采购 yes/no，默认 yes
 }
 
 // PurchaseLimitSchemeUpdateReq 更新限购方案请求

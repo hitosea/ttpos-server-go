@@ -18,8 +18,9 @@ type PurchaseLimitSchemeResp struct {
 
 // PurchaseLimitSchemeItemResp 限购方案物品配置响应
 type PurchaseLimitSchemeItemResp struct {
-	MaterialUuid uint64  `json:"material_uuid"`
-	QuotaLimit   float64 `json:"quota_limit"`
+	MaterialUuid    uint64  `json:"material_uuid"`
+	QuotaLimit      float64 `json:"quota_limit"`
+	IsAllowPurchase string  `json:"is_allow_purchase"`
 }
 
 // PurchaseLimitSchemeListResp 限购方案列表响应
