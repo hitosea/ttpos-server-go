@@ -27,6 +27,7 @@ type IMaterialRepo interface {
 	GetMaterialDetailByUuids(uuids []uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuid(uuid uint64) (*model.Material, error)
 	GetMaterialDetailContainsDeletedByUuid(uuid uint64) (*model.Material, error)
+	GetMaterialDetailContainsDeletedByUuids(uuids []uint64) ([]*model.Material, error)
 	CreateMaterial(material model.Material) (uint64, error)
 	CreateMaterialList(materials []model.Material) error
 	UpdateMaterialCode(uuid uint64, code string) error
@@ -378,6 +379,36 @@ func (r *MaterialRepoImpl) GetMaterialDetailContainsDeletedByUuid(uuid uint64) (
 // GetMaterialDetailByUuids 根据UUIDs获取物品详情
 func (r *MaterialRepoImpl) GetMaterialDetailByUuids(uuids []uint64) ([]*model.Material, error) {
 	materials, err := r.GetMaterialByUuids(uuids,
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Category.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Unit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "PurchaseUnit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "CostUnit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "NotBaseUnitList.Unit.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询物品详情失败")
+	}
+	return materials, nil
+}
+
+// GetMaterialDetailContainsDeletedByUuids 根据UUIDs获取物品详情（包含软删除的物品）
+func (r *MaterialRepoImpl) GetMaterialDetailContainsDeletedByUuids(uuids []uint64) ([]*model.Material, error) {
+	materials, err := r.GetMaterialContainsDeletedByUuids(uuids,
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "MultiLanguageName",

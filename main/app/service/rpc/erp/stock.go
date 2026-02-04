@@ -189,3 +189,32 @@ func (s *erpSrv) GetMaterialStockNumByBin(ctx cc.Context, warehouseErpCode strin
 	}
 	return nil, nil
 }
+
+// SubmitStockEntry 提交库存变动（物料出库），用于报损单审核通过时调用
+func (s *erpSrv) SubmitStockEntry(ctx cc.Context, companySetting model.CompanySetting, submitStockEntryReq *stock.SubmitStockEntryReq) (*stock.SubmitStockEntryResp, error) {
+	var resp stock.SubmitStockEntryResp
+	client, conn, err := NewErpStockClient()
+	if err != nil {
+		return &resp, err
+	}
+	defer conn.Close()
+
+	submitStockEntryReq.CompanyAbbr = companySetting.ErpnextCompanyAbbr
+	submitStockEntryReq.Branch = companySetting.ErpnextBranchName
+
+	result, err := client.SubmitStockEntry(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), submitStockEntryReq)
+	if err != nil {
+		return &resp, err
+	}
+	if result.Code != "0" {
+		return &resp, errors.New(result.Message)
+	}
+	if result.Data != nil {
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("SubmitStockEntry-UnmarshalTo", zap.Any("err", err))
+			return &resp, err
+		}
+		return &resp, nil
+	}
+	return &resp, nil
+}

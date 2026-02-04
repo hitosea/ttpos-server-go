@@ -908,6 +908,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 			"code":                  request.ItemCode,
 			"delivered_by_supplier": request.DeliveredBySupplier,
 			"supplier_erp_code":     request.SupplierErpCode,
+			"specification":         request.Specification,
 		}
 		if request.NotForSale {
 			updateData["delete_time"] = time.Now().Unix()
@@ -1541,6 +1542,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			"internal_code":         request.InternalCode,        // 内部编码
 			"delivered_by_supplier": request.DeliveredBySupplier, // 是否由供应商配送
 			"supplier_erp_code":     request.SupplierErpCode,     // 供应商ERP编码
+			"specification":         request.Specification,       // 规格
 			"status": func() int {
 				if request.Disabled {
 					return 0
@@ -3247,6 +3249,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					AllowNegativeStock:  itemInfo.AllowNegativeStock,
 					DeliveredBySupplier: deliveredBySupplier,
 					SupplierErpCode:     supplierErpCode,
+					Specification:       itemInfo.CustomSpecification,
 				}); err != nil {
 					logger.Logger.Error("同步erp物品列表失败-01", zap.Error(err))
 				}
@@ -3303,6 +3306,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					AllowSubstoreVisible: true,
 					DeliveredBySupplier:  deliveredBySupplier,
 					SupplierErpCode:      supplierErpCode,
+					Specification:        itemInfo.CustomSpecification,
 				})
 				if err != nil {
 					logger.Logger.Error("同步erp物品列表失败-02", zap.Error(err))
@@ -3394,6 +3398,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					OriginCountryCode:     material.OriginCountryCode,
 					DeliveredBySupplier:   material.DeliveredBySupplier,
 					SupplierErpCode:       material.SupplierErpCode,
+					Specification:         material.Specification, // 同步规格字段
 				})
 				for _, unit := range material.NotBaseUnitList {
 					addMaterialUnitList = append(addMaterialUnitList, model.MaterialUnit{

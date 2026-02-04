@@ -25,6 +25,7 @@ type CompanyBusinessSummaryResp struct {
 type CompanyBusinessSummaryItem struct {
 	Date               string  `json:"date"`                  // 营业日（格式：YYYY-MM-DD）
 	CompanyName        string  `json:"company_name"`          // 门店名称
+	StoreCode          string  `json:"-"`                     // 店铺编号（内部排序用，不输出到JSON）
 	OrderAmount        float64 `json:"order_amount"`          // 订单金额（含优惠前，保留2位小数）
 	PayAmount          float64 `json:"pay_amount"`            // 实付金额（保留2位小数）
 	OrderNum           int64   `json:"order_num"`             // 订单数量
@@ -53,6 +54,7 @@ type CompanyPaymentMethodSummaryResp struct {
 type CompanyPaymentMethodSummaryItem struct {
 	Date          string  `json:"date"`           // 营业日（格式：YYYY-MM-DD 或 YYYY-MM）
 	CompanyName   string  `json:"company_name"`   // 门店名称
+	StoreCode     string  `json:"-"`              // 店铺编号（内部排序用，不输出到JSON）
 	PaymentName   string  `json:"payment_name"`   // 支付方式名称
 	PaymentAmount float64 `json:"payment_amount"` // 支付金额（保留2位小数）
 	PaymentNum    int64   `json:"payment_num"`    // 支付笔数
@@ -70,6 +72,7 @@ type CompanyRefundSummaryResp struct {
 type CompanyRefundSummaryItem struct {
 	Date                string  `json:"date"`                  // 营业日（格式：YYYY-MM-DD 或 YYYY-MM）
 	CompanyName         string  `json:"company_name"`          // 门店名称
+	StoreCode           string  `json:"-"`                     // 店铺编号（内部排序用，不输出到JSON）
 	RefundAmount        float64 `json:"refund_amount"`         // 退款金额（保留2位小数）
 	RefundNum           int64   `json:"refund_num"`            // 退款笔数
 	RefundRate          float64 `json:"refund_rate"`           // 退款率（保留2位小数，百分比）

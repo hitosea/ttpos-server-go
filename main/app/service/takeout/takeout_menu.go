@@ -100,45 +100,40 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 	// 2. 开始推送，创建推送日志
 	// importType: 1 = TTPOS推送到平台
 	// importDirection: 根据平台名称设置
-	// 首字母大写
-	platformName := platform
-	if len(platform) > 0 {
-		platformName = strings.ToUpper(string(platform[0])) + strings.ToLower(platform[1:])
-	}
-	importDirection := fmt.Sprintf("TTPOS推送到%s", platformName)
+	importDirection := fmt.Sprintf("TTPOS推送到%s", value_object.GetPlatformName(platform))
 	importLog, err := progressService.StartImport(ctx, platform, 1, importDirection)
 	if err != nil {
 		return errors.WithMessage(errors.New("开始推送失败"), err.Error())
 	}
 
 	// 3. 获取货币设置 (进度 0-20%)
-	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
-	if err != nil {
-		logger.Logger.Error("获取货币设置失败",
-			zap.String("platform", platform),
-			zap.Error(err),
-		)
-		// 标记推送失败
-		progressService.CompleteImport(ctx, importLog.Uuid, false, "获取货币设置失败: "+err.Error())
-		return errors.WithMessage(errors.New("获取货币设置失败"), err.Error())
-	}
+	// currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	// if err != nil {
+	// 	logger.Logger.Error("获取货币设置失败",
+	// 		zap.String("platform", platform),
+	// 		zap.Error(err),
+	// 	)
+	// 	// 标记推送失败
+	// 	progressService.CompleteImport(ctx, importLog.Uuid, false, "获取货币设置失败: "+err.Error())
+	// 	return errors.WithMessage(errors.New("获取货币设置失败"), err.Error())
+	// }
 
 	// 更新进度到 20%
 	progressService.UpdateProgress(ctx, importLog.Uuid, 20, 100)
 
 	// 4. 推送菜单到平台 (进度 20-100%)
-	err = s.takeoutAppSrv.PushMenu(ctx, platform, currencySetting.Unit)
-	if err != nil {
-		logger.Logger.Error("推送菜单到平台失败", zap.String("platform", platform), zap.Error(err))
-		// 判断是否是门店ID无效的错误
-		errMsg := "推送菜单失败"
-		if strings.Contains(err.Error(), "Invalid store ID") {
-			errMsg = "门店ID无效，请检查门店是否已在外卖平台绑定"
-		}
-		// 标记推送失败
-		progressService.CompleteImport(ctx, importLog.Uuid, false, errMsg+": "+err.Error())
-		return errors.WithMessage(errors.New(errMsg), err.Error())
-	}
+	// err = s.takeoutAppSrv.PushMenu(ctx, platform, currencySetting.Unit)
+	// if err != nil {
+	// 	logger.Logger.Error("推送菜单到平台失败", zap.String("platform", platform), zap.Error(err))
+	// 	// 判断是否是门店ID无效的错误
+	// 	errMsg := "推送菜单失败"
+	// 	if strings.Contains(err.Error(), "Invalid store ID") {
+	// 		errMsg = "门店ID无效，请检查门店是否已在外卖平台绑定"
+	// 	}
+	// 	// 标记推送失败
+	// 	progressService.CompleteImport(ctx, importLog.Uuid, false, errMsg+": "+err.Error())
+	// 	return errors.WithMessage(errors.New(errMsg), err.Error())
+	// }
 
 	// 更新进度到 100%
 	progressService.UpdateProgress(ctx, importLog.Uuid, 100, 100)
