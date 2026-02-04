@@ -67,7 +67,7 @@ const (
 	WarehouseInOutLogTypeLossOut      = "loss_out"       // 盘亏出库 4
 	WarehouseInOutLogTypeTransferIn   = "transfer_in"    // 调拨入库 5
 	WarehouseInOutLogTypeTransferOut  = "transfer_out"   // 调拨出库 6
-	WarehouseInOutLogTypeStockLossOut = "stock_loss_out" // 报损出库 22
+	WarehouseInOutLogTypeStockLossOut = "stock_loss_out" // 报损出库 7
 )
 
 const (
@@ -84,17 +84,17 @@ const (
 
 // WarehouseInOutLogScene 出入库日志场景
 const (
-	WarehouseInOutLogScenePurchase    = 0 // 采购入库
-	WarehouseInOutLogSceneSale        = 1 // 销售出库
-	WarehouseInOutLogSceneDelivery    = 2 // 发货出库
-	WarehouseInOutLogSceneProfitIn    = 3 // 盘盈入库
-	WarehouseInOutLogSceneLossOut     = 4 // 盘亏出库
-	WarehouseInOutLogSceneTransferIn  = 5 // 调拨入库
-	WarehouseInOutLogSceneTransferOut = 6 // 调拨出库
+	WarehouseInOutLogScenePurchase     = 0 // 采购入库
+	WarehouseInOutLogSceneSale         = 1 // 销售出库
+	WarehouseInOutLogSceneDelivery     = 2 // 发货出库
+	WarehouseInOutLogSceneProfitIn     = 3 // 盘盈入库
+	WarehouseInOutLogSceneLossOut      = 4 // 盘亏出库
+	WarehouseInOutLogSceneTransferIn   = 5 // 调拨入库
+	WarehouseInOutLogSceneTransferOut  = 6 // 调拨出库
+	WarehouseInOutLogSceneStockLossOut = 7 // 报损出库
 
-	WarehouseInOutLogSceneTransitIn      = 20 // 在途入库
-	WarehouseInOutLogSceneTransitOut     = 21 // 在途出库
-	WarehouseInOutLogSceneStockLossOut   = 22 // 报损出库
+	WarehouseInOutLogSceneTransitIn  = 20 // 在途入库
+	WarehouseInOutLogSceneTransitOut = 21 // 在途出库
 )
 
 func WarehouseInOutLogTypeToInt(typ string) int {
