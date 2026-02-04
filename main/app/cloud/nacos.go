@@ -77,49 +77,14 @@ func GetServiceGrpcAddr(serviceName string) (string, error) {
 	return nacosClient.GetServiceGrpcAddr(serviceName)
 }
 
-// getDirectGrpcAddr 获取BMP服务的直连地址（调试模式使用）
-func getDirectGrpcAddr(serviceName ServiceName) string {
-	switch serviceName {
-	case ErpServiceName:
-		return config.Bmp.ErpGrpcAddr
-	case TakeOutServiceName:
-		return config.Bmp.TakeoutGrpcAddr
-	case MessageServiceName:
-		return config.Bmp.MessageGrpcAddr
-	case WebSocketServiceName:
-		return config.Bmp.WebsocketGrpcAddr
-	default:
-		return ""
-	}
-}
-
 func GetRpcConnWithName(serviceName ServiceName) (conn *grpc.ClientConn, err error) {
-	var addr string
-
-	// 调试模式下，优先使用直连地址
-	if config.Server.Mode == "debug" {
-		if directAddr := getDirectGrpcAddr(serviceName); directAddr != "" {
-			addr = directAddr
-			logger.Logger.Debug("使用BMP服务直连地址", zap.String("service", string(serviceName)), zap.String("addr", addr))
-		}
+	addr, err := GetServiceGrpcAddr(string(serviceName))
+	if err != nil {
+		logger.Logger.Error("获取外送服务gRPC地址失败:", zap.Error(err))
+		return nil, err
 	}
-
-	// 如果没有直连地址，则通过Nacos服务发现获取
-	if addr == "" {
-		addr, err = GetServiceGrpcAddr(string(serviceName))
-		if err != nil {
-			// 调试模式下，如果Nacos服务发现失败，给出更友好的提示
-			if config.Server.Mode == "debug" {
-				logger.Logger.Error("获取BMP服务gRPC地址失败，请检查：1.BMP服务是否已启动 2.是否配置了直连地址(BMP_ERP_GRPC_ADDR等)", zap.String("service", string(serviceName)), zap.Error(err))
-			} else {
-				logger.Logger.Error("获取BMP服务gRPC地址失败:", zap.String("service", string(serviceName)), zap.Error(err))
-			}
-			return nil, err
-		}
-	}
-
-	// 建立gRPC连接（开发环境使用Insecure，生产环境建议配置TLS）
-	// 同时接入 OpenTelemetry 客户端拦截器以自动创建与传播 trace
+	// 1. 建立gRPC连接（开发环境使用Insecure，生产环境建议配置TLS）
+	//    同时接入 OpenTelemetry 客户端拦截器以自动创建与传播 trace
 	conn, err = grpc.NewClient(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
