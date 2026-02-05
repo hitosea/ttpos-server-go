@@ -19,20 +19,15 @@ type IMenuDataRepository interface {
 
 	// GetProductNameByUuid 根据商品UUID获取多语言名称
 	// 优先返回中文名称，如果没有则返回英文名称
-	GetProductNameByUuid(ctx context.Context, productUuid uint64, productType int) (string, error)
+	GetProductNameByUuid(ctx context.Context, platform string, productUuid uint64, productType int) (string, error)
 
 	// GetProductNamesByUuids 批量根据商品UUID获取多语言名称
 	// 返回 map[productUuid]types.ProductInfo（包含显示名称和TTPOS核心表名称）
-	GetProductNamesByUuids(ctx context.Context, productUuids []uint64, productTypes map[uint64]int) map[uint64]types.ProductInfo
-
-	// GetTTPOSProductNames 批量从 ttpos_product_package 表获取商品名称（不包含外卖表的名称）
-	// 返回 map[productUuid]name
-	// 已废弃：建议使用 GetProductNamesByUuids，它会同时返回显示名称和TTPOS名称
-	GetTTPOSProductNames(ctx context.Context, productUuids []uint64) map[uint64]string
+	GetProductNamesByUuids(ctx context.Context, platform string, productUuids []uint64, productTypes map[uint64]int) map[uint64]types.ProductInfo
 
 	// GetModifierNamesByUuids 批量根据修饰符UUID和类型获取多语言名称和数量
 	// 返回 map[modifierUuid]types.ModifierInfo
-	GetModifierNamesByUuids(ctx context.Context, modifierUuids []uint64, modifierTypes map[uint64]string) map[uint64]types.ModifierInfo
+	GetModifierNamesByUuids(ctx context.Context, platform string, modifierUuids []uint64, modifierTypes map[uint64]string) map[uint64]types.ModifierInfo
 
 	// GetMenuNamesByPlatformItemIds 批量根据平台商品ID获取菜单名称
 	// 从 ttpos_takeout 表的 menu JSON 字段获取
