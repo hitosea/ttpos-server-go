@@ -93,7 +93,6 @@ func (h *DeskHandler) BindDesk(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /tablet/desk/open [post]
 func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
-
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.DeskOrderCreateReq{}
@@ -102,8 +101,13 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 		return
 	}
 
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionTabletOpenDesk).
+		WithPath(c.Request.URL.Path)
 	// 创建桌台订单
 	res, err := h.deskSrv.CreateDeskOrder(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	// 处理错误
 	if err != nil {
 		ctx.Log().Error("创建桌台订单失败", zap.Error(err))
@@ -177,7 +181,13 @@ func (h *DeskHandler) OrderCartProductAddAndCooking(c *gin.Context) {
 		return
 	}
 	params.FormatPackageSubProductParams()
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionTabletAddAndCooking).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	failedData, err := h.orderSrv.TabletAddAndCooking(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
 			helper.ErrorWithData(c, constant.CodeOrderCheckProductPriceChanged, failedData, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), err.Error())))
@@ -266,8 +276,13 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	//
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionTabletProductRemark).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	shopCart, err := h.orderSrv.OrderProductRemark(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -301,8 +316,13 @@ func (h *DeskHandler) OrderRemark(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
-	//
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionTabletOrderRemark).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	shopCart, err := h.orderSrv.OrderRemark(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -379,8 +399,14 @@ func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("确认必点商品", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionTabletMustPlanConfirm).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	// 确认必点商品
 	res, mustPlan, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

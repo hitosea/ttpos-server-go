@@ -53,8 +53,13 @@ func (h *InstantHandler) InvalidateSaleBillSettingCache(ctx context.Context) {
 
 func (h *InstantHandler) CreateInstantOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCreateInstantOrder).
+		WithPath(c.Request.URL.Path)
 	// 创建订单
 	res, err := h.orderSrv.CreateInstantOrder(ctx)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "创建订单失败"))
 		return
@@ -81,8 +86,14 @@ func (h *InstantHandler) CancelOrder(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCancelOrder).
+		WithBill(req.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	//
 	err := h.orderSrv.CancelOrder(ctx, req)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -129,8 +140,14 @@ func (h *InstantHandler) HideOrder(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionHideOrder).
+		WithBill(req.SaleBillUuid, req.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	//
 	shopCart, err := h.orderSrv.HideOrder(ctx, req.SaleBillUuid)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -158,8 +175,14 @@ func (h *InstantHandler) ShowOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionShowOrder).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	//
 	shopCart, err := h.orderSrv.ShowOrder(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -186,7 +209,13 @@ func (h *InstantHandler) SetOrderSource(c *gin.Context) {
 		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionSetOrderSource).
+		WithBill(payload.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	shopCart, err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -213,7 +242,13 @@ func (h *InstantHandler) SetNationality(c *gin.Context) {
 		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionSetNationality).
+		WithBill(payload.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	shopCart, err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -268,8 +303,14 @@ func (h *InstantHandler) OrderTakeout(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderTakeout).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	//
 	res, err := h.orderSrv.OrderTakeout(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -300,8 +341,14 @@ func (h *InstantHandler) OrderProductDelete(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderProductDelete).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	//
 	shopCart, err := h.orderSrv.OrderProductDelete(ctx, companyUuid, staff.Uuid, source, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -329,8 +376,14 @@ func (h *InstantHandler) OrderProductChangePrice(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderProductChangePrice).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	//
 	info, err := h.orderSrv.OrderProductChangePrice(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -363,7 +416,7 @@ func (h *InstantHandler) OrderDiscount(c *gin.Context) {
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_discount").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderDiscount).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	//
@@ -425,8 +478,14 @@ func (h *InstantHandler) OrderDiscountCancel(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderDiscountCancel).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	//
 	info, err := h.orderSrv.OrderDiscountCancel(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -454,8 +513,14 @@ func (h *InstantHandler) OrderProductRemark(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderProductRemark).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	//
 	info, err := h.orderSrv.OrderProductRemark(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -483,8 +548,14 @@ func (h *InstantHandler) OrderRemark(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderRemark).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	//
 	info, err := h.orderSrv.OrderRemark(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -598,8 +669,14 @@ func (h *InstantHandler) OrderCartProductAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductAdd).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 添加商品。 若没有点餐账单则新建一个
 	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
 			otel.AddSpanEvent(stdCtx, "商品价格已变更", attribute.String("error.type", "product_price_changed"))
@@ -636,8 +713,14 @@ func (h *InstantHandler) OrderCartProductPackageAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCartPackageAdd).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 向购物车添加套餐
 	res, err := h.orderSrv.OrderCartProductPackageAdd(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -694,8 +777,14 @@ func (h *InstantHandler) OrderCartProductFlavorAndAttributeChange(c *gin.Context
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	// 修改购物车商品“规格/属性”
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductFlavorChange).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
+	// 修改购物车商品"规格/属性"
 	res, err := h.orderSrv.OrderCartProductFlavorAndAttributeChange(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -725,8 +814,14 @@ func (h *InstantHandler) OrderCartProductNum(c *gin.Context) {
 		return
 	}
 	ctx.Log().Debug("点餐页面修改购物车商品数量接口请求", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductNum).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 修改购物车商品数量
 	res, err := h.orderSrv.OrderCartProductNum(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -756,8 +851,14 @@ func (h *InstantHandler) OrderCartProductCooking(c *gin.Context) {
 		return
 	}
 	ctx.Log().Debug("点餐页面送厨购物车商品接口请求", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductCooking).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	// 送厨购物车商品
 	res, errRes, err := h.orderSrv.InstantOrderCartProductCooking(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -792,8 +893,14 @@ func (h *InstantHandler) OrderCartProductReturning(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductReturning).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 退菜购物车商品
 	res, err := h.orderSrv.InstantOrderCartProductReturning(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -822,8 +929,14 @@ func (h *InstantHandler) OrderCartProductCancelReturning(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductCancelReturn).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 退菜购物车商品
 	res, err := h.orderSrv.InstantOrderCartProductCancelReturning(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -852,8 +965,14 @@ func (h *InstantHandler) OrderCartProductGiving(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductGiving).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 退菜购物车商品
 	res, err := h.orderSrv.InstantOrderCartProductGiving(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -882,8 +1001,14 @@ func (h *InstantHandler) OrderCartProductCancelGiving(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductCancelGiving).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 退菜购物车商品
 	res, err := h.orderSrv.InstantOrderCartProductCancelGiving(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -943,8 +1068,14 @@ func (h *InstantHandler) OrderPaymentCoupon(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("选择或取消优惠券", zap.Any("params", couponReq))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentCoupon).
+		WithBill(couponReq.SaleBillUuid, couponReq.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 选择或取消优惠券
 	res, err := h.orderSrv.OrderPaymentCoupon(ctx, couponReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1001,8 +1132,14 @@ func (h *InstantHandler) OrderPaymentPoints(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("设置订单的抵扣积分数量", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentPoints).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 设置订单的抵扣积分数量
 	res, err := h.orderSrv.OrderPaymentPoints(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1031,8 +1168,14 @@ func (h *InstantHandler) OrderPaymentCreate(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("创建一个支付单", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentCreate).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 创建一个支付单
 	res, err := h.orderSrv.InstantOrderPaymentCreate(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1062,8 +1205,14 @@ func (h *InstantHandler) OrderPaymentCancel(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("撤销一个支付单", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentCancel).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 撤销一个支付单
 	res, err := h.orderSrv.InstantOrderPaymentCancel(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1093,7 +1242,7 @@ func (h *InstantHandler) OrderPaymentFinish(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "payment_finish").
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentFinish).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("销售订单的付款结账", zap.Any("params", params))
@@ -1168,8 +1317,14 @@ func (h *InstantHandler) OrderFree(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("免单", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderFree).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 免单
 	res, err := h.orderSrv.InstantOrderFree(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		if strings.Contains(err.Error(), "物品库存不足") {
 			ctx.Log().Error("桌台销售订单的付款结账失败", zap.Any("err", err))
@@ -1230,8 +1385,14 @@ func (h *InstantHandler) OrderPaymentZeroRule(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("设置结账抹零规则", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentZeroRule).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 设置结账抹零规则
 	res, err := h.orderSrv.InstantOrderPaymentZeroRule(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1258,8 +1419,14 @@ func (h *InstantHandler) OrderSaleOrderCreate(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionSaleOrderCreate).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	// 创建一个销售订单
 	res, err := h.orderSrv.InstantOrderSaleOrderCreate(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1288,8 +1455,14 @@ func (h *InstantHandler) OrderSaleOrderMoveProduct(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("从一个销售订单移动商品到另一个销售订单", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionSaleOrderMoveProduct).
+		WithBill(params.SaleBillUuid, params.From).
+		WithPath(c.Request.URL.Path)
 	// 从一个销售订单移动商品到另一个销售订单
 	res, err := h.orderSrv.SaleOrderMoveProduct(ctx, params, false)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1319,8 +1492,14 @@ func (h *InstantHandler) OrderMustPlanConfirm(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("确认必点商品", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderMustPlanConfirm).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	// 确认必点商品
 	res, mustPlan, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1393,8 +1572,14 @@ func (h *InstantHandler) OrderSaleOrderDelete(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("删除一个销售订单(删除拆单)", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionSaleOrderDelete).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 删除一个销售订单(删除拆单)
 	res, err := h.orderSrv.InstantOrderSaleOrderDelete(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1424,8 +1609,14 @@ func (h *InstantHandler) OrderSaleOrderDeleteAll(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("删除所有子销售订单(撤销拆单)", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionSaleOrderDeleteAll).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	// 删除所有子销售订单(撤销拆单)
 	res, err := h.orderSrv.InstantOrderSaleOrderDeleteAll(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1480,7 +1671,13 @@ func (h *InstantHandler) OrderUseMember(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderUseMember).
+		WithBill(passwordReq.SaleBillUuid, passwordReq.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	res, isCustomAmountAndZero, err := h.orderSrv.OrderUseMember(ctx, passwordReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1509,7 +1706,13 @@ func (h *InstantHandler) OrderMemberCancel(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderMemberCancel).
+		WithBill(passwordReq.SaleBillUuid, passwordReq.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	res, err := h.orderSrv.OrderMemberCancel(ctx, passwordReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1534,7 +1737,13 @@ func (h *InstantHandler) OrderPrint(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderPrint).
+		WithBill(printReq.SaleBillUuid, printReq.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	res, err := h.orderSrv.OrderPrint(ctx, printReq, true)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1559,7 +1768,13 @@ func (h *InstantHandler) OrderPrintInvoice(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderPrintInvoice).
+		WithBill(printReq.SaleBillUuid, printReq.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	res, err := h.orderSrv.OrderPrintInvoice(ctx, printReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1584,7 +1799,13 @@ func (h *InstantHandler) OrderUnlock(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionOrderUnlock).
+		WithBill(unlockReq.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	err := h.orderSrv.OrderUnlock(ctx, unlockReq.SaleBillUuid)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1662,8 +1883,14 @@ func (h *InstantHandler) OrderCartProductBatchCooking(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductBatchCooking).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 分批送厨弹框的销售订单商品列表
 	res, err := h.orderSrv.OrderCartProductBatchCooking(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1713,8 +1940,14 @@ func (h *InstantHandler) ChangeBatchTag(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionChangeBatchTag).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	// 更换分批类型
 	res, err := h.orderSrv.ChangeBatchTag(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1744,8 +1977,14 @@ func (h *InstantHandler) OrderPaymentActivity(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("选择或取消满减活动", zap.Any("params", activityReq))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentActivity).
+		WithBill(activityReq.SaleBillUuid, activityReq.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 选择或取消满减活动
 	res, err := h.orderSrv.OrderPaymentActivity(ctx, activityReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

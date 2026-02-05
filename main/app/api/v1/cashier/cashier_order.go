@@ -104,7 +104,7 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cancel_order").
+	tracker := helper.StartTrack(ctx, constant.ActionCancelOrder).
 		WithBill(req.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	// 订单列表中取消订单不需要密码
@@ -169,7 +169,7 @@ func (h *OrderHandler) ReturnOrder(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "return_order").
+	tracker := helper.StartTrack(ctx, constant.ActionReturnOrder).
 		WithBill(req.SaleBillUuid, req.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	//
@@ -356,7 +356,7 @@ func (h *OrderHandler) ReverseSettle(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "reverse_settle").
+	tracker := helper.StartTrack(ctx, constant.ActionReverseSettle).
 		WithBill(req.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	//

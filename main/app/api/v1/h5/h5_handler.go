@@ -98,8 +98,13 @@ func (h *Handler) OpenDesk(c *gin.Context) {
 	}
 	// 获取桌台uuid
 	params.DeskUuid = ctx.GetDeskUuid()
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionH5OpenDesk).
+		WithPath(c.Request.URL.Path)
 	// 创建桌台订单
 	res, err := h.deskSrv.CreateDeskOrder(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	// 处理错误
 	if err != nil {
 		ctx.Log().Error("创建桌台订单失败", zap.Error(err))
@@ -185,7 +190,12 @@ func (h *Handler) Call(c *gin.Context) {
 		helper.HandleValidationError(c, err, callReq, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionH5Call).
+		WithPath(c.Request.URL.Path)
 	err := h.callSrv.Call(ctx, callReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -221,7 +231,13 @@ func (h *Handler) OrderProductRemark(c *gin.Context) {
 	// 都是加购到第一个子单中
 	params.SaleOrderUuid = saleOrderUuid
 	params.SaleBillUuid = saleBillUuid
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionH5ProductRemark).
+		WithBill(saleBillUuid, saleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	shopCart, err := h.orderSrv.OrderProductRemark(ctx, params, repository.WithUnorderedH5Product())
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -256,7 +272,13 @@ func (h *Handler) OrderRemark(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionH5OrderRemark).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	shopCart, err := h.orderSrv.OrderRemark(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -345,8 +367,14 @@ func (h *Handler) OrderCartProductAdd(c *gin.Context) {
 		return
 	}
 	params.SetIsH5Product() // 设置为H5商品
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionH5CartProductAdd).
+		WithBill(saleBillUuid, saleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 添加商品。 若没有点餐账单则新建一个
 	shopCart, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params, repository.WithUnorderedH5Product())
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) { //  [app/service/order.go:4264]: [app/service/order.go:4562]: [app/service/order_action.go:271]: [app/service/order_action.go:586]: 商品超过限购
 			fmt.Println("InstantOrderCartProductAdd 1111", err)
@@ -410,8 +438,14 @@ func (h *Handler) OrderCartProductPackageAdd(c *gin.Context) {
 	}
 	params.SetIsH5Product() // 设置为H5商品
 
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionH5CartPackageAdd).
+		WithBill(saleBillUuid, saleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 向购物车添加套餐
 	res, err := h.orderSrv.OrderCartProductPackageAdd(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -486,8 +520,14 @@ func (h *Handler) OrderCartProductFlavorAndAttributeChange(c *gin.Context) {
 	// 都是加购到第一个子单中
 	params.SaleOrderUuid = saleOrderUuid
 	params.SaleBillUuid = saleBillUuid
-	// 修改购物车商品“规格/属性”
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionH5CartFlavorChange).
+		WithBill(saleBillUuid, saleOrderUuid).
+		WithPath(c.Request.URL.Path)
+	// 修改购物车商品"规格/属性"
 	shopCart, err := h.orderSrv.OrderCartProductFlavorAndAttributeChange(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
 			res := &resp.DeskPing{
@@ -611,8 +651,14 @@ func (h *Handler) OrderCartProductNum(c *gin.Context) {
 	params.SaleOrderUuid = saleOrderUuid
 	params.SaleBillUuid = saleBillUuid
 	ctx.Log().Debug("扫码点餐页面修改购物车商品数量接口请求", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionH5CartProductNum).
+		WithBill(saleBillUuid, saleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 修改购物车商品数量
 	shopCart, err := h.orderSrv.OrderCartProductNum(ctx, params, repository.WithUnorderedH5Product())
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -664,7 +710,14 @@ func (h *Handler) ConfirmOrder(c *gin.Context) {
 		return
 	}
 
-	if failedData, err := h.orderSrv.ConfirmH5Order(ctx, saleBillUuid, saleOrderUuid, params.IgnoreMust); err != nil {
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionH5ConfirmOrder).
+		WithBill(saleBillUuid, saleOrderUuid).
+		WithPath(c.Request.URL.Path)
+	failedData, err := h.orderSrv.ConfirmH5Order(ctx, saleBillUuid, saleOrderUuid, params.IgnoreMust)
+	// 记录耗时
+	tracker.End(ctx, err)
+	if err != nil {
 		if strings.Contains(err.Error(), "关闭h5接单功能，自动接单失败/异常") {
 			helper.ErrorWithDetail(c, constant.UnknownError, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), "下单失败,请联系商家")))
 			return
@@ -733,8 +786,14 @@ func (h *Handler) OrderMustPlanConfirm(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("确认必点商品", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionH5MustPlanConfirm).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	// 确认必点商品
 	res, mustPlan, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params, service.WithIsH5Order())
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

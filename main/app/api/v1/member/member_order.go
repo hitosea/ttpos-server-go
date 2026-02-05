@@ -42,8 +42,13 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	}
 	ctx.Log().Debug("创建会员端订单", zap.Any("params", params))
 
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionMemberOrderCreate).
+		WithPath(c.Request.URL.Path)
 	// 创建会员端订单
 	res, checkRes, err := h.orderSrv.CreateMemberOrder(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -110,8 +115,13 @@ func (h *OrderHandler) SetOrderAddress(c *gin.Context) {
 	}
 	ctx.Log().Debug("设置订单地址", zap.Any("params", params))
 
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionMemberOrderAddress).
+		WithPath(c.Request.URL.Path)
 	// 设置订单地址
 	res, err := h.orderSrv.SetMemberOrderAddress(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -142,8 +152,13 @@ func (h *OrderHandler) PayOrder(c *gin.Context) {
 	}
 	ctx.Log().Debug("提交支付", zap.Any("params", params))
 
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionMemberOrderPay).
+		WithPath(c.Request.URL.Path)
 	// 提交支付
 	err := h.orderSrv.PayMemberOrder(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -316,8 +331,13 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionMemberOrderCancel).
+		WithPath(c.Request.URL.Path)
 	// 取消订单
 	err := h.orderSrv.MemberOrderCancel(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

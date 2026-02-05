@@ -30,12 +30,18 @@ type CallHandler struct {
 // @Success 200 {object} dto.Response
 // @Router /tablet/call [post]
 func (h *CallHandler) Call(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var callReq req.CallReq
 	if err := c.ShouldBindJSON(&callReq); err != nil {
 		helper.HandleValidationError(c, err, callReq, nil)
 		return
 	}
-	err := h.callSrv.Call(helper.GetContext(c), callReq)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionTabletCall).
+		WithPath(c.Request.URL.Path)
+	err := h.callSrv.Call(ctx, callReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
