@@ -1076,16 +1076,22 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 					if err := modifierRepoTx.DeleteByItemUuid(change.OldItem.Uuid); err != nil {
 						logger.Logger.Error("删除旧修饰符失败", zap.Uint64("itemUuid", change.OldItem.Uuid), zap.Error(err))
 					}
-					// 更新数量
-					if err := itemRepoTx.UpdateQuantity(change.OldItem.Uuid, change.NewQuantity); err != nil {
-						logger.Logger.Error("更新商品数量失败", zap.Error(err))
-					}
-					// 插入新修饰符
+					// 插入新修饰符并更新商品属性
 					for j := range updatedOrder.TakeoutOrderItems {
 						newItem := &updatedOrder.TakeoutOrderItems[j]
 						if newItem.PlatformItemId == change.PlatformItemId {
 							// 使用已存在商品的 UUID，确保修饰符关联正确
 							newItem.Uuid = change.OldItem.Uuid
+							// 更新商品的完整属性（数量、规格、价格等）
+							updateFields := map[string]any{
+								"quantity":       change.NewQuantity,
+								"specifications": newItem.Specifications,
+								"price":          newItem.Price,
+								"tax":            newItem.Tax,
+							}
+							if err := itemRepoTx.UpdateByMap(change.OldItem.Uuid, updateFields); err != nil {
+								logger.Logger.Error("更新商品属性失败", zap.Error(err))
+							}
 							// 补全修饰符信息（UUID、映射、名称等）
 							if _, err := s.enrichModifiersInfo(ctx, platform, newItem); err != nil {
 								logger.Logger.Error("补全修饰符信息失败", zap.Error(err))

@@ -9848,14 +9848,13 @@ definitions:
     type: object
   request.GetImportLogsRequest:
     properties:
-      importType:
+      import_type:
         description: 导入类型筛选（1-TTPOS推送到平台 2-平台推送到TTPOS）
-        format: int32
         type: integer
-      pageNo:
+      page_no:
         description: 页码
         type: integer
-      pageSize:
+      page_size:
         description: 每页数量
         type: integer
       platform:
@@ -9863,7 +9862,6 @@ definitions:
         type: string
       status:
         description: 状态筛选（0-进行中 1-成功 2-失败）
-        format: int32
         type: integer
     type: object
   request.PushTakeoutMenuRequest:

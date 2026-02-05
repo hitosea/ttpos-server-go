@@ -18,6 +18,7 @@ type ITakeoutOrderItemRepo interface {
 	GetByOrderUuid(orderUuid uint64, options ...DBOption) ([]*model.TakeoutOrderItem, error)
 	Delete(uuid uint64) error
 	UpdateQuantity(uuid uint64, quantity int) error
+	UpdateByMap(uuid uint64, fields map[string]interface{}) error
 	// 选项方法
 	WithModifiers() DBOption
 }
@@ -96,6 +97,15 @@ func (r *TakeoutOrderItemRepoImpl) UpdateQuantity(uuid uint64, quantity int) err
 		r.db.Model(&model.TakeoutOrderItem{}).
 			Where("uuid = ?", uuid).
 			Update("quantity", quantity).Error,
+	)
+}
+
+// UpdateByMap 根据 Map 更新商品字段
+func (r *TakeoutOrderItemRepoImpl) UpdateByMap(uuid uint64, fields map[string]interface{}) error {
+	return errors.WithMessage(
+		r.db.Model(&model.TakeoutOrderItem{}).
+			Where("uuid = ?", uuid).
+			Updates(fields).Error,
 	)
 }
 
