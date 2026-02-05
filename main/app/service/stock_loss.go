@@ -240,13 +240,14 @@ func (s *stockLossSrv) GetStockLossDetail(ctx context.Context, detailReq req.Sto
 	detailResp.Items = itemsResp
 
 	// 附件列表
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	filesResp := make([]*resp.StockLossFileInfo, 0, len(stockLoss.StockLossFiles))
 	for _, file := range stockLoss.StockLossFiles {
 		if file.File != nil {
 			filesResp = append(filesResp, &resp.StockLossFileInfo{
 				Uuid:      file.FileUuid,
 				Name:      file.File.FileName,
-				Url:       file.File.FileUrl,
+				Url:       file.File.GetUrl(baseUrl),
 				FileType:  file.File.FileType,
 				SortOrder: file.SortOrder,
 			})
@@ -350,7 +351,7 @@ func (s *stockLossSrv) SaveStockLoss(ctx context.Context, saveReq req.StockLossS
 		if staff := ctx.GetStaff(); staff.Uuid > 0 {
 			staffName = staff.RealName
 		}
-		err = s.submitStockLoss(ctx, stockLoss.Uuid, staffName)
+		err = s.submitStockLoss(ctx, stockLoss.Uuid, staffName, false)
 		if err != nil {
 			return stockLossUuid, errors.WithMessage(err, "提交报损单失败")
 		}
@@ -408,21 +409,6 @@ func (s *stockLossSrv) SaveStockLoss(ctx context.Context, saveReq req.StockLossS
 	// 开启事务
 	err = db.Transaction(func(tx *gorm.DB) error {
 		stockLossRepo := repository.NewStockLossRepo(tx)
-
-		// 重新提交成功后添加批注记录（包含报损原因）
-		if saveReq.GetIsResubmit() {
-			annotation := &model.StockLossAnnotation{
-				StockLossUuid: stockLoss.Uuid,
-				Action:        model.StockLossActionResubmit,
-				Content:       saveReq.Reason,
-				OperatorUuid:  ctx.GetStaffUuid(),
-				OperatorName:  staffName,
-			}
-			if err := stockLossRepo.CreateAnnotation(annotation); err != nil {
-				logger.Logger.Error("保存重新提交批注失败", zap.Error(err))
-				// 批注保存失败不影响主流程，仅记录日志
-			}
-		}
 
 		if saveReq.Uuid == 0 { // 新建
 			// 生成单据编号
@@ -543,7 +529,7 @@ func (s *stockLossSrv) SaveStockLoss(ctx context.Context, saveReq req.StockLossS
 
 	// 提交报损单（包括首次提交和重新提交）
 	if saveReq.IsSubmit || saveReq.GetIsResubmit() {
-		err = s.submitStockLoss(ctx, stockLoss.Uuid, staffName)
+		err = s.submitStockLoss(ctx, stockLoss.Uuid, staffName, saveReq.GetIsResubmit())
 		if err != nil {
 			return stockLossUuid, errors.WithMessage(err, "提交报损单失败")
 		}
@@ -553,7 +539,7 @@ func (s *stockLossSrv) SaveStockLoss(ctx context.Context, saveReq req.StockLossS
 }
 
 // submitStockLoss 提交报损单
-func (s *stockLossSrv) submitStockLoss(ctx context.Context, stockLossUuid uint64, staffName string) error {
+func (s *stockLossSrv) submitStockLoss(ctx context.Context, stockLossUuid uint64, staffName string, isResubmit bool) error {
 	db := ctx.GetDB()
 	stockLossRepo := repository.NewStockLossRepo(db)
 
@@ -649,10 +635,14 @@ func (s *stockLossSrv) submitStockLoss(ctx context.Context, stockLossUuid uint64
 			return errors.WithMessage(errors.New("更新报损单状态失败"), err.Error())
 		}
 
-		// 创建提交批注（包含报损原因）
+		// 创建批注（首次提交为 submit，重新提交为 resubmit）
+		action := model.StockLossActionSubmit
+		if isResubmit {
+			action = model.StockLossActionResubmit
+		}
 		annotation := &model.StockLossAnnotation{
 			StockLossUuid: stockLoss.Uuid,
-			Action:        model.StockLossActionSubmit,
+			Action:        action,
 			Content:       stockLoss.Reason,
 			OperatorUuid:  ctx.GetStaffUuid(),
 			OperatorName:  staffName,
@@ -1132,6 +1122,8 @@ func formatMaterialName(nameJson string, internalCode string, defaultLang string
 	if name == "" {
 		name = nameJson // 如果解析失败，使用原始字符串
 	}
+	// 内部编码不为空时才显示括号
+	internalCode = strings.TrimSpace(internalCode)
 	if internalCode != "" {
 		return name + "（" + internalCode + "）"
 	}
@@ -1368,6 +1360,8 @@ func (s *stockLossSrv) getMaterialInfoByCode(db *gorm.DB, erpCode string, defaul
 
 // formatMaterialNameForError 格式化物品名称用于错误信息，格式：名称（内部编码）
 func formatMaterialNameForError(name string, internalCode string) string {
+	// 内部编码不为空时才显示括号
+	internalCode = strings.TrimSpace(internalCode)
 	if internalCode != "" {
 		return name + "（" + internalCode + "）"
 	}
