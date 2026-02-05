@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/model"
@@ -92,7 +93,15 @@ type Context interface {
 	SetBasicInfo(db *gorm.DB, companyInfo *model.Company) error // 设置基础信息
 
 	// 耗时追踪
-	GetStartTime() int64 // 获取请求开始时间（毫秒时间戳）
+	GetStartTime() int64      // 获取请求开始时间（毫秒时间戳）
+	Mark(name string)         // 标记时间节点
+	GetTimeNodes() []TimeNode // 获取所有时间节点
+}
+
+// TimeNode 时间节点，用于记录请求处理过程中各阶段的耗时
+type TimeNode struct {
+	Name     string `json:"name"`      // 节点名称
+	OffsetMs int64  `json:"offset_ms"` // 距离请求开始时间的偏移(毫秒)
 }
 
 type ContextImpl struct {
@@ -119,6 +128,8 @@ type ContextImpl struct {
 	log            *zap.Logger
 	db             *gorm.DB
 	startTime      int64                // 请求开始时间（毫秒时间戳）
+	timeNodes      []TimeNode           // 时间节点列表
+	timeNodesMu    sync.Mutex           // 时间节点互斥锁
 }
 
 type Option func(*ContextImpl)
@@ -237,6 +248,15 @@ func WithStartTime(startTime int64) Option {
 	}
 }
 
+func WithTimeNodes(nodes []TimeNode) Option {
+	return func(ctx *ContextImpl) {
+		if len(nodes) > 0 {
+			ctx.timeNodes = make([]TimeNode, len(nodes))
+			copy(ctx.timeNodes, nodes)
+		}
+	}
+}
+
 func NewDefaultContext() Context {
 	return NewContext(WithContext(context.Background()))
 }
@@ -273,6 +293,7 @@ func (c *ContextImpl) Copy() Context {
 		WithMember(c.member),
 		WithMemberUuid(c.memberUuid),
 		WithStartTime(c.startTime),
+		WithTimeNodes(c.timeNodes),
 	)
 }
 
@@ -513,6 +534,54 @@ func (c *ContextImpl) GetBrand() string {
 // GetStartTime 获取请求开始时间（毫秒时间戳）
 func (c *ContextImpl) GetStartTime() int64 {
 	return c.startTime
+}
+
+// maxTimeNodes 时间节点数量上限，防止异常情况下无限累积
+const maxTimeNodes = 50
+
+// maxTimeNodeNameLen 时间节点名称最大长度
+const maxTimeNodeNameLen = 64
+
+// Mark 标记时间节点
+// 记录当前时刻距离请求开始时间的偏移量
+// 用于追踪请求处理过程中各阶段的耗时
+// 线程安全，可在多个 goroutine 中调用
+func (c *ContextImpl) Mark(name string) {
+	if c.startTime == 0 {
+		return // 如果没有开始时间，忽略
+	}
+
+	// 截断过长的节点名称
+	if len(name) > maxTimeNodeNameLen {
+		name = name[:maxTimeNodeNameLen]
+	}
+
+	c.timeNodesMu.Lock()
+	defer c.timeNodesMu.Unlock()
+
+	// 防止节点数量无限累积
+	if len(c.timeNodes) >= maxTimeNodes {
+		return
+	}
+	offsetMs := time.Now().UnixMilli() - c.startTime
+	c.timeNodes = append(c.timeNodes, TimeNode{
+		Name:     name,
+		OffsetMs: offsetMs,
+	})
+}
+
+// GetTimeNodes 获取所有时间节点（返回副本，线程安全）
+func (c *ContextImpl) GetTimeNodes() []TimeNode {
+	c.timeNodesMu.Lock()
+	defer c.timeNodesMu.Unlock()
+
+	if len(c.timeNodes) == 0 {
+		return nil
+	}
+	// 返回副本，避免外部修改
+	result := make([]TimeNode, len(c.timeNodes))
+	copy(result, c.timeNodes)
+	return result
 }
 
 // 设置基础信息

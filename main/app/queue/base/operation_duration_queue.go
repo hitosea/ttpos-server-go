@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"encoding/json"
 	"time"
 
 	"ttpos-server-go/app/api/helper"
@@ -129,6 +130,14 @@ func (q *OperationDurationQueue) flush(records []*req.OperationDurationRecord) {
 			continue
 		}
 
+		// 序列化时间节点为 JSON
+		timeNodesJSON := ""
+		if len(r.TimeNodes) > 0 {
+			if jsonBytes, err := json.Marshal(r.TimeNodes); err == nil {
+				timeNodesJSON = string(jsonBytes)
+			}
+		}
+
 		models = append(models, model.OrderOperationDuration{
 			Uuid:          uuid,
 			CompanyUuid:   r.CompanyUuid,
@@ -145,6 +154,7 @@ func (q *OperationDurationQueue) flush(records []*req.OperationDurationRecord) {
 			RequestPath:   r.RequestPath,
 			Status:        r.Status,
 			ErrorMsg:      r.ErrorMsg,
+			TimeNodes:     timeNodesJSON,
 			CreateTime:    now,
 			UpdateTime:    now,
 			DeleteTime:    0,

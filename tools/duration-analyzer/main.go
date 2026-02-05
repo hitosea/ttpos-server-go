@@ -29,7 +29,7 @@ var (
 
 func init() {
 	flag.StringVar(&dsn, "dsn", "", "MySQL DSN (例: user:pass@tcp(host:3306)/dbname)")
-	flag.StringVar(&reportType, "report", "summary", "报告类型: summary|slow|error|trend|company|action|terminal")
+	flag.StringVar(&reportType, "report", "summary", "报告类型: summary|slow|error|trend|company|action|terminal|nodes")
 	flag.StringVar(&startTime, "start", "", "开始时间 (格式: 2006-01-02 或 2006-01-02 15:04:05)")
 	flag.StringVar(&endTime, "end", "", "结束时间 (格式: 2006-01-02 或 2006-01-02 15:04:05)")
 	flag.Uint64Var(&companyUuid, "company", 0, "商户UUID (可选，0表示全部)")
@@ -54,6 +54,7 @@ func main() {
 		fmt.Println("  company  - 门店性能对比")
 		fmt.Println("  action   - 接口性能排名")
 		fmt.Println("  terminal - 终端性能对比")
+		fmt.Println("  nodes    - 时间节点分析 (各阶段耗时)")
 		fmt.Println("\n示例:")
 		fmt.Println("  # 查看今天的总体概览")
 		fmt.Println("  ./duration-analyzer -dsn 'user:pass@tcp(host:3306)/saas' -report summary -start 2026-02-05")
@@ -118,6 +119,8 @@ func main() {
 		analyzer.ActionReport()
 	case "terminal":
 		analyzer.TerminalReport()
+	case "nodes":
+		analyzer.NodesReport()
 	default:
 		fmt.Printf("未知的报告类型: %s\n", reportType)
 		os.Exit(1)
@@ -722,4 +725,150 @@ type SummaryResult struct {
 func outputAsJSON(data any) {
 	jsonData, _ := json.MarshalIndent(data, "", "  ")
 	fmt.Println(string(jsonData))
+}
+
+// TimeNode 时间节点
+type TimeNode struct {
+	Name     string `json:"name"`
+	OffsetMs int64  `json:"offset_ms"`
+}
+
+// NodesReport 时间节点分析报告
+func (a *Analyzer) NodesReport() {
+	where, args := a.buildWhereClause()
+
+	fmt.Println("\n" + strings.Repeat("=", 80))
+	fmt.Println("                            时间节点分析报告")
+	fmt.Println(strings.Repeat("=", 80))
+	fmt.Printf("时间范围: %s ~ %s\n", startTime, endTime)
+	fmt.Println(strings.Repeat("-", 80))
+
+	// 查询包含时间节点的记录
+	query := fmt.Sprintf(`
+		SELECT action, time_nodes, duration_ms
+		FROM ttpos_order_operation_duration
+		WHERE %s AND time_nodes IS NOT NULL AND time_nodes != '' AND time_nodes != '[]'
+		LIMIT %d
+	`, where, a.topN*10) // 多查一些用于统计
+
+	rows, err := a.db.Query(query, args...)
+	if err != nil {
+		fmt.Printf("查询失败: %v\n", err)
+		return
+	}
+	defer rows.Close()
+
+	// 按节点名称聚合统计
+	nodeStats := make(map[string][]int64) // nodeName -> []offsetMs
+	actionNodes := make(map[string]map[string][]int64) // action -> nodeName -> []offsetMs
+
+	for rows.Next() {
+		var actionName, timeNodesJSON string
+		var durationMs int
+		rows.Scan(&actionName, &timeNodesJSON, &durationMs)
+
+		var nodes []TimeNode
+		if err := json.Unmarshal([]byte(timeNodesJSON), &nodes); err != nil {
+			continue
+		}
+
+		for _, node := range nodes {
+			nodeStats[node.Name] = append(nodeStats[node.Name], node.OffsetMs)
+
+			if actionNodes[actionName] == nil {
+				actionNodes[actionName] = make(map[string][]int64)
+			}
+			actionNodes[actionName][node.Name] = append(actionNodes[actionName][node.Name], node.OffsetMs)
+		}
+	}
+
+	if len(nodeStats) == 0 {
+		fmt.Println("\n暂无时间节点数据")
+		fmt.Println("提示: 需要在代码中使用 ctx.Mark(\"node_name\") 记录时间节点")
+		return
+	}
+
+	// 1. 全局节点统计
+	fmt.Printf("\n📊 全局节点耗时统计\n")
+	a.printNodeStats(nodeStats)
+
+	// 2. 按 Action 分组的节点统计
+	fmt.Printf("\n📋 各接口节点耗时明细\n")
+	for actionName, nodes := range actionNodes {
+		fmt.Printf("\n  [%s]\n", actionName)
+		a.printNodeStatsIndent(nodes, "    ")
+	}
+}
+
+// printNodeStats 打印节点统计
+func (a *Analyzer) printNodeStats(nodeStats map[string][]int64) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"节点名称", "样本数", "平均偏移", "最小", "最大", "P50", "P95"})
+	table.SetBorder(false)
+
+	// 按平均值排序
+	type nodeStat struct {
+		name string
+		data []int64
+	}
+	var stats []nodeStat
+	for name, data := range nodeStats {
+		stats = append(stats, nodeStat{name, data})
+	}
+	sort.Slice(stats, func(i, j int) bool {
+		return avg(stats[i].data) < avg(stats[j].data)
+	})
+
+	for _, s := range stats {
+		data := s.data
+		sort.Slice(data, func(i, j int) bool { return data[i] < data[j] })
+		n := len(data)
+
+		table.Append([]string{
+			s.name,
+			fmt.Sprintf("%d", n),
+			fmt.Sprintf("%d ms", avg(data)),
+			fmt.Sprintf("%d ms", data[0]),
+			fmt.Sprintf("%d ms", data[n-1]),
+			fmt.Sprintf("%d ms", data[percentileIndex(n, 50)]),
+			fmt.Sprintf("%d ms", data[percentileIndex(n, 95)]),
+		})
+	}
+	table.Render()
+}
+
+// printNodeStatsIndent 打印节点统计（带缩进）
+func (a *Analyzer) printNodeStatsIndent(nodeStats map[string][]int64, indent string) {
+	// 按平均值排序
+	type nodeStat struct {
+		name string
+		data []int64
+	}
+	var stats []nodeStat
+	for name, data := range nodeStats {
+		stats = append(stats, nodeStat{name, data})
+	}
+	sort.Slice(stats, func(i, j int) bool {
+		return avg(stats[i].data) < avg(stats[j].data)
+	})
+
+	for _, s := range stats {
+		data := s.data
+		sort.Slice(data, func(i, j int) bool { return data[i] < data[j] })
+		n := len(data)
+		fmt.Printf("%s%-20s: avg=%4dms, min=%4dms, max=%4dms, p95=%4dms (n=%d)\n",
+			indent, s.name, avg(data), data[0], data[n-1], data[percentileIndex(n, 95)], n)
+	}
+}
+
+// avg 计算平均值
+func avg(data []int64) int64 {
+	if len(data) == 0 {
+		return 0
+	}
+	var sum int64
+	for _, v := range data {
+		sum += v
+	}
+	return sum / int64(len(data))
 }
