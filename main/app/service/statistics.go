@@ -1259,7 +1259,8 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 		}
 		// 使用 product_bom_uuid 作为 key（如果为 0 或无效，则跳过）
 		if !product.ProductBomUuid.Valid || product.ProductBomUuid.Int64 == 0 {
-			continue
+			product.ProductBomUuid.Int64 = product.ProductPackageUuid.Int64
+			product.ProductBomUuid.Valid = true
 		}
 		productBomUuid := uint64(product.ProductBomUuid.Int64)
 		productResp := &CountProductResp{
@@ -1292,9 +1293,7 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 		if takeoutProduct.ProductBomUuid.Valid && takeoutProduct.ProductBomUuid.Int64 > 0 {
 			takeoutProductBomUuid = uint64(takeoutProduct.ProductBomUuid.Int64)
 		} else {
-			// 如果没有有效的 product_bom_uuid，使用商品名称作为 key（fallback）
-			// 这种情况应该很少见，但为了健壮性需要处理
-			continue
+			takeoutProductBomUuid = uint64(takeoutProduct.ProductPackageUuid.Int64)
 		}
 		if existing, exists := productMap[takeoutProductBomUuid]; exists {
 			// 如果有匹配的店内商品，合并到该商品
