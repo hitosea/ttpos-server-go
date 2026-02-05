@@ -267,7 +267,7 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 
 // GetProductNameByUuid 根据商品UUID获取多语言名称
 // 优先返回中文名称，如果没有则返回英文名称
-func (r *menuDataRepositoryImpl) GetProductNameByUuid(ctx context.Context, productUuid uint64, productType int) (string, error) {
+func (r *menuDataRepositoryImpl) GetProductNameByUuid(ctx context.Context, platform string, productUuid uint64, productType int) (string, error) {
 	db := ctx.GetDB()
 
 	// 第一步：查询店内商品
@@ -290,6 +290,7 @@ func (r *menuDataRepositoryImpl) GetProductNameByUuid(ctx context.Context, produ
 	err = db.
 		Model(&model.ProductPackageTakeout{}).
 		Where("product_package_uuid = ? AND delete_time = ?", productUuid, 0).
+		Where("takeout_type = ?", value_object.GetTakeoutTypeByPlatform(platform)).
 		Preload("MultiLanguageName", "delete_time = ?", 0).
 		First(&takeoutProduct).Error
 
@@ -310,7 +311,7 @@ func (r *menuDataRepositoryImpl) GetProductNameByUuid(ctx context.Context, produ
 // 返回 map[productUuid]name
 // GetProductNamesByUuids 批量根据商品UUID获取商品名称
 // 返回 map[productUuid]types.ProductInfo（包含显示名称、TTPOS核心表名称和ERP编码）
-func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, productUuids []uint64, productTypes map[uint64]int) map[uint64]types.ProductInfo {
+func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, platform string, productUuids []uint64, productTypes map[uint64]int) map[uint64]types.ProductInfo {
 	db := ctx.GetDB()
 
 	if len(productUuids) == 0 {
@@ -344,6 +345,7 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 	err = db.
 		Model(&model.ProductPackageTakeout{}).
 		Where("product_package_uuid IN ? AND delete_time = ?", productUuids, 0).
+		Where("takeout_type = ?", value_object.GetTakeoutTypeByPlatform(platform)).
 		Preload("MultiLanguageName", "delete_time = ?", 0).
 		Find(&takeoutProducts).Error
 
@@ -509,50 +511,10 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 	return result
 }
 
-// GetTTPOSProductNames 批量从 ttpos_product_package 表获取商品名称（不包含外卖表的名称）
-// 已废弃：建议使用 GetProductNamesByUuids，它会同时返回显示名称和TTPOS名称
-func (r *menuDataRepositoryImpl) GetTTPOSProductNames(ctx context.Context, productUuids []uint64) map[uint64]string {
-	db := ctx.GetDB()
-
-	if len(productUuids) == 0 {
-		return make(map[uint64]string)
-	}
-
-	// 只查询店内商品表 ttpos_product_package
-	var productPackages []model.ProductPackage
-	err := db.
-		Model(&model.ProductPackage{}).
-		Where("uuid IN ? AND delete_time = ?", productUuids, 0).
-		Preload("MultiLanguageName", "delete_time = ?", 0).
-		Find(&productPackages).Error
-
-	if err != nil {
-		logger.Logger.Error("批量查询 TTPOS 商品名称失败", zap.Error(err))
-		return make(map[uint64]string)
-	}
-
-	// 构建返回结果
-	result := make(map[uint64]string)
-	for _, pkg := range productPackages {
-		var name string
-		// 优先使用多语言名称
-		if pkg.MultiLanguageName.Uuid != 0 {
-			name = pkg.MultiLanguageName.ToJson()
-		}
-		// 回退到单语言名称
-		if name == "" {
-			name = pkg.Name
-		}
-		result[pkg.Uuid] = name
-	}
-
-	return result
-}
-
 // GetModifierNamesByUuids 批量根据修饰符UUID和类型获取多语言名称和数量
 // modifierTypes: map[uuid]type, type 可能是 "flavor"/"sauce"/"attr"/"commodity"
 // 返回 map[modifierUuid]ModifierInfo
-func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, modifierUuids []uint64, modifierTypes map[uint64]string) map[uint64]types.ModifierInfo {
+func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, platform string, modifierUuids []uint64, modifierTypes map[uint64]string) map[uint64]types.ModifierInfo {
 	db := ctx.GetDB()
 
 	if len(modifierUuids) == 0 {
@@ -609,7 +571,7 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 				for _, uuid := range packageUuids {
 					packageTypes[uuid] = 0 // 0表示商品类型
 				}
-				packageInfoMap = r.GetProductNamesByUuids(ctx, packageUuids, packageTypes)
+				packageInfoMap = r.GetProductNamesByUuids(ctx, platform, packageUuids, packageTypes)
 			}
 
 			for _, flavor := range flavors {
@@ -758,6 +720,7 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 				err := db.
 					Model(&model.ProductPackageTakeout{}).
 					Where("product_package_uuid IN ? AND delete_time = ?", packageUuids, 0).
+					Where("takeout_type = ?", value_object.GetTakeoutTypeByPlatform(platform)).
 					Preload("MultiLanguageName", "delete_time = ?", 0).
 					Find(&takeoutProducts).Error
 				if err == nil {
