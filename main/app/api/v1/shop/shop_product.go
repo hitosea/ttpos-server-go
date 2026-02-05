@@ -1274,7 +1274,15 @@ func (h *ProductHandler) ProductShopEdit(c *gin.Context) {
 	}
 	// 失效商品列表缓存
 	h.InvalidateProductListCache(ctx)
-	helper.Success(c, nil, "保存成功")
+	// 返回详情和替换列表
+	productDetailResp, err := h.productSrv.GetProductDetail(ctx, req.ProductDetailReq{
+		Uuid: editReq.Uuid,
+	})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, productDetailResp, "保存成功")
 }
 
 // ProductShopDelete 删除商品

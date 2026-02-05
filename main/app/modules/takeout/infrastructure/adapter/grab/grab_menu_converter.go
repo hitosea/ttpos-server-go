@@ -28,6 +28,7 @@ type GrabConverter struct {
 	menuRepo               menuRepo.IMenuDataRepository
 	amountConversionFactor int64 // 金额转换因子(分转元)
 	defaultLanguage        string
+	nameMaxLength          int
 }
 
 // NewGrabConverter 创建 Grab 转换器
@@ -37,6 +38,7 @@ func NewGrabConverter(dbm *database.DBManager) *GrabConverter {
 		menuRepo:               persistence.NewMenuDataRepository(dbm),
 		amountConversionFactor: 100,
 		defaultLanguage:        "th",
+		nameMaxLength:          40,
 	}
 }
 
@@ -45,10 +47,15 @@ func (c *GrabConverter) GetPlatformName() string {
 	return "Grab"
 }
 
+// SetNameMaxLength 设置名称最大长度
+func (c *GrabConverter) SetNameMaxLength(length int) {
+	c.nameMaxLength = length
+}
+
 // truncateName 截取名称，限制为 40 个字符（UTF-8 安全截取）
 // Grab 平台对名称长度有限制，超过限制会导致上传失败
 func (c *GrabConverter) truncateName(name string, maxLength ...int) string {
-	maxLengthValue := 40
+	maxLengthValue := c.nameMaxLength
 	if len(maxLength) > 0 {
 		maxLengthValue = maxLength[0]
 	}
@@ -998,9 +1005,9 @@ func (c *GrabConverter) convertPackageGroups(_ context.Context, platform string,
 			if groupItem.Num > 0 {
 				// 如果数量是整数，显示为整数；否则显示小数
 				if groupItem.Num == float64(int64(groupItem.Num)) {
-					itemName = fmt.Sprintf("%s * %d", c.truncateName(itemName, 32), int64(groupItem.Num))
+					itemName = fmt.Sprintf("%s * %d", c.truncateName(itemName, c.nameMaxLength-8), int64(groupItem.Num))
 				} else {
-					itemName = fmt.Sprintf("%s * %.2f", c.truncateName(itemName, 32), groupItem.Num)
+					itemName = fmt.Sprintf("%s * %.2f", c.truncateName(itemName, c.nameMaxLength-8), groupItem.Num)
 				}
 			}
 
@@ -1029,9 +1036,9 @@ func (c *GrabConverter) convertPackageGroups(_ context.Context, platform string,
 				for lang, name := range translations {
 					if groupItem.Num > 0 {
 						if groupItem.Num == float64(int64(groupItem.Num)) {
-							translations[lang] = fmt.Sprintf("%s * %d", c.truncateName(name, 32), int64(groupItem.Num))
+							translations[lang] = fmt.Sprintf("%s * %d", c.truncateName(name, c.nameMaxLength-8), int64(groupItem.Num))
 						} else {
-							translations[lang] = fmt.Sprintf("%s * %.2f", c.truncateName(name, 32), groupItem.Num)
+							translations[lang] = fmt.Sprintf("%s * %.2f", c.truncateName(name, c.nameMaxLength-8), groupItem.Num)
 						}
 					}
 				}
