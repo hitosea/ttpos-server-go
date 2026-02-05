@@ -681,6 +681,9 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 	lang := ctx.GetLanguage()
 	existsMaterialUuidMap := make(map[uint64]bool)
 	for _, reqItem := range stockReconciliation.StockReconciliationItems {
+		if reqItem.DeleteTime > 0 {
+			continue
+		}
 		if _, exists := existsMaterialUuidMap[reqItem.MaterialUuid]; exists {
 			materialName := *language.JsonToLocaleResponse(reqItem.MaterialName)
 			return fmt.Errorf(i18n.Translate(lang, "物品 %s 重复"), materialName.GetLocale(lang))
