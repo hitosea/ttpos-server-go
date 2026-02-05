@@ -3,7 +3,6 @@ package stock
 import (
 	"context"
 	"math"
-	itemApi "ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
@@ -63,8 +62,10 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 		data.SetWarehouse = warehouseName
 	}
 
-	// 方案D: 批量预查询整个仓库的 Bin 记录，避免 N+1 查询问题
+	// 批量预查询整个仓库的 Bin 记录（包含估值率和库存数量），避免 N+1 查询问题
 	binValuationMap := make(map[string]float64) // key: item_code, value: valuation_rate
+	binActualQtyMap := make(map[string]float64) // key: item_code, value: actual_qty
+	binExists := make(map[string]bool)          // key: item_code, value: 是否存在 Bin 记录
 	if len(warehouseName) > 0 {
 		binResp, err := s.GetBin(ctx, &stock.GetBinReq{
 			Warehouse: warehouseName,
@@ -73,6 +74,8 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 		if err == nil && binResp != nil && len(binResp.Items) > 0 {
 			for _, bin := range binResp.Items {
 				binValuationMap[bin.ItemCode] = bin.ValuationRate
+				binActualQtyMap[bin.ItemCode] = bin.ActualQty
+				binExists[bin.ItemCode] = true
 			}
 			g.Log().Infof(ctx, "批量查询 Bin 记录成功: warehouse=%s, count=%d", warehouseName, len(binResp.Items))
 		} else {
@@ -80,41 +83,21 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 		}
 	}
 
-	// 批量预查询整个仓库的库存数量，避免 N+1 查询问题
-	stockQtyMap := make(map[string]float64) // key: item_code, value: actual_qty
-	stockQtyExists := make(map[string]bool) // key: item_code, value: 是否存在库存记录
-	if len(warehouseName) > 0 {
-		stockResp, err := service.Item().GetItemStock(ctx, &itemApi.GetItemStockReq{
-			Warehouse:   warehouseName,
-			CompanyAbbr: req.CompanyAbbr,
-			// 不传 ItemCode，返回该仓库所有物品库存
-		})
-		if err == nil && stockResp != nil && len(stockResp.ItemStockList) > 0 {
-			for _, stockItem := range stockResp.ItemStockList {
-				stockQtyMap[stockItem.ItemCode] = stockItem.ActualQty
-				stockQtyExists[stockItem.ItemCode] = true
-			}
-			g.Log().Infof(ctx, "批量查询库存数量成功: warehouse=%s, count=%d", warehouseName, len(stockResp.ItemStockList))
-		} else {
-			g.Log().Warningf(ctx, "批量查询库存数量失败或为空: warehouse=%s, err=%v", warehouseName, err)
-		}
-	}
-
 	// 构建明细项目
 	itemList := make([]erp.StockReconciliationItem, 0)
 	for _, item := range req.Items {
 		// 判断当前仓库已有库存是否与盘点数量一致，如果一致就不要继续新增盘点记录了
-		// 从预查询的库存 map 中获取库存数量
-		actualQty, exists := stockQtyMap[item.ItemCode]
-		hasStockRecord := stockQtyExists[item.ItemCode]
+		// 从预查询的 Bin map 中获取库存数量
+		actualQty := binActualQtyMap[item.ItemCode]
+		hasBinRecord := binExists[item.ItemCode]
 
 		// 如果当前物品在当前仓库的库存数量与盘点数量一致，跳过
-		if hasStockRecord && math.Abs(actualQty-item.Qty) < consts.DefaultDecimalPrecision {
+		if hasBinRecord && math.Abs(actualQty-item.Qty) < consts.DefaultDecimalPrecision {
 			g.Log().Warningf(ctx, "物品[%s]在仓库[%s]的库存数量为[%.2f]，与盘点数量[%.2f]一致,无需新增盘点记录", item.ItemCode, warehouseName, actualQty, item.Qty)
 			continue
 		}
 		// 如果当前物品在当前仓库没有库存且盘点数量为0，跳过
-		if !exists && item.Qty == 0 {
+		if !hasBinRecord && item.Qty == 0 {
 			g.Log().Warningf(ctx, "物品[%s]在仓库[%s]的库存无库存且盘点数量为[0]无需新增盘点记录", item.ItemCode, warehouseName)
 			continue
 		}
