@@ -1299,7 +1299,7 @@ func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, pr
 			return nil, err
 		}
 		return receiptData, nil
-	} else {
+	} else if order.OrderState != valueObject.TakeoutOrderStatePending {
 		// 异步打印顾客联
 		utils.Go(func() {
 			_, err := printer.NewPrinterRepo(ctx, printLang).PrintingPlatformTakeoutReceipt(
@@ -1324,6 +1324,8 @@ func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, pr
 		}
 		return receiptData, nil
 	}
+
+	return nil, nil
 }
 
 // PrintProductionOrder 打印送厨单

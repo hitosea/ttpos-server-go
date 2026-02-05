@@ -100,6 +100,12 @@ func (d *OrderChangeDetector) handleItemChange(
 	result *value_object.OrderChangeResult,
 	oldItem, newItem *model.TakeoutOrderItem,
 ) {
+	// 新数量为 0 时视为删除
+	if newItem.Quantity == 0 {
+		d.handleRemovedItem(result, oldItem)
+		return
+	}
+
 	// 检查数量变动
 	quantityChanged := oldItem.Quantity != newItem.Quantity
 	// 检查属性变动
@@ -191,10 +197,15 @@ func (d *OrderChangeDetector) handleQuantityChange(
 }
 
 // hasAttributeChange 检查属性是否变动
-// 比较修饰符列表是否一致
+// 比较规格/备注和修饰符列表是否一致
 func (d *OrderChangeDetector) hasAttributeChange(
 	oldItem, newItem *model.TakeoutOrderItem,
 ) bool {
+	// 检查规格/备注是否变动
+	if oldItem.Specifications != newItem.Specifications {
+		return true
+	}
+
 	oldModifiers := oldItem.TakeoutOrderItemModifiers
 	newModifiers := newItem.TakeoutOrderItemModifiers
 

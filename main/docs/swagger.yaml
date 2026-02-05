@@ -1053,6 +1053,9 @@ definitions:
       safety_stock:
         description: 安全库存数量
         type: number
+      specification:
+        description: 规格
+        type: string
       status:
         description: 状态 1-启用 0-停用
         type: integer
@@ -1238,6 +1241,9 @@ definitions:
     type: object
   material_resp.MaterialQuotaConfig:
     properties:
+      is_allow_purchase:
+        description: 是否允许采购 yes/no
+        type: string
       quota_limit:
         description: 限购数量
         type: number
@@ -7809,6 +7815,9 @@ definitions:
     type: object
   req.PurchaseLimitSchemeItemReq:
     properties:
+      is_allow_purchase:
+        description: 是否允许采购 yes/no，默认 yes
+        type: string
       material_uuid:
         description: 物品UUID
         type: integer
@@ -8576,6 +8585,86 @@ definitions:
         description: 查询开始时间戳
         type: integer
     type: object
+  req.StockLossApproveReq:
+    properties:
+      annotation:
+        description: 批注内容（非必填）
+        type: string
+      uuid:
+        description: 报损单UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.StockLossDeleteReq:
+    properties:
+      uuid:
+        description: 报损单UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.StockLossItemReq:
+    properties:
+      material_uuid:
+        description: 物料UUID
+        type: integer
+      units:
+        description: 报损单物品单位明细
+        items:
+          $ref: '#/definitions/req.StockLossItemUnitReq'
+        type: array
+    type: object
+  req.StockLossItemUnitReq:
+    properties:
+      material_unit_uuid:
+        description: 单位UUID
+        type: integer
+      quantity:
+        description: 单位数量
+        type: number
+    required:
+    - material_unit_uuid
+    type: object
+  req.StockLossRejectReq:
+    properties:
+      annotation:
+        description: 批注内容（非必填）
+        type: string
+      uuid:
+        description: 报损单UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.StockLossSaveReq:
+    properties:
+      file_uuids:
+        description: 附件UUID列表
+        items:
+          type: integer
+        type: array
+      is_submit:
+        description: 是否提交
+        type: boolean
+      items:
+        description: 报损单物品明细（新建时必填）
+        items:
+          $ref: '#/definitions/req.StockLossItemReq'
+        type: array
+      loss_type:
+        description: 报损类型 1:物品损坏 2:物品报废 3:物品过期（新建时必填）
+        type: integer
+      reason:
+        description: 报损原因
+        type: string
+      uuid:
+        description: 报损单UUID，如果为0，表示新建
+        type: integer
+      warehouse_uuid:
+        description: 仓库UUID（新建时必填）
+        type: integer
+    type: object
   req.StockReconciliationApproveReq:
     properties:
       annotation:
@@ -8989,7 +9078,6 @@ definitions:
         description: 附件UUID列表
         items:
           type: integer
-        minItems: 1
         type: array
       in_warehouse_erp_code:
         description: 入库仓库ERP编码
@@ -9003,7 +9091,6 @@ definitions:
         minimum: 1
         type: integer
     required:
-    - file_uuids
     - uuid
     type: object
   req.TransferOrderRejectReq:
@@ -9658,6 +9745,72 @@ definitions:
     required:
     - password
     type: object
+  req.VisibilityCreateReq:
+    properties:
+      category_uuids:
+        description: 物品类别UUID列表
+        items:
+          type: integer
+        type: array
+      is_all_roles:
+        description: 是否全部门店角色：1-全部，0-部分
+        enum:
+        - 0
+        - 1
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 配置名称（多语言）
+      role_configs:
+        description: 角色配置列表
+        items:
+          $ref: '#/definitions/req.VisibilityRoleConfig'
+        type: array
+    type: object
+  req.VisibilityDeleteReq:
+    properties:
+      uuid:
+        description: 配置UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.VisibilityRoleConfig:
+    properties:
+      company_uuid:
+        type: integer
+      role_uuid:
+        type: integer
+    type: object
+  req.VisibilityUpdateReq:
+    properties:
+      category_uuids:
+        description: 物品类别UUID列表
+        items:
+          type: integer
+        type: array
+      is_all_roles:
+        description: 是否全部门店角色：1-全部，0-部分
+        enum:
+        - 0
+        - 1
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 配置名称（多语言）
+      role_configs:
+        description: 角色配置列表
+        items:
+          $ref: '#/definitions/req.VisibilityRoleConfig'
+        type: array
+      uuid:
+        description: 配置UUID
+        type: integer
+    required:
+    - uuid
+    type: object
   req.VisitorLoginReq:
     properties:
       company_uuid:
@@ -9695,14 +9848,13 @@ definitions:
     type: object
   request.GetImportLogsRequest:
     properties:
-      importType:
+      import_type:
         description: 导入类型筛选（1-TTPOS推送到平台 2-平台推送到TTPOS）
-        format: int32
         type: integer
-      pageNo:
+      page_no:
         description: 页码
         type: integer
-      pageSize:
+      page_size:
         description: 每页数量
         type: integer
       platform:
@@ -9710,7 +9862,6 @@ definitions:
         type: string
       status:
         description: 状态筛选（0-进行中 1-成功 2-失败）
-        format: int32
         type: integer
     type: object
   request.PushTakeoutMenuRequest:
@@ -10646,6 +10797,15 @@ definitions:
       avg_customer_price:
         description: 平均客单价（实付金额/用餐人数，保留2位小数）
         type: number
+      cash_ac:
+        description: 现金AC（现金金额/现金TC，保留2位小数）
+        type: number
+      cash_amount:
+        description: 现金金额（现金支付总金额，保留2位小数）
+        type: number
+      cash_tc:
+        description: 现金TC（现金支付订单数）
+        type: integer
       company_name:
         description: 门店名称
         type: string
@@ -10938,6 +11098,9 @@ definitions:
       company_uuid:
         description: 门店UUID
         type: integer
+      store_code:
+        description: 店铺编号（用于排序和格式化）
+        type: string
     type: object
   resp.CompanySummaryListResp:
     properties:
@@ -15036,6 +15199,8 @@ definitions:
     type: object
   resp.PurchaseLimitSchemeItemResp:
     properties:
+      is_allow_purchase:
+        type: string
       material_uuid:
         type: integer
       quota_limit:
@@ -15313,6 +15478,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.PurchaseOrderItemQuotaConfig'
         description: 限购配置
+      specification:
+        description: 规格
+        type: string
       store_quantity:
         description: 门店数量
         type: number
@@ -15353,6 +15521,9 @@ definitions:
     properties:
       error_message:
         description: 错误信息，用于出现感叹号提示用户，如果为空则不显示
+        type: string
+      is_allow_purchase:
+        description: 是否允许采购 yes/no
         type: string
       quota_limit:
         description: 限购数量
@@ -15467,6 +15638,9 @@ definitions:
       purchase_order_item_uuid:
         description: 采购订单明细ID
         type: integer
+      specification:
+        description: 规格
+        type: string
       unit_conversion_rate:
         description: 基准单位转换率
         type: number
@@ -15795,6 +15969,9 @@ definitions:
       base_unit_uuid:
         description: 基准单位UUID
         type: integer
+      internal_code:
+        description: 内部编码
+        type: string
       locale_base_unit_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -15822,6 +15999,9 @@ definitions:
       purchase_order_item_uuid:
         description: 采购单物品UUID
         type: integer
+      specification:
+        description: 规格
+        type: string
       unit_conversion_rate:
         description: 单位转换率
         type: number
@@ -16840,6 +17020,23 @@ definitions:
           $ref: '#/definitions/setting.TimeZoneItem'
         type: array
     type: object
+  resp.ShopRoles:
+    properties:
+      company_code:
+        description: 门店编码
+        type: string
+      company_name:
+        description: 门店名称
+        type: string
+      company_uuid:
+        description: 门店UUID
+        type: integer
+      roles:
+        description: 角色列表（复用 saas_staff.go 中的 RoleItem）
+        items:
+          $ref: '#/definitions/resp.RoleItem'
+        type: array
+    type: object
   resp.SimpleAmountInfo:
     properties:
       product_amount:
@@ -16959,6 +17156,221 @@ definitions:
         type: string
       uuid:
         description: 角色UUID
+        type: integer
+    type: object
+  resp.StockLossAnnotationInfo:
+    properties:
+      action:
+        description: 操作类型 submit/resubmit/approve/reject
+        type: string
+      content:
+        description: 批注内容
+        type: string
+      create_time:
+        description: 创建时间
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 操作类型名称（多语言）
+      operator_name:
+        description: 操作人姓名
+        type: string
+      operator_uuid:
+        description: 操作人UUID
+        type: integer
+      uuid:
+        description: 批注UUID
+        type: integer
+    type: object
+  resp.StockLossAnnotationListResp:
+    properties:
+      list:
+        description: 批注列表
+        items:
+          $ref: '#/definitions/resp.StockLossAnnotationInfo'
+        type: array
+    type: object
+  resp.StockLossDetailResp:
+    properties:
+      annotations:
+        description: 批注列表（按创建时间倒序）
+        items:
+          $ref: '#/definitions/resp.StockLossAnnotationInfo'
+        type: array
+      approve_time:
+        description: 审核通过时间
+        type: integer
+      code:
+        description: 单据编号
+        type: string
+      create_time:
+        description: 创建时间
+        type: integer
+      erp_code:
+        description: ERP单据编号
+        type: string
+      files:
+        description: 附件列表
+        items:
+          $ref: '#/definitions/resp.StockLossFileInfo'
+        type: array
+      is_can_resubmit:
+        description: 是否可重新提交（已驳回状态且为发起人）
+        type: boolean
+      items:
+        description: 报损单物品明细
+        items:
+          $ref: '#/definitions/resp.StockLossItemInfo'
+        type: array
+      loss_type:
+        description: 报损类型 1:物品损坏 2:物品报废 3:物品过期
+        type: integer
+      reason:
+        description: 报损原因
+        type: string
+      reject_time:
+        description: 驳回时间
+        type: integer
+      status:
+        description: 状态 0:已保存 1:已提交 2:已审核通过 3:已驳回
+        type: integer
+      submit_time:
+        description: 提交时间
+        type: integer
+      update_time:
+        description: 更新时间
+        type: integer
+      uuid:
+        description: 报损单UUID
+        type: integer
+      warehouse_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 仓库名称（多语言）
+      warehouse_uuid:
+        description: 仓库UUID
+        type: integer
+    type: object
+  resp.StockLossFileInfo:
+    properties:
+      file_type:
+        description: 文件类型
+        type: string
+      name:
+        description: 文件名称
+        type: string
+      sort_order:
+        description: 排序顺序
+        type: integer
+      url:
+        description: 文件URL
+        type: string
+      uuid:
+        description: 文件UUID
+        type: integer
+    type: object
+  resp.StockLossInfo:
+    properties:
+      code:
+        description: 单据编号
+        type: string
+      create_time:
+        description: 创建时间
+        type: integer
+      erp_code:
+        description: ERP单据编号
+        type: string
+      items_count:
+        description: 物品明细数量
+        type: integer
+      loss_type:
+        description: 报损类型 1:物品损坏 2:物品报废 3:物品过期
+        type: integer
+      status:
+        description: 状态 0:已保存 1:已提交 2:已审核通过 3:已驳回
+        type: integer
+      submit_time:
+        description: 提交时间
+        type: integer
+      uuid:
+        description: 报损单UUID
+        type: integer
+      warehouse_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 仓库多语言名称
+      warehouse_uuid:
+        description: 仓库UUID
+        type: integer
+    type: object
+  resp.StockLossItemInfo:
+    properties:
+      base_quantity:
+        description: 基准单位数量（所有单位转换后的总量）
+        type: number
+      create_time:
+        description: 创建时间
+        type: integer
+      internal_code:
+        description: 内部编码
+        type: string
+      item_units:
+        description: 报损单物品单位明细
+        items:
+          $ref: '#/definitions/resp.StockLossItemUnitInfo'
+        type: array
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物料名称（多语言）
+      material_barcode:
+        description: 物料条码
+        type: string
+      material_code:
+        description: 物料编码
+        type: string
+      material_uuid:
+        description: 物料UUID
+        type: integer
+      units:
+        description: 所有单位（包含基准单位）
+        items:
+          $ref: '#/definitions/resp.MaterialUnitInfo'
+        type: array
+    type: object
+  resp.StockLossItemUnitInfo:
+    properties:
+      conversion_rate:
+        description: 转换率（相对于基准单位）
+        type: number
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位名称
+      material_unit_uuid:
+        description: 单位UUID
+        type: integer
+      quantity:
+        description: 单位数量
+        type: number
+    type: object
+  resp.StockLossListResp:
+    properties:
+      list:
+        description: 报损单列表
+        items:
+          $ref: '#/definitions/resp.StockLossInfo'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
+    type: object
+  resp.StockLossUuidResp:
+    properties:
+      uuid:
+        description: 报损单UUID
         type: integer
     type: object
   resp.StockReconciliationAnnotationInfo:
@@ -17232,6 +17644,13 @@ definitions:
       list:
         items:
           $ref: '#/definitions/resp.SubProductItem'
+        type: array
+    type: object
+  resp.SubShopRolesResp:
+    properties:
+      shops:
+        items:
+          $ref: '#/definitions/resp.ShopRoles'
         type: array
     type: object
   resp.SupplierCreateResp:
@@ -18362,6 +18781,62 @@ definitions:
       verified:
         description: '验证结果: true-成功, false-失败'
         type: boolean
+    type: object
+  resp.VisibilityDetailResp:
+    properties:
+      category_uuids:
+        description: 物品类别UUID列表
+        items:
+          type: integer
+        type: array
+      is_all_roles:
+        description: 是否全部门店角色
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 配置名称（多语言）
+      role_configs:
+        description: 角色配置列表
+        items:
+          $ref: '#/definitions/resp.VisibilityRoleConfig'
+        type: array
+      uuid:
+        description: 配置UUID
+        type: integer
+    type: object
+  resp.VisibilityListItem:
+    properties:
+      category_count:
+        description: 类别数量
+        type: integer
+      is_all_roles:
+        description: 是否全部门店角色
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 配置名称（多语言）
+      role_count:
+        description: 角色数量（-1表示全部）
+        type: integer
+      uuid:
+        description: 配置UUID
+        type: integer
+    type: object
+  resp.VisibilityListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.VisibilityListItem'
+        type: array
+    type: object
+  resp.VisibilityRoleConfig:
+    properties:
+      company_uuid:
+        type: integer
+      role_uuid:
+        type: integer
     type: object
   resp.WarehouseInOutListResp:
     properties:
@@ -31089,6 +31564,35 @@ paths:
       summary: 获取结账页面信息
       tags:
       - 自助点餐机.订单
+  /kiosk/order/print:
+    post:
+      consumes:
+      - application/json
+      description: 订单打印小票
+      parameters:
+      - description: 参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderPrintReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterData'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 订单打印小票
+      tags:
+      - 自助点餐机.订单
   /kiosk/order/product/package/detail:
     get:
       consumes:
@@ -34341,6 +34845,151 @@ paths:
       security:
       - JwtToken: []
       summary: 修改物品安全库存
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建物品分类可见性配置（仅总店可用，创建后自动同步到子店）
+      parameters:
+      - description: 创建请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VisibilityCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建可见性配置
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除物品分类可见性配置（仅总店可用，删除后自动同步到子店）
+      parameters:
+      - description: 删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VisibilityDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除可见性配置
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品分类可见性配置详情（仅总店可用）
+      parameters:
+      - description: 配置UUID
+        format: int64
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.VisibilityDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取可见性配置详情
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品分类可见性配置列表（仅总店可用）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.VisibilityListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取可见性配置列表
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/sub_shop_roles:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有子店的角色列表（仅总店可用，用于配置可见性规则）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SubShopRolesResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取子店角色列表
+      tags:
+      - 商家端.物品管理
+  /shop/material_category_visibility/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新物品分类可见性配置（仅总店可用，更新后自动同步到子店）
+      parameters:
+      - description: 更新请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VisibilityUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新可见性配置
       tags:
       - 商家端.物品管理
   /shop/member_order/cancel:
@@ -40413,6 +41062,308 @@ paths:
       summary: 导出用户分析统计
       tags:
       - 商家端.报表
+  /shop/stock_loss/annotation_list:
+    get:
+      consumes:
+      - application/json
+      description: 根据报损单UUID获取批注列表
+      parameters:
+      - description: 报损单UUID
+        in: query
+        name: stock_loss_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockLossAnnotationListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取报损单批注列表
+      tags:
+      - 商家端.报损管理
+  /shop/stock_loss/approve:
+    post:
+      consumes:
+      - application/json
+      description: 审核通过报损单，扣减仓库库存
+      parameters:
+      - description: 审核报损单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockLossApproveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 审核通过报损单
+      tags:
+      - 商家端.报损管理
+  /shop/stock_loss/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除报损单（软删除，仅已保存状态可删除）
+      parameters:
+      - description: 删除报损单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockLossDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除报损单
+      tags:
+      - 商家端.报损管理
+  /shop/stock_loss/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据UUID获取报损单详情，包含物品明细、附件、批注
+      parameters:
+      - description: 报损单UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockLossDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取报损单详情
+      tags:
+      - 商家端.报损管理
+  /shop/stock_loss/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取报损单列表，支持多仓库筛选、关键字搜索、创建时间范围筛选
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        required: true
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      - collectionFormat: csv
+        description: 仓库UUID列表
+        in: query
+        items:
+          type: integer
+        name: warehouse_uuids
+        type: array
+      - description: 关键字（搜索单据编号和ERP单据编号）
+        in: query
+        name: keyword
+        type: string
+      - description: 创建开始时间（时间戳）
+        in: query
+        name: start_create_time
+        type: integer
+      - description: 创建结束时间（时间戳）
+        in: query
+        name: end_create_time
+        type: integer
+      - collectionFormat: csv
+        description: 状态列表 0:已保存 1:已提交 2:已审核通过 3:已驳回
+        in: query
+        items:
+          type: integer
+        name: status_in
+        type: array
+      - description: 报损类型 1:物品损坏 2:物品报废 3:物品过期
+        in: query
+        name: loss_type
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockLossListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取报损单列表
+      tags:
+      - 商家端.报损管理
+  /shop/stock_loss/reject:
+    post:
+      consumes:
+      - application/json
+      description: 驳回报损单
+      parameters:
+      - description: 驳回报损单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockLossRejectReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 驳回报损单
+      tags:
+      - 商家端.报损管理
+  /shop/stock_loss/resubmit:
+    post:
+      consumes:
+      - application/json
+      description: 将已驳回的报损单重新提交审核，支持修改报损单信息后提交
+      parameters:
+      - description: 重新提交报损单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockLossSaveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockLossUuidResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 重新提交报损单
+      tags:
+      - 商家端.报损管理
+  /shop/stock_loss/save:
+    post:
+      consumes:
+      - application/json
+      description: 保存报损单信息（新建或修改）
+      parameters:
+      - description: 保存报损单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockLossSaveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockLossUuidResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 保存报损单
+      tags:
+      - 商家端.报损管理
+  /shop/stock_loss/submit:
+    post:
+      consumes:
+      - application/json
+      description: 提交报损单进行审核
+      parameters:
+      - description: 提交报损单请求参数（is_submit设为true）
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockLossSaveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockLossUuidResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 提交报损单
+      tags:
+      - 商家端.报损管理
   /shop/stock_reconciliation/approve:
     post:
       consumes:

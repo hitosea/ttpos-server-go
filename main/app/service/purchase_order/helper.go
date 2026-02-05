@@ -903,6 +903,40 @@ func (h *purchaseOrderHelper) getQuotaLimitMap(
 	return quotaLimitMap
 }
 
+// 获取禁止采购的物品编码列表
+func (h *purchaseOrderHelper) getDisallowedPurchaseMaterials(
+	ctx context.Context,
+	dbm *database.DBManager,
+	purchaseOrder *model.PurchaseOrder,
+) []string {
+	companySetting := ctx.GetCompanySetting()
+	headquarterUuid := companySetting.HeadquarterUuid
+	if headquarterUuid == 0 {
+		return nil
+	}
+	if purchaseOrder.IsHeadquarterPurchase() && len(purchaseOrder.Items) > 0 {
+		// 提取所有物品编码
+		materialCodes := make([]string, 0, len(purchaseOrder.Items))
+		for _, item := range purchaseOrder.Items {
+			materialCodes = append(materialCodes, item.MaterialCode)
+		}
+		// 查询禁止采购的物品
+		headquarterDb := dbm.GetDB(headquarterUuid)
+		schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
+		disallowedCodes, err := schemeRepo.GetDisallowedPurchaseMaterialCodes(
+			companySetting.CompanyUuid,
+			materialCodes,
+			utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday(),
+		)
+		if err != nil {
+			logger.Logger.Error("获取禁止采购物品失败", zap.Error(err))
+			return nil
+		}
+		return disallowedCodes
+	}
+	return nil
+}
+
 // 获取当天最小的每日申请次数限制
 func (h *purchaseOrderHelper) getMinDailyLimit(
 	ctx context.Context,

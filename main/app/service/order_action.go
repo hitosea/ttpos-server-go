@@ -467,6 +467,7 @@ func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, sal
 			return errors.WithMessage(err)
 		}
 	}
+	ctx.Mark("action_add_done")
 
 	otel.AddSpanEvent(stdCtx, "开始事务：计算并保存销售账单")
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
@@ -478,6 +479,7 @@ func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, sal
 	}); err != nil {
 		return errors.WithMessage(err)
 	}
+	ctx.Mark("calc_and_save_done")
 	return nil
 }
 
@@ -844,12 +846,15 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 	if err := saleBill.CheckSaleOrderProductNum(); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	ctx.Mark("check_product_num_done")
 
 	// 获取当前销售订单信息
 	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
+	ctx.Mark("get_sale_order_done")
+
 	// 录入订单商品数据
 	saleOrderProducts, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
 		IsH5Product: request.IsH5Product,
@@ -861,6 +866,7 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 	if err != nil {
 		return nil, errors.WithMessage(err, "构建商品失败")
 	}
+	ctx.Mark("new_product_done")
 
 	if !option.skipLimit {
 		// 检查限购
@@ -874,11 +880,14 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 				return nil, errors.WithMessage(err)
 			}
 		}
+		ctx.Mark("check_limit_done")
 	}
 	// 检查超时不能加购
 	if err := s.checkTimeoutAndCannotAddPurchase(ctx, saleBill, saleOrderProducts); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	ctx.Mark("check_timeout_done")
+
 	// saleBill已经加入了新的商品，并且重新计算了价格
 	return saleBill, nil
 }

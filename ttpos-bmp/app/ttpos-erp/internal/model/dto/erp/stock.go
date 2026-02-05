@@ -1,13 +1,11 @@
 package erp
 
-import "time"
-
 // StockEntry 库存变动单据
 type StockEntry struct {
 	Name                  string             `json:"name,omitempty"`                    // 单据编号
 	Owner                 string             `json:"owner,omitempty"`                   // 所有者
-	Creation              time.Time          `json:"creation,omitempty"`                // 创建时间
-	Modified              time.Time          `json:"modified,omitempty"`                // 修改时间
+	Creation              string             `json:"creation,omitempty"`                // 创建时间
+	Modified              string             `json:"modified,omitempty"`                // 修改时间
 	ModifiedBy            string             `json:"modified_by,omitempty"`             // 修改人
 	DocStatus             int                `json:"docstatus,omitempty"`               // 单据状态
 	Idx                   int                `json:"idx,omitempty"`                     // 索引
@@ -37,50 +35,52 @@ type StockEntry struct {
 	DocType               string             `json:"doctype,omitempty"`                 // 文档类型
 	Items                 []StockEntryDetail `json:"items,omitempty"`                   // 明细项目
 	AdditionalCosts       []interface{}      `json:"additional_costs,omitempty"`        // 额外成本
+	Remarks               string             `json:"remarks,omitempty"`                 // 备注/报损原因
 }
 
 // StockEntryDetail 库存变动明细
 type StockEntryDetail struct {
-	Name                   string    `json:"name,omitempty"`                      // 明细编号
-	Owner                  string    `json:"owner,omitempty"`                     // 所有者
-	Creation               time.Time `json:"creation,omitempty"`                  // 创建时间
-	Modified               time.Time `json:"modified,omitempty"`                  // 修改时间
-	ModifiedBy             string    `json:"modified_by,omitempty"`               // 修改人
-	DocStatus              int       `json:"docstatus,omitempty"`                 // 单据状态
-	Idx                    int       `json:"idx,omitempty"`                       // 索引
-	Barcode                string    `json:"barcode,omitempty"`                   // 条形码
-	HasItemScanned         int       `json:"has_item_scanned,omitempty"`          // 已扫描物品
-	TWarehouse             string    `json:"t_warehouse,omitempty"`               // 目标仓库
-	ItemCode               string    `json:"item_code,omitempty"`                 // 物品编码
-	ItemName               string    `json:"item_name,omitempty"`                 // 物品名称
-	IsFinishedItem         int       `json:"is_finished_item,omitempty"`          // 是否成品
-	IsScrapItem            int       `json:"is_scrap_item,omitempty"`             // 是否废料
-	Description            string    `json:"description,omitempty"`               // 描述
-	ItemGroup              string    `json:"item_group,omitempty"`                // 物品分组
-	Qty                    float64   `json:"qty,omitempty"`                       // 数量
-	TransferQty            float64   `json:"transfer_qty,omitempty"`              // 转移数量
-	RetainSample           int       `json:"retain_sample,omitempty"`             // 保留样品
-	Uom                    string    `json:"uom,omitempty"`                       // 单位
-	StockUom               string    `json:"stock_uom,omitempty"`                 // 库存单位
-	ConversionFactor       float64   `json:"conversion_factor,omitempty"`         // 转换系数
-	SampleQuantity         float64   `json:"sample_quantity,omitempty"`           // 样品数量
-	BasicRate              float64   `json:"basic_rate,omitempty"`                // 基础价格
-	AdditionalCost         float64   `json:"additional_cost,omitempty"`           // 额外成本
-	ValuationRate          float64   `json:"valuation_rate,omitempty"`            // 估值价格
-	AllowZeroValuationRate int       `json:"allow_zero_valuation_rate,omitempty"` // 允许零估值价格
-	SetBasicRateManually   int       `json:"set_basic_rate_manually,omitempty"`   // 手动设置基础价格
-	BasicAmount            float64   `json:"basic_amount,omitempty"`              // 基础金额
-	Amount                 float64   `json:"amount,omitempty"`                    // 金额
-	UseSerialBatchFields   int       `json:"use_serial_batch_fields,omitempty"`   // 使用序列批次字段
-	ExpenseAccount         string    `json:"expense_account,omitempty"`           // 费用科目
-	CostCenter             string    `json:"cost_center,omitempty"`               // 成本中心
-	ActualQty              float64   `json:"actual_qty,omitempty"`                // 实际数量
-	TransferredQty         float64   `json:"transferred_qty,omitempty"`           // 已转移数量
-	AllowAlternativeItem   int       `json:"allow_alternative_item,omitempty"`    // 允许替代物品
-	Parent                 string    `json:"parent,omitempty"`                    // 父单据
-	ParentField            string    `json:"parentfield,omitempty"`               // 父字段
-	ParentType             string    `json:"parenttype,omitempty"`                // 父类型
-	DocType                string    `json:"doctype,omitempty"`                   // 文档类型
+	Name                   string  `json:"name,omitempty"`                      // 明细编号
+	Owner                  string  `json:"owner,omitempty"`                     // 所有者
+	Creation               string  `json:"creation,omitempty"`                  // 创建时间
+	Modified               string  `json:"modified,omitempty"`                  // 修改时间
+	ModifiedBy             string  `json:"modified_by,omitempty"`               // 修改人
+	DocStatus              int     `json:"docstatus,omitempty"`                 // 单据状态
+	Idx                    int     `json:"idx,omitempty"`                       // 索引
+	Barcode                string  `json:"barcode,omitempty"`                   // 条形码
+	HasItemScanned         int     `json:"has_item_scanned,omitempty"`          // 已扫描物品
+	SWarehouse             string  `json:"s_warehouse,omitempty"`               // 源仓库（出库时使用）
+	TWarehouse             string  `json:"t_warehouse,omitempty"`               // 目标仓库（入库时使用）
+	ItemCode               string  `json:"item_code,omitempty"`                 // 物品编码
+	ItemName               string  `json:"item_name,omitempty"`                 // 物品名称
+	IsFinishedItem         int     `json:"is_finished_item,omitempty"`          // 是否成品
+	IsScrapItem            int     `json:"is_scrap_item,omitempty"`             // 是否废料
+	Description            string  `json:"description,omitempty"`               // 描述
+	ItemGroup              string  `json:"item_group,omitempty"`                // 物品分组
+	Qty                    float64 `json:"qty,omitempty"`                       // 数量
+	TransferQty            float64 `json:"transfer_qty,omitempty"`              // 转移数量
+	RetainSample           int     `json:"retain_sample,omitempty"`             // 保留样品
+	Uom                    string  `json:"uom,omitempty"`                       // 单位
+	StockUom               string  `json:"stock_uom,omitempty"`                 // 库存单位
+	ConversionFactor       float64 `json:"conversion_factor,omitempty"`         // 转换系数
+	SampleQuantity         float64 `json:"sample_quantity,omitempty"`           // 样品数量
+	BasicRate              float64 `json:"basic_rate,omitempty"`                // 基础价格
+	AdditionalCost         float64 `json:"additional_cost,omitempty"`           // 额外成本
+	ValuationRate          float64 `json:"valuation_rate,omitempty"`            // 估值价格
+	AllowZeroValuationRate int     `json:"allow_zero_valuation_rate,omitempty"` // 允许零估值价格
+	SetBasicRateManually   int     `json:"set_basic_rate_manually,omitempty"`   // 手动设置基础价格
+	BasicAmount            float64 `json:"basic_amount,omitempty"`              // 基础金额
+	Amount                 float64 `json:"amount,omitempty"`                    // 金额
+	UseSerialBatchFields   int     `json:"use_serial_batch_fields,omitempty"`   // 使用序列批次字段
+	ExpenseAccount         string  `json:"expense_account,omitempty"`           // 费用科目
+	CostCenter             string  `json:"cost_center,omitempty"`               // 成本中心
+	ActualQty              float64 `json:"actual_qty,omitempty"`                // 实际数量
+	TransferredQty         float64 `json:"transferred_qty,omitempty"`           // 已转移数量
+	AllowAlternativeItem   int     `json:"allow_alternative_item,omitempty"`    // 允许替代物品
+	Parent                 string  `json:"parent,omitempty"`                    // 父单据
+	ParentField            string  `json:"parentfield,omitempty"`               // 父字段
+	ParentType             string  `json:"parenttype,omitempty"`                // 父类型
+	DocType                string  `json:"doctype,omitempty"`                   // 文档类型
 }
 
 // StockEntryConstants 库存变动常量
@@ -106,6 +106,9 @@ const (
 
 	// DefaultMaterialRequestSeries 默认申请单命名序列
 	DefaultMaterialRequestSeries = "MAT-MR-.YYYY.-"
+
+	// DefaultStockEntryNamingSeries 默认库存变动命名序列
+	DefaultStockEntryNamingSeries = "MAT-STE-.YYYY.-"
 )
 
 // StockLedger 库存分类账结构体，记录库存变动明细

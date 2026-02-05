@@ -301,7 +301,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 	for _, takeoutOrder := range takeoutOrders {
 		res.TakeoutOrder.List = append(res.TakeoutOrder.List, resp.UnprocessedTakeoutOrderItem{
 			Uuid:             takeoutOrder.Uuid,
-			Platform:         takeoutOrder.Platform,
+			Platform:         takeoutOrder.GetSpacePlatformName(),
 			ShortOrderNumber: takeoutOrder.ShortOrderNumber,
 			OrderState:       takeoutOrder.OrderState,
 			IsAbnormal:       takeoutOrder.IsAbnormal,

@@ -87,12 +87,18 @@ func (h *MemberOrderHandler) GetMemberOrderDetail(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.GetMemberOrderDetailResp}
 // @Router /shop/member_order/reject [post]
 func (h *MemberOrderHandler) RejectOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var rejectOrderReq req.RejectOrderReq
 	if err := c.ShouldBindJSON(&rejectOrderReq); err != nil {
 		helper.HandleValidationError(c, err, rejectOrderReq, nil)
 		return
 	}
-	err := h.memberOrderSrv.RejectMemberSaleOrder(helper.GetContext(c), rejectOrderReq)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionShopMemberOrderReject).
+		WithPath(c.Request.URL.Path)
+	err := h.memberOrderSrv.RejectMemberSaleOrder(ctx, rejectOrderReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -111,12 +117,18 @@ func (h *MemberOrderHandler) RejectOrder(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /shop/member_order/cancel [post]
 func (h *MemberOrderHandler) CancelOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var cancelOrderReq member_req.CancelOrderReq
 	if err := c.ShouldBindJSON(&cancelOrderReq); err != nil {
 		helper.HandleValidationError(c, err, cancelOrderReq, nil)
 		return
 	}
-	err := h.memberOrderSrv.MemberOrderCancelInCashier(helper.GetContext(c), cancelOrderReq)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionShopMemberOrderCancel).
+		WithPath(c.Request.URL.Path)
+	err := h.memberOrderSrv.MemberOrderCancelInCashier(ctx, cancelOrderReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -171,8 +183,13 @@ func (h *MemberOrderHandler) MemberOrderReturn(c *gin.Context) {
 		helper.HandleValidationError(c, err, reqParam, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionShopMemberOrderReturn).
+		WithPath(c.Request.URL.Path)
 	//
 	err, codeFail := h.memberOrderSrv.MemberOrderReturn(ctx, reqParam)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithMessage(c, codeFail, err)
 		return
@@ -200,8 +217,13 @@ func (h *MemberOrderHandler) MemberOrderReReturn(c *gin.Context) {
 		helper.HandleValidationError(c, err, reqParam, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionShopMemberOrderReReturn).
+		WithPath(c.Request.URL.Path)
 	//
 	err, codeFail := h.memberOrderSrv.MemberOrderReReturn(ctx, reqParam)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithMessage(c, codeFail, err)
 		return

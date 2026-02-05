@@ -36,18 +36,25 @@ type sGrabOrder struct{}
 
 // HandleSubmitOrder 处理 Grab 提交订单 Webhook
 // 签名验证已由中间件完成，此处只处理业务逻辑
+// 支持幂等性：订单已存在则更新，不存在则创建
 // 使用 SDK grabfood.SubmitOrderRequest 替换自定义 DTO
 func (s *sGrab) HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrderRequest) error {
-	// 保存订单
-	orderUUID, err := s.saveOrderFromSDK(ctx, req)
+	// 保存或更新订单（幂等处理）
+	orderUUID, isUpdate, err := s.saveOrUpdateOrderFromSDK(ctx, req)
 	if err != nil {
 		g.Log().Errorf(ctx, "保存订单失败: %v", err)
 		return gerror.Wrap(err, "保存订单失败")
 	}
 
-	// 3. 发送 MQ 消息（使用订单号作为 key，便于消息追踪）
+	// 根据是否更新设置 Action
+	action := "create"
+	if isUpdate {
+		action = "update"
+	}
+
+	// 发送 MQ 消息（使用订单号作为 key，便于消息追踪）
 	event := &grab.OrderEvent{
-		Action:       "create",
+		Action:       action,
 		ProviderName: string(consts.ProviderGrab),
 		ShopUUID:     req.GetPartnerMerchantID(), // partnerMerchantID 即为 shopUuid
 		OrderUUID:    orderUUID,
@@ -61,7 +68,139 @@ func (s *sGrab) HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrder
 		g.Log().Warningf(ctx, "发送订单 MQ 事件失败 %s: %v", orderUUID, err)
 	}
 
-	g.Log().Infof(ctx, "成功处理 Grab 订单: %s (UUID: %s)", req.GetOrderID(), orderUUID)
+	g.Log().Infof(ctx, "成功处理 Grab 订单: %s (UUID: %s, action: %s)", req.GetOrderID(), orderUUID, action)
+	return nil
+}
+
+// saveOrUpdateOrderFromSDK 保存或更新订单到数据库（幂等处理）
+// 返回: orderUUID, isUpdate, error
+func (s *sGrab) saveOrUpdateOrderFromSDK(ctx context.Context, req *grabfood.SubmitOrderRequest) (string, bool, error) {
+	// 1. 检查订单是否已存在
+	var existingOrder *entity.Order
+	err := dao.Order.Ctx(ctx).
+		Where(dao.Order.Columns().ProviderName, string(consts.ProviderGrab)).
+		Where(dao.Order.Columns().ProviderOrderId, req.GetOrderID()).
+		Scan(&existingOrder)
+	if err != nil {
+		g.Log().Warningf(ctx, "查询订单失败: %v", err)
+	}
+
+	// 2. 如果订单已存在，执行更新
+	if existingOrder != nil {
+		err := s.updateOrderFromSDK(ctx, existingOrder, req)
+		if err != nil {
+			return "", false, err
+		}
+		g.Log().Infof(ctx, "订单已存在，执行更新: orderID=%s, uuid=%s", req.GetOrderID(), existingOrder.Uuid)
+		return existingOrder.Uuid, true, nil
+	}
+
+	// 3. 订单不存在，执行插入
+	orderUUID, err := s.saveOrderFromSDK(ctx, req)
+	if err != nil {
+		return "", false, err
+	}
+	return orderUUID, false, nil
+}
+
+// updateOrderFromSDK 更新已存在的订单
+func (s *sGrab) updateOrderFromSDK(ctx context.Context, existingOrder *entity.Order, req *grabfood.SubmitOrderRequest) error {
+	// 转换价格 (最小单位 -> 元)
+	currency := req.GetCurrency()
+	exponent := int(currency.GetExponent())
+	if exponent == 0 {
+		exponent = 2
+	}
+	divisor := float64(1)
+	for i := 0; i < exponent; i++ {
+		divisor *= 10
+	}
+
+	// 解析配送地址
+	var deliveryAddressJSON string
+	if req.HasReceiver() {
+		receiver := req.GetReceiver()
+		if receiver.HasAddress() {
+			if addrJSON, err := gjson.EncodeString(receiver.GetAddress()); err == nil {
+				deliveryAddressJSON = addrJSON
+			}
+		}
+	}
+
+	// 获取价格信息
+	price := req.GetPrice()
+
+	// 序列化请求体
+	rawData, _ := gjson.EncodeString(req)
+
+	// 更新订单主表
+	_, err := dao.Order.Ctx(ctx).
+		Where(dao.Order.Columns().Uuid, existingOrder.Uuid).
+		Data(g.Map{
+			dao.Order.Columns().OrderStatus:       req.GetOrderState(),
+			dao.Order.Columns().OrderType:         req.GetFeatureFlags().OrderType,
+			dao.Order.Columns().Subtotal:          float64(price.GetSubtotal()) / divisor,
+			dao.Order.Columns().TotalAmount:       float64(price.GetEaterPayment()) / divisor,
+			dao.Order.Columns().MerchantCharge:    float64(price.GetMerchantChargeFee()) / divisor,
+			dao.Order.Columns().TaxAmount:         float64(price.GetTax()) / divisor,
+			dao.Order.Columns().DiscountAmount:    float64(price.GetGrabFundPromo()+price.GetMerchantFundPromo()) / divisor,
+			dao.Order.Columns().MerchantFundPromo: float64(price.GetMerchantFundPromo()) / divisor,
+			dao.Order.Columns().PaymentType:       req.GetPaymentType(),
+			dao.Order.Columns().IsMexEditOrder:    boolToIntFromFeatureFlags(req.GetFeatureFlags()),
+			dao.Order.Columns().Cutlery:           boolToInt(req.GetCutlery()),
+			dao.Order.Columns().EaterCount:        getEaterCountFromSDK(req),
+			dao.Order.Columns().CustomerName:      getCustomerNameFromSDK(req),
+			dao.Order.Columns().CustomerPhone:     getCustomerPhoneFromSDK(req),
+			dao.Order.Columns().DeliveryAddress:   deliveryAddressJSON,
+			dao.Order.Columns().RawData:           rawData,
+		}).Update()
+	if err != nil {
+		return gerror.Wrap(err, "更新订单失败")
+	}
+
+	// 更新订单明细：先删除旧的，再插入新的
+	_, err = dao.OrderItem.Ctx(ctx).
+		Where(dao.OrderItem.Columns().OrderUuid, existingOrder.Uuid).
+		Delete()
+	if err != nil {
+		g.Log().Warningf(ctx, "删除旧订单明细失败: %v", err)
+	}
+
+	// 插入新的订单明细
+	for _, item := range req.GetItems() {
+		var modifiersJSON string
+		if len(item.GetModifiers()) > 0 {
+			if mJSON, err := gjson.EncodeString(item.GetModifiers()); err == nil {
+				modifiersJSON = mJSON
+			}
+		}
+
+		var outOfStockInstr string
+		if item.HasOutOfStockInstruction() {
+			instr := item.GetOutOfStockInstruction()
+			if instr.HasInstructionType() {
+				outOfStockInstr = instr.GetInstructionType()
+			}
+		}
+
+		itemDo := &do.OrderItem{
+			OrderUuid:             existingOrder.Uuid,
+			ProviderItemId:        item.GetId(),
+			ItemName:              item.GetSpecifications(),
+			Quantity:              int(item.GetQuantity()),
+			Price:                 float64(item.GetPrice()) / divisor,
+			TotalPrice:            float64(item.GetPrice()*int64(item.GetQuantity())) / divisor,
+			Specifications:        item.GetSpecifications(),
+			Modifiers:             modifiersJSON,
+			OutOfStockInstruction: outOfStockInstr,
+		}
+
+		_, err := dao.OrderItem.Ctx(ctx).Data(itemDo).Insert()
+		if err != nil {
+			g.Log().Warningf(ctx, "插入订单明细失败: %v", err)
+		}
+	}
+
 	return nil
 }
 

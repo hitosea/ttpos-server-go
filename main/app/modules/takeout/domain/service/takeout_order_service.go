@@ -1076,16 +1076,22 @@ func (s *takeoutOrderSrv) IncrementalUpdateOrder(
 					if err := modifierRepoTx.DeleteByItemUuid(change.OldItem.Uuid); err != nil {
 						logger.Logger.Error("删除旧修饰符失败", zap.Uint64("itemUuid", change.OldItem.Uuid), zap.Error(err))
 					}
-					// 更新数量
-					if err := itemRepoTx.UpdateQuantity(change.OldItem.Uuid, change.NewQuantity); err != nil {
-						logger.Logger.Error("更新商品数量失败", zap.Error(err))
-					}
-					// 插入新修饰符
+					// 插入新修饰符并更新商品属性
 					for j := range updatedOrder.TakeoutOrderItems {
 						newItem := &updatedOrder.TakeoutOrderItems[j]
 						if newItem.PlatformItemId == change.PlatformItemId {
 							// 使用已存在商品的 UUID，确保修饰符关联正确
 							newItem.Uuid = change.OldItem.Uuid
+							// 更新商品的完整属性（数量、规格、价格等）
+							updateFields := map[string]any{
+								"quantity":       change.NewQuantity,
+								"specifications": newItem.Specifications,
+								"price":          newItem.Price,
+								"tax":            newItem.Tax,
+							}
+							if err := itemRepoTx.UpdateByMap(change.OldItem.Uuid, updateFields); err != nil {
+								logger.Logger.Error("更新商品属性失败", zap.Error(err))
+							}
 							// 补全修饰符信息（UUID、映射、名称等）
 							if _, err := s.enrichModifiersInfo(ctx, platform, newItem); err != nil {
 								logger.Logger.Error("补全修饰符信息失败", zap.Error(err))
@@ -1323,7 +1329,7 @@ func (s *takeoutOrderSrv) enrichModifiersInfo(ctx context.Context, platform stri
 	}
 
 	// 第二阶段：批量查询修饰符名称
-	modifierInfos := s.menuRepo.GetModifierNamesByUuids(ctx, modifierUuids, modifierTypes)
+	modifierInfos := s.menuRepo.GetModifierNamesByUuids(ctx, platform, modifierUuids, modifierTypes)
 	platformModifierNames := s.menuRepo.GetModifierNamesByPlatformIds(ctx, platform, modifierPlatformIds)
 
 	// 第三阶段：设置修饰符详细信息
@@ -1411,7 +1417,7 @@ func (s *takeoutOrderSrv) enrichItemInfo(ctx context.Context, platform string, o
 		// 已映射商品：查询商品名称
 		productUuids := []uint64{item.TtposProductPackageUuid}
 		productTypes := map[uint64]int{item.TtposProductPackageUuid: item.TtposProductType}
-		productInfos := s.menuRepo.GetProductNamesByUuids(ctx, productUuids, productTypes)
+		productInfos := s.menuRepo.GetProductNamesByUuids(ctx, platform, productUuids, productTypes)
 
 		if info, ok := productInfos[item.TtposProductPackageUuid]; ok {
 			// ItemName: 显示用名称（外卖表优先）
@@ -1747,6 +1753,11 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		}
 		order.PlatformOrderState = status // 更新平台原始状态
 
+		// 更新完成时间
+		if newOrderState == valueobject.TakeoutOrderStateCompleted && order.CompletedTime == 0 {
+			order.CompletedTime = time.Now().Unix()
+		}
+
 		// 更新取消时间
 		if newOrderState == valueobject.TakeoutOrderStateCanceled || newOrderState == valueobject.TakeoutOrderStateRejected {
 			order.RejectedTime = time.Now().Unix()
@@ -1754,13 +1765,13 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		}
 
 		// 判断状态是否发生变化或已完成
-		if oldOrderState == newOrderState || oldOrderState == valueobject.TakeoutOrderStateCompleted {
-			logger.Logger.Info("订单状态未发生变化或已完成", zap.String("order_uuid", orderUuid), zap.Int("old_order_state", oldOrderState), zap.Int("new_order_state", newOrderState))
+		if oldOrderState == valueobject.TakeoutOrderStateCompleted {
+			logger.Logger.Info("订单状态已完成", zap.String("order_uuid", orderUuid), zap.Int("old_order_state", oldOrderState), zap.Int("new_order_state", newOrderState))
 			return nil
 		}
 
 		// 判断状态是否下降
-		if newOrderState < oldOrderState && newOrderState != valueobject.TakeoutOrderStateCompleted {
+		if newOrderState < oldOrderState {
 			logger.Logger.Info("订单状态下降，不处理", zap.String("order_uuid", orderUuid), zap.Int("old_order_state", oldOrderState), zap.Int("new_order_state", newOrderState))
 			return nil
 		}
@@ -1772,39 +1783,41 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		}
 
 		// 发布订单状态更新事件（仅在状态发生变化时）
-		switch newOrderState {
-		case valueobject.TakeoutOrderStateRiderProcessing:
-			// 骑手配送中事件
-			event.GetDispatcher().Publish(event.NewOrderRiderProcessingEvent(
-				order.Uuid,
-				order.Platform,
-				order.PlatformOrderId,
-				order.ShortOrderNumber,
-				order.TakeoutOrderUuid,
-				ctx.GetCompanyUuid(),
-			))
-		case valueobject.TakeoutOrderStateCanceled, valueobject.TakeoutOrderStateRejected:
-			// 订单取消事件
-			event.GetDispatcher().Publish(event.NewOrderCancelEvent(
-				order.Uuid,
-				order.Platform,
-				order.PlatformOrderId,
-				order.ShortOrderNumber,
-				order.TakeoutOrderUuid,
-				ctx.GetCompanyUuid(),
-				"订单已取消",
-				newOrderState,
-			))
-		case valueobject.TakeoutOrderStateCompleted:
-			// 订单完成事件
-			event.GetDispatcher().Publish(event.NewOrderCompletedEvent(
-				order.Uuid,
-				order.Platform,
-				order.PlatformOrderId,
-				order.ShortOrderNumber,
-				order.TakeoutOrderUuid,
-				ctx.GetCompanyUuid(),
-			))
+		if newOrderState != oldOrderState {
+			switch newOrderState {
+			case valueobject.TakeoutOrderStateRiderProcessing:
+				// 骑手配送中事件
+				event.GetDispatcher().Publish(event.NewOrderRiderProcessingEvent(
+					order.Uuid,
+					order.Platform,
+					order.PlatformOrderId,
+					order.ShortOrderNumber,
+					order.TakeoutOrderUuid,
+					ctx.GetCompanyUuid(),
+				))
+			case valueobject.TakeoutOrderStateCanceled, valueobject.TakeoutOrderStateRejected:
+				// 订单取消事件
+				event.GetDispatcher().Publish(event.NewOrderCancelEvent(
+					order.Uuid,
+					order.Platform,
+					order.PlatformOrderId,
+					order.ShortOrderNumber,
+					order.TakeoutOrderUuid,
+					ctx.GetCompanyUuid(),
+					"订单已取消",
+					newOrderState,
+				))
+			case valueobject.TakeoutOrderStateCompleted:
+				// 订单完成事件
+				event.GetDispatcher().Publish(event.NewOrderCompletedEvent(
+					order.Uuid,
+					order.Platform,
+					order.PlatformOrderId,
+					order.ShortOrderNumber,
+					order.TakeoutOrderUuid,
+					ctx.GetCompanyUuid(),
+				))
+			}
 		}
 
 		return nil

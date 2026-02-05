@@ -57,6 +57,9 @@ type IErpSrv interface {
 	RejectStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, cancelStockReconciliationReq *stock.CancelStockReconciliationReq) (*stock.CancelStockReconciliationReq, error)
 	GetMaterialStockNumByBin(ctx cc.Context, warehouseErpCode string) ([]*stock.ItemStockBin, error)
 
+	// 报损单（库存变动出库）
+	SubmitStockEntry(ctx cc.Context, companySetting model.CompanySetting, submitStockEntryReq *stock.SubmitStockEntryReq) (*stock.SubmitStockEntryResp, error)
+
 	// 调拨单
 	SaveMaterialTransfer(ctx pkgCtx.Context, companySetting model.CompanySetting, saveMaterialTransferReq *material_transfer.MaterialTransferReq) (*material_transfer.MaterialTransferResp, error)
 

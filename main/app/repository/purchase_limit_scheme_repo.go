@@ -28,6 +28,9 @@ type IPurchaseLimitSchemeRepo interface {
 	// GetMinQuotaLimitBatchByMaterialCodes 批量获取物品的最小限购数量
 	GetMinQuotaLimitBatchByMaterialCodes(companyUuid uint64, materialCodes []string, currentWeekday int8) (map[string]float64, error)
 
+	// GetDisallowedPurchaseMaterialCodes 批量获取禁止采购的物品编码
+	GetDisallowedPurchaseMaterialCodes(companyUuid uint64, materialCodes []string, currentWeekday int8) ([]string, error)
+
 	// GetMinDailyLimit 获取当天最小的每日申请次数限制
 	GetMinDailyLimit(companyUuid uint64, currentWeekday int8) (int, error)
 
@@ -254,6 +257,91 @@ func (r *purchaseLimitSchemeRepoImpl) GetMinQuotaLimitBatchByMaterialCodes(
 	}
 
 	return quotaMap, nil
+}
+
+// GetDisallowedPurchaseMaterialCodes 批量获取禁止采购的物品编码
+//
+// 参数：
+//   - companyUuid: 门店UUID（用于判断方案是否应用到该门店）
+//   - materialCodes: 物品编码列表
+//   - currentWeekday: 当前星期几（1-7，1=周一，7=周日）
+//
+// 返回：
+//   - []string: 禁止采购的物品编码列表
+//   - error: 错误信息
+//
+// 逻辑：
+//  1. 查询所有启用的、应用到该门店的限购方案
+//  2. 过滤出包含当前星期的方案
+//  3. 在这些方案中查找 is_allow_purchase = 'no' 的物品
+func (r *purchaseLimitSchemeRepoImpl) GetDisallowedPurchaseMaterialCodes(
+	companyUuid uint64,
+	materialCodes []string,
+	currentWeekday int8,
+) ([]string, error) {
+	if len(materialCodes) == 0 {
+		return []string{}, nil
+	}
+
+	// 1. 子查询：查找应用到该门店的方案UUID
+	subQuery := r.db.Table("ttpos_purchase_limit_scheme_shop").
+		Select("scheme_uuid").
+		Where("company_uuid = ?", companyUuid).
+		Where("delete_time = ?", 0)
+
+	// 2. 查询所有启用的、应用到该门店的限购方案中禁止采购的物品
+	var schemes []struct {
+		SchemeUuid uint64 `gorm:"column:scheme_uuid"`
+		Weekdays   string `gorm:"column:weekdays"`
+	}
+
+	err := r.db.Table("ttpos_purchase_limit_scheme_item as item").
+		Select("DISTINCT scheme.uuid as scheme_uuid, scheme.weekdays").
+		Joins("INNER JOIN ttpos_purchase_limit_scheme as scheme ON scheme.uuid = item.scheme_uuid").
+		Where("item.delete_time = ?", 0).
+		Where("item.material_code IN ?", materialCodes).
+		Where("item.is_allow_purchase = ?", "no").
+		Where("scheme.delete_time = ?", 0).
+		Where("scheme.status = ?", 1).
+		Where("(scheme.apply_to_all_shops = 1 OR scheme.uuid IN (?))", subQuery).
+		Find(&schemes).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(schemes) == 0 {
+		return []string{}, nil
+	}
+
+	// 3. 过滤出包含当前星期的方案
+	validSchemeUuids := make([]uint64, 0)
+	for _, scheme := range schemes {
+		if isWeekdayInScheme(currentWeekday, scheme.Weekdays) {
+			validSchemeUuids = append(validSchemeUuids, scheme.SchemeUuid)
+		}
+	}
+
+	if len(validSchemeUuids) == 0 {
+		return []string{}, nil
+	}
+
+	// 4. 查询这些方案中禁止采购的物品编码
+	var results []string
+
+	err = r.db.Table("ttpos_purchase_limit_scheme_item").
+		Select("DISTINCT material_code").
+		Where("delete_time = ?", 0).
+		Where("material_code IN ?", materialCodes).
+		Where("scheme_uuid IN ?", validSchemeUuids).
+		Where("is_allow_purchase = ?", "no").
+		Pluck("material_code", &results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
 
 // GetMinDailyLimit 获取当天最小的每日申请次数限制

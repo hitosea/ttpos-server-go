@@ -201,9 +201,12 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		defer s.lock.UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
+	ctx.Mark("lock_acquired")
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
+	ctx.Mark("db_connected")
+
 	// 获取销售账单信息
 	otel.AddSpanEvent(stdCtx, "获取销售账单信息")
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid, repository.WithUseSaleBillCache())
@@ -211,6 +214,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		otel.RecordSpanError(stdCtx, errSaleBill, "获取销售账单信息失败")
 		return nil, errors.WithMessage(errSaleBill)
 	}
+	ctx.Mark("bill_loaded")
 
 	// 判断订单状态
 	otel.AddSpanEvent(stdCtx, "验证订单状态")
@@ -225,6 +229,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 			return nil, errors.WithMessage(err)
 		}
 	}
+	ctx.Mark("status_validated")
 
 	// 设置添加来源
 	saleBill.SetOperateSource(ctx.GetSource())
@@ -235,6 +240,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		otel.RecordSpanError(stdCtx, err, "加购操作失败")
 		return nil, errors.WithMessage(err)
 	}
+	ctx.Mark("product_added")
 
 	// 更新缓存的salebill信息
 	otel.AddSpanEvent(stdCtx, "判断是否需要更新对象存储缓存")
@@ -248,6 +254,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 			otel.RecordSpanError(stdCtx, err, "更新对象存储缓存失败")
 			return nil, errors.WithMessage(err)
 		}
+		ctx.Mark("cache_updated")
 	}
 
 	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
@@ -263,6 +270,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		otel.RecordSpanError(stdCtx, err, "获取购物车信息失败")
 		return nil, errors.WithMessage(err)
 	}
+	ctx.Mark("cart_info_loaded")
 	return info, nil
 }
 
@@ -311,12 +319,16 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
+	ctx.Mark("lock_acquired")
+
 	option := &repository.OrderCartInfoOption{}
 	for _, opt := range opts {
 		opt(option)
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.Mark("db_connected")
+
 	ctx.Log().Info("修改购物车商品数量", zap.Any("request", request))
 	// 商品数量不能超过999个
 	if request.Num > 999 {
@@ -331,6 +343,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
+	ctx.Mark("bill_loaded")
 	ctx.Log().Debug("获取到账单信息成功")
 
 	// 判断订单状态
@@ -342,6 +355,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
+	ctx.Mark("status_validated")
 
 	ctx.Log().Debug("获取到订单信息成功")
 
@@ -350,6 +364,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	if errSaleOrderProduct != nil {
 		return nil, errors.WithMessage(errSaleOrderProduct)
 	}
+	ctx.Mark("product_loaded")
 	ctx.Log().Debug("获取到订单商品信息成功")
 
 	if saleOrderProduct.IsCookingProduct() {
@@ -384,6 +399,8 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 			return nil, errors.WithMessage(errors.New(message))
 		}
 	}
+	ctx.Mark("stock_checked")
+
 	// 计算商品数据。折扣、税费、服务
 	saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("重新计算了商品金额", zap.Any("saleOrderProduct salePrice", saleOrderProduct.SalePrice))
@@ -394,6 +411,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	ctx.Log().Debug("重新计算了订单金额", zap.Any("calc", calc))
 	// 计算账单金额
 	saleBill.CalcSaleBill()
+	ctx.Mark("price_calculated")
 
 	// 检查限购
 	{
@@ -458,11 +476,14 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	}); err != nil {
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
+	ctx.Mark("db_saved")
+
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	ctx.Mark("cart_info_loaded")
 	ctx.Log().Debug("获取新的账单数据")
 	return info, nil
 }
@@ -660,15 +681,22 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 
 // InstantOrderCartProductCooking 送厨购物车商品
 func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error) {
+	// 用defer的方式是因为这个方法可能因为多个原因return, 所以用defer的方式来确保分批送厨的逻辑一定会执行
 	defer func() { // 送厨结束后，执行分批送厨
 		if !req.IsCheckCooking { // 只有真送厨时才会送厨预送厨的商品. IsCheckCooking为true时,表示助手端在进行送厨检查,不需要实际进行送厨
 			// 助手端前置模式：分批送厨（每次点击下单都送优先级最高的分批类型）
+			// 任务39416:减少分批送厨步骤（收银机）. 收银机也参考助手端的逻辑进行分批送厨. 如果客户端版本大于等于v2.17.0 则使用该逻辑
+			// useFeature := false // 是否使用该功能,默认不使用.为了兼容旧版本的收银机
+			// if ctx.GetSource() == constant.SourceCashier && utils.CompareVersion(ctx.GetVersion(), utils.VersionGTE, constant.ClientVersionV2170) {
+			// 	useFeature = true
+			// }
+			// if ctx.GetSource() == constant.SourceAssistant || useFeature {
 			if ctx.GetSource() == constant.SourceAssistant {
 				db := s.dbm.GetDB(ctx.GetDbId())
 				batchCookingMode, err := repository.NewOrderRepo(db).GetSaleBillBatchCookingMode(req.SaleBillUuid)
 				if err != nil {
 					ctx.Log().Info("获取销售账单的分批送厨模式失败,导致不能分批送厨", zap.Error(err))
-				} else if batchCookingMode == constant.BatchCookingModePre {
+				} else if batchCookingMode == constant.BatchCookingModePre { // 前置模式时，才执行分批送厨
 					// 异步执行分批送厨，不阻塞流程
 					utils.Go(func() {
 						ctx := ctx.Copy()
@@ -728,6 +756,36 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		return nil, nil, errors.New("没有未送厨的商品")
 	} else if len(unCookingSaleOrderProducts) == 0 && len(h5OrderProductUnAccept) == 0 && nonNeedBatchSendCooking {
 		if !req.IgnoreMust { // 如果不是在结账检查时送厨，才返回-209，否则直接不分批送厨而是使用正常送厨
+			// 修复39526问题 2 ： 前置分批送厨 - 选择2个不同分批送厨商品 - > 现状：第2批次送厨无响应  -> 期望：可正常送厨
+			// 当没有未送厨的商品时，需要再执行一次分批送厨
+			// 送厨结束后，执行分批送厨
+			if !req.IsCheckCooking { // 只有真送厨时才会送厨预送厨的商品. IsCheckCooking为true时,表示助手端在进行送厨检查,不需要实际进行送厨
+				// 助手端前置模式：分批送厨（每次点击下单都送优先级最高的分批类型）
+				// 任务39416:减少分批送厨步骤（收银机）. 收银机也参考助手端的逻辑进行分批送厨. 如果客户端版本大于等于v2.17.0 则使用该逻辑
+				useFeature := false // 是否使用该功能,默认不使用.为了兼容旧版本的收银机
+				if ctx.GetSource() == constant.SourceCashier && utils.CompareVersion(ctx.GetVersion(), utils.VersionGTE, constant.ClientVersionV2170) {
+					useFeature = true
+				}
+				if useFeature {
+					db := s.dbm.GetDB(ctx.GetDbId())
+					batchCookingMode, err := repository.NewOrderRepo(db).GetSaleBillBatchCookingMode(req.SaleBillUuid)
+					if err != nil {
+						ctx.Log().Info("获取销售账单的分批送厨模式失败,导致不能分批送厨", zap.Error(err))
+					} else if batchCookingMode == constant.BatchCookingModePre { // 前置模式时，才执行分批送厨
+						// 同步执行分批送厨，阻塞流程,为了送厨后收银机立即看到送厨状态
+						ctx := ctx.Copy()
+						if err := s.AutoSendCookingByPriority(ctx, req.SaleBillUuid); err != nil {
+							ctx.Log().Error("分批送厨失败", zap.Error(err))
+						}
+					}
+					ctx.Log().Debug("获取新的购物车信息")
+					cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+					if err != nil {
+						return nil, nil, errors.WithMessage(err, "获取购物车信息失败")
+					}
+					return cartInfo, nil, nil
+				}
+			}
 			return nil, &resp.OrderCheckServiceRes{
 				Code: constant.CodeOrderCheckProductBatch,
 			}, nil
@@ -833,6 +891,29 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	// 会员端接单，不返回购物车信息
 	if req.IsMemberOrderAccept {
 		return nil, nil, nil
+	}
+
+	// 送厨结束后，执行分批送厨
+	if !req.IsCheckCooking { // 只有真送厨时才会送厨预送厨的商品. IsCheckCooking为true时,表示助手端在进行送厨检查,不需要实际进行送厨
+		// 助手端前置模式：分批送厨（每次点击下单都送优先级最高的分批类型）
+		// 任务39416:减少分批送厨步骤（收银机）. 收银机也参考助手端的逻辑进行分批送厨. 如果客户端版本大于等于v2.17.0 则使用该逻辑
+		useFeature := false // 是否使用该功能,默认不使用.为了兼容旧版本的收银机
+		if ctx.GetSource() == constant.SourceCashier && utils.CompareVersion(ctx.GetVersion(), utils.VersionGTE, constant.ClientVersionV2170) {
+			useFeature = true
+		}
+		if useFeature {
+			db := s.dbm.GetDB(ctx.GetDbId())
+			batchCookingMode, err := repository.NewOrderRepo(db).GetSaleBillBatchCookingMode(req.SaleBillUuid)
+			if err != nil {
+				ctx.Log().Info("获取销售账单的分批送厨模式失败,导致不能分批送厨", zap.Error(err))
+			} else if batchCookingMode == constant.BatchCookingModePre { // 前置模式时，才执行分批送厨
+				// 同步执行分批送厨，阻塞流程,为了送厨后收银机立即看到送厨状态
+				ctx := ctx.Copy()
+				if err := s.AutoSendCookingByPriority(ctx, req.SaleBillUuid); err != nil {
+					ctx.Log().Error("分批送厨失败", zap.Error(err))
+				}
+			}
+		}
 	}
 
 	ctx.Log().Debug("获取新的购物车信息")
@@ -2608,6 +2689,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 			request.SaleBillUuid = billInfo.Uuid
 			request.SaleOrderUuid = billInfo.SaleOrders[0].Uuid
 			otel.AddSpanEvent(stdCtx, "使用现有订单", attribute.String("sale_bill_uuid", fmt.Sprintf("%d", billInfo.Uuid)))
+			ctx.Mark("order_found")
 		} else {
 			otel.AddSpanEvent(stdCtx, "创建新订单")
 			order, err := s.CreateInstantOrder(ctx)
@@ -2620,6 +2702,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 			request.SaleBillUuid = order.SaleBillUuid
 			request.SaleOrderUuid = order.SaleOrderUuid
 			otel.AddSpanEvent(stdCtx, "订单创建成功", attribute.String("sale_bill_uuid", fmt.Sprintf("%d", order.SaleBillUuid)))
+			ctx.Mark("order_created")
 		}
 	}
 
@@ -2646,6 +2729,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 				Product: productInfo,
 			}, errors.ErrProductPriceChanged
 		}
+		ctx.Mark("price_validated")
 	}
 
 	num := 1.0

@@ -12,6 +12,7 @@ type Material struct {
 	LocaleName           dto.LocaleResponse    `json:"locale_name"`             // 物品名称
 	ErpCode              string                `json:"erp_code"`                // erp编码
 	InternalCode         string                `json:"internal_code"`           // 内部编码
+	Specification        string                `json:"specification"`           // 规格
 	BarcodeValue         string                `json:"barcode_value"`           // 条形码值
 	Num                  float64               `json:"num"`                     // 库存数量
 	SafetyStock          *float64              `json:"safety_stock"`            // 安全库存数量
@@ -51,6 +52,7 @@ type MaterialQuotaConfig struct {
 	QuotaUnitUuid       uint64             `json:"quota_unit_uuid"`        // 限购单位UUID
 	QuotaUnitName       string             `json:"quota_unit_name"`        // 限购单位名称
 	QuotaUnitLocaleName dto.LocaleResponse `json:"quota_unit_locale_name"` // 限购单位名称
+	IsAllowPurchase     string             `json:"is_allow_purchase"`      // 是否允许采购 yes/no
 }
 
 type NotBasicUnitStockList struct {

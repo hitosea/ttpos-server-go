@@ -151,8 +151,8 @@ type IOrderSrv interface {
 	InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error)                                                            // 免单
 	InstantOrderPaymentZeroRule(ctx context.Context, req req.InstantOrderPaymentZeroRuleReq) (*resp.InstantOrderPaymentInfoResp, error)                          // 设置结账抹零规则
 	InstantOrderPaymentInfo(ctx context.Context, saleBill *model.SaleBill, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error) // 获取结账页面信息
-	KioskPaymentConfirm(ctx context.Context, req req.KioskPaymentConfirmReq) error                    // Kiosk 自助点餐机 KBank 支付确认
-	KioskOrderFinish(ctx context.Context, req req.KioskOrderFinishReq) (*resp.KioskOrderFinishResp, error) // Kiosk 自助点餐机订单完成（检查支付、送厨、结账）
+	KioskPaymentConfirm(ctx context.Context, req req.KioskPaymentConfirmReq) error                                                                               // Kiosk 自助点餐机 KBank 支付确认
+	KioskOrderFinish(ctx context.Context, req req.KioskOrderFinishReq) (*resp.KioskOrderFinishResp, error)                                                       // Kiosk 自助点餐机订单完成（检查支付、送厨、结账）
 
 	// h5
 	GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnsentKitchen, error)   // 获取扫码h5购物车未下单商品列表
@@ -2122,14 +2122,17 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	ctx.Mark("nsp_get_business_setting")
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
+	ctx.Mark("nsp_db_connected")
 	saleOrderProducts := make([]*model.SaleOrderProduct, 0)
 
 	// 创建库存服务实例（用于库存检查）
 	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 	productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
+	ctx.Mark("nsp_inventory_ready")
 
 	for _, product := range params.Products {
 		// 获取商品包信息
@@ -2137,6 +2140,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
+		ctx.Mark("nsp_get_product_bom")
 		productPackage := productBom.ProductPackage
 		productName := productPackage.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
 
@@ -2153,6 +2157,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if errFlavorProductBom != nil {
 			return nil, errors.WithMessage(errFlavorProductBom)
 		}
+		ctx.Mark("nsp_get_flavor")
 		if flavorProductBom.GetStockNum(productBomStockNum) < float64(product.Num) {
 			return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
 		}
@@ -2215,6 +2220,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				}
 			}
 		}
+		ctx.Mark("nsp_sauce_checked")
 
 		// 获取属性信息
 		productAttributes := make(map[uint64]*model.ProductPackageAttribute)
@@ -2227,6 +2233,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				productAttributes[attribute.Uuid] = productAttributeList[i]
 			}
 		}
+		ctx.Mark("nsp_attr_loaded")
 
 		// 验证属性组可选数量
 		if err := s.validateAttributeGroupSelection(ctx, &productPackage, productAttributes); err != nil {
@@ -2438,6 +2445,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				}
 			}
 		}
+		ctx.Mark("nsp_must_plan_checked")
 		// 如果是打包订单，则更新商品打包状态
 		if params.SaleBill.IsTakeout() {
 			saleOrderProduct.SetWrap()
@@ -2471,6 +2479,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 
 		// 计算商品数据。折扣、税费、服务
 		saleOrderProduct.CalcSaleOrderProduct(params.Setting)
+		ctx.Mark("nsp_product_calculated")
 
 		// 判断该商品是不是自助餐商品
 		if params.SaleBill.IsBuffetSaleBill() {
@@ -2605,6 +2614,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			}
 		}
 	}
+	ctx.Mark("nsp_loop_done")
 	return saleOrderProducts, nil
 }
 
@@ -5052,9 +5062,14 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	if option.OpenPosEntryName != "" {
 		openPosEntryName = option.OpenPosEntryName
 	}
+	// 根据反结账次数生成 OrderNo：首次使用原始 OrderNo，反结账后加后缀 -1, -2...
+	orderNo := saleOrder.OrderNo
+	if saleBill.ReverseSettleCount > 0 {
+		orderNo = fmt.Sprintf("%s-%d", saleOrder.OrderNo, saleBill.ReverseSettleCount)
+	}
 	param := req.SavePosInvoiceReq{
 		SiteCode:         companySetting.ErpnextSiteCode,
-		OrderNo:          saleOrder.OrderNo,
+		OrderNo:          orderNo,
 		OpenPosEntryName: openPosEntryName,
 		PostingDatetime:  saleOrder.FinishTime,
 		CustomerUuid:     customerUuid,

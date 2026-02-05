@@ -350,6 +350,8 @@ type MemberRechargeOrder struct {
 
 	// ERP发票
 	ErpProductsInvoiceName string `gorm:"column:erp_products_invoice_name;type:varchar(255);comment:商品发票名称" json:"erp_products_invoice_name"`
+	// 反结账次数
+	ReverseSettleCount uint `gorm:"column:reverse_settle_count;type:int(11);default:0;comment:反结账次数" json:"reverse_settle_count"`
 
 	PaymentOrders              []PaymentOrder                    `gorm:"foreignKey:RelatedUuid;references:Uuid"`       // 一个会员充值订单关联多个支付订单
 	Member                     *Member                           `gorm:"foreignKey:MemberUuid;references:Uuid"`        // 关联会员

@@ -3,7 +3,6 @@ package stock
 import (
 	"context"
 	"math"
-	itemApi "ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
@@ -63,29 +62,52 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 		data.SetWarehouse = warehouseName
 	}
 
+	// 批量预查询整个仓库的 Bin 记录（包含估值率和库存数量），避免 N+1 查询问题
+	binValuationMap := make(map[string]float64) // key: item_code, value: valuation_rate
+	binActualQtyMap := make(map[string]float64) // key: item_code, value: actual_qty
+	binExists := make(map[string]bool)          // key: item_code, value: 是否存在 Bin 记录
+	if len(warehouseName) > 0 {
+		binResp, err := s.GetBin(ctx, &stock.GetBinReq{
+			Warehouse: warehouseName,
+			// 不传 ItemCode，返回该仓库所有 Bin 记录
+		})
+		if err == nil && binResp != nil && len(binResp.Items) > 0 {
+			for _, bin := range binResp.Items {
+				binValuationMap[bin.ItemCode] = bin.ValuationRate
+				binActualQtyMap[bin.ItemCode] = bin.ActualQty
+				binExists[bin.ItemCode] = true
+			}
+			g.Log().Infof(ctx, "批量查询 Bin 记录成功: warehouse=%s, count=%d", warehouseName, len(binResp.Items))
+		} else {
+			g.Log().Warningf(ctx, "批量查询 Bin 记录失败或为空: warehouse=%s, err=%v", warehouseName, err)
+		}
+	}
+
 	// 构建明细项目
 	itemList := make([]erp.StockReconciliationItem, 0)
+	processedItems := make(map[string]bool) // 记录已处理的物品，防止重复
 	for _, item := range req.Items {
-		//判断当前仓库已有库存是否与盘点数量一致，如果一致就不要继续新增盘点记录了
-		// 查询当前物品在当前仓库的库存数量
-		stockQtyResp, err := service.Item().GetItemStock(ctx, &itemApi.GetItemStockReq{
-			ItemCode:    item.ItemCode,
-			Warehouse:   warehouseName,
-			CompanyAbbr: req.CompanyAbbr,
-		})
-		if err != nil {
-			return nil, gerror.Wrapf(err, "查询物品%s在仓库%s的库存数量失败", item.ItemCode, warehouseName)
+		// 防御性校验：跳过重复物品，只保留第一条
+		if processedItems[item.ItemCode] {
+			g.Log().Warningf(ctx, "物品[%s]重复，跳过后续记录", item.ItemCode)
+			continue
 		}
-		// 如果当前物品在当前仓库的库存数量与盘点数量不一致，就不要继续新增盘点记录了; 如果当前物品在当前仓库没有库存，也不要新增盘点记录
-		{
-			if len(stockQtyResp.ItemStockList) > 0 && math.Abs(stockQtyResp.ItemStockList[0].ActualQty-item.Qty) < consts.DefaultDecimalPrecision {
-				g.Log().Warningf(ctx, "物品[%s]在仓库[%s]的库存数量为[%.2f]，与盘点数量[%.2f]一致,无需新增盘点记录", item.ItemCode, warehouseName, stockQtyResp.ItemStockList[0].ActualQty, item.Qty)
-				continue
-			}
-			if len(stockQtyResp.ItemStockList) == 0 && item.Qty == 0 {
-				g.Log().Warningf(ctx, "物品[%s]在仓库[%s]的库存无库存且盘点数量为[0]无需新增盘点记录", item.ItemCode, warehouseName)
-				continue
-			}
+		processedItems[item.ItemCode] = true
+
+		// 判断当前仓库已有库存是否与盘点数量一致，如果一致就不要继续新增盘点记录了
+		// 从预查询的 Bin map 中获取库存数量
+		actualQty := binActualQtyMap[item.ItemCode]
+		hasBinRecord := binExists[item.ItemCode]
+
+		// 如果当前物品在当前仓库的库存数量与盘点数量一致，跳过
+		if hasBinRecord && math.Abs(actualQty-item.Qty) < consts.DefaultDecimalPrecision {
+			g.Log().Warningf(ctx, "物品[%s]在仓库[%s]的库存数量为[%.2f]，与盘点数量[%.2f]一致,无需新增盘点记录", item.ItemCode, warehouseName, actualQty, item.Qty)
+			continue
+		}
+		// 如果当前物品在当前仓库没有库存且盘点数量为0，跳过
+		if !hasBinRecord && item.Qty == 0 {
+			g.Log().Warningf(ctx, "物品[%s]在仓库[%s]的库存无库存且盘点数量为[0]无需新增盘点记录", item.ItemCode, warehouseName)
+			continue
 		}
 
 		itemData := erp.StockReconciliationItem{
@@ -102,28 +124,24 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 			itemData.Warehouse = warehouseName
 		}
 
-		// 设置估值价格
+		// 设置估值价格（方案A+D整合逻辑）
 		if item.ValuationRate > 0 {
-			// 用户提供了估值率，直接使用
+			// 优先级1: 用户提供了估值率，直接使用
 			itemData.ValuationRate = item.ValuationRate
 			g.Log().Infof(ctx, "使用用户提供的估值率: item_code=%s, valuation_rate=%.2f",
 				item.ItemCode, item.ValuationRate)
+		} else if rate, ok := binValuationMap[item.ItemCode]; ok && rate > 0 {
+			// 优先级2: 从预查询的 Bin map 中获取估值率（方案D）
+			itemData.ValuationRate = rate
+			g.Log().Infof(ctx, "从 Bin 表获取估值率: item_code=%s, warehouse=%s, valuation_rate=%.2f",
+				item.ItemCode, itemData.Warehouse, rate)
 		} else {
-			// 估值率为 0，从 Bin 表查询
-			binResp, err := s.GetBin(ctx, &stock.GetBinReq{
-				ItemCode:  item.ItemCode,
-				Warehouse: itemData.Warehouse,
-			})
-
-			if err == nil && binResp != nil && len(binResp.Items) > 0 {
-				// 使用 Bin 表中的估值率（因为指定了 item_code 和 warehouse，应该只有一条记录）
-				itemData.ValuationRate = binResp.Items[0].ValuationRate
-				g.Log().Infof(ctx, "从 Bin 表获取估值率: item_code=%s, warehouse=%s, valuation_rate=%.2f",
-					item.ItemCode, itemData.Warehouse, binResp.Items[0].ValuationRate)
-			} else {
-				// Bin 表中没有估值率，返回异常
-				return nil, gerror.New("缺少对应仓库的入库记录,无估值率!")
-			}
+			// 优先级3: 兜底方案 - 设置 AllowZeroValuationRate=1（方案A）
+			// 触发条件: Bin 表中没有该物品记录，或估值率为 0
+			itemData.AllowZeroValuationRate = 1
+			itemData.ValuationRate = 0
+			g.Log().Warningf(ctx, "物品[%s]在仓库[%s]无估值率或估值率为0，启用 AllowZeroValuationRate 兜底",
+				item.ItemCode, itemData.Warehouse)
 		}
 
 		itemList = append(itemList, itemData)

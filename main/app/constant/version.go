@@ -18,4 +18,6 @@ const (
 	ClientVersionV2150 = "2.15.0"
 	// 新版采购收货
 	ClientVersionV2160 = "2.16.0"
+	// 分批送厨（收银机端）最低版本号
+	ClientVersionV2170 = "2.17.0"
 )

@@ -100,12 +100,7 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 	// 2. 开始推送，创建推送日志
 	// importType: 1 = TTPOS推送到平台
 	// importDirection: 根据平台名称设置
-	// 首字母大写
-	platformName := platform
-	if len(platform) > 0 {
-		platformName = strings.ToUpper(string(platform[0])) + strings.ToLower(platform[1:])
-	}
-	importDirection := fmt.Sprintf("TTPOS推送到%s", platformName)
+	importDirection := fmt.Sprintf("TTPOS推送到%s", value_object.GetPlatformName(platform))
 	importLog, err := progressService.StartImport(ctx, platform, 1, importDirection)
 	if err != nil {
 		return errors.WithMessage(errors.New("开始推送失败"), err.Error())

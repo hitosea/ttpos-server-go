@@ -11,83 +11,11 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 )
 
 type (
-	IDeliveryNote interface {
-		// CreateDeliveryNote 创建送货单
-		// 参数：
-		//   - ctx: 上下文对象
-		//   - req: 创建送货单请求
-		//
-		// 返回：
-		//   - res: 创建送货单响应
-		//   - err: 错误信息
-		CreateDeliveryNote(ctx context.Context, req *delivery_note.CreateDeliveryNoteReq) (res *delivery_note.CreateDeliveryNoteResp, err error)
-		// GetDeliveryNote 获取送货单详情
-		// 参数：
-		//   - ctx: 上下文对象
-		//   - req: 获取送货单详情请求
-		//
-		// 返回：
-		//   - res: 获取送货单详情响应
-		//   - err: 错误信息
-		GetDeliveryNote(ctx context.Context, req *delivery_note.GetDeliveryNoteReq) (res *delivery_note.GetDeliveryNoteResp, err error)
-		// GetDeliveryNoteList 获取送货单列表
-		// 参数：
-		//   - ctx: 上下文对象
-		//   - req: 获取送货单列表请求
-		//
-		// 返回：
-		//   - res: 获取送货单列表响应
-		//   - err: 错误信息
-		GetDeliveryNoteList(ctx context.Context, req *delivery_note.GetDeliveryNoteListReq) (res *delivery_note.GetDeliveryNoteListResp, err error)
-		// UpdateDeliveryNote 更新送货单
-		// 参数：
-		//   - ctx: 上下文对象
-		//   - req: 更新送货单请求
-		//
-		// 返回：
-		//   - res: 更新送货单响应
-		//   - err: 错误信息
-		UpdateDeliveryNote(ctx context.Context, req *delivery_note.UpdateDeliveryNoteReq) (res *delivery_note.UpdateDeliveryNoteResp, err error)
-		// SubmitDeliveryNote 提交送货单
-		// 参数：
-		//   - ctx: 上下文对象
-		//   - deliveryNoteName: 送货单号
-		//
-		// 返回：
-		//   - err: 错误信息
-		SubmitDeliveryNote(ctx context.Context, deliveryNoteName string) error
-		// CancelDeliveryNote 取消送货单
-		// 参数：
-		//   - ctx: 上下文对象
-		//   - deliveryNoteName: 送货单号
-		//
-		// 返回：
-		//   - err: 错误信息
-		CancelDeliveryNote(ctx context.Context, deliveryNoteName string) error
-		// DeleteDeliveryNote 删除送货单
-		// 参数：
-		//   - ctx: 上下文对象
-		//   - deliveryNoteName: 送货单号
-		//
-		// 返回：
-		//   - err: 错误信息
-		DeleteDeliveryNote(ctx context.Context, deliveryNoteName string) error
-		// CreateDeliveryNoteFromSaleOrder 从销售订单创建送货单
-		// 参数：
-		//   - ctx: 上下文对象
-		//   - req: 从销售订单创建送货单请求
-		//
-		// 返回：
-		//   - res: 送货单信息
-		//   - err: 错误信息
-		CreateDeliveryNoteFromSaleOrder(ctx context.Context, req *delivery_note.CreateDeliveryNoteFromSaleOrderReq) (res *delivery_note.CreateDeliveryNoteFromSaleOrderResp, err error)
-	}
 	IItem interface {
 		// SyncDelay 同步延迟处理
 		// 将物品同步任务推送到队列，并设置10秒延迟
@@ -183,6 +111,10 @@ type (
 		//   - res: Bin 数据列表，包含实际库存数量、估值率、库存价值
 		//   - err: 操作过程中产生的错误（若有）
 		GetBin(ctx context.Context, req *stock.GetBinReq) (*stock.GetBinResp, error)
+		// SubmitStockEntry 提交库存变动（物料出库）
+		// 参数：ctx 上下文，req 提交库存变动请求
+		// 返回：提交库存变动响应，错误信息
+		SubmitStockEntry(ctx context.Context, req *stock.SubmitStockEntryReq) (res *stock.SubmitStockEntryResp, err error)
 		// SaveStockReconciliation 保存库存盘点
 		// 参数：ctx 上下文，req 保存库存盘点请求
 		// 返回：保存库存盘点响应，错误信息
@@ -235,7 +167,6 @@ type (
 )
 
 var (
-	localDeliveryNote     IDeliveryNote
 	localItem             IItem
 	localItemGroup        IItemGroup
 	localMaterialTransfer IMaterialTransfer
@@ -244,17 +175,6 @@ var (
 	localUom              IUom
 	localWarehouse        IWarehouse
 )
-
-func DeliveryNote() IDeliveryNote {
-	if localDeliveryNote == nil {
-		panic("implement not found for interface IDeliveryNote, forgot register?")
-	}
-	return localDeliveryNote
-}
-
-func RegisterDeliveryNote(i IDeliveryNote) {
-	localDeliveryNote = i
-}
 
 func Item() IItem {
 	if localItem == nil {

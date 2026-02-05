@@ -103,9 +103,15 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionCancelOrder).
+		WithBill(req.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	// 订单列表中取消订单不需要密码
 	req.NotNeedPassword = true
 	err := h.orderSrv.CancelOrder(ctx, req)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -162,8 +168,14 @@ func (h *OrderHandler) ReturnOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionReturnOrder).
+		WithBill(req.SaleBillUuid, req.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	//
 	err, codeFail := h.orderSrv.ReturnOrder(ctx, req)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithMessage(c, codeFail, err)
 		return
@@ -343,8 +355,14 @@ func (h *OrderHandler) ReverseSettle(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionReverseSettle).
+		WithBill(req.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	//
 	err := h.orderSrv.ReverseSettle(ctx, req)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

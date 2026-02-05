@@ -6,6 +6,8 @@ import "ttpos-server-go/app/dto"
 type CompanySummaryItem struct {
 	CompanyUuid uint64 `json:"company_uuid"` // 门店UUID
 	CompanyName string `json:"company_name"` // 门店名称
+	StoreCode   string `json:"store_code"`   // 店铺编号（用于排序和格式化）
+	CreateTime  int64  `json:"-"`            // 创建时间（内部排序用，不输出到JSON）
 }
 
 // CompanySummaryListResp 门店列表响应
@@ -24,9 +26,14 @@ type CompanyBusinessSummaryResp struct {
 type CompanyBusinessSummaryItem struct {
 	Date               string  `json:"date"`                  // 营业日（格式：YYYY-MM-DD）
 	CompanyName        string  `json:"company_name"`          // 门店名称
+	StoreCode          string  `json:"-"`                     // 店铺编号（内部排序用，不输出到JSON）
+	CreateTime         int64   `json:"-"`                     // 创建时间（内部排序用，不输出到JSON）
 	OrderAmount        float64 `json:"order_amount"`          // 订单金额（含优惠前，保留2位小数）
 	PayAmount          float64 `json:"pay_amount"`            // 实付金额（保留2位小数）
 	OrderNum           int64   `json:"order_num"`             // 订单数量
+	CashTC             int64   `json:"cash_tc"`               // 现金TC（现金支付订单数）
+	CashAmount         float64 `json:"cash_amount"`           // 现金金额（现金支付总金额，保留2位小数）
+	CashAC             float64 `json:"cash_ac"`               // 现金AC（现金金额/现金TC，保留2位小数）
 	MealNum            int64   `json:"meal_num"`              // 用餐人数
 	DeskNum            int64   `json:"desk_num"`              // 消费桌数
 	AvgCustomerPrice   float64 `json:"avg_customer_price"`    // 平均客单价（实付金额/用餐人数，保留2位小数）
@@ -49,6 +56,8 @@ type CompanyPaymentMethodSummaryResp struct {
 type CompanyPaymentMethodSummaryItem struct {
 	Date          string  `json:"date"`           // 营业日（格式：YYYY-MM-DD 或 YYYY-MM）
 	CompanyName   string  `json:"company_name"`   // 门店名称
+	StoreCode     string  `json:"-"`              // 店铺编号（内部排序用，不输出到JSON）
+	CreateTime    int64   `json:"-"`              // 创建时间（内部排序用，不输出到JSON）
 	PaymentName   string  `json:"payment_name"`   // 支付方式名称
 	PaymentAmount float64 `json:"payment_amount"` // 支付金额（保留2位小数）
 	PaymentNum    int64   `json:"payment_num"`    // 支付笔数
@@ -66,6 +75,8 @@ type CompanyRefundSummaryResp struct {
 type CompanyRefundSummaryItem struct {
 	Date                string  `json:"date"`                  // 营业日（格式：YYYY-MM-DD 或 YYYY-MM）
 	CompanyName         string  `json:"company_name"`          // 门店名称
+	StoreCode           string  `json:"-"`                     // 店铺编号（内部排序用，不输出到JSON）
+	CreateTime          int64   `json:"-"`                     // 创建时间（内部排序用，不输出到JSON）
 	RefundAmount        float64 `json:"refund_amount"`         // 退款金额（保留2位小数）
 	RefundNum           int64   `json:"refund_num"`            // 退款笔数
 	RefundRate          float64 `json:"refund_rate"`           // 退款率（保留2位小数，百分比）

@@ -224,6 +224,7 @@ type MaterialAddErpReq struct {
 	AllowSubstoreVisible bool             `json:"allow_substore_visible"` // 是否允许门店可见
 	DeliveredBySupplier  int              `json:"delivered_by_supplier"`  // 是否由供应商配送，0-否，1-是
 	SupplierErpCode      string           `json:"supplier_erp_code"`      // 供应商ERP编码
+	Specification        string           `json:"specification"`          // 规格（来自 ERP 的 custom_specification）
 }
 
 type MaterialEditErpReq struct {
@@ -245,6 +246,7 @@ type MaterialEditErpReq struct {
 	AllowNegativeStock  *bool            `json:"allow_negative_stock"`  // 是否允许负库存-对应ttpos的允许负库存
 	DeliveredBySupplier int              `json:"delivered_by_supplier"` // 是否由供应商配送，0-否，1-是
 	SupplierErpCode     string           `json:"supplier_erp_code"`     // 供应商ERP编码
+	Specification       string           `json:"specification"`         // 规格（来自 ERP 的 custom_specification）
 }
 
 type ProductAddErpReq struct {
