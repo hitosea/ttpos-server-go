@@ -174,7 +174,7 @@ func (s *purchaseOrderSrv) checkSalesUnitChanged(
 	if len(changedNames) > 0 {
 		return errors.NewWithCode(
 			constant.CodeErrorConfirmRefresh,
-			fmt.Sprintf(i18n.Translate(lang, "物品 %s 单位已变更，请确认数量"), strings.Join(changedNames, "、")),
+			fmt.Sprintf(i18n.Translate(lang, "物品 %s 单位变动，请检查物品和数量"), strings.Join(changedNames, "、")),
 		)
 	}
 
