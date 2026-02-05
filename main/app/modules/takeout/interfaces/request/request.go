@@ -26,11 +26,11 @@ type UpdateBindingStatusRequest struct {
 
 // GetImportLogsRequest 获取导入日志列表请求
 type GetImportLogsRequest struct {
-	Platform   string // 外卖平台筛选
-	ImportType *int8  // 导入类型筛选（1-TTPOS推送到平台 2-平台推送到TTPOS）
-	Status     *int8  // 状态筛选（0-进行中 1-成功 2-失败）
-	PageNo     int    // 页码
-	PageSize   int    // 每页数量
+	Platform   string `form:"platform" json:"platform"`       // 外卖平台筛选
+	ImportType *int8  `form:"import_type" json:"import_type"` // 导入类型筛选（1-TTPOS推送到平台 2-平台推送到TTPOS）
+	Status     *int8  `form:"status" json:"status"`           // 状态筛选（0-进行中 1-成功 2-失败）
+	PageNo     int    `form:"page_no" json:"page_no"`         // 页码
+	PageSize   int    `form:"page_size" json:"page_size"`     // 每页数量
 }
 
 // PushTakeoutMenuRequest 推送菜单请求
