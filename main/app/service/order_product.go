@@ -201,9 +201,12 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		defer s.lock.UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
+	ctx.Mark("lock_acquired")
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
+	ctx.Mark("db_connected")
+
 	// 获取销售账单信息
 	otel.AddSpanEvent(stdCtx, "获取销售账单信息")
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid, repository.WithUseSaleBillCache())
@@ -211,6 +214,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		otel.RecordSpanError(stdCtx, errSaleBill, "获取销售账单信息失败")
 		return nil, errors.WithMessage(errSaleBill)
 	}
+	ctx.Mark("bill_loaded")
 
 	// 判断订单状态
 	otel.AddSpanEvent(stdCtx, "验证订单状态")
@@ -225,6 +229,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 			return nil, errors.WithMessage(err)
 		}
 	}
+	ctx.Mark("status_validated")
 
 	// 设置添加来源
 	saleBill.SetOperateSource(ctx.GetSource())
@@ -235,6 +240,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		otel.RecordSpanError(stdCtx, err, "加购操作失败")
 		return nil, errors.WithMessage(err)
 	}
+	ctx.Mark("product_added")
 
 	// 更新缓存的salebill信息
 	otel.AddSpanEvent(stdCtx, "判断是否需要更新对象存储缓存")
@@ -248,6 +254,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 			otel.RecordSpanError(stdCtx, err, "更新对象存储缓存失败")
 			return nil, errors.WithMessage(err)
 		}
+		ctx.Mark("cache_updated")
 	}
 
 	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
@@ -263,6 +270,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		otel.RecordSpanError(stdCtx, err, "获取购物车信息失败")
 		return nil, errors.WithMessage(err)
 	}
+	ctx.Mark("cart_info_loaded")
 	return info, nil
 }
 
@@ -311,12 +319,16 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
+	ctx.Mark("lock_acquired")
+
 	option := &repository.OrderCartInfoOption{}
 	for _, opt := range opts {
 		opt(option)
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.Mark("db_connected")
+
 	ctx.Log().Info("修改购物车商品数量", zap.Any("request", request))
 	// 商品数量不能超过999个
 	if request.Num > 999 {
@@ -331,6 +343,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
+	ctx.Mark("bill_loaded")
 	ctx.Log().Debug("获取到账单信息成功")
 
 	// 判断订单状态
@@ -342,6 +355,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
+	ctx.Mark("status_validated")
 
 	ctx.Log().Debug("获取到订单信息成功")
 
@@ -350,6 +364,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	if errSaleOrderProduct != nil {
 		return nil, errors.WithMessage(errSaleOrderProduct)
 	}
+	ctx.Mark("product_loaded")
 	ctx.Log().Debug("获取到订单商品信息成功")
 
 	if saleOrderProduct.IsCookingProduct() {
@@ -384,6 +399,8 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 			return nil, errors.WithMessage(errors.New(message))
 		}
 	}
+	ctx.Mark("stock_checked")
+
 	// 计算商品数据。折扣、税费、服务
 	saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("重新计算了商品金额", zap.Any("saleOrderProduct salePrice", saleOrderProduct.SalePrice))
@@ -394,6 +411,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	ctx.Log().Debug("重新计算了订单金额", zap.Any("calc", calc))
 	// 计算账单金额
 	saleBill.CalcSaleBill()
+	ctx.Mark("price_calculated")
 
 	// 检查限购
 	{
@@ -458,11 +476,14 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	}); err != nil {
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
+	ctx.Mark("db_saved")
+
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	ctx.Mark("cart_info_loaded")
 	ctx.Log().Debug("获取新的账单数据")
 	return info, nil
 }
@@ -2668,6 +2689,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 			request.SaleBillUuid = billInfo.Uuid
 			request.SaleOrderUuid = billInfo.SaleOrders[0].Uuid
 			otel.AddSpanEvent(stdCtx, "使用现有订单", attribute.String("sale_bill_uuid", fmt.Sprintf("%d", billInfo.Uuid)))
+			ctx.Mark("order_found")
 		} else {
 			otel.AddSpanEvent(stdCtx, "创建新订单")
 			order, err := s.CreateInstantOrder(ctx)
@@ -2680,6 +2702,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 			request.SaleBillUuid = order.SaleBillUuid
 			request.SaleOrderUuid = order.SaleOrderUuid
 			otel.AddSpanEvent(stdCtx, "订单创建成功", attribute.String("sale_bill_uuid", fmt.Sprintf("%d", order.SaleBillUuid)))
+			ctx.Mark("order_created")
 		}
 	}
 
@@ -2706,6 +2729,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 				Product: productInfo,
 			}, errors.ErrProductPriceChanged
 		}
+		ctx.Mark("price_validated")
 	}
 
 	num := 1.0

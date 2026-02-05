@@ -1862,6 +1862,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
+	ctx.Mark("lock_acquired")
 
 	// 获取门店设置
 	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
@@ -1878,6 +1879,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+	ctx.Mark("bill_loaded")
 	if saleBill.IsDeskSaleBill() {
 		if request.DeskUuid == 0 {
 			return errors.WithMessage(errors.New("桌台UUID不能为0"))
@@ -1931,14 +1933,18 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 
 	refundPoints := 0.0 // 用于记录本次退款的积分
 
+	ctx.Mark("status_validated")
+
 	// 构建入库单，将账单的商品重新入库.
 	// 出库记录标记为已撤销，并生成入库单将库存退还
 	// 构建出库单，将账单下单减库存的商品出库
 	if err := s.returnInventory(ctx, saleBill, WithReverseSettle()); err != nil {
 		return errors.WithMessage(err)
 	}
+	ctx.Mark("inventory_returned")
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		ctx.Mark("transaction_started")
 		ctxCopy := ctx.Copy()
 		ctxCopy.SetDB(db)
 		// 删除销售订单原料
@@ -1994,6 +2000,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 				return errors.WithMessage(err)
 			}
 		}
+		ctx.Mark("orders_updated")
 		// 更新支付订单,状态为已退款
 		// for _, saleOrder := range saleBill.SaleOrders {
 		// 	for _, paymentOrder := range saleOrder.PaymentOrders {
@@ -2177,6 +2184,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 				})
 			}
 		}
+		ctx.Mark("refund_processed")
 
 		utils.Go(func() {
 			// 发布"反结账"操作事件
@@ -2221,6 +2229,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 				return errors.WithMessage(err)
 			}
 		}
+		ctx.Mark("desk_updated")
 
 		// 更新自助餐销量
 		if saleBill.IsBuffetSaleBill() {
@@ -2286,12 +2295,14 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 					return errors.WithMessage(err)
 				}
 			}
+			ctx.Mark("erp_invoice_cancelled")
 		}
 
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err)
 	}
+	ctx.Mark("transaction_committed")
 
 	return nil
 }
