@@ -90,6 +90,9 @@ type Context interface {
 
 	// 基础信息
 	SetBasicInfo(db *gorm.DB, companyInfo *model.Company) error // 设置基础信息
+
+	// 耗时追踪
+	GetStartTime() int64 // 获取请求开始时间（毫秒时间戳）
 }
 
 type ContextImpl struct {
@@ -115,6 +118,7 @@ type ContextImpl struct {
 	version        string               // 客户端版本号（用于队列等非HTTP场景）
 	log            *zap.Logger
 	db             *gorm.DB
+	startTime      int64                // 请求开始时间（毫秒时间戳）
 }
 
 type Option func(*ContextImpl)
@@ -227,6 +231,12 @@ func WithContext(ctx context.Context) Option {
 	}
 }
 
+func WithStartTime(startTime int64) Option {
+	return func(ctx *ContextImpl) {
+		ctx.startTime = startTime
+	}
+}
+
 func NewDefaultContext() Context {
 	return NewContext(WithContext(context.Background()))
 }
@@ -262,6 +272,7 @@ func (c *ContextImpl) Copy() Context {
 		WithContext(c.Context),
 		WithMember(c.member),
 		WithMemberUuid(c.memberUuid),
+		WithStartTime(c.startTime),
 	)
 }
 
@@ -497,6 +508,11 @@ func (c *ContextImpl) GetCache() cache.Cache {
 
 func (c *ContextImpl) GetBrand() string {
 	return c.cc.GetString(jwt.Brand)
+}
+
+// GetStartTime 获取请求开始时间（毫秒时间戳）
+func (c *ContextImpl) GetStartTime() int64 {
+	return c.startTime
 }
 
 // 设置基础信息

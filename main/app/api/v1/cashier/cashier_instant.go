@@ -361,6 +361,11 @@ func (h *InstantHandler) OrderDiscount(c *gin.Context) {
 		return
 	}
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, "order_discount").
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	//
 	var shopCart *resp.ShopCart
 	var err error
@@ -391,6 +396,8 @@ func (h *InstantHandler) OrderDiscount(c *gin.Context) {
 		}
 		shopCart, err = h.orderSrv.OrderZeroRule(ctx, zeroRuleReq)
 	}
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1085,9 +1092,15 @@ func (h *InstantHandler) OrderPaymentFinish(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, "payment_finish").
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("销售订单的付款结账", zap.Any("params", params))
 	// 销售订单的付款结账
 	res, err := h.orderSrv.InstantOrderPaymentFinish(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		if strings.Contains(err.Error(), "请刷新优惠券列表") {
 			// 获取销售订单的付款信息

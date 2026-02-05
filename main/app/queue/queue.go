@@ -34,6 +34,7 @@ var manager *rocketmq.Manager
 
 func Init() {
 	baseQueue.InitMemberOrderCancel()
+	baseQueue.InitOperationDurationQueue()
 
 	manager = rocketmq.NewManager(logger.Logger)
 	manager.RegisterConsumer(config.Rocketmq.GroupName, &config.Rocketmq)

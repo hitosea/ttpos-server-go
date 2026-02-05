@@ -589,4 +589,37 @@ CREATE TABLE `ttpos_staff` (
   KEY `idx_delete_time` (`delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='员工表（统一账号表）';
 
+-- ----------------------------
+-- Table structure for ttpos_order_operation_duration
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_order_operation_duration`;
+CREATE TABLE `ttpos_order_operation_duration` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '记录UUID',
+  `company_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '商户UUID',
+  `sale_bill_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '账单UUID',
+  `sale_order_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '订单UUID',
+  `action` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '操作类型(cancel_order/checkout/discount等)',
+  `source` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '来源终端(cashier/assistant/shop/h5等)',
+  `staff_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '操作员工UUID',
+  `device_sn` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '设备序列号',
+  `instance_id` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '服务实例标识',
+  `start_time` bigint unsigned NOT NULL DEFAULT '0' COMMENT '开始时间戳(毫秒)',
+  `end_time` bigint unsigned NOT NULL DEFAULT '0' COMMENT '结束时间戳(毫秒)',
+  `duration_ms` int unsigned NOT NULL DEFAULT '0' COMMENT '耗时(毫秒)',
+  `request_path` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '请求路径',
+  `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '操作结果(1成功 0失败)',
+  `error_msg` text COLLATE utf8mb4_unicode_ci COMMENT '错误信息',
+  `create_time` int unsigned NOT NULL DEFAULT '0' COMMENT '创建时间(时间戳)',
+  `update_time` int unsigned NOT NULL DEFAULT '0' COMMENT '更新时间(时间戳)',
+  `delete_time` int unsigned NOT NULL DEFAULT '0' COMMENT '删除时间(时间戳)',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_company_uuid` (`company_uuid`),
+  KEY `idx_sale_bill_uuid` (`sale_bill_uuid`),
+  KEY `idx_action` (`action`),
+  KEY `idx_instance_id` (`instance_id`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单操作耗时记录表';
+
 SET FOREIGN_KEY_CHECKS = 1;
