@@ -755,10 +755,15 @@ func (s *rechargeOrderSrv) SavePosInvoice(ctx context.Context, memberRechargeOrd
 	if customerUuid == "0" {
 		customerUuid = ""
 	}
+	// 根据反结账次数生成OrderNo
+	orderNo := memberRechargeOrder.OrderNo
+	// if memberRechargeOrder.ReverseSettleCount > 0 {
+	// 	orderNo = fmt.Sprintf("%s-%d", memberRechargeOrder.OrderNo, memberRechargeOrder.ReverseSettleCount)
+	// }
 	erpSrv := erp.NewIErpSrv(s.dbm)
 	param := req.SavePosInvoiceReq{
 		SiteCode:         companySetting.ErpnextSiteCode,
-		OrderNo:          memberRechargeOrder.OrderNo,
+		OrderNo:          orderNo,
 		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
 		PostingDatetime:  memberRechargeOrder.PaymentTime,
 		CustomerUuid:     customerUuid,
@@ -1533,11 +1538,12 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		}
 
 		if err := repository.NewMemberRechargeOrderRepo(tx).Update(order.Uuid, map[string]any{
-			"status":       constant.RechargeOrderStatusPending,
-			"payment_time": 0,
-			"amount":       0,
-			"refund_money": 0,
-			"charge_due":   0,
+			"status":               constant.RechargeOrderStatusPending,
+			"reverse_settle_count": order.ReverseSettleCount + 1,
+			"payment_time":         0,
+			"amount":               0,
+			"refund_money":         0,
+			"charge_due":           0,
 		}); err != nil {
 			return errors.WithMessage(errors.ErrInternal)
 		}
@@ -1559,10 +1565,15 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				return errors.New("当前班次已交班，无法保存发票")
 			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
+			// 根据反结账次数生成OrderNo（取消发票时使用的是反结账前的次数）
+			cancelOrderNo := order.OrderNo
+			// if order.ReverseSettleCount > 0 {
+			// 	cancelOrderNo = fmt.Sprintf("%s-%d", order.OrderNo, order.ReverseSettleCount)
+			// }
 			err = erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
 				ProductsInvoiceName: order.ErpProductsInvoiceName,
 				OpenPosEntryName:    shiftLog.ErpnextOpenPosEntryName,
-				OrderNo:             order.OrderNo, //异步模式必填
+				OrderNo:             cancelOrderNo, //异步模式必填
 			})
 			if err != nil {
 				return errors.WithMessage(err)
