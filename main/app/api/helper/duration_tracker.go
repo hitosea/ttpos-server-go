@@ -78,6 +78,19 @@ func (t *DurationTracker) End(ctx context.Context, err error) {
 		errMsg = err.Error()
 	}
 
+	// 提取时间节点
+	var timeNodes []req.TimeNode
+	ctxNodes := ctx.GetTimeNodes()
+	if len(ctxNodes) > 0 {
+		timeNodes = make([]req.TimeNode, len(ctxNodes))
+		for i, node := range ctxNodes {
+			timeNodes[i] = req.TimeNode{
+				Name:     node.Name,
+				OffsetMs: node.OffsetMs,
+			}
+		}
+	}
+
 	// 构建记录
 	record := &req.OperationDurationRecord{
 		CompanyUuid:   ctx.GetCompanyUuid(),
@@ -93,6 +106,7 @@ func (t *DurationTracker) End(ctx context.Context, err error) {
 		RequestPath:   t.requestPath,
 		Status:        status,
 		ErrorMsg:      errMsg,
+		TimeNodes:     timeNodes,
 	}
 
 	// 推送到队列（非阻塞）

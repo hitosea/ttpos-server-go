@@ -19,6 +19,7 @@ type OrderOperationDuration struct {
 	RequestPath   string `gorm:"column:request_path;type:varchar(255);default:'';comment:请求路径"`
 	Status        int    `gorm:"column:status;type:tinyint(3) unsigned;default:1;comment:操作结果(1成功 0失败)"`
 	ErrorMsg      string `gorm:"column:error_msg;type:text;comment:错误信息"`
+	TimeNodes     string `gorm:"column:time_nodes;type:text;comment:时间节点JSON"`
 	CreateTime    int64  `gorm:"column:create_time;type:int(10) unsigned;default:0;comment:创建时间(时间戳)"`
 	UpdateTime    int64  `gorm:"column:update_time;type:int(10) unsigned;default:0;comment:更新时间(时间戳)"`
 	DeleteTime    int64  `gorm:"column:delete_time;type:int(10) unsigned;default:0;comment:删除时间(时间戳)"`

@@ -610,6 +610,7 @@ CREATE TABLE `ttpos_order_operation_duration` (
   `request_path` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '请求路径',
   `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '操作结果(1成功 0失败)',
   `error_msg` text COLLATE utf8mb4_unicode_ci COMMENT '错误信息',
+  `time_nodes` text COLLATE utf8mb4_unicode_ci COMMENT '时间节点JSON([{name,offset_ms}])',
   `create_time` int unsigned NOT NULL DEFAULT '0' COMMENT '创建时间(时间戳)',
   `update_time` int unsigned NOT NULL DEFAULT '0' COMMENT '更新时间(时间戳)',
   `delete_time` int unsigned NOT NULL DEFAULT '0' COMMENT '删除时间(时间戳)',
