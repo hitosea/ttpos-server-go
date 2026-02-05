@@ -194,10 +194,11 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		availableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
 	}
 
+	// 任务39419物品可见性,要求失效这个过滤功能
 	// 子店查询时自动过滤不可见物品
-	if companySetting.IsSubShop() {
-		dbOptions = append(dbOptions, materialRepo.WhereAllowSubstoreVisible(1))
-	}
+	// if companySetting.IsSubShop() {
+	// 	dbOptions = append(dbOptions, materialRepo.WhereAllowSubstoreVisible(1))
+	// }
 
 	// 预加载关联数据
 	dbOptions = append(dbOptions, commonRepo.Preload(
