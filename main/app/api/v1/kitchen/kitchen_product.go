@@ -173,12 +173,18 @@ func (h *ProductHandler) Recovery(c *gin.Context) {
 // @param data body req.ProductUuid true "送厨商品Uuid参数"
 // @Router /kitchen/product/confirm_return [post]
 func (h *ProductHandler) ConfirmReturn(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var productionReq req.ProductUuid
 	if err := c.ShouldBindJSON(&productionReq); err != nil {
 		helper.HandleValidationError(c, err, productionReq, nil)
 		return
 	}
-	err := h.productionSrv.ConfirmReturn(helper.GetContext(c), productionReq.ProductUuid)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionKitchenConfirmReturn).
+		WithPath(c.Request.URL.Path)
+	err := h.productionSrv.ConfirmReturn(ctx, productionReq.ProductUuid)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -196,12 +202,18 @@ func (h *ProductHandler) ConfirmReturn(c *gin.Context) {
 // @param data body req.ConfirmReturnAllReq true "按订单查看送厨商品，确认整单取消时传递销售账单Uuid和外卖订单Uuid"
 // @Router /kitchen/product/confirm_return_all [post]
 func (h *ProductHandler) ConfirmReturnAll(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var returnAllReq req.ConfirmReturnAllReq
 	if err := c.ShouldBindJSON(&returnAllReq); err != nil {
 		helper.HandleValidationError(c, err, returnAllReq, nil)
 		return
 	}
-	err := h.productionSrv.ConfirmReturnAll(helper.GetContext(c), returnAllReq)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionKitchenConfirmReturnAll).
+		WithPath(c.Request.URL.Path)
+	err := h.productionSrv.ConfirmReturnAll(ctx, returnAllReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

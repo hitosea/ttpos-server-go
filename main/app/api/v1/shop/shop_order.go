@@ -101,8 +101,13 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionShopOrderCancel).
+		WithPath(c.Request.URL.Path)
 	//
 	err := h.service.CancelOrder(ctx, orderCancelReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -131,8 +136,14 @@ func (h *OrderHandler) DeleteOrder(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionShopOrderDelete).
+		WithBill(orderDeleteReq.SaleBillUuid, orderDeleteReq.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	//
 	err := h.service.DeleteOrder(ctx, companyUuid, orderDeleteReq.SaleBillUuid, orderDeleteReq.SaleOrderUuid)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -244,8 +255,13 @@ func (h *OrderHandler) ReturnOrder(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("当前不可进行退款"))
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionShopOrderReturn).
+		WithPath(c.Request.URL.Path)
 	//
 	err, codeFail := h.service.ReturnOrder(ctx, req)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithMessage(c, codeFail, err)
 		return
@@ -273,8 +289,13 @@ func (h *OrderHandler) ReReturnOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionShopOrderReReturn).
+		WithPath(c.Request.URL.Path)
 	//
 	err, codeFail := h.service.ReReturnOrder(ctx, req)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithMessage(c, codeFail, err)
 		return
@@ -295,8 +316,14 @@ func (h *OrderHandler) ReReturnOrder(c *gin.Context) {
 // @Router /shop/order/reject_all [post]
 func (h *OrderHandler) RejectAllH5Order(c *gin.Context) {
 	ctx := helper.GetContext(c)
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionShopOrderRejectAll).
+		WithPath(c.Request.URL.Path)
 
-	if err := h.service.RejectAllH5OrderInShop(ctx); err != nil {
+	err := h.service.RejectAllH5OrderInShop(ctx)
+	// 记录耗时
+	tracker.End(ctx, err)
+	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}

@@ -157,7 +157,7 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "create_desk_order").
+	tracker := helper.StartTrack(ctx, constant.ActionCreateDeskOrder).
 		WithBill(0, 0).
 		WithPath(c.Request.URL.Path)
 	// 创建桌台订单
@@ -194,7 +194,7 @@ func (h *DeskHandler) SetOrderSource(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "set_order_source").
+	tracker := helper.StartTrack(ctx, constant.ActionSetOrderSource).
 		WithBill(payload.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	shopCart, err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid)
@@ -226,7 +226,7 @@ func (h *DeskHandler) SetNationality(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "set_nationality").
+	tracker := helper.StartTrack(ctx, constant.ActionSetNationality).
 		WithBill(payload.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	shopCart, err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid)
@@ -259,7 +259,7 @@ func (h *DeskHandler) CloseDesk(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "close_desk").
+	tracker := helper.StartTrack(ctx, constant.ActionCloseDesk).
 		WithPath(c.Request.URL.Path)
 	//
 	err := h.deskSrv.CloseDesk(ctx, params)
@@ -293,7 +293,7 @@ func (h *DeskHandler) CompleteDesk(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "complete_desk").
+	tracker := helper.StartTrack(ctx, constant.ActionCompleteDesk).
 		WithPath(c.Request.URL.Path)
 	//
 	err := h.deskSrv.CompleteDesk(ctx, params)
@@ -327,7 +327,7 @@ func (h *DeskHandler) ChangeDesk(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "change_desk").
+	tracker := helper.StartTrack(ctx, constant.ActionChangeDesk).
 		WithBill(params.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	//
@@ -362,7 +362,7 @@ func (h *DeskHandler) MergeDesk(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "merge_desk").
+	tracker := helper.StartTrack(ctx, constant.ActionMergeDesk).
 		WithBill(params.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	//
@@ -400,7 +400,7 @@ func (h *DeskHandler) CancelDeskOrder(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cancel_desk_order").
+	tracker := helper.StartTrack(ctx, constant.ActionCancelDeskOrder).
 		WithBill(cancelReq.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	//
@@ -438,7 +438,7 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_product_delete").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderProductDelete).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	//
@@ -473,7 +473,7 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_product_change_price").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderProductChangePrice).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	//
@@ -513,7 +513,7 @@ func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // 重新写入数据
 
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_discount").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderDiscount).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 
@@ -575,7 +575,7 @@ func (h *DeskHandler) OrderDiscountCancel(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_discount_cancel").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderDiscountCancel).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	//
@@ -610,7 +610,7 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_change_population").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderChangePopulation).
 		WithBill(params.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	//
@@ -645,7 +645,7 @@ func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_change_buffet").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderChangeBuffet).
 		WithBill(params.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	//
@@ -680,7 +680,7 @@ func (h *DeskHandler) OrderChangeBuffetClock(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_change_buffet_clock").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderChangeBuffetClock).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	//
@@ -745,7 +745,7 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_product_remark").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderProductRemark).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	//
@@ -780,7 +780,7 @@ func (h *DeskHandler) OrderRemark(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_remark").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderRemark).
 		WithBill(params.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	//
@@ -876,7 +876,7 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_add").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductAdd).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	// 添加商品。 若没有点餐账单则新建一个
@@ -927,7 +927,7 @@ func (h *DeskHandler) OrderCartProductPackageAdd(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_package_add").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductPackageAdd).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	// 向购物车添加套餐
@@ -991,7 +991,7 @@ func (h *DeskHandler) OrderCartProductFlavorAndAttributeChange(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_flavor_change").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductFlavorChange).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	// 修改购物车商品"规格/属性"
@@ -1026,7 +1026,7 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_num").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductNum).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Debug("桌台页面修改购物车商品数量接口请求", zap.Any("params", params))
@@ -1062,7 +1062,7 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_cooking").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductCooking).
 		WithBill(params.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Debug("桌台页面送厨购物车商品接口请求", zap.Any("params", params))
@@ -1105,7 +1105,7 @@ func (h *DeskHandler) OrderCartProductReturning(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_returning").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductReturning).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	// 退菜购物车商品
@@ -1141,7 +1141,7 @@ func (h *DeskHandler) OrderCartProductCancelReturning(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_cancel_returning").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductCancelReturn).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	// 退菜购物车商品
@@ -1177,7 +1177,7 @@ func (h *DeskHandler) OrderCartProductChangeDesk(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_change_desk").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductChangeDesk).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	// 转菜购物车商品
@@ -1213,7 +1213,7 @@ func (h *DeskHandler) OrderCartProductWrap(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_wrap").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductWrap).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	// 打包单商品
@@ -1249,7 +1249,7 @@ func (h *DeskHandler) OrderCartProductUnwrap(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_unwrap").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductUnwrap).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	// 取消打包单商品
@@ -1285,7 +1285,7 @@ func (h *DeskHandler) OrderCartProductGiving(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_giving").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductGiving).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	// 赠菜购物车商品
@@ -1321,7 +1321,7 @@ func (h *DeskHandler) OrderCartProductCancelGiving(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_cancel_giving").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductCancelGiving).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	// 取消赠菜购物车商品
@@ -1357,7 +1357,7 @@ func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "must_plan_confirm").
+	tracker := helper.StartTrack(ctx, constant.ActionMustPlanConfirm).
 		WithBill(params.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("确认必点商品", zap.Any("params", params))
@@ -1398,7 +1398,7 @@ func (h *DeskHandler) OrderCheck(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_check").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderCheck).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("订单检查", zap.Any("params", params))
@@ -1476,8 +1476,14 @@ func (h *DeskHandler) OrderPaymentCoupon(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("选择或取消优惠券", zap.Any("params", couponReq))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentCoupon).
+		WithBill(couponReq.SaleBillUuid, couponReq.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 选择或取消优惠券
 	res, err := h.orderSrv.OrderPaymentCoupon(ctx, couponReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1507,8 +1513,14 @@ func (h *DeskHandler) OrderPaymentActivity(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("选择或取消满减活动", zap.Any("params", activityReq))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentActivity).
+		WithBill(activityReq.SaleBillUuid, activityReq.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 选择或取消满减活动
 	res, err := h.orderSrv.OrderPaymentActivity(ctx, activityReq)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1538,8 +1550,14 @@ func (h *DeskHandler) OrderPaymentPoints(c *gin.Context) {
 		return
 	}
 	ctx.Log().Info("设置订单的抵扣积分数量", zap.Any("params", params))
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentPoints).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	// 设置订单的抵扣积分数量
 	res, err := h.orderSrv.OrderPaymentPoints(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1595,7 +1613,7 @@ func (h *DeskHandler) OrderPaymentCreate(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "payment_create").
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentCreate).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("创建一个支付单", zap.Any("params", params))
@@ -1632,7 +1650,7 @@ func (h *DeskHandler) OrderPaymentCancel(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "payment_cancel").
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentCancel).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("撤销一个支付单", zap.Any("params", params))
@@ -1669,7 +1687,7 @@ func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "payment_finish").
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentFinish).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("桌台销售订单的付款结账", zap.Any("params", params))
@@ -1744,7 +1762,7 @@ func (h *DeskHandler) OrderFree(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_free").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderFree).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("桌台免单", zap.Any("params", params))
@@ -1812,7 +1830,7 @@ func (h *DeskHandler) OrderPaymentZeroRule(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "payment_zero_rule").
+	tracker := helper.StartTrack(ctx, constant.ActionPaymentZeroRule).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("设置结账抹零规则", zap.Any("params", params))
@@ -1849,7 +1867,7 @@ func (h *DeskHandler) OrderSaleOrderCreate(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "sale_order_create").
+	tracker := helper.StartTrack(ctx, constant.ActionSaleOrderCreate).
 		WithBill(params.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("创建一个销售订单", zap.Any("params", params))
@@ -1886,7 +1904,7 @@ func (h *DeskHandler) OrderSaleOrderMoveProduct(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "sale_order_move_product").
+	tracker := helper.StartTrack(ctx, constant.ActionSaleOrderMoveProduct).
 		WithBill(params.SaleBillUuid, params.From).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("从一个销售订单移动商品到另一个销售订单", zap.Any("params", params))
@@ -1923,7 +1941,7 @@ func (h *DeskHandler) OrderSaleOrderDelete(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "sale_order_delete").
+	tracker := helper.StartTrack(ctx, constant.ActionSaleOrderDelete).
 		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("删除一个销售订单(删除拆单)", zap.Any("params", params))
@@ -1960,7 +1978,7 @@ func (h *DeskHandler) OrderSaleOrderDeleteAll(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "sale_order_delete_all").
+	tracker := helper.StartTrack(ctx, constant.ActionSaleOrderDeleteAll).
 		WithBill(params.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("删除所有子销售订单(撤销拆单)", zap.Any("params", params))
@@ -2023,7 +2041,7 @@ func (h *DeskHandler) OrderUseMember(c *gin.Context) {
 	}
 	ctx := helper.GetContext(c)
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_use_member").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderUseMember).
 		WithBill(passwordReq.SaleBillUuid, passwordReq.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	res, isCustomAmountAndZero, err := h.orderSrv.OrderUseMember(ctx, passwordReq)
@@ -2058,7 +2076,7 @@ func (h *DeskHandler) OrderMemberCancel(c *gin.Context) {
 	}
 	ctx := helper.GetContext(c)
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_member_cancel").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderMemberCancel).
 		WithBill(passwordReq.SaleBillUuid, passwordReq.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	res, err := h.orderSrv.OrderMemberCancel(ctx, passwordReq)
@@ -2089,7 +2107,7 @@ func (h *DeskHandler) OrderPrint(c *gin.Context) {
 	}
 	ctx := helper.GetContext(c)
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_print").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderPrint).
 		WithBill(printReq.SaleBillUuid, printReq.SaleOrderUuid).
 		WithPath(c.Request.URL.Path)
 	res, err := h.orderSrv.OrderPrint(ctx, printReq, true)
@@ -2120,7 +2138,7 @@ func (h *DeskHandler) OrderPrintInvoice(c *gin.Context) {
 	}
 	ctx := helper.GetContext(c)
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_print_invoice").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderPrintInvoice).
 		WithBill(printReq.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	res, err := h.orderSrv.OrderPrintInvoice(ctx, printReq)
@@ -2151,7 +2169,7 @@ func (h *DeskHandler) OrderUnlock(c *gin.Context) {
 	}
 	ctx := helper.GetContext(c)
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "order_unlock").
+	tracker := helper.StartTrack(ctx, constant.ActionOrderUnlock).
 		WithBill(unlockReq.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	err := h.orderSrv.OrderUnlock(ctx, unlockReq.SaleBillUuid)
@@ -2235,7 +2253,7 @@ func (h *DeskHandler) OrderCartProductBatchCooking(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "cart_product_batch_cooking").
+	tracker := helper.StartTrack(ctx, constant.ActionCartProductBatchCooking).
 		WithBill(params.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	// 分批送厨弹框的销售订单商品列表
@@ -2299,7 +2317,7 @@ func (h *DeskHandler) ChangeBatchTag(c *gin.Context) {
 		return
 	}
 	// 开始耗时跟踪
-	tracker := helper.StartTrack(ctx, "change_batch_tag").
+	tracker := helper.StartTrack(ctx, constant.ActionChangeBatchTag).
 		WithBill(params.SaleBillUuid, 0).
 		WithPath(c.Request.URL.Path)
 	// 更换分批类型

@@ -1329,7 +1329,7 @@ func (s *takeoutOrderSrv) enrichModifiersInfo(ctx context.Context, platform stri
 	}
 
 	// 第二阶段：批量查询修饰符名称
-	modifierInfos := s.menuRepo.GetModifierNamesByUuids(ctx, modifierUuids, modifierTypes)
+	modifierInfos := s.menuRepo.GetModifierNamesByUuids(ctx, platform, modifierUuids, modifierTypes)
 	platformModifierNames := s.menuRepo.GetModifierNamesByPlatformIds(ctx, platform, modifierPlatformIds)
 
 	// 第三阶段：设置修饰符详细信息
@@ -1417,7 +1417,7 @@ func (s *takeoutOrderSrv) enrichItemInfo(ctx context.Context, platform string, o
 		// 已映射商品：查询商品名称
 		productUuids := []uint64{item.TtposProductPackageUuid}
 		productTypes := map[uint64]int{item.TtposProductPackageUuid: item.TtposProductType}
-		productInfos := s.menuRepo.GetProductNamesByUuids(ctx, productUuids, productTypes)
+		productInfos := s.menuRepo.GetProductNamesByUuids(ctx, platform, productUuids, productTypes)
 
 		if info, ok := productInfos[item.TtposProductPackageUuid]; ok {
 			// ItemName: 显示用名称（外卖表优先）
