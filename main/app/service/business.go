@@ -4302,7 +4302,6 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 					QueryEndDate:       queryEndDate,
 					Cycle:              request.Cycle,
 					ExcludeDataManage:  excludeDataManage,
-					OrderDelivery:      1,
 					Source:             1,
 					PaymentMethodNames: []string{"Cash"}, // 只查询现金支付
 				}
@@ -4560,7 +4559,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 		sort.Strings(allCompanyNames) // 排序以保证一致性
 
 		summaryRow = resp.CompanyBusinessSummaryItem{
-			Date:               "汇总",
+			Date:               i18n.Translate(ctx.GetLanguage(), "汇总"),
 			CompanyName:        strings.Join(allCompanyNames, "、"), // 所有商家名称用、符号连接
 			OrderAmount:        utils.Round(totalOrderAmount.InexactFloat64(), 2),
 			PayAmount:          utils.Round(totalPayAmount.InexactFloat64(), 2),
@@ -4989,7 +4988,7 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 			companyNamesStr := strings.Join(companyNames, "、")
 
 			paymentSummaryItem := resp.CompanyPaymentMethodSummaryItem{
-				Date:          "汇总",
+				Date:          i18n.Translate(ctx.GetLanguage(), "汇总"),
 				CompanyName:   companyNamesStr, // 合并所有涉及的门店名称
 				PaymentName:   paymentName,
 				PaymentAmount: paymentDecimal.PaymentAmount.InexactFloat64(),
@@ -5377,7 +5376,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 		sort.Strings(allCompanyNames) // 排序以保证一致性
 
 		summaryRow = resp.CompanyRefundSummaryItem{
-			Date:                "汇总",
+			Date:                i18n.Translate(ctx.GetLanguage(), "汇总"),
 			CompanyName:         strings.Join(allCompanyNames, "、"), // 所有商家名称用、符号连接
 			RefundAmount:        utils.Round(totalRefundAmount.InexactFloat64(), 2),
 			RefundNum:           totalRefundNum,
@@ -5669,34 +5668,34 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		return errors.New("数据类型错误")
 	}
 
-	// 表头映射（字段顺序：营业日、店铺名称、总营业额、实收金额、TC、AC、现金TC、现金金额、现金AC、用餐人数、消费桌数、平均客单价、订单金额人均、订单金额单均、实付金额单均、点餐订单金额、桌台订单金额、外送订单金额）
+	// 表头映射（字段顺序：营业日、店铺名称、总营业额、实收金额、TC、AC、现金TC、现金金额、现金AC、用餐人数、消费桌数、平均客单价、订单金额人均、实付金额单均、点餐订单金额、桌台订单金额、外送订单金额）
 	headerMap := map[string][]string{
 		"zh": { // 中文
-			"营业日", "店铺名称", "总营业额", "实收金额", "TC", "AC", "现金TC", "现金金额", "现金AC", "用餐人数", "消费桌数", "平均客单价", "订单金额人均", "订单金额单均", "实付金额单均", "点餐订单金额", "桌台订单金额", "外送订单金额",
+			"营业日", "店铺名称", "总营业额", "实收金额", "TC", "AC", "现金TC", "现金金额", "现金AC", "用餐人数", "消费桌数", "平均客单价", "订单金额人均", "实付金额单均", "点餐订单金额", "桌台订单金额", "外送订单金额",
 		},
 		"en": { // 英文
-			"Business Day", "Store Name", "Total Revenue", "Actual Amount", "TC", "AC", "Cash TC", "Cash Amount", "Cash AC", "Number of Diners", "Number of Tables Consumed", "Average Customer Price", "Order Amount Per Person", "Order Amount Per Order", "Paid Amount Per Order", "Meal Order Amount", "Table Order Amount", "Takeout Order Amount",
+			"Business Day", "Store Name", "Total Revenue", "Actual Amount", "TC", "AC", "Cash TC", "Cash Amount", "Cash AC", "Number of Diners", "Number of Tables Consumed", "Average Customer Price", "Order Amount Per Person", "Paid Amount Per Order", "Meal Order Amount", "Table Order Amount", "Takeout Order Amount",
 		},
 		"th": { // 泰语
-			"วันดำเนินธุรกิจ", "ชื่อร้าน", "ยอดขายรวม", "ยอดรับจริง", "TC", "AC", "Cash TC", "ยอดเงินสด", "Cash AC", "จำนวนลูกค้า", "จำนวนโต๊ะที่ใช้", "ราคาเฉลี่ยต่อลูกค้า", "ยอดคำสั่งซื้อต่อคน", "ยอดคำสั่งซื้อต่อบิล", "ยอดชำระเงินต่อบิล", "ยอดคำสั่งซื้อรับประทานอาหาร", "ยอดคำสั่งซื้อโต๊ะ", "ยอดคำสั่งซื้อนำกลับบ้าน",
+			"วันดำเนินธุรกิจ", "ชื่อร้าน", "ยอดขายรวม", "ยอดรับจริง", "TC", "AC", "Cash TC", "ยอดเงินสด", "Cash AC", "จำนวนลูกค้า", "จำนวนโต๊ะที่ใช้", "ราคาเฉลี่ยต่อลูกค้า", "ยอดคำสั่งซื้อต่อคน", "ยอดชำระเงินต่อบิล", "ยอดคำสั่งซื้อรับประทานอาหาร", "ยอดคำสั่งซื้อโต๊ะ", "ยอดคำสั่งซื้อนำกลับบ้าน",
 		},
 		"zhtw": { // 繁体中文
-			"營業日", "店鋪名稱", "總營業額", "實收金額", "TC", "AC", "現金TC", "現金金額", "現金AC", "用餐人數", "消費桌數", "平均客單價", "訂單金額人均", "訂單金額單均", "實付金額單均", "點餐訂單金額", "桌台訂單金額", "外送訂單金額",
+			"營業日", "店鋪名稱", "總營業額", "實收金額", "TC", "AC", "現金TC", "現金金額", "現金AC", "用餐人數", "消費桌數", "平均客單價", "訂單金額人均", "實付金額單均", "點餐訂單金額", "桌台訂單金額", "外送訂單金額",
 		},
 		"ja": { // 日语
-			"営業日", "店舗名", "総売上高", "実収金額", "TC", "AC", "現金TC", "現金金額", "現金AC", "来店人数", "利用テーブル数", "平均客単価", "一人当たり注文金額", "一件当たり注文金額", "一件当たり支払い金額", "食事注文金額", "テーブル注文金額", "テイクアウト注文金額",
+			"営業日", "店舗名", "総売上高", "実収金額", "TC", "AC", "現金TC", "現金金額", "現金AC", "来店人数", "利用テーブル数", "平均客単価", "一人当たり注文金額", "一件当たり支払い金額", "食事注文金額", "テーブル注文金額", "テイクアウト注文金額",
 		},
 		"ko": { // 韩语
-			"영업일", "매장명", "총 매출액", "실수령액", "TC", "AC", "현금 TC", "현금 금액", "현금 AC", "식사 인원", "소비 테이블 수", "평균 고객 단가", "인당 주문 금액", "주문당 주문 금액", "주문당 실제 결제 금액", "식사 주문 금액", "테이블 주문 금액", "포장 주문 금액",
+			"영업일", "매장명", "총 매출액", "실수령액", "TC", "AC", "현금 TC", "현금 금액", "현금 AC", "식사 인원", "소비 테이블 수", "평균 고객 단가", "인당 주문 금액", "주문당 실제 결제 금액", "식사 주문 금액", "테이블 주문 금액", "포장 주문 금액",
 		},
 		"my": { // 缅甸语
-			"လုပ်ငန်းသက်တမ်းနေ့", "ဆိုင်အမည်", "စုစုပေါင်းဝင်ငွေ", "အမှန်တကယ်ရငွေ", "TC", "AC", "ငွေသား TC", "ငွေသားပမာဏ", "ငွေသား AC", "စားသုံးသူအရေအတွက်", "စားသုံးထားသောစားပွဲအရေအတွက်", "ပျမ်းမျှဖောက်သည်စျေးနှုန်း", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်ပေးသွင်းငွေ", "အစားအသောက်အော်ဒါပမာဏ", "စားပွဲအော်ဒါပမာဏ", "ယူဆောင်အော်ဒါပမာဏ",
+			"လုပ်ငန်းသက်တမ်းနေ့", "ဆိုင်အမည်", "စုစုပေါင်းဝင်ငွေ", "အမှန်တကယ်ရငွေ", "TC", "AC", "ငွေသား TC", "ငွေသားပမာဏ", "ငွေသား AC", "စားသုံးသူအရေအတွက်", "စားသုံးထားသောစားပွဲအရေအတွက်", "ပျမ်းမျှဖောက်သည်စျေးနှုန်း", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်ပေးသွင်းငွေ", "အစားအသောက်အော်ဒါပမာဏ", "စားပွဲအော်ဒါပမာဏ", "ယူဆောင်အော်ဒါပမာဏ",
 		},
 		"tr": { // 土耳其语
-			"İşletme Günü", "Mağaza Adı", "Toplam Gelir", "Gerçek Tutar", "TC", "AC", "Nakit TC", "Nakit Tutar", "Nakit AC", "Yemek Yiyen Kişi Sayısı", "Tüketilen Masa Sayısı", "Ortalama Müşteri Fiyatı", "Kişi Başına Sipariş Tutarı", "Sipariş Başına Sipariş Tutarı", "Sipariş Başına Ödenen Tutar", "Yemek Sipariş Tutarı", "Masa Sipariş Tutarı", "Paket Sipariş Tutarı",
+			"İşletme Günü", "Mağaza Adı", "Toplam Gelir", "Gerçek Tutar", "TC", "AC", "Nakit TC", "Nakit Tutar", "Nakit AC", "Yemek Yiyen Kişi Sayısı", "Tüketilen Masa Sayısı", "Ortalama Müşteri Fiyatı", "Kişi Başına Sipariş Tutarı", "Sipariş Başına Ödenen Tutar", "Yemek Sipariş Tutarı", "Masa Sipariş Tutarı", "Paket Sipariş Tutarı",
 		},
 		"sv": { // 瑞典语
-			"Affärsdag", "Butiksnamn", "Total Omsättning", "Faktiskt Belopp", "TC", "AC", "Kontant TC", "Kontant Belopp", "Kontant AC", "Antal Gäster", "Antal Konsumerade Bord", "Genomsnittligt Kundpris", "Orderbelopp per Person", "Orderbelopp per Order", "Betalt Belopp per Order", "Matbeställningsbelopp", "Bordsorderbelopp", "Takeaway Orderbelopp",
+			"Affärsdag", "Butiksnamn", "Total Omsättning", "Faktiskt Belopp", "TC", "AC", "Kontant TC", "Kontant Belopp", "Kontant AC", "Antal Gäster", "Antal Konsumerade Bord", "Genomsnittligt Kundpris", "Orderbelopp per Person", "Betalt Belopp per Order", "Matbeställningsbelopp", "Bordsorderbelopp", "Takeaway Orderbelopp",
 		},
 	}
 
@@ -5726,7 +5725,7 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellStyle(sheet1Name, cell, cell, style)
 	}
 
-	// 写入明细表数据（字段顺序：营业日、店铺名称、总营业额、实收金额、TC、AC、现金TC、现金金额、现金AC、用餐人数、消费桌数、平均客单价、订单金额人均、订单金额单均、实付金额单均、点餐订单金额、桌台订单金额、外送订单金额）
+	// 写入明细表数据（字段顺序：营业日、店铺名称、总营业额、实收金额、TC、AC、现金TC、现金金额、现金AC、用餐人数、消费桌数、平均客单价、订单金额人均、实付金额单均、点餐订单金额、桌台订单金额、外送订单金额）
 	for rowIdx, item := range detailResp.List {
 		offsetRow := rowIdx + 2
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("A%d", offsetRow), item.Date)
@@ -5742,11 +5741,10 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("K%d", offsetRow), item.DeskNum)
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("L%d", offsetRow), item.AvgCustomerPrice)
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("M%d", offsetRow), item.OrderAmountMealAvg)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("N%d", offsetRow), item.OrderAmountAvg) // 订单金额单均
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("O%d", offsetRow), item.PayAmountAvg)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("P%d", offsetRow), item.InstantOrderAmount)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("Q%d", offsetRow), item.DeskOrderAmount)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("R%d", offsetRow), item.TakeoutOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("N%d", offsetRow), item.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("O%d", offsetRow), item.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("P%d", offsetRow), item.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("Q%d", offsetRow), item.TakeoutOrderAmount)
 	}
 
 	// 自动调整明细表列宽
@@ -5788,11 +5786,10 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", offsetRow), item.DeskNum)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", offsetRow), item.AvgCustomerPrice)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", offsetRow), item.OrderAmountMealAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", offsetRow), item.OrderAmountAvg) // 订单金额单均
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("O%d", offsetRow), item.PayAmountAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("P%d", offsetRow), item.InstantOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("Q%d", offsetRow), item.DeskOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("R%d", offsetRow), item.TakeoutOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", offsetRow), item.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("O%d", offsetRow), item.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("P%d", offsetRow), item.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("Q%d", offsetRow), item.TakeoutOrderAmount)
 	}
 
 	// 写入汇总行（字段顺序与数据行一致）
@@ -5803,7 +5800,7 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", summaryRow), summaryResp.SummaryRow.OrderAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", summaryRow), summaryResp.SummaryRow.PayAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", summaryRow), summaryResp.SummaryRow.OrderNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", summaryRow), summaryResp.SummaryRow.OrderAmountAvg) // AC
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", summaryRow), summaryResp.SummaryRow.OrderAmountAvg) // AC = 订单金额单均
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", summaryRow), summaryResp.SummaryRow.CashTC)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", summaryRow), summaryResp.SummaryRow.CashAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", summaryRow), summaryResp.SummaryRow.CashAC)
@@ -5811,11 +5808,10 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", summaryRow), summaryResp.SummaryRow.DeskNum)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", summaryRow), summaryResp.SummaryRow.AvgCustomerPrice)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", summaryRow), summaryResp.SummaryRow.OrderAmountMealAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", summaryRow), summaryResp.SummaryRow.OrderAmountAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("O%d", summaryRow), summaryResp.SummaryRow.PayAmountAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("P%d", summaryRow), summaryResp.SummaryRow.InstantOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("Q%d", summaryRow), summaryResp.SummaryRow.DeskOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("R%d", summaryRow), summaryResp.SummaryRow.TakeoutOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", summaryRow), summaryResp.SummaryRow.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("O%d", summaryRow), summaryResp.SummaryRow.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("P%d", summaryRow), summaryResp.SummaryRow.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("Q%d", summaryRow), summaryResp.SummaryRow.TakeoutOrderAmount)
 	}
 
 	// 自动调整汇总表列宽
@@ -5875,18 +5871,7 @@ func (s *businessSrv) exportPaymentMethodSummaryToExcel(xlsxFile *excelize.File,
 	}()
 
 	// Sheet1: 明细表
-	sheet1NameMul := model.MultiLanguageName{
-		EnName:   "Details",
-		ZhName:   "明细表",
-		ZhTwName: "明細表",
-		ThName:   "รายละเอียด",
-		MyName:   "အသေးစား",
-		JaName:   "明細表",
-		KoName:   "상세",
-		TrName:   "Detaylar",
-		SvName:   "Detaljer",
-	}
-	sheet1Name := sheet1NameMul.GetNameByLang(lang)
+	sheet1Name := "Sheet1"
 	sheet1Index, err := xlsxFile.NewSheet(sheet1Name)
 	if err != nil {
 		return errors.WithMessage(err, "创建明细表Sheet失败")
@@ -5921,18 +5906,7 @@ func (s *businessSrv) exportPaymentMethodSummaryToExcel(xlsxFile *excelize.File,
 	}
 
 	// Sheet2: 汇总表
-	sheet2NameMul := model.MultiLanguageName{
-		EnName:   "Summary",
-		ZhName:   "汇总表",
-		ZhTwName: "匯總表",
-		ThName:   "สรุป",
-		MyName:   "စုပေါင်းစာရင်း",
-		JaName:   "集計表",
-		KoName:   "요약",
-		TrName:   "Özet",
-		SvName:   "Sammanfattning",
-	}
-	sheet2Name := sheet2NameMul.GetNameByLang(lang)
+	sheet2Name := "Sheet2"
 	_, err = xlsxFile.NewSheet(sheet2Name)
 	if err != nil {
 		return errors.WithMessage(err, "创建汇总表Sheet失败")
