@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 	"time"
 	"ttpos-server-go/app/cloud"
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
@@ -26,7 +25,6 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // 命令行参数
@@ -123,9 +121,12 @@ var syncErpDataBatchCmd = &cobra.Command{
 		fmt.Printf("门店数量: %d, 并发数: %d\n", len(companyUuids), batchWorkers)
 		fmt.Printf("门店列表: %v\n\n", companyUuids)
 
+		// 初始化 DBManager（统一管理所有数据库连接）
+		dbm := database.GetDBManager(config.Database)
+
 		// 验证所有门店
 		fmt.Printf("%s[1/3] 验证门店有效性...%s\n", blueColor, resetColor)
-		invalidUuids := validateCompanyUuids(companyUuids)
+		invalidUuids := validateCompanyUuids(companyUuids, dbm)
 		if len(invalidUuids) > 0 {
 			fmt.Printf("%s错误: 发现无效的 company_uuid，终止执行%s\n", redColor, resetColor)
 			fmt.Printf("无效列表:\n")
@@ -138,13 +139,12 @@ var syncErpDataBatchCmd = &cobra.Command{
 
 		// 初始化服务依赖
 		fmt.Printf("%s[2/3] 初始化服务...%s\n", blueColor, resetColor)
-		dbm := database.GetDBManager(config.Database)
 		syncSrv := initSyncService(dbm)
 		fmt.Printf("%s✓ 服务初始化完成%s\n\n", greenColor, resetColor)
 
 		// 执行批量同步
 		fmt.Printf("%s[3/3] 开始同步...%s\n", blueColor, resetColor)
-		results := runBatchSync(companyUuids, batchWorkers, syncSrv)
+		results := runBatchSync(companyUuids, batchWorkers, dbm, syncSrv)
 
 		// 输出汇总
 		printSummary(results)
@@ -182,25 +182,15 @@ type invalidUuid struct {
 	reason string
 }
 
-// closeDB 关闭数据库连接
-func closeDB(db *gorm.DB) {
-	if db == nil {
-		return
-	}
-	if sqlDB, err := db.DB(); err == nil {
-		_ = sqlDB.Close()
-	}
-}
-
 // validateCompanyUuids 验证所有 company_uuid 有效性
-func validateCompanyUuids(uuids []uint64) []invalidUuid {
+func validateCompanyUuids(uuids []uint64, dbm *database.DBManager) []invalidUuid {
 	var invalidList []invalidUuid
 
 	for _, uuid := range uuids {
-		// 尝试连接数据库
-		companyDB, err := database.NewMySQLConnection(config.Database, fmt.Sprintf("%s%d", constant.DBNamePrefix, uuid))
-		if err != nil {
-			invalidList = append(invalidList, invalidUuid{uuid: uuid, reason: fmt.Sprintf("数据库连接失败: %v", err)})
+		// 从 DBManager 获取数据库连接（统一管理）
+		companyDB := dbm.GetDB(uuid)
+		if companyDB == nil {
+			invalidList = append(invalidList, invalidUuid{uuid: uuid, reason: "数据库连接失败: DBManager 返回 nil"})
 			continue
 		}
 
@@ -208,20 +198,15 @@ func validateCompanyUuids(uuids []uint64) []invalidUuid {
 		companyRepo := repository.NewCompanyRepo(companyDB)
 		company, err := companyRepo.GetCompanyInfoByUuid(uuid)
 		if err != nil {
-			closeDB(companyDB)
 			invalidList = append(invalidList, invalidUuid{uuid: uuid, reason: fmt.Sprintf("获取公司信息失败: %v", err)})
 			continue
 		}
 
 		// 检查 ERP 开启状态
 		if !company.IsOpenErp() {
-			closeDB(companyDB)
 			invalidList = append(invalidList, invalidUuid{uuid: uuid, reason: "公司未开启 ERP"})
 			continue
 		}
-
-		// 验证通过，关闭连接
-		closeDB(companyDB)
 	}
 
 	return invalidList
@@ -244,7 +229,7 @@ func initSyncService(dbm *database.DBManager) service.ISyncSrv {
 }
 
 // runBatchSync 执行批量同步
-func runBatchSync(companyUuids []uint64, workers int, syncSrv service.ISyncSrv) []SyncResult {
+func runBatchSync(companyUuids []uint64, workers int, dbm *database.DBManager, syncSrv service.ISyncSrv) []SyncResult {
 	total := len(companyUuids)
 	jobs := make(chan uint64, total)
 	results := make(chan SyncResult, total)
@@ -259,7 +244,7 @@ func runBatchSync(companyUuids []uint64, workers int, syncSrv service.ISyncSrv) 
 		utils.Go(func() {
 			defer wg.Done()
 			for companyUuid := range jobs {
-				result := syncOneCompany(companyUuid, syncSrv)
+				result := syncOneCompany(companyUuid, dbm, syncSrv)
 				results <- result
 
 				// 更新进度并打印
@@ -289,7 +274,7 @@ func runBatchSync(companyUuids []uint64, workers int, syncSrv service.ISyncSrv) 
 }
 
 // syncOneCompany 同步单个门店
-func syncOneCompany(companyUuid uint64, syncSrv service.ISyncSrv) SyncResult {
+func syncOneCompany(companyUuid uint64, dbm *database.DBManager, syncSrv service.ISyncSrv) SyncResult {
 	start := time.Now()
 	result := SyncResult{CompanyUuid: companyUuid}
 
@@ -308,17 +293,16 @@ func syncOneCompany(companyUuid uint64, syncSrv service.ISyncSrv) SyncResult {
 		zap.Uint64("company_uuid", companyUuid),
 	)
 
-	// 连接门店数据库
-	companyDB, err := database.NewMySQLConnection(config.Database, fmt.Sprintf("%s%d", constant.DBNamePrefix, companyUuid))
-	if err != nil {
-		result.Error = fmt.Errorf("数据库连接失败: %v", err)
+	// 从 DBManager 获取门店数据库连接（统一管理，无需手动关闭）
+	companyDB := dbm.GetDB(companyUuid)
+	if companyDB == nil {
+		result.Error = fmt.Errorf("数据库连接失败: DBManager 返回 nil")
 		logger.Logger.Error("同步失败",
 			zap.Uint64("company_uuid", companyUuid),
 			zap.Error(result.Error),
 		)
 		return result
 	}
-	defer closeDB(companyDB)
 
 	// 获取公司信息
 	companyRepo := repository.NewCompanyRepo(companyDB)
