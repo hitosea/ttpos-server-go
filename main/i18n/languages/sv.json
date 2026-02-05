@@ -5225,6 +5225,7 @@
   "物品 %s 超出限购/单位变动，请检查物品和数量": "Artikel %s överskrider köplimit/enhet ändrad, vänligen kontrollera artikel och mängd",
   "物品 %s 超出限购/单位变动，请检查物品和数量。": "Artikel %s överskrider köpgräns/enhetsändring, kontrollera varan och kvantiteten。",
   "物品 %s 重复": "Artikel %s är duplicerad",
+  "物品%s已关闭/被删除。请检查物品情况": "Objektet %s har stängts/raderats. Kontrollera objektets status",
   "物品%s已禁用": "Varan %s har inaktiverats",
   "物品%s未找到": "Artikel %s hittades inte",
   "物品%s状态已关闭，请修改物品状态": "Statusen för objektet %s har stängts. Vänligen ändra objektets status.",

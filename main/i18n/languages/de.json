@@ -5225,6 +5225,7 @@
   "物品 %s 超出限购/单位变动，请检查物品和数量": "Artikel %s überschreitet das Kauflimit/Einheit geändert, bitte Artikel und Menge prüfen",
   "物品 %s 超出限购/单位变动，请检查物品和数量。": "Artikel %s überschreitet das Kauflimit/Einheitenänderung, bitte prüfen Sie den Artikel und die Menge.",
   "物品 %s 重复": "Artikel %s ist doppelt vorhanden",
+  "物品%s已关闭/被删除。请检查物品情况": "Artikel %s wurde geschlossen/gelöscht. Bitte überprüfen Sie den Artikelstatus",
   "物品%s已禁用": "Artikel %s wurde deaktiviert",
   "物品%s未找到": "Artikel %s nicht gefunden",
   "物品%s状态已关闭，请修改物品状态": "Der Status des Artikels %s wurde geschlossen. Bitte ändern Sie den Artikelstatus.",
