@@ -85,7 +85,15 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 
 	// 构建明细项目
 	itemList := make([]erp.StockReconciliationItem, 0)
+	processedItems := make(map[string]bool) // 记录已处理的物品，防止重复
 	for _, item := range req.Items {
+		// 防御性校验：跳过重复物品，只保留第一条
+		if processedItems[item.ItemCode] {
+			g.Log().Warningf(ctx, "物品[%s]重复，跳过后续记录", item.ItemCode)
+			continue
+		}
+		processedItems[item.ItemCode] = true
+
 		// 判断当前仓库已有库存是否与盘点数量一致，如果一致就不要继续新增盘点记录了
 		// 从预查询的 Bin map 中获取库存数量
 		actualQty := binActualQtyMap[item.ItemCode]
