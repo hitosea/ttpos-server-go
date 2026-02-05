@@ -20,6 +20,7 @@ class CreateStockLossTables extends Migrator
     {
         $this->createStockLossTable();
         $this->createStockLossItemTable();
+        $this->createStockLossItemUnitTable();
         $this->createStockLossAnnotationTable();
         $this->createStockLossFileTable();
     }
@@ -72,16 +73,38 @@ class CreateStockLossTables extends Migrator
             ->addColumn('stock_loss_uuid', 'biginteger', ['default' => 0, 'comment' => '报损单UUID'])
             ->addColumn('material_uuid', 'biginteger', ['default' => 0, 'comment' => '物料UUID'])
             ->addColumn('material_name', 'text', ['null' => true, 'comment' => '物料名称'])
-            ->addColumn('material_unit_uuid', 'biginteger', ['default' => 0, 'comment' => '物料单位UUID'])
-            ->addColumn('material_unit_name', 'text', ['null' => true, 'comment' => '物料单位名称'])
-            ->addColumn('quantity', 'decimal', ['precision' => 14, 'scale' => 4, 'default' => '0.0000', 'comment' => '报损数量'])
+            ->addColumn('base_quantity', 'decimal', ['precision' => 14,'scale' => 4,'default' => '0.0000','comment' => '基准单位数量（所有单位转换后的总量）','after' => 'material_unit_name'])
             ->addColumn('create_time', 'integer', ['default' => 0, 'comment' => '创建时间'])
             ->addColumn('update_time', 'integer', ['default' => 0, 'comment' => '更新时间'])
             ->addColumn('delete_time', 'integer', ['default' => 0, 'comment' => '删除时间'])
             ->addIndex(['uuid'], ['unique' => true])
             ->addIndex(['stock_loss_uuid'])
             ->addIndex(['material_uuid'])
-            ->addIndex(['material_unit_uuid'])
+            ->create();
+    }
+
+    /**
+     * 创建报损单物品单位明细表
+     */
+    protected function createStockLossItemUnitTable()
+    {
+        if ($this->hasTable('stock_loss_item_unit')) {
+            return;
+        }
+
+        $table = $this->table('stock_loss_item_unit', ['comment' => '报损单物品单位明细表']);
+
+        $table->addColumn('uuid', 'biginteger', ['default' => 0, 'comment' => '报损单物品单位明细UUID'])
+            ->addColumn('stock_loss_item_uuid', 'biginteger', ['default' => 0, 'comment' => '报损单物品明细UUID'])
+            ->addColumn('material_unit_uuid', 'biginteger', ['default' => 0, 'comment' => '物料单位UUID'])
+            ->addColumn('material_unit_name', 'text', ['null' => true, 'comment' => '物料单位名称（多语言JSON备份）'])
+            ->addColumn('quantity', 'decimal', ['precision' => 22, 'scale' => 4, 'null' => true, 'comment' => '单位数量'])
+            ->addColumn('create_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '创建时间'])
+            ->addColumn('update_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '更新时间'])
+            ->addColumn('delete_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '删除时间'])
+            ->addIndex(['uuid'], ['unique' => true, 'name' => 'unique_uuid'])
+            ->addIndex(['stock_loss_item_uuid'], ['name' => 'idx_stock_loss_item_uuid'])
+            ->addIndex(['material_unit_uuid'], ['name' => 'idx_material_unit_uuid'])
             ->create();
     }
 
