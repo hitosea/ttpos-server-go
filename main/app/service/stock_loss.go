@@ -1326,7 +1326,7 @@ func (s *stockLossSrv) parseErpErrorForStockLoss(db *gorm.DB, errMsg string, def
 		name, internalCode := s.getMaterialInfoByCode(db, erpCode, defaultLang)
 		displayName := formatMaterialNameForError(name, internalCode)
 		// 翻译: 物品XXX状态已关闭，请修改物品状态（使用现有翻译键）
-		return errors.New(i18n.Translate(defaultLang, "物品%s状态已关闭，请修改物品状态", displayName))
+		return errors.New(i18n.Translate(defaultLang, "物品%s已关闭/被删除。请检查物品情况", displayName))
 	}
 
 	// 模式2: XXX is not a stock Item
