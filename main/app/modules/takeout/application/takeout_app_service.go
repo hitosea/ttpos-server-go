@@ -335,6 +335,8 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 		// Grab 平台使用专用的加载方法（直接返回 Grab 格式）
 		if req.Platform == value_object.TakeoutPlatformLineman {
 			grabConverter.SetNameMaxLength(5000)
+		} else {
+			grabConverter.SetNameMaxLength(40)
 		}
 		platformData, err = grabConverter.LoadMenuFromDatabase(ctx, req.Platform, companyUuid, req.CurrencyUnit, []uint64{})
 		if err != nil {
