@@ -90,6 +90,7 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 | Proposal | 说明 | 状态 |
 | --- | --- | --- |
+| [all-order-operation-duration](2026-02/all-order-operation-duration.md) | 订单操作耗时记录（性能监控+分布式追踪） | 待评审 |
 | [shop-report-pagination-fix](2026-02/shop-report-pagination-fix.md) | 门店统计报表分页数据不一致修复 | 待评审 |
 | [shop-purchase-allow-control](2026-02/shop-purchase-allow-control.md) | 采购限制方案-是否允许采购控制 | 待评审 |
 | [shop-store-summary-fields](2026-02/shop-store-summary-fields.md) | 门店汇总统计字段优化（名称、排序、现金统计、导出） | 待评审 |
@@ -122,5 +123,5 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 ---
 
-**最后更新**: 2026-02-04
+**最后更新**: 2026-02-05
 

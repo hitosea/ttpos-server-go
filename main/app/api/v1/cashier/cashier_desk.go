@@ -328,8 +328,14 @@ func (h *DeskHandler) MergeDesk(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, "merge_desk").
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	//
 	info, deskMergeCheckResp, err := h.deskSrv.MergeDesk(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		if deskMergeCheckResp == nil {
 			deskMergeCheckResp = &resp.DeskMergeCheckResp{}
@@ -455,6 +461,11 @@ func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 	}
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // 重新写入数据
 
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, "order_discount").
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
+
 	var shopCart *resp.ShopCart
 	var err error
 	// 改价
@@ -484,6 +495,8 @@ func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 		}
 		shopCart, err = h.orderSrv.OrderZeroRule(ctx, zeroRuleReq)
 	}
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1473,9 +1486,15 @@ func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, "payment_finish").
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	ctx.Log().Info("桌台销售订单的付款结账", zap.Any("params", params))
 	// 桌台销售订单的付款结账
 	res, err := h.orderSrv.InstantOrderPaymentFinish(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
 	if err != nil {
 		if strings.Contains(err.Error(), "请刷新优惠券列表") {
 			// 获取销售订单的付款信息

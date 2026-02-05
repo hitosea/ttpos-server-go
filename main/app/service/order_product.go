@@ -660,6 +660,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 
 // InstantOrderCartProductCooking 送厨购物车商品
 func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error) {
+	// 用defer的方式是因为这个方法可能因为多个原因return, 所以用defer的方式来确保分批送厨的逻辑一定会执行
 	defer func() { // 送厨结束后，执行分批送厨
 		if !req.IsCheckCooking { // 只有真送厨时才会送厨预送厨的商品. IsCheckCooking为true时,表示助手端在进行送厨检查,不需要实际进行送厨
 			// 助手端前置模式：分批送厨（每次点击下单都送优先级最高的分批类型）
@@ -734,6 +735,36 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		return nil, nil, errors.New("没有未送厨的商品")
 	} else if len(unCookingSaleOrderProducts) == 0 && len(h5OrderProductUnAccept) == 0 && nonNeedBatchSendCooking {
 		if !req.IgnoreMust { // 如果不是在结账检查时送厨，才返回-209，否则直接不分批送厨而是使用正常送厨
+			// 修复39526问题 2 ： 前置分批送厨 - 选择2个不同分批送厨商品 - > 现状：第2批次送厨无响应  -> 期望：可正常送厨
+			// 当没有未送厨的商品时，需要再执行一次分批送厨
+			// 送厨结束后，执行分批送厨
+			if !req.IsCheckCooking { // 只有真送厨时才会送厨预送厨的商品. IsCheckCooking为true时,表示助手端在进行送厨检查,不需要实际进行送厨
+				// 助手端前置模式：分批送厨（每次点击下单都送优先级最高的分批类型）
+				// 任务39416:减少分批送厨步骤（收银机）. 收银机也参考助手端的逻辑进行分批送厨. 如果客户端版本大于等于v2.17.0 则使用该逻辑
+				useFeature := false // 是否使用该功能,默认不使用.为了兼容旧版本的收银机
+				if ctx.GetSource() == constant.SourceCashier && utils.CompareVersion(ctx.GetVersion(), utils.VersionGTE, constant.ClientVersionV2170) {
+					useFeature = true
+				}
+				if useFeature {
+					db := s.dbm.GetDB(ctx.GetDbId())
+					batchCookingMode, err := repository.NewOrderRepo(db).GetSaleBillBatchCookingMode(req.SaleBillUuid)
+					if err != nil {
+						ctx.Log().Info("获取销售账单的分批送厨模式失败,导致不能分批送厨", zap.Error(err))
+					} else if batchCookingMode == constant.BatchCookingModePre { // 前置模式时，才执行分批送厨
+						// 同步执行分批送厨，阻塞流程,为了送厨后收银机立即看到送厨状态
+						ctx := ctx.Copy()
+						if err := s.AutoSendCookingByPriority(ctx, req.SaleBillUuid); err != nil {
+							ctx.Log().Error("分批送厨失败", zap.Error(err))
+						}
+					}
+					ctx.Log().Debug("获取新的购物车信息")
+					cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+					if err != nil {
+						return nil, nil, errors.WithMessage(err, "获取购物车信息失败")
+					}
+					return cartInfo, nil, nil
+				}
+			}
 			return nil, &resp.OrderCheckServiceRes{
 				Code: constant.CodeOrderCheckProductBatch,
 			}, nil
