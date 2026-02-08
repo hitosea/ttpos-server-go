@@ -201,25 +201,25 @@ func (v *purchaseOrderValidator) validateReceiptQuantityNew(
 		for _, unit := range unitList {
 			reqNum += unit.Num
 		}
-		if reqNum > orderItem.Num {
-			return errors.New(fmt.Sprintf("物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）", language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()), orderItem.Num, orderItem.ArrivalNum, reqNum)), reqNum
-		}
+		// if reqNum > orderItem.Num {
+		// 	return errors.New(fmt.Sprintf("物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）", language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()), orderItem.Num, orderItem.ArrivalNum, reqNum)), reqNum
+		// }
 	} else {
 		for _, unit := range unitList {
 			for _, orderItemUnit := range orderItem.Units {
 				if orderItemUnit.UnitUuid == unit.Uuid {
-					newArrivalNum := orderItemUnit.ArrivalNum + unit.Num
-					if newArrivalNum > orderItemUnit.Num {
-						return errors.New(
-							fmt.Sprintf(
-								i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）"),
-								language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()),
-								orderItemUnit.Num,
-								orderItemUnit.ArrivalNum,
-								unit.Num,
-							),
-						), reqNum
-					}
+					// newArrivalNum := orderItemUnit.ArrivalNum + unit.Num
+					// if newArrivalNum > orderItemUnit.Num {
+					// 	return errors.New(
+					// 		fmt.Sprintf(
+					// 			i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）"),
+					// 			language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()),
+					// 			orderItemUnit.Num,
+					// 			orderItemUnit.ArrivalNum,
+					// 			unit.Num,
+					// 		),
+					// 	), reqNum
+					// }
 					reqNum += unit.Num
 				}
 			}
@@ -515,11 +515,11 @@ func (v *purchaseOrderValidator) validateDNReceipt(
 		}
 
 		// 校验收货数量不超过DN待收数量
-		alreadyReceived := receivedQtyMap[materialCode]
-		pendingQty := dnInfo.Qty - alreadyReceived
-		if thisReceiptQty > pendingQty {
-			return nil, errors.New(fmt.Sprintf("物品 %s 收货数量(%.2f)超过DN待收数量(%.2f)", materialName, thisReceiptQty, pendingQty))
-		}
+		// alreadyReceived := receivedQtyMap[materialCode]
+		// pendingQty := dnInfo.Qty - alreadyReceived
+		// if thisReceiptQty > pendingQty {
+		// 	return nil, errors.New(fmt.Sprintf("物品 %s 收货数量(%.2f)超过DN待收数量(%.2f)", materialName, thisReceiptQty, pendingQty))
+		// }
 	}
 
 	return &DNReceiptValidationResult{

@@ -5205,6 +5205,8 @@
   "物品 %s 库存不足\n\n请补充库存": "Ürün %s stokta yetersiz\n\nLütfen stoğu tamamlayın",
   "物品 %s 库存不足\\n\\n请补充库存": "Ürün %s stokta yetersiz\\n\\nLütfen stoğu tamamlayın",
   "物品 %s 库存不足，请补充库存": "%s ürününün stoğu yetersiz, lütfen stoğu tamamlayın",
+  "物品 %s 数量超出限额 %s，如需超额收货，请设置物品超收限额比例": "%s ürünü miktarı limiti %s aştı. Fazla teslimata izin vermek için lütfen ürünün fazla teslimat tolerans oranını ayarlayın",
+  "收货数量超出限额，如需超额收货，请设置物品超收限额比例": "Teslimat miktarı limiti aşıyor. Fazla teslimata izin vermek için lütfen ürünün fazla teslimat tolerans oranını ayarlayın",
   "物品 %s 收货数量(%.2f)超过DN待收数量(%.2f)": "品目 %s の受領数量(%.2f)がDNの未受領数量(%.2f)を超えています",
   "物品 %s 未找到。": "Ürün %s bulunamadı.",
   "物品 %s 未找到。\n\n提交后将移除该物品，是否确认提交？": "%s ürünü bulunamadı.\n\nGönderdikten sonra bu ürün kaldırılacaktır, göndermek istediğinizden emin misiniz?",

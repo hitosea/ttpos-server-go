@@ -5205,6 +5205,8 @@
   "物品 %s 库存不足\n\n请补充库存": "Unzureichender Bestand für Artikel %s\n\nBitte füllen Sie den Bestand auf",
   "物品 %s 库存不足\\n\\n请补充库存": "Artikel %s ist nicht ausreichend auf Lager\\n\\nBitte füllen Sie den Lagerbestand auf",
   "物品 %s 库存不足，请补充库存": "Unzureichender Bestand für Artikel %s, bitte Lager auffüllen",
+  "物品 %s 数量超出限额 %s，如需超额收货，请设置物品超收限额比例": "Artikel %s Menge überschreitet Limit um %s. Um Überlieferung zu erlauben, bitte den Überlieferungs-Toleranzwert des Artikels einstellen",
+  "收货数量超出限额，如需超额收货，请设置物品超收限额比例": "Empfangsmenge überschreitet Limit. Um Überlieferung zu erlauben, bitte den Überlieferungs-Toleranzwert einstellen",
   "物品 %s 收货数量(%.2f)超过DN待收数量(%.2f)": "Die Empfangsmenge für Artikel %s (%.2f) überschreitet die noch ausstehende DN-Menge (%.2f)",
   "物品 %s 未找到。": "Artikel %s nicht gefunden.",
   "物品 %s 未找到。\n\n提交后将移除该物品，是否确认提交？": "Artikel %s wurde nicht gefunden.\n\nNach dem Absenden wird dieser Artikel entfernt. Möchten Sie fortfahren?",

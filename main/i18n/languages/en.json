@@ -5205,6 +5205,8 @@
   "物品 %s 库存不足\n\n请补充库存": "Insufficient stock for item %s\n\nPlease replenish the stock",
   "物品 %s 库存不足\\n\\n请补充库存": "Item %s is out of stock\\n\\nPlease restock",
   "物品 %s 库存不足，请补充库存": "Insufficient stock for item %s, please replenish inventory",
+  "物品 %s 数量超出限额 %s，如需超额收货，请设置物品超收限额比例": "Item %s quantity exceeds limit by %s. To allow over receipt, please set the item's over receipt allowance ratio",
+  "收货数量超出限额，如需超额收货，请设置物品超收限额比例": "Receipt quantity exceeds limit. To allow over receipt, please set the item's over receipt allowance ratio",
   "物品 %s 收货数量(%.2f)超过DN待收数量(%.2f)": "Item %s receipt quantity (%.2f) exceeds DN pending quantity (%.2f)",
   "物品 %s 未找到。": "Item %s not found.",
   "物品 %s 未找到。\n\n提交后将移除该物品，是否确认提交？": "Item %s not found.\n\nAfter submission, this item will be removed. Do you want to proceed?",
