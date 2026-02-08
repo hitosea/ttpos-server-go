@@ -287,55 +287,77 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 	receipt := &erp.PurchaseReceipt{}
 	j.GetJson("data").Scan(&receipt)
 
+	// 获取采购订单信息（用于超收场景和物品匹配）
+	purchaseOrder, err := service.Buying().GetPurchaseOrder(ctx, &buying.GetPurchaseOrderReq{
+		PurchaseOrderName: req.PurchaseOrderName,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取采购订单失败")
+	}
+
 	//根据入参调整item
 	if req.Items != nil && len(req.Items) > 0 {
 		receiptItems := make([]*erp.PurchaseReceiptItem, 0)
-		//获取采购单中所有物品编码
-		// purchaseItemCodeList := make([]string, len(receipt.Items))
-		// _warehouse := receipt.SetWarehouse
-		// for _, item := range receipt.Items {
-		// 	purchaseItemCodeList = append(purchaseItemCodeList, item.ItemCode)
-		// 	if len(item.Warehouse) > 0 {
-		// 		_warehouse = item.Warehouse
-		// 	}
-		// }
-		// gPurchaseItemCodeList := garray.NewStrArrayFrom(purchaseItemCodeList)
+
 		for _, itemReq := range req.Items {
-			//获取已有物品
-			var existsItem *erp.PurchaseReceiptItem
+			var receiptItem *erp.PurchaseReceiptItem
+
+			// 首先尝试从待收货列表中匹配（正常收货场景）
 			for _, item := range receipt.Items {
 				if item.ItemCode == itemReq.ItemCode && item.Uom == itemReq.Uom {
-					existsItem = item
+					receiptItem = &erp.PurchaseReceiptItem{}
+					gvar.New(item).Clone().Scan(receiptItem)
+					receiptItem.Qty = itemReq.Qty
 					break
 				}
 			}
 
+			// 如果待收货列表为空或未找到匹配项，从采购订单物品中构建（超收场景）
+			if receiptItem == nil {
+				for _, poItem := range purchaseOrder.Items {
+					if poItem.ItemCode == itemReq.ItemCode && poItem.Uom == itemReq.Uom {
+						receiptItem = &erp.PurchaseReceiptItem{
+							ItemCode:          poItem.ItemCode,
+							ItemName:          poItem.ItemName,
+							ItemGroup:         poItem.ItemGroup,
+							Description:       poItem.Description,
+							Qty:               itemReq.Qty,
+							Uom:               poItem.Uom,
+							StockUom:          poItem.StockUom,
+							ConversionFactor:  poItem.ConversionFactor,
+							Rate:              poItem.Rate,
+							BaseRate:          poItem.BaseRate,
+							PriceListRate:     poItem.PriceListRate,
+							BasePriceListRate: poItem.BasePriceListRate,
+							Warehouse:         poItem.Warehouse,
+							PurchaseOrder:     req.PurchaseOrderName,
+							PurchaseOrderItem: poItem.Name,
+							CostCenter:        poItem.CostCenter,
+							ExpenseAccount:    poItem.ExpenseAccount,
+						}
+						break
+					}
+				}
+			}
+
 			// 校验：请求的物品必须在采购单中存在
-			if existsItem == nil {
-				g.Log().Warningf(ctx, "物品 %s 不在采购单中，跳过", itemReq.ItemCode)
+			if receiptItem == nil {
+				g.Log().Warningf(ctx, "物品 %s (单位: %s) 不在采购单中，跳过", itemReq.ItemCode, itemReq.Uom)
 				continue
 			}
 
-			//复制已有物品，根据请求参数设置收货数量和单位
-			receiptItem := &erp.PurchaseReceiptItem{}
-			gvar.New(existsItem).Clone().Scan(receiptItem)
-			receiptItem.Qty = itemReq.Qty
 			receiptItems = append(receiptItems, receiptItem)
-
-			// if gPurchaseItemCodeList.Contains(itemReq.ItemCode) {
-			// 	if len(itemReq.Warehouse) > 0 {
-			// 		_warehouse = itemReq.Warehouse
-			// 	}
-			// 	receiptItems = append(receiptItems, &erp.PurchaseReceiptItem{
-			// 		ItemCode:      itemReq.ItemCode,
-			// 		Qty:           itemReq.Qty,
-			// 		Uom:           itemReq.Uom,
-			// 		Warehouse:     _warehouse,
-			// 		PurchaseOrder: req.PurchaseOrderName,
-			// 	})
-			// }
 		}
+
+		// 校验处理后的物品列表不为空
+		if len(receiptItems) == 0 {
+			return nil, gerror.Newf("没有有效的收货物品，请检查请求的物品是否在采购订单 %s 中", req.PurchaseOrderName)
+		}
+
 		receipt.Items = receiptItems
+	} else if len(receipt.Items) == 0 {
+		// 如果未指定收货物品且待收货列表为空，返回错误
+		return nil, gerror.Newf("采购订单 %s 没有待收货的物品，请指定要收货的物品列表", req.PurchaseOrderName)
 	}
 
 	// 设置跨公司订单引用
@@ -344,8 +366,40 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 		receipt.InterCompanyReference = req.InterCompanyReference
 	}
 
+	// 将结构体转换为 map，以便手动设置计算字段
+	// 解决 omitempty 导致 0 值字段被省略，ERPNext 收到 None 引发 TypeError
+	receiptMap := gconv.Map(receipt)
+
+	// 禁用舍入总额，让 ERPNext 使用 grand_total 而不是 rounded_total
+	receiptMap["disable_rounded_total"] = true
+
+	// 清除所有计算字段（设置为 0），让 ERPNext 根据新的 items 列表重新计算
+	// 由于使用 map，这些字段会被保留而不会因为 omitempty 被省略
+	receiptMap["total"] = 0
+	receiptMap["net_total"] = 0
+	receiptMap["base_total"] = 0
+	receiptMap["base_net_total"] = 0
+	receiptMap["grand_total"] = 0
+	receiptMap["base_grand_total"] = 0
+	receiptMap["rounded_total"] = 0
+	receiptMap["base_rounded_total"] = 0
+	receiptMap["rounding_adjustment"] = 0
+	receiptMap["base_rounding_adjustment"] = 0
+	receiptMap["total_qty"] = 0
+	receiptMap["total_net_weight"] = 0
+	receiptMap["total_taxes_and_charges"] = 0
+	receiptMap["base_total_taxes_and_charges"] = 0
+	receiptMap["tax_withholding_net_total"] = 0
+	receiptMap["base_tax_withholding_net_total"] = 0
+	receiptMap["taxes_and_charges_added"] = 0
+	receiptMap["taxes_and_charges_deducted"] = 0
+	receiptMap["base_taxes_and_charges_added"] = 0
+	receiptMap["base_taxes_and_charges_deducted"] = 0
+	receiptMap["in_words"] = ""
+	receiptMap["base_in_words"] = ""
+
 	//创建采购收货订单
-	resp, err = service.Document().Create(ctx, erp.DocTypePurchaseReceipt, receipt)
+	resp, err = service.Document().Create(ctx, erp.DocTypePurchaseReceipt, receiptMap)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建采购收货订单失败")
 	}
@@ -357,6 +411,17 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 	// 提交订单
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseReceipt, receipt.Name, erp.DocstatusSubmitted)
 	if err != nil {
+		// 如果是超收错误，删除已创建的收货单草稿
+		if strings.Contains(err.Error(), "OverAllowanceError") {
+			if _, deleteErr := service.Document().Delete(ctx, &erp.ErpReq{
+				DocType: erp.DocTypePurchaseReceipt,
+				Name:    receipt.Name,
+			}); deleteErr != nil {
+				g.Log().Warningf(ctx, "删除超收失败的收货单草稿 %s 失败: %v", receipt.Name, deleteErr)
+			} else {
+				g.Log().Infof(ctx, "已删除超收失败的收货单草稿: %s", receipt.Name)
+			}
+		}
 		return nil, gerror.Wrapf(err, "提交采购收货订单失败")
 	}
 	return receipt, nil
