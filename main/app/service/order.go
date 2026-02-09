@@ -1681,7 +1681,7 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 					return errors.WithMessage(err)
 				}
 				// 创建出库单记录
-				if err := repository.NewWarehouseFormRepo(db).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
+				if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
 					return errors.WithMessage(err)
 				}
 			}

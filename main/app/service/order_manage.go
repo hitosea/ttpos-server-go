@@ -935,7 +935,7 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
 	}
 
-	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, err := repository.NewOrderRepo(tx).GetSaleBillAllInfo(req.SaleBillUuid)
 	if err != nil {
 		return errors.WithMessage(err, "销售账单不存在")
 	}
@@ -950,6 +950,9 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	if err := tx.Commit().Error; err != nil {
 		return errors.WithMessage(err)
 	}
+
+	// 恢复数据库连接
+	ctx.SetDB(db)
 
 	// 发布"整单取消"操作事件
 	utils.Go(func() {

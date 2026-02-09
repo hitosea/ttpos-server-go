@@ -532,6 +532,47 @@ func (h *purchaseOrderHelper) extractName(name, after, errorMsg string) string {
 	return ""
 }
 
+// extractOverReceiptInfo 从超收错误信息中提取物品编码和超额数量
+// 错误消息格式: "This document is over limit by <strong>Qty</strong> <strong>5.0</strong> for item <strong>BE02003</strong>..."
+func (h *purchaseOrderHelper) extractOverReceiptInfo(errorMsg string) (itemCode string, overQty string) {
+	// 提取物品编码: for item <strong>BE02003</strong>
+	itemCodeRe := regexp.MustCompile(`for item\s*<strong>([^<]+)</strong>`)
+	itemCodeMatches := itemCodeRe.FindStringSubmatch(errorMsg)
+	if len(itemCodeMatches) > 1 {
+		itemCode = strings.TrimSpace(itemCodeMatches[1])
+	}
+
+	// 提取超额数量: <strong>Qty</strong> <strong>5.0</strong>
+	qtyRe := regexp.MustCompile(`<strong>Qty</strong>\s*<strong>([^<]+)</strong>`)
+	qtyMatches := qtyRe.FindStringSubmatch(errorMsg)
+	if len(qtyMatches) > 1 {
+		overQty = strings.TrimSpace(qtyMatches[1])
+	}
+
+	return itemCode, overQty
+}
+
+// getItemNameByCode 根据物品编码获取物品名称
+func (h *purchaseOrderHelper) getItemNameByCode(ctx context.Context, itemCode string) string {
+	db := ctx.GetDB()
+	if db == nil {
+		return ""
+	}
+
+	materialRepo := repository.NewMaterialRepo(db)
+	material, err := materialRepo.GetMaterialByCode(itemCode, materialRepo.WithMultiLanguageName())
+	if err != nil {
+		return ""
+	}
+
+	// 优先使用多语言名称
+	if name := material.MultiLanguageName.GetNameByLangWithFallback(ctx.GetLanguage()); name != "" {
+		return name
+	}
+
+	return material.Name
+}
+
 // handleErpError 处理ERP错误
 func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error, purchaseOrder *model.PurchaseOrder) error {
 	// 记录日志，方便排查问题
@@ -612,6 +653,26 @@ func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error, pur
 			)
 		}
 		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "物品库存不足，请补充库存")
+	}
+	// 检查超收限额错误
+	// 错误消息格式: "This document is over limit by <strong>Qty</strong> <strong>5.0</strong> for item <strong>BE02003</strong>..."
+	if strings.Contains(err.Error(), "Over Receipt/Delivery Allowance") {
+		itemCode, overQty := h.extractOverReceiptInfo(err.Error())
+		if itemCode != "" {
+			// 尝试根据物品编码获取物品名称
+			itemName := h.getItemNameByCode(ctx, itemCode)
+			if itemName == "" {
+				itemName = itemCode // 如果获取不到名称，使用编码
+			}
+			return errors.NewWithCode(
+				constant.CodePurchaseOrderSupplierDisabled,
+				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 数量超出限额 %s，如需超额收货，请设置物品超收限额比例"), itemName, overQty),
+			)
+		}
+		return errors.NewWithCode(
+			constant.CodePurchaseOrderSupplierDisabled,
+			i18n.Translate(ctx.GetLanguage(), "收货数量超出限额，如需超额收货，请设置物品超收限额比例"),
+		)
 	}
 	// 未知错误
 	return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled,
