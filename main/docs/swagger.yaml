@@ -10792,6 +10792,66 @@ definitions:
         description: 商家UUID
         type: integer
     type: object
+  resp.CompanyBusinessAverage:
+    properties:
+      avg_customer_price:
+        description: 平均客单价的平均值
+        type: number
+      cash_ac:
+        description: 平均现金AC
+        type: number
+      cash_amount:
+        description: 平均现金金额
+        type: number
+      cash_tc:
+        description: 平均现金TC
+        type: number
+      delivery_amount:
+        description: 平均外卖业绩
+        type: number
+      delivery_order_num:
+        description: 平均外卖订单数
+        type: number
+      desk_num:
+        description: 平均消费桌数
+        type: number
+      desk_order_amount:
+        description: 平均桌台订单金额
+        type: number
+      in_store_amount:
+        description: 平均到店业绩
+        type: number
+      in_store_order_num:
+        description: 平均到店订单数
+        type: number
+      instant_order_amount:
+        description: 平均点餐订单金额
+        type: number
+      meal_num:
+        description: 平均用餐人数
+        type: number
+      order_amount:
+        description: 平均订单金额
+        type: number
+      order_amount_avg:
+        description: 平均单均
+        type: number
+      order_amount_meal_avg:
+        description: 平均人均
+        type: number
+      order_num:
+        description: 平均订单数量
+        type: number
+      pay_amount:
+        description: 平均实付金额
+        type: number
+      pay_amount_avg:
+        description: 平均实付单均
+        type: number
+      takeout_order_amount:
+        description: 平均外送订单金额
+        type: number
+    type: object
   resp.CompanyBusinessSummaryItem:
     properties:
       avg_customer_price:
@@ -10812,12 +10872,24 @@ definitions:
       date:
         description: 营业日（格式：YYYY-MM-DD）
         type: string
+      delivery_amount:
+        description: 外卖业绩（外送+第三方外卖订单金额，保留2位小数）
+        type: number
+      delivery_order_num:
+        description: 外卖订单数（外送+第三方外卖订单数）
+        type: integer
       desk_num:
         description: 消费桌数
         type: integer
       desk_order_amount:
         description: 桌台订单金额（保留2位小数）
         type: number
+      in_store_amount:
+        description: 到店业绩（堂食+外带订单金额，保留2位小数）
+        type: number
+      in_store_order_num:
+        description: 到店订单数（堂食+外带订单数）
+        type: integer
       instant_order_amount:
         description: 点餐订单金额（保留2位小数）
         type: number
@@ -10848,6 +10920,10 @@ definitions:
     type: object
   resp.CompanyBusinessSummaryResp:
     properties:
+      average:
+        allOf:
+        - $ref: '#/definitions/resp.CompanyBusinessAverage'
+        description: 平均值统计（基于筛选后全量数据计算）
       list:
         description: 明细列表或汇总列表
         items:
@@ -10900,6 +10976,18 @@ definitions:
         description: 门店UUID
         type: integer
     type: object
+  resp.CompanyPaymentMethodAverage:
+    properties:
+      payment_amount:
+        description: 平均支付金额
+        type: number
+      payment_num:
+        description: 平均支付笔数
+        type: number
+      payment_ratio:
+        description: 平均支付占比
+        type: number
+    type: object
   resp.CompanyPaymentMethodItem:
     properties:
       payment_name:
@@ -10937,6 +11025,10 @@ definitions:
     type: object
   resp.CompanyPaymentMethodSummaryResp:
     properties:
+      average:
+        allOf:
+        - $ref: '#/definitions/resp.CompanyPaymentMethodAverage'
+        description: 平均值统计（基于筛选后全量数据计算）
       list:
         description: 明细列表或汇总列表
         items:
@@ -10952,8 +11044,38 @@ definitions:
           $ref: '#/definitions/resp.CompanyPaymentMethodSummaryItem'
         type: array
     type: object
+  resp.CompanyRefundAverage:
+    properties:
+      avg_refund_amount:
+        description: 平均退款额的平均值
+        type: number
+      full_refund_amount:
+        description: 平均整单退款金额
+        type: number
+      full_refund_num:
+        description: 平均整单退款笔数
+        type: number
+      partial_refund_amount:
+        description: 平均部分退款金额
+        type: number
+      partial_refund_num:
+        description: 平均部分退款笔数
+        type: number
+      refund_amount:
+        description: 平均退款金额
+        type: number
+      refund_num:
+        description: 平均退款笔数
+        type: number
+      refund_rate:
+        description: 平均退款率
+        type: number
+    type: object
   resp.CompanyRefundSummaryItem:
     properties:
+      avg_refund_amount:
+        description: 平均退款额（退款金额/退款单数，保留2位小数）
+        type: number
       company_name:
         description: 门店名称
         type: string
@@ -10984,6 +11106,10 @@ definitions:
     type: object
   resp.CompanyRefundSummaryResp:
     properties:
+      average:
+        allOf:
+        - $ref: '#/definitions/resp.CompanyRefundAverage'
+        description: 平均值统计（基于筛选后全量数据计算）
       list:
         description: 明细列表或汇总列表
         items:
