@@ -850,7 +850,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 		fmt.Sprintf("IF(MAX(toi.ttpos_product_type) = 1, '', COALESCE(MAX(JSON_UNQUOTE(JSON_EXTRACT(toim.ttpos_modifier_name, '$.%s'))), '')) AS flavor_name", language),
 		// 单价：从 product_bom 表获取
 		// 普通商品使用 pb_flavor.price，套餐商品使用 pb_package.price
-		fmt.Sprintf("COALESCE(MAX(IF(toi.ttpos_product_type = 1, pb_package.price, pb_flavor.price)), 0) AS sale_price"),
+		fmt.Sprintf("COALESCE(MAX(IF(toim.id IS NULL, toi.ttpos_price ,IF(toi.ttpos_product_type = 1, pb_package.price, pb_flavor.price))), 0) AS sale_price"),
 		// 销量：所有 validOrderStates 都统计（包括取消订单）
 		"SUM(CAST(toi.quantity AS DECIMAL(14,2))) AS sale_num",
 		// 合计：只统计 businessOrderStates（不包括取消订单），使用商品实收=单价*数量
@@ -865,7 +865,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 	).
 		// 按 product_bom_uuid 分组，和 CountProduct 一致
 		// 普通商品使用 pb_flavor.uuid，套餐商品使用 pb_package.uuid
-		Group("IF(toi.ttpos_product_type = 1, pb_package.uuid, pb_flavor.uuid)").
+		Group("IF(toim.id IS NULL, toi.ttpos_product_package_uuid, IF(toi.ttpos_product_type = 1, pb_package.uuid, pb_flavor.uuid))").
 		// 排序：和 CountProduct 一致
 		Order("ppc_sort ASC").
 		Order("ppc_create_time DESC").

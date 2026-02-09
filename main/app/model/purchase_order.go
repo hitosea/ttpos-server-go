@@ -120,7 +120,7 @@ func (po *PurchaseOrder) CanApprove() bool {
 
 // CanReceive 判断是否可收货
 func (po *PurchaseOrder) CanReceive() bool {
-	return po.Status == constant.PurchaseOrderStatusApproved
+	return po.Status == constant.PurchaseOrderStatusApproved || po.Status == constant.PurchaseOrderStatusCompleted
 }
 
 // GetOrderDate 获取订单日期

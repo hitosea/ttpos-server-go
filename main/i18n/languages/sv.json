@@ -5205,6 +5205,8 @@
   "物品 %s 库存不足\n\n请补充库存": "Otillräckligt lager för artikeln %s\n\nVänligen fyll på lagret",
   "物品 %s 库存不足\\n\\n请补充库存": "Artikel %s har otillräckligt lager\\n\\nVänligen fyll på lagret",
   "物品 %s 库存不足，请补充库存": "Otillräckligt lager för artikel %s, vänligen fyll på lagret",
+  "物品 %s 数量超出限额 %s，如需超额收货，请设置物品超收限额比例": "Artikel %s antal överstiger gränsen med %s. För att tillåta överleverans, ställ in artikelns överleveranstolerans",
+  "收货数量超出限额，如需超额收货，请设置物品超收限额比例": "Mottagningskvantitet överstiger gränsen. För att tillåta överleverans, ställ in artikelns överleveranstolerans",
   "物品 %s 收货数量(%.2f)超过DN待收数量(%.2f)": "Mottagningskvantitet för artikel %s (%.2f) överstiger DN:s väntande kvantitet (%.2f)",
   "物品 %s 未找到。": "Artikel %s hittades inte.",
   "物品 %s 未找到。\n\n提交后将移除该物品，是否确认提交？": "Artikel %s hittades inte.\n\nEfter inskick kommer denna artikel att tas bort. Vill du bekräfta inskick?",
