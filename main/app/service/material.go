@@ -489,13 +489,19 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 					}
 				}
 
-				// 有限购数量时，返回完整配置
+				// 有限购数量时，返回完整配置（需校验 quotaUnit 及其关联单位，避免 nil 解引用）
 				if hasQuotaLimit && quotaLimit > 0 {
+					quotaUnitName := ""
+					quotaUnitLocaleName := dto.LocaleResponse{}
+					if quotaUnit != nil && quotaUnit.Unit != nil && quotaUnit.Unit.MultiLanguageName != (model.MultiLanguageName{}) {
+						quotaUnitName = quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+						quotaUnitLocaleName = quotaUnit.Unit.MultiLanguageName.GetNames()
+					}
 					return material_resp.MaterialQuotaConfig{
 						QuotaLimit:          quotaLimit,
 						QuotaUnitUuid:       quotaUnit.Uuid,
-						QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-						QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
+						QuotaUnitName:       quotaUnitName,
+						QuotaUnitLocaleName: quotaUnitLocaleName,
 						IsAllowPurchase:     isAllowPurchase,
 					}
 				}
