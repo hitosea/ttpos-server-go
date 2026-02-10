@@ -151,10 +151,10 @@ type CompanyPaymentMethodAverage struct {
 // CompanyBusinessSummaryItem 扩展（位于"现金AC"列后）
 type CompanyBusinessSummaryItem struct {
     // ... 现有字段（至 CashAC）
-    InStoreAmount    float64 `json:"in_store_amount"`     // 新增: 到店业绩 = 堂食订单金额 + 外带订单金额
-    InStoreOrderNum  int64   `json:"in_store_order_num"`  // 新增: 到店订单数 = 堂食订单数 + 外带订单数
-    DeliveryAmount   float64 `json:"delivery_amount"`     // 新增: 外卖业绩 = 外送订单金额 + 第三方外卖订单金额
-    DeliveryOrderNum int64   `json:"delivery_order_num"`  // 新增: 外卖订单数 = 外送订单数 + 第三方外卖订单数
+    InStoreAmount    float64 `json:"in_store_amount"`     // 新增: 到店业绩 = 堂食+外带订单金额 - 退款金额 - 反结账金额
+    InStoreOrderNum  int64   `json:"in_store_order_num"`  // 新增: 到店订单数 = 堂食+外带订单数 - 整单退订单数（部分退纳入统计）
+    DeliveryAmount   float64 `json:"delivery_amount"`     // 新增: 外卖业绩 = 外送+第三方外卖订单金额（不含已取消订单）
+    DeliveryOrderNum int64   `json:"delivery_order_num"`  // 新增: 外卖订单数 = 外送+第三方外卖订单数（不含已取消订单）
     // ... 后续字段（MealNum 等）
 }
 ```
@@ -282,10 +282,10 @@ type CompanyPaymentMethodSummaryResp struct {
 
 | 列名 | 英文 | 位置 | 计算公式 |
 |------|------|------|----------|
-| 到店业绩 | In-store Amount | 在"现金AC"后面 | 堂食订单金额 + 外带订单金额 |
-| 到店订单数 | In-store Orders | 在"到店业绩"后面 | 堂食订单数 + 外带订单数 |
-| 外卖业绩 | Delivery Amount | 在"到店订单数"后面 | 外送订单金额 + 第三方外卖订单金额 |
-| 外卖订单数 | Delivery Orders | 在"外卖业绩"后面 | 外送订单数 + 第三方外卖订单数 |
+| 到店业绩 | In-store Amount | 在"现金AC"后面 | DeskOrderAmountEffective + InstantOrderAmountEffective（原始金额 - 退款金额） |
+| 到店订单数 | In-store Orders | 在"到店业绩"后面 | 堂食订单数 + 外带订单数 - 整单退订单数（基于 return_type=1 判断，部分退纳入统计） |
+| 外卖业绩 | Delivery Amount | 在"到店订单数"后面 | 外送订单金额 + 第三方外卖订单金额（不含已取消订单） |
+| 外卖订单数 | Delivery Orders | 在"外卖业绩"后面 | 外送订单数 + 第三方外卖订单数（不含已取消订单） |
 
 ### 退款表新增列
 

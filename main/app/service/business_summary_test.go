@@ -242,43 +242,43 @@ func TestCashACCalculation(t *testing.T) {
 func TestCalculateBusinessAverage_Normal(t *testing.T) {
 	items := []resp.CompanyBusinessSummaryItem{
 		{
-			OrderAmount:      1000.00,
-			PayAmount:        900.00,
-			OrderNum:         10,
-			CashTC:           5,
-			CashAmount:       500.00,
-			CashAC:           100.00,
-			InStoreAmount:    600.00,
-			InStoreOrderNum:  6,
-			DeliveryAmount:   400.00,
-			DeliveryOrderNum: 4,
-			MealNum:          20,
-			DeskNum:          5,
-			AvgCustomerPrice: 45.00,
+			OrderAmount:        1000.00,
+			PayAmount:          900.00,
+			OrderNum:           10,
+			CashTC:             5,
+			CashAmount:         500.00,
+			CashAC:             100.00,
+			InStoreAmount:      600.00,
+			InStoreOrderNum:    6,
+			DeliveryAmount:     400.00,
+			DeliveryOrderNum:   4,
+			MealNum:            20,
+			DeskNum:            5,
+			AvgCustomerPrice:   45.00,
 			OrderAmountMealAvg: 50.00,
-			OrderAmountAvg:   100.00,
-			PayAmountAvg:     90.00,
+			OrderAmountAvg:     100.00,
+			PayAmountAvg:       90.00,
 			InstantOrderAmount: 300.00,
 			DeskOrderAmount:    300.00,
 			TakeoutOrderAmount: 200.00,
 		},
 		{
-			OrderAmount:      2000.00,
-			PayAmount:        1800.00,
-			OrderNum:         20,
-			CashTC:           10,
-			CashAmount:       1000.00,
-			CashAC:           100.00,
-			InStoreAmount:    1200.00,
-			InStoreOrderNum:  12,
-			DeliveryAmount:   800.00,
-			DeliveryOrderNum: 8,
-			MealNum:          40,
-			DeskNum:          10,
-			AvgCustomerPrice: 45.00,
+			OrderAmount:        2000.00,
+			PayAmount:          1800.00,
+			OrderNum:           20,
+			CashTC:             10,
+			CashAmount:         1000.00,
+			CashAC:             100.00,
+			InStoreAmount:      1200.00,
+			InStoreOrderNum:    12,
+			DeliveryAmount:     800.00,
+			DeliveryOrderNum:   8,
+			MealNum:            40,
+			DeskNum:            10,
+			AvgCustomerPrice:   45.00,
 			OrderAmountMealAvg: 50.00,
-			OrderAmountAvg:   100.00,
-			PayAmountAvg:     90.00,
+			OrderAmountAvg:     100.00,
+			PayAmountAvg:       90.00,
 			InstantOrderAmount: 600.00,
 			DeskOrderAmount:    600.00,
 			TakeoutOrderAmount: 400.00,
@@ -392,10 +392,10 @@ func TestCalculateRefundAverage_Empty(t *testing.T) {
 // TestAvgRefundAmountCalculation 测试平均退款额计算
 func TestAvgRefundAmountCalculation(t *testing.T) {
 	tests := []struct {
-		name               string
-		refundAmount       float64
-		refundNum          int64
-		expectedAvgRefund  float64
+		name              string
+		refundAmount      float64
+		refundNum         int64
+		expectedAvgRefund float64
 	}{
 		{
 			name:              "正常计算",

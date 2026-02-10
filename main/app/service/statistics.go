@@ -3054,6 +3054,12 @@ type StatisticsSummaryItem struct {
 	TakeoutOrderNum            int64   `json:"takeout_order_num"`             // 会员外送订单数
 	ExternalTakeoutAmount      float64 `json:"external_takeout_amount"`       // 外卖平台订单金额（Grab/LINE MAN）
 	ExternalTakeoutNum         int64   `json:"external_takeout_num"`          // 外卖平台订单数（Grab/LINE MAN）
+	// 有效订单数（排除整单退款订单，用于到店订单数计算）
+	DeskNumEffective         int64 `json:"desk_num_effective"`          // 有效桌台订单数（排除整单退）
+	InstantOrderNumEffective int64 `json:"instant_order_num_effective"` // 有效店内点餐订单数（排除整单退）
+	// 有效金额（扣除退款，用于到店业绩计算）
+	DeskOrderAmountEffective    float64 `json:"desk_order_amount_effective"`    // 有效桌台订单金额（扣除退款）
+	InstantOrderAmountEffective float64 `json:"instant_order_amount_effective"` // 有效点餐订单金额（扣除退款）
 }
 
 // CountBusinessSummary 统计综合运营
@@ -3133,6 +3139,12 @@ func (s *statisticsSrv) CountBusinessSummary(ctx context.Context, req req.Statis
 			TakeoutOrderNum:            data.TakeoutOrderNum.Int64,
 			ExternalTakeoutAmount:      data.ExternalTakeoutAmount.Float64,
 			ExternalTakeoutNum:         data.ExternalTakeoutNum.Int64,
+			// 有效订单数（排除整单退款订单）
+			DeskNumEffective:         data.DeskNumEffective.Int64,
+			InstantOrderNumEffective: data.InstantOrderNumEffective.Int64,
+			// 有效金额（扣除退款）
+			DeskOrderAmountEffective:    data.DeskOrderAmountEffective.Float64,
+			InstantOrderAmountEffective: data.InstantOrderAmountEffective.Float64,
 		}
 
 		list = append(list, item)
