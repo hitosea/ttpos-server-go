@@ -1,12 +1,5 @@
 {
   "mcpServers": {
-    "DooTask": {
-      "type": "http",
-      "url": "https://t.hitosea.com/apps/mcp_server/mcp",
-      "headers": {
-        "Authorization": "Bearer YIG8ANC8q2RqeOMn60FNUkLDYBBiygMFcY0CDi9WtW0Bdapsl7T-1An43XGK0NK3cqM_ki1KlZuzY4OOGDn-nKnB0kpNgtZ2g_XYpNzCZtOqD9hoKyfoEjwAxml5GcYc"
-      }
-    },
     "Graphiti": {
       "type": "http",
       "url": "http://10.180.10.1:8000/mcp"

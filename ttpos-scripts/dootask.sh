@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# MCP Token 自动更新脚本
-# 功能：定时获取 DooTask 登录 token 并更新 mcp.json 配置文件
+# DooTask MCP 配置脚本
+# 功能：获取 DooTask 登录 token 并通过 claude mcp add 命令配置 MCP 服务器
 
 set -e
 
@@ -15,7 +15,7 @@ ENV_FILE="${SCRIPT_DIR}/.env"
 # 加载 .env 文件
 if [ -f "$ENV_FILE" ]; then
     # 加载环境变量，忽略注释和空行
-    export $(grep -E '^(DOOTASK_EMAIL|DOOTASK_PASSWORD|MCP_JSON_PATHS)=' "$ENV_FILE" | xargs)
+    export $(grep -E '^(DOOTASK_EMAIL|DOOTASK_PASSWORD)=' "$ENV_FILE" | xargs)
 else
     echo "错误: 未找到 .env 文件: $ENV_FILE"
     echo "请复制 .env.example 并填写配置: cp ${SCRIPT_DIR}/.env.example ${SCRIPT_DIR}/.env"
@@ -28,8 +28,8 @@ if [ -z "$DOOTASK_EMAIL" ] || [ -z "$DOOTASK_PASSWORD" ]; then
     exit 1
 fi
 
-# MCP_JSON_PATHS 支持多个文件，用逗号分隔
-MCP_JSON_PATHS="${MCP_JSON_PATHS:-/workspace/project/ttpos-server-go/.mcp.private.json}"
+# DooTask MCP 配置
+DOOTASK_MCP_URL="https://t.hitosea.com/apps/mcp_server/mcp"
 LOGIN_URL="https://t.hitosea.com/api/users/login"
 LOG_FILE="/tmp/update_mcp_token.log"
 
@@ -47,6 +47,11 @@ check_dependencies() {
 
     if ! command -v jq &> /dev/null; then
         log "错误: 未找到 jq 命令，请安装: sudo apt-get install jq"
+        exit 1
+    fi
+
+    if ! command -v claude &> /dev/null; then
+        log "错误: 未找到 claude 命令，请先安装 Claude Code CLI"
         exit 1
     fi
 }
@@ -85,87 +90,28 @@ get_token() {
     echo "$TOKEN"
 }
 
-# 创建 MCP 配置文件（包含 DooTask 配置）
-create_mcp_json() {
-    local mcp_path="$1"
-    local new_token="$2"
-
-    cat > "$mcp_path" << EOF
-{
-  "mcpServers": {
-    "DooTask": {
-      "type": "http",
-      "url": "https://t.hitosea.com/apps/mcp_server/mcp",
-      "headers": {
-        "Authorization": "Bearer ${new_token}"
-      }
-    }
-  }
-}
-EOF
-    log "已创建: $mcp_path"
-}
-
-# 更新单个 mcp.json 文件
-update_single_mcp_json() {
-    local mcp_path="$1"
-    local new_token="$2"
-
-    # 检查文件是否存在，不存在则创建
-    if [ ! -f "$mcp_path" ]; then
-        log "文件不存在，正在创建: $mcp_path"
-        create_mcp_json "$mcp_path" "$new_token"
-        return 0
-    fi
-
-    # 检查文件中是否有 DooTask 配置，没有则添加
-    if ! jq -e '.mcpServers.DooTask' "$mcp_path" > /dev/null 2>&1; then
-        log "添加 DooTask 配置到: $mcp_path"
-        if jq --arg token "$new_token" \
-           '.mcpServers.DooTask = {"type": "http", "url": "https://t.hitosea.com/apps/mcp_server/mcp", "headers": {"Authorization": "Bearer \($token)"}}' \
-           "$mcp_path" > "${mcp_path}.tmp" && \
-        mv "${mcp_path}.tmp" "$mcp_path"; then
-            log "成功添加 DooTask 配置: $mcp_path"
-            return 0
-        else
-            log "错误: 添加配置失败: $mcp_path"
-            return 1
-        fi
-    fi
-
-    # 使用 jq 更新 Authorization header
-    if jq --arg token "$new_token" \
-       '.mcpServers.DooTask.headers.Authorization = "Bearer \($token)"' \
-       "$mcp_path" > "${mcp_path}.tmp" && \
-    mv "${mcp_path}.tmp" "$mcp_path"; then
-        log "成功更新: $mcp_path"
-        return 0
-    else
-        log "错误: 更新失败: $mcp_path"
-        return 1
-    fi
-}
-
-# 更新所有 mcp.json 文件
-update_all_mcp_json() {
+# 使用 claude mcp add 命令添加/更新 DooTask MCP 服务器
+add_dootask_mcp() {
     local new_token="$1"
-    local has_error=0
 
     if [ -z "$new_token" ]; then
         log "错误: token 为空，无法更新"
         return 1
     fi
 
-    # 按逗号分隔遍历所有路径
-    IFS=',' read -ra MCP_PATHS <<< "$MCP_JSON_PATHS"
-    for mcp_path in "${MCP_PATHS[@]}"; do
-        mcp_path=$(echo "$mcp_path" | xargs)
-        if [ -n "$mcp_path" ]; then
-            update_single_mcp_json "$mcp_path" "$new_token" || has_error=1
-        fi
-    done
+    log "正在使用 claude mcp add 命令配置 DooTask..."
 
-    return $has_error
+    # 使用 claude mcp add 命令添加 MCP 服务器
+    # --transport http 指定传输类型
+    # --header 设置 Authorization header
+    if claude mcp add --transport http DooTask "$DOOTASK_MCP_URL" \
+        --header "Authorization: Bearer ${new_token}" 2>&1 | tee -a "$LOG_FILE"; then
+        log "成功配置 DooTask MCP 服务器"
+        return 0
+    else
+        log "错误: claude mcp add 命令执行失败"
+        return 1
+    fi
 }
 
 # 主函数
@@ -180,7 +126,7 @@ main() {
         exit 1
     fi
 
-    update_all_mcp_json "$NEW_TOKEN"
+    add_dootask_mcp "$NEW_TOKEN"
     if [ $? -eq 0 ]; then
         log "========== Token 更新完成 =========="
         exit 0
