@@ -20,6 +20,30 @@ type CompanyBusinessSummaryResp struct {
 	Meta       dto.PageResponse             `json:"meta"`        // 分页信息
 	List       []CompanyBusinessSummaryItem `json:"list"`        // 明细列表或汇总列表
 	SummaryRow CompanyBusinessSummaryItem   `json:"summary_row"` // 汇总行（明细表返回默认值，汇总表返回汇总数据）
+	Average    CompanyBusinessAverage       `json:"average"`     // 平均值统计（基于筛选后全量数据计算）
+}
+
+// CompanyBusinessAverage 门店营业数据平均值
+type CompanyBusinessAverage struct {
+	OrderAmount        float64 `json:"order_amount"`          // 平均订单金额
+	PayAmount          float64 `json:"pay_amount"`            // 平均实付金额
+	OrderNum           float64 `json:"order_num"`             // 平均订单数量
+	CashTC             float64 `json:"cash_tc"`               // 平均现金TC
+	CashAmount         float64 `json:"cash_amount"`           // 平均现金金额
+	CashAC             float64 `json:"cash_ac"`               // 平均现金AC
+	InStoreAmount      float64 `json:"in_store_amount"`       // 平均到店业绩
+	InStoreOrderNum    float64 `json:"in_store_order_num"`    // 平均到店订单数
+	DeliveryAmount     float64 `json:"delivery_amount"`       // 平均外卖业绩
+	DeliveryOrderNum   float64 `json:"delivery_order_num"`    // 平均外卖订单数
+	MealNum            float64 `json:"meal_num"`              // 平均用餐人数
+	DeskNum            float64 `json:"desk_num"`              // 平均消费桌数
+	AvgCustomerPrice   float64 `json:"avg_customer_price"`    // 平均客单价的平均值
+	OrderAmountMealAvg float64 `json:"order_amount_meal_avg"` // 平均人均
+	OrderAmountAvg     float64 `json:"order_amount_avg"`      // 平均单均
+	PayAmountAvg       float64 `json:"pay_amount_avg"`        // 平均实付单均
+	InstantOrderAmount float64 `json:"instant_order_amount"`  // 平均点餐订单金额
+	DeskOrderAmount    float64 `json:"desk_order_amount"`     // 平均桌台订单金额
+	TakeoutOrderAmount float64 `json:"takeout_order_amount"`  // 平均外送订单金额
 }
 
 // CompanyBusinessSummaryItem 门店营业数据汇总项
@@ -34,6 +58,10 @@ type CompanyBusinessSummaryItem struct {
 	CashTC             int64   `json:"cash_tc"`               // 现金TC（现金支付订单数）
 	CashAmount         float64 `json:"cash_amount"`           // 现金金额（现金支付总金额，保留2位小数）
 	CashAC             float64 `json:"cash_ac"`               // 现金AC（现金金额/现金TC，保留2位小数）
+	InStoreAmount      float64 `json:"in_store_amount"`       // 到店业绩（堂食+外带订单金额，保留2位小数）
+	InStoreOrderNum    int64   `json:"in_store_order_num"`    // 到店订单数（堂食+外带订单数）
+	DeliveryAmount     float64 `json:"delivery_amount"`       // 外卖业绩（外送+第三方外卖订单金额，保留2位小数）
+	DeliveryOrderNum   int64   `json:"delivery_order_num"`    // 外卖订单数（外送+第三方外卖订单数）
 	MealNum            int64   `json:"meal_num"`              // 用餐人数
 	DeskNum            int64   `json:"desk_num"`              // 消费桌数
 	AvgCustomerPrice   float64 `json:"avg_customer_price"`    // 平均客单价（实付金额/用餐人数，保留2位小数）
@@ -50,6 +78,14 @@ type CompanyPaymentMethodSummaryResp struct {
 	Meta       dto.PageResponse                  `json:"meta"`        // 分页信息
 	List       []CompanyPaymentMethodSummaryItem `json:"list"`        // 明细列表或汇总列表
 	SummaryRow []CompanyPaymentMethodSummaryItem `json:"summary_row"` // 汇总行（明细表返回空数组，汇总表返回按支付方式分组的汇总数据）
+	Average    CompanyPaymentMethodAverage       `json:"average"`     // 平均值统计（基于筛选后全量数据计算）
+}
+
+// CompanyPaymentMethodAverage 门店支付方式平均值
+type CompanyPaymentMethodAverage struct {
+	PaymentAmount float64 `json:"payment_amount"` // 平均支付金额
+	PaymentNum    float64 `json:"payment_num"`    // 平均支付笔数
+	PaymentRatio  float64 `json:"payment_ratio"`  // 平均支付占比
 }
 
 // CompanyPaymentMethodSummaryItem 门店支付方式汇总项
@@ -69,6 +105,19 @@ type CompanyRefundSummaryResp struct {
 	Meta       dto.PageResponse           `json:"meta"`        // 分页信息
 	List       []CompanyRefundSummaryItem `json:"list"`        // 明细列表或汇总列表
 	SummaryRow CompanyRefundSummaryItem   `json:"summary_row"` // 汇总行（明细表返回默认值，汇总表返回汇总数据）
+	Average    CompanyRefundAverage       `json:"average"`     // 平均值统计（基于筛选后全量数据计算）
+}
+
+// CompanyRefundAverage 门店退款金额平均值
+type CompanyRefundAverage struct {
+	RefundAmount        float64 `json:"refund_amount"`         // 平均退款金额
+	RefundNum           float64 `json:"refund_num"`            // 平均退款笔数
+	RefundRate          float64 `json:"refund_rate"`           // 平均退款率
+	AvgRefundAmount     float64 `json:"avg_refund_amount"`     // 平均退款额的平均值
+	PartialRefundAmount float64 `json:"partial_refund_amount"` // 平均部分退款金额
+	PartialRefundNum    float64 `json:"partial_refund_num"`    // 平均部分退款笔数
+	FullRefundAmount    float64 `json:"full_refund_amount"`    // 平均整单退款金额
+	FullRefundNum       float64 `json:"full_refund_num"`       // 平均整单退款笔数
 }
 
 // CompanyRefundSummaryItem 门店退款金额汇总项
@@ -79,6 +128,7 @@ type CompanyRefundSummaryItem struct {
 	CreateTime          int64   `json:"-"`                     // 创建时间（内部排序用，不输出到JSON）
 	RefundAmount        float64 `json:"refund_amount"`         // 退款金额（保留2位小数）
 	RefundNum           int64   `json:"refund_num"`            // 退款笔数
+	AvgRefundAmount     float64 `json:"avg_refund_amount"`     // 平均退款额（退款金额/退款单数，保留2位小数）
 	RefundRate          float64 `json:"refund_rate"`           // 退款率（保留2位小数，百分比）
 	PartialRefundAmount float64 `json:"partial_refund_amount"` // 部分退款金额（保留2位小数）
 	PartialRefundNum    int64   `json:"partial_refund_num"`    // 部分退款笔数

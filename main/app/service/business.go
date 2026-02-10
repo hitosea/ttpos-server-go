@@ -4149,6 +4149,126 @@ func compareStoreCode(a, b string) bool {
 	return len(a) < len(b)
 }
 
+// calculateBusinessAverage 计算营业数据平均值
+func calculateBusinessAverage(items []resp.CompanyBusinessSummaryItem) resp.CompanyBusinessAverage {
+	if len(items) == 0 {
+		return resp.CompanyBusinessAverage{}
+	}
+
+	// 使用 decimal 进行精确计算
+	var totalOrderAmount, totalPayAmount, totalCashAmount decimal.Decimal
+	var totalOrderNum, totalCashTC, totalMealNum, totalDeskNum decimal.Decimal
+	var totalCashAC, totalAvgCustomerPrice, totalOrderAmountMealAvg, totalOrderAmountAvg, totalPayAmountAvg decimal.Decimal
+	var totalInstantOrderAmount, totalDeskOrderAmount, totalTakeoutOrderAmount decimal.Decimal
+	var totalInStoreAmount, totalDeliveryAmount decimal.Decimal
+	var totalInStoreOrderNum, totalDeliveryOrderNum decimal.Decimal
+
+	for _, item := range items {
+		totalOrderAmount = totalOrderAmount.Add(decimal.NewFromFloat(item.OrderAmount))
+		totalPayAmount = totalPayAmount.Add(decimal.NewFromFloat(item.PayAmount))
+		totalOrderNum = totalOrderNum.Add(decimal.NewFromInt(item.OrderNum))
+		totalCashTC = totalCashTC.Add(decimal.NewFromInt(item.CashTC))
+		totalCashAmount = totalCashAmount.Add(decimal.NewFromFloat(item.CashAmount))
+		totalCashAC = totalCashAC.Add(decimal.NewFromFloat(item.CashAC))
+		totalMealNum = totalMealNum.Add(decimal.NewFromInt(item.MealNum))
+		totalDeskNum = totalDeskNum.Add(decimal.NewFromInt(item.DeskNum))
+		totalAvgCustomerPrice = totalAvgCustomerPrice.Add(decimal.NewFromFloat(item.AvgCustomerPrice))
+		totalOrderAmountMealAvg = totalOrderAmountMealAvg.Add(decimal.NewFromFloat(item.OrderAmountMealAvg))
+		totalOrderAmountAvg = totalOrderAmountAvg.Add(decimal.NewFromFloat(item.OrderAmountAvg))
+		totalPayAmountAvg = totalPayAmountAvg.Add(decimal.NewFromFloat(item.PayAmountAvg))
+		totalInstantOrderAmount = totalInstantOrderAmount.Add(decimal.NewFromFloat(item.InstantOrderAmount))
+		totalDeskOrderAmount = totalDeskOrderAmount.Add(decimal.NewFromFloat(item.DeskOrderAmount))
+		totalTakeoutOrderAmount = totalTakeoutOrderAmount.Add(decimal.NewFromFloat(item.TakeoutOrderAmount))
+		totalInStoreAmount = totalInStoreAmount.Add(decimal.NewFromFloat(item.InStoreAmount))
+		totalDeliveryAmount = totalDeliveryAmount.Add(decimal.NewFromFloat(item.DeliveryAmount))
+		totalInStoreOrderNum = totalInStoreOrderNum.Add(decimal.NewFromInt(item.InStoreOrderNum))
+		totalDeliveryOrderNum = totalDeliveryOrderNum.Add(decimal.NewFromInt(item.DeliveryOrderNum))
+	}
+
+	countDecimal := decimal.NewFromInt(int64(len(items)))
+	return resp.CompanyBusinessAverage{
+		OrderAmount:        totalOrderAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		PayAmount:          totalPayAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		OrderNum:           totalOrderNum.Div(countDecimal).Round(2).InexactFloat64(),
+		CashTC:             totalCashTC.Div(countDecimal).Round(2).InexactFloat64(),
+		CashAmount:         totalCashAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		CashAC:             totalCashAC.Div(countDecimal).Round(2).InexactFloat64(),
+		InStoreAmount:      totalInStoreAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		InStoreOrderNum:    totalInStoreOrderNum.Div(countDecimal).Round(2).InexactFloat64(),
+		DeliveryAmount:     totalDeliveryAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		DeliveryOrderNum:   totalDeliveryOrderNum.Div(countDecimal).Round(2).InexactFloat64(),
+		MealNum:            totalMealNum.Div(countDecimal).Round(2).InexactFloat64(),
+		DeskNum:            totalDeskNum.Div(countDecimal).Round(2).InexactFloat64(),
+		AvgCustomerPrice:   totalAvgCustomerPrice.Div(countDecimal).Round(2).InexactFloat64(),
+		OrderAmountMealAvg: totalOrderAmountMealAvg.Div(countDecimal).Round(2).InexactFloat64(),
+		OrderAmountAvg:     totalOrderAmountAvg.Div(countDecimal).Round(2).InexactFloat64(),
+		PayAmountAvg:       totalPayAmountAvg.Div(countDecimal).Round(2).InexactFloat64(),
+		InstantOrderAmount: totalInstantOrderAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		DeskOrderAmount:    totalDeskOrderAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		TakeoutOrderAmount: totalTakeoutOrderAmount.Div(countDecimal).Round(2).InexactFloat64(),
+	}
+}
+
+// calculatePaymentMethodAverage 计算支付方式平均值
+func calculatePaymentMethodAverage(items []resp.CompanyPaymentMethodSummaryItem) resp.CompanyPaymentMethodAverage {
+	if len(items) == 0 {
+		return resp.CompanyPaymentMethodAverage{}
+	}
+
+	// 使用 decimal 进行精确计算
+	var totalPaymentAmount decimal.Decimal
+	var totalPaymentNum decimal.Decimal
+	var totalPaymentRatio decimal.Decimal
+
+	for _, item := range items {
+		totalPaymentAmount = totalPaymentAmount.Add(decimal.NewFromFloat(item.PaymentAmount))
+		totalPaymentNum = totalPaymentNum.Add(decimal.NewFromInt(item.PaymentNum))
+		totalPaymentRatio = totalPaymentRatio.Add(decimal.NewFromFloat(item.PaymentRatio))
+	}
+
+	countDecimal := decimal.NewFromInt(int64(len(items)))
+	return resp.CompanyPaymentMethodAverage{
+		PaymentAmount: totalPaymentAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		PaymentNum:    totalPaymentNum.Div(countDecimal).Round(2).InexactFloat64(),
+		PaymentRatio:  totalPaymentRatio.Div(countDecimal).Round(2).InexactFloat64(),
+	}
+}
+
+// calculateRefundAverage 计算退款金额平均值
+func calculateRefundAverage(items []resp.CompanyRefundSummaryItem) resp.CompanyRefundAverage {
+	if len(items) == 0 {
+		return resp.CompanyRefundAverage{}
+	}
+
+	// 使用 decimal 进行精确计算
+	var totalRefundAmount, totalPartialRefundAmount, totalFullRefundAmount decimal.Decimal
+	var totalRefundNum, totalPartialRefundNum, totalFullRefundNum decimal.Decimal
+	var totalRefundRate, totalAvgRefundAmount decimal.Decimal
+
+	for _, item := range items {
+		totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
+		totalRefundNum = totalRefundNum.Add(decimal.NewFromInt(item.RefundNum))
+		totalRefundRate = totalRefundRate.Add(decimal.NewFromFloat(item.RefundRate))
+		totalAvgRefundAmount = totalAvgRefundAmount.Add(decimal.NewFromFloat(item.AvgRefundAmount))
+		totalPartialRefundAmount = totalPartialRefundAmount.Add(decimal.NewFromFloat(item.PartialRefundAmount))
+		totalPartialRefundNum = totalPartialRefundNum.Add(decimal.NewFromInt(item.PartialRefundNum))
+		totalFullRefundAmount = totalFullRefundAmount.Add(decimal.NewFromFloat(item.FullRefundAmount))
+		totalFullRefundNum = totalFullRefundNum.Add(decimal.NewFromInt(item.FullRefundNum))
+	}
+
+	countDecimal := decimal.NewFromInt(int64(len(items)))
+	return resp.CompanyRefundAverage{
+		RefundAmount:        totalRefundAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		RefundNum:           totalRefundNum.Div(countDecimal).Round(2).InexactFloat64(),
+		RefundRate:          totalRefundRate.Div(countDecimal).Round(2).InexactFloat64(),
+		AvgRefundAmount:     totalAvgRefundAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		PartialRefundAmount: totalPartialRefundAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		PartialRefundNum:    totalPartialRefundNum.Div(countDecimal).Round(2).InexactFloat64(),
+		FullRefundAmount:    totalFullRefundAmount.Div(countDecimal).Round(2).InexactFloat64(),
+		FullRefundNum:       totalFullRefundNum.Div(countDecimal).Round(2).InexactFloat64(),
+	}
+}
+
 // CountCompanyBusinessSummary 获取门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
 func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request req.StatisticsCompanySummaryReq) (interface{}, error) {
 	// 根据指标类型调用不同的处理逻辑
@@ -4354,6 +4474,10 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 						CashTC:             cashStats.CashTC,
 						CashAmount:         utils.Round(cashStats.CashAmount.InexactFloat64(), 2),
 						CashAC:             cashAC,
+						InStoreAmount:      utils.Round(statItem.DeskOrderAmount+statItem.InstantOrderAmount, 2),                                           // 到店业绩 = 桌台 + 店内点餐
+						InStoreOrderNum:    statItem.DeskNum + statItem.InstantOrderNum,                                                                    // 到店订单数
+						DeliveryAmount:     utils.Round(statItem.TakeoutOrderAmount+statItem.InstantOrderTakeawayAmount+statItem.ExternalTakeoutAmount, 2), // 外卖业绩 = 外送 + 第三方外卖（系统内）+ 外卖平台（Grab/LINE MAN）
+						DeliveryOrderNum:   statItem.TakeoutOrderNum + statItem.InstantOrderTakeawayNum + statItem.ExternalTakeoutNum,                      // 外卖订单数
 						MealNum:            statItem.MealNum,
 						DeskNum:            statItem.DeskNum,
 						AvgCustomerPrice:   statItem.PayAmountMealAvg,
@@ -4403,10 +4527,14 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 			DeskOrderAmount    decimal.Decimal
 			TakeoutOrderAmount decimal.Decimal
 			CashAmount         decimal.Decimal
+			InStoreAmount      decimal.Decimal // 到店业绩
+			DeliveryAmount     decimal.Decimal // 外卖业绩
 			OrderNum           int64
 			MealNum            int64
 			DeskNum            int64
 			CashTC             int64
+			InStoreOrderNum    int64 // 到店订单数
+			DeliveryOrderNum   int64 // 外卖订单数
 		}
 		dateDecimalMap := make(map[string]*dateSummaryDecimal)
 
@@ -4419,10 +4547,14 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 				dateDecimal.DeskOrderAmount = dateDecimal.DeskOrderAmount.Add(decimal.NewFromFloat(item.DeskOrderAmount))
 				dateDecimal.TakeoutOrderAmount = dateDecimal.TakeoutOrderAmount.Add(decimal.NewFromFloat(item.TakeoutOrderAmount))
 				dateDecimal.CashAmount = dateDecimal.CashAmount.Add(decimal.NewFromFloat(item.CashAmount))
+				dateDecimal.InStoreAmount = dateDecimal.InStoreAmount.Add(decimal.NewFromFloat(item.InStoreAmount))
+				dateDecimal.DeliveryAmount = dateDecimal.DeliveryAmount.Add(decimal.NewFromFloat(item.DeliveryAmount))
 				dateDecimal.OrderNum += item.OrderNum
 				dateDecimal.MealNum += item.MealNum
 				dateDecimal.DeskNum += item.DeskNum
 				dateDecimal.CashTC += item.CashTC
+				dateDecimal.InStoreOrderNum += item.InStoreOrderNum
+				dateDecimal.DeliveryOrderNum += item.DeliveryOrderNum
 				// 收集商家名称
 				if dateCompanyNamesMap[item.Date] == nil {
 					dateCompanyNamesMap[item.Date] = make(map[string]bool)
@@ -4437,10 +4569,14 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 					DeskOrderAmount:    decimal.NewFromFloat(item.DeskOrderAmount),
 					TakeoutOrderAmount: decimal.NewFromFloat(item.TakeoutOrderAmount),
 					CashAmount:         decimal.NewFromFloat(item.CashAmount),
+					InStoreAmount:      decimal.NewFromFloat(item.InStoreAmount),
+					DeliveryAmount:     decimal.NewFromFloat(item.DeliveryAmount),
 					OrderNum:           item.OrderNum,
 					MealNum:            item.MealNum,
 					DeskNum:            item.DeskNum,
 					CashTC:             item.CashTC,
+					InStoreOrderNum:    item.InStoreOrderNum,
+					DeliveryOrderNum:   item.DeliveryOrderNum,
 				}
 				// 初始化商家名称集合
 				if dateCompanyNamesMap[item.Date] == nil {
@@ -4476,6 +4612,10 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 				CashTC:             dateDecimal.CashTC,
 				CashAmount:         dateDecimal.CashAmount.InexactFloat64(),
 				CashAC:             cashAC,
+				InStoreAmount:      utils.Round(dateDecimal.InStoreAmount.InexactFloat64(), 2),
+				InStoreOrderNum:    dateDecimal.InStoreOrderNum,
+				DeliveryAmount:     utils.Round(dateDecimal.DeliveryAmount.InexactFloat64(), 2),
+				DeliveryOrderNum:   dateDecimal.DeliveryOrderNum,
 				MealNum:            dateDecimal.MealNum,
 				DeskNum:            dateDecimal.DeskNum,
 				InstantOrderAmount: dateDecimal.InstantOrderAmount.InexactFloat64(),
@@ -4514,7 +4654,9 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 
 		// 计算总汇总行（使用 decimal）
 		var totalOrderAmount, totalPayAmount, totalInstantOrderAmount, totalDeskOrderAmount, totalTakeoutOrderAmount, totalCashAmount decimal.Decimal
+		var totalInStoreAmount, totalDeliveryAmount decimal.Decimal
 		var totalOrderNum, totalMealNum, totalDeskNum, totalCashTC int64
+		var totalInStoreOrderNum, totalDeliveryOrderNum int64
 
 		for _, item := range finalList {
 			totalOrderAmount = totalOrderAmount.Add(decimal.NewFromFloat(item.OrderAmount))
@@ -4527,6 +4669,10 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 			totalInstantOrderAmount = totalInstantOrderAmount.Add(decimal.NewFromFloat(item.InstantOrderAmount))
 			totalDeskOrderAmount = totalDeskOrderAmount.Add(decimal.NewFromFloat(item.DeskOrderAmount))
 			totalTakeoutOrderAmount = totalTakeoutOrderAmount.Add(decimal.NewFromFloat(item.TakeoutOrderAmount))
+			totalInStoreAmount = totalInStoreAmount.Add(decimal.NewFromFloat(item.InStoreAmount))
+			totalDeliveryAmount = totalDeliveryAmount.Add(decimal.NewFromFloat(item.DeliveryAmount))
+			totalInStoreOrderNum += item.InStoreOrderNum
+			totalDeliveryOrderNum += item.DeliveryOrderNum
 		}
 
 		// 计算总汇总行的人均和单均（使用 decimal）
@@ -4567,6 +4713,10 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 			CashTC:             totalCashTC,
 			CashAmount:         utils.Round(totalCashAmount.InexactFloat64(), 2),
 			CashAC:             totalCashAC,
+			InStoreAmount:      utils.Round(totalInStoreAmount.InexactFloat64(), 2),
+			InStoreOrderNum:    totalInStoreOrderNum,
+			DeliveryAmount:     utils.Round(totalDeliveryAmount.InexactFloat64(), 2),
+			DeliveryOrderNum:   totalDeliveryOrderNum,
 			MealNum:            totalMealNum,
 			DeskNum:            totalDeskNum,
 			AvgCustomerPrice:   utils.Round(avgCustomerPrice.InexactFloat64(), 2),
@@ -4617,6 +4767,9 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 		list = make([]resp.CompanyBusinessSummaryItem, 0)
 	}
 
+	// 计算平均值（基于全量数据，而非分页数据）
+	average := calculateBusinessAverage(finalList)
+
 	return &resp.CompanyBusinessSummaryResp{
 		Meta: dto.PageResponse{
 			PageNo:   pageNo,
@@ -4625,6 +4778,7 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 		},
 		List:       list,
 		SummaryRow: summaryRow,
+		Average:    average,
 	}, nil
 }
 
@@ -5052,6 +5206,9 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 		list = make([]resp.CompanyPaymentMethodSummaryItem, 0)
 	}
 
+	// 计算平均值（基于全量数据，而非分页数据）
+	average := calculatePaymentMethodAverage(finalList)
+
 	return &resp.CompanyPaymentMethodSummaryResp{
 		Meta: dto.PageResponse{
 			PageNo:   pageNo,
@@ -5060,6 +5217,7 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 		},
 		List:       list,
 		SummaryRow: summaryRow,
+		Average:    average,
 	}, nil
 }
 
@@ -5198,6 +5356,12 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 				items := make([]resp.CompanyRefundSummaryItem, 0, len(statisticsData.StatisticsRefundSummaryList))
 				orderNums := make(map[string]int64) // 日期 -> 订单数
 				for _, statItem := range statisticsData.StatisticsRefundSummaryList {
+					// 计算平均退款额：退款金额 / 退款单数
+					var avgRefundAmount float64
+					if statItem.RefundNum > 0 {
+						avgRefundAmount = utils.Round(statItem.RefundAmount/float64(statItem.RefundNum), 2)
+					}
+
 					items = append(items, resp.CompanyRefundSummaryItem{
 						Date:                statItem.Date,
 						CompanyName:         companyName, // 使用 GetCompanyList 返回的 CompanyName，避免重复查询
@@ -5205,6 +5369,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 						CreateTime:          createTime,  // 创建时间（用于排序）
 						RefundAmount:        statItem.RefundAmount,
 						RefundNum:           statItem.RefundNum,
+						AvgRefundAmount:     avgRefundAmount, // 平均退款额
 						RefundRate:          statItem.RefundRate,
 						PartialRefundAmount: statItem.PartialRefundAmount,
 						PartialRefundNum:    statItem.PartialRefundNum,
@@ -5311,11 +5476,18 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 				refundRate = decimal.NewFromInt(dateDecimal.RefundNum).Div(decimal.NewFromInt(dateDecimal.OrderNum)).Mul(decimal.NewFromInt(100))
 			}
 
+			// 计算平均退款额：退款金额 / 退款单数
+			var avgRefundAmount float64
+			if dateDecimal.RefundNum > 0 {
+				avgRefundAmount = utils.Round(dateDecimal.RefundAmount.Div(decimal.NewFromInt(dateDecimal.RefundNum)).InexactFloat64(), 2)
+			}
+
 			dateItem := resp.CompanyRefundSummaryItem{
 				Date:                date,
 				CompanyName:         "", // 稍后设置
 				RefundAmount:        utils.Round(dateDecimal.RefundAmount.InexactFloat64(), 2),
 				RefundNum:           dateDecimal.RefundNum,
+				AvgRefundAmount:     avgRefundAmount, // 平均退款额
 				RefundRate:          utils.Round(refundRate.InexactFloat64(), 2),
 				PartialRefundAmount: utils.Round(dateDecimal.PartialRefundAmount.InexactFloat64(), 2),
 				PartialRefundNum:    dateDecimal.PartialRefundNum,
@@ -5362,6 +5534,12 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 			totalRefundRate = decimal.NewFromInt(totalRefundNum).Div(decimal.NewFromInt(totalOrderNum)).Mul(decimal.NewFromInt(100))
 		}
 
+		// 计算汇总行的平均退款额：总退款金额 / 总退款单数
+		var totalAvgRefundAmount float64
+		if totalRefundNum > 0 {
+			totalAvgRefundAmount = utils.Round(totalRefundAmount.Div(decimal.NewFromInt(totalRefundNum)).InexactFloat64(), 2)
+		}
+
 		// 收集所有商家名称（用于汇总行）
 		allCompanyNamesSet := make(map[string]bool)
 		for _, namesMap := range dateCompanyNamesMap {
@@ -5380,6 +5558,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 			CompanyName:         strings.Join(allCompanyNames, "、"), // 所有商家名称用、符号连接
 			RefundAmount:        utils.Round(totalRefundAmount.InexactFloat64(), 2),
 			RefundNum:           totalRefundNum,
+			AvgRefundAmount:     totalAvgRefundAmount, // 平均退款额
 			RefundRate:          utils.Round(totalRefundRate.InexactFloat64(), 2),
 			PartialRefundAmount: utils.Round(totalPartialRefundAmount.InexactFloat64(), 2),
 			PartialRefundNum:    totalPartialRefundNum,
@@ -5426,6 +5605,9 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 		list = make([]resp.CompanyRefundSummaryItem, 0)
 	}
 
+	// 计算平均值（基于全量数据，而非分页数据）
+	average := calculateRefundAverage(finalList)
+
 	return &resp.CompanyRefundSummaryResp{
 		Meta: dto.PageResponse{
 			PageNo:   pageNo,
@@ -5434,6 +5616,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 		},
 		List:       list,
 		SummaryRow: summaryRow,
+		Average:    average,
 	}, nil
 }
 
@@ -5668,34 +5851,34 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		return errors.New("数据类型错误")
 	}
 
-	// 表头映射（字段顺序：营业日、店铺名称、总营业额、实收金额、TC、AC、现金TC、现金金额、现金AC、用餐人数、消费桌数、平均客单价、订单金额人均、实付金额单均、点餐订单金额、桌台订单金额、外送订单金额）
+	// 表头映射（字段顺序：营业日、店铺名称、总营业额、实收金额、TC、AC、现金TC、现金金额、现金AC、到店业绩、到店订单数、外卖业绩、外卖订单数、用餐人数、消费桌数、平均客单价、订单金额人均、实付金额单均、点餐订单金额、桌台订单金额、外送订单金额）
 	headerMap := map[string][]string{
 		"zh": { // 中文
-			"营业日", "店铺名称", "总营业额", "实收金额", "TC", "AC", "现金TC", "现金金额", "现金AC", "用餐人数", "消费桌数", "平均客单价", "订单金额人均", "实付金额单均", "点餐订单金额", "桌台订单金额", "外送订单金额",
+			"营业日", "店铺名称", "总营业额", "实收金额", "TC", "AC", "现金TC", "现金金额", "现金AC", "到店业绩", "到店订单数", "外卖业绩", "外卖订单数", "用餐人数", "消费桌数", "平均客单价", "订单金额人均", "实付金额单均", "点餐订单金额", "桌台订单金额", "外送订单金额",
 		},
 		"en": { // 英文
-			"Business Day", "Store Name", "Total Revenue", "Actual Amount", "TC", "AC", "Cash TC", "Cash Amount", "Cash AC", "Number of Diners", "Number of Tables Consumed", "Average Customer Price", "Order Amount Per Person", "Paid Amount Per Order", "Meal Order Amount", "Table Order Amount", "Takeout Order Amount",
+			"Business Day", "Store Name", "Total Revenue", "Actual Amount", "TC", "AC", "Cash TC", "Cash Amount", "Cash AC", "In-store Performance", "In-store Orders", "Delivery Performance", "Delivery Orders", "Number of Diners", "Number of Tables Consumed", "Average Customer Price", "Order Amount Per Person", "Paid Amount Per Order", "Meal Order Amount", "Table Order Amount", "Takeout Order Amount",
 		},
 		"th": { // 泰语
-			"วันดำเนินธุรกิจ", "ชื่อร้าน", "ยอดขายรวม", "ยอดรับจริง", "TC", "AC", "Cash TC", "ยอดเงินสด", "Cash AC", "จำนวนลูกค้า", "จำนวนโต๊ะที่ใช้", "ราคาเฉลี่ยต่อลูกค้า", "ยอดคำสั่งซื้อต่อคน", "ยอดชำระเงินต่อบิล", "ยอดคำสั่งซื้อรับประทานอาหาร", "ยอดคำสั่งซื้อโต๊ะ", "ยอดคำสั่งซื้อนำกลับบ้าน",
+			"วันดำเนินธุรกิจ", "ชื่อร้าน", "ยอดขายรวม", "ยอดรับจริง", "TC", "AC", "Cash TC", "ยอดเงินสด", "Cash AC", "ยอดขายในร้าน", "จำนวนออเดอร์ในร้าน", "ยอดขายเดลิเวอรี่", "จำนวนออเดอร์เดลิเวอรี่", "จำนวนลูกค้า", "จำนวนโต๊ะที่ใช้", "ราคาเฉลี่ยต่อลูกค้า", "ยอดคำสั่งซื้อต่อคน", "ยอดชำระเงินต่อบิล", "ยอดคำสั่งซื้อรับประทานอาหาร", "ยอดคำสั่งซื้อโต๊ะ", "ยอดคำสั่งซื้อนำกลับบ้าน",
 		},
 		"zhtw": { // 繁体中文
-			"營業日", "店鋪名稱", "總營業額", "實收金額", "TC", "AC", "現金TC", "現金金額", "現金AC", "用餐人數", "消費桌數", "平均客單價", "訂單金額人均", "實付金額單均", "點餐訂單金額", "桌台訂單金額", "外送訂單金額",
+			"營業日", "店鋪名稱", "總營業額", "實收金額", "TC", "AC", "現金TC", "現金金額", "現金AC", "到店業績", "到店訂單數", "外賣業績", "外賣訂單數", "用餐人數", "消費桌數", "平均客單價", "訂單金額人均", "實付金額單均", "點餐訂單金額", "桌台訂單金額", "外送訂單金額",
 		},
 		"ja": { // 日语
-			"営業日", "店舗名", "総売上高", "実収金額", "TC", "AC", "現金TC", "現金金額", "現金AC", "来店人数", "利用テーブル数", "平均客単価", "一人当たり注文金額", "一件当たり支払い金額", "食事注文金額", "テーブル注文金額", "テイクアウト注文金額",
+			"営業日", "店舗名", "総売上高", "実収金額", "TC", "AC", "現金TC", "現金金額", "現金AC", "店内売上", "店内注文数", "デリバリー売上", "デリバリー注文数", "来店人数", "利用テーブル数", "平均客単価", "一人当たり注文金額", "一件当たり支払い金額", "食事注文金額", "テーブル注文金額", "テイクアウト注文金額",
 		},
 		"ko": { // 韩语
-			"영업일", "매장명", "총 매출액", "실수령액", "TC", "AC", "현금 TC", "현금 금액", "현금 AC", "식사 인원", "소비 테이블 수", "평균 고객 단가", "인당 주문 금액", "주문당 실제 결제 금액", "식사 주문 금액", "테이블 주문 금액", "포장 주문 금액",
+			"영업일", "매장명", "총 매출액", "실수령액", "TC", "AC", "현금 TC", "현금 금액", "현금 AC", "매장 매출", "매장 주문 수", "배달 매출", "배달 주문 수", "식사 인원", "소비 테이블 수", "평균 고객 단가", "인당 주문 금액", "주문당 실제 결제 금액", "식사 주문 금액", "테이블 주문 금액", "포장 주문 금액",
 		},
 		"my": { // 缅甸语
-			"လုပ်ငန်းသက်တမ်းနေ့", "ဆိုင်အမည်", "စုစုပေါင်းဝင်ငွေ", "အမှန်တကယ်ရငွေ", "TC", "AC", "ငွေသား TC", "ငွေသားပမာဏ", "ငွေသား AC", "စားသုံးသူအရေအတွက်", "စားသုံးထားသောစားပွဲအရေအတွက်", "ပျမ်းမျှဖောက်သည်စျေးနှုန်း", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်ပေးသွင်းငွေ", "အစားအသောက်အော်ဒါပမာဏ", "စားပွဲအော်ဒါပမာဏ", "ယူဆောင်အော်ဒါပမာဏ",
+			"လုပ်ငန်းသက်တမ်းနေ့", "ဆိုင်အမည်", "စုစုပေါင်းဝင်ငွေ", "အမှန်တကယ်ရငွေ", "TC", "AC", "ငွေသား TC", "ငွေသားပမာဏ", "ငွေသား AC", "ဆိုင်တွင်းရောင်းရငွေ", "ဆိုင်တွင်းအော်ဒါအရေအတွက်", "ပို့ဆောင်ရောင်းရငွေ", "ပို့ဆောင်အော်ဒါအရေအတွက်", "စားသုံးသူအရေအတွက်", "စားသုံးထားသောစားပွဲအရေအတွက်", "ပျမ်းမျှဖောက်သည်စျေးနှုန်း", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်ပေးသွင်းငွေ", "အစားအသောက်အော်ဒါပမာဏ", "စားပွဲအော်ဒါပမာဏ", "ယူဆောင်အော်ဒါပမာဏ",
 		},
 		"tr": { // 土耳其语
-			"İşletme Günü", "Mağaza Adı", "Toplam Gelir", "Gerçek Tutar", "TC", "AC", "Nakit TC", "Nakit Tutar", "Nakit AC", "Yemek Yiyen Kişi Sayısı", "Tüketilen Masa Sayısı", "Ortalama Müşteri Fiyatı", "Kişi Başına Sipariş Tutarı", "Sipariş Başına Ödenen Tutar", "Yemek Sipariş Tutarı", "Masa Sipariş Tutarı", "Paket Sipariş Tutarı",
+			"İşletme Günü", "Mağaza Adı", "Toplam Gelir", "Gerçek Tutar", "TC", "AC", "Nakit TC", "Nakit Tutar", "Nakit AC", "Mağaza İçi Satış", "Mağaza İçi Sipariş Sayısı", "Teslimat Satışı", "Teslimat Sipariş Sayısı", "Yemek Yiyen Kişi Sayısı", "Tüketilen Masa Sayısı", "Ortalama Müşteri Fiyatı", "Kişi Başına Sipariş Tutarı", "Sipariş Başına Ödenen Tutar", "Yemek Sipariş Tutarı", "Masa Sipariş Tutarı", "Paket Sipariş Tutarı",
 		},
 		"sv": { // 瑞典语
-			"Affärsdag", "Butiksnamn", "Total Omsättning", "Faktiskt Belopp", "TC", "AC", "Kontant TC", "Kontant Belopp", "Kontant AC", "Antal Gäster", "Antal Konsumerade Bord", "Genomsnittligt Kundpris", "Orderbelopp per Person", "Betalt Belopp per Order", "Matbeställningsbelopp", "Bordsorderbelopp", "Takeaway Orderbelopp",
+			"Affärsdag", "Butiksnamn", "Total Omsättning", "Faktiskt Belopp", "TC", "AC", "Kontant TC", "Kontant Belopp", "Kontant AC", "Butiksförsäljning", "Butiksorder", "Leveransförsäljning", "Leveransorder", "Antal Gäster", "Antal Konsumerade Bord", "Genomsnittligt Kundpris", "Orderbelopp per Person", "Betalt Belopp per Order", "Matbeställningsbelopp", "Bordsorderbelopp", "Takeaway Orderbelopp",
 		},
 	}
 
@@ -5725,7 +5908,7 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellStyle(sheet1Name, cell, cell, style)
 	}
 
-	// 写入明细表数据（字段顺序：营业日、店铺名称、总营业额、实收金额、TC、AC、现金TC、现金金额、现金AC、用餐人数、消费桌数、平均客单价、订单金额人均、实付金额单均、点餐订单金额、桌台订单金额、外送订单金额）
+	// 写入明细表数据（字段顺序：营业日、店铺名称、总营业额、实收金额、TC、AC、现金TC、现金金额、现金AC、到店业绩、到店订单数、外卖业绩、外卖订单数、用餐人数、消费桌数、平均客单价、订单金额人均、实付金额单均、点餐订单金额、桌台订单金额、外送订单金额）
 	for rowIdx, item := range detailResp.List {
 		offsetRow := rowIdx + 2
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("A%d", offsetRow), item.Date)
@@ -5737,14 +5920,51 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("G%d", offsetRow), item.CashTC)
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("H%d", offsetRow), item.CashAmount)
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("I%d", offsetRow), item.CashAC)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("J%d", offsetRow), item.MealNum)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("K%d", offsetRow), item.DeskNum)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("L%d", offsetRow), item.AvgCustomerPrice)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("M%d", offsetRow), item.OrderAmountMealAvg)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("N%d", offsetRow), item.PayAmountAvg)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("O%d", offsetRow), item.InstantOrderAmount)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("P%d", offsetRow), item.DeskOrderAmount)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("Q%d", offsetRow), item.TakeoutOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("J%d", offsetRow), item.InStoreAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("K%d", offsetRow), item.InStoreOrderNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("L%d", offsetRow), item.DeliveryAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("M%d", offsetRow), item.DeliveryOrderNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("N%d", offsetRow), item.MealNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("O%d", offsetRow), item.DeskNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("P%d", offsetRow), item.AvgCustomerPrice)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("Q%d", offsetRow), item.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("R%d", offsetRow), item.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("S%d", offsetRow), item.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("T%d", offsetRow), item.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("U%d", offsetRow), item.TakeoutOrderAmount)
+	}
+
+	// 写入明细表平均值行
+	if len(detailResp.List) > 0 {
+		avgRow := len(detailResp.List) + 2
+		avgLabel := i18n.Translate(lang, "平均值")
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("A%d", avgRow), avgLabel)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("B%d", avgRow), "-")
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("C%d", avgRow), detailResp.Average.OrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("D%d", avgRow), detailResp.Average.PayAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("E%d", avgRow), detailResp.Average.OrderNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("F%d", avgRow), detailResp.Average.OrderAmountAvg)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("G%d", avgRow), detailResp.Average.CashTC)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("H%d", avgRow), detailResp.Average.CashAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("I%d", avgRow), detailResp.Average.CashAC)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("J%d", avgRow), detailResp.Average.InStoreAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("K%d", avgRow), detailResp.Average.InStoreOrderNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("L%d", avgRow), detailResp.Average.DeliveryAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("M%d", avgRow), detailResp.Average.DeliveryOrderNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("N%d", avgRow), detailResp.Average.MealNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("O%d", avgRow), detailResp.Average.DeskNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("P%d", avgRow), detailResp.Average.AvgCustomerPrice)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("Q%d", avgRow), detailResp.Average.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("R%d", avgRow), detailResp.Average.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("S%d", avgRow), detailResp.Average.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("T%d", avgRow), detailResp.Average.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("U%d", avgRow), detailResp.Average.TakeoutOrderAmount)
+		// 设置平均值行粗体样式
+		boldStyle, _ := xlsxFile.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true}})
+		for col := 1; col <= 21; col++ {
+			cell, _ := excelize.CoordinatesToCellName(col, avgRow)
+			xlsxFile.SetCellStyle(sheet1Name, cell, cell, boldStyle)
+		}
 	}
 
 	// 自动调整明细表列宽
@@ -5782,19 +6002,24 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", offsetRow), item.CashTC)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", offsetRow), item.CashAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", offsetRow), item.CashAC)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", offsetRow), item.MealNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", offsetRow), item.DeskNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", offsetRow), item.AvgCustomerPrice)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", offsetRow), item.OrderAmountMealAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", offsetRow), item.PayAmountAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("O%d", offsetRow), item.InstantOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("P%d", offsetRow), item.DeskOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("Q%d", offsetRow), item.TakeoutOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", offsetRow), item.InStoreAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", offsetRow), item.InStoreOrderNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", offsetRow), item.DeliveryAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", offsetRow), item.DeliveryOrderNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", offsetRow), item.MealNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("O%d", offsetRow), item.DeskNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("P%d", offsetRow), item.AvgCustomerPrice)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("Q%d", offsetRow), item.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("R%d", offsetRow), item.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("S%d", offsetRow), item.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("T%d", offsetRow), item.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("U%d", offsetRow), item.TakeoutOrderAmount)
 	}
 
 	// 写入汇总行（字段顺序与数据行一致）
+	nextRowOffset := len(summaryResp.List) + 2
 	if summaryResp.SummaryRow.Date != "" || summaryResp.SummaryRow.CompanyName != "" {
-		summaryRow := len(summaryResp.List) + 2
+		summaryRow := nextRowOffset
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", summaryRow), summaryResp.SummaryRow.Date)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", summaryRow), summaryResp.SummaryRow.CompanyName)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", summaryRow), summaryResp.SummaryRow.OrderAmount)
@@ -5804,14 +6029,52 @@ func (s *businessSrv) exportBusinessSummaryToExcel(xlsxFile *excelize.File, deta
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", summaryRow), summaryResp.SummaryRow.CashTC)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", summaryRow), summaryResp.SummaryRow.CashAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", summaryRow), summaryResp.SummaryRow.CashAC)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", summaryRow), summaryResp.SummaryRow.MealNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", summaryRow), summaryResp.SummaryRow.DeskNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", summaryRow), summaryResp.SummaryRow.AvgCustomerPrice)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", summaryRow), summaryResp.SummaryRow.OrderAmountMealAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", summaryRow), summaryResp.SummaryRow.PayAmountAvg)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("O%d", summaryRow), summaryResp.SummaryRow.InstantOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("P%d", summaryRow), summaryResp.SummaryRow.DeskOrderAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("Q%d", summaryRow), summaryResp.SummaryRow.TakeoutOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", summaryRow), summaryResp.SummaryRow.InStoreAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", summaryRow), summaryResp.SummaryRow.InStoreOrderNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", summaryRow), summaryResp.SummaryRow.DeliveryAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", summaryRow), summaryResp.SummaryRow.DeliveryOrderNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", summaryRow), summaryResp.SummaryRow.MealNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("O%d", summaryRow), summaryResp.SummaryRow.DeskNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("P%d", summaryRow), summaryResp.SummaryRow.AvgCustomerPrice)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("Q%d", summaryRow), summaryResp.SummaryRow.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("R%d", summaryRow), summaryResp.SummaryRow.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("S%d", summaryRow), summaryResp.SummaryRow.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("T%d", summaryRow), summaryResp.SummaryRow.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("U%d", summaryRow), summaryResp.SummaryRow.TakeoutOrderAmount)
+		nextRowOffset++
+	}
+
+	// 写入汇总表平均值行
+	if len(summaryResp.List) > 0 {
+		avgRow := nextRowOffset
+		avgLabel := i18n.Translate(lang, "平均值")
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", avgRow), avgLabel)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", avgRow), "-")
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", avgRow), summaryResp.Average.OrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", avgRow), summaryResp.Average.PayAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", avgRow), summaryResp.Average.OrderNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", avgRow), summaryResp.Average.OrderAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", avgRow), summaryResp.Average.CashTC)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", avgRow), summaryResp.Average.CashAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", avgRow), summaryResp.Average.CashAC)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", avgRow), summaryResp.Average.InStoreAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", avgRow), summaryResp.Average.InStoreOrderNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", avgRow), summaryResp.Average.DeliveryAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", avgRow), summaryResp.Average.DeliveryOrderNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", avgRow), summaryResp.Average.MealNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("O%d", avgRow), summaryResp.Average.DeskNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("P%d", avgRow), summaryResp.Average.AvgCustomerPrice)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("Q%d", avgRow), summaryResp.Average.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("R%d", avgRow), summaryResp.Average.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("S%d", avgRow), summaryResp.Average.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("T%d", avgRow), summaryResp.Average.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("U%d", avgRow), summaryResp.Average.TakeoutOrderAmount)
+		// 设置平均值行粗体样式
+		boldStyle, _ := xlsxFile.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true}})
+		for col := 1; col <= 21; col++ {
+			cell, _ := excelize.CoordinatesToCellName(col, avgRow)
+			xlsxFile.SetCellStyle(sheet2Name, cell, cell, boldStyle)
+		}
 	}
 
 	// 自动调整汇总表列宽
@@ -5899,6 +6162,24 @@ func (s *businessSrv) exportPaymentMethodSummaryToExcel(xlsxFile *excelize.File,
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("F%d", offsetRow), item.PaymentRatio)
 	}
 
+	// 写入明细表平均值行
+	if len(detailResp.List) > 0 {
+		avgRow := len(detailResp.List) + 2
+		avgLabel := i18n.Translate(lang, "平均值")
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("A%d", avgRow), avgLabel)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("B%d", avgRow), "-")
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("C%d", avgRow), "-")
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("D%d", avgRow), detailResp.Average.PaymentAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("E%d", avgRow), detailResp.Average.PaymentNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("F%d", avgRow), detailResp.Average.PaymentRatio)
+		// 设置平均值行粗体样式
+		boldStyle, _ := xlsxFile.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true}})
+		for col := 1; col <= 6; col++ {
+			cell, _ := excelize.CoordinatesToCellName(col, avgRow)
+			xlsxFile.SetCellStyle(sheet1Name, cell, cell, boldStyle)
+		}
+	}
+
 	// 自动调整明细表列宽
 	for i := range headers {
 		colName, _ := excelize.ColumnNumberToName(i + 1)
@@ -5934,14 +6215,34 @@ func (s *businessSrv) exportPaymentMethodSummaryToExcel(xlsxFile *excelize.File,
 	}
 
 	// 写入汇总行（支付方式汇总的汇总行是数组）
+	nextRowOffset := len(summaryResp.List) + 2
 	for rowIdx, item := range summaryResp.SummaryRow {
-		summaryRow := len(summaryResp.List) + 2 + rowIdx
+		summaryRow := nextRowOffset + rowIdx
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", summaryRow), item.Date)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", summaryRow), item.CompanyName)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", summaryRow), item.PaymentName)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", summaryRow), item.PaymentAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", summaryRow), item.PaymentNum)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", summaryRow), item.PaymentRatio)
+	}
+	nextRowOffset += len(summaryResp.SummaryRow)
+
+	// 写入汇总表平均值行
+	if len(summaryResp.List) > 0 {
+		avgRow := nextRowOffset
+		avgLabel := i18n.Translate(lang, "平均值")
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", avgRow), avgLabel)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", avgRow), "-")
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", avgRow), "-")
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", avgRow), summaryResp.Average.PaymentAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", avgRow), summaryResp.Average.PaymentNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", avgRow), summaryResp.Average.PaymentRatio)
+		// 设置平均值行粗体样式
+		boldStyle, _ := xlsxFile.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true}})
+		for col := 1; col <= 6; col++ {
+			cell, _ := excelize.CoordinatesToCellName(col, avgRow)
+			xlsxFile.SetCellStyle(sheet2Name, cell, cell, boldStyle)
+		}
 	}
 
 	// 自动调整汇总表列宽
@@ -5961,34 +6262,34 @@ func (s *businessSrv) exportRefundSummaryToExcel(xlsxFile *excelize.File, detail
 		return errors.New("数据类型错误")
 	}
 
-	// 表头映射
+	// 表头映射（新增"平均退款额"列）
 	headerMap := map[string][]string{
 		"zh": { // 中文
-			"营业日", "门店名称", "退款金额", "退款笔数", "退款率", "部分退款金额", "部分退款笔数", "整单退款金额", "整单退款笔数",
+			"营业日", "门店名称", "退款金额", "退款笔数", "平均退款额", "退款率", "部分退款金额", "部分退款笔数", "整单退款金额", "整单退款笔数",
 		},
 		"en": { // 英文
-			"Business Day", "Store Name", "Refund Amount", "Refund Count", "Refund Rate", "Partial Refund Amount", "Partial Refund Count", "Full Refund Amount", "Full Refund Count",
+			"Business Day", "Store Name", "Refund Amount", "Refund Count", "Avg Refund Amount", "Refund Rate", "Partial Refund Amount", "Partial Refund Count", "Full Refund Amount", "Full Refund Count",
 		},
 		"th": { // 泰语
-			"วันดำเนินธุรกิจ", "ชื่อร้าน", "จำนวนเงินคืน", "จำนวนครั้งที่คืน", "อัตราการคืนเงิน", "จำนวนเงินคืนบางส่วน", "จำนวนครั้งที่คืนบางส่วน", "จำนวนเงินคืนเต็มจำนวน", "จำนวนครั้งที่คืนเต็มจำนวน",
+			"วันดำเนินธุรกิจ", "ชื่อร้าน", "จำนวนเงินคืน", "จำนวนครั้งที่คืน", "จำนวนคืนเงินเฉลี่ย", "อัตราการคืนเงิน", "จำนวนเงินคืนบางส่วน", "จำนวนครั้งที่คืนบางส่วน", "จำนวนเงินคืนเต็มจำนวน", "จำนวนครั้งที่คืนเต็มจำนวน",
 		},
 		"zhtw": { // 繁体中文
-			"營業日", "門店名稱", "退款金額", "退款筆數", "退款率", "部分退款金額", "部分退款筆數", "整單退款金額", "整單退款筆數",
+			"營業日", "門店名稱", "退款金額", "退款筆數", "平均退款額", "退款率", "部分退款金額", "部分退款筆數", "整單退款金額", "整單退款筆數",
 		},
 		"ja": { // 日语
-			"営業日", "店舗名", "返金金額", "返金回数", "返金率", "一部返金金額", "一部返金回数", "全額返金金額", "全額返金回数",
+			"営業日", "店舗名", "返金金額", "返金回数", "平均返金金額", "返金率", "一部返金金額", "一部返金回数", "全額返金金額", "全額返金回数",
 		},
 		"ko": { // 韩语
-			"영업일", "매장명", "환불 금액", "환불 건수", "환불률", "부분 환불 금액", "부분 환불 건수", "전액 환불 금액", "전액 환불 건수",
+			"영업일", "매장명", "환불 금액", "환불 건수", "평균 환불 금액", "환불률", "부분 환불 금액", "부분 환불 건수", "전액 환불 금액", "전액 환불 건수",
 		},
 		"my": { // 缅甸语
-			"လုပ်ငန်းသက်တမ်းနေ့", "ဆိုင်အမည်", "ငွေပြန်လည်ပေးအပ်မှုပမာဏ", "ငွေပြန်လည်ပေးအပ်မှုအကြိမ်အရေအတွက်", "ငွေပြန်လည်ပေးအပ်မှုရာခိုင်နှုန်း", "အပိုင်းငွေပြန်လည်ပေးအပ်မှုပမာဏ", "အပိုင်းငွေပြန်လည်ပေးအပ်မှုအကြိမ်အရေအတွက်", "အပြည့်အဝငွေပြန်လည်ပေးအပ်မှုပမာဏ", "အပြည့်အဝငွေပြန်လည်ပေးအပ်မှုအကြိမ်အရေအတွက်",
+			"လုပ်ငန်းသက်တမ်းနေ့", "ဆိုင်အမည်", "ငွေပြန်လည်ပေးအပ်မှုပမာဏ", "ငွေပြန်လည်ပေးအပ်မှုအကြိမ်အရေအတွက်", "ပျမ်းမျှငွေပြန်အမ်းပမာဏ", "ငွေပြန်လည်ပေးအပ်မှုရာခိုင်နှုန်း", "အပိုင်းငွေပြန်လည်ပေးအပ်မှုပမာဏ", "အပိုင်းငွေပြန်လည်ပေးအပ်မှုအကြိမ်အရေအတွက်", "အပြည့်အဝငွေပြန်လည်ပေးအပ်မှုပမာဏ", "အပြည့်အဝငွေပြန်လည်ပေးအပ်မှုအကြိမ်အရေအတွက်",
 		},
 		"tr": { // 土耳其语
-			"İşletme Günü", "Mağaza Adı", "İade Tutarı", "İade Sayısı", "İade Oranı", "Kısmi İade Tutarı", "Kısmi İade Sayısı", "Tam İade Tutarı", "Tam İade Sayısı",
+			"İşletme Günü", "Mağaza Adı", "İade Tutarı", "İade Sayısı", "Ort. İade Tutarı", "İade Oranı", "Kısmi İade Tutarı", "Kısmi İade Sayısı", "Tam İade Tutarı", "Tam İade Sayısı",
 		},
 		"sv": { // 瑞典语
-			"Affärsdag", "Butiksnamn", "Återbetalningsbelopp", "Återbetalningsantal", "Återbetalningsandel", "Delvis återbetalningsbelopp", "Delvis återbetalningsantal", "Fullt återbetalningsbelopp", "Fullt återbetalningsantal",
+			"Affärsdag", "Butiksnamn", "Återbetalningsbelopp", "Återbetalningsantal", "Genomsnittlig återbetalning", "Återbetalningsandel", "Delvis återbetalningsbelopp", "Delvis återbetalningsantal", "Fullt återbetalningsbelopp", "Fullt återbetalningsantal",
 		},
 	}
 
@@ -6018,18 +6319,41 @@ func (s *businessSrv) exportRefundSummaryToExcel(xlsxFile *excelize.File, detail
 		xlsxFile.SetCellStyle(sheet1Name, cell, cell, style)
 	}
 
-	// 写入明细表数据
+	// 写入明细表数据（新增平均退款额列）
 	for rowIdx, item := range detailResp.List {
 		offsetRow := rowIdx + 2
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("A%d", offsetRow), item.Date)
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("B%d", offsetRow), item.CompanyName)
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("C%d", offsetRow), item.RefundAmount)
 		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("D%d", offsetRow), item.RefundNum)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("E%d", offsetRow), item.RefundRate)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("F%d", offsetRow), item.PartialRefundAmount)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("G%d", offsetRow), item.PartialRefundNum)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("H%d", offsetRow), item.FullRefundAmount)
-		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("I%d", offsetRow), item.FullRefundNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("E%d", offsetRow), item.AvgRefundAmount) // 平均退款额
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("F%d", offsetRow), item.RefundRate)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("G%d", offsetRow), item.PartialRefundAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("H%d", offsetRow), item.PartialRefundNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("I%d", offsetRow), item.FullRefundAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("J%d", offsetRow), item.FullRefundNum)
+	}
+
+	// 写入明细表平均值行
+	if len(detailResp.List) > 0 {
+		avgRow := len(detailResp.List) + 2
+		avgLabel := i18n.Translate(lang, "平均值")
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("A%d", avgRow), avgLabel)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("B%d", avgRow), "-")
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("C%d", avgRow), detailResp.Average.RefundAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("D%d", avgRow), detailResp.Average.RefundNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("E%d", avgRow), detailResp.Average.AvgRefundAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("F%d", avgRow), detailResp.Average.RefundRate)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("G%d", avgRow), detailResp.Average.PartialRefundAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("H%d", avgRow), detailResp.Average.PartialRefundNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("I%d", avgRow), detailResp.Average.FullRefundAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("J%d", avgRow), detailResp.Average.FullRefundNum)
+		// 设置平均值行粗体样式
+		boldStyle, _ := xlsxFile.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true}})
+		for col := 1; col <= 10; col++ {
+			cell, _ := excelize.CoordinatesToCellName(col, avgRow)
+			xlsxFile.SetCellStyle(sheet1Name, cell, cell, boldStyle)
+		}
 	}
 
 	// 自动调整明细表列宽
@@ -6055,32 +6379,58 @@ func (s *businessSrv) exportRefundSummaryToExcel(xlsxFile *excelize.File, detail
 		xlsxFile.SetCellStyle(sheet2Name, cell, cell, style)
 	}
 
-	// 写入汇总表数据
+	// 写入汇总表数据（新增平均退款额列）
 	for rowIdx, item := range summaryResp.List {
 		offsetRow := rowIdx + 2
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", offsetRow), item.Date)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", offsetRow), item.CompanyName)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", offsetRow), item.RefundAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", offsetRow), item.RefundNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", offsetRow), item.RefundRate)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", offsetRow), item.PartialRefundAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", offsetRow), item.PartialRefundNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", offsetRow), item.FullRefundAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", offsetRow), item.FullRefundNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", offsetRow), item.AvgRefundAmount) // 平均退款额
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", offsetRow), item.RefundRate)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", offsetRow), item.PartialRefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", offsetRow), item.PartialRefundNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", offsetRow), item.FullRefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", offsetRow), item.FullRefundNum)
 	}
 
 	// 写入汇总行
+	nextRowOffset := len(summaryResp.List) + 2
 	if summaryResp.SummaryRow.Date != "" || summaryResp.SummaryRow.CompanyName != "" {
-		summaryRow := len(summaryResp.List) + 2
+		summaryRow := nextRowOffset
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", summaryRow), summaryResp.SummaryRow.Date)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", summaryRow), summaryResp.SummaryRow.CompanyName)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", summaryRow), summaryResp.SummaryRow.RefundAmount)
 		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", summaryRow), summaryResp.SummaryRow.RefundNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", summaryRow), summaryResp.SummaryRow.RefundRate)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", summaryRow), summaryResp.SummaryRow.PartialRefundAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", summaryRow), summaryResp.SummaryRow.PartialRefundNum)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", summaryRow), summaryResp.SummaryRow.FullRefundAmount)
-		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", summaryRow), summaryResp.SummaryRow.FullRefundNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", summaryRow), summaryResp.SummaryRow.AvgRefundAmount) // 平均退款额
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", summaryRow), summaryResp.SummaryRow.RefundRate)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", summaryRow), summaryResp.SummaryRow.PartialRefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", summaryRow), summaryResp.SummaryRow.PartialRefundNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", summaryRow), summaryResp.SummaryRow.FullRefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", summaryRow), summaryResp.SummaryRow.FullRefundNum)
+		nextRowOffset++
+	}
+
+	// 写入汇总表平均值行
+	if len(summaryResp.List) > 0 {
+		avgRow := nextRowOffset
+		avgLabel := i18n.Translate(lang, "平均值")
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", avgRow), avgLabel)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", avgRow), "-")
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", avgRow), summaryResp.Average.RefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", avgRow), summaryResp.Average.RefundNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", avgRow), summaryResp.Average.AvgRefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", avgRow), summaryResp.Average.RefundRate)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", avgRow), summaryResp.Average.PartialRefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", avgRow), summaryResp.Average.PartialRefundNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", avgRow), summaryResp.Average.FullRefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", avgRow), summaryResp.Average.FullRefundNum)
+		// 设置平均值行粗体样式
+		boldStyle, _ := xlsxFile.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true}})
+		for col := 1; col <= 10; col++ {
+			cell, _ := excelize.CoordinatesToCellName(col, avgRow)
+			xlsxFile.SetCellStyle(sheet2Name, cell, cell, boldStyle)
+		}
 	}
 
 	// 自动调整汇总表列宽

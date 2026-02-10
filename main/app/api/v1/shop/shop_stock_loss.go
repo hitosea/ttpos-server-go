@@ -312,14 +312,14 @@ func RegisterStockLossHandlers(router gin.IRouter, dbm *database.DBManager, cach
 
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/stock_loss/list", wrapper.GetStockLossList)                     // 获取报损单列表
-		privateApi.GET("/stock_loss/detail", wrapper.GetStockLossDetail)                 // 获取报损单详情
+		privateApi.GET("/stock_loss/list", wrapper.GetStockLossList)                      // 获取报损单列表
+		privateApi.GET("/stock_loss/detail", wrapper.GetStockLossDetail)                  // 获取报损单详情
 		privateApi.GET("/stock_loss/annotation_list", wrapper.GetStockLossAnnotationList) // 获取批注列表
-		privateApi.POST("/stock_loss/save", wrapper.SaveStockLoss)                       // 保存报损单
-		privateApi.DELETE("/stock_loss/delete", wrapper.DeleteStockLoss)                 // 删除报损单
-		privateApi.POST("/stock_loss/submit", wrapper.SubmitStockLoss)                   // 提交报损单
-		privateApi.POST("/stock_loss/approve", wrapper.ApproveStockLoss)                 // 审核通过报损单
-		privateApi.POST("/stock_loss/reject", wrapper.RejectStockLoss)                   // 驳回报损单
-		privateApi.POST("/stock_loss/resubmit", wrapper.ResubmitStockLoss)               // 重新提交报损单
+		privateApi.POST("/stock_loss/save", wrapper.SaveStockLoss)                        // 保存报损单
+		privateApi.DELETE("/stock_loss/delete", wrapper.DeleteStockLoss)                  // 删除报损单
+		privateApi.POST("/stock_loss/submit", wrapper.SubmitStockLoss)                    // 提交报损单
+		privateApi.POST("/stock_loss/approve", wrapper.ApproveStockLoss)                  // 审核通过报损单
+		privateApi.POST("/stock_loss/reject", wrapper.RejectStockLoss)                    // 驳回报损单
+		privateApi.POST("/stock_loss/resubmit", wrapper.ResubmitStockLoss)                // 重新提交报损单
 	}
 }

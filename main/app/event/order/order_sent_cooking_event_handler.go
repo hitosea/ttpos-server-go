@@ -224,13 +224,14 @@ func ReduceStock(payloadCtx context.Context, db *gorm.DB, saleBillUuid uint64) {
 	// 同步外卖平台
 	utils.Go(func() {
 		dbm := database.GetDBManager(config.DatabaseConf{})
+		takeoutSrv := takeoutService.NewTakeoutSrv(dbm, cache.Global, nil, nil, nil, nil)
 		// 同步Grab外卖平台
-		_, err := takeoutService.NewTakeoutSrv(dbm, cache.Global, nil, nil, nil, nil).SyncMenuChanges(payloadCtx, value_object.TakeoutPlatformGrab)
+		_, err := takeoutSrv.SyncMenuChanges(payloadCtx, value_object.TakeoutPlatformGrab)
 		if err != nil {
 			logger.Logger.Error("同步Grab外卖平台失败", zap.Error(err))
 		}
 		// 同步Lineman外卖平台
-		_, err = takeoutService.NewTakeoutSrv(dbm, cache.Global, nil, nil, nil, nil).SyncMenuChanges(payloadCtx, value_object.TakeoutPlatformLineman)
+		_, err = takeoutSrv.SyncMenuChanges(payloadCtx, value_object.TakeoutPlatformLineman)
 		if err != nil {
 			logger.Logger.Error("同步Lineman外卖平台失败", zap.Error(err))
 		}
