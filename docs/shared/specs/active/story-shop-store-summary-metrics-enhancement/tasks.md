@@ -240,11 +240,17 @@
 | Leverage | 现有 countCompanyBusinessSummary 方法 |
 
 **详细任务**:
-- 计算到店业绩 = 桌台订单金额(DeskOrderAmount) + 点餐订单金额(InstantOrderAmount)
-- 计算到店订单数 = 桌台订单数(DeskNum) + 点餐订单数(InstantOrderNum)
-- 计算外卖业绩 = 外送订单金额(TakeoutOrderAmount) + 第三方外卖订单金额(InstantOrderTakeawayAmount)
-- 计算外卖订单数 = 外送订单数(TakeoutOrderNum) + 第三方外卖订单数(InstantOrderTakeawayNum)
+- 计算到店业绩 = 桌台订单金额(DeskOrderAmount) + 点餐订单金额(InstantOrderAmount) - 退款金额 - 反结账金额
+- 计算到店订单数 = 桌台订单数(DeskNum) + 点餐订单数(InstantOrderNum) - 整单退订单数（基于 ttpos_return_order.return_type=1 判断，部分退订单纳入统计）
+- 计算外卖业绩 = 外送订单金额(TakeoutOrderAmount) + 第三方外卖订单金额(InstantOrderTakeawayAmount)，排除已取消订单
+- 计算外卖订单数 = 外送订单数(TakeoutOrderNum) + 第三方外卖订单数(InstantOrderTakeawayNum)，排除已取消订单
 - 更新 calculateBusinessAverage 函数包含新字段
+
+**实现细节**:
+- Repository 层：通过 LEFT JOIN ttpos_return_order 查询 return_type=1 的记录判断整单退
+- 新增订单数字段：DeskNumEffective、InstantOrderNumEffective（有效订单数，排除整单退）
+- 新增金额字段：DeskOrderAmountEffective、InstantOrderAmountEffective（有效金额，扣除退款）
+- Business 层：InStoreAmount 使用有效金额计算，InStoreOrderNum 使用有效订单数计算
 
 - [x] 完成
 

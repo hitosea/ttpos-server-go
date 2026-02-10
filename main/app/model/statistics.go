@@ -381,6 +381,12 @@ type StatisticsBusinessSummaryData struct {
 	TakeoutOrderNum            sql.NullInt64   `gorm:"column:takeout_order_num;comment:会员外送订单数"`
 	ExternalTakeoutAmount      sql.NullFloat64 `gorm:"column:external_takeout_amount;comment:外卖平台订单金额(Grab/LINE MAN)"`
 	ExternalTakeoutNum         sql.NullInt64   `gorm:"column:external_takeout_num;comment:外卖平台订单数(Grab/LINE MAN)"`
+	// 有效订单数（排除整单退款订单，用于到店订单数计算）
+	DeskNumEffective         sql.NullInt64 `gorm:"column:desk_num_effective;comment:有效桌台订单数(排除整单退)"`
+	InstantOrderNumEffective sql.NullInt64 `gorm:"column:instant_order_num_effective;comment:有效店内点餐订单数(排除整单退)"`
+	// 有效金额（扣除退款，用于到店业绩计算）
+	DeskOrderAmountEffective    sql.NullFloat64 `gorm:"column:desk_order_amount_effective;comment:有效桌台订单金额(扣除退款)"`
+	InstantOrderAmountEffective sql.NullFloat64 `gorm:"column:instant_order_amount_effective;comment:有效点餐订单金额(扣除退款)"`
 }
 
 // StatisticsRefundSummaryData 退款金额汇总统计数据
