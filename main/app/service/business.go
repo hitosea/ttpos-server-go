@@ -4474,10 +4474,10 @@ func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request r
 						CashTC:             cashStats.CashTC,
 						CashAmount:         utils.Round(cashStats.CashAmount.InexactFloat64(), 2),
 						CashAC:             cashAC,
-						InStoreAmount:      utils.Round(statItem.DeskOrderAmountEffective+statItem.InstantOrderAmountEffective, 2),                         // 到店业绩 = 桌台 + 店内点餐（已扣除退款）
-						InStoreOrderNum:    statItem.DeskNumEffective + statItem.InstantOrderNumEffective,                                                  // 到店订单数（排除整单退，部分退纳入统计）
-						DeliveryAmount:     utils.Round(statItem.TakeoutOrderAmount+statItem.InstantOrderTakeawayAmount+statItem.ExternalTakeoutAmount, 2), // 外卖业绩 = 外送 + 第三方外卖（系统内）+ 外卖平台（Grab/LINE MAN）
-						DeliveryOrderNum:   statItem.TakeoutOrderNum + statItem.InstantOrderTakeawayNum + statItem.ExternalTakeoutNum,                      // 外卖订单数
+						InStoreAmount:      utils.Round(statItem.DeskOrderAmountEffective+statItem.InstantOrderAmountEffective, 2),                                                    // 到店业绩 = 桌台 + 店内点餐（已扣除退款）
+						InStoreOrderNum:    statItem.DeskNumEffective + statItem.InstantOrderNumEffective,                                                                             // 到店订单数（排除整单退，部分退纳入统计）
+						DeliveryAmount:     utils.Round(statItem.TakeoutOrderAmountEffective+statItem.InstantOrderTakeawayAmountEffective+statItem.ExternalTakeoutAmountEffective, 2), // 外卖业绩 = 外送 + 第三方外卖 + 外卖平台（排除整单退/取消）
+						DeliveryOrderNum:   statItem.TakeoutOrderNumEffective + statItem.InstantOrderTakeawayNumEffective + statItem.ExternalTakeoutNumEffective,                      // 外卖订单数（排除整单退/取消）
 						MealNum:            statItem.MealNum,
 						DeskNum:            statItem.DeskNum,
 						AvgCustomerPrice:   statItem.PayAmountMealAvg,
