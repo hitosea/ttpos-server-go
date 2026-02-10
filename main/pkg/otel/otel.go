@@ -34,6 +34,11 @@ func AddSpanEvent(ctx context.Context, name string, attrs ...attribute.KeyValue)
 // err: 错误对象
 // message: 可选的错误消息
 func RecordSpanError(ctx context.Context, err error, message ...string) {
+	// 防御性检查：err 为 nil 时直接返回，避免后续调用 err.Error() 时 panic
+	if err == nil {
+		return
+	}
+
 	span := trace.SpanFromContext(ctx)
 	if !span.IsRecording() {
 		return

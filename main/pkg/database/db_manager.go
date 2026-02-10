@@ -207,3 +207,61 @@ func CloseAll() error {
 	}
 	return nil
 }
+
+// DBPoolStats 单个数据库连接池统计
+type DBPoolStats struct {
+	DBName            string `json:"db_name"`              // 数据库名称
+	MaxOpenConns      int    `json:"max_open_conns"`       // 最大打开连接数
+	OpenConns         int    `json:"open_conns"`           // 当前打开连接数
+	InUse             int    `json:"in_use"`               // 正在使用的连接数
+	Idle              int    `json:"idle"`                 // 空闲连接数
+	WaitCount         int64  `json:"wait_count"`           // 等待连接的累计次数
+	WaitDuration      string `json:"wait_duration"`        // 等待连接的累计时间(字符串格式)
+	WaitDurationMs    int64  `json:"wait_duration_ms"`     // 等待连接的累计时间(毫秒)
+	MaxIdleClosed     int64  `json:"max_idle_closed"`      // 因超过MaxIdleConns被关闭的连接数
+	MaxIdleTimeClosed int64  `json:"max_idle_time_closed"` // 因ConnMaxIdleTime被关闭的连接数
+	MaxLifetimeClosed int64  `json:"max_lifetime_closed"`  // 因ConnMaxLifetime被关闭的连接数
+}
+
+// GetAllStats 获取所有数据库连接池统计
+func (m *DBManager) GetAllStats() []DBPoolStats {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	stats := make([]DBPoolStats, 0, len(m.dbs))
+	for index, db := range m.dbs {
+		sqlDB, err := db.DB()
+		if err != nil {
+			continue
+		}
+
+		dbStats := sqlDB.Stats()
+		dbName := "saas"
+		if index > 0 {
+			dbName = fmt.Sprintf("%s%d", constant.DBNamePrefix, index)
+		}
+
+		stats = append(stats, DBPoolStats{
+			DBName:            dbName,
+			MaxOpenConns:      dbStats.MaxOpenConnections,
+			OpenConns:         dbStats.OpenConnections,
+			InUse:             dbStats.InUse,
+			Idle:              dbStats.Idle,
+			WaitCount:         dbStats.WaitCount,
+			WaitDuration:      dbStats.WaitDuration.String(),
+			WaitDurationMs:    dbStats.WaitDuration.Milliseconds(),
+			MaxIdleClosed:     dbStats.MaxIdleClosed,
+			MaxIdleTimeClosed: dbStats.MaxIdleTimeClosed,
+			MaxLifetimeClosed: dbStats.MaxLifetimeClosed,
+		})
+	}
+	return stats
+}
+
+// GetAllStats 全局获取所有数据库连接池统计
+func GetAllStats() []DBPoolStats {
+	if instance != nil {
+		return instance.GetAllStats()
+	}
+	return nil
+}

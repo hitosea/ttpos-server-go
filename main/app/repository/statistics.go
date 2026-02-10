@@ -2462,16 +2462,22 @@ type CountBusinessSummaryReq struct {
 
 // businessSummaryRawData 综合运营统计原始数据
 type businessSummaryRawData struct {
-	FinishTime         int64   // 完成时间戳
-	SaleBillUuid       uint64  // 销售账单UUID
-	OrderAmount        float64 // 订单金额
-	PayAmount          float64 // 支付金额
-	RefundAmount       float64 // 退款金额
-	MealNum            uint    // 用餐人数
-	DeskUuid           uint64  // 桌台UUID
-	DeskOrderAmount    float64 // 桌台订单金额
-	InstantOrderAmount float64 // 点餐订单金额
-	TakeoutOrderAmount float64 // 外送订单金额
+	FinishTime                  int64   // 完成时间戳
+	SaleBillUuid                uint64  // 销售账单UUID
+	OrderAmount                 float64 // 订单金额
+	PayAmount                   float64 // 支付金额
+	RefundAmount                float64 // 退款金额
+	MealNum                     uint    // 用餐人数
+	DeskUuid                    uint64  // 桌台UUID
+	DeskOrderAmount             float64 // 桌台订单金额
+	InstantOrderAmount          float64 // 点餐订单金额
+	TakeoutOrderAmount          float64 // 外送订单金额
+	BillType                    int     // 订单类型: 0=桌台, 1=点餐, 2=会员外送
+	OrderSourceUuid             uint64  // 订单来源UUID（>0表示第三方外卖如Grab/LINE MAN）
+	InstantOrderTakeawayAmount  float64 // 第三方外卖金额
+	IsExternalTakeout           bool    // 是否为外卖平台订单（Grab/LINE MAN 从 takeout_order 表）
+	DeskOrderAmountEffective    float64 // 有效桌台订单金额（扣除退款）
+	InstantOrderAmountEffective float64 // 有效点餐订单金额（扣除退款）
 }
 
 // CountBusinessSummary 统计综合运营
@@ -2479,7 +2485,7 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 	// 1. 查询原始数据（不分组）
 	var rawData []businessSummaryRawData
 	rawQuery := `
-		SELECT 
+		SELECT
 			sb.finish_time,
 			sb.uuid AS sale_bill_uuid,
 			SUM(so_agg.origin_amount) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) AS order_amount,
@@ -2488,11 +2494,16 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 			MAX(sb.meal_num) AS meal_num,
 			MAX(sb.desk_uuid) AS desk_uuid,
 			SUM(IF(sb.bill_type = 0, so_agg.origin_amount, 0)) as desk_order_amount,
-			SUM(IF(sb.bill_type = 1, so_agg.origin_amount, 0)) as instant_order_amount,
-			SUM(IF(sb.bill_type = 2, so_agg.origin_amount, 0)) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) as takeout_order_amount
+			SUM(IF(sb.bill_type = 1 AND sb.order_source_uuid = 0, so_agg.origin_amount, 0)) as instant_order_amount,
+			SUM(IF(sb.bill_type = 2, so_agg.origin_amount, 0)) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) as takeout_order_amount,
+			MAX(sb.bill_type) AS bill_type,
+			MAX(sb.order_source_uuid) AS order_source_uuid,
+			SUM(IF(sb.bill_type = 1 AND sb.order_source_uuid > 0, so_agg.origin_amount, 0)) as instant_order_takeaway_amount,
+			SUM(IF(sb.bill_type = 0, so_agg.origin_amount - IFNULL(ro_summary.refund_amount, 0), 0)) as desk_order_amount_effective,
+			SUM(IF(sb.bill_type = 1 AND sb.order_source_uuid = 0, so_agg.origin_amount - IFNULL(ro_summary.refund_amount, 0), 0)) as instant_order_amount_effective
 		FROM ttpos_sale_bill AS sb
 		LEFT JOIN (
-			SELECT 
+			SELECT
 				so.sale_bill_uuid,
 				so.uuid AS so_uuid,
 				so.origin_amount,
@@ -2501,7 +2512,7 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 			WHERE so.delete_time = ? AND so.status = ?
 		) AS so_agg ON sb.uuid = so_agg.sale_bill_uuid
 		LEFT JOIN (
-			SELECT 
+			SELECT
 				related_order_uuid,
 				SUM(refund_amount) AS refund_amount
 			FROM ttpos_return_order
@@ -2548,12 +2559,13 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 			SaleBillUuid:       takeoutItem.OrderUuid,
 			OrderAmount:        takeoutItem.OrderAmount,
 			PayAmount:          takeoutItem.PayAmount,
-			RefundAmount:       0, // 外卖订单退款已在实付金额中体现
-			MealNum:            0, // 外卖订单无用餐人数
-			DeskUuid:           0, // 外卖订单无桌台
-			DeskOrderAmount:    0, // 外卖订单不归入桌台订单
-			InstantOrderAmount: 0, // 外卖订单不归入点餐订单
-			TakeoutOrderAmount: 0, // 外卖订单不归入外送订单（单独统计）
+			RefundAmount:       0,    // 外卖订单退款已在实付金额中体现
+			MealNum:            0,    // 外卖订单无用餐人数
+			DeskUuid:           0,    // 外卖订单无桌台
+			DeskOrderAmount:    0,    // 外卖订单不归入桌台订单
+			InstantOrderAmount: 0,    // 外卖订单不归入点餐订单
+			TakeoutOrderAmount: 0,    // 外卖订单不归入外送订单（单独统计）
+			IsExternalTakeout:  true, // 标记为外卖平台订单（Grab/LINE MAN）
 		})
 	}
 
@@ -2563,15 +2575,34 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 	// 按日期分组统计
 	// 使用 decimal 进行精确计算
 	type groupData struct {
-		OrderAmount        decimal.Decimal
-		PayAmount          decimal.Decimal
-		RefundAmount       decimal.Decimal
-		OrderNum           int64
-		MealNum            int64
-		DeskNum            int64
-		DeskOrderAmount    decimal.Decimal
-		InstantOrderAmount decimal.Decimal
-		TakeoutOrderAmount decimal.Decimal
+		OrderAmount                decimal.Decimal
+		PayAmount                  decimal.Decimal
+		RefundAmount               decimal.Decimal
+		OrderNum                   int64
+		MealNum                    int64
+		DeskNum                    int64
+		DeskOrderAmount            decimal.Decimal
+		InstantOrderAmount         decimal.Decimal
+		TakeoutOrderAmount         decimal.Decimal
+		InstantOrderNum            int64           // 店内点餐订单数
+		InstantOrderTakeawayAmount decimal.Decimal // 第三方外卖金额
+		InstantOrderTakeawayNum    int64           // 第三方外卖订单数
+		TakeoutOrderNum            int64           // 会员外送订单数
+		ExternalTakeoutAmount      decimal.Decimal // 外卖平台订单金额（Grab/LINE MAN）
+		ExternalTakeoutNum         int64           // 外卖平台订单数（Grab/LINE MAN）
+		// 有效订单数（排除整单退款订单）
+		DeskNumEffective         int64 // 有效桌台订单数（排除整单退）
+		InstantOrderNumEffective int64 // 有效店内点餐订单数（排除整单退）
+		// 有效金额（扣除退款）
+		DeskOrderAmountEffective    decimal.Decimal // 有效桌台订单金额（扣除退款）
+		InstantOrderAmountEffective decimal.Decimal // 有效点餐订单金额（扣除退款）
+		// 外卖有效订单数和金额（排除整单退/取消订单）
+		TakeoutOrderNumEffective            int64           // 有效会员外送订单数（排除整单退）
+		TakeoutOrderAmountEffective         decimal.Decimal // 有效会员外送金额（扣除退款）
+		InstantOrderTakeawayNumEffective    int64           // 有效第三方外卖订单数（排除整单退）
+		InstantOrderTakeawayAmountEffective decimal.Decimal // 有效第三方外卖金额（扣除退款）
+		ExternalTakeoutNumEffective         int64           // 有效外卖平台订单数（排除取消）
+		ExternalTakeoutAmountEffective      decimal.Decimal // 有效外卖平台金额（排除取消）
 	}
 	groupedData := make(map[string]*groupData)
 	for _, item := range rawData {
@@ -2597,28 +2628,109 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 		group.RefundAmount = group.RefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
 		group.OrderNum++
 		group.MealNum += int64(item.MealNum)
+
+		// 判断是否整单退款：实付金额 > 0 且 退款金额 >= 实付金额
+		isFullRefund := item.PayAmount > 0 && item.RefundAmount >= item.PayAmount
+
 		if item.DeskUuid > 0 {
 			group.DeskNum++
+			// 有效桌台订单数：排除整单退款
+			if !isFullRefund {
+				group.DeskNumEffective++
+			}
 		}
 		group.DeskOrderAmount = group.DeskOrderAmount.Add(decimal.NewFromFloat(item.DeskOrderAmount))
 		group.InstantOrderAmount = group.InstantOrderAmount.Add(decimal.NewFromFloat(item.InstantOrderAmount))
 		group.TakeoutOrderAmount = group.TakeoutOrderAmount.Add(decimal.NewFromFloat(item.TakeoutOrderAmount))
+		// 有效金额累加（扣除退款）
+		group.DeskOrderAmountEffective = group.DeskOrderAmountEffective.Add(decimal.NewFromFloat(item.DeskOrderAmountEffective))
+		group.InstantOrderAmountEffective = group.InstantOrderAmountEffective.Add(decimal.NewFromFloat(item.InstantOrderAmountEffective))
+
+		// 统计订单数分类
+		if item.IsExternalTakeout {
+			// 外卖平台订单（Grab/LINE MAN 从 takeout_order 表）
+			group.ExternalTakeoutNum++
+			group.ExternalTakeoutAmount = group.ExternalTakeoutAmount.Add(decimal.NewFromFloat(item.OrderAmount))
+			// 有效外卖平台订单：PayAmount > 0 表示未取消（取消订单 PayAmount=0）
+			if item.PayAmount > 0 {
+				group.ExternalTakeoutNumEffective++
+				group.ExternalTakeoutAmountEffective = group.ExternalTakeoutAmountEffective.Add(decimal.NewFromFloat(item.PayAmount))
+			}
+		} else {
+			switch item.BillType {
+			case 0: // 桌台订单 - 已在 DeskNum 中统计
+			case 1: // 点餐订单
+				if item.OrderSourceUuid == 0 {
+					// 店内点餐
+					group.InstantOrderNum++
+					// 有效店内点餐订单数：排除整单退款
+					if !isFullRefund {
+						group.InstantOrderNumEffective++
+					}
+				} else {
+					// 第三方外卖（Grab、LINE MAN等，系统内订单）
+					group.InstantOrderTakeawayNum++
+					group.InstantOrderTakeawayAmount = group.InstantOrderTakeawayAmount.Add(decimal.NewFromFloat(item.InstantOrderTakeawayAmount))
+					// 有效第三方外卖订单数和金额：排除整单退款
+					if !isFullRefund {
+						group.InstantOrderTakeawayNumEffective++
+						// 有效金额 = 原始金额 - 退款金额
+						effectiveAmount := item.InstantOrderTakeawayAmount - item.RefundAmount
+						if effectiveAmount < 0 {
+							effectiveAmount = 0
+						}
+						group.InstantOrderTakeawayAmountEffective = group.InstantOrderTakeawayAmountEffective.Add(decimal.NewFromFloat(effectiveAmount))
+					}
+				}
+			case 2: // 会员外送
+				group.TakeoutOrderNum++
+				// 有效会员外送订单数和金额：排除整单退款
+				if !isFullRefund {
+					group.TakeoutOrderNumEffective++
+					// 有效金额 = 原始金额 - 退款金额
+					effectiveAmount := item.TakeoutOrderAmount - item.RefundAmount
+					if effectiveAmount < 0 {
+						effectiveAmount = 0
+					}
+					group.TakeoutOrderAmountEffective = group.TakeoutOrderAmountEffective.Add(decimal.NewFromFloat(effectiveAmount))
+				}
+			}
+		}
 	}
 
 	// 转换为结果格式
 	result := make([]model.StatisticsBusinessSummaryData, 0, len(groupedData))
 	for dateKey, group := range groupedData {
 		result = append(result, model.StatisticsBusinessSummaryData{
-			Date:               sql.NullString{String: dateKey, Valid: true},
-			OrderAmount:        sql.NullFloat64{Float64: group.OrderAmount.InexactFloat64(), Valid: true},
-			PayAmount:          sql.NullFloat64{Float64: group.PayAmount.InexactFloat64(), Valid: true},
-			RefundAmount:       sql.NullFloat64{Float64: group.RefundAmount.InexactFloat64(), Valid: true},
-			OrderNum:           sql.NullInt64{Int64: group.OrderNum, Valid: true},
-			MealNum:            sql.NullInt64{Int64: group.MealNum, Valid: true},
-			DeskNum:            sql.NullInt64{Int64: group.DeskNum, Valid: true},
-			DeskOrderAmount:    sql.NullFloat64{Float64: group.DeskOrderAmount.InexactFloat64(), Valid: true},
-			InstantOrderAmount: sql.NullFloat64{Float64: group.InstantOrderAmount.InexactFloat64(), Valid: true},
-			TakeoutOrderAmount: sql.NullFloat64{Float64: group.TakeoutOrderAmount.InexactFloat64(), Valid: true},
+			Date:                       sql.NullString{String: dateKey, Valid: true},
+			OrderAmount:                sql.NullFloat64{Float64: group.OrderAmount.InexactFloat64(), Valid: true},
+			PayAmount:                  sql.NullFloat64{Float64: group.PayAmount.InexactFloat64(), Valid: true},
+			RefundAmount:               sql.NullFloat64{Float64: group.RefundAmount.InexactFloat64(), Valid: true},
+			OrderNum:                   sql.NullInt64{Int64: group.OrderNum, Valid: true},
+			MealNum:                    sql.NullInt64{Int64: group.MealNum, Valid: true},
+			DeskNum:                    sql.NullInt64{Int64: group.DeskNum, Valid: true},
+			DeskOrderAmount:            sql.NullFloat64{Float64: group.DeskOrderAmount.InexactFloat64(), Valid: true},
+			InstantOrderAmount:         sql.NullFloat64{Float64: group.InstantOrderAmount.InexactFloat64(), Valid: true},
+			TakeoutOrderAmount:         sql.NullFloat64{Float64: group.TakeoutOrderAmount.InexactFloat64(), Valid: true},
+			InstantOrderNum:            sql.NullInt64{Int64: group.InstantOrderNum, Valid: true},
+			InstantOrderTakeawayAmount: sql.NullFloat64{Float64: group.InstantOrderTakeawayAmount.InexactFloat64(), Valid: true},
+			InstantOrderTakeawayNum:    sql.NullInt64{Int64: group.InstantOrderTakeawayNum, Valid: true},
+			TakeoutOrderNum:            sql.NullInt64{Int64: group.TakeoutOrderNum, Valid: true},
+			ExternalTakeoutAmount:      sql.NullFloat64{Float64: group.ExternalTakeoutAmount.InexactFloat64(), Valid: true},
+			ExternalTakeoutNum:         sql.NullInt64{Int64: group.ExternalTakeoutNum, Valid: true},
+			// 有效订单数（排除整单退款订单）
+			DeskNumEffective:         sql.NullInt64{Int64: group.DeskNumEffective, Valid: true},
+			InstantOrderNumEffective: sql.NullInt64{Int64: group.InstantOrderNumEffective, Valid: true},
+			// 有效金额（扣除退款）
+			DeskOrderAmountEffective:    sql.NullFloat64{Float64: group.DeskOrderAmountEffective.InexactFloat64(), Valid: true},
+			InstantOrderAmountEffective: sql.NullFloat64{Float64: group.InstantOrderAmountEffective.InexactFloat64(), Valid: true},
+			// 外卖有效订单数和金额
+			TakeoutOrderNumEffective:            sql.NullInt64{Int64: group.TakeoutOrderNumEffective, Valid: true},
+			TakeoutOrderAmountEffective:         sql.NullFloat64{Float64: group.TakeoutOrderAmountEffective.InexactFloat64(), Valid: true},
+			InstantOrderTakeawayNumEffective:    sql.NullInt64{Int64: group.InstantOrderTakeawayNumEffective, Valid: true},
+			InstantOrderTakeawayAmountEffective: sql.NullFloat64{Float64: group.InstantOrderTakeawayAmountEffective.InexactFloat64(), Valid: true},
+			ExternalTakeoutNumEffective:         sql.NullInt64{Int64: group.ExternalTakeoutNumEffective, Valid: true},
+			ExternalTakeoutAmountEffective:      sql.NullFloat64{Float64: group.ExternalTakeoutAmountEffective.InexactFloat64(), Valid: true},
 		})
 	}
 

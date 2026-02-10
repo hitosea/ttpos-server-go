@@ -457,7 +457,7 @@ func (s *takeoutOrderAppService) UpdateOrder(ctx context.Context, orderUuid uint
 		orderRepo.WithTakeoutOrderMaterials(),
 	)
 	if err == nil && existingOrderForLog != nil {
-		s.saveOrderUpdateLog(db, orderUuid, existingOrderForLog, existingOrderForLog)
+		s.saveOrderUpdateLog(db, orderUuid, existingOrder, existingOrderForLog)
 	}
 
 	// 发布订单更新事件（带变动信息）

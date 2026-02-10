@@ -54978,6 +54978,87 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.CompanyBusinessAverage": {
+            "type": "object",
+            "properties": {
+                "avg_customer_price": {
+                    "description": "平均客单价的平均值",
+                    "type": "number"
+                },
+                "cash_ac": {
+                    "description": "平均现金AC",
+                    "type": "number"
+                },
+                "cash_amount": {
+                    "description": "平均现金金额",
+                    "type": "number"
+                },
+                "cash_tc": {
+                    "description": "平均现金TC",
+                    "type": "number"
+                },
+                "delivery_amount": {
+                    "description": "平均外卖业绩",
+                    "type": "number"
+                },
+                "delivery_order_num": {
+                    "description": "平均外卖订单数",
+                    "type": "number"
+                },
+                "desk_num": {
+                    "description": "平均消费桌数",
+                    "type": "number"
+                },
+                "desk_order_amount": {
+                    "description": "平均桌台订单金额",
+                    "type": "number"
+                },
+                "in_store_amount": {
+                    "description": "平均到店业绩",
+                    "type": "number"
+                },
+                "in_store_order_num": {
+                    "description": "平均到店订单数",
+                    "type": "number"
+                },
+                "instant_order_amount": {
+                    "description": "平均点餐订单金额",
+                    "type": "number"
+                },
+                "meal_num": {
+                    "description": "平均用餐人数",
+                    "type": "number"
+                },
+                "order_amount": {
+                    "description": "平均订单金额",
+                    "type": "number"
+                },
+                "order_amount_avg": {
+                    "description": "平均单均",
+                    "type": "number"
+                },
+                "order_amount_meal_avg": {
+                    "description": "平均人均",
+                    "type": "number"
+                },
+                "order_num": {
+                    "description": "平均订单数量",
+                    "type": "number"
+                },
+                "pay_amount": {
+                    "description": "平均实付金额",
+                    "type": "number"
+                },
+                "pay_amount_avg": {
+                    "description": "平均实付单均",
+                    "type": "number"
+                },
+                "takeout_order_amount": {
+                    "description": "平均外送订单金额",
+                    "type": "number"
+                }
+            }
+        },
         "resp.CompanyBusinessSummaryItem": {
             "type": "object",
             "properties": {
@@ -55005,6 +55086,14 @@ const docTemplate = `{
                     "description": "营业日（格式：YYYY-MM-DD）",
                     "type": "string"
                 },
+                "delivery_amount": {
+                    "description": "外卖业绩（外送+第三方外卖订单金额，保留2位小数）",
+                    "type": "number"
+                },
+                "delivery_order_num": {
+                    "description": "外卖订单数（外送+第三方外卖订单数）",
+                    "type": "integer"
+                },
                 "desk_num": {
                     "description": "消费桌数",
                     "type": "integer"
@@ -55012,6 +55101,14 @@ const docTemplate = `{
                 "desk_order_amount": {
                     "description": "桌台订单金额（保留2位小数）",
                     "type": "number"
+                },
+                "in_store_amount": {
+                    "description": "到店业绩（堂食+外带订单金额，保留2位小数）",
+                    "type": "number"
+                },
+                "in_store_order_num": {
+                    "description": "到店订单数（堂食+外带订单数）",
+                    "type": "integer"
                 },
                 "instant_order_amount": {
                     "description": "点餐订单金额（保留2位小数）",
@@ -55054,6 +55151,14 @@ const docTemplate = `{
         "resp.CompanyBusinessSummaryResp": {
             "type": "object",
             "properties": {
+                "average": {
+                    "description": "平均值统计（基于筛选后全量数据计算）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CompanyBusinessAverage"
+                        }
+                    ]
+                },
                 "list": {
                     "description": "明细列表或汇总列表",
                     "type": "array",
@@ -55132,6 +55237,23 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.CompanyPaymentMethodAverage": {
+            "type": "object",
+            "properties": {
+                "payment_amount": {
+                    "description": "平均支付金额",
+                    "type": "number"
+                },
+                "payment_num": {
+                    "description": "平均支付笔数",
+                    "type": "number"
+                },
+                "payment_ratio": {
+                    "description": "平均支付占比",
+                    "type": "number"
+                }
+            }
+        },
         "resp.CompanyPaymentMethodItem": {
             "type": "object",
             "properties": {
@@ -55185,6 +55307,14 @@ const docTemplate = `{
         "resp.CompanyPaymentMethodSummaryResp": {
             "type": "object",
             "properties": {
+                "average": {
+                    "description": "平均值统计（基于筛选后全量数据计算）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CompanyPaymentMethodAverage"
+                        }
+                    ]
+                },
                 "list": {
                     "description": "明细列表或汇总列表",
                     "type": "array",
@@ -55209,9 +55339,50 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.CompanyRefundAverage": {
+            "type": "object",
+            "properties": {
+                "avg_refund_amount": {
+                    "description": "平均退款额的平均值",
+                    "type": "number"
+                },
+                "full_refund_amount": {
+                    "description": "平均整单退款金额",
+                    "type": "number"
+                },
+                "full_refund_num": {
+                    "description": "平均整单退款笔数",
+                    "type": "number"
+                },
+                "partial_refund_amount": {
+                    "description": "平均部分退款金额",
+                    "type": "number"
+                },
+                "partial_refund_num": {
+                    "description": "平均部分退款笔数",
+                    "type": "number"
+                },
+                "refund_amount": {
+                    "description": "平均退款金额",
+                    "type": "number"
+                },
+                "refund_num": {
+                    "description": "平均退款笔数",
+                    "type": "number"
+                },
+                "refund_rate": {
+                    "description": "平均退款率",
+                    "type": "number"
+                }
+            }
+        },
         "resp.CompanyRefundSummaryItem": {
             "type": "object",
             "properties": {
+                "avg_refund_amount": {
+                    "description": "平均退款额（退款金额/退款单数，保留2位小数）",
+                    "type": "number"
+                },
                 "company_name": {
                     "description": "门店名称",
                     "type": "string"
@@ -55253,6 +55424,14 @@ const docTemplate = `{
         "resp.CompanyRefundSummaryResp": {
             "type": "object",
             "properties": {
+                "average": {
+                    "description": "平均值统计（基于筛选后全量数据计算）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CompanyRefundAverage"
+                        }
+                    ]
+                },
                 "list": {
                     "description": "明细列表或汇总列表",
                     "type": "array",

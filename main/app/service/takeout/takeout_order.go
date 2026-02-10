@@ -128,18 +128,15 @@ func (s *takeoutSrv) ProcessTakeoutOrderOutboundAndSales(ctx context.Context, or
 	}
 
 	// 同步外卖平台
-	s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
-		Platform:    order.Platform,
-		CompanyUuid: companyUuid,
-	})
-
+	payloadCtx := ctx.Copy()
+	payloadCtx.SetDB(db)
 	utils.Go(func() {
-		s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
+		s.takeoutAppSrv.SyncMenuChanges(payloadCtx, request.ExportMenuRequest{
 			Platform:    value_object.TakeoutPlatformGrab,
 			CompanyUuid: companyUuid,
 		})
 
-		s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
+		s.takeoutAppSrv.SyncMenuChanges(payloadCtx, request.ExportMenuRequest{
 			Platform:    value_object.TakeoutPlatformLineman,
 			CompanyUuid: companyUuid,
 		})

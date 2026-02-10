@@ -365,16 +365,35 @@ type StatisticsBusinessTimePeriodData struct {
 
 // StatisticsBusinessSummaryData 综合运营统计数据
 type StatisticsBusinessSummaryData struct {
-	Date               sql.NullString  `gorm:"column:date;comment:日期"`
-	OrderAmount        sql.NullFloat64 `gorm:"column:order_amount;comment:订单金额"`
-	PayAmount          sql.NullFloat64 `gorm:"column:pay_amount;comment:实付金额"`
-	RefundAmount       sql.NullFloat64 `gorm:"column:refund_amount;comment:退款金额"`
-	OrderNum           sql.NullInt64   `gorm:"column:order_num;comment:订单数量"`
-	MealNum            sql.NullInt64   `gorm:"column:meal_num;comment:用餐人数"`
-	DeskNum            sql.NullInt64   `gorm:"column:desk_num;comment:桌台数"`
-	InstantOrderAmount sql.NullFloat64 `gorm:"column:instant_order_amount;comment:点餐订单金额"`
-	DeskOrderAmount    sql.NullFloat64 `gorm:"column:desk_order_amount;comment:桌台订单金额"`
-	TakeoutOrderAmount sql.NullFloat64 `gorm:"column:takeout_order_amount;comment:外送订单金额"`
+	Date                       sql.NullString  `gorm:"column:date;comment:日期"`
+	OrderAmount                sql.NullFloat64 `gorm:"column:order_amount;comment:订单金额"`
+	PayAmount                  sql.NullFloat64 `gorm:"column:pay_amount;comment:实付金额"`
+	RefundAmount               sql.NullFloat64 `gorm:"column:refund_amount;comment:退款金额"`
+	OrderNum                   sql.NullInt64   `gorm:"column:order_num;comment:订单数量"`
+	MealNum                    sql.NullInt64   `gorm:"column:meal_num;comment:用餐人数"`
+	DeskNum                    sql.NullInt64   `gorm:"column:desk_num;comment:桌台数"`
+	InstantOrderAmount         sql.NullFloat64 `gorm:"column:instant_order_amount;comment:点餐订单金额"`
+	DeskOrderAmount            sql.NullFloat64 `gorm:"column:desk_order_amount;comment:桌台订单金额"`
+	TakeoutOrderAmount         sql.NullFloat64 `gorm:"column:takeout_order_amount;comment:外送订单金额"`
+	InstantOrderNum            sql.NullInt64   `gorm:"column:instant_order_num;comment:店内点餐订单数"`
+	InstantOrderTakeawayAmount sql.NullFloat64 `gorm:"column:instant_order_takeaway_amount;comment:第三方外卖金额"`
+	InstantOrderTakeawayNum    sql.NullInt64   `gorm:"column:instant_order_takeaway_num;comment:第三方外卖订单数"`
+	TakeoutOrderNum            sql.NullInt64   `gorm:"column:takeout_order_num;comment:会员外送订单数"`
+	ExternalTakeoutAmount      sql.NullFloat64 `gorm:"column:external_takeout_amount;comment:外卖平台订单金额(Grab/LINE MAN)"`
+	ExternalTakeoutNum         sql.NullInt64   `gorm:"column:external_takeout_num;comment:外卖平台订单数(Grab/LINE MAN)"`
+	// 有效订单数（排除整单退款订单，用于到店订单数计算）
+	DeskNumEffective         sql.NullInt64 `gorm:"column:desk_num_effective;comment:有效桌台订单数(排除整单退)"`
+	InstantOrderNumEffective sql.NullInt64 `gorm:"column:instant_order_num_effective;comment:有效店内点餐订单数(排除整单退)"`
+	// 有效金额（扣除退款，用于到店业绩计算）
+	DeskOrderAmountEffective    sql.NullFloat64 `gorm:"column:desk_order_amount_effective;comment:有效桌台订单金额(扣除退款)"`
+	InstantOrderAmountEffective sql.NullFloat64 `gorm:"column:instant_order_amount_effective;comment:有效点餐订单金额(扣除退款)"`
+	// 外卖有效订单数和金额（排除整单退/取消订单，用于外卖业绩计算）
+	TakeoutOrderNumEffective            sql.NullInt64   `gorm:"column:takeout_order_num_effective;comment:有效会员外送订单数(排除整单退)"`
+	TakeoutOrderAmountEffective         sql.NullFloat64 `gorm:"column:takeout_order_amount_effective;comment:有效会员外送金额(扣除退款)"`
+	InstantOrderTakeawayNumEffective    sql.NullInt64   `gorm:"column:instant_order_takeaway_num_effective;comment:有效第三方外卖订单数(排除整单退)"`
+	InstantOrderTakeawayAmountEffective sql.NullFloat64 `gorm:"column:instant_order_takeaway_amount_effective;comment:有效第三方外卖金额(扣除退款)"`
+	ExternalTakeoutNumEffective         sql.NullInt64   `gorm:"column:external_takeout_num_effective;comment:有效外卖平台订单数(排除取消)"`
+	ExternalTakeoutAmountEffective      sql.NullFloat64 `gorm:"column:external_takeout_amount_effective;comment:有效外卖平台金额(排除取消)"`
 }
 
 // StatisticsRefundSummaryData 退款金额汇总统计数据

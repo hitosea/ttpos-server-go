@@ -127,9 +127,9 @@ type ContextImpl struct {
 	version        string               // 客户端版本号（用于队列等非HTTP场景）
 	log            *zap.Logger
 	db             *gorm.DB
-	startTime      int64                // 请求开始时间（毫秒时间戳）
-	timeNodes      []TimeNode           // 时间节点列表
-	timeNodesMu    sync.Mutex           // 时间节点互斥锁
+	startTime      int64      // 请求开始时间（毫秒时间戳）
+	timeNodes      []TimeNode // 时间节点列表
+	timeNodesMu    sync.Mutex // 时间节点互斥锁
 }
 
 type Option func(*ContextImpl)

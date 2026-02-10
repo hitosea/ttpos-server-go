@@ -1573,6 +1573,7 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		}
 		forms = warehouseOutForms
 	}
+	ctx.Mark("out_forms_loaded")
 
 	// 2.该账单的商品归还库存，生成入库单
 	// 获取账单的所有商品，退菜的商品除外
@@ -1613,6 +1614,7 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 			warehouseForm = model.NewWarehouseForm(filteredProductList, saleBill.Uuid)
 		}
 	}
+	ctx.Mark("in_form_built")
 
 	// 3.构建出库单，将账单下单减库存的商品出库
 	var warehouseOutForms []*model.WarehouseOutForm
@@ -1631,8 +1633,10 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		}
 		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid, 0)
 	}
+	ctx.Mark("forms_prepared")
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		ctx.Mark("transaction_started")
 		// 撤销出库单
 		for _, form := range forms {
 			if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormRecord(*form); err != nil {
@@ -1645,6 +1649,7 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 				}
 			}
 		}
+		ctx.Mark("out_forms_revoked")
 
 		// 创建入库单
 		if warehouseForm != nil && len(warehouseForm.WarehouseFormItems) > 0 {
@@ -1657,6 +1662,7 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 				return errors.WithMessage(err)
 			}
 		}
+		ctx.Mark("in_form_created")
 
 		// 更新销量. 如果是反结账，则减少销量
 		if opt.IsReverseSettle {
@@ -1681,16 +1687,18 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 					return errors.WithMessage(err)
 				}
 				// 创建出库单记录
-				if err := repository.NewWarehouseFormRepo(db).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
+				if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
 		}
+		ctx.Mark("warehouse_saved")
 
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err)
 	}
+	ctx.Mark("transaction_committed")
 
 	// 发布"库存变更"事件
 	utils.Go(func() {
@@ -5419,11 +5427,13 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 	}
 	// 计算订单商品、订单、账单
 	saleBill.CalcAll(options...)
+	ctx.Mark("bill_calculated")
 	// 设置收银员信息
 	staff := ctx.GetStaff()
 	saleBill.SetCashier(staff.DutyNo, staff.Uuid, staff.GetUserName())
 
 	err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		ctx.Mark("transaction_started")
 		reasonRepo := repository.NewSaleOrderProductReasonRepo(tx)
 
 		for _, saleOrder := range saleBill.SaleOrders {
@@ -5497,16 +5507,19 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 				}
 			}
 		}
+		ctx.Mark("orders_saved")
 		// 保存账单。不能用这个方法来创建销售账单，故不使用UpdateOrCreate
 		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
+		ctx.Mark("bill_saved")
 		return nil
 	})
 	if err != nil {
 		ctx.Log().Error("更新金额失败", zap.Error(err))
 		return errors.WithMessage(err)
 	}
+	ctx.Mark("transaction_committed")
 	return nil
 }
 

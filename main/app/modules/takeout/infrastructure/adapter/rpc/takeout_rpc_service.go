@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 	menuApi "ttpos-bmp/app/ttpos-takeout/api/menu"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/domain/value_object"
@@ -190,7 +191,11 @@ func (s *TakeoutRPCService) UpdateMenuItem(ctx context.Context, shopUuid string,
 	}
 
 	// 调用 RPC 接口
-	err = client.UpdateMenuItem(ctx, req)
+	// 创建独立的 context，不继承父 context 的超时设置（避免在异步调用中继承已超时的 context）
+	// 为 RPC 调用设置 30 秒超时，防止永久阻塞
+	rpcCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	err = client.UpdateMenuItem(rpcCtx, req)
 	if err != nil {
 		logger.Logger.Error("更新菜单项失败",
 			zap.Error(err),
@@ -231,7 +236,11 @@ func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, platform str
 	}
 
 	// 调用 RPC 接口
-	err = client.UpdateMenuModifier(ctx, req)
+	// 创建独立的 context，不继承父 context 的超时设置（避免在异步调用中继承已超时的 context）
+	// 为 RPC 调用设置 30 秒超时，防止永久阻塞
+	rpcCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	err = client.UpdateMenuModifier(rpcCtx, req)
 	if err != nil {
 		return err
 	}

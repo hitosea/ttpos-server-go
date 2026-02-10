@@ -26,36 +26,36 @@ type StockLossInfo struct {
 
 // StockLossDetailResp 报损单详情响应
 type StockLossDetailResp struct {
-	Uuid          uint64                    `json:"uuid"`           // 报损单UUID
-	Code          string                    `json:"code"`           // 单据编号
-	ErpCode       string                    `json:"erp_code"`       // ERP单据编号
-	LossType      int                       `json:"loss_type"`      // 报损类型 1:物品损坏 2:物品报废 3:物品过期
-	WarehouseUuid uint64                    `json:"warehouse_uuid"` // 仓库UUID
-	WarehouseName dto.LocaleResponse        `json:"warehouse_name"` // 仓库名称（多语言）
-	Reason        string                    `json:"reason"`         // 报损原因
-	Status        int                       `json:"status"`         // 状态 0:已保存 1:已提交 2:已审核通过 3:已驳回
-	Items         []*StockLossItemInfo      `json:"items"`          // 报损单物品明细
-	Files         []*StockLossFileInfo      `json:"files"`          // 附件列表
-	Annotations   []*StockLossAnnotationInfo `json:"annotations"`    // 批注列表（按创建时间倒序）
-	SubmitTime    int                       `json:"submit_time"`    // 提交时间
-	ApproveTime   int                       `json:"approve_time"`   // 审核通过时间
-	RejectTime    int                       `json:"reject_time"`    // 驳回时间
-	CreateTime    int                       `json:"create_time"`    // 创建时间
-	UpdateTime    int                       `json:"update_time"`    // 更新时间
-	IsCanResubmit bool                      `json:"is_can_resubmit"` // 是否可重新提交（已驳回状态且为发起人）
+	Uuid          uint64                     `json:"uuid"`            // 报损单UUID
+	Code          string                     `json:"code"`            // 单据编号
+	ErpCode       string                     `json:"erp_code"`        // ERP单据编号
+	LossType      int                        `json:"loss_type"`       // 报损类型 1:物品损坏 2:物品报废 3:物品过期
+	WarehouseUuid uint64                     `json:"warehouse_uuid"`  // 仓库UUID
+	WarehouseName dto.LocaleResponse         `json:"warehouse_name"`  // 仓库名称（多语言）
+	Reason        string                     `json:"reason"`          // 报损原因
+	Status        int                        `json:"status"`          // 状态 0:已保存 1:已提交 2:已审核通过 3:已驳回
+	Items         []*StockLossItemInfo       `json:"items"`           // 报损单物品明细
+	Files         []*StockLossFileInfo       `json:"files"`           // 附件列表
+	Annotations   []*StockLossAnnotationInfo `json:"annotations"`     // 批注列表（按创建时间倒序）
+	SubmitTime    int                        `json:"submit_time"`     // 提交时间
+	ApproveTime   int                        `json:"approve_time"`    // 审核通过时间
+	RejectTime    int                        `json:"reject_time"`     // 驳回时间
+	CreateTime    int                        `json:"create_time"`     // 创建时间
+	UpdateTime    int                        `json:"update_time"`     // 更新时间
+	IsCanResubmit bool                       `json:"is_can_resubmit"` // 是否可重新提交（已驳回状态且为发起人）
 }
 
 // StockLossItemInfo 报损单物品明细信息
 type StockLossItemInfo struct {
-	MaterialUuid    uint64                      `json:"material_uuid"`    // 物料UUID
-	MaterialBarcode string                      `json:"material_barcode"` // 物料条码
-	InternalCode    string                      `json:"internal_code"`    // 内部编码
-	MaterialCode    string                      `json:"material_code"`    // 物料编码
-	LocaleName      dto.LocaleResponse          `json:"locale_name"`      // 物料名称（多语言）
-	BaseQuantity    float64                     `json:"base_quantity"`    // 基准单位数量（所有单位转换后的总量）
-	ItemUnits       []*StockLossItemUnitInfo    `json:"item_units"`       // 报损单物品单位明细
-	Units           []MaterialUnitInfo          `json:"units"`            // 所有单位（包含基准单位）
-	CreateTime      int                         `json:"create_time"`      // 创建时间
+	MaterialUuid    uint64                   `json:"material_uuid"`    // 物料UUID
+	MaterialBarcode string                   `json:"material_barcode"` // 物料条码
+	InternalCode    string                   `json:"internal_code"`    // 内部编码
+	MaterialCode    string                   `json:"material_code"`    // 物料编码
+	LocaleName      dto.LocaleResponse       `json:"locale_name"`      // 物料名称（多语言）
+	BaseQuantity    float64                  `json:"base_quantity"`    // 基准单位数量（所有单位转换后的总量）
+	ItemUnits       []*StockLossItemUnitInfo `json:"item_units"`       // 报损单物品单位明细
+	Units           []MaterialUnitInfo       `json:"units"`            // 所有单位（包含基准单位）
+	CreateTime      int                      `json:"create_time"`      // 创建时间
 }
 
 // StockLossItemUnitInfo 报损单物品单位明细信息

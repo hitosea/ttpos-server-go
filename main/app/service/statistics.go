@@ -3035,19 +3035,38 @@ type StatisticsSummaryResp struct {
 
 // StatisticsSummaryItem 统计综合运营列表
 type StatisticsSummaryItem struct {
-	Date               string  `json:"date"`                  // 日期
-	OrderAmount        float64 `json:"order_amount"`          // 订单金额
-	PayAmount          float64 `json:"pay_amount"`            // 实付金额
-	OrderNum           int64   `json:"order_num"`             // 订单数量
-	MealNum            int64   `json:"meal_num"`              // 用餐人数
-	DeskNum            int64   `json:"desk_num"`              // 桌台数
-	OrderAmountMealAvg float64 `json:"order_meal_avg_amount"` // 订单金额人均
-	PayAmountMealAvg   float64 `json:"pay_amount_meal_avg"`   // 实付金额人均
-	OrderAmountAvg     float64 `json:"order_amount_avg"`      // 订单金额平均
-	PayAmountAvg       float64 `json:"pay_amount_avg"`        // 实付金额平均
-	InstantOrderAmount float64 `json:"instant_order_amount"`  // 点餐订单金额
-	DeskOrderAmount    float64 `json:"desk_order_amount"`     // 桌台订单金额
-	TakeoutOrderAmount float64 `json:"takeout_order_amount"`  // 外送订单金额
+	Date                       string  `json:"date"`                          // 日期
+	OrderAmount                float64 `json:"order_amount"`                  // 订单金额
+	PayAmount                  float64 `json:"pay_amount"`                    // 实付金额
+	OrderNum                   int64   `json:"order_num"`                     // 订单数量
+	MealNum                    int64   `json:"meal_num"`                      // 用餐人数
+	DeskNum                    int64   `json:"desk_num"`                      // 桌台数
+	OrderAmountMealAvg         float64 `json:"order_meal_avg_amount"`         // 订单金额人均
+	PayAmountMealAvg           float64 `json:"pay_amount_meal_avg"`           // 实付金额人均
+	OrderAmountAvg             float64 `json:"order_amount_avg"`              // 订单金额平均
+	PayAmountAvg               float64 `json:"pay_amount_avg"`                // 实付金额平均
+	InstantOrderAmount         float64 `json:"instant_order_amount"`          // 点餐订单金额
+	DeskOrderAmount            float64 `json:"desk_order_amount"`             // 桌台订单金额
+	TakeoutOrderAmount         float64 `json:"takeout_order_amount"`          // 外送订单金额
+	InstantOrderNum            int64   `json:"instant_order_num"`             // 店内点餐订单数
+	InstantOrderTakeawayAmount float64 `json:"instant_order_takeaway_amount"` // 第三方外卖金额（系统内）
+	InstantOrderTakeawayNum    int64   `json:"instant_order_takeaway_num"`    // 第三方外卖订单数（系统内）
+	TakeoutOrderNum            int64   `json:"takeout_order_num"`             // 会员外送订单数
+	ExternalTakeoutAmount      float64 `json:"external_takeout_amount"`       // 外卖平台订单金额（Grab/LINE MAN）
+	ExternalTakeoutNum         int64   `json:"external_takeout_num"`          // 外卖平台订单数（Grab/LINE MAN）
+	// 有效订单数（排除整单退款订单，用于到店订单数计算）
+	DeskNumEffective         int64 `json:"desk_num_effective"`          // 有效桌台订单数（排除整单退）
+	InstantOrderNumEffective int64 `json:"instant_order_num_effective"` // 有效店内点餐订单数（排除整单退）
+	// 有效金额（扣除退款，用于到店业绩计算）
+	DeskOrderAmountEffective    float64 `json:"desk_order_amount_effective"`    // 有效桌台订单金额（扣除退款）
+	InstantOrderAmountEffective float64 `json:"instant_order_amount_effective"` // 有效点餐订单金额（扣除退款）
+	// 外卖有效订单数和金额（排除整单退/取消订单，用于外卖业绩计算）
+	TakeoutOrderNumEffective            int64   `json:"takeout_order_num_effective"`             // 有效会员外送订单数（排除整单退）
+	TakeoutOrderAmountEffective         float64 `json:"takeout_order_amount_effective"`          // 有效会员外送金额（扣除退款）
+	InstantOrderTakeawayNumEffective    int64   `json:"instant_order_takeaway_num_effective"`    // 有效第三方外卖订单数（排除整单退）
+	InstantOrderTakeawayAmountEffective float64 `json:"instant_order_takeaway_amount_effective"` // 有效第三方外卖金额（扣除退款）
+	ExternalTakeoutNumEffective         int64   `json:"external_takeout_num_effective"`          // 有效外卖平台订单数（排除取消）
+	ExternalTakeoutAmountEffective      float64 `json:"external_takeout_amount_effective"`       // 有效外卖平台金额（排除取消）
 }
 
 // CountBusinessSummary 统计综合运营
@@ -3108,19 +3127,38 @@ func (s *statisticsSrv) CountBusinessSummary(ctx context.Context, req req.Statis
 		}
 
 		item := StatisticsSummaryItem{
-			Date:               data.Date.String,
-			OrderAmount:        data.OrderAmount.Float64,
-			PayAmount:          payAmount.InexactFloat64(),
-			OrderNum:           data.OrderNum.Int64,
-			MealNum:            data.MealNum.Int64,
-			DeskNum:            data.DeskNum.Int64,
-			OrderAmountMealAvg: orderAmountMealAvgDec.Round(2).InexactFloat64(),
-			PayAmountMealAvg:   payAmountMealAvgDec.Round(2).InexactFloat64(),
-			OrderAmountAvg:     orderAmountAvgDec.Round(2).InexactFloat64(),
-			PayAmountAvg:       payAmountAvgDec.Round(2).InexactFloat64(),
-			InstantOrderAmount: data.InstantOrderAmount.Float64,
-			DeskOrderAmount:    data.DeskOrderAmount.Float64,
-			TakeoutOrderAmount: data.TakeoutOrderAmount.Float64,
+			Date:                       data.Date.String,
+			OrderAmount:                data.OrderAmount.Float64,
+			PayAmount:                  payAmount.InexactFloat64(),
+			OrderNum:                   data.OrderNum.Int64,
+			MealNum:                    data.MealNum.Int64,
+			DeskNum:                    data.DeskNum.Int64,
+			OrderAmountMealAvg:         orderAmountMealAvgDec.Round(2).InexactFloat64(),
+			PayAmountMealAvg:           payAmountMealAvgDec.Round(2).InexactFloat64(),
+			OrderAmountAvg:             orderAmountAvgDec.Round(2).InexactFloat64(),
+			PayAmountAvg:               payAmountAvgDec.Round(2).InexactFloat64(),
+			InstantOrderAmount:         data.InstantOrderAmount.Float64,
+			DeskOrderAmount:            data.DeskOrderAmount.Float64,
+			TakeoutOrderAmount:         data.TakeoutOrderAmount.Float64,
+			InstantOrderNum:            data.InstantOrderNum.Int64,
+			InstantOrderTakeawayAmount: data.InstantOrderTakeawayAmount.Float64,
+			InstantOrderTakeawayNum:    data.InstantOrderTakeawayNum.Int64,
+			TakeoutOrderNum:            data.TakeoutOrderNum.Int64,
+			ExternalTakeoutAmount:      data.ExternalTakeoutAmount.Float64,
+			ExternalTakeoutNum:         data.ExternalTakeoutNum.Int64,
+			// 有效订单数（排除整单退款订单）
+			DeskNumEffective:         data.DeskNumEffective.Int64,
+			InstantOrderNumEffective: data.InstantOrderNumEffective.Int64,
+			// 有效金额（扣除退款）
+			DeskOrderAmountEffective:    data.DeskOrderAmountEffective.Float64,
+			InstantOrderAmountEffective: data.InstantOrderAmountEffective.Float64,
+			// 外卖有效订单数和金额
+			TakeoutOrderNumEffective:            data.TakeoutOrderNumEffective.Int64,
+			TakeoutOrderAmountEffective:         data.TakeoutOrderAmountEffective.Float64,
+			InstantOrderTakeawayNumEffective:    data.InstantOrderTakeawayNumEffective.Int64,
+			InstantOrderTakeawayAmountEffective: data.InstantOrderTakeawayAmountEffective.Float64,
+			ExternalTakeoutNumEffective:         data.ExternalTakeoutNumEffective.Int64,
+			ExternalTakeoutAmountEffective:      data.ExternalTakeoutAmountEffective.Float64,
 		}
 
 		list = append(list, item)

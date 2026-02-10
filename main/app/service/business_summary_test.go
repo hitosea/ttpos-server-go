@@ -237,3 +237,383 @@ func TestCashACCalculation(t *testing.T) {
 		})
 	}
 }
+
+// TestCalculateBusinessAverage_Normal 测试营业数据平均值计算 - 正常数据
+func TestCalculateBusinessAverage_Normal(t *testing.T) {
+	items := []resp.CompanyBusinessSummaryItem{
+		{
+			OrderAmount:        1000.00,
+			PayAmount:          900.00,
+			OrderNum:           10,
+			CashTC:             5,
+			CashAmount:         500.00,
+			CashAC:             100.00,
+			InStoreAmount:      600.00,
+			InStoreOrderNum:    6,
+			DeliveryAmount:     400.00,
+			DeliveryOrderNum:   4,
+			MealNum:            20,
+			DeskNum:            5,
+			AvgCustomerPrice:   45.00,
+			OrderAmountMealAvg: 50.00,
+			OrderAmountAvg:     100.00,
+			PayAmountAvg:       90.00,
+			InstantOrderAmount: 300.00,
+			DeskOrderAmount:    300.00,
+			TakeoutOrderAmount: 200.00,
+		},
+		{
+			OrderAmount:        2000.00,
+			PayAmount:          1800.00,
+			OrderNum:           20,
+			CashTC:             10,
+			CashAmount:         1000.00,
+			CashAC:             100.00,
+			InStoreAmount:      1200.00,
+			InStoreOrderNum:    12,
+			DeliveryAmount:     800.00,
+			DeliveryOrderNum:   8,
+			MealNum:            40,
+			DeskNum:            10,
+			AvgCustomerPrice:   45.00,
+			OrderAmountMealAvg: 50.00,
+			OrderAmountAvg:     100.00,
+			PayAmountAvg:       90.00,
+			InstantOrderAmount: 600.00,
+			DeskOrderAmount:    600.00,
+			TakeoutOrderAmount: 400.00,
+		},
+	}
+
+	avg := calculateBusinessAverage(items)
+
+	// 验证平均值计算（2条数据）
+	if avg.OrderAmount != 1500.00 {
+		t.Errorf("OrderAmount: 期望 1500.00, 实际 %.2f", avg.OrderAmount)
+	}
+	if avg.PayAmount != 1350.00 {
+		t.Errorf("PayAmount: 期望 1350.00, 实际 %.2f", avg.PayAmount)
+	}
+	if avg.OrderNum != 15.00 {
+		t.Errorf("OrderNum: 期望 15.00, 实际 %.2f", avg.OrderNum)
+	}
+	if avg.InStoreAmount != 900.00 {
+		t.Errorf("InStoreAmount: 期望 900.00, 实际 %.2f", avg.InStoreAmount)
+	}
+	if avg.InStoreOrderNum != 9.00 {
+		t.Errorf("InStoreOrderNum: 期望 9.00, 实际 %.2f", avg.InStoreOrderNum)
+	}
+	if avg.DeliveryAmount != 600.00 {
+		t.Errorf("DeliveryAmount: 期望 600.00, 实际 %.2f", avg.DeliveryAmount)
+	}
+	if avg.DeliveryOrderNum != 6.00 {
+		t.Errorf("DeliveryOrderNum: 期望 6.00, 实际 %.2f", avg.DeliveryOrderNum)
+	}
+}
+
+// TestCalculateBusinessAverage_Empty 测试营业数据平均值计算 - 空数据返回零值
+func TestCalculateBusinessAverage_Empty(t *testing.T) {
+	items := []resp.CompanyBusinessSummaryItem{}
+
+	avg := calculateBusinessAverage(items)
+
+	// 验证空数据返回零值
+	if avg.OrderAmount != 0 {
+		t.Errorf("OrderAmount: 期望 0, 实际 %.2f", avg.OrderAmount)
+	}
+	if avg.PayAmount != 0 {
+		t.Errorf("PayAmount: 期望 0, 实际 %.2f", avg.PayAmount)
+	}
+	if avg.InStoreAmount != 0 {
+		t.Errorf("InStoreAmount: 期望 0, 实际 %.2f", avg.InStoreAmount)
+	}
+	if avg.DeliveryAmount != 0 {
+		t.Errorf("DeliveryAmount: 期望 0, 实际 %.2f", avg.DeliveryAmount)
+	}
+}
+
+// TestCalculateRefundAverage_Normal 测试退款平均值计算 - 正常数据
+func TestCalculateRefundAverage_Normal(t *testing.T) {
+	items := []resp.CompanyRefundSummaryItem{
+		{
+			RefundAmount:        100.00,
+			RefundNum:           5,
+			RefundRate:          10.00,
+			AvgRefundAmount:     20.00,
+			PartialRefundAmount: 60.00,
+			PartialRefundNum:    3,
+			FullRefundAmount:    40.00,
+			FullRefundNum:       2,
+		},
+		{
+			RefundAmount:        200.00,
+			RefundNum:           10,
+			RefundRate:          20.00,
+			AvgRefundAmount:     20.00,
+			PartialRefundAmount: 120.00,
+			PartialRefundNum:    6,
+			FullRefundAmount:    80.00,
+			FullRefundNum:       4,
+		},
+	}
+
+	avg := calculateRefundAverage(items)
+
+	// 验证平均值计算
+	if avg.RefundAmount != 150.00 {
+		t.Errorf("RefundAmount: 期望 150.00, 实际 %.2f", avg.RefundAmount)
+	}
+	if avg.RefundNum != 7.50 {
+		t.Errorf("RefundNum: 期望 7.50, 实际 %.2f", avg.RefundNum)
+	}
+	if avg.AvgRefundAmount != 20.00 {
+		t.Errorf("AvgRefundAmount: 期望 20.00, 实际 %.2f", avg.AvgRefundAmount)
+	}
+}
+
+// TestCalculateRefundAverage_Empty 测试退款平均值计算 - 空数据返回零值
+func TestCalculateRefundAverage_Empty(t *testing.T) {
+	items := []resp.CompanyRefundSummaryItem{}
+
+	avg := calculateRefundAverage(items)
+
+	// 验证空数据返回零值
+	if avg.RefundAmount != 0 {
+		t.Errorf("RefundAmount: 期望 0, 实际 %.2f", avg.RefundAmount)
+	}
+	if avg.RefundNum != 0 {
+		t.Errorf("RefundNum: 期望 0, 实际 %.2f", avg.RefundNum)
+	}
+	if avg.AvgRefundAmount != 0 {
+		t.Errorf("AvgRefundAmount: 期望 0, 实际 %.2f", avg.AvgRefundAmount)
+	}
+}
+
+// TestAvgRefundAmountCalculation 测试平均退款额计算
+func TestAvgRefundAmountCalculation(t *testing.T) {
+	tests := []struct {
+		name              string
+		refundAmount      float64
+		refundNum         int64
+		expectedAvgRefund float64
+	}{
+		{
+			name:              "正常计算",
+			refundAmount:      100.00,
+			refundNum:         5,
+			expectedAvgRefund: 20.00,
+		},
+		{
+			name:              "除数为0返回0",
+			refundAmount:      100.00,
+			refundNum:         0,
+			expectedAvgRefund: 0.00,
+		},
+		{
+			name:              "金额为0",
+			refundAmount:      0.00,
+			refundNum:         5,
+			expectedAvgRefund: 0.00,
+		},
+		{
+			name:              "保留2位小数",
+			refundAmount:      100.00,
+			refundNum:         3,
+			expectedAvgRefund: 33.33,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var avgRefundAmount float64
+			if tt.refundNum > 0 {
+				avgRefundAmount = float64(int(tt.refundAmount/float64(tt.refundNum)*100+0.5)) / 100
+			}
+
+			if avgRefundAmount != tt.expectedAvgRefund {
+				t.Errorf("期望 AvgRefundAmount=%.2f, 实际 AvgRefundAmount=%.2f", tt.expectedAvgRefund, avgRefundAmount)
+			}
+		})
+	}
+}
+
+// TestDeliveryAmountCalculation 测试外卖业绩计算（包含外卖平台订单）
+func TestDeliveryAmountCalculation(t *testing.T) {
+	tests := []struct {
+		name                       string
+		takeoutOrderAmount         float64 // 会员外送金额
+		instantOrderTakeawayAmount float64 // 第三方外卖金额（系统内）
+		externalTakeoutAmount      float64 // 外卖平台金额（Grab/LINE MAN）
+		takeoutOrderNum            int64   // 会员外送订单数
+		instantOrderTakeawayNum    int64   // 第三方外卖订单数（系统内）
+		externalTakeoutNum         int64   // 外卖平台订单数（Grab/LINE MAN）
+		expectedDeliveryAmount     float64
+		expectedDeliveryOrderNum   int64
+	}{
+		{
+			name:                       "仅会员外送",
+			takeoutOrderAmount:         1000.00,
+			instantOrderTakeawayAmount: 0.00,
+			externalTakeoutAmount:      0.00,
+			takeoutOrderNum:            10,
+			instantOrderTakeawayNum:    0,
+			externalTakeoutNum:         0,
+			expectedDeliveryAmount:     1000.00,
+			expectedDeliveryOrderNum:   10,
+		},
+		{
+			name:                       "仅第三方外卖（系统内）",
+			takeoutOrderAmount:         0.00,
+			instantOrderTakeawayAmount: 500.00,
+			externalTakeoutAmount:      0.00,
+			takeoutOrderNum:            0,
+			instantOrderTakeawayNum:    5,
+			externalTakeoutNum:         0,
+			expectedDeliveryAmount:     500.00,
+			expectedDeliveryOrderNum:   5,
+		},
+		{
+			name:                       "仅外卖平台（Grab/LINE MAN）",
+			takeoutOrderAmount:         0.00,
+			instantOrderTakeawayAmount: 0.00,
+			externalTakeoutAmount:      800.00,
+			takeoutOrderNum:            0,
+			instantOrderTakeawayNum:    0,
+			externalTakeoutNum:         8,
+			expectedDeliveryAmount:     800.00,
+			expectedDeliveryOrderNum:   8,
+		},
+		{
+			name:                       "综合外卖业绩",
+			takeoutOrderAmount:         1000.00,
+			instantOrderTakeawayAmount: 500.00,
+			externalTakeoutAmount:      800.00,
+			takeoutOrderNum:            10,
+			instantOrderTakeawayNum:    5,
+			externalTakeoutNum:         8,
+			expectedDeliveryAmount:     2300.00, // 1000 + 500 + 800
+			expectedDeliveryOrderNum:   23,      // 10 + 5 + 8
+		},
+		{
+			name:                       "精度测试",
+			takeoutOrderAmount:         100.33,
+			instantOrderTakeawayAmount: 200.44,
+			externalTakeoutAmount:      300.55,
+			takeoutOrderNum:            1,
+			instantOrderTakeawayNum:    2,
+			externalTakeoutNum:         3,
+			expectedDeliveryAmount:     601.32, // 保留2位小数
+			expectedDeliveryOrderNum:   6,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// 模拟 business.go 中的计算逻辑
+			deliveryAmount := float64(int((tt.takeoutOrderAmount+tt.instantOrderTakeawayAmount+tt.externalTakeoutAmount)*100+0.5)) / 100
+			deliveryOrderNum := tt.takeoutOrderNum + tt.instantOrderTakeawayNum + tt.externalTakeoutNum
+
+			if deliveryAmount != tt.expectedDeliveryAmount {
+				t.Errorf("DeliveryAmount: 期望 %.2f, 实际 %.2f", tt.expectedDeliveryAmount, deliveryAmount)
+			}
+			if deliveryOrderNum != tt.expectedDeliveryOrderNum {
+				t.Errorf("DeliveryOrderNum: 期望 %d, 实际 %d", tt.expectedDeliveryOrderNum, deliveryOrderNum)
+			}
+		})
+	}
+}
+
+// TestInStoreAmountCalculation 测试到店业绩计算
+func TestInStoreAmountCalculation(t *testing.T) {
+	tests := []struct {
+		name                    string
+		deskOrderAmount         float64 // 桌台订单金额
+		instantOrderAmount      float64 // 店内点餐金额
+		deskNum                 int64   // 桌台数
+		instantOrderNum         int64   // 店内点餐订单数
+		expectedInStoreAmount   float64
+		expectedInStoreOrderNum int64
+	}{
+		{
+			name:                    "仅桌台订单",
+			deskOrderAmount:         1000.00,
+			instantOrderAmount:      0.00,
+			deskNum:                 10,
+			instantOrderNum:         0,
+			expectedInStoreAmount:   1000.00,
+			expectedInStoreOrderNum: 10,
+		},
+		{
+			name:                    "仅店内点餐",
+			deskOrderAmount:         0.00,
+			instantOrderAmount:      500.00,
+			deskNum:                 0,
+			instantOrderNum:         5,
+			expectedInStoreAmount:   500.00,
+			expectedInStoreOrderNum: 5,
+		},
+		{
+			name:                    "综合到店业绩",
+			deskOrderAmount:         1000.00,
+			instantOrderAmount:      500.00,
+			deskNum:                 10,
+			instantOrderNum:         5,
+			expectedInStoreAmount:   1500.00,
+			expectedInStoreOrderNum: 15,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// 模拟 business.go 中的计算逻辑
+			inStoreAmount := float64(int((tt.deskOrderAmount+tt.instantOrderAmount)*100+0.5)) / 100
+			inStoreOrderNum := tt.deskNum + tt.instantOrderNum
+
+			if inStoreAmount != tt.expectedInStoreAmount {
+				t.Errorf("InStoreAmount: 期望 %.2f, 实际 %.2f", tt.expectedInStoreAmount, inStoreAmount)
+			}
+			if inStoreOrderNum != tt.expectedInStoreOrderNum {
+				t.Errorf("InStoreOrderNum: 期望 %d, 实际 %d", tt.expectedInStoreOrderNum, inStoreOrderNum)
+			}
+		})
+	}
+}
+
+// TestCalculatePaymentMethodAverage_Normal 测试支付方式平均值计算 - 正常数据
+func TestCalculatePaymentMethodAverage_Normal(t *testing.T) {
+	items := []resp.CompanyPaymentMethodSummaryItem{
+		{
+			PaymentAmount: 1000.00,
+			PaymentNum:    10,
+			PaymentRatio:  50.00,
+		},
+		{
+			PaymentAmount: 2000.00,
+			PaymentNum:    20,
+			PaymentRatio:  50.00,
+		},
+	}
+
+	avg := calculatePaymentMethodAverage(items)
+
+	if avg.PaymentAmount != 1500.00 {
+		t.Errorf("PaymentAmount: 期望 1500.00, 实际 %.2f", avg.PaymentAmount)
+	}
+	if avg.PaymentNum != 15.00 {
+		t.Errorf("PaymentNum: 期望 15.00, 实际 %.2f", avg.PaymentNum)
+	}
+}
+
+// TestCalculatePaymentMethodAverage_Empty 测试支付方式平均值计算 - 空数据返回零值
+func TestCalculatePaymentMethodAverage_Empty(t *testing.T) {
+	items := []resp.CompanyPaymentMethodSummaryItem{}
+
+	avg := calculatePaymentMethodAverage(items)
+
+	if avg.PaymentAmount != 0 {
+		t.Errorf("PaymentAmount: 期望 0, 实际 %.2f", avg.PaymentAmount)
+	}
+	if avg.PaymentNum != 0 {
+		t.Errorf("PaymentNum: 期望 0, 实际 %.2f", avg.PaymentNum)
+	}
+}
