@@ -44,21 +44,6 @@ type SyncResult struct {
 	Duration    time.Duration
 }
 
-// getSyncLockKey 生成同步锁 key
-func getSyncLockKey(companyUuid uint64) string {
-	return fmt.Sprintf("%s%d", lock.SyncErpDataLockPrefix, companyUuid)
-}
-
-// tryAcquireSyncLock 尝试获取同步锁（非阻塞）
-func tryAcquireSyncLock(companyUuid uint64) bool {
-	return lock.NewSystemLock().TryLockUuidString(getSyncLockKey(companyUuid))
-}
-
-// releaseSyncLock 释放同步锁
-func releaseSyncLock(companyUuid uint64) {
-	lock.NewSystemLock().UnlockUuidString(getSyncLockKey(companyUuid))
-}
-
 func init() {
 	syncErpDataBatchCmd.Flags().StringVarP(&batchCompanies, "companies", "c", "", "门店 UUID 列表，逗号分隔（必填）")
 	syncErpDataBatchCmd.Flags().IntVarP(&batchWorkers, "workers", "w", 5, "最大并发数（默认 5）")
@@ -105,6 +90,10 @@ var syncErpDataBatchCmd = &cobra.Command{
 		cloud.Init()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		defer logger.Logger.Sync()
+
+		startTime := time.Now()
+
 		// 解析门店列表
 		companyUuids, err := parseBatchSyncCompanyUuids(batchCompanies)
 		if err != nil {
@@ -147,7 +136,7 @@ var syncErpDataBatchCmd = &cobra.Command{
 		results := runBatchSync(companyUuids, batchWorkers, dbm, syncSrv)
 
 		// 输出汇总
-		printSummary(results)
+		printSummary(results, time.Since(startTime))
 	},
 }
 
@@ -278,17 +267,6 @@ func syncOneCompany(companyUuid uint64, dbm *database.DBManager, syncSrv service
 	start := time.Now()
 	result := SyncResult{CompanyUuid: companyUuid}
 
-	// 尝试获取同步锁（非阻塞）
-	if !tryAcquireSyncLock(companyUuid) {
-		result.Skipped = true
-		result.Error = fmt.Errorf("门店正在同步中，已跳过")
-		logger.Logger.Warn("跳过同步：门店正在同步中",
-			zap.Uint64("company_uuid", companyUuid),
-		)
-		return result
-	}
-	defer releaseSyncLock(companyUuid)
-
 	logger.Logger.Info("开始同步门店",
 		zap.Uint64("company_uuid", companyUuid),
 	)
@@ -336,10 +314,22 @@ func syncOneCompany(companyUuid uint64, dbm *database.DBManager, syncSrv service
 	ctx.SetCompanySetting(*company.CompanySetting)
 	ctx.SetLanguage("zh")
 
-	// 执行同步
+	// 执行同步（Sync 内部已有分布式锁，会返回 "数据同步中，请稍后再试" 错误）
 	_, err = syncSrv.Sync(ctx, req.SyncReq{IsSyncExecute: true})
 	if err != nil {
+		// 检查是否因为正在同步中而被跳过
+		if strings.Contains(err.Error(), "数据同步中") {
+			result.Skipped = true
+			result.Error = fmt.Errorf("门店正在同步中，已跳过")
+			result.Duration = time.Since(start)
+			logger.Logger.Warn("跳过同步：门店正在同步中",
+				zap.Uint64("company_uuid", companyUuid),
+				zap.String("company_name", company.Name),
+			)
+			return result
+		}
 		result.Error = fmt.Errorf("同步执行失败: %v", err)
+		result.Duration = time.Since(start)
 		logger.Logger.Error("同步失败",
 			zap.Uint64("company_uuid", companyUuid),
 			zap.String("company_name", company.Name),
@@ -394,7 +384,7 @@ func printBatchSyncProgress(completed, total int, result SyncResult) {
 }
 
 // printSummary 打印同步结果汇总
-func printSummary(results []SyncResult) {
+func printSummary(results []SyncResult, totalElapsed time.Duration) {
 	var success, failed, skipped int
 	var failedList, skippedList []SyncResult
 	var totalDuration time.Duration
@@ -419,6 +409,7 @@ func printSummary(results []SyncResult) {
 		redColor, failed, resetColor,
 		yellowColor, skipped, resetColor,
 	)
+	fmt.Printf("总耗时: %v\n", totalElapsed.Round(time.Millisecond))
 
 	if success > 0 {
 		avgDuration := totalDuration / time.Duration(success)
