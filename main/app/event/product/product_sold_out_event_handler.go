@@ -33,15 +33,17 @@ func ProductSoldOutEventHandler() {
 			settingSrv := setting.NewSrv(dbm, cache)
 			translateSrv := service.NewTranslateSrv(dbm, cache)
 			takeoutSrv := takeoutService.NewTakeoutSrv(dbm, cache, nil, nil, translateSrv, settingSrv)
-
+			payloadCtx := payload.Ctx.Copy()
+			payloadCtx.SetDB(dbm.GetDB(payload.CompanyUuid))
+			// 同步外卖平台
 			utils.Go(func() {
 				// 推送菜单到Grab平台
-				_, err := takeoutSrv.SyncMenuChanges(payload.Ctx, value_object.TakeoutPlatformGrab)
+				_, err := takeoutSrv.SyncMenuChanges(payloadCtx, value_object.TakeoutPlatformGrab)
 				if err != nil {
 					logger.Logger.Error("推送菜单到Grab平台失败", zap.Error(err))
 				}
 				// 推送菜单到Lineman平台
-				_, err = takeoutSrv.SyncMenuChanges(payload.Ctx, value_object.TakeoutPlatformLineman)
+				_, err = takeoutSrv.SyncMenuChanges(payloadCtx, value_object.TakeoutPlatformLineman)
 				if err != nil {
 					logger.Logger.Error("推送菜单到Lineman平台失败", zap.Error(err))
 				}
