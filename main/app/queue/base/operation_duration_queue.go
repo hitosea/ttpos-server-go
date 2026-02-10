@@ -15,7 +15,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 const (
@@ -29,7 +28,7 @@ const (
 // 使用内存 channel 作为缓冲，消费者协程批量写入数据库
 type OperationDurationQueue struct {
 	ch         chan *req.OperationDurationRecord
-	db         *gorm.DB
+	dbm        *database.DBManager // 存储 DBManager 而非 *gorm.DB，确保每次获取最新连接
 	batchSize  int
 	flushTime  time.Duration
 	instanceId string
@@ -37,10 +36,22 @@ type OperationDurationQueue struct {
 }
 
 // NewOperationDurationQueue 创建操作耗时记录队列
+// 如果 dbm 为 nil 或无法获取 SaaS 主库连接，返回 nil
 func NewOperationDurationQueue(dbm *database.DBManager) *OperationDurationQueue {
+	if dbm == nil {
+		logger.Logger.Error("OperationDurationQueue 创建失败: DBManager 为 nil")
+		return nil
+	}
+
+	// 验证能够获取 SaaS 主库连接
+	if db := dbm.GetDB(constant.DefaultDB); db == nil {
+		logger.Logger.Error("OperationDurationQueue 创建失败: 无法获取 SaaS 主库连接")
+		return nil
+	}
+
 	return &OperationDurationQueue{
 		ch:         make(chan *req.OperationDurationRecord, operationDurationQueueSize),
-		db:         dbm.GetDB(constant.DefaultDB), // SaaS 主库
+		dbm:        dbm, // 存储 DBManager，每次写入时获取最新连接
 		batchSize:  operationDurationBatchSize,
 		flushTime:  time.Duration(operationDurationFlushTime) * time.Second,
 		instanceId: utils.GetInstanceID(),
@@ -67,6 +78,10 @@ func (q *OperationDurationQueue) Stop() {
 // Push 非阻塞推送记录到队列
 // 如果队列满，丢弃记录并输出告警日志
 func (q *OperationDurationQueue) Push(record *req.OperationDurationRecord) {
+	if record == nil {
+		return
+	}
+
 	// 自动填充服务实例标识
 	record.InstanceId = q.instanceId
 
@@ -120,6 +135,14 @@ func (q *OperationDurationQueue) flush(records []*req.OperationDurationRecord) {
 		return
 	}
 
+	// 每次写入时从 DBManager 获取最新连接，避免使用已关闭的连接
+	db := q.dbm.GetDB(constant.DefaultDB)
+	if db == nil {
+		logger.Logger.Error("OperationDurationQueue flush 失败: 无法获取 SaaS 主库连接",
+			zap.Int("dropped_count", len(records)))
+		return
+	}
+
 	models := make([]model.OrderOperationDuration, 0, len(records))
 	now := time.Now().Unix()
 
@@ -166,7 +189,7 @@ func (q *OperationDurationQueue) flush(records []*req.OperationDurationRecord) {
 	}
 
 	// 批量写入
-	if err := q.db.CreateInBatches(&models, q.batchSize).Error; err != nil {
+	if err := db.CreateInBatches(&models, q.batchSize).Error; err != nil {
 		logger.Logger.Error("批量写入操作耗时记录失败",
 			zap.Error(err),
 			zap.Int("count", len(models)))
@@ -190,6 +213,10 @@ func (q *OperationDurationQueue) GetInstanceID() string {
 func InitOperationDurationQueue() {
 	dbm := database.GetDBManager(config.Database)
 	operationDurationQueue := NewOperationDurationQueue(dbm)
+	if operationDurationQueue == nil {
+		logger.Logger.Warn("OperationDurationQueue 初始化失败，操作耗时监控功能已禁用")
+		return
+	}
 	operationDurationQueue.Start()
 	service.Queue.RegisterOperationDurationQueue(operationDurationQueue)
 

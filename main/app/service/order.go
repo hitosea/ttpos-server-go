@@ -5419,11 +5419,13 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 	}
 	// 计算订单商品、订单、账单
 	saleBill.CalcAll(options...)
+	ctx.Mark("bill_calculated")
 	// 设置收银员信息
 	staff := ctx.GetStaff()
 	saleBill.SetCashier(staff.DutyNo, staff.Uuid, staff.GetUserName())
 
 	err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		ctx.Mark("transaction_started")
 		reasonRepo := repository.NewSaleOrderProductReasonRepo(tx)
 
 		for _, saleOrder := range saleBill.SaleOrders {
@@ -5497,16 +5499,19 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 				}
 			}
 		}
+		ctx.Mark("orders_saved")
 		// 保存账单。不能用这个方法来创建销售账单，故不使用UpdateOrCreate
 		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
+		ctx.Mark("bill_saved")
 		return nil
 	})
 	if err != nil {
 		ctx.Log().Error("更新金额失败", zap.Error(err))
 		return errors.WithMessage(err)
 	}
+	ctx.Mark("transaction_committed")
 	return nil
 }
 

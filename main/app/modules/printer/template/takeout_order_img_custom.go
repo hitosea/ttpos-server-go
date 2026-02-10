@@ -9,7 +9,6 @@ import (
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/app/modules/printer/tyeps/structs"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
-	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
@@ -118,7 +117,7 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	isMerchantReceipt bool,
 ) structs.StatementOrderInfoData {
 	orderData := structs.StatementOrderInfoData{
-		Platform:     value_object.GetPlatformName(order.Platform),
+		Platform:     order.GetSpacePlatformName(),
 		OrderNo:      order.PlatformOrderId,
 		SerialNo:     fmt.Sprintf("%s: %s", order.GetSpacePlatformName(), order.ShortOrderNumber),
 		OrderType:    order.OrderType,
@@ -238,7 +237,7 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	orderData.DiscountFee = t.base.Amount(order.PlatformDiscount + order.MerchantDiscount + order.BasketPromo)
 
 	// 支付信息
-	orderData.PaymentName = order.PaymentType
+	orderData.PaymentName = order.GetSpacePlatformName()
 	orderData.PaidAmount = t.base.Amount(order.PlatformTotal) // 使用平台结算总额
 
 	// 附加属性
