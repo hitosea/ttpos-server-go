@@ -623,4 +623,34 @@ CREATE TABLE `ttpos_order_operation_duration` (
   KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单操作耗时记录表';
 
+-- ----------------------------
+-- Table structure for ttpos_db_pool_stats
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_db_pool_stats`;
+CREATE TABLE `ttpos_db_pool_stats` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '记录UUID',
+  `instance_id` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '服务实例标识',
+  `db_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '数据库名称',
+  `max_open_conns` int NOT NULL DEFAULT '0' COMMENT '最大打开连接数',
+  `open_conns` int NOT NULL DEFAULT '0' COMMENT '当前打开连接数',
+  `in_use` int NOT NULL DEFAULT '0' COMMENT '正在使用的连接数',
+  `idle` int NOT NULL DEFAULT '0' COMMENT '空闲连接数',
+  `wait_count` bigint NOT NULL DEFAULT '0' COMMENT '等待连接的累计次数',
+  `wait_duration_ms` bigint NOT NULL DEFAULT '0' COMMENT '等待连接的累计时间(毫秒)',
+  `max_idle_closed` bigint NOT NULL DEFAULT '0' COMMENT '因超过MaxIdleConns被关闭的连接数',
+  `max_idle_time_closed` bigint NOT NULL DEFAULT '0' COMMENT '因ConnMaxIdleTime被关闭的连接数',
+  `max_lifetime_closed` bigint NOT NULL DEFAULT '0' COMMENT '因ConnMaxLifetime被关闭的连接数',
+  `sample_time` bigint NOT NULL DEFAULT '0' COMMENT '采样时间戳(毫秒)',
+  `create_time` int unsigned NOT NULL DEFAULT '0' COMMENT '创建时间(时间戳)',
+  `update_time` int unsigned NOT NULL DEFAULT '0' COMMENT '更新时间(时间戳)',
+  `delete_time` int unsigned NOT NULL DEFAULT '0' COMMENT '删除时间(时间戳)',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_instance_id` (`instance_id`),
+  KEY `idx_db_name` (`db_name`),
+  KEY `idx_sample_time` (`sample_time`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据库连接池统计记录表';
+
 SET FOREIGN_KEY_CHECKS = 1;
