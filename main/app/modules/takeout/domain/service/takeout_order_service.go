@@ -526,7 +526,6 @@ func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrd
 	// 调用 MarkOrderReady 接口（标记订单准备完成，通知平台派送骑手）
 	if err := rpcClient.MarkOrderReady(ctx.GetContext(), order.TakeoutOrderUuid); err != nil {
 		logger.Logger.Error("调用 BMP MarkOrderReady 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		return errors.WithMessage(errors.New("呼叫骑手失败"), err.Error())
 	}
 
 	// 更新订单状态为待骑手接单
