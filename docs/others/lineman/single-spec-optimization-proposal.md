@@ -1,9 +1,10 @@
-# 单规格商品在 Grab/Lineman 同步时的优化方案
+# 单选项 ModifierGroup 在 Grab/Lineman 同步时的优化方案
 
 > 状态: 待评审
 > 涉及模块: Main (takeout), BMP (ttpos-takeout)
 > 影响平台: Grab, Lineman
 > 创建时间: 2026-02-13
+> 更新时间: 2026-02-13
 
 ---
 
@@ -12,9 +13,10 @@
 ### 1.1 背景
 
 TTPOS 的商品使用 `ProductBom` + `ProductFlavor` 体系来定义**规格**(Spec)，例如 S/M/L 三种杯型。
+同时还有加料(Sauce)、属性(Attribute)等修饰类型。
 Grab 和 Lineman 没有"规格"概念，使用 `ModifierGroup` / `Property` 来表示可选项组。
 
-当 TTPOS 推送菜单到 Grab/Lineman 时，会将所有规格（包括只有一个的）包装为一个 `ModifierGroup`：
+当 TTPOS 推送菜单到 Grab/Lineman 时，会将所有修饰项（包括只有一个选项的）包装为 `ModifierGroup`：
 
 ```
 ModifierGroup {
@@ -27,12 +29,58 @@ ModifierGroup {
 
 ### 1.2 用户体验问题
 
-| 场景 | 用户看到 | 体验 |
-|------|---------|------|
-| 多规格(S/M/L) | "Specifications" 选项组，3 个选项 | ✅ 合理 |
-| **单规格(默认)** | **"Specifications" 选项组，1 个选项** | **❌ 多余操作** |
+当 `selectionRangeMin == selectionRangeMax == len(modifiers) == 1` 时，用户被迫与一个**没有实质选择**的选项组交互。
 
-单规格时用户被迫打开一个只有 1 个选项的选项组，点击唯一的选项，价格差为 0——纯粹增加操作步骤。
+| 类型 | 场景 | 用户看到 | 体验 |
+|------|------|---------|------|
+| 规格 | 多规格(S/M/L) | "Specifications" 选项组，3 个选项 | ✅ 合理 |
+| 规格 | **单规格(默认)** | **"Specifications" 选项组，1 个选项，必选** | **❌ 多余操作** |
+| 加料 | 多加料 | "Add Toppings" 选项组，N 个选项 | ✅ 合理 |
+| 加料 | **单加料且 min=1** | **"Add Toppings" 选项组，1 个选项，必选** | **❌ 多余操作** |
+| 属性 | 多属性 | "辣度" 选项组，3 个选项 | ✅ 合理 |
+| 属性 | **单属性且 min=1** | **"辣度" 选项组，1 个选项，必选** | **❌ 多余操作** |
+
+核心判断标准：**当 `min == max == len(options) == 1` 时，用户被强制选择唯一选项，纯粹增加操作步骤。**
+
+### 1.3 为什么条件是 `min == max == len(options) == 1`
+
+需要区分几种容易混淆的场景：
+
+| 条件 | 含义 | 是否有实质选择 | 是否应跳过 |
+|------|------|--------------|-----------|
+| `min=1, max=1, options=1` | 必须选唯一项 | ❌ 无选择 | ✅ 跳过 |
+| `min=0, max=1, options=1` | 可选唯一项 | ✅ 选或不选 | ❌ 保留 |
+| `min=2, max=2, options=2` | 必须全选 2 项 | ❌ 无选择，但有信息价值（用户需看到各项名称和价格） | ❌ 保留 |
+| `min=2, max=2, options=3` | 从 3 选 2 | ✅ 有选择 | ❌ 保留 |
+| `min=1, max=1, options=3` | 从 3 选 1 | ✅ 有选择 | ❌ 保留 |
+
+**为什么不泛化到 `min == max == len(options)` (N>1)？**
+
+虽然 `min == max == len(options)` 时用户也没有取舍权，但当 N>1 时：
+- 用户仍需要看到选项组的**信息展示**（各加料的名称、价格）
+- 直接移除会导致用户完全不知道商品包含了什么附加项
+- 而 N=1 时，唯一选项的信息可以合并到商品本身（名称、价格已在商品层面体现）
+
+因此 `N == 1` 是唯一安全的优化边界。
+
+### 1.4 为什么加料 `min=0`（可选）不应跳过
+
+加料的 `SauceMinSelection` 可以为 0（可选），此时即使只有 1 个加料：
+
+- `min=0, max=1, options=1` → 用户可以**选择加或不加**
+- 如果跳过 ModifierGroup，用户**完全无法选择**该加料 → 功能缺失
+- 可选的单加料 UX 是合理的：用户看到一个可展开的加料组，按需选择
+
+只有 `min=1`（必选）时才存在"强制选唯一项"的 UX 问题。
+
+### 1.5 为什么套餐固定组不参与优化
+
+套餐固定组（`GroupType=0`）的 `min=max=len(items)` 是**业务设计意图**：
+- 固定组要求必须包含所有子商品（如套餐必含 A+B+C）
+- 即使只有 1 个子商品，用户也需要看到这个**子商品是什么**（名称、价格）
+- 套餐子商品的信息无法简单合并到父商品层面
+
+因此套餐固定组不参与此优化。
 
 ---
 
@@ -75,22 +123,16 @@ Main: GrabConverter.LoadMenuFromDatabase() → 生成 Grab 格式 JSON
 | Grab→Lineman 转换 | `ttpos-bmp/.../lineman/menu_sync.go:220` | `convertGrabToLinemanMenuGroups()` |
 | 菜单快照保存 | `ttpos-bmp/.../channel_menu/channel_menu.go:101` | `SaveMenuSnapshot()` |
 
-### 2.3 当前 `convertProductFlavors()` 核心逻辑
+### 2.3 各转换函数的 min/max 逻辑
 
-```go
-// grab_menu_converter.go:527-529
-// 只要有 ≥1 个 flavor 就创建 ModifierGroup，不区分单/多规格
-if len(flavors) == 0 {
-    return nil
-}
+| 类型 | 函数 | min 来源 | max 来源 | 单选项时 min==max? |
+|------|------|---------|---------|------------------|
+| **规格** | `convertProductFlavors()` | 硬编码 `1` | 硬编码 `1` | ✅ 永远 `1==1` |
+| **加料** | `convertProductSauces()` | `SauceMinSelection`（可为0） | `SauceMaxSelection`（未配置=加料总数） | 仅当 `SauceMinSelection=1` 时 |
+| **属性** | `convertProductAttributeGroups()` | `MinSelection` | `MaxSelection`（未配置=属性总数） | 仅当 `MinSelection=1` 时 |
+| **套餐** | `convertPackageGroups()` | 固定组:`len(items)`；可选组:`OptionalMinCount` | 固定组:`len(items)`；可选组:`OptionalCount` | 固定组永远是，但不参与优化 |
 
-// 固定 min=1, max=1
-minSelection := 1
-maxSelection := 1
-
-// 无条件追加 ModifierGroup
-menuItem.SetModifierGroups(append(menuItem.GetModifierGroups(), *modifierGroup))
-```
+当前所有函数均**不检查选项数量**，只要存在 ≥1 个有效选项就创建 ModifierGroup。
 
 ---
 
@@ -158,9 +200,11 @@ takeoutOrderSrv.CreateOrder()
 
 ## 4. 风险分析
 
-### 4.1 直接移除单规格 ModifierGroup 的风险
+### 4.1 直接移除单选项 ModifierGroup 的风险
 
-如果仅在菜单侧移除单规格的 ModifierGroup 而不做订单侧处理：
+如果仅在菜单侧移除 ModifierGroup 而不做订单侧处理：
+
+#### 4.1.1 规格（Flavor） — 风险最高
 
 | 影响 | 当前行为 | 移除后行为 | 风险等级 |
 |------|---------|-----------|---------|
@@ -169,6 +213,24 @@ takeoutOrderSrv.CreateOrder()
 | 库存扣减 | 通过 BOM UUID 扣原料 | **无 BOM UUID，跳过原料扣减** | **严重** |
 | 销量统计 | 记录 BOM 销量 | **不记录 BOM 销量** | **严重** |
 | 订单显示 | 显示规格名称 | 不显示 | 可接受 |
+
+#### 4.1.2 加料（Sauce） — 风险中等
+
+| 影响 | 当前行为 | 移除后行为 | 风险等级 |
+|------|---------|-----------|---------|
+| 加料映射 | modifier → Sauce BOM UUID | 无 modifier → **加料缺失** | **中等** |
+| 库存扣减 | 通过 Sauce BOM 扣原料 | **跳过加料原料扣减** | **中等** |
+| 价格计算 | 加料价格计入订单 | **加料价格缺失** | **中等** |
+
+注意：仅当 `SauceMinSelection=1` 且只有 1 个加料时才触发此优化。当 `SauceMinSelection=0`（可选）时不跳过。
+
+#### 4.1.3 属性（Attribute） — 风险较低
+
+| 影响 | 当前行为 | 移除后行为 | 风险等级 |
+|------|---------|-----------|---------|
+| 属性映射 | modifier → Attribute UUID | 无 modifier → 属性缺失 | 较低 |
+| 价格计算 | 属性加价计入订单 | 属性加价缺失 | 较低 |
+| 库存影响 | 属性通常不关联物料 | 无影响 | 无 |
 
 ### 4.2 时序竞争场景
 
@@ -202,17 +264,40 @@ T4: TTPOS 收到订单
 
 ## 5. 解决方案
 
-### 5.1 方案概述
+### 5.1 优化判定条件
 
-**两端协同修改**：菜单侧隐藏 + 订单侧按实时状态补全。
+**统一跳过条件**：`min == max == len(options) == 1`
+
+即：只有 1 个选项，且该选项为必选（min=1），只能选 1 个（max=1）。此时用户无实质选择。
+
+适用的 Modifier 类型：
+
+| 类型 | 跳过条件 | 适用场景 |
+|------|---------|---------|
+| 规格 (Flavor) | `len(flavors) == 1`（min/max 硬编码为 1，永远满足） | 单规格商品 |
+| 加料 (Sauce) | `len(sauces) == 1 && SauceMinSelection == 1` | 单加料且必选 |
+| 属性 (Attribute) | `len(attrs) == 1 && MinSelection == 1 && MaxSelection == 1` | 单属性且必选1个 |
+| 套餐 (Package) | **不参与优化** | 见 1.5 节说明 |
+
+### 5.2 方案概述
+
+**两端协同修改**：菜单侧按条件跳过 + 订单侧按实时状态补全。
 
 ```
 【菜单推送侧】
 convertProductFlavors():
-  len(flavors) == 1 → 跳过 ModifierGroup 创建
+  len(flavors) == 1 → 跳过 ModifierGroup
   len(flavors) > 1  → 保持现有逻辑
 
-【订单处理侧】
+convertProductSauces():
+  len(sauces) == 1 && SauceMinSelection >= 1 → 跳过 ModifierGroup
+  其他 → 保持现有逻辑
+
+convertProductAttributeGroups():
+  len(attrs) == 1 && MinSelection >= 1 && maxSelection == 1 → 跳过该 ModifierGroup
+  其他 → 保持现有逻辑
+
+【订单处理侧 — 以 flavor 为例】
 收到订单 → 商品已映射 → 无 flavor modifier
     │
     ▼
@@ -221,15 +306,17 @@ convertProductFlavors():
     ├─ 仍然只有 1 个 flavor BOM → 自动补全该 BOM 作为 modifier
     │
     └─ 有多个 flavor BOM → 标记为异常订单（套用现有异常逻辑）
+
+（加料和属性同理：缺失时查实时数据，仅 1 个则补全，多个则异常）
 ```
 
-### 5.2 改动清单
+### 5.3 改动清单
 
-#### 修改点 1: 菜单推送 — 跳过单规格 ModifierGroup
+#### 修改点 1: 菜单推送 — 跳过单选项 ModifierGroup
 
 **文件**: `main/app/modules/takeout/infrastructure/adapter/grab/grab_menu_converter.go`
-**函数**: `convertProductFlavors()`
-**位置**: line 527 之后
+
+**1a. `convertProductFlavors()` — line 527 之后**
 
 ```go
 if len(flavors) == 0 {
@@ -237,34 +324,79 @@ if len(flavors) == 0 {
 }
 
 // 新增：单规格优化 — 仅有一个规格时，价格已体现在商品基础价格中，
-// 无需创建额外的 ModifierGroup
+// 无需创建额外的 ModifierGroup（min=1,max=1,options=1 → 无实质选择）
 if len(flavors) == 1 {
     return nil
 }
 ```
 
-**安全性论证**:
+安全性论证:
 - 商品基础价格在 `convertTTPOSProduct()` line 291-306 中已使用 `minFlavorPrice`
 - 单规格时 `minFlavorPrice` = 唯一规格的价格 = 商品展示价格
 - 因此商品价格已正确反映唯一规格的售价
 
-#### 修改点 2: 订单处理 — 单规格自动补全
+**1b. `convertProductSauces()` — line 669 之后**
+
+```go
+if len(sauces) == 0 {
+    return nil
+}
+
+// 新增：单加料且必选优化 — 仅有一个加料且 SauceMinSelection >= 1 时，
+// 满足 min==max==options==1 条件，无实质选择
+if len(sauces) == 1 && takeoutProduct.ProductPackage.SauceMinSelection >= 1 {
+    return nil
+}
+```
+
+安全性论证:
+- 仅在 `SauceMinSelection >= 1`（必选）时跳过
+- `SauceMinSelection == 0`（可选）时保留，确保用户可以选择"加或不加"
+- 跳过后加料价格需在订单侧补全
+
+**1c. `convertProductAttributeGroups()` — 属性组循环内**
+
+```go
+// 新增：单属性且必选优化 — 属性组只有 1 个有效属性，且 min >= 1, max == 1 时
+// 满足 min==max==options==1 条件，无实质选择
+validAttrs := filterValidAttrs(packageAttrGroup.ProductPackageAttributes)
+if len(validAttrs) == 1 && packageAttrGroup.MinSelection >= 1 && maxSelection == 1 {
+    continue  // 跳过该属性组
+}
+```
+
+安全性论证:
+- 每个属性组独立判断，不影响其他属性组
+- 仅在 `MinSelection >= 1`（必选）且 `maxSelection == 1` 时跳过
+- 属性通常不关联物料，补全逻辑较简单
+
+#### 修改点 2: 订单处理 — 缺失 modifier 自动补全
 
 **文件**: `main/app/modules/takeout/domain/service/takeout_order_service.go`
 **位置**: `CreateOrder()` 中 `enrichModifiersInfo()` 调用之后
 
-新增方法 `autoFillSingleFlavorModifier()`：
+新增方法 `autoFillSingleModifiers()`：
 
 ```
 逻辑:
-1. 遍历订单商品，筛选出"已映射 + 无 flavor modifier + 非套餐"的商品
-2. 批量查询这些商品的 flavor BOM:
-   SELECT uuid FROM ttpos_product_bom
-   WHERE product_package_uuid = ? AND product_flavor_uuid > 0 AND delete_time = 0
-3. 对于只有 1 个 flavor BOM 的商品:
-   → 自动创建一条 TakeoutOrderItemModifier (TtposModifierType="flavor")
-4. 对于有多个 flavor BOM 的商品:
-   → 标记为异常（现有逻辑）
+1. 遍历订单商品，筛选出"已映射 + 非套餐"的商品
+2. 对每个商品检查缺失的 modifier 类型（flavor/sauce/attr）
+
+【Flavor 补全】
+  a. 无 flavor modifier 的商品 → 批量查询 flavor BOM
+  b. 仅 1 个 flavor BOM → 自动创建 TakeoutOrderItemModifier (type="flavor")
+  c. 多个 flavor BOM → 标记异常
+
+【Sauce 补全】
+  a. 无 sauce modifier 的商品 → 查询 sauce BOM + SauceMinSelection
+  b. 仅 1 个 sauce BOM 且 SauceMinSelection >= 1 → 自动补全
+  c. 多个 sauce BOM 且 SauceMinSelection >= 1 → 标记异常
+  d. SauceMinSelection == 0 → 无需补全（可选项，用户未选择是正常的）
+
+【Attribute 补全】
+  a. 无某属性组 modifier 的商品 → 查询属性组配置
+  b. 仅 1 个属性 且 MinSelection >= 1 → 自动补全
+  c. 其他 → 标记异常或跳过
 ```
 
 #### 修改点 3: Repository 层 — 新增查询方法
@@ -273,21 +405,33 @@ if len(flavors) == 1 {
 
 新增接口方法:
 ```go
-// GetFlavorBomUuidsByProductPackageUuids 批量查询商品的 flavor BOM UUID 列表
-// 返回: map[ProductPackageUuid][]BomUuid
-GetFlavorBomUuidsByProductPackageUuids(productPackageUuids []uint64) (map[uint64][]uint64, error)
+// GetFlavorBomsByProductPackageUuids 批量查询商品的 flavor BOM 列表
+// 返回: map[ProductPackageUuid][]ProductBom
+GetFlavorBomsByProductPackageUuids(productPackageUuids []uint64) (map[uint64][]ProductBom, error)
+
+// GetSauceBomsByProductPackageUuids 批量查询商品的 sauce BOM 列表
+// 返回: map[ProductPackageUuid][]ProductBom
+GetSauceBomsByProductPackageUuids(productPackageUuids []uint64) (map[uint64][]ProductBom, error)
 ```
 
 实现:
 ```sql
-SELECT product_package_uuid, uuid
+-- Flavor BOMs
+SELECT product_package_uuid, uuid, price, product_flavor_uuid
 FROM ttpos_product_bom
 WHERE product_package_uuid IN (?)
   AND product_flavor_uuid > 0
   AND delete_time = 0
+
+-- Sauce BOMs
+SELECT product_package_uuid, uuid, price, product_sauce_uuid
+FROM ttpos_product_bom
+WHERE product_package_uuid IN (?)
+  AND product_sauce_uuid > 0
+  AND delete_time = 0
 ```
 
-### 5.3 不需要修改的部分
+### 5.4 不需要修改的部分
 
 | 组件 | 原因 |
 |------|------|
@@ -300,6 +444,8 @@ WHERE product_package_uuid IN (?)
 
 ## 6. 场景覆盖验证
 
+### 6.1 规格 (Flavor) 场景
+
 | # | 推送时 | 下单时 TTPOS 状态 | 订单内容 | 处理结果 | 正确性 |
 |---|--------|-----------------|---------|---------|--------|
 | 1 | 单规格,无modifier | 仍 1 个 BOM | Modifiers=[] | 自动补全唯一 BOM | ✅ |
@@ -308,31 +454,64 @@ WHERE product_package_uuid IN (?)
 | 4 | 多规格,有modifier | 不变 | Modifiers有值 | 现有逻辑 | ✅ 不受影响 |
 | 5 | 多规格,有modifier | 删了某规格 | Modifiers有旧ID | 现有异常逻辑 | ✅ 既有行为 |
 
+### 6.2 加料 (Sauce) 场景
+
+| # | 推送时 | 下单时 TTPOS 状态 | 订单内容 | 处理结果 | 正确性 |
+|---|--------|-----------------|---------|---------|--------|
+| 6 | 单加料必选(min=1),无modifier | 仍 1 个 sauce | Modifiers=[] | 自动补全唯一 sauce | ✅ |
+| 7 | 单加料必选(min=1),无modifier | 新增为多 sauce | Modifiers=[] | 标记异常 | ✅ 安全兜底 |
+| 8 | 单加料可选(min=0),有modifier | 用户选了 | Modifiers有sauce | 现有逻辑 | ✅ 不受影响 |
+| 9 | 单加料可选(min=0),有modifier | 用户未选 | Modifiers=[] | 无需补全（可选） | ✅ 正常行为 |
+| 10 | 多加料,有modifier | 不变 | Modifiers有值 | 现有逻辑 | ✅ 不受影响 |
+
+### 6.3 属性 (Attribute) 场景
+
+| # | 推送时 | 下单时 TTPOS 状态 | 订单内容 | 处理结果 | 正确性 |
+|---|--------|-----------------|---------|---------|--------|
+| 11 | 单属性必选(min=1,max=1),无modifier | 仍 1 个属性 | Modifiers=[] | 自动补全唯一属性 | ✅ |
+| 12 | 单属性必选,无modifier | 新增为多属性 | Modifiers=[] | 标记异常 | ✅ 安全兜底 |
+| 13 | 多属性,有modifier | 不变 | Modifiers有值 | 现有逻辑 | ✅ 不受影响 |
+
 ---
 
 ## 7. 测试要点
 
-### 7.1 菜单推送测试
+### 7.1 菜单推送测试 — 规格
 
-- [ ] 单规格商品推送后 Grab 菜单无 ModifierGroup
-- [ ] 单规格商品推送后 Lineman 菜单无 Property
+- [ ] 单规格商品推送后 Grab 菜单无 Specifications ModifierGroup
+- [ ] 单规格商品推送后 Lineman 菜单无 Specifications Property
 - [ ] 单规格商品的展示价格 = 唯一规格的价格
 - [ ] 多规格商品不受影响，仍有 ModifierGroup
-- [ ] 加料(Sauce)、属性(Attr)不受影响
 
-### 7.2 订单处理测试
+### 7.2 菜单推送测试 — 加料
+
+- [ ] 单加料 + `SauceMinSelection=1` → 无 Add Toppings ModifierGroup
+- [ ] 单加料 + `SauceMinSelection=0` → **保留** Add Toppings ModifierGroup（可选，不应跳过）
+- [ ] 多加料不受影响
+- [ ] 加料价格在跳过后不影响商品展示价格（加料是独立加价）
+
+### 7.3 菜单推送测试 — 属性
+
+- [ ] 单属性 + `MinSelection=1, MaxSelection=1` → 无该属性组的 ModifierGroup
+- [ ] 单属性 + `MinSelection=0`（可选）→ **保留** ModifierGroup
+- [ ] 多属性不受影响
+
+### 7.4 订单处理测试
 
 - [ ] 单规格商品订单回传（无modifier）→ 自动补全 BOM → 库存正常扣减
-- [ ] 竞争窗口场景（推送时单规格，下单时多规格）→ 标记异常
-- [ ] 多规格商品订单回传（有modifier）→ 现有逻辑不受影响
+- [ ] 单加料必选商品订单回传（无modifier）→ 自动补全 sauce → 价格正确
+- [ ] 竞争窗口场景（推送时单项，下单时多项）→ 标记异常
+- [ ] 多规格/多加料商品订单回传（有modifier）→ 现有逻辑不受影响
 - [ ] 销量统计：补全后的 flavor modifier 正确计入 BOM 销量
 - [ ] 原料消耗：补全后正确通过 BOM UUID 查找配方并扣减库存
 
-### 7.3 边界场景
+### 7.5 边界场景
 
 - [ ] 商品无规格（0 个 BOM）→ 无 modifier 也无需补全
 - [ ] 商品所有规格已售罄 → 商品状态为 UNAVAILABLE，正常
 - [ ] 商品唯一规格已删除 → 0 个有效 BOM，走无规格逻辑
+- [ ] 加料 `SauceMinSelection=0` 且用户未选 → 无 modifier，**不应补全**（可选项未选是正常的）
+- [ ] 属性组有多个属性组，其中仅 1 个符合跳过条件 → 仅跳过该组，其他不受影响
 
 ---
 
@@ -340,8 +519,17 @@ WHERE product_package_uuid IN (?)
 
 | 维度 | 评估 |
 |------|------|
-| 用户体验 | ✅ 单规格商品下单流程简化，减少 1 次无意义点击 |
+| 用户体验 | ✅ 消除所有"必选唯一项"的无意义交互（规格/加料/属性） |
 | 数据一致性 | ✅ 订单侧按实时状态补全，无歧义时自动处理，有歧义时安全兜底 |
-| 性能影响 | ⚠️ 订单处理新增一次轻量 DB 查询（按 product_package_uuid），可批量化 |
-| 改动范围 | ✅ 3 个修改点，均在 Main 模块内，不涉及 BMP 改动 |
-| 向后兼容 | ✅ 多规格商品完全不受影响 |
+| 性能影响 | ⚠️ 订单处理新增轻量 DB 查询（按 product_package_uuid），可批量化 |
+| 改动范围 | ✅ 菜单侧 3 个函数 + 订单侧 1 个补全方法 + Repository 层 2 个查询方法，均在 Main 模块 |
+| 向后兼容 | ✅ 多选项商品完全不受影响；可选（min=0）的单选项保留展示 |
+
+## 9. Grab/Lineman API 兼容性确认
+
+| 平台 | 单选项 ModifierGroup | min=0（可选）| min=1 单选项 | 依据 |
+|------|---------------------|-------------|-------------|------|
+| **Grab** | 允许 — SDK 无 `minItems` 约束 | 允许 | 允许 | GrabFood SDK v1.1.3 `ModifierGroup` 定义 |
+| **Lineman** | 允许 — API Spec 无 values 最小数量约束 | 允许 | 允许 | Lineman Partner API Spec |
+
+两个平台都不会因 ModifierGroup 只有 1 个选项而拒绝请求。本优化是纯 UX 改进，不涉及 API 兼容性问题。
