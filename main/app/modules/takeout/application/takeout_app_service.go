@@ -1,6 +1,7 @@
 package application
 
 import (
+	contexts "context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -24,6 +25,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/google/uuid"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
@@ -578,7 +580,9 @@ func (s *takeoutAppService) GetImportLogs(ctx context.Context, req request.GetIm
 // 实现防抖机制：在2秒内如果有相同同步请求，则取消旧请求的执行
 func (s *takeoutAppService) SyncMenuChanges(ctx context.Context, req request.ExportMenuRequest) (*response.MenuSyncResult, error) {
 	// 启动异步防抖处理
-	go s.handleDebouncedMenuSync(ctx, req)
+	utils.Go(func() {
+		s.handleDebouncedMenuSync(ctx.Copy(), req)
+	})
 
 	// 立即返回初始结果，表示已接受请求
 	return &response.MenuSyncResult{
@@ -885,7 +889,10 @@ func (s *takeoutAppService) batchUpdateItems(
 			ProviderName: &platform,
 		}
 
-		resp, err := client.GetMenuClient().BatchUpdateMenu(ctx, req)
+		// 设置超时时间
+		newCtx, cancel := contexts.WithTimeout(contexts.Background(), 30*time.Second)
+		defer cancel()
+		resp, err := client.GetMenuClient().BatchUpdateMenu(newCtx, req)
 
 		// 处理响应并记录结果
 		for _, item := range batch {

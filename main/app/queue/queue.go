@@ -34,6 +34,7 @@ var manager *rocketmq.Manager
 
 func Init() {
 	baseQueue.InitMemberOrderCancel()
+
 	baseQueue.InitOperationDurationQueue()
 	baseQueue.InitDBPoolStatsQueue()
 
