@@ -29,6 +29,11 @@ type GrabConverter struct {
 	amountConversionFactor int64 // 金额转换因子(分转元)
 	defaultLanguage        string
 	nameMaxLength          int
+
+	// 单规格映射，用于记录被跳过推送的单规格信息
+	// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+	// key = 平台商品ID (如 "TTPOS-ITEM-123456"), value = 单规格信息
+	singleFlavorMapping map[string]*value_object.SingleFlavorInfo
 }
 
 // NewGrabConverter 创建 Grab 转换器
@@ -133,10 +138,15 @@ func (c *GrabConverter) ValidateData(platformData interface{}) error {
 }
 
 // LoadMenuFromDatabase 从数据库加载菜单数据（辅助方法）
+// 返回 Grab 菜单格式，同时记录单规格映射到 singleFlavorMapping 字段
+// 任务 #39752: 记录被跳过推送的单规格信息，订单回传时用于自动补全
 func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, platform string, companyUuid uint64, currencyUnit string, categoryIDs []uint64) (*grabfood.GetMenuNewResponse, error) {
 	menu := grabfood.NewGetMenuNewResponseWithDefaults()
 	// 设置 PartnerMerchantID
 	menu.SetPartnerMerchantID(strconv.FormatUint(companyUuid, 10))
+
+	// 初始化单规格映射（用于记录被跳过推送的单规格信息）
+	c.singleFlavorMapping = make(map[string]*value_object.SingleFlavorInfo)
 
 	// 根据货币符号推断货币代码和 exponent
 	menu.SetCurrency(c.getCurrencyInfoBySymbol(currencyUnit))
@@ -202,6 +212,13 @@ func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, platform strin
 	}
 
 	return menu, nil
+}
+
+// GetSingleFlavorMapping 获取单规格映射
+// 在 LoadMenuFromDatabase 调用后使用，获取被跳过推送的单规格信息
+// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+func (c *GrabConverter) GetSingleFlavorMapping() map[string]*value_object.SingleFlavorInfo {
+	return c.singleFlavorMapping
 }
 
 // convertTTPOSCategory 从 TTPOS model 转换分类
@@ -525,6 +542,36 @@ func (c *GrabConverter) convertProductFlavors(
 	}
 
 	if len(flavors) == 0 {
+		return nil
+	}
+
+	// 单规格优化：仅有一个规格时，价格已体现在商品基础价格中，
+	// 无需创建额外的 ModifierGroup（min=1,max=1,options=1 → 用户无实质选择）
+	// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+	if len(flavors) == 1 {
+		singleFlavor := flavors[0]
+		// 记录被跳过的单规格信息，订单回传时用于自动补全
+		if c.singleFlavorMapping != nil {
+			// 获取规格价格（优先使用外卖价格）
+			flavorPrice := singleFlavor.Price
+			if price, exists := takeoutPriceMap[singleFlavor.Uuid]; exists {
+				flavorPrice = price
+			}
+			// 获取规格名称
+			flavorName := ""
+			if singleFlavor.ProductFlavor.MultiLanguageName.Uuid != 0 {
+				flavorName = singleFlavor.ProductFlavor.MultiLanguageName.GetNameByLangWithFallback(c.defaultLanguage)
+			} else {
+				flavorName = singleFlavor.ProductFlavor.Name
+			}
+			// 记录单规格信息到映射表
+			c.singleFlavorMapping[menuItem.GetId()] = &value_object.SingleFlavorInfo{
+				ProductPackageUuid: takeoutProduct.ProductPackageUuid,
+				FlavorBomUuid:      singleFlavor.Uuid,
+				FlavorName:         flavorName,
+				FlavorPrice:        int64(flavorPrice * float64(c.amountConversionFactor)), // 转换为分
+			}
+		}
 		return nil
 	}
 
