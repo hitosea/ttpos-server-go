@@ -34,8 +34,7 @@ var manager *rocketmq.Manager
 
 func Init() {
 	baseQueue.InitMemberOrderCancel()
-	// TODO: 临时关闭，待稳定后重新启用
-	// baseQueue.InitOperationDurationQueue()
+	baseQueue.InitOperationDurationQueue()
 	baseQueue.InitDBPoolStatsQueue()
 
 	manager = rocketmq.NewManager(logger.Logger)
