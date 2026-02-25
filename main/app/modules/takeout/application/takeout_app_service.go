@@ -358,11 +358,12 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	}
 
 	// 保存单规格映射到 single_flavor_mapping 字段
-	// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
-	if len(singleFlavorMapping) > 0 {
+	if req.IsSaveSingleFlavorMapping {
+		// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+		// 注意：无论有没有单规格映射，都更新数据库（覆盖旧数据），避免残留历史数据
 		if err := s.takeoutService.UpdateSingleFlavorMappingByPlatform(ctx, req.Platform, singleFlavorMapping); err != nil {
 			logger.Logger.Error("保存单规格映射失败", zap.Error(err), zap.String("platform", req.Platform))
-		} else {
+		} else if len(singleFlavorMapping) > 0 {
 			logger.Logger.Info("保存单规格映射成功",
 				zap.String("platform", req.Platform),
 				zap.Int("count", len(singleFlavorMapping)))
@@ -441,8 +442,9 @@ func (s *takeoutAppService) PushMenu(ctx context.Context, platform string, curre
 	}
 
 	menu, err := s.ExportMenu(ctx, request.ExportMenuRequest{
-		Platform:     platform,
-		CurrencyUnit: currencyUnit,
+		Platform:                  platform,
+		CurrencyUnit:              currencyUnit,
+		IsSaveSingleFlavorMapping: true,
 	})
 	if err != nil {
 		return fmt.Errorf("导出菜单失败: %w", err)
