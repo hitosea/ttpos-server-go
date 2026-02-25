@@ -54,6 +54,14 @@ type TakeoutService interface {
 	// UpdateTtposMenuByPlatform 通过平台名称更新 TTPOS 导出的菜单数据
 	UpdateTtposMenuByPlatform(ctx context.Context, platform string, ttposMenu interface{}) error
 
+	// UpdateSingleFlavorMappingByPlatform 通过平台名称更新单规格映射
+	// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+	UpdateSingleFlavorMappingByPlatform(ctx context.Context, platform string, mapping interface{}) error
+
+	// GetSingleFlavorMappingByPlatform 通过平台名称获取单规格映射
+	// 任务 #39752: 订单回传时从备份查询单规格信息
+	GetSingleFlavorMappingByPlatform(ctx context.Context, platform string) (string, error)
+
 	// GetAllPlatformStatus 获取所有平台状态
 	GetAllPlatformStatus(ctx context.Context) ([]*model.Takeout, error)
 
@@ -298,6 +306,30 @@ func (s *TakeoutServiceImpl) UpdateTtposMenuByPlatform(ctx context.Context, plat
 	}
 
 	return nil
+}
+
+// UpdateSingleFlavorMappingByPlatform 通过平台名称更新单规格映射
+// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+func (s *TakeoutServiceImpl) UpdateSingleFlavorMappingByPlatform(ctx context.Context, platform string, mapping interface{}) error {
+	if err := s.ValidatePlatform(platform); err != nil {
+		return err
+	}
+
+	if err := s.takeoutRepo.UpdateSingleFlavorMappingByPlatform(ctx, platform, mapping); err != nil {
+		return fmt.Errorf("更新平台%s的单规格映射失败: %w", platform, err)
+	}
+
+	return nil
+}
+
+// GetSingleFlavorMappingByPlatform 通过平台名称获取单规格映射
+// 任务 #39752: 订单回传时从备份查询单规格信息
+func (s *TakeoutServiceImpl) GetSingleFlavorMappingByPlatform(ctx context.Context, platform string) (string, error) {
+	if err := s.ValidatePlatform(platform); err != nil {
+		return "", err
+	}
+
+	return s.takeoutRepo.GetSingleFlavorMappingByPlatform(ctx, platform)
 }
 
 // GetImportStatus 获取导入状态

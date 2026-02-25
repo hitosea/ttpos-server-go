@@ -53,6 +53,14 @@ type ITakeoutRepository interface {
 	// UpdateTtposMenuByPlatform 通过平台名称更新 TTPOS 导出的菜单数据
 	UpdateTtposMenuByPlatform(ctx context.Context, platform string, ttposMenu interface{}) error
 
+	// UpdateSingleFlavorMappingByPlatform 通过平台名称更新单规格映射
+	// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+	UpdateSingleFlavorMappingByPlatform(ctx context.Context, platform string, mapping interface{}) error
+
+	// GetSingleFlavorMappingByPlatform 通过平台名称获取单规格映射
+	// 任务 #39752: 订单回传时从备份查询单规格信息
+	GetSingleFlavorMappingByPlatform(ctx context.Context, platform string) (string, error)
+
 	// Delete 删除平台状态记录
 	Delete(ctx context.Context, uuid uint64) error
 
@@ -267,6 +275,52 @@ func (r *takeoutRepositoryImpl) UpdateTtposMenuByPlatform(ctx context.Context, p
 			"ttpos_menu":  string(ttposMenuJSON),
 			"update_time": time.Now().Unix(),
 		}).Error
+}
+
+// UpdateSingleFlavorMappingByPlatform 通过平台名称更新单规格映射
+// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+func (r *takeoutRepositoryImpl) UpdateSingleFlavorMappingByPlatform(ctx context.Context, platform string, mapping interface{}) error {
+	db := ctx.GetDB()
+
+	var mappingJSON []byte
+	var err error
+
+	switch v := mapping.(type) {
+	case string:
+		mappingJSON = []byte(v)
+	case []byte:
+		mappingJSON = v
+	default:
+		mappingJSON, err = json.Marshal(mapping)
+		if err != nil {
+			return err
+		}
+	}
+
+	return db.Model(&model.Takeout{}).
+		Where("platform = ? AND delete_time = ?", platform, 0).
+		Updates(map[string]interface{}{
+			"single_flavor_mapping": string(mappingJSON),
+			"update_time":           time.Now().Unix(),
+		}).Error
+}
+
+// GetSingleFlavorMappingByPlatform 通过平台名称获取单规格映射
+// 任务 #39752: 订单回传时从备份查询单规格信息
+func (r *takeoutRepositoryImpl) GetSingleFlavorMappingByPlatform(ctx context.Context, platform string) (string, error) {
+	db := ctx.GetDB()
+
+	var takeout model.Takeout
+	err := db.Model(&model.Takeout{}).
+		Where("platform = ? AND delete_time = ?", platform, 0).
+		Select("single_flavor_mapping").
+		First(&takeout).Error
+
+	if err != nil {
+		return "", err
+	}
+
+	return takeout.SingleFlavorMapping, nil
 }
 
 // UpdateImportStatusByPlatform 通过平台名称更新导入状态
