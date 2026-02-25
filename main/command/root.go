@@ -109,30 +109,35 @@ var rootCommand = &cobra.Command{
 				"ttpos_product_category",
 				"ttpos_product_attribute",
 				"ttpos_product_package",
-				"ttpos_product_bom",   // 商品BOM，添加商品时必查
-				"ttpos_product_label", // 商品标签，菜单展示时查询
+				"ttpos_product_bom",
+				"ttpos_product_label",
+				"ttpos_product_flavor",        // 商品规格
+				"ttpos_product_sauce",         // 商品小料
+				"ttpos_product_unit",          // 商品单位
+				"ttpos_product_bom_card",      // 商品成本卡
+				"ttpos_product_package_group", // 商品套餐组
 
 				// ==================== 桌位相关 ====================
 				"ttpos_table_area",
-				"ttpos_table", // 桌位信息，桌台订单时必查
+				"ttpos_table",
+				"ttpos_desk_region",     // 桌位区域
+				"ttpos_desk_type",       // 桌位类型
+				"ttpos_desk_map_layout", // 桌位地图布局
 
 				// ==================== 支付相关 ====================
 				"ttpos_payment_method",
 				"ttpos_payment_order",
 
-				// ==================== 员工相关 ====================
-				"ttpos_staff",
-
 				// ==================== 会员相关 ====================
 				"ttpos_member_point_log",
-				"ttpos_member_level",     // 会员等级，影响折扣计算
-				"ttpos_member_card_type", // 会员卡类型
+				"ttpos_member_level",
+				"ttpos_member_card_type",
 
 				// ==================== 自助餐相关 ====================
-				"ttpos_buffet",                     // 自助餐基础信息
-				"ttpos_buffet_package",             // 自助餐套餐信息
-				"ttpos_buffet_customer_type",       // 自助餐顾客类型
-				"ttpos_buffet_customer_type_price", // 自助餐顾客价格
+				"ttpos_buffet",
+				"ttpos_buffet_package",
+				"ttpos_buffet_customer_type",
+				"ttpos_buffet_customer_type_price",
 
 				// ==================== 订单属性表 ====================
 				"ttpos_sale_order_buffet_customer_type",
@@ -144,12 +149,31 @@ var rootCommand = &cobra.Command{
 				"ttpos_return_order_product",
 				"ttpos_production_order_product",
 
+				// ==================== 订单配置字典 ====================
+				"ttpos_order_remark",       // 整单备注字典
+				"ttpos_order_item_remark",  // 单品备注字典
+				"ttpos_return_food_reason", // 退菜原因字典
+				"ttpos_order_source",       // 外卖来源配置
+				"ttpos_production_order",   // 生产订单
+
+				// ==================== 原料物料 ====================
+				"ttpos_material",      // 原料表
+				"ttpos_material_unit", // 原料单位
+
+				// ==================== 访问控制 ====================
+				"ttpos_access", // 权限表
+				"ttpos_role",   // 角色表
+
+				// ==================== 财务配置 ====================
+				"ttpos_tax",      // 税种表
+				"ttpos_supplier", // 供应商表
+
 				// ==================== 其他基础数据 ====================
 				"ttpos_batch_tag",
 				"ttpos_multi_language_name",
 				"ttpos_company",
 				"ttpos_company_setting",
-				"ttpos_printer", // 打印机配置
+				"ttpos_printer",
 			},
 		})
 		// 设置数据库就绪回调，自动为所有数据库启用缓存
