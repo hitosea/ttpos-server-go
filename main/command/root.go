@@ -98,35 +98,58 @@ var rootCommand = &cobra.Command{
 		// 初始化数据库管理器
 		var dbm *database.DBManager = database.GetDBManager(config.Database)
 
-		// TODO: GORM 查询缓存功能暂时关闭，待稳定测试通过后再开启
+		// GORM 查询缓存（表级精确失效）
 		gormcache.Init(&gormcache.Config{
 			Easer:   true,            // 启用请求合并（相同查询只执行一次）
 			TTL:     5 * time.Minute, // 缓存 5 分钟
 			MaxRows: 1000,            // 超过 1000 行不缓存
 			Tables: []string{ // 只缓存低频更新的表
+				// ==================== 商品相关 ====================
 				"ttpos_product",
 				"ttpos_product_category",
+				"ttpos_product_attribute",
+				"ttpos_product_package",
+				"ttpos_product_bom",   // 商品BOM，添加商品时必查
+				"ttpos_product_label", // 商品标签，菜单展示时查询
+
+				// ==================== 桌位相关 ====================
 				"ttpos_table_area",
+				"ttpos_table", // 桌位信息，桌台订单时必查
+
+				// ==================== 支付相关 ====================
 				"ttpos_payment_method",
+				"ttpos_payment_order",
+
+				// ==================== 员工相关 ====================
 				"ttpos_staff",
+
+				// ==================== 会员相关 ====================
 				"ttpos_member_point_log",
+				"ttpos_member_level",     // 会员等级，影响折扣计算
+				"ttpos_member_card_type", // 会员卡类型
+
+				// ==================== 自助餐相关 ====================
+				"ttpos_buffet",                     // 自助餐基础信息
+				"ttpos_buffet_package",             // 自助餐套餐信息
+				"ttpos_buffet_customer_type",       // 自助餐顾客类型
+				"ttpos_buffet_customer_type_price", // 自助餐顾客价格
+
+				// ==================== 订单属性表 ====================
 				"ttpos_sale_order_buffet_customer_type",
 				"ttpos_sale_order_buffet_delay_product",
-				"ttpos_batch_tag",
-				"ttpos_multi_language_name",
-				"ttpos_return_order_product",
 				"ttpos_sale_order_product_attribute",
 				"ttpos_sale_order_product_bom",
 				"ttpos_sale_order_product_reason",
-				"ttpos_production_order_product",
 				"ttpos_sale_order_coupon",
-				"ttpos_member_point_log",
 				"ttpos_return_order_product",
-				"ttpos_payment_order",
+				"ttpos_production_order_product",
+
+				// ==================== 其他基础数据 ====================
+				"ttpos_batch_tag",
+				"ttpos_multi_language_name",
 				"ttpos_company",
 				"ttpos_company_setting",
-				"ttpos_product_package",
-				"ttpos_product_attribute",
+				"ttpos_printer", // 打印机配置
 			},
 		})
 		// 设置数据库就绪回调，自动为所有数据库启用缓存
