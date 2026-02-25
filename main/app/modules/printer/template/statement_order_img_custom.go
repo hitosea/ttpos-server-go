@@ -241,20 +241,29 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		})
 	}
 	if len(saleOrder.PaymentOrders) > 0 {
+		// 获取每个支付单的退款金额映射（独立查询数据库）
+		refundAmountMap := saleOrder.GetPaymentOrderRefundAmountMap(t.base.Ctx.GetDB())
 		for _, paymentOrder := range saleOrder.PaymentOrders {
 			paymentMethods = append(paymentMethods, structs.StatementPaymentMethod{
 				Name: t.base.Translate("支付方式"),
 				Text: paymentOrder.PaymentMethod.GetName(),
 			})
-			paymentMethods = append(paymentMethods, structs.StatementPaymentMethod{
-				Name: t.base.Translate("实收金额"),
-				Text: t.base.Amount(paymentOrder.Amount),
-			})
-			if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+			// 实收金额扣除退款：根据每个支付单的实际退款金额扣除
+			actualAmount := paymentOrder.Amount
+			if refundAmount, ok := refundAmountMap[paymentOrder.Uuid]; ok && refundAmount > 0 {
+				actualAmount = decimal.NewFromFloat(paymentOrder.Amount).Sub(decimal.NewFromFloat(refundAmount)).InexactFloat64()
+			}
+			if actualAmount > 0 {
 				paymentMethods = append(paymentMethods, structs.StatementPaymentMethod{
-					Name: t.base.Translate("找零"),
-					Text: t.base.Amount(saleOrder.ChangeAmount),
+					Name: t.base.Translate("实收金额"),
+					Text: t.base.Amount(actualAmount),
 				})
+				if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+					paymentMethods = append(paymentMethods, structs.StatementPaymentMethod{
+						Name: t.base.Translate("找零"),
+						Text: t.base.Amount(saleOrder.ChangeAmount),
+					})
+				}
 			}
 		}
 	}
@@ -374,7 +383,13 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 			CouponExchangeAmount: saleOrder.CalcCouponExchangeAmount(),
 			ActivityAmount:       saleOrder.ActivityAmount,
 			CheckOutZeroFee:      t.base.Amount(saleOrder.GetCheckOutZeroFee()),
-			ReturnAmount:         t.base.Amount(saleOrder.GetReturnAmount()),
+			ReturnAmount: func() string {
+				returnAmount := saleOrder.GetReturnAmount()
+				if returnAmount > 0 {
+					return "-" + t.base.Amount(returnAmount)
+				}
+				return t.base.Amount(returnAmount)
+			}(),
 			PaymentCommissionFee: saleOrder.PaymentCommissionFee,
 			FreeAmount: func() string {
 				if saleOrder.IsFreeSaleOrder() {
@@ -382,7 +397,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 				}
 				return "0"
 			}(),
-			ActualReceivePrice: t.base.Amount(saleOrder.GetPrintReceivablePrice()),
+			ActualReceivePrice: t.base.Amount(saleOrder.GetPrintReceivablePriceAfterRefund()),
 			PaymentMethods:     paymentMethods,
 			PercentageLists:    percentageLists,
 			IsFree:             saleOrder.IsFreeSaleOrder(),

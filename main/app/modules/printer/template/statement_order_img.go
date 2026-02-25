@@ -516,7 +516,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 	}
 	if returnAmount := saleOrder.GetReturnAmount(); returnAmount > 0 {
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("退款金额"), t.base.GetPriceAndUnit(returnAmount)))
+		img.AppendText(fmt.Sprintf("%s: -%s", t.base.Translate("退款金额"), t.base.GetPriceAndUnit(returnAmount)))
 		img.LineFeed(1)
 	}
 	if saleOrder.PaymentCommissionFee > 0 {
@@ -536,10 +536,10 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.LineFeed(1, 10)
 	}
 
-	// 合计应收
+	// 合计应收（扣除退款金额）
 	img.SetFontSize(26)
 	img.SetFontWeight(2)
-	finalPrice := saleOrder.GetPrintReceivablePrice()
+	finalPrice := saleOrder.GetPrintReceivablePriceAfterRefund()
 	img.PrintInColumns(
 		pkg.ColumnConfig{Text: t.base.Translate("合计应收"), Width: 280, Align: pkg.AlignLeft},
 		pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(finalPrice), Width: 0, Align: pkg.AlignRight},
@@ -589,20 +589,29 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		if len(saleOrder.PaymentOrders) > 0 {
 			img.AppendSplitLine()
 			img.LineFeed(1)
+			// 获取每个支付单的退款金额映射（独立查询数据库）
+			refundAmountMap := saleOrder.GetPaymentOrderRefundAmountMap(t.base.Ctx.GetDB())
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: 280, Align: pkg.AlignLeft},
 					pkg.ColumnConfig{Text: paymentOrder.PaymentMethod.GetName(), Width: 0, Align: pkg.AlignRight},
 				)
-				img.PrintInColumns(
-					pkg.ColumnConfig{Text: t.base.Translate("实收金额"), Width: 280, Align: pkg.AlignLeft},
-					pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(paymentOrder.Amount), Width: 0, Align: pkg.AlignRight},
-				)
-				if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+				// 实收金额扣除退款：根据每个支付单的实际退款金额扣除
+				actualAmount := paymentOrder.Amount
+				if refundAmount, ok := refundAmountMap[paymentOrder.Uuid]; ok && refundAmount > 0 {
+					actualAmount = decimal.NewFromFloat(paymentOrder.Amount).Sub(decimal.NewFromFloat(refundAmount)).InexactFloat64()
+				}
+				if actualAmount > 0 {
 					img.PrintInColumns(
-						pkg.ColumnConfig{Text: t.base.Translate("找零"), Width: 280, Align: pkg.AlignLeft},
-						pkg.ColumnConfig{Text: t.base.Amount(saleOrder.ChangeAmount), Width: 0, Align: pkg.AlignRight},
+						pkg.ColumnConfig{Text: t.base.Translate("实收金额"), Width: 280, Align: pkg.AlignLeft},
+						pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(actualAmount), Width: 0, Align: pkg.AlignRight},
 					)
+					if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+						img.PrintInColumns(
+							pkg.ColumnConfig{Text: t.base.Translate("找零"), Width: 280, Align: pkg.AlignLeft},
+							pkg.ColumnConfig{Text: t.base.Amount(saleOrder.ChangeAmount), Width: 0, Align: pkg.AlignRight},
+						)
+					}
 				}
 			}
 		}
