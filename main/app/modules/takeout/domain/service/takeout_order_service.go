@@ -1277,8 +1277,34 @@ func (s *takeoutOrderSrv) EnrichOrderItems(ctx context.Context, order *takeoutMo
 // 包含：生成 UUID、查询映射、补全名称/价格/分类等详细信息
 // 返回值：abnormalUuids 是异常修饰符的商品UUID列表（名称为空），err 表示处理错误
 func (s *takeoutOrderSrv) enrichModifiersInfo(ctx context.Context, platform string, item *takeoutModel.TakeoutOrderItem) (abnormalUuids []uint64, err error) {
+	// 检查是否有 Flavor 类型的 modifier
+	// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+	hasFlavorModifier := false
+	for _, modifier := range item.TakeoutOrderItemModifiers {
+		if modifier.IsFlavor() {
+			hasFlavorModifier = true
+			break
+		}
+	}
+
+	// 单规格自动补全：当商品已映射但没有 Flavor modifier 时，查询并补全单规格
+	// 注意：商品可能有 Sauce/Attr modifier 但没有 Flavor modifier
+	if !hasFlavorModifier {
+		if item.IsMapped == 1 && item.TtposProductPackageUuid > 0 && item.TtposProductType == 0 {
+			// 非套餐商品，尝试补全单规格
+			singleFlavorAbnormals, err := s.autoFillSingleFlavorModifier(ctx, platform, item)
+			if err != nil {
+				logger.Logger.Warn("自动补全单规格失败", zap.Error(err), zap.Uint64("productPackageUuid", item.TtposProductPackageUuid))
+			}
+			if len(singleFlavorAbnormals) > 0 {
+				abnormalUuids = append(abnormalUuids, singleFlavorAbnormals...)
+			}
+		}
+	}
+
+	// 如果没有任何 modifier，直接返回
 	if len(item.TakeoutOrderItemModifiers) == 0 {
-		return nil, nil
+		return abnormalUuids, nil
 	}
 
 	currentTime := time.Now().Unix()
@@ -2120,4 +2146,83 @@ func (s *takeoutOrderSrv) BatchAssignShiftLogToPendingOrders(ctx context.Context
 		zap.Int("peakTimeRecordCount", len(allProcessedOrders)))
 
 	return nil
+}
+
+// autoFillSingleFlavorModifier 自动补全单规格修饰符
+// 从 ttpos_menu 备份的元数据中查询单规格信息，而非实时数据库查询
+// 这样可以确保使用的是菜单推送时记录的规格，避免竞争窗口问题
+// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+func (s *takeoutOrderSrv) autoFillSingleFlavorModifier(ctx context.Context, platform string, item *takeoutModel.TakeoutOrderItem) (abnormalUuids []uint64, err error) {
+	// 从 ttpos_menu 备份查询单规格信息
+	singleFlavorInfo := s.menuRepo.GetSingleFlavorInfoByPlatformItemId(ctx, platform, item.PlatformItemId)
+	if singleFlavorInfo == nil {
+		// 没有单规格信息，可能是多规格商品或旧菜单格式
+		return nil, nil
+	}
+
+	// 验证商品UUID匹配
+	if singleFlavorInfo.ProductPackageUuid != item.TtposProductPackageUuid {
+		logger.Logger.Warn("单规格信息与商品不匹配",
+			zap.String("platformItemId", item.PlatformItemId),
+			zap.Uint64("expected", singleFlavorInfo.ProductPackageUuid),
+			zap.Uint64("actual", item.TtposProductPackageUuid))
+		return []uint64{item.TtposProductPackageUuid}, nil
+	}
+
+	currentTime := time.Now().Unix()
+
+	// 生成 modifier UUID
+	modifierUuid, err := utils.GetID()
+	if err != nil {
+		return nil, errors.WithMessage(err, "生成修饰符UUID失败")
+	}
+
+	// 创建 flavor modifier
+	modifier := takeoutModel.TakeoutOrderItemModifier{
+		BaseModel: takeoutModel.BaseModel{
+			Uuid:       modifierUuid,
+			CreateTime: currentTime,
+			UpdateTime: currentTime,
+		},
+		TakeoutOrderItemUuid: item.Uuid,
+		Platform:             platform,
+		PlatformModifierId:   fmt.Sprintf("%s%d", valueobject.PrefixFlavor.GetPrefix(platform), singleFlavorInfo.FlavorBomUuid),
+		IsMapped:             1,
+		TtposModifierUuid:    singleFlavorInfo.FlavorBomUuid,
+		TtposModifierType:    string(valueobject.ModifierTypeFlavor),
+		Quantity:             1,
+		Price:                0, // 单规格时价格已包含在商品价格中，modifier 差价为 0
+	}
+
+	// 查询规格详细信息（名称、分类等）
+	modifierInfos := s.menuRepo.GetModifierNamesByUuids(ctx, platform, []uint64{singleFlavorInfo.FlavorBomUuid}, map[uint64]string{singleFlavorInfo.FlavorBomUuid: string(valueobject.ModifierTypeFlavor)})
+	if info, ok := modifierInfos[singleFlavorInfo.FlavorBomUuid]; ok {
+		modifier.ModifierName = info.Name
+		modifier.TtposModifierName = info.TtposName
+		modifier.TtposModifierErpCode = info.TtposErpCode
+		modifier.TtposPrice = info.TtposPrice
+		modifier.TtposCategoryUuid = info.TtposCategoryUuid
+		modifier.TtposCategoryName = info.TtposCategoryName
+		modifier.TtposParentCategoryUuid = info.TtposParentCategoryUuid
+		modifier.TtposParentCategoryName = info.TtposParentCategoryName
+
+		// 检查是否异常（名称为空）
+		if info.Name == "" || info.TtposName == "" {
+			abnormalUuids = append(abnormalUuids, item.TtposProductPackageUuid)
+		}
+	} else {
+		// 如果查询不到详细信息，使用元数据中的名称
+		modifier.ModifierName = singleFlavorInfo.FlavorName
+		modifier.TtposModifierName = singleFlavorInfo.FlavorName
+	}
+
+	// 添加到商品的 modifiers 列表头部（Flavor 应该排在 Sauce/Attr 之前）
+	item.TakeoutOrderItemModifiers = append([]takeoutModel.TakeoutOrderItemModifier{modifier}, item.TakeoutOrderItemModifiers...)
+
+	logger.Logger.Debug("自动补全单规格成功（从元数据）",
+		zap.Uint64("productPackageUuid", item.TtposProductPackageUuid),
+		zap.Uint64("flavorBomUuid", singleFlavorInfo.FlavorBomUuid),
+		zap.String("flavorName", singleFlavorInfo.FlavorName))
+
+	return abnormalUuids, nil
 }

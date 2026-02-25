@@ -113,6 +113,75 @@ type (
 		Put(ctx context.Context, docType string, params *erp.RequestParams) (rst *gjson.Json, err error)
 		Delete(ctx context.Context, docType string, params *erp.RequestParams) (rst *gjson.Json, err error)
 	}
+	IFile interface {
+		// Upload 上传文件到 ERPNext（使用 multipart/form-data）
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 文件上传请求参数
+		//
+		// 返回：
+		//   - *erp.FileUploadResp: 上传成功后的文件信息
+		//   - error: 错误信息
+		Upload(ctx context.Context, req *erp.FileUploadReq) (*erp.FileUploadResp, error)
+		// UploadBase64 上传 Base64 编码的文件到 ERPNext
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: Base64 编码的文件上传请求参数
+		//
+		// 返回：
+		//   - *erp.FileUploadResp: 上传成功后的文件信息
+		//   - error: 错误信息
+		UploadBase64(ctx context.Context, req *erp.FileUploadBase64Req) (*erp.FileUploadResp, error)
+		// UploadFromBytes 从字节数组上传文件（自动转换为 Base64）
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - fileName: 文件名
+		//   - content: 文件内容字节数组
+		//   - docType: 关联的文档类型（可选）
+		//   - docName: 关联的文档名称（可选）
+		//   - isPrivate: 是否私有（可选）
+		//
+		// 返回：
+		//   - *erp.FileUploadResp: 上传成功后的文件信息
+		//   - error: 错误信息
+		UploadFromBytes(ctx context.Context, fileName string, content []byte, docType, docName string, isPrivate int) (*erp.FileUploadResp, error)
+		// UploadFromUrl 通过远程 URL 上传文件到 ERPNext
+		// ERPNext 会自动下载远程文件并存储，适用于文件已在 CDN 或云存储的场景
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: URL 上传请求参数
+		//
+		// 返回：
+		//   - *erp.FileUploadResp: 上传成功后的文件信息
+		//   - error: 错误信息
+		UploadFromUrl(ctx context.Context, req *erp.FileUploadUrlReq) (*erp.FileUploadResp, error)
+		// List 查询文件列表
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 文件列表查询请求
+		//
+		// 返回：
+		//   - []*erp.FileUploadResp: 文件列表
+		//   - error: 错误信息
+		List(ctx context.Context, req *erp.FileListReq) ([]*erp.FileUploadResp, error)
+		// Get 获取单个文件信息
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: 文件文档名称
+		//
+		// 返回：
+		//   - *erp.FileUploadResp: 文件信息
+		//   - error: 错误信息
+		Get(ctx context.Context, name string) (*erp.FileUploadResp, error)
+		// Delete 删除文件
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: 文件文档名称
+		//
+		// 返回：
+		//   - error: 错误信息
+		Delete(ctx context.Context, name string) error
+	}
 )
 
 var (
@@ -122,6 +191,7 @@ var (
 	localPrintFormat IPrintFormat
 	localReport      IReport
 	localResource    IResource
+	localFile        IFile
 )
 
 func Doctype() IDoctype {
@@ -188,4 +258,15 @@ func Resource() IResource {
 
 func RegisterResource(i IResource) {
 	localResource = i
+}
+
+func File() IFile {
+	if localFile == nil {
+		panic("implement not found for interface IFile, forgot register?")
+	}
+	return localFile
+}
+
+func RegisterFile(i IFile) {
+	localFile = i
 }

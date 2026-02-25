@@ -964,6 +964,40 @@ func (h *purchaseOrderHelper) getQuotaLimitMap(
 	return quotaLimitMap
 }
 
+// 品牌采购：批量查询最小采购数量配置
+func (h *purchaseOrderHelper) getMinQuotaMap(
+	ctx context.Context,
+	dbm *database.DBManager,
+	purchaseOrder *model.PurchaseOrder,
+) map[string]float64 {
+	companySetting := ctx.GetCompanySetting()
+	var minQuotaMap map[string]float64
+	if purchaseOrder.IsHeadquarterPurchase() && len(purchaseOrder.Items) > 0 {
+		// 提取所有物品编码
+		materialCodes := make([]string, 0, len(purchaseOrder.Items))
+		for _, item := range purchaseOrder.Items {
+			materialCodes = append(materialCodes, item.MaterialCode)
+		}
+		// 批量查询最小采购数量配置
+		headquarterUuid := companySetting.HeadquarterUuid
+		if headquarterUuid > 0 {
+			headquarterDb := dbm.GetDB(headquarterUuid)
+			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
+			minQuotaLimits, err := schemeRepo.GetMinQuotaMinBatchByMaterialCodes(
+				companySetting.CompanyUuid,
+				materialCodes,
+				utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday(),
+			)
+			if err != nil {
+				logger.Logger.Error("批量查询最小采购数量配置失败", zap.Error(err))
+				return minQuotaMap
+			}
+			minQuotaMap = minQuotaLimits
+		}
+	}
+	return minQuotaMap
+}
+
 // 获取禁止采购的物品编码列表
 func (h *purchaseOrderHelper) getDisallowedPurchaseMaterials(
 	ctx context.Context,

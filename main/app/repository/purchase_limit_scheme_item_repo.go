@@ -22,6 +22,9 @@ type IPurchaseLimitSchemeItemRepo interface {
 	// DeleteBySchemeUuid 根据方案UUID软删除所有物品配置
 	DeleteBySchemeUuid(schemeUuid uint64) error
 
+	// HardDeleteBySchemeUuid 根据方案UUID物理删除所有物品配置
+	HardDeleteBySchemeUuid(schemeUuid uint64) error
+
 	// 选项方法
 	WhereSchemeUuid(schemeUuid uint64) DBOption
 	WhereMaterialCode(materialCode string) DBOption
@@ -70,6 +73,11 @@ func (r *purchaseLimitSchemeItemRepoImpl) DeleteBySchemeUuid(schemeUuid uint64) 
 		Where("scheme_uuid = ?", schemeUuid).
 		Where("delete_time = ?", 0).
 		Update("delete_time", time.Now().Unix()).Error
+}
+
+// HardDeleteBySchemeUuid 根据方案UUID物理删除所有物品配置
+func (r *purchaseLimitSchemeItemRepoImpl) HardDeleteBySchemeUuid(schemeUuid uint64) error {
+	return r.db.Unscoped().Where("scheme_uuid = ?", schemeUuid).Delete(&model.PurchaseLimitSchemeItem{}).Error
 }
 
 // 选项方法

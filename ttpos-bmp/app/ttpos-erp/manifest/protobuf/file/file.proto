@@ -1,0 +1,110 @@
+syntax = "proto3";
+import "erp.proto" ;
+package file;
+
+// Go 包路径配置，指定生成的 Go 代码存放位置
+option go_package = "ttpos-bmp/app/ttpos-erp/api/file";
+
+// 文件上传请求（二进制方式）
+message UploadFileReq {
+  string file_name = 1;           // 文件名，必填
+  bytes file_content = 2;         // 文件内容（二进制），必填
+  string doc_type = 3;            // 关联的文档类型，可选
+  string doc_name = 4;            // 关联的文档名称，可选
+  int32 is_private = 5;           // 是否私有（0: 公开, 1: 私有），可选
+  string folder = 6;              // 文件夹路径，可选
+}
+
+// Base64 编码方式的文件上传请求
+message UploadFileBase64Req {
+  string file_name = 1;           // 文件名，必填
+  string file_data = 2;           // Base64 编码的文件内容，必填
+  string doc_type = 3;            // 关联的文档类型，可选
+  string doc_name = 4;            // 关联的文档名称，可选
+  int32 is_private = 5;           // 是否私有（0: 公开, 1: 私有），可选
+}
+
+// URL 方式的文件上传请求（ERPNext 自动下载远程文件）
+message UploadFileUrlReq {
+  string file_url = 1;            // 远程文件 URL，必填
+  string file_name = 2;           // 文件名，可选（不填则从 URL 提取）
+  string doc_type = 3;            // 关联的文档类型，可选
+  string doc_name = 4;            // 关联的文档名称，可选
+  int32 is_private = 5;           // 是否私有（0: 公开, 1: 私有），可选
+  string folder = 6;              // 文件夹路径，可选
+}
+
+// 文件上传响应
+message UploadFileResp {
+  string name = 1;                // 文件文档名称（File doctype 的 name 字段）
+  string file_name = 2;           // 文件名
+  string file_url = 3;            // 文件访问 URL
+  int32 is_private = 4;           // 是否私有
+  string attached_to_doctype = 5; // 关联的文档类型
+  string attached_to_name = 6;    // 关联的文档名称
+  int64 file_size = 7;            // 文件大小（字节）
+  string content_type = 8;        // 文件 MIME 类型
+}
+
+// 文件列表查询请求
+message ListFilesReq {
+  string doc_type = 1;            // 关联的文档类型，可选
+  string doc_name = 2;            // 关联的文档名称，可选
+  int32 is_private = 3;           // 是否私有（-1: 不限, 0: 公开, 1: 私有），可选
+  string folder = 4;              // 文件夹，可选
+  int32 limit_start = 5;          // 分页起始位置，可选
+  int32 limit = 6;                // 分页数量，可选，默认 20
+}
+
+// 文件列表响应
+message ListFilesResp {
+  repeated UploadFileResp files = 1; // 文件列表
+}
+
+// 获取单个文件请求
+message GetFileReq {
+  string name = 1;                // 文件文档名称，必填
+}
+
+// 删除文件请求
+message DeleteFileReq {
+  string name = 1;                // 文件文档名称，必填
+}
+
+// 删除文件响应
+message DeleteFileResp {
+  string message = 1;             // 操作结果消息
+}
+
+// 文件服务
+service FileService {
+  // 上传文件到 ERPNext（二进制方式）
+  // 参数：文件名、文件内容、关联的 DocType 和 DocName
+  // 返回：上传成功后的文件信息
+  rpc UploadFile(UploadFileReq) returns (erp.ResponseInfo);
+
+  // 上传文件到 ERPNext（Base64 编码方式）
+  // 参数：文件名、Base64 编码的文件内容、关联的 DocType 和 DocName
+  // 返回：上传成功后的文件信息
+  rpc UploadFileBase64(UploadFileBase64Req) returns (erp.ResponseInfo);
+
+  // 上传文件到 ERPNext（URL 方式，ERPNext 自动下载）
+  // 参数：远程文件 URL、关联的 DocType 和 DocName
+  // 返回：上传成功后的文件信息
+  rpc UploadFileUrl(UploadFileUrlReq) returns (erp.ResponseInfo);
+
+  // 查询文件列表
+  // 参数：过滤条件（DocType、DocName、是否私有等）
+  // 返回：符合条件的文件列表
+  rpc ListFiles(ListFilesReq) returns (erp.ResponseInfo);
+
+  // 获取单个文件信息
+  // 参数：文件文档名称
+  // 返回：文件详细信息
+  rpc GetFile(GetFileReq) returns (erp.ResponseInfo);
+
+  // 删除文件
+  // 参数：文件文档名称
+  // 返回：操作结果
+  rpc DeleteFile(DeleteFileReq) returns (erp.ResponseInfo);
+}

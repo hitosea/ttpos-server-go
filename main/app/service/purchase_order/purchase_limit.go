@@ -55,10 +55,18 @@ func (s *purchaseOrderSrv) checkPurchaseLimit(ctx context.Context, order *model.
 		}
 	}
 
-	// 3 检查物品数量限制
+	// 3 检查物品数量限制（最大采购数量）
 	quotaMap := s.helper.getQuotaLimitMap(ctx, s.dbm, order)
 	if len(quotaMap) > 0 {
 		if err := s.checkItemLimitByScheme(ctx, order, quotaMap); err != nil {
+			return err
+		}
+	}
+
+	// 3.5 检查最小采购数量
+	minQuotaMap := s.helper.getMinQuotaMap(ctx, s.dbm, order)
+	if len(minQuotaMap) > 0 {
+		if err := s.checkMinItemLimitByScheme(ctx, order, minQuotaMap); err != nil {
 			return err
 		}
 	}
@@ -256,4 +264,87 @@ func (s *purchaseOrderSrv) checkItemLimitByScheme(
 	}
 
 	return nil
+}
+
+// checkMinItemLimitByScheme 检查物品最小采购数量限制（按方案）
+func (s *purchaseOrderSrv) checkMinItemLimitByScheme(
+	ctx context.Context,
+	order *model.PurchaseOrder,
+	minQuotaMap map[string]float64,
+) error {
+	lang := ctx.GetLanguage()
+
+	// 1. 定义物品汇总结构
+	type MaterialSummary struct {
+		MaterialCode string
+		MaterialName string
+		TotalQty     float64
+	}
+
+	materialSummaryMap := make(map[string]*MaterialSummary)
+
+	// 2. 遍历订单明细，汇总物品数量
+	for _, orderItem := range order.Items {
+		// 检查是否在最小采购数量配置中
+		_, inMinQuota := minQuotaMap[orderItem.MaterialCode]
+		if !inMinQuota {
+			continue // 不在配置中，跳过
+		}
+		if orderItem.Material == nil {
+			continue // Material 未加载，跳过
+		}
+		// 获取限购配置单位
+		quotaUnit := orderItem.Material.GetUnitByUuidForQuotaConfig()
+		if quotaUnit == nil {
+			continue // 未找到限购配置单位，跳过
+		}
+		quotaUnitUuid := quotaUnit.Uuid
+
+		materialName := language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(lang)
+
+		// 累加单位申请数量
+		for _, unit := range orderItem.Units {
+			// 只累加限购单位的数量
+			if unit.UnitUuid != quotaUnitUuid {
+				continue
+			}
+			key := orderItem.MaterialCode
+			if summary, exists := materialSummaryMap[key]; exists {
+				summary.TotalQty += unit.Num
+			} else {
+				materialSummaryMap[key] = &MaterialSummary{
+					MaterialCode: orderItem.MaterialCode,
+					MaterialName: materialName,
+					TotalQty:     unit.Num,
+				}
+			}
+		}
+	}
+
+	// 3. 逐个检查物品是否低于最小采购数量
+	for _, summary := range materialSummaryMap {
+		minQuotaLimit := minQuotaMap[summary.MaterialCode]
+		if summary.TotalQty < minQuotaLimit {
+			// 错误提示：物品 {name} 申请总数（{actual}），不能小于（{min}），请调整后提交
+			return errors.NewWithCode(
+				constant.CodeErrorConfirmRefresh,
+				fmt.Sprintf(
+					i18n.Translate(lang, "物品 %s 申请总数（%s），不能小于（%s），请调整后提交"),
+					summary.MaterialName,
+					formatQuantity(summary.TotalQty),
+					formatQuantity(minQuotaLimit),
+				),
+			)
+		}
+	}
+
+	return nil
+}
+
+// formatQuantity 格式化数量，去掉不必要的小数位
+func formatQuantity(qty float64) string {
+	if qty == float64(int64(qty)) {
+		return fmt.Sprintf("%d", int64(qty))
+	}
+	return fmt.Sprintf("%.2f", qty)
 }

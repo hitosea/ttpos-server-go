@@ -11,6 +11,11 @@ type Takeout struct {
 	Menu        interface{} `gorm:"column:menu;type:json;comment:平台菜单数据(JSON格式)" json:"menu"`
 	TtposMenu   interface{} `gorm:"column:ttpos_menu;type:json;comment:TTPOS导出的菜单数据(JSON格式)" json:"ttpos_menu"`
 
+	// 单规格映射：记录被跳过推送的单规格商品信息
+	// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+	// JSON 格式: {"TTPOS-ITEM-123": {"product_package_uuid": 123, "flavor_bom_uuid": 456, ...}}
+	SingleFlavorMapping string `gorm:"column:single_flavor_mapping;type:json;comment:单规格映射(JSON格式)" json:"single_flavor_mapping"`
+
 	// 导入进度相关字段
 	ImportStatus int8 `gorm:"column:import_status;type:tinyint(3);default:0;comment:导入状态(0-未导入 1-导入中 2-导入成功 3-导入失败);NOT NULL;index:idx_import_status" json:"import_status"`
 }
