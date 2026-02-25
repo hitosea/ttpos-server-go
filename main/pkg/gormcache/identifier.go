@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/callbacks"
 )
 
 const (
@@ -13,13 +14,18 @@ const (
 	IdentifierPrefix = "gorm:cache:"
 )
 
-// buildIdentifier 构建缓存键
+// buildIdentifier 构建缓存键（参考 go-gorm/caches 官方实现）
+// 使用 callbacks.BuildQuerySQL 构建 SQL，然后生成缓存 key
 // 格式: gorm:cache:{tableName}:{sql}:{params}
+//
+// 注意：callbacks.BuildQuerySQL 会检查 SQL 是否已构建，不会重复构建
+// 因此可以安全地在 Query 回调中调用
 func buildIdentifier(db *gorm.DB) (tableName string, key string) {
-	tableName = extractTableName(db)
+	// 使用 GORM 官方的 callbacks 包构建 SQL
+	// 这是 go-gorm/caches 官方库使用的方法
+	callbacks.BuildQuerySQL(db)
 
-	// 触发 SQL 编译（不执行）
-	db.Statement.Build("SELECT", "FROM", "WHERE", "GROUP BY", "ORDER BY", "LIMIT", "FOR")
+	tableName = extractTableName(db)
 
 	// 构建唯一标识
 	var builder strings.Builder
