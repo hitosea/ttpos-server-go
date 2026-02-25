@@ -119,6 +119,7 @@ func (p *Plugin) Initialize(db *gorm.DB) error {
 }
 
 // queryCallback 查询回调（核心逻辑）
+// 参考 go-gorm/caches 官方实现
 func (p *Plugin) queryCallback(db *gorm.DB) {
 	// 检查是否跳过缓存
 	if p.shouldSkipCache(db) {
@@ -126,7 +127,8 @@ func (p *Plugin) queryCallback(db *gorm.DB) {
 		return
 	}
 
-	// 构建缓存标识
+	// 构建缓存标识（使用 callbacks.BuildQuerySQL 构建 SQL）
+	// 注意：BuildQuerySQL 会检查 SQL 是否已构建，不会重复构建
 	tableName, key := buildIdentifier(db)
 
 	// 检查表是否需要缓存
