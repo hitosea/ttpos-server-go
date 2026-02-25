@@ -1244,6 +1244,9 @@ definitions:
       is_allow_purchase:
         description: 是否允许采购 yes/no
         type: string
+      min_quota_limit:
+        description: 最小限购数量
+        type: number
       quota_limit:
         description: 限购数量
         type: number
@@ -3775,6 +3778,9 @@ definitions:
       category_type:
         description: 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
         type: integer
+      company_uuid:
+        description: 可选，指定查询的门店UUID（用于多店切换查看）
+        type: integer
       duty_no:
         description: 班次编号
         type: string
@@ -3844,6 +3850,9 @@ definitions:
     type: object
   req.BusinessDataRankProductReq:
     properties:
+      company_uuid:
+        description: 可选，指定查询的门店UUID（用于多店切换查看）
+        type: integer
       exclude_data_manage:
         description: 是否排除数据管理订单
         type: boolean
@@ -7821,8 +7830,11 @@ definitions:
       material_uuid:
         description: 物品UUID
         type: integer
+      min_quota_limit:
+        description: 最小采购数量
+        type: number
       quota_limit:
-        description: 限购数量
+        description: 最大采购数量
         type: number
     required:
     - material_uuid
@@ -9839,6 +9851,9 @@ definitions:
       currency_unit:
         description: 货币单位
         type: string
+      is_save_single_flavor_mapping:
+        description: 是否保存单规格映射，默认不保存
+        type: boolean
       platform:
         description: 平台名称：grab, lineman 等
         type: string
@@ -15329,6 +15344,8 @@ definitions:
         type: string
       material_uuid:
         type: integer
+      min_quota_limit:
+        type: number
       quota_limit:
         type: number
     type: object
@@ -15651,6 +15668,9 @@ definitions:
       is_allow_purchase:
         description: 是否允许采购 yes/no
         type: string
+      min_quota_limit:
+        description: 最小限购数量
+        type: number
       quota_limit:
         description: 限购数量
         type: number
@@ -33543,6 +33563,37 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
       summary: 获取验证码
+      tags:
+      - 通用
+  /passport/file_redirect:
+    get:
+      parameters:
+      - description: 文件UUID
+        format: int64
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      - description: 公司UUID
+        format: int64
+        in: query
+        name: company_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: 重定向到文件URL
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: 文件不存在
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 文件重定向
       tags:
       - 通用
   /passport/server_public_key:
