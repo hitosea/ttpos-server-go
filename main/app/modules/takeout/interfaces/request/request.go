@@ -8,9 +8,10 @@ type ImportMenuRequest struct {
 
 // ExportMenuRequest 导出菜单请求
 type ExportMenuRequest struct {
-	Platform     string `json:"platform" binding:"required"`     // 平台名称：grab, lineman 等
-	CompanyUuid  uint64 `json:"company_uuid" binding:"required"` // 公司 UUID
-	CurrencyUnit string `json:"currency_unit"`                   // 货币单位
+	Platform                  string `json:"platform" binding:"required"`     // 平台名称：grab, lineman 等
+	CompanyUuid               uint64 `json:"company_uuid" binding:"required"` // 公司 UUID
+	CurrencyUnit              string `json:"currency_unit"`                   // 货币单位
+	IsSaveSingleFlavorMapping bool   `json:"is_save_single_flavor_mapping"`   // 是否保存单规格映射，默认不保存
 }
 
 // ToggleTakeoutStatusRequest 切换外卖状态请求

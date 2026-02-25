@@ -2028,6 +2028,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		otel.RecordSpanError(stdCtx, err, "获取订单购物车信息失败")
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
 	}
+	ctx.Mark("cart_info_queried")
 	if !option.FilterEndStatus && shopCart.SaleBill.IsEndStatus() {
 		otel.RecordSpanError(stdCtx, errors.New("桌台订单结束"), "订单已结束")
 		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
@@ -2041,6 +2042,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		shopCart.SaleBill.CalcAll(model.WithAllAndOneH5Order(option.H5OrderUuid))
 		otel.AddSpanEvent(stdCtx, "包含 H5 订单商品计算")
 	}
+	ctx.Mark("amount_calculated")
 
 	// 获取门店业务设置（使用对象存储模块缓存）
 	otel.AddSpanEvent(stdCtx, "获取门店业务设置")
@@ -2079,6 +2081,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		}
 		businessSetting = &bs
 	}
+	ctx.Mark("business_setting_loaded")
 
 	// 给订单列表添加订单
 	otel.AddSpanEvent(stdCtx, "构建订单列表", attribute.Int("order_count", len(shopCart.SaleBill.SaleOrders)))
@@ -2139,6 +2142,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		}
 		saleOrderList = append(saleOrderList, order)
 	}
+	ctx.Mark("order_list_built")
 
 	takeout := shopCart.SaleBill.IsTakeout()
 	orderRemark, _ := shopCart.SaleBill.GetOrderRemarkRes()
@@ -2187,6 +2191,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			}
 		}
 	}
+	ctx.Mark("shop_cart_built")
+
 	// 先判断商户是否有生效的必点方案（仅在对象存储缓存开启时执行）
 	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
 		otel.AddSpanEvent(stdCtx, "检查是否有生效的必点方案")
@@ -2274,6 +2280,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			shopCartInfo.MustPlans = productMustPlanList
 		}
 	}
+	ctx.Mark("must_plan_processed")
+
 	// 判断是否需要弹出分批送厨弹窗。只有收银机和助手端需要判断
 	if ctx.GetSource() == constant.SourceAssistant || ctx.GetSource() == constant.SourceCashier {
 		otel.AddSpanEvent(stdCtx, "检查是否需要弹出分批送厨弹窗")

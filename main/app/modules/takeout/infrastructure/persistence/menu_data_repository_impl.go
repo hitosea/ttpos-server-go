@@ -1159,3 +1159,44 @@ func (r *menuDataRepositoryImpl) getCategoryInfoMap(db *gorm.DB, categoryUuids [
 
 	return result
 }
+
+// GetSingleFlavorInfoByPlatformItemId 根据平台商品ID获取单规格信息
+// 从 ttpos_takeout 表的 single_flavor_mapping 字段获取单规格映射
+// 任务 #39752: 订单回传时从菜单备份查询单规格信息
+func (r *menuDataRepositoryImpl) GetSingleFlavorInfoByPlatformItemId(ctx context.Context, platform string, platformItemId string) *value_object.SingleFlavorInfo {
+	db := ctx.GetDB()
+
+	// 查询 single_flavor_mapping 字段
+	var takeout takeoutModel.Takeout
+	err := db.Model(&takeoutModel.Takeout{}).
+		Where("platform = ? AND delete_time = ?", platform, 0).
+		Select("single_flavor_mapping").
+		First(&takeout).Error
+
+	if err != nil {
+		logger.Logger.Debug("查询single_flavor_mapping失败",
+			zap.String("platform", platform),
+			zap.Error(err))
+		return nil
+	}
+
+	if takeout.SingleFlavorMapping == "" {
+		return nil
+	}
+
+	// 解析 JSON 为映射表
+	var mapping map[string]*value_object.SingleFlavorInfo
+	if err := json.Unmarshal([]byte(takeout.SingleFlavorMapping), &mapping); err != nil {
+		logger.Logger.Error("解析single_flavor_mapping JSON失败",
+			zap.String("platform", platform),
+			zap.Error(err))
+		return nil
+	}
+
+	// 从映射表中查找
+	if info, ok := mapping[platformItemId]; ok {
+		return info
+	}
+
+	return nil
+}
