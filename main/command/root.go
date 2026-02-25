@@ -23,6 +23,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/gormcache"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/otlp"
@@ -98,24 +99,42 @@ var rootCommand = &cobra.Command{
 		var dbm *database.DBManager = database.GetDBManager(config.Database)
 
 		// TODO: GORM 查询缓存功能暂时关闭，待稳定测试通过后再开启
-		// gormcache.Init(&gormcache.Config{
-		// 	Easer:   true,            // 启用请求合并（相同查询只执行一次）
-		// 	TTL:     5 * time.Minute, // 缓存 5 分钟
-		// 	MaxRows: 1000,            // 超过 1000 行不缓存
-		// 	Tables: []string{ // 只缓存低频更新的表
-		// 		"ttpos_product",
-		// 		"ttpos_product_category",
-		// 		"ttpos_table_area",
-		// 		"ttpos_payment_method",
-		// 		"ttpos_printer",
-		// 	},
-		// })
-		// // 设置数据库就绪回调，自动为所有数据库启用缓存
-		// database.SetOnDBReady(func(db *gorm.DB) {
-		// 	gormcache.Enable(db, nil)
-		// })
-		// // 为已存在的所有数据库启用缓存（启动时已加载的商户库）
-		// dbm.EnableCacheForAllDBs()
+		gormcache.Init(&gormcache.Config{
+			Easer:   true,            // 启用请求合并（相同查询只执行一次）
+			TTL:     5 * time.Minute, // 缓存 5 分钟
+			MaxRows: 1000,            // 超过 1000 行不缓存
+			Tables: []string{ // 只缓存低频更新的表
+				"ttpos_product",
+				"ttpos_product_category",
+				"ttpos_table_area",
+				"ttpos_payment_method",
+				"ttpos_staff",
+				"ttpos_member_point_log",
+				"ttpos_sale_order_buffet_customer_type",
+				"ttpos_sale_order_buffet_delay_product",
+				"ttpos_batch_tag",
+				"ttpos_multi_language_name",
+				"ttpos_return_order_product",
+				"ttpos_sale_order_product_attribute",
+				"ttpos_sale_order_product_bom",
+				"ttpos_sale_order_product_reason",
+				"ttpos_production_order_product",
+				"ttpos_sale_order_coupon",
+				"ttpos_member_point_log",
+				"ttpos_return_order_product",
+				"ttpos_payment_order",
+				"ttpos_company",
+				"ttpos_company_setting",
+				"ttpos_product_package",
+				"ttpos_product_attribute",
+			},
+		})
+		// 设置数据库就绪回调，自动为所有数据库启用缓存
+		database.SetOnDBReady(func(db *gorm.DB) {
+			gormcache.Enable(db, nil)
+		})
+		// 为已存在的所有数据库启用缓存（启动时已加载的商户库）
+		dbm.EnableCacheForAllDBs()
 
 		// 初始化对象存储缓存配置的缓存层（使用三级缓存基础设施）
 		objectStorageAdapter.InitObjectStorageCacheConfigCache(
