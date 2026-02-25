@@ -57,6 +57,11 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 		data.Purpose = erp.StockReconciliationPurposeStockReconciliation
 	}
 
+	// 设置盘点类型
+	if len(req.InventoryType) > 0 {
+		data.CustomInventoryType = req.InventoryType
+	}
+
 	// 设置仓库
 	if len(warehouseName) > 0 {
 		data.SetWarehouse = warehouseName

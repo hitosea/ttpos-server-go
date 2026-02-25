@@ -119,6 +119,7 @@ message SaveStockReconciliationReq {
   string purpose = 5;                                 // 用途，可选，默认 Stock Reconciliation / Opening Stock
   string warehouse = 6;                               // 仓库名称，可选
   repeated StockReconciliationItem items = 7;         // 盘点明细，必填
+  string inventory_type = 8;                          // 盘点类型，可选，可选值：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items
 }
 
 // 保存库存盘点响应
