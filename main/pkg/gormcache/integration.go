@@ -182,6 +182,23 @@ func WithCacher(cacher Cacher) ConfigOption {
 	}
 }
 
+// WithLocalCache 使用默认配置的本地内存缓存（BigCache）
+// 使用此选项将替代 Redis 缓存
+func WithLocalCache() ConfigOption {
+	return func(c *Config) {
+		c.Cacher = NewLocalCacher(
+			WithLocalDefaultTTL(c.TTL),
+		)
+	}
+}
+
+// WithLocalCacheOptions 使用自定义配置的本地内存缓存（BigCache）
+func WithLocalCacheOptions(opts ...LocalCacherOption) ConfigOption {
+	return func(c *Config) {
+		c.Cacher = NewLocalCacher(opts...)
+	}
+}
+
 // ============ 便捷操作 ============
 
 // InvalidateTable 失效指定表的缓存
@@ -203,10 +220,14 @@ func InvalidateAll(ctx context.Context) error {
 
 // GetStats 获取缓存统计信息
 func GetStats(ctx context.Context) map[string]int64 {
-	if rc, ok := globalCacher.(*RedisCacher); ok {
-		return rc.GetStats(ctx)
+	switch c := globalCacher.(type) {
+	case *RedisCacher:
+		return c.GetStats(ctx)
+	case *LocalCacher:
+		return c.GetStats(ctx)
+	default:
+		return nil
 	}
-	return nil
 }
 
 // ============ GORM Scopes ============

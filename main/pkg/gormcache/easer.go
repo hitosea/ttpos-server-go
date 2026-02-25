@@ -51,8 +51,8 @@ func ease(t task, queue *sync.Map) {
 
 // queryTask 查询任务实现
 type queryTask struct {
-	id      string              // 任务唯一标识（= SQL + 参数）
-	queryCb func()              // 原始查询回调
+	id      string // 任务唯一标识（= SQL + 参数）
+	queryCb func() // 原始查询回调
 }
 
 func (t *queryTask) GetId() string {

@@ -8,6 +8,7 @@ Package gormcache 提供 GORM 查询缓存功能，支持表级精确缓存失�
   - 与项目现有 cache 包无缝集成
   - 支持单机和 Redis 集群模式
   - 白名单/黑名单控制缓存范围
+  - 支持本地内存缓存（BigCache），可通过配置切换
 
 # 快速开始
 
@@ -91,6 +92,48 @@ Package gormcache 提供 GORM 查询缓存功能，支持表级精确缓存失�
 	    gormcache.WithTables("ttpos_product", "ttpos_category"),
 	    gormcache.WithDebug(true),
 	)
+
+# 使用本地内存缓存（BigCache）
+
+默认使用 Redis 缓存，如需使用本地内存缓存，可通过以下方式切换：
+
+	// 方式一：使用默认配置的本地缓存
+	gormcache.Init(&gormcache.Config{
+	    Easer:  true,
+	    TTL:    5 * time.Minute,
+	    Cacher: gormcache.NewLocalCacher(),
+	    Tables: []string{"ttpos_product", "ttpos_category"},
+	})
+
+	// 方式二：自定义本地缓存配置
+	gormcache.Init(&gormcache.Config{
+	    Easer:  true,
+	    TTL:    5 * time.Minute,
+	    Cacher: gormcache.NewLocalCacher(
+	        gormcache.WithLocalDefaultTTL(10*time.Minute),
+	        gormcache.WithLocalMaxSize(512),           // 最大内存 512MB
+	        gormcache.WithLocalCleanWindow(2*time.Minute),
+	    ),
+	    Tables: []string{"ttpos_product"},
+	})
+
+	// 方式三：使用 ConfigOption
+	gormcache.EnableWithOptions(db,
+	    gormcache.WithLocalCache(),  // 使用默认配置的本地缓存
+	)
+
+本地缓存配置选项：
+
+  - WithLocalDefaultTTL(d)    设置默认过期时间
+  - WithLocalMaxSize(mb)      设置最大内存占用（MB），默认 256MB
+  - WithLocalCleanWindow(d)   设置过期条目清理间隔，默认 1 分钟
+  - WithLocalMaxEntrySize(n)  设置单条目最大大小（bytes），默认 500KB
+  - WithLocalShards(n)        设置分片数（必须是 2 的幂），默认 1024
+
+本地缓存 vs Redis 缓存：
+
+  - 本地缓存：零网络延迟，适合单机部署或对延迟敏感的场景
+  - Redis 缓存：支持分布式，适合多实例部署，数据持久化
 
 # 最佳实践
 
