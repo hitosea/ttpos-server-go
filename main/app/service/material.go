@@ -234,7 +234,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	}
 
 	// 品牌采购：批量查询限购配置和禁止采购物品（避免 N+1 查询问题）
-	var quotaLimitMap map[string]float64
+	var quotaLimitMap map[string]repository.QuotaLimitConfig
 	var disallowedSet map[string]bool
 	if req.PurchaseType == 2 && len(materials) > 0 {
 		// 提取所有物品编码
@@ -246,12 +246,12 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		// 获取当前星期几
 		currentWeekday := utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday()
 
-		// 批量查询限购配置
+		// 批量查询限购配置（包含最大和最小限购数量）
 		headquarterUuid := companySetting.HeadquarterUuid
 		if headquarterUuid > 0 {
 			headquarterDb := s.dbm.GetDB(headquarterUuid)
 			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
-			quotaLimitMap, err = schemeRepo.GetMinQuotaLimitBatchByMaterialCodes(
+			quotaLimitMap, err = schemeRepo.GetQuotaLimitConfigBatchByMaterialCodes(
 				companySetting.CompanyUuid,
 				materialCodes,
 				currentWeekday,
@@ -468,8 +468,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 					}
 				}
 
-				// 从批量查询的结果中获取限购数量和禁止采购状态
-				quotaLimit, hasQuotaLimit := quotaLimitMap[material.Code]
+				// 从批量查询的结果中获取限购配置和禁止采购状态
+				quotaConfig, hasQuotaLimit := quotaLimitMap[material.Code]
 				isDisallowed := disallowedSet[material.Code]
 
 				// 设置是否允许采购
@@ -482,6 +482,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				if !hasQuotaLimit && !isDisallowed {
 					return material_resp.MaterialQuotaConfig{
 						QuotaLimit:          0,
+						MinQuotaLimit:       0,
 						QuotaUnitUuid:       0,
 						QuotaUnitName:       "",
 						QuotaUnitLocaleName: dto.LocaleResponse{},
@@ -489,8 +490,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 					}
 				}
 
-				// 有限购数量时，返回完整配置（需校验 quotaUnit 及其关联单位，避免 nil 解引用）
-				if hasQuotaLimit && quotaLimit > 0 {
+				// 有限购配置时，返回完整配置（需校验 quotaUnit 及其关联单位，避免 nil 解引用）
+				if hasQuotaLimit && (quotaConfig.QuotaLimit > 0 || quotaConfig.MinQuotaLimit > 0) {
 					quotaUnitName := ""
 					quotaUnitLocaleName := dto.LocaleResponse{}
 					if quotaUnit != nil && quotaUnit.Unit != nil && quotaUnit.Unit.MultiLanguageName != (model.MultiLanguageName{}) {
@@ -498,7 +499,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 						quotaUnitLocaleName = quotaUnit.Unit.MultiLanguageName.GetNames()
 					}
 					return material_resp.MaterialQuotaConfig{
-						QuotaLimit:          quotaLimit,
+						QuotaLimit:          quotaConfig.QuotaLimit,
+						MinQuotaLimit:       quotaConfig.MinQuotaLimit,
 						QuotaUnitUuid:       quotaUnit.Uuid,
 						QuotaUnitName:       quotaUnitName,
 						QuotaUnitLocaleName: quotaUnitLocaleName,
@@ -509,6 +511,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				// 只有禁止采购状态，没有限购数量
 				return material_resp.MaterialQuotaConfig{
 					QuotaLimit:          0,
+					MinQuotaLimit:       0,
 					QuotaUnitUuid:       0,
 					QuotaUnitName:       "",
 					QuotaUnitLocaleName: dto.LocaleResponse{},

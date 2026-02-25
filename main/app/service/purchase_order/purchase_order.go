@@ -402,7 +402,8 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 				}
 			}
 			// 限购配置和单位限制检查
-			hasQuotaLimit := quotaLimitMap[item.MaterialCode] > 0
+			quotaConfig := quotaLimitMap[item.MaterialCode]
+			hasQuotaLimit := quotaConfig.QuotaLimit > 0
 			isDisallowed := disallowedSet[item.MaterialCode]
 
 			// 设置是否允许采购
@@ -420,7 +421,8 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 			// 构建 QuotaConfig
 			if quotaUnit != nil && quotaUnit.Unit != nil {
 				itemInfo.QuotaConfig = resp.PurchaseOrderItemQuotaConfig{
-					QuotaLimit:          quotaLimitMap[item.MaterialCode],
+					QuotaLimit:          quotaConfig.QuotaLimit,
+					MinQuotaLimit:       quotaConfig.MinQuotaLimit,
 					QuotaUnitUuid:       quotaUnit.Uuid,
 					QuotaUnitName:       quotaUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 					QuotaUnitLocaleName: quotaUnit.Unit.MultiLanguageName.GetNames(),
@@ -444,12 +446,21 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 								)
 								break
 							}
-							// 限购数量检查（仅在有限购方案时检查）
-							if hasQuotaLimit && unit.Num > itemInfo.QuotaConfig.QuotaLimit {
+							// 最大限购数量检查（仅在有限购方案时检查）
+							if hasQuotaLimit && itemInfo.QuotaConfig.QuotaLimit > 0 && unit.Num > itemInfo.QuotaConfig.QuotaLimit {
 								detailResp.IsUpdateQuotaScheme = true
 								itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(
 									i18n.Translate(lang, "物品%s申请总数（%.2f）已超过限购数（%.2f），请调整数量后提交。"),
 									materialName, item.Num, itemInfo.QuotaConfig.QuotaLimit,
+								)
+								break
+							}
+							// 最小采购数量检查（仅在有限购方案时检查）
+							if hasQuotaLimit && itemInfo.QuotaConfig.MinQuotaLimit > 0 && unit.Num < itemInfo.QuotaConfig.MinQuotaLimit {
+								detailResp.IsUpdateQuotaScheme = true
+								itemInfo.QuotaConfig.ErrorMessage = fmt.Sprintf(
+									i18n.Translate(lang, "物品%s申请总数（%.2f）不能小于最小采购数（%.2f），请调整数量后提交。"),
+									materialName, item.Num, itemInfo.QuotaConfig.MinQuotaLimit,
 								)
 								break
 							}
@@ -949,8 +960,8 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrderItemUnit(
 			}
 
 			// 品牌采购：检查是否超过限购数量
-			quotaLimit := quotaLimitMap[item.MaterialCode]
-			if quotaLimit > 0 && item.Num > quotaLimit {
+			quotaConfig := quotaLimitMap[item.MaterialCode]
+			if quotaConfig.QuotaLimit > 0 && item.Num > quotaConfig.QuotaLimit {
 				return errors.New("当前物品数量超过限购数量，请检查物品单位是否正确")
 			}
 
