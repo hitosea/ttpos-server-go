@@ -181,25 +181,23 @@ func (c *RedisCacher) Store(ctx context.Context, tableName string, key string, r
 }
 
 // InvalidateTable 失效指定表的所有缓存
+// 注意：始终从 Redis 获取索引，确保多实例部署时缓存一致性
 func (c *RedisCacher) InvalidateTable(ctx context.Context, tableName string) error {
 	if c.client == nil {
 		return nil
 	}
 
-	// 优先使用本地索引（避免 Redis SMEMBERS）
-	keys := c.getAndClearLocalIndex(tableName)
+	// 清除本地索引（避免内存泄漏）
+	c.getAndClearLocalIndex(tableName)
 
-	// 如果本地索引为空，从 Redis 获取
-	if len(keys) == 0 {
-		indexKey := indexKeyPrefix + tableName
-		var err error
-		keys, err = c.client.SMembers(ctx, indexKey).Result()
-		if err != nil && err != redis.Nil {
-			logWarn("gormcache: 获取表索引失败",
-				zap.String("table", tableName),
-				zap.Error(err),
-			)
-		}
+	// 始终从 Redis 获取索引（确保多实例一致性）
+	indexKey := indexKeyPrefix + tableName
+	keys, err := c.client.SMembers(ctx, indexKey).Result()
+	if err != nil && err != redis.Nil {
+		logWarn("gormcache: 获取表索引失败",
+			zap.String("table", tableName),
+			zap.Error(err),
+		)
 	}
 
 	if len(keys) == 0 {
@@ -216,10 +214,9 @@ func (c *RedisCacher) InvalidateTable(ctx context.Context, tableName string) err
 	pipe.Del(ctx, keys...)
 
 	// 删除索引
-	indexKey := indexKeyPrefix + tableName
 	pipe.Del(ctx, indexKey)
 
-	_, err := pipe.Exec(ctx)
+	_, err = pipe.Exec(ctx)
 	if err != nil {
 		logWarn("gormcache: 批量删除失败",
 			zap.String("table", tableName),
