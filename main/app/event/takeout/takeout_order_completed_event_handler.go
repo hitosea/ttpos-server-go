@@ -1,9 +1,17 @@
 package event
 
 import (
+	"context"
 	"sync"
 	"ttpos-server-go/app/modules/takeout/domain/event"
+	takeoutService "ttpos-server-go/app/service/takeout"
+	"ttpos-server-go/config"
+	appContext "ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+
+	"go.uber.org/zap"
 )
 
 var once_takeout_order_completed_event_handler sync.Once
@@ -43,6 +51,23 @@ func (s *takeoutOrderCompletedEventSubscriber) Handle(domainEvent event.DomainEv
 			"completed",
 			map[string]any{},
 		)
+
+		// 记录高峰期（订单完成时记录）
+		dbm := database.GetDBManager(config.DatabaseConf{})
+		db := dbm.GetDB(orderCompletedEvent.CompanyUuid)
+		ctx := appContext.NewContext(
+			appContext.WithContext(context.Background()),
+		)
+		ctx.SetCompanyUuid(orderCompletedEvent.CompanyUuid)
+		ctx.SetDB(db)
+
+		takeoutSrv := takeoutService.NewTakeoutSrvImpl(dbm)
+		if err := takeoutSrv.RecordTakeoutOrderPeakTime(ctx, orderCompletedEvent.OrderUuid, orderCompletedEvent.CompanyUuid); err != nil {
+			logger.Logger.Error("记录外卖订单高峰期失败",
+				zap.Uint64("orderUuid", orderCompletedEvent.OrderUuid),
+				zap.String("takeoutOrderUuid", orderCompletedEvent.TakeoutOrderUuid),
+				zap.Error(err))
+		}
 	})
 
 	return nil

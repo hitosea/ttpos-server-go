@@ -2124,26 +2124,31 @@ func (s *takeoutOrderSrv) BatchAssignShiftLogToPendingOrders(ctx context.Context
 		}
 	}
 
-	// 5. 批量记录高峰期（包括已接单和已取消的订单）
+	// 5. 批量记录高峰期（仅已完成的订单）
 	allProcessedOrders := append(ordersNeedErpInvoice, ordersNoErpInvoice...)
-	// 批量发布高峰期记录事件
-	if len(allProcessedOrders) > 0 {
-		companyUuid := ctx.GetCompanyUuid()
-		// 收集订单UUID列表
-		orderUuids := make([]uint64, 0, len(allProcessedOrders))
-		for _, order := range allProcessedOrders {
-			orderUuids = append(orderUuids, order.Uuid)
+	// 过滤出已完成的订单
+	var completedOrderUuids []uint64
+	for _, order := range allProcessedOrders {
+		// 仅已完成且有完成时间和接单人的订单才记录高峰期
+		if order.OrderState == valueobject.TakeoutOrderStateCompleted &&
+			order.CompletedTime > 0 &&
+			order.AcceptedBy > 0 &&
+			order.AcceptedTime > 0 {
+			completedOrderUuids = append(completedOrderUuids, order.Uuid)
 		}
-		// 创建单个批量事件并发布
-		peakTimeEvent := event.NewOrderPeakTimeRecordEvent(orderUuids, companyUuid)
+	}
+	// 批量发布高峰期记录事件
+	if len(completedOrderUuids) > 0 {
+		companyUuid := ctx.GetCompanyUuid()
+		peakTimeEvent := event.NewOrderPeakTimeRecordEvent(completedOrderUuids, companyUuid)
 		event.GetDispatcher().Publish(peakTimeEvent)
-		logger.Logger.Debug("批量发布高峰期记录事件完成", zap.Int("count", len(orderUuids)))
+		logger.Logger.Debug("批量发布高峰期记录事件完成", zap.Int("count", len(completedOrderUuids)))
 	}
 
 	logger.Logger.Debug("批量分配班次完成", zap.Int("erpInvoiceSuccessCount", successCount),
 		zap.Int("erpInvoiceTotalCount", len(ordersNeedErpInvoice)),
 		zap.Int("noErpInvoiceCount", len(ordersNoErpInvoice)),
-		zap.Int("peakTimeRecordCount", len(allProcessedOrders)))
+		zap.Int("peakTimeRecordCount", len(completedOrderUuids)))
 
 	return nil
 }
