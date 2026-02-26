@@ -192,15 +192,21 @@ func (p *Plugin) invalidateCallback(qt queryType) func(db *gorm.DB) {
 			return
 		}
 
+		// 构建带数据库名的索引 key（多租户隔离）
+		dbName := db.Name()
+		indexKey := dbName + ":" + tableName
+
 		// 失效该表的所有缓存
-		if err := p.conf.Cacher.InvalidateTable(db.Statement.Context, tableName); err != nil {
+		if err := p.conf.Cacher.InvalidateTable(db.Statement.Context, indexKey); err != nil {
 			logWarn("gormcache: 缓存失效失败",
+				zap.String("db", dbName),
 				zap.String("table", tableName),
 				zap.String("operation", string(qt)),
 				zap.Error(err),
 			)
 		} else if p.conf.Debug {
 			logDebug("gormcache: 缓存已失效",
+				zap.String("db", dbName),
 				zap.String("table", tableName),
 				zap.String("operation", string(qt)),
 			)
@@ -265,8 +271,13 @@ func (p *Plugin) storeInCache(db *gorm.DB, tableName string, key string) {
 		ttl = DefaultConfig().TTL
 	}
 
-	if err := p.conf.Cacher.Store(db.Statement.Context, tableName, key, result, ttl); err != nil {
+	// 构建带数据库名的索引 key（多租户隔离）
+	dbName := db.Name()
+	indexKey := dbName + ":" + tableName
+
+	if err := p.conf.Cacher.Store(db.Statement.Context, indexKey, key, result, ttl); err != nil {
 		logWarn("gormcache: 缓存存储失败",
+			zap.String("db", dbName),
 			zap.String("table", tableName),
 			zap.String("key", key),
 			zap.Error(err),

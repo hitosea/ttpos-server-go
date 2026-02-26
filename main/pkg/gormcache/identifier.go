@@ -16,20 +16,25 @@ const (
 
 // buildIdentifier 构建缓存键（参考 go-gorm/caches 官方实现）
 // 使用 callbacks.BuildQuerySQL 构建 SQL，然后生成缓存 key
-// 格式: gorm:cache:{tableName}:{sql}:{params}
+// 格式: gorm:cache:{dbName}:{tableName}:{sql}:{params}
 //
 // 注意：callbacks.BuildQuerySQL 会检查 SQL 是否已构建，不会重复构建
 // 因此可以安全地在 Query 回调中调用
+//
+// 重要：必须包含 dbName 以区分不同商户数据库，避免多租户数据串库
 func buildIdentifier(db *gorm.DB) (tableName string, key string) {
 	// 使用 GORM 官方的 callbacks 包构建 SQL
 	// 这是 go-gorm/caches 官方库使用的方法
 	callbacks.BuildQuerySQL(db)
 
 	tableName = extractTableName(db)
+	dbName := db.Name() // 获取数据库名称（如 shop8267304538112000）
 
-	// 构建唯一标识
+	// 构建唯一标识（包含数据库名以支持多租户隔离）
 	var builder strings.Builder
 	builder.WriteString(IdentifierPrefix)
+	builder.WriteString(dbName)
+	builder.WriteString(":")
 	builder.WriteString(tableName)
 	builder.WriteString(":")
 	builder.WriteString(db.Statement.SQL.String())
