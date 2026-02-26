@@ -1204,6 +1204,8 @@ class Setting extends BaseModel
                     'remain_continue_time' => '10',
                     // 剩余xx分提醒不可继续点餐
                     'remain_continue_notice_time' => '10',
+                    // 是否显示非自助餐商品 0-关闭 1-开启
+                    'is_show_non_buffet_product' => '1',
                     // 非自助餐商品到时是否能继续选购 0-关闭 1-开启
                     'is_buy_continue' => '0',
                     // 是否开启加钟 0-关闭 1-开启
