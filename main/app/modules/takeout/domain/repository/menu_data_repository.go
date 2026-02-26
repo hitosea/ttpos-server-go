@@ -3,6 +3,7 @@ package repository
 import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/domain/types"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/pkg/context"
 )
 
@@ -38,4 +39,9 @@ type IMenuDataRepository interface {
 	// 从 ttpos_takeout 表的 menu JSON 字段获取
 	// 返回 map[platformModifierId]modifierName
 	GetModifierNamesByPlatformIds(ctx context.Context, platform string, platformModifierIds []string) map[string]string
+
+	// GetSingleFlavorInfoByPlatformItemId 根据平台商品ID获取单规格信息
+	// 从 ttpos_takeout 表的 ttpos_menu JSON 字段获取单规格映射
+	// 任务 #39752: 订单回传时从菜单备份查询单规格信息
+	GetSingleFlavorInfoByPlatformItemId(ctx context.Context, platform string, platformItemId string) *value_object.SingleFlavorInfo
 }

@@ -77,10 +77,10 @@ func (s *purchaseLimitSchemeSrv) Create(ctx context.Context, req req.PurchaseLim
 		if _, exists := itemCodes[item.MaterialUuid]; !exists {
 			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
 			if err != nil {
-				if err == gorm.ErrRecordNotFound {
-					return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "物品不存在"))
+				if err == gorm.ErrRecordNotFound || strings.Contains(err.Error(), "record not found") {
+					continue
 				}
-				return 0, errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "查询物品失败"))
+				return 0, errors.WithMessage(errors.New(i18n.Translate(ctx.GetLanguage(), "查询物品失败")), err.Error())
 			}
 			itemCodes[item.MaterialUuid] = material.Code
 		}
@@ -111,6 +111,9 @@ func (s *purchaseLimitSchemeSrv) Create(ctx context.Context, req req.PurchaseLim
 		// 4.2 批量插入物品配置
 		items := make([]*model.PurchaseLimitSchemeItem, 0, len(req.Items))
 		for _, item := range req.Items {
+			if _, exists := itemCodes[item.MaterialUuid]; !exists {
+				continue
+			}
 			// 处理 IsAllowPurchase 默认值
 			isAllowPurchase := item.IsAllowPurchase
 			if isAllowPurchase == "" {
@@ -196,8 +199,8 @@ func (s *purchaseLimitSchemeSrv) Update(ctx context.Context, req req.PurchaseLim
 		if _, exists := itemCodes[item.MaterialUuid]; !exists {
 			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
 			if err != nil {
-				if err == gorm.ErrRecordNotFound {
-					return errors.New(i18n.Translate(ctx.GetLanguage(), "物品不存在"))
+				if err == gorm.ErrRecordNotFound || strings.Contains(err.Error(), "record not found") {
+					continue
 				}
 				return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "查询物品失败"))
 			}
@@ -232,6 +235,9 @@ func (s *purchaseLimitSchemeSrv) Update(ctx context.Context, req req.PurchaseLim
 		// 5.3 插入新的物品配置
 		items := make([]*model.PurchaseLimitSchemeItem, 0, len(req.Items))
 		for _, item := range req.Items {
+			if _, exists := itemCodes[item.MaterialUuid]; !exists {
+				continue
+			}
 			// 处理 IsAllowPurchase 默认值
 			isAllowPurchase := item.IsAllowPurchase
 			if isAllowPurchase == "" {

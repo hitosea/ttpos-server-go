@@ -333,6 +333,7 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 
 	// 从数据库加载菜单数据并转换为平台格式
 	var platformData interface{}
+	var singleFlavorMapping map[string]*value_object.SingleFlavorInfo
 	if grabConverter, ok := converter.(*grab.GrabConverter); ok {
 		// Grab 平台使用专用的加载方法（直接返回 Grab 格式）
 		if req.Platform == value_object.TakeoutPlatformLineman {
@@ -344,6 +345,8 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 		if err != nil {
 			return nil, errors.New("加载菜单数据失败")
 		}
+		// 获取单规格映射
+		singleFlavorMapping = grabConverter.GetSingleFlavorMapping()
 	} else {
 		return nil, errors.New("暂不支持该平台")
 	}
@@ -352,6 +355,19 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	if err := s.takeoutService.UpdateTtposMenuByPlatform(ctx, req.Platform, platformData); err != nil {
 		// 仅记录日志，不影响主流程
 		logger.Logger.Error("保存TTPOS导出菜单失败", zap.Error(err), zap.String("platform", req.Platform))
+	}
+
+	// 保存单规格映射到 single_flavor_mapping 字段
+	if req.IsSaveSingleFlavorMapping {
+		// 任务 #39752: Grab/LINE MAN-单规格不推送规格内的选项
+		// 注意：无论有没有单规格映射，都更新数据库（覆盖旧数据），避免残留历史数据
+		if err := s.takeoutService.UpdateSingleFlavorMappingByPlatform(ctx, req.Platform, singleFlavorMapping); err != nil {
+			logger.Logger.Error("保存单规格映射失败", zap.Error(err), zap.String("platform", req.Platform))
+		} else if len(singleFlavorMapping) > 0 {
+			logger.Logger.Info("保存单规格映射成功",
+				zap.String("platform", req.Platform),
+				zap.Int("count", len(singleFlavorMapping)))
+		}
 	}
 
 	return platformData, nil
@@ -426,8 +442,9 @@ func (s *takeoutAppService) PushMenu(ctx context.Context, platform string, curre
 	}
 
 	menu, err := s.ExportMenu(ctx, request.ExportMenuRequest{
-		Platform:     platform,
-		CurrencyUnit: currencyUnit,
+		Platform:                  platform,
+		CurrencyUnit:              currencyUnit,
+		IsSaveSingleFlavorMapping: true,
 	})
 	if err != nil {
 		return fmt.Errorf("导出菜单失败: %w", err)
