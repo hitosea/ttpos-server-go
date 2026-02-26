@@ -146,9 +146,10 @@ func (s *TakeoutServiceImpl) CreatePlatformStatus(ctx context.Context, platform 
 			CreateTime: time.Now().Unix(),
 			UpdateTime: time.Now().Unix(),
 		},
-		Platform: platform,
-		Enabled:  enabled,
-		IsBound:  false, // 新创建的默认为未绑定
+		Platform:            platform,
+		Enabled:             enabled,
+		IsBound:             false, // 新创建的默认为未绑定
+		SingleFlavorMapping: "{}",
 	}
 
 	if err := s.takeoutRepo.Create(ctx, takeout); err != nil {
