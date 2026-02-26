@@ -26,12 +26,28 @@ func (model *SaleBill) GetBuffetProductList() resp.BuffetProductList {
 	if model.BuffetPackage2 != nil {
 		buffetProductList.List = append(buffetProductList.List, model.BuffetPackage2.GetBuffetProductList().List...)
 	}
-	// 去重, 并重新计算限制数量
-	buffetProductMap := make(map[uint64]bool)
+	// 去重, 合并显示设置（优先显示）, 并重新计算限制数量
+	// 如果桌台选了A、B两个自助餐，同一商品在A设置显示、在B设置不显示，最终该商品显示
+	buffetProductMap := make(map[uint64]int) // uuid -> list中的索引
 	for _, buffetProduct := range buffetProductList.List {
-		if !buffetProductMap[buffetProduct.Uuid] {
-			buffetProductMap[buffetProduct.Uuid] = true
+		if idx, exists := buffetProductMap[buffetProduct.Uuid]; exists {
+			// 已存在，合并显示设置（优先显示：只要有一个设置为显示，最终就显示）
+			if buffetProduct.IsShowCashier == 1 {
+				list[idx].IsShowCashier = 1
+			}
+			if buffetProduct.IsShowTablet == 1 {
+				list[idx].IsShowTablet = 1
+			}
+			if buffetProduct.IsShowKitchen == 1 {
+				list[idx].IsShowKitchen = 1
+			}
+			if buffetProduct.IsShowAssistant == 1 {
+				list[idx].IsShowAssistant = 1
+			}
+		} else {
+			// 不存在，添加到列表
 			buffetProduct.Limit = buffetProduct.Limit * model.MealNum // 限制数量=单人限购数量*用餐人数
+			buffetProductMap[buffetProduct.Uuid] = len(list) // 记录该商品在list中的索引
 			list = append(list, buffetProduct)
 		}
 	}
