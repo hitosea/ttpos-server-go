@@ -417,9 +417,13 @@ type BuffetProductList struct {
 }
 
 type BuffetProduct struct {
-	Uuid  uint64 `json:"uuid"`  // 商品product_package_uuid
-	Name  string `json:"name"`  // 商品名称. 不用于前端展示，仅用于开发核对接口数据是否正确
-	Limit uint   `json:"limit"` // 限购数量， 限购数量=单人限购数量*用餐人数
+	Uuid            uint64 `json:"uuid"`              // 商品product_package_uuid
+	Name            string `json:"name"`              // 商品名称. 不用于前端展示，仅用于开发核对接口数据是否正确
+	Limit           uint   `json:"limit"`             // 限购数量， 限购数量=单人限购数量*用餐人数
+	IsShowCashier   uint   `json:"is_show_cashier"`   // 是否在收银台显示, 0-否、1-是
+	IsShowTablet    uint   `json:"is_show_tablet"`    // 是否在平板显示, 0-否、1-是
+	IsShowKitchen   uint   `json:"is_show_kitchen"`   // 是否在厨房显示, 0-否、1-是
+	IsShowAssistant uint   `json:"is_show_assistant"` // 是否在助手显示, 0-否、1-是
 }
 
 type ProductPackageDetail struct {
