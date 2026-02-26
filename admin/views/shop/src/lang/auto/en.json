@@ -2266,5 +2266,6 @@
     "分批送厨规则": "Batch Kitchen Delivery Rules",
     "安全库存设置": "Safety Stock Setting",
     "点餐设置": "Ordering Settings",
-    "扫码接单": "Scan QR to accept orders"
+    "扫码接单": "Scan QR to accept orders",
+    "是否显示非自助餐商品": "Show non-buffet items?"
 }
