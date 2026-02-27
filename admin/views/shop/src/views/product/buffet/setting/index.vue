@@ -29,8 +29,8 @@
 
       <el-form-item :label="$t('是否显示非自助餐商品')" :rules="[{ required: true, message: '' }]">
         <el-radio-group v-model="form.is_show_non_buffet_product">
-          <el-radio value="1">{{ $t('开') }}</el-radio>
-          <el-radio value="0">{{ $t('关') }}</el-radio>
+          <el-radio value="1">{{ $t('是') }}</el-radio>
+          <el-radio value="0">{{ $t('否') }}</el-radio>
         </el-radio-group>
       </el-form-item>
 
