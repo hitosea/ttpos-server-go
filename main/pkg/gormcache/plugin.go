@@ -192,6 +192,11 @@ func (p *Plugin) invalidateCallback(qt queryType) func(db *gorm.DB) {
 			return
 		}
 
+		// 检查表是否在缓存白名单中，不在则跳过（避免无效的 Redis 请求）
+		if !p.shouldCacheTable(tableName) {
+			return
+		}
+
 		// 构建表索引键（多租户隔离）
 		tableKey := buildTableKey(db, tableName)
 
