@@ -3,7 +3,6 @@ package gormcache
 import (
 	"context"
 	"encoding/json"
-	"sync"
 	"time"
 
 	"ttpos-server-go/pkg/cache"
@@ -16,16 +15,17 @@ import (
 //
 // 缓存 Key 结构：
 //
-//	gorm:cache:{tableName}:{sql}:{params}
+//	gorm:cache:{dbName}:{tableName}:{sql}:{params}
 //
 // 表索引 Key 结构（SET 类型）：
 //
-//	gorm:cache:_idx:{tableName} → SET{key1, key2, ...}
+//	gorm:cache:_idx:{dbName}:{tableName} → SET{key1, key2, ...}
+//
+// 注意：多实例部署时，索引始终从 Redis 获取，确保缓存一致性
 type RedisCacher struct {
 	client        redis.UniversalClient // Redis 客户端（支持单机和集群）
 	defaultTTL    time.Duration         // 默认过期时间
 	indexTTL      time.Duration         // 索引过期时间（比数据 TTL 长）
-	localIndex    sync.Map              // 本地索引（减少 Redis 访问）
 	enableMetrics bool                  // 是否启用指标统计
 }
 
@@ -167,9 +167,6 @@ func (c *RedisCacher) Store(ctx context.Context, tableName string, key string, r
 		return err
 	}
 
-	// 更新本地索引
-	c.addToLocalIndex(tableName, key)
-
 	logDebug("gormcache: 缓存存储成功",
 		zap.String("key", key),
 		zap.String("table", tableName),
@@ -187,10 +184,7 @@ func (c *RedisCacher) InvalidateTable(ctx context.Context, tableName string) err
 		return nil
 	}
 
-	// 清除本地索引（避免内存泄漏）
-	c.getAndClearLocalIndex(tableName)
-
-	// 始终从 Redis 获取索引（确保多实例一致性）
+	// 从 Redis 获取索引（确保多实例一致性）
 	indexKey := indexKeyPrefix + tableName
 	keys, err := c.client.SMembers(ctx, indexKey).Result()
 	if err != nil && err != redis.Nil {
@@ -240,12 +234,6 @@ func (c *RedisCacher) InvalidateAll(ctx context.Context) error {
 		return nil
 	}
 
-	// 清空本地索引
-	c.localIndex.Range(func(key, value any) bool {
-		c.localIndex.Delete(key)
-		return true
-	})
-
 	// 使用 SCAN 查找所有缓存键
 	pattern := IdentifierPrefix + "*"
 	keys, err := cache.ScanRedisKeysDefault(ctx, c.client, pattern)
@@ -280,30 +268,6 @@ func (c *RedisCacher) InvalidateAll(ctx context.Context) error {
 	)
 
 	return nil
-}
-
-// addToLocalIndex 添加到本地索引
-func (c *RedisCacher) addToLocalIndex(tableName string, key string) {
-	actual, _ := c.localIndex.LoadOrStore(tableName, &sync.Map{})
-	keySet := actual.(*sync.Map)
-	keySet.Store(key, struct{}{})
-}
-
-// getAndClearLocalIndex 获取并清空本地索引
-func (c *RedisCacher) getAndClearLocalIndex(tableName string) []string {
-	actual, ok := c.localIndex.LoadAndDelete(tableName)
-	if !ok {
-		return nil
-	}
-
-	keySet := actual.(*sync.Map)
-	var keys []string
-	keySet.Range(func(k, v any) bool {
-		keys = append(keys, k.(string))
-		return true
-	})
-
-	return keys
 }
 
 // GetStats 获取缓存统计信息
