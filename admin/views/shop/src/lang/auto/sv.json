@@ -2262,5 +2262,6 @@
     "分批送厨规则": "Regler för partiell köksleverans",
     "安全库存设置": "Inställning för säkerhetslager",
     "点餐设置": "Mataläggningsinställningar",
-    "扫码接单": "Skanna QR för att ta emot beställningar"
+    "扫码接单": "Skanna QR för att ta emot beställningar",
+    "是否显示非自助餐商品": "Visa icke-bufféartiklar?"
 }
