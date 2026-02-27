@@ -255,6 +255,9 @@ func (s *SettingDomainServiceImpl) MergeWithDefaultBuffet(defaultBuffet entity.B
 	if userBuffet.IsBuffetDiscount != "" {
 		result.IsBuffetDiscount = userBuffet.IsBuffetDiscount
 	}
+	if userBuffet.IsShowNonBuffetProduct != "" {
+		result.IsShowNonBuffetProduct = userBuffet.IsShowNonBuffetProduct
+	}
 	if len(userBuffet.AddClock) > 0 {
 		result.AddClock = userBuffet.AddClock
 	}
