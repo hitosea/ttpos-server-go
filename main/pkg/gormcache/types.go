@@ -27,15 +27,16 @@ type Cacher interface {
 	Get(ctx context.Context, key string) (*QueryResult, bool)
 
 	// Store 将查询结果存入缓存
-	// tableName: 表名，用于后续的表级失效
+	// tableKey: 表索引键，格式为 {dbName}:{tableName}，用于多租户隔离和表级失效
 	// key: 缓存键
 	// result: 查询结果
 	// ttl: 过期时间
-	Store(ctx context.Context, tableName string, key string, result *QueryResult, ttl time.Duration) error
+	Store(ctx context.Context, tableKey string, key string, result *QueryResult, ttl time.Duration) error
 
 	// InvalidateTable 失效指定表的所有缓存
+	// tableKey: 表索引键，格式为 {dbName}:{tableName}
 	// 在 INSERT/UPDATE/DELETE 后调用
-	InvalidateTable(ctx context.Context, tableName string) error
+	InvalidateTable(ctx context.Context, tableKey string) error
 
 	// InvalidateAll 失效所有缓存
 	InvalidateAll(ctx context.Context) error

@@ -127,7 +127,8 @@ func (c *RedisCacher) Get(ctx context.Context, key string) (*QueryResult, bool) 
 }
 
 // Store 将查询结果存入缓存
-func (c *RedisCacher) Store(ctx context.Context, tableName string, key string, result *QueryResult, ttl time.Duration) error {
+// tableKey: 表索引键，格式为 {dbName}:{tableName}，用于多租户隔离
+func (c *RedisCacher) Store(ctx context.Context, tableKey string, key string, result *QueryResult, ttl time.Duration) error {
 	if c.client == nil {
 		return nil
 	}
@@ -153,7 +154,8 @@ func (c *RedisCacher) Store(ctx context.Context, tableName string, key string, r
 	pipe.Set(ctx, key, data, ttl)
 
 	// 2. 更新表索引（SET 类型）
-	indexKey := indexKeyPrefix + tableName
+	// indexKey 格式: gorm:cache:_idx:{dbName}:{tableName}
+	indexKey := indexKeyPrefix + tableKey
 	pipe.SAdd(ctx, indexKey, key)
 	pipe.Expire(ctx, indexKey, c.indexTTL)
 
@@ -161,7 +163,7 @@ func (c *RedisCacher) Store(ctx context.Context, tableName string, key string, r
 	if err != nil {
 		logWarn("gormcache: Pipeline 执行失败",
 			zap.String("key", key),
-			zap.String("table", tableName),
+			zap.String("tableKey", tableKey),
 			zap.Error(err),
 		)
 		return err
@@ -169,7 +171,7 @@ func (c *RedisCacher) Store(ctx context.Context, tableName string, key string, r
 
 	logDebug("gormcache: 缓存存储成功",
 		zap.String("key", key),
-		zap.String("table", tableName),
+		zap.String("tableKey", tableKey),
 		zap.Duration("ttl", ttl),
 		zap.Int("size", len(data)),
 	)
@@ -178,25 +180,27 @@ func (c *RedisCacher) Store(ctx context.Context, tableName string, key string, r
 }
 
 // InvalidateTable 失效指定表的所有缓存
+// tableKey: 表索引键，格式为 {dbName}:{tableName}，用于多租户隔离
 // 注意：始终从 Redis 获取索引，确保多实例部署时缓存一致性
-func (c *RedisCacher) InvalidateTable(ctx context.Context, tableName string) error {
+func (c *RedisCacher) InvalidateTable(ctx context.Context, tableKey string) error {
 	if c.client == nil {
 		return nil
 	}
 
 	// 从 Redis 获取索引（确保多实例一致性）
-	indexKey := indexKeyPrefix + tableName
+	// indexKey 格式: gorm:cache:_idx:{dbName}:{tableName}
+	indexKey := indexKeyPrefix + tableKey
 	keys, err := c.client.SMembers(ctx, indexKey).Result()
 	if err != nil && err != redis.Nil {
 		logWarn("gormcache: 获取表索引失败",
-			zap.String("table", tableName),
+			zap.String("tableKey", tableKey),
 			zap.Error(err),
 		)
 	}
 
 	if len(keys) == 0 {
 		logDebug("gormcache: 表缓存为空，跳过失效",
-			zap.String("table", tableName),
+			zap.String("tableKey", tableKey),
 		)
 		return nil
 	}
@@ -213,7 +217,7 @@ func (c *RedisCacher) InvalidateTable(ctx context.Context, tableName string) err
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		logWarn("gormcache: 批量删除失败",
-			zap.String("table", tableName),
+			zap.String("tableKey", tableKey),
 			zap.Int("keyCount", len(keys)),
 			zap.Error(err),
 		)
@@ -221,7 +225,7 @@ func (c *RedisCacher) InvalidateTable(ctx context.Context, tableName string) err
 	}
 
 	logDebug("gormcache: 表缓存失效成功",
-		zap.String("table", tableName),
+		zap.String("tableKey", tableKey),
 		zap.Int("keyCount", len(keys)),
 	)
 
@@ -286,9 +290,9 @@ func (c *RedisCacher) GetStats(ctx context.Context) map[string]int64 {
 	}
 
 	for _, key := range keys {
-		tableName := key[len(indexKeyPrefix):]
+		tableKey := key[len(indexKeyPrefix):]
 		count, _ := c.client.SCard(ctx, key).Result()
-		stats[tableName] = count
+		stats[tableKey] = count
 	}
 
 	return stats
