@@ -50,6 +50,12 @@ func buildIdentifier(db *gorm.DB) (tableName string, key string) {
 	return tableName, key
 }
 
+// buildTableKey 构建表索引键，格式为 {dbName}:{tableName}
+// 用于多租户隔离，确保不同商户的缓存不会混淆
+func buildTableKey(db *gorm.DB, tableName string) string {
+	return extractDBName(db) + ":" + tableName
+}
+
 // extractDBName 从 GORM DB 获取数据库名称
 // 用于多租户隔离，确保不同商户的缓存不会混淆
 // 通过 CustomGormLogger.DBName 直接获取（在创建连接时已设置）
