@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/callbacks"
@@ -56,20 +57,45 @@ func buildTableKey(db *gorm.DB, tableName string) string {
 	return extractDBName(db) + ":" + tableName
 }
 
+// dbNameCache 缓存数据库名（用于非 CustomGormLogger 的备选方案）
+// key: db.Config 指针地址, value: 数据库名
+var dbNameCache sync.Map
+
 // extractDBName 从 GORM DB 获取数据库名称
 // 用于多租户隔离，确保不同商户的缓存不会混淆
-// 通过 CustomGormLogger.DBName 直接获取（在创建连接时已设置）
+// 优先从 CustomGormLogger.DBName 获取，备选通过 SQL 查询
 func extractDBName(db *gorm.DB) string {
-	if db.Config == nil || db.Config.Logger == nil {
+	if db.Config == nil {
 		return "unknown"
 	}
 
-	// 从 CustomGormLogger 获取数据库名（推荐方式，直接从内存读取）
-	if customLogger, ok := db.Config.Logger.(*logger.CustomGormLogger); ok {
-		return customLogger.DBName
+	// 方式1: 从 CustomGormLogger 获取数据库名（推荐，直接从内存读取）
+	if db.Config.Logger != nil {
+		if customLogger, ok := db.Config.Logger.(*logger.CustomGormLogger); ok {
+			return customLogger.DBName
+		}
 	}
 
-	return "unknown"
+	// 方式2: 从缓存获取（避免重复查询）
+	cacheKey := reflect.ValueOf(db.Config).Pointer()
+	if cached, ok := dbNameCache.Load(cacheKey); ok {
+		return cached.(string)
+	}
+
+	// 方式3: 通过 SQL 查询获取数据库名（仅在首次访问时执行）
+	// 使用 Session 跳过所有插件回调，避免递归
+	var dbName string
+	sqlDB, err := db.DB()
+	if err != nil {
+		return "unknown"
+	}
+	if err := sqlDB.QueryRow("SELECT DATABASE()").Scan(&dbName); err != nil || dbName == "" {
+		return "unknown"
+	}
+
+	// 缓存结果
+	dbNameCache.Store(cacheKey, dbName)
+	return dbName
 }
 
 // extractTableName 从 GORM Statement 提取表名（包含表前缀）
