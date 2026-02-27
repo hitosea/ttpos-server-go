@@ -28,6 +28,9 @@ func buildIdentifier(db *gorm.DB) (tableName string, key string) {
 	callbacks.BuildQuerySQL(db)
 
 	tableName = extractTableName(db)
+	if !strings.HasPrefix(tableName, "ttpos_") {
+		fmt.Print("Warning: table name does not start with 'ttpos_': " + tableName)
+	}
 	dbName := db.Name() // 获取数据库名称（如 shop8267304538112000）
 
 	// 构建唯一标识（包含数据库名以支持多租户隔离）
@@ -45,19 +48,19 @@ func buildIdentifier(db *gorm.DB) (tableName string, key string) {
 	return tableName, key
 }
 
-// extractTableName 从 GORM Statement 提取表名
+// extractTableName 从 GORM Statement 提取表名（包含表前缀）
 func extractTableName(db *gorm.DB) string {
-	// 优先从 Statement.Table 获取（显式指定的表名）
+	// 优先从 Statement.Table 获取（显式指定的表名，已包含前缀）
 	if db.Statement.Table != "" {
 		return db.Statement.Table
 	}
 
-	// 从 Schema 推断（通过 Model 推断）
+	// 从 Schema 推断（通过 Model 推断，已包含前缀）
 	if db.Statement.Schema != nil && db.Statement.Schema.Table != "" {
 		return db.Statement.Schema.Table
 	}
 
-	// 从 Model 类型推断
+	// 从 Model 类型推断（需要手动添加前缀）
 	if db.Statement.Model != nil {
 		modelType := reflect.TypeOf(db.Statement.Model)
 		if modelType.Kind() == reflect.Ptr {
@@ -69,26 +72,36 @@ func extractTableName(db *gorm.DB) string {
 				modelType = modelType.Elem()
 			}
 		}
-		// 转换为表名（驼峰转下划线）
-		return toSnakeCase(modelType.Name())
+		// 转换为表名（驼峰转下划线）并添加前缀
+		tableName := toSnakeCase(modelType.Name())
+		return applyTablePrefix(db, tableName)
 	}
 
 	return "unknown"
 }
 
-// extractTableNameFromMutator 从写操作中提取表名
+// applyTablePrefix 应用表名前缀
+func applyTablePrefix(db *gorm.DB, tableName string) string {
+	if db.Config != nil && db.Config.NamingStrategy != nil {
+		// 使用 GORM 的 NamingStrategy 获取完整表名
+		return db.Config.NamingStrategy.TableName(tableName)
+	}
+	return tableName
+}
+
+// extractTableNameFromMutator 从写操作中提取表名（包含表前缀）
 func extractTableNameFromMutator(db *gorm.DB) string {
-	// 优先从 Statement.Table 获取
+	// 优先从 Statement.Table 获取（已包含前缀）
 	if db.Statement.Table != "" {
 		return db.Statement.Table
 	}
 
-	// 从 Schema 获取
+	// 从 Schema 获取（已包含前缀）
 	if db.Statement.Schema != nil && db.Statement.Schema.Table != "" {
 		return db.Statement.Schema.Table
 	}
 
-	// 从 Dest 类型推断
+	// 从 Dest 类型推断（需要手动添加前缀）
 	if db.Statement.Dest != nil {
 		destType := reflect.TypeOf(db.Statement.Dest)
 		if destType.Kind() == reflect.Ptr {
@@ -101,7 +114,8 @@ func extractTableNameFromMutator(db *gorm.DB) string {
 			}
 		}
 		if destType.Kind() == reflect.Struct {
-			return toSnakeCase(destType.Name())
+			tableName := toSnakeCase(destType.Name())
+			return applyTablePrefix(db, tableName)
 		}
 	}
 
