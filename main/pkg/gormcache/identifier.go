@@ -125,7 +125,25 @@ func extractTableNameFromMutator(db *gorm.DB) string {
 		return db.Statement.Schema.Table
 	}
 
-	// 从 Dest 类型推断（需要手动添加前缀）
+	// 从 Model 类型推断（优先于 Dest，因为 Update 操作时 Dest 可能是 map）
+	if db.Statement.Model != nil {
+		modelType := reflect.TypeOf(db.Statement.Model)
+		if modelType.Kind() == reflect.Ptr {
+			modelType = modelType.Elem()
+		}
+		if modelType.Kind() == reflect.Slice {
+			modelType = modelType.Elem()
+			if modelType.Kind() == reflect.Ptr {
+				modelType = modelType.Elem()
+			}
+		}
+		if modelType.Kind() == reflect.Struct {
+			tableName := toSnakeCase(modelType.Name())
+			return applyTablePrefix(db, tableName)
+		}
+	}
+
+	// 从 Dest 类型推断（作为 Model 的备选）
 	if db.Statement.Dest != nil {
 		destType := reflect.TypeOf(db.Statement.Dest)
 		if destType.Kind() == reflect.Ptr {
