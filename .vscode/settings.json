@@ -57,6 +57,7 @@
   "files.exclude": {
     "**/trans/**/*test.go": true,
     ".husky": true,
+    ".cursor": true,
     ".github": true,
     "node_modules": true,
     "certificate.pem": true,
