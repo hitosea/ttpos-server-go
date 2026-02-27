@@ -4,20 +4,17 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"sync"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/callbacks"
+
+	"ttpos-server-go/pkg/logger"
 )
 
 const (
 	// IdentifierPrefix 缓存键前缀
 	IdentifierPrefix = "gorm:cache:"
 )
-
-// dbNameCache 缓存数据库名，避免每次查询
-// key: db.Config 指针地址, value: 数据库名
-var dbNameCache sync.Map
 
 // buildIdentifier 构建缓存键（参考 go-gorm/caches 官方实现）
 // 使用 callbacks.BuildQuerySQL 构建 SQL，然后生成缓存 key
@@ -55,32 +52,18 @@ func buildIdentifier(db *gorm.DB) (tableName string, key string) {
 
 // extractDBName 从 GORM DB 获取数据库名称
 // 用于多租户隔离，确保不同商户的缓存不会混淆
-// 使用缓存避免重复查询数据库
+// 通过 CustomGormLogger.DBName 直接获取（在创建连接时已设置）
 func extractDBName(db *gorm.DB) string {
-	if db.Config == nil {
+	if db.Config == nil || db.Config.Logger == nil {
 		return "unknown"
 	}
 
-	// 使用 Config 指针作为缓存 key
-	cacheKey := reflect.ValueOf(db.Config).Pointer()
-
-	// 先从缓存获取
-	if cached, ok := dbNameCache.Load(cacheKey); ok {
-		return cached.(string)
+	// 从 CustomGormLogger 获取数据库名（推荐方式，直接从内存读取）
+	if customLogger, ok := db.Config.Logger.(*logger.CustomGormLogger); ok {
+		return customLogger.DBName
 	}
 
-	// 缓存未命中，创建新会话查询数据库名
-	// 使用 Session 创建独立会话避免触发回调
-	dbName := db.Session(&gorm.Session{
-		NewDB:            true,
-		SkipHooks:        true,
-		SkipDefaultTransaction: true,
-	}).Migrator().CurrentDatabase()
-
-	// 存入缓存
-	dbNameCache.Store(cacheKey, dbName)
-
-	return dbName
+	return "unknown"
 }
 
 // extractTableName 从 GORM Statement 提取表名（包含表前缀）
