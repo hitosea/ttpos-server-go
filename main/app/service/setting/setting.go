@@ -719,6 +719,7 @@ func (s *Srv) GetBuffetSetting(ctx context.Context, companySetting model.Company
 		IsRemainContinue:         defaultBuffet.IsRemainContinue,
 		RemainContinueTime:       defaultBuffet.RemainContinueTime,
 		RemainContinueNoticeTime: defaultBuffet.RemainContinueNoticeTime,
+		IsShowNonBuffetProduct:   defaultBuffet.IsShowNonBuffetProduct,
 		IsBuyContinue:            defaultBuffet.IsBuyContinue,
 		IsAddClock:               defaultBuffet.IsAddClock,
 		IsBuffetDiscount:         defaultBuffet.IsBuffetDiscount,

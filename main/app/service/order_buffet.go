@@ -322,12 +322,23 @@ func (s *orderSrv) OrderDeskBuffetProductList(ctx context.Context, req req.Order
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 
+	// 获取自助餐设置
+	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		return nil, err
+	}
+	buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+	if buffetErr != nil {
+		return nil, buffetErr
+	}
+
 	// 获取销售账单
 	saleBill, err := repository.NewSaleBillRepo(db).GetSaleBillBuffetProductList(req.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	buffetProductList := saleBill.GetBuffetProductList()
+	buffetProductList.IsShowNonBuffetProduct = buffetSetting.IsShowNonBuffetProduct
 
 	return &buffetProductList, nil
 }

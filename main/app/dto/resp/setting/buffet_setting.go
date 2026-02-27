@@ -10,6 +10,7 @@ type Buffet struct {
 	IsBuyContinue            string         `json:"is_buy_continue"`             // 非自助餐商品到时是否能继续选购 0-关闭 1-开启
 	IsAddClock               string         `json:"is_add_clock"`                // 是否开启加钟 0-关闭 1-开启
 	IsBuffetDiscount         string         `json:"is_buffet_discount"`          // 是否开启自助餐优惠折扣 0-关闭 1-开启
+	IsShowNonBuffetProduct   string         `json:"is_show_non_buffet_product"`  // 是否显示非自助餐商品 0-关闭 1-开启
 	AddClock                 []AddClockItem `json:"add_clock"`                   // 名称 - 加钟时间（分）- 价格
 }
 
@@ -23,6 +24,7 @@ type BuffetResp struct {
 	IsBuyContinue            string         `json:"is_buy_continue"`             // 非自助餐商品到时是否能继续选购 0-关闭 1-开启 (用餐时间到后可继续选购非自助餐商品)
 	IsAddClock               string         `json:"is_add_clock"`                // 是否开启加钟 0-关闭 1-开启
 	IsBuffetDiscount         string         `json:"is_buffet_discount"`          // 是否开启自助餐优惠折扣 0-关闭 1-开启
+	IsShowNonBuffetProduct   string         `json:"is_show_non_buffet_product"`  // 是否显示非自助餐商品 0-关闭 1-开启
 	AddClock                 []AddClockItem `json:"add_clock"`                   // 名称 - 加钟时间（分）- 价格
 }
 
