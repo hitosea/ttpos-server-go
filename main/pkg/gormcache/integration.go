@@ -82,12 +82,6 @@ func Enable(db *gorm.DB, conf *Config) error {
 		return nil
 	}
 
-	// 检查是否已启用
-	dbPtr := getDBPointer(db)
-	if _, loaded := enabledDBs.LoadOrStore(dbPtr, true); loaded {
-		return nil // 已启用，跳过
-	}
-
 	// 使用传入配置或全局配置
 	if conf == nil {
 		conf = globalConfig
@@ -95,6 +89,25 @@ func Enable(db *gorm.DB, conf *Config) error {
 	if conf == nil {
 		conf = DefaultConfig()
 		conf.Cacher = NewRedisCacher()
+	}
+
+	// 检查数据库是否在黑名单中（商户级别禁用）
+	if len(conf.ExcludeDBs) > 0 {
+		dbName := extractDBName(db)
+		for _, excludeDB := range conf.ExcludeDBs {
+			if dbName == excludeDB {
+				logDebug("gormcache: 数据库在黑名单中，跳过启用",
+					zap.String("db", dbName),
+				)
+				return nil
+			}
+		}
+	}
+
+	// 检查是否已启用
+	dbPtr := getDBPointer(db)
+	if _, loaded := enabledDBs.LoadOrStore(dbPtr, true); loaded {
+		return nil // 已启用，跳过
 	}
 
 	// 创建并注册插件

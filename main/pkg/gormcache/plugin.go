@@ -238,13 +238,8 @@ func (p *Plugin) shouldSkipCache(db *gorm.DB) bool {
 		return true
 	}
 
-	// 检查数据库是否在黑名单中（商户级别禁用）
-	if len(p.dbBlacklist) > 0 {
-		dbName := extractDBName(db)
-		if _, ok := p.dbBlacklist[dbName]; ok {
-			return true
-		}
-	}
+	// 注意：数据库黑名单检查已移至 Enable 函数
+	// 黑名单中的数据库不会注册插件，无需在此重复检查
 
 	return false
 }
