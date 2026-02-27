@@ -31,9 +31,6 @@ func buildIdentifier(db *gorm.DB) (tableName string, key string) {
 	callbacks.BuildQuerySQL(db)
 
 	tableName = extractTableName(db)
-	if !strings.HasPrefix(tableName, "ttpos_") {
-		fmt.Print("Warning: table name does not start with 'ttpos_': " + tableName)
-	}
 	dbName := extractDBName(db) // 获取数据库名称（如 shop8267304538112000）
 
 	// 构建唯一标识（包含数据库名以支持多租户隔离）
