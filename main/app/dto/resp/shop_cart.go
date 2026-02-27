@@ -413,7 +413,8 @@ type PayMethod struct {
 
 // BuffetProductList 自助餐商品列表 或 必点商品列表
 type BuffetProductList struct {
-	List []BuffetProduct `json:"list"` // 商品列表
+	List                   []BuffetProduct `json:"list"`                       // 商品列表
+	IsShowNonBuffetProduct string          `json:"is_show_non_buffet_product"` // 是否显示非自助餐商品 0-关闭 1-开启
 }
 
 type BuffetProduct struct {
