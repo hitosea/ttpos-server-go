@@ -855,11 +855,11 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 	}
 
 	// 设置员工班次信息】
-	if !order.IsExistShiftLog() {
-		if err := orderRepo.SetStaffShiftLogUuid(order); err != nil {
-			logger.Logger.Error("设置员工班次日志UUID失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		}
-	}
+	// if !order.IsExistShiftLog() {
+	// 	if err := orderRepo.SetStaffShiftLogUuid(order); err != nil {
+	// 		logger.Logger.Error("设置员工班次日志UUID失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+	// 	}
+	// }
 
 	// 开启事务
 	if err := db.Transaction(func(tx *gorm.DB) error {
@@ -2093,6 +2093,9 @@ func (s *takeoutOrderSrv) BatchAssignShiftLogToPendingOrders(ctx context.Context
 	var ordersNoErpInvoice []*takeoutModel.TakeoutOrder
 
 	for _, order := range pendingOrders {
+		if order.OrderState == valueobject.TakeoutOrderStatePending {
+			continue
+		}
 		// 需要生成 ERP 发票的条件：已接单且未同步 ERP 发票
 		if order.OrderState != valueobject.TakeoutOrderStatePending && !order.IsErpInvoiceSynced() {
 			ordersNeedErpInvoice = append(ordersNeedErpInvoice, order)
