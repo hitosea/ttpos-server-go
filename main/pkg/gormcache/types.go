@@ -70,6 +70,11 @@ type Config struct {
 	// 如果设置了 Tables 白名单，此配置无效
 	ExcludeTables []string
 
+	// ExcludeDBs 排除缓存的数据库名列表（商户黑名单）
+	// 在黑名单中的数据库不会启用缓存
+	// 格式示例: []string{"shop1234567890", "shop9876543210"}
+	ExcludeDBs []string
+
 	// InvalidateOnWrite 写操作后是否自动失效缓存
 	// 默认为 true
 	InvalidateOnWrite *bool

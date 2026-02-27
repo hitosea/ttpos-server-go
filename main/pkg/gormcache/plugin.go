@@ -35,6 +35,9 @@ type Plugin struct {
 
 	// tableBlacklist 表黑名单
 	tableBlacklist map[string]struct{}
+
+	// dbBlacklist 数据库黑名单（商户级别禁用缓存）
+	dbBlacklist map[string]struct{}
 }
 
 // New 创建缓存插件实例
@@ -48,16 +51,22 @@ func New(conf *Config) *Plugin {
 		callbacks:      make(map[queryType]func(db *gorm.DB)),
 		tableWhitelist: make(map[string]struct{}),
 		tableBlacklist: make(map[string]struct{}),
+		dbBlacklist:    make(map[string]struct{}),
 	}
 
-	// 构建白名单
+	// 构建表白名单
 	for _, t := range conf.Tables {
 		p.tableWhitelist[t] = struct{}{}
 	}
 
-	// 构建黑名单
+	// 构建表黑名单
 	for _, t := range conf.ExcludeTables {
 		p.tableBlacklist[t] = struct{}{}
+	}
+
+	// 构建数据库黑名单（商户级别禁用）
+	for _, db := range conf.ExcludeDBs {
+		p.dbBlacklist[db] = struct{}{}
 	}
 
 	return p
@@ -111,8 +120,9 @@ func (p *Plugin) Initialize(db *gorm.DB) error {
 	logInfo("gormcache: 插件初始化完成",
 		zap.Bool("easer", p.conf.Easer),
 		zap.Bool("cacher", p.conf.Cacher != nil),
-		zap.Int("whitelist", len(p.tableWhitelist)),
-		zap.Int("blacklist", len(p.tableBlacklist)),
+		zap.Int("tableWhitelist", len(p.tableWhitelist)),
+		zap.Int("tableBlacklist", len(p.tableBlacklist)),
+		zap.Int("dbBlacklist", len(p.dbBlacklist)),
 	)
 
 	return nil
@@ -226,6 +236,14 @@ func (p *Plugin) shouldSkipCache(db *gorm.DB) bool {
 	// 没有配置缓存器且没有启用 Easer
 	if p.conf.Cacher == nil && !p.conf.Easer {
 		return true
+	}
+
+	// 检查数据库是否在黑名单中（商户级别禁用）
+	if len(p.dbBlacklist) > 0 {
+		dbName := extractDBName(db)
+		if _, ok := p.dbBlacklist[dbName]; ok {
+			return true
+		}
 	}
 
 	return false

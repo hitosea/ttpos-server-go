@@ -59,6 +59,7 @@ func Init(conf *Config) {
 			zap.Int64("maxRows", conf.MaxRows),
 			zap.Int("tables", len(conf.Tables)),
 			zap.Int("excludeTables", len(conf.ExcludeTables)),
+			zap.Int("excludeDBs", len(conf.ExcludeDBs)),
 		)
 	})
 }
@@ -165,6 +166,14 @@ func WithTables(tables ...string) ConfigOption {
 func WithExcludeTables(tables ...string) ConfigOption {
 	return func(c *Config) {
 		c.ExcludeTables = tables
+	}
+}
+
+// WithExcludeDBs 设置排除数据库黑名单（商户级别禁用缓存）
+// 用于某些商户不希望使用 GORM 缓存的场景
+func WithExcludeDBs(dbs ...string) ConfigOption {
+	return func(c *Config) {
+		c.ExcludeDBs = dbs
 	}
 }
 
