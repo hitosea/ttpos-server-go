@@ -482,7 +482,7 @@ type StatisticsTakeoutPaymentData struct {
 
 // StatisticsTakeoutReceivedAmountData 外卖订单实收金额统计数据
 type StatisticsTakeoutReceivedAmountData struct {
-	AcceptedTime        int64   `gorm:"column:accepted_time"`         // 接单时间
+	StatTime            int64   `gorm:"column:stat_time"`             // 统计时间戳（已完成订单用完成时间，其他用接单时间）
 	TakeoutOrderUuid    uint64  `gorm:"column:takeout_order_uuid"`    // 外卖订单UUID
 	TotalReceivedAmount float64 `gorm:"column:total_received_amount"` // 总实收金额
 }

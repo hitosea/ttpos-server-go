@@ -90,6 +90,7 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 | Proposal | 说明 | 状态 |
 | --- | --- | --- |
+| [shop-takeout-order-stats-timing](2026-02/shop-takeout-order-stats-timing.md) | 调整外卖订单统计时间逻辑（实时+最终准确） | 待评审 |
 | [takeout-peak-hour-timing](2026-02/takeout-peak-hour-timing.md) | 调整外卖订单高峰期记录时机为订单完成时 | 待评审 |
 | [shop-home-store-switch](2026-02/shop-home-store-switch.md) | 新管理端首页门店切换（多店数据快速查看） | 待评审 |
 | [all-order-operation-duration](2026-02/all-order-operation-duration.md) | 订单操作耗时记录（性能监控+分布式追踪） | 待评审 |
