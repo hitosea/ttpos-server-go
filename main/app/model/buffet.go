@@ -37,7 +37,16 @@ func (model *BuffetPackage) GetBuffetProductList() resp.BuffetProductList {
 		buffetProductList.List = append(buffetProductList.List, resp.BuffetProduct{
 			Uuid:  buffetProduct.ProductPackageUuid,
 			Limit: buffetProduct.Limit,
-			Name:  buffetProduct.ProductPackage.Name,
+			Name: func() string {
+				if buffetProduct.ProductPackage != nil {
+					return buffetProduct.ProductPackage.Name
+				}
+				return ""
+			}(),
+			IsShowCashier:   buffetProduct.IsShowCashier,
+			IsShowTablet:    buffetProduct.IsShowTablet,
+			IsShowKitchen:   buffetProduct.IsShowKitchen,
+			IsShowAssistant: buffetProduct.IsShowAssistant,
 		})
 	}
 	return buffetProductList

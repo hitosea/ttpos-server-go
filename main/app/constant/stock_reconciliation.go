@@ -16,7 +16,31 @@ const (
 	StockReconciliationTypeSpecified = 1
 	// StockReconciliationTypeAll 盘点类型-全部物品盘点
 	StockReconciliationTypeAll = 2
+	// StockReconciliationTypeDaily 盘点类型-日盘
+	StockReconciliationTypeDaily = 3
+	// StockReconciliationTypeWeekly 盘点类型-周盘
+	StockReconciliationTypeWeekly = 4
+	// StockReconciliationTypeMonthly 盘点类型-月盘
+	StockReconciliationTypeMonthly = 5
 )
+
+// StockReconciliationTypeToErpInventoryType 将盘点类型转换为 ERP inventory_type
+func StockReconciliationTypeToErpInventoryType(stockType int) string {
+	switch stockType {
+	case StockReconciliationTypeDaily:
+		return "Daily inventory"
+	case StockReconciliationTypeWeekly:
+		return "Weekly inventory"
+	case StockReconciliationTypeMonthly:
+		return "Monthly inventory"
+	case StockReconciliationTypeSpecified:
+		return "Designated item inventory"
+	case StockReconciliationTypeAll:
+		return "Inventory of all items"
+	default:
+		return ""
+	}
+}
 
 const (
 	// StockReconciliationPurposeInventory 盘点目的-库存盘点

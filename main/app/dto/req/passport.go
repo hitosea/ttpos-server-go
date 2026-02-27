@@ -41,3 +41,14 @@ var CacheHitRateStatsReqMessage = map[string]string{
 	"top.max":    "Top N 不能大于100",
 	"sort.oneof": "排序方式必须是 total、hits 或 hitrate",
 }
+
+// FileRedirectRequest 文件重定向请求
+type FileRedirectRequest struct {
+	Uuid        uint64 `form:"uuid" binding:"required"`         // 文件UUID
+	CompanyUuid uint64 `form:"company_uuid" binding:"required"` // 公司UUID
+}
+
+var FileRedirectRequestMessage = map[string]string{
+	"uuid.required":         "文件UUID不能为空",
+	"company_uuid.required": "公司UUID不能为空",
+}

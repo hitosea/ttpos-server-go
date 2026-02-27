@@ -4,6 +4,7 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/delivery_note"
+	"ttpos-bmp/app/ttpos-erp/api/file"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
@@ -106,6 +107,9 @@ type IErpSrv interface {
 	// 送货单
 	GetDeliveryNoteList(ctx pkgCtx.Context, getDeliveryNoteListReq *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error)
 	GetDeliveryNote(ctx pkgCtx.Context, dnName string) (*delivery_note.DeliveryNote, error) // 获取单个送货单详情
+
+	// 文件
+	UploadFileUrl(ctx pkgCtx.Context, req *file.UploadFileUrlReq) (*file.UploadFileResp, error) // 通过 URL 上传文件到 ERPNext
 }
 type erpSrv struct {
 	dbm *database.DBManager

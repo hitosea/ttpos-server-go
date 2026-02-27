@@ -748,12 +748,13 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 		}
 		erpSrv := erp.NewIErpSrv(s.dbm)
 		erpReq, err := erpSrv.SubmitStockReconciliation(ctx, companySetting, &stock.SaveStockReconciliationReq{
-			CompanyAbbr: companySetting.ErpnextCompanyAbbr,
-			Branch:      companySetting.ErpnextBranchName,
-			PostingDate: now.Format("2006-01-02"),
-			PostingTime: now.Format("15:04:05"),
-			Warehouse:   stockReconciliation.Warehouse.ErpCode,
-			Items:       erpItems,
+			CompanyAbbr:   companySetting.ErpnextCompanyAbbr,
+			Branch:        companySetting.ErpnextBranchName,
+			PostingDate:   now.Format("2006-01-02"),
+			PostingTime:   now.Format("15:04:05"),
+			Warehouse:     stockReconciliation.Warehouse.ErpCode,
+			Items:         erpItems,
+			InventoryType: constant.StockReconciliationTypeToErpInventoryType(stockReconciliation.Type),
 		})
 		if err != nil {
 			logger.Logger.Error("提交盘点单失败", zap.Error(err))

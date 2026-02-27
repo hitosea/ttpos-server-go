@@ -942,13 +942,14 @@ func (x *StockReconciliationItem) GetValuationRate() float64 {
 // 保存库存盘点请求
 type SaveStockReconciliationReq struct {
 	state         protoimpl.MessageState     `protogen:"open.v1"`
-	CompanyAbbr   string                     `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，必填"`                        // 公司缩写，必填
-	Branch        string                     `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                     // 分支名称，可选
-	PostingDate   string                     `protobuf:"bytes,3,opt,name=posting_date,json=postingDate,proto3" json:"posting_date,omitempty" dc:"过账日期，必填，格式：YYYY-MM-DD"`          // 过账日期，必填，格式：YYYY-MM-DD
-	PostingTime   string                     `protobuf:"bytes,4,opt,name=posting_time,json=postingTime,proto3" json:"posting_time,omitempty" dc:"过账时间，可选，格式：HH:MM:SS，如 18:20:11"` // 过账时间，可选，格式：HH:MM:SS，如 18:20:11
-	Purpose       string                     `protobuf:"bytes,5,opt,name=purpose,proto3" json:"purpose,omitempty" dc:"用途，可选，默认 Stock Reconciliation / Opening Stock"`             // 用途，可选，默认 Stock Reconciliation / Opening Stock
-	Warehouse     string                     `protobuf:"bytes,6,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选"`                                               // 仓库名称，可选
-	Items         []*StockReconciliationItem `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty" dc:"盘点明细，必填"`                                                       // 盘点明细，必填
+	CompanyAbbr   string                     `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，必填"`                                                                                                               // 公司缩写，必填
+	Branch        string                     `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                                                                            // 分支名称，可选
+	PostingDate   string                     `protobuf:"bytes,3,opt,name=posting_date,json=postingDate,proto3" json:"posting_date,omitempty" dc:"过账日期，必填，格式：YYYY-MM-DD"`                                                                                                 // 过账日期，必填，格式：YYYY-MM-DD
+	PostingTime   string                     `protobuf:"bytes,4,opt,name=posting_time,json=postingTime,proto3" json:"posting_time,omitempty" dc:"过账时间，可选，格式：HH:MM:SS，如 18:20:11"`                                                                                        // 过账时间，可选，格式：HH:MM:SS，如 18:20:11
+	Purpose       string                     `protobuf:"bytes,5,opt,name=purpose,proto3" json:"purpose,omitempty" dc:"用途，可选，默认 Stock Reconciliation / Opening Stock"`                                                                                                    // 用途，可选，默认 Stock Reconciliation / Opening Stock
+	Warehouse     string                     `protobuf:"bytes,6,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选"`                                                                                                                                      // 仓库名称，可选
+	Items         []*StockReconciliationItem `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty" dc:"盘点明细，必填"`                                                                                                                                              // 盘点明细，必填
+	InventoryType string                     `protobuf:"bytes,8,opt,name=inventory_type,json=inventoryType,proto3" json:"inventory_type,omitempty" dc:"盘点类型，可选，可选值：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items"` // 盘点类型，可选，可选值：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1030,6 +1031,13 @@ func (x *SaveStockReconciliationReq) GetItems() []*StockReconciliationItem {
 		return x.Items
 	}
 	return nil
+}
+
+func (x *SaveStockReconciliationReq) GetInventoryType() string {
+	if x != nil {
+		return x.InventoryType
+	}
+	return ""
 }
 
 // 保存库存盘点响应
@@ -2003,7 +2011,7 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\titem_name\x18\x02 \x01(\tR\bitemName\x12\x10\n" +
 	"\x03qty\x18\x03 \x01(\x01R\x03qty\x12\x1c\n" +
 	"\twarehouse\x18\x04 \x01(\tR\twarehouse\x12%\n" +
-	"\x0evaluation_rate\x18\x05 \x01(\x01R\rvaluationRate\"\x8b\x02\n" +
+	"\x0evaluation_rate\x18\x05 \x01(\x01R\rvaluationRate\"\xb2\x02\n" +
 	"\x1aSaveStockReconciliationReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12!\n" +
@@ -2011,7 +2019,8 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\fposting_time\x18\x04 \x01(\tR\vpostingTime\x12\x18\n" +
 	"\apurpose\x18\x05 \x01(\tR\apurpose\x12\x1c\n" +
 	"\twarehouse\x18\x06 \x01(\tR\twarehouse\x124\n" +
-	"\x05items\x18\a \x03(\v2\x1e.stock.StockReconciliationItemR\x05items\"Y\n" +
+	"\x05items\x18\a \x03(\v2\x1e.stock.StockReconciliationItemR\x05items\x12%\n" +
+	"\x0einventory_type\x18\b \x01(\tR\rinventoryType\"Y\n" +
 	"\x1bSaveStockReconciliationResp\x12:\n" +
 	"\x19stock_reconciliation_name\x18\x01 \x01(\tR\x17stockReconciliationName\"\xde\x01\n" +
 	"\x1dGetStockReconciliationListReq\x12!\n" +

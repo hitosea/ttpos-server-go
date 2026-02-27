@@ -1617,7 +1617,7 @@ func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, orderUuid u
 	}
 
 	// 3. 构建 SaleBill
-	saleBill := buildSaleBillFromTakeoutOrder(order, recordType)
+	saleBill := buildSaleBillFromTakeoutOrder(order)
 	if saleBill == nil {
 		return nil
 	}
@@ -1637,20 +1637,17 @@ func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, orderUuid u
 }
 
 // determineRecordType 根据订单状态判断记录类型
-// 返回: "inc" - 增加, "dec" - 减少, "" - 不记录
+// 返回: "inc" - 增加, "" - 不记录
+// 仅在订单完成时记录高峰期，取消订单不计入统计
 func determineRecordType(order *takeoutModel.TakeoutOrder) string {
 	// 必须要有接单人和接单时间
 	if order.AcceptedBy <= 0 || order.AcceptedTime <= 0 {
 		return ""
 	}
 
-	// 判断订单状态
-	if order.OrderState == valueObject.TakeoutOrderStateAccepted {
-		// 已接单配餐中 → inc
+	// 仅在订单完成时记录高峰期
+	if order.OrderState == valueObject.TakeoutOrderStateCompleted && order.CompletedTime > 0 {
 		return "inc"
-	} else if order.OrderState == valueObject.TakeoutOrderStateCanceled {
-		// 已取消 → dec
-		return "dec"
 	}
 
 	// 其他状态不记录
@@ -1658,40 +1655,13 @@ func determineRecordType(order *takeoutModel.TakeoutOrder) string {
 }
 
 // buildSaleBillFromTakeoutOrder 从外卖订单构建 SaleBill
-// recordType: "inc" - 接单时使用 AcceptedTime, "dec" - 取消时使用 RejectedTime
-func buildSaleBillFromTakeoutOrder(order *takeoutModel.TakeoutOrder, recordType string) *model.SaleBill {
+// 使用订单完成时间作为高峰期记录时间
+func buildSaleBillFromTakeoutOrder(order *takeoutModel.TakeoutOrder) *model.SaleBill {
 	saleBill := &model.SaleBill{
 		Status:        constant.SaleBillStatusComplete, // 设置为已完成状态，IsFinish() 才能返回 true
 		PaymentAmount: order.PlatformTotal,             // 顾客实付金额（单位：元）
-		CashierUuid:   0,                               // 默认值
-		FinishTime:    0,                               // 默认值
-	}
-
-	// 根据 recordType 设置不同的时间和收银员
-	if recordType == "inc" {
-		// 接单时：使用接单时间和接单人
-		if order.AcceptedTime > 0 {
-			saleBill.FinishTime = order.AcceptedTime
-			saleBill.CashierUuid = order.AcceptedBy
-		} else {
-			// 如果没有接单时间，使用订单时间
-			saleBill.FinishTime = order.OrderTime
-			saleBill.CashierUuid = order.AcceptedBy
-		}
-	} else if recordType == "dec" {
-		// 取消时：使用取消时间和取消人
-		rejectedBy := order.RejectedBy
-		if rejectedBy == 0 {
-			rejectedBy = order.AcceptedBy
-		}
-		if order.RejectedTime > 0 {
-			saleBill.FinishTime = order.RejectedTime
-			saleBill.CashierUuid = rejectedBy
-		} else {
-			// 如果没有取消时间，使用订单时间
-			saleBill.FinishTime = order.OrderTime
-			saleBill.CashierUuid = rejectedBy
-		}
+		CashierUuid:   order.AcceptedBy,                // 使用接单人
+		FinishTime:    order.CompletedTime,             // 使用完成时间
 	}
 
 	// 如果 FinishTime 为 0，无法记录高峰期

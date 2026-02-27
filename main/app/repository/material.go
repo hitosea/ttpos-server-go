@@ -137,7 +137,7 @@ func (r *MaterialRepoImpl) WhereAllowSubstoreVisible(visible int) DBOption {
 func (r *MaterialRepoImpl) WhereUuidInWarehouseItem(warehouseUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid in (?)",
-			r.db.Model(&model.WarehouseItem{}).Select("material_uuid").Where("warehouse_uuid = ?", warehouseUuid).Scopes(NotDeleted))
+			r.db.Model(&model.WarehouseItem{}).Distinct("material_uuid").Where("warehouse_uuid = ?", warehouseUuid).Scopes(NotDeleted))
 	}
 }
 
@@ -147,7 +147,7 @@ func (r *MaterialRepoImpl) GetMaterialListWithPagination(pageNo, pageSize int, o
 	var total int64
 
 	// 构建查询
-	query := r.db.Model(&model.Material{}).Where("delete_time = ?", 0).Debug()
+	query := r.db.Model(&model.Material{}).Where("delete_time = ?", 0)
 
 	// 应用查询选项
 	for _, opt := range opts {
@@ -161,7 +161,7 @@ func (r *MaterialRepoImpl) GetMaterialListWithPagination(pageNo, pageSize int, o
 
 	// 分页查询
 	offset := (pageNo - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("create_time DESC").Find(&materials).Error; err != nil {
+	if err := query.Offset(offset).Limit(pageSize).Order("create_time DESC, uuid DESC").Find(&materials).Error; err != nil {
 		return nil, 0, errors.WithMessage(err, "查询物品列表失败")
 	}
 

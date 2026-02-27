@@ -144,6 +144,19 @@ func (s *takeoutOrderAppService) HandlePushOrderState(ctx context.Context, takeo
 
 // SyncNewOrder 同步新订单（从 RPC 接收）
 func (s *takeoutOrderAppService) SyncNewOrder(ctx context.Context, platform string, takeoutOrderUuid string, rawData map[string]interface{}, orderDataMap map[string]interface{}) error {
+	// 获取公司信息
+	companyInfo := ctx.GetCompany()
+
+	// 判断是否开启外卖功能
+	if !companyInfo.CompanySetting.IsOpenGrabDelivery() && platform == value_object.TakeoutPlatformGrab {
+		logger.Logger.Info("Grab订单更新事件-不处理", zap.String("provider", platform), zap.String("order_uuid", takeoutOrderUuid))
+		return nil
+	}
+	if !companyInfo.CompanySetting.IsOpenLINEMANDelivery() && platform == value_object.TakeoutPlatformLineman {
+		logger.Logger.Info("LINE MAN订单更新事件-不处理", zap.String("provider", platform), zap.String("order_uuid", takeoutOrderUuid))
+		return nil
+	}
+
 	// 1. 解析订单 Webhook 数据
 	rawDataJSON, webhookInterface, platformOrderId, err := s.parseOrderWebhookData(platform, rawData, orderDataMap)
 	if err != nil {

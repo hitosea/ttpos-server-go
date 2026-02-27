@@ -1,10 +1,13 @@
 package passport
 
 import (
+	"net/http"
 	"runtime"
+	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 
@@ -16,6 +19,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/model"
 	printerPkg "ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
@@ -153,6 +157,54 @@ func (h *Handler) GetMemoryStats(c *gin.Context) {
 	helper.Success(c, memStats)
 }
 
+// FileRedirect 文件重定向
+// @Summary 文件重定向
+// @Tags 通用
+// @Access json
+// @Produce json
+// @Param uuid query uint64 true "文件UUID"
+// @Param company_uuid query uint64 true "公司UUID"
+// @Success 302 "重定向到文件URL"
+// @Failure 400 {object} dto.Response "参数错误"
+// @Failure 404 {object} dto.Response "文件不存在"
+// @Router /passport/file_redirect [get]
+func (h *Handler) FileRedirect(c *gin.Context) {
+	var redirectReq req.FileRedirectRequest
+	if err := c.ShouldBindQuery(&redirectReq); err != nil {
+		helper.HandleValidationError(c, err, redirectReq, req.FileRedirectRequestMessage)
+		return
+	}
+
+	// 根据 company_uuid 获取对应门店数据库
+	db := h.dbm.GetDB(redirectReq.CompanyUuid)
+	if db == nil {
+		logger.Logger.Error("获取数据库连接失败",
+			zap.Uint64("company_uuid", redirectReq.CompanyUuid),
+		)
+		helper.Fail(c, constant.CodeFail, "获取数据库连接失败")
+		return
+	}
+
+	// 查询文件记录
+	var file model.File
+	err := db.Model(&model.File{}).Where("uuid = ? AND delete_time = 0", redirectReq.Uuid).First(&file).Error
+	if err != nil {
+		logger.Logger.Error("查询文件失败",
+			zap.Uint64("uuid", redirectReq.Uuid),
+			zap.Uint64("company_uuid", redirectReq.CompanyUuid),
+			zap.Error(err),
+		)
+		helper.Fail(c, constant.CodeFail, "文件不存在")
+		return
+	}
+
+	// 获取文件URL并重定向
+	baseURL := utils.GetBaseURL(c.Request)
+	fileURL := file.GetUrl(baseURL)
+
+	c.Redirect(http.StatusFound, fileURL)
+}
+
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	wrapper := &Handler{
 		dbm:        dbm,
@@ -161,6 +213,8 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	}
 	router.GET("/captcha", wrapper.GetCaptcha)
 	router.GET("/server_public_key", wrapper.GetServerPublicKey)
+	// 文件重定向接口，全局限流：每秒 10 次，突发容量 20
+	router.GET("/file_redirect", middleware.RateLimitGlobal(10, 20), wrapper.FileRedirect)
 	router.POST("/lianlian/callback", wrapper.LianLianCallback)
 	router.POST("/lianlian/refund/callback", wrapper.LianLianRefundCallback)
 }

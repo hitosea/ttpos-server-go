@@ -22022,6 +22022,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/passport/file_redirect": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通用"
+                ],
+                "summary": "文件重定向",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "文件UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "公司UUID",
+                        "name": "company_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "重定向到文件URL"
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "文件不存在",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/passport/server_public_key": {
             "get": {
                 "produces": [
@@ -41138,6 +41184,10 @@ const docTemplate = `{
                     "description": "是否允许采购 yes/no",
                     "type": "string"
                 },
+                "min_quota_limit": {
+                    "description": "最小限购数量",
+                    "type": "number"
+                },
                 "quota_limit": {
                     "description": "限购数量",
                     "type": "number"
@@ -44925,6 +44975,10 @@ const docTemplate = `{
                     "description": "分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)",
                     "type": "integer"
                 },
+                "company_uuid": {
+                    "description": "可选，指定查询的门店UUID（用于多店切换查看）",
+                    "type": "integer"
+                },
                 "duty_no": {
                     "description": "班次编号",
                     "type": "string"
@@ -45019,6 +45073,10 @@ const docTemplate = `{
         "req.BusinessDataRankProductReq": {
             "type": "object",
             "properties": {
+                "company_uuid": {
+                    "description": "可选，指定查询的门店UUID（用于多店切换查看）",
+                    "type": "integer"
+                },
                 "exclude_data_manage": {
                     "description": "是否排除数据管理订单",
                     "type": "boolean"
@@ -50741,8 +50799,12 @@ const docTemplate = `{
                     "description": "物品UUID",
                     "type": "integer"
                 },
+                "min_quota_limit": {
+                    "description": "最小采购数量",
+                    "type": "number"
+                },
                 "quota_limit": {
-                    "description": "限购数量",
+                    "description": "最大采购数量",
                     "type": "number"
                 }
             }
@@ -53531,6 +53593,10 @@ const docTemplate = `{
                 "currency_unit": {
                     "description": "货币单位",
                     "type": "string"
+                },
+                "is_save_single_flavor_mapping": {
+                    "description": "是否保存单规格映射，默认不保存",
+                    "type": "boolean"
                 },
                 "platform": {
                     "description": "平台名称：grab, lineman 等",
@@ -61734,6 +61800,9 @@ const docTemplate = `{
                 "material_uuid": {
                     "type": "integer"
                 },
+                "min_quota_limit": {
+                    "type": "number"
+                },
                 "quota_limit": {
                     "type": "number"
                 }
@@ -62202,6 +62271,10 @@ const docTemplate = `{
                 "is_allow_purchase": {
                     "description": "是否允许采购 yes/no",
                     "type": "string"
+                },
+                "min_quota_limit": {
+                    "description": "最小限购数量",
+                    "type": "number"
                 },
                 "quota_limit": {
                     "description": "限购数量",
