@@ -205,23 +205,28 @@ func (c *RedisCacher) InvalidateTable(ctx context.Context, tableKey string) erro
 		return nil
 	}
 
-	// 批量删除
-	pipe := c.client.Pipeline()
-
-	// 删除所有缓存数据
-	pipe.Del(ctx, keys...)
+	// 删除缓存数据
+	// 注意：Redis 集群模式下，不同 key 可能在不同 slot，不能用 Pipeline 批量删除
+	// 逐个删除以兼容集群模式
+	var delErr error
+	for _, key := range keys {
+		if err := c.client.Del(ctx, key).Err(); err != nil && err != redis.Nil {
+			delErr = err
+		}
+	}
 
 	// 删除索引
-	pipe.Del(ctx, indexKey)
+	if err := c.client.Del(ctx, indexKey).Err(); err != nil && err != redis.Nil {
+		delErr = err
+	}
 
-	_, err = pipe.Exec(ctx)
-	if err != nil {
-		logWarn("gormcache: 批量删除失败",
+	if delErr != nil {
+		logWarn("gormcache: 缓存删除部分失败",
 			zap.String("tableKey", tableKey),
 			zap.Int("keyCount", len(keys)),
-			zap.Error(err),
+			zap.Error(delErr),
 		)
-		return err
+		return delErr
 	}
 
 	logDebug("gormcache: 表缓存失效成功",
@@ -253,15 +258,11 @@ func (c *RedisCacher) InvalidateAll(ctx context.Context) error {
 		return nil
 	}
 
-	// 批量删除（分批，每批 100 个）
-	batchSize := 100
-	for i := 0; i < len(keys); i += batchSize {
-		end := min(i+batchSize, len(keys))
-		batch := keys[i:end]
-
-		if err := c.client.Del(ctx, batch...).Err(); err != nil {
-			logWarn("gormcache: 批量删除失败",
-				zap.Int("batchStart", i),
+	// 逐个删除（Redis 集群模式下不同 key 可能在不同 slot）
+	for _, key := range keys {
+		if err := c.client.Del(ctx, key).Err(); err != nil && err != redis.Nil {
+			logWarn("gormcache: 删除失败",
+				zap.String("key", key),
 				zap.Error(err),
 			)
 		}
