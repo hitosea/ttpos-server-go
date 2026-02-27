@@ -31,7 +31,7 @@ func buildIdentifier(db *gorm.DB) (tableName string, key string) {
 	if !strings.HasPrefix(tableName, "ttpos_") {
 		fmt.Print("Warning: table name does not start with 'ttpos_': " + tableName)
 	}
-	dbName := db.Name() // 获取数据库名称（如 shop8267304538112000）
+	dbName := extractDBName(db) // 获取数据库名称（如 shop8267304538112000）
 
 	// 构建唯一标识（包含数据库名以支持多租户隔离）
 	var builder strings.Builder
@@ -46,6 +46,14 @@ func buildIdentifier(db *gorm.DB) (tableName string, key string) {
 
 	key = builder.String()
 	return tableName, key
+}
+
+// extractDBName 从 GORM DB 获取数据库名称
+// 用于多租户隔离，确保不同商户的缓存不会混淆
+func extractDBName(db *gorm.DB) string {
+	// 使用 Migrator().CurrentDatabase() 获取当前数据库名
+	// 这是 GORM 官方推荐的方法
+	return db.Migrator().CurrentDatabase()
 }
 
 // extractTableName 从 GORM Statement 提取表名（包含表前缀）

@@ -193,7 +193,7 @@ func (p *Plugin) invalidateCallback(qt queryType) func(db *gorm.DB) {
 		}
 
 		// 构建带数据库名的索引 key（多租户隔离）
-		dbName := db.Name()
+		dbName := extractDBName(db)
 		indexKey := dbName + ":" + tableName
 
 		// 失效该表的所有缓存
@@ -272,7 +272,7 @@ func (p *Plugin) storeInCache(db *gorm.DB, tableName string, key string) {
 	}
 
 	// 构建带数据库名的索引 key（多租户隔离）
-	dbName := db.Name()
+	dbName := extractDBName(db)
 	indexKey := dbName + ":" + tableName
 
 	if err := p.conf.Cacher.Store(db.Statement.Context, indexKey, key, result, ttl); err != nil {
