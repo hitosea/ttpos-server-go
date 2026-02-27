@@ -237,8 +237,12 @@ func buildPosInvoiceItems(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 			for _, modifier := range item.TakeoutOrderItemModifiers {
 				if modifier.IsCommodity() {
 					modifierName := language.JsonToLocaleResponse(modifier.ModifierName) // 套餐子商品名称
+					commodityItemCode := modifier.TtposModifierErpCode
+					if commodityItemCode == "" {
+						commodityItemCode = constant.PosInvoiceItemCodeSpareGoods // 未映射套餐子商品使用备用商品编码
+					}
 					items = append(items, &selling.PosInvoiceItem{
-						ItemCode:    modifier.TtposModifierErpCode,                       // 使用 ERP Code
+						ItemCode:    commodityItemCode,
 						Qty:         float64(item.Quantity),                              // 子商品数量
 						Rate:        0,                                                   // 套餐子商品没有单价
 						Amount:      0,                                                   // 套餐子商品没有金额
@@ -249,8 +253,12 @@ func buildPosInvoiceItems(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 			}
 		} else {
 			// 普通商品
+			itemCode := item.TtposItemErpCode
+			if itemCode == "" {
+				itemCode = constant.PosInvoiceItemCodeSpareGoods // 未映射商品使用备用商品编码
+			}
 			items = append(items, &selling.PosInvoiceItem{
-				ItemCode:    item.TtposItemErpCode,            // 使用 ERP Code
+				ItemCode:    itemCode,
 				Qty:         float64(item.Quantity),           // 数量
 				Rate:        item.GetPriceNoneTax(),           // 单价
 				Amount:      item.GetTotalPriceNoneTaxTotal(), // 小计
@@ -275,8 +283,12 @@ func buildPosInvoiceItems(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 			// 规格(flavor)、加料(sauce)、属性(attr) 都作为独立行项添加
 			// 参考 order.go:4421-4431 的小料处理逻辑
 			if modifier.IsSauce() {
+				sauceItemCode := modifier.TtposModifierErpCode
+				if sauceItemCode == "" {
+					sauceItemCode = constant.PosInvoiceItemCodeSpareGoods // 未映射加料使用备用商品编码
+				}
 				items = append(items, &selling.PosInvoiceItem{
-					ItemCode:    modifier.TtposModifierErpCode, // 使用 ERP Code
+					ItemCode:    sauceItemCode,
 					Qty:         float64(item.Quantity),        // 修饰符数量
 					Rate:        0,                             // 修饰符没有单独单价（已计入主商品）
 					Amount:      0,                             // 修饰符没有单独金额
