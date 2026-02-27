@@ -21,6 +21,9 @@ import (
 var Logger *zap.Logger
 var SqlLogger *zap.Logger
 
+// StockAlertLogger 库存预警相关日志（写入 log/stock_alert/ 子目录）
+var StockAlertLogger *zap.Logger
+
 // Init 初始化日志
 func Init() error {
 	// 创建日志目录
@@ -31,14 +34,32 @@ func Init() error {
 	// 创建Logger
 	Logger = NewLoggerInstance("")
 	SqlLogger = NewLoggerInstance(".sql")
+	// 库存预警日志写入单独子目录
+	stockAlertDir := filepath.Join(config.Log.Dir, "stock_alert")
+	if err := os.MkdirAll(stockAlertDir, 0755); err != nil {
+		return fmt.Errorf("can't create stock_alert log directory: %v", err)
+	}
+	StockAlertLogger = NewLoggerInstanceInDir(stockAlertDir, "")
 	// 定时每天清理一次日志
 	startCron()
 	return nil
 }
 
+// NewLoggerInstanceInDir 在指定目录下创建日志实例，用于将日志写入单独子目录（如 stock_alert）
+func NewLoggerInstanceInDir(dir, name string) *zap.Logger {
+	now := time.Now()
+	logFile := filepath.Join(dir, fmt.Sprintf("%s%s.log", now.Format(time.DateOnly), name))
+	return newZapLogger(logFile, name)
+}
+
 func NewLoggerInstance(name string) *zap.Logger {
 	now := time.Now()
 	logFile := filepath.Join(config.Log.Dir, fmt.Sprintf("%s%s.log", now.Format(time.DateOnly), name))
+	return newZapLogger(logFile, name)
+}
+
+// newZapLogger 根据日志文件路径和配置创建 zap.Logger
+func newZapLogger(logFile, _ string) *zap.Logger {
 
 	// 编码器配置
 	encoderConfig := zapcore.EncoderConfig{

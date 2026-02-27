@@ -4125,7 +4125,7 @@ func (s *materialSrv) sendStockAlertEmail(ctx context.Context, alertType uint8, 
 		} else {
 			skipReason = "跳过发送预警邮件"
 		}
-		logger.Logger.Info(skipReason,
+		logger.StockAlertLogger.Info(skipReason,
 			zap.Uint64("company_uuid", sendReq.CompanyUuid),
 			zap.Uint64("material_uuid", sendReq.MaterialUuid),
 			zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),

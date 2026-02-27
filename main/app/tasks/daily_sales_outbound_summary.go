@@ -109,7 +109,7 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 	// 检查是否到达营业结束时间
 	isBusinessEndTime, startTime, endTime := t.isBusinessEndTime(company, openingHours)
 	if !isBusinessEndTime {
-		logger.Logger.Info("门店 %s 未到达营业结束时间，跳过处理", zap.String("company_name", company.Name))
+		logger.StockAlertLogger.Info("门店 %s 未到达营业结束时间，跳过处理", zap.String("company_name", company.Name))
 		return nil
 	}
 

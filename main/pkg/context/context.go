@@ -194,6 +194,12 @@ func WithStaff(staff model.Staff) Option {
 	}
 }
 
+func WithDB(db *gorm.DB) Option {
+	return func(ctx *ContextImpl) {
+		ctx.db = db
+	}
+}
+
 func WithStaffUuid(staffUuid uint64) Option {
 	return func(ctx *ContextImpl) {
 		ctx.staffUuid = staffUuid
@@ -283,6 +289,7 @@ func (c *ContextImpl) Copy() Context {
 		WithStaff(c.staff),
 		WithCompanySetting(c.companySetting),
 		WithStaffUuid(c.staffUuid),
+		WithDB(c.db),
 		WithDeskUuid(c.deskUuid),
 		WithDeviceSn(c.deviceSn),
 		WithDeviceUuid(c.deviceUuid),

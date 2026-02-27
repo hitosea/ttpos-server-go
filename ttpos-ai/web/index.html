@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTPOS AI Assistant</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>TTPOS AI Assistant</h1>
+            <div class="mode-switch">
+                <button id="chatMode" class="mode-btn active">Chat</button>
+                <button id="agentMode" class="mode-btn">Agent</button>
+                <button id="clearBtn" class="mode-btn clear-btn">Clear</button>
+            </div>
+        </header>
+
+        <main class="chat-container">
+            <div id="messages" class="messages"></div>
+        </main>
+
+        <footer class="input-container">
+            <div class="input-wrapper">
+                <textarea
+                    id="userInput"
+                    placeholder="Enter to send, Shift+Enter for new line..."
+                    rows="1"
+                ></textarea>
+                <button id="sendBtn" class="send-btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="input-options">
+                <label class="stream-toggle">
+                    <input type="checkbox" id="streamToggle" checked>
+                    <span>Stream</span>
+                </label>
+                <span id="status" class="status"></span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/js/marked.min.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
