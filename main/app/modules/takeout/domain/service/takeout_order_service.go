@@ -1760,8 +1760,7 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		}
 
 		if order == nil {
-			logger.Logger.Error("订单不存在", zap.String("order_uuid", orderUuid))
-			return errors.New("订单不存在")
+			return nil
 		}
 
 		// 3. 转换并更新订单状态
