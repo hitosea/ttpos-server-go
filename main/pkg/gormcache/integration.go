@@ -133,8 +133,8 @@ func Enable(db *gorm.DB, conf *Config) error {
 		return err
 	}
 
-	logDebug("gormcache: 数据库缓存已启用",
-		zap.String("db", db.Name()),
+	logInfo("gormcache: 数据库缓存已启用",
+		zap.String("db", dbName),
 	)
 
 	return nil
