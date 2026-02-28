@@ -71,7 +71,34 @@ var rootCommand = &cobra.Command{
 		_ = copier.Copy(&cacheConfig, &config.Redis)
 		cache.Init(cache.Redis, cacheConfig)
 
-		// GORM 查询缓存（表级精确失效）
+		// 初始化Redis分布式并发锁
+		lock.InitRedisLock(cacheConfig)
+		lock.NewSystemLock()
+
+		// 初始化短信客户端
+		sms.InitClient(config.SMS.APIKey, config.SMS.BaseURL, config.SMS.ProjectName)
+		// 检查短信客户端配置
+		if err := sms.GetSMSClient().CheckConfig(); err != nil {
+			fmt.Printf("[FATAL] Failed to check SMS client config: %v\n", err)
+			logger.Logger.Info("Failed to check SMS client config", zap.Error(err))
+		}
+
+		//初始化服务发现
+		cloud.Init()
+
+		// 初始化 OTLP 调用链跟踪
+		if err := otlp.Init(context.Background(), config.Otlp); err != nil {
+			fmt.Printf("[FATAL] Failed to initialize OpenTelemetry: %v\n", err)
+			logger.Logger.Error("Failed to initialize OpenTelemetry", zap.Error(err))
+		}
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		defer logger.Logger.Sync()
+
+		// 初始化数据库管理器
+		var dbm *database.DBManager = database.GetDBManager(config.Database)
+
+		// ==================== GORM 查询缓存（一键注释此区块可禁用）====================
 		gormcache.Init(&gormcache.Config{
 			Easer:   true,            // 启用请求合并（相同查询只执行一次）
 			TTL:     5 * time.Minute, // 缓存 5 分钟
@@ -152,40 +179,11 @@ var rootCommand = &cobra.Command{
 				"ttpos_printer",
 			},
 		})
-
-		// 初始化Redis分布式并发锁
-		lock.InitRedisLock(cacheConfig)
-		lock.NewSystemLock()
-
-		// 初始化短信客户端
-		sms.InitClient(config.SMS.APIKey, config.SMS.BaseURL, config.SMS.ProjectName)
-		// 检查短信客户端配置
-		if err := sms.GetSMSClient().CheckConfig(); err != nil {
-			fmt.Printf("[FATAL] Failed to check SMS client config: %v\n", err)
-			logger.Logger.Info("Failed to check SMS client config", zap.Error(err))
-		}
-
-		//初始化服务发现
-		cloud.Init()
-
-		// 初始化 OTLP 调用链跟踪
-		if err := otlp.Init(context.Background(), config.Otlp); err != nil {
-			fmt.Printf("[FATAL] Failed to initialize OpenTelemetry: %v\n", err)
-			logger.Logger.Error("Failed to initialize OpenTelemetry", zap.Error(err))
-		}
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		defer logger.Logger.Sync()
-
-		// 初始化数据库管理器
-		var dbm *database.DBManager = database.GetDBManager(config.Database)
-
-		// 设置数据库就绪回调，自动为所有数据库启用缓存
 		database.SetOnDBReady(func(db *gorm.DB) {
 			gormcache.Enable(db, nil)
 		})
-		// 为已存在的所有数据库启用缓存（启动时已加载的商户库）
 		dbm.EnableCacheForAllDBs()
+		// ==================== GORM 查询缓存结束 ====================
 
 		// 初始化对象存储缓存配置的缓存层（使用三级缓存基础设施）
 		objectStorageAdapter.InitObjectStorageCacheConfigCache(
