@@ -114,7 +114,7 @@ func (r *productPackageRepoImpl) GetProductPackageBoms(productPackageUuid uint64
 func (r *productPackageRepoImpl) GetProductPackageByUuidWithAssociations(productPackageUuid uint64) (*model.ProductPackage, error) {
 	productPackage, err := r.GetProductPackage(
 		CommonRepo.WhereByUuid(productPackageUuid),
-		CommonRepo.WhereBySoftDelete(),
+		// CommonRepo.WhereBySoftDelete(), // 修复: 购物车中有已经删除的订单时会空指针错误
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "MultiLanguageName",
@@ -155,7 +155,7 @@ func (r *productPackageRepoImpl) GetProductPackagesByUuidsWithAssociations(produ
 	}
 	productPackages, err := r.GetProductPackageList(
 		CommonRepo.WhereInUuids(productPackageUuids),
-		CommonRepo.WhereBySoftDelete(),
+		// CommonRepo.WhereBySoftDelete(), // 修复: 购物车中有已经删除的订单时会空指针错误
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "MultiLanguageName",
