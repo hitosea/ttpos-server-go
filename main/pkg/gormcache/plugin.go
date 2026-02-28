@@ -128,7 +128,7 @@ func (p *Plugin) queryCallback(db *gorm.DB) {
 
 	// 构建缓存标识（使用 callbacks.BuildQuerySQL 构建 SQL）
 	// 注意：BuildQuerySQL 会检查 SQL 是否已构建，不会重复构建
-	tableName, key := buildIdentifier(db)
+	tableName, key := buildIdentifier(db, p.conf.DBName)
 
 	// 检查表是否需要缓存
 	if !p.shouldCacheTable(tableName) {
@@ -197,7 +197,7 @@ func (p *Plugin) invalidateCallback(qt queryType) func(db *gorm.DB) {
 		}
 
 		// 构建表索引键（多租户隔离）
-		tableKey := buildTableKey(db, tableName)
+		tableKey := buildTableKey(p.conf.DBName, tableName)
 
 		// 失效该表的所有缓存
 		if err := p.conf.Cacher.InvalidateTable(db.Statement.Context, tableKey); err != nil {
@@ -276,7 +276,7 @@ func (p *Plugin) storeInCache(db *gorm.DB, tableName string, key string) {
 	}
 
 	// 构建表索引键（多租户隔离）
-	tableKey := buildTableKey(db, tableName)
+	tableKey := buildTableKey(p.conf.DBName, tableName)
 
 	if err := p.conf.Cacher.Store(db.Statement.Context, tableKey, key, result, ttl); err != nil {
 		logWarn("gormcache: 缓存存储失败",

@@ -44,6 +44,11 @@ type Cacher interface {
 
 // Config 缓存插件配置
 type Config struct {
+	// DBName 数据库名称（如 "saas" 或 "shop123456"）
+	// 用于多租户隔离，确保不同商户的缓存不会混淆
+	// 由 Enable 函数设置，无需手动配置
+	DBName string
+
 	// Easer 是否启用请求合并（singleflight）
 	// 当多个相同查询并发时，只执行一次数据库查询
 	Easer bool
@@ -98,6 +103,27 @@ func DefaultConfig() *Config {
 		MaxRows:           1000,
 		InvalidateOnWrite: &invalidate,
 		Debug:             false,
+	}
+}
+
+// Copy 复制配置，返回新的 Config 实例
+// 用于避免多个数据库共享同一配置实例导致的污染问题
+func (c *Config) Copy() *Config {
+	if c == nil {
+		return nil
+	}
+	return &Config{
+		DBName:            c.DBName,
+		Easer:             c.Easer,
+		Cacher:            c.Cacher,
+		TTL:               c.TTL,
+		MaxRows:           c.MaxRows,
+		Tables:            c.Tables,
+		ExcludeTables:     c.ExcludeTables,
+		ExcludeDBs:        c.ExcludeDBs,
+		AllowDBs:          c.AllowDBs,
+		InvalidateOnWrite: c.InvalidateOnWrite,
+		Debug:             c.Debug,
 	}
 }
 

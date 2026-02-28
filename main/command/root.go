@@ -180,8 +180,8 @@ var rootCommand = &cobra.Command{
 				"ttpos_printer",
 			},
 		})
-		database.SetOnDBReady(func(db *gorm.DB) {
-			gormcache.Enable(db, nil)
+		database.SetOnDBReady(func(db *gorm.DB, dbName string) {
+			gormcache.Enable(db, dbName, nil)
 		})
 		dbm.EnableCacheForAllDBs()
 		// ==================== GORM 查询缓存结束 ====================
