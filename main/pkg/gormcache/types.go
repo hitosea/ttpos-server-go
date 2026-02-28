@@ -101,13 +101,3 @@ func DefaultConfig() *Config {
 	}
 }
 
-// HitStats 缓存命中统计
-type HitStats struct {
-	TableName string // 表名
-	Hits      int64  // 命中次数
-	Misses    int64  // 未命中次数
-	Eased     int64  // Easer 合并次数
-}
-
-// StatsCallback 统计回调函数
-type StatsCallback func(stats HitStats)

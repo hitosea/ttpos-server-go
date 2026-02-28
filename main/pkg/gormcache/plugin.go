@@ -2,7 +2,6 @@ package gormcache
 
 import (
 	"encoding/json"
-	"reflect"
 	"sync"
 
 	"go.uber.org/zap"
@@ -35,9 +34,6 @@ type Plugin struct {
 
 	// tableBlacklist 表黑名单
 	tableBlacklist map[string]struct{}
-
-	// dbBlacklist 数据库黑名单（商户级别禁用缓存）
-	dbBlacklist map[string]struct{}
 }
 
 // New 创建缓存插件实例
@@ -51,7 +47,6 @@ func New(conf *Config) *Plugin {
 		callbacks:      make(map[queryType]func(db *gorm.DB)),
 		tableWhitelist: make(map[string]struct{}),
 		tableBlacklist: make(map[string]struct{}),
-		dbBlacklist:    make(map[string]struct{}),
 	}
 
 	// 构建表白名单
@@ -62,11 +57,6 @@ func New(conf *Config) *Plugin {
 	// 构建表黑名单
 	for _, t := range conf.ExcludeTables {
 		p.tableBlacklist[t] = struct{}{}
-	}
-
-	// 构建数据库黑名单（商户级别禁用）
-	for _, db := range conf.ExcludeDBs {
-		p.dbBlacklist[db] = struct{}{}
 	}
 
 	return p
@@ -122,7 +112,6 @@ func (p *Plugin) Initialize(db *gorm.DB) error {
 		zap.Bool("cacher", p.conf.Cacher != nil),
 		zap.Int("tableWhitelist", len(p.tableWhitelist)),
 		zap.Int("tableBlacklist", len(p.tableBlacklist)),
-		zap.Int("dbBlacklist", len(p.dbBlacklist)),
 	)
 
 	return nil
@@ -325,16 +314,6 @@ func copyValue(dest any, src any) error {
 
 	// 反序列化到目标
 	return json.Unmarshal(data, dest)
-}
-
-// setPointedValue 使用反射设置指针值
-func setPointedValue(dest any, src any) {
-	destVal := reflect.ValueOf(dest)
-	srcVal := reflect.ValueOf(src)
-
-	if destVal.Kind() == reflect.Ptr && srcVal.Kind() == reflect.Ptr {
-		destVal.Elem().Set(srcVal.Elem())
-	}
 }
 
 // ============ 上下文控制 ============
