@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
@@ -115,6 +116,12 @@ func (c *RedisCacher) Get(ctx context.Context, key string) (*QueryResult, bool) 
 		return nil, false
 	}
 
+	// 创建 gorm-cache 专属 span
+	ctx, span := startCacheSpan(ctx, "Get",
+		attribute.String("cache.key", key),
+	)
+	defer endSpan(span)
+
 	data, err := c.client.Get(ctx, key).Bytes()
 	if err != nil {
 		if err != redis.Nil {
@@ -144,6 +151,13 @@ func (c *RedisCacher) Store(ctx context.Context, tableKey string, key string, re
 	if c.client == nil {
 		return nil
 	}
+
+	// 创建 gorm-cache 专属 span
+	ctx, span := startCacheSpan(ctx, "Store",
+		attribute.String("cache.key", key),
+		attribute.String("cache.table_key", tableKey),
+	)
+	defer endSpan(span)
 
 	if ttl <= 0 {
 		ttl = c.defaultTTL
@@ -237,6 +251,12 @@ func (c *RedisCacher) InvalidateTable(ctx context.Context, tableKey string) erro
 		return nil
 	}
 
+	// 创建 gorm-cache 专属 span
+	ctx, span := startCacheSpan(ctx, "InvalidateTable",
+		attribute.String("cache.table_key", tableKey),
+	)
+	defer endSpan(span)
+
 	// indexKey 格式: gorm:cache:_idx:{dbName}:{tableName}
 	indexKey := indexKeyPrefix + tableKey
 
@@ -307,6 +327,10 @@ func (c *RedisCacher) InvalidateAll(ctx context.Context) error {
 		return nil
 	}
 
+	// 创建 gorm-cache 专属 span
+	ctx, span := startCacheSpan(ctx, "InvalidateAll")
+	defer endSpan(span)
+
 	// 使用 SCAN 查找所有缓存键
 	pattern := IdentifierPrefix + "*"
 	keys, err := cache.ScanRedisKeysDefault(ctx, c.client, pattern)
@@ -344,6 +368,10 @@ func (c *RedisCacher) GetStats(ctx context.Context) map[string]int64 {
 	if c.client == nil {
 		return nil
 	}
+
+	// 创建 gorm-cache 专属 span
+	ctx, span := startCacheSpan(ctx, "GetStats")
+	defer endSpan(span)
 
 	stats := make(map[string]int64)
 

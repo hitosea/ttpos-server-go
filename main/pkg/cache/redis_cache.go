@@ -88,6 +88,9 @@ func newRedisCache(conf Config) Cache {
 			log.Fatal("initClusterRedis client.Ping err: ", errPing)
 		}
 	}
+	// 启用 OpenTelemetry 追踪
+	enableRedisTracing(client, clusterClient)
+
 	return &redisCache{
 		client:        client,
 		clusterClient: clusterClient,
@@ -209,4 +212,110 @@ func (c *redisCache) Del(key ...string) {
 		return
 	}
 	c.client.Del(context.Background(), key...)
+}
+
+// ==================== WithContext 方法 - 支持链路追踪 ====================
+
+func (c *redisCache) SetWithContext(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	if c.clusterClient != nil {
+		return c.clusterClient.Set(ctx, key, value, expiration).Err()
+	}
+	return c.client.Set(ctx, key, value, expiration).Err()
+}
+
+func (c *redisCache) GetWithContext(ctx context.Context, key string) (interface{}, bool) {
+	if c.clusterClient != nil {
+		val, err := c.clusterClient.Get(ctx, key).Result()
+		if err != nil {
+			return nil, false
+		}
+		return val, true
+	}
+	val, err := c.client.Get(ctx, key).Result()
+	if err != nil {
+		return nil, false
+	}
+	return val, true
+}
+
+func (c *redisCache) GetBytesWithContext(ctx context.Context, key string) ([]byte, bool) {
+	if c.clusterClient != nil {
+		val, err := c.clusterClient.Get(ctx, key).Bytes()
+		if err != nil {
+			return nil, false
+		}
+		return val, true
+	}
+	val, err := c.client.Get(ctx, key).Bytes()
+	if err != nil {
+		return nil, false
+	}
+	return val, true
+}
+
+func (c *redisCache) GetBatchBytesWithContext(ctx context.Context, keys []string) (map[string][]byte, []string) {
+	result := make(map[string][]byte)
+	var missedKeys []string
+
+	if c.clusterClient != nil {
+		vals, err := c.clusterClient.MGet(ctx, keys...).Result()
+		if err != nil {
+			return result, keys
+		}
+
+		for i, key := range keys {
+			if i < len(vals) && vals[i] != nil {
+				switch v := vals[i].(type) {
+				case string:
+					result[key] = []byte(v)
+				case []byte:
+					result[key] = v
+				default:
+					bytes, err := json.Marshal(v)
+					if err != nil {
+						missedKeys = append(missedKeys, key)
+						continue
+					}
+					result[key] = bytes
+				}
+			} else {
+				missedKeys = append(missedKeys, key)
+			}
+		}
+	} else {
+		vals, err := c.client.MGet(ctx, keys...).Result()
+		if err != nil {
+			return result, keys
+		}
+
+		for i, key := range keys {
+			if i < len(vals) && vals[i] != nil {
+				switch v := vals[i].(type) {
+				case string:
+					result[key] = []byte(v)
+				case []byte:
+					result[key] = v
+				default:
+					bytes, err := json.Marshal(v)
+					if err != nil {
+						missedKeys = append(missedKeys, key)
+						continue
+					}
+					result[key] = bytes
+				}
+			} else {
+				missedKeys = append(missedKeys, key)
+			}
+		}
+	}
+
+	return result, missedKeys
+}
+
+func (c *redisCache) DelWithContext(ctx context.Context, keys ...string) {
+	if c.clusterClient != nil {
+		c.clusterClient.Del(ctx, keys...)
+		return
+	}
+	c.client.Del(ctx, keys...)
 }
