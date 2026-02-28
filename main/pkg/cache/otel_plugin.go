@@ -18,6 +18,8 @@ import (
 //	otlp.Init(ctx, config)  // 先初始化 OTLP
 //	cache.EnableTracing()   // 再启用 Redis 追踪
 func EnableTracing() {
+	log.Printf("[OTLP] EnableTracing called")
+
 	if Global == nil {
 		log.Printf("[OTLP] Redis cache not initialized, skip tracing")
 		return
@@ -25,6 +27,8 @@ func EnableTracing() {
 
 	client := Global.GetClient()
 	clusterClient := Global.GetClusterClient()
+
+	log.Printf("[OTLP] Redis client: %v, cluster client: %v", client != nil, clusterClient != nil)
 
 	enableRedisTracing(client, clusterClient)
 }
@@ -35,7 +39,12 @@ func EnableTracing() {
 //   - clusterClient: Redis 集群客户端（可为 nil）
 func enableRedisTracing(client *redis.Client, clusterClient *redis.ClusterClient) {
 	cfg := otlp.Config()
-	if cfg == nil || !cfg.Enabled {
+	if cfg == nil {
+		log.Printf("[OTLP] Redis tracing skipped: otlp.Config() is nil")
+		return
+	}
+	if !cfg.Enabled {
+		log.Printf("[OTLP] Redis tracing skipped: OTLP not enabled")
 		return
 	}
 
