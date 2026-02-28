@@ -46,7 +46,7 @@ RUN chmod +x main
 FROM ubuntu:latest
 
 # 安装 ca-certificates 和 curl
-RUN apt-get update && apt-get install -y ca-certificates curl golang
+RUN apt-get update && apt-get install -y ca-certificates curl
 
 RUN apt-get clean && apt-get autoclean && apt-get autoremove --yes \
 && rm -rf /var/lib/{apt,dpkg,cache,log}/
@@ -66,3 +66,4 @@ EXPOSE 8080
 # 运行应用
 
 CMD ["./main"]
+
