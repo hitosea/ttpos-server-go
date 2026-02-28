@@ -99,6 +99,7 @@ var rootCommand = &cobra.Command{
 		var dbm *database.DBManager = database.GetDBManager(config.Database)
 
 		// ==================== GORM 查询缓存（一键注释此区块可禁用）====================
+		fmt.Println("[GORM Cache] 启用 GORM 查询缓存")
 		gormcache.Init(&gormcache.Config{
 			Easer:   true,            // 启用请求合并（相同查询只执行一次）
 			TTL:     5 * time.Minute, // 缓存 5 分钟
