@@ -59,6 +59,7 @@ func Init(conf *Config) {
 			zap.Int64("maxRows", conf.MaxRows),
 			zap.Int("tables", len(conf.Tables)),
 			zap.Int("excludeTables", len(conf.ExcludeTables)),
+			zap.Int("allowDBs", len(conf.AllowDBs)),
 			zap.Int("excludeDBs", len(conf.ExcludeDBs)),
 		)
 	})
@@ -91,9 +92,24 @@ func Enable(db *gorm.DB, conf *Config) error {
 		conf.Cacher = NewRedisCacher()
 	}
 
-	// 检查数据库是否在黑名单中（商户级别禁用）
-	if len(conf.ExcludeDBs) > 0 {
-		dbName := extractDBName(db)
+	// 检查数据库访问控制（商户级别）
+	dbName := extractDBName(db)
+
+	// 白名单模式（内测）：只允许指定商户使用缓存
+	if len(conf.AllowDBs) > 0 {
+		allowed := false
+		for _, allowDB := range conf.AllowDBs {
+			if dbName == allowDB {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			// 不在白名单中，跳过
+			return nil
+		}
+	} else if len(conf.ExcludeDBs) > 0 {
+		// 黑名单模式：排除指定商户
 		for _, excludeDB := range conf.ExcludeDBs {
 			if dbName == excludeDB {
 				logDebug("gormcache: 数据库在黑名单中，跳过启用",
@@ -187,6 +203,14 @@ func WithExcludeTables(tables ...string) ConfigOption {
 func WithExcludeDBs(dbs ...string) ConfigOption {
 	return func(c *Config) {
 		c.ExcludeDBs = dbs
+	}
+}
+
+// WithAllowDBs 设置允许数据库白名单（商户级别，用于内测）
+// 设置后只有白名单中的商户才会启用缓存，ExcludeDBs 配置无效
+func WithAllowDBs(dbs ...string) ConfigOption {
+	return func(c *Config) {
+		c.AllowDBs = dbs
 	}
 }
 

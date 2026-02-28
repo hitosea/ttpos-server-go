@@ -75,6 +75,12 @@ type Config struct {
 	// 格式示例: []string{"shop1234567890", "shop9876543210"}
 	ExcludeDBs []string
 
+	// AllowDBs 允许缓存的数据库名列表（商户白名单，用于内测）
+	// 如果设置了此配置，只有白名单中的数据库才会启用缓存
+	// 优先级高于 ExcludeDBs（设置白名单后黑名单无效）
+	// 格式示例: []string{"shop1234567890", "shop9876543210"}
+	AllowDBs []string
+
 	// InvalidateOnWrite 写操作后是否自动失效缓存
 	// 默认为 true
 	InvalidateOnWrite *bool
