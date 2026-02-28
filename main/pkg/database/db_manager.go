@@ -22,11 +22,13 @@ type DBManager struct {
 	conf          config.DatabaseConf
 	lastCheck     map[uint64]time.Time // 新增：记录最后检查时间
 	checkInterval time.Duration        // 新增：检查间隔
-	onDBReady     func(*gorm.DB)       // 数据库就绪时的回调（用于启用缓存等）
+	onDBReady     OnDBReadyFunc        // 数据库就绪时的回调（用于启用缓存等）
 }
 
 // OnDBReadyFunc 数据库就绪回调函数类型
-type OnDBReadyFunc func(*gorm.DB)
+// db: GORM 数据库连接
+// dbName: 数据库名称（如 "saas" 或 "shop123456"）
+type OnDBReadyFunc func(db *gorm.DB, dbName string)
 
 var (
 	instance *DBManager
@@ -80,8 +82,12 @@ func (m *DBManager) EnableCacheForAllDBs() {
 		return
 	}
 
-	for _, db := range m.dbs {
-		m.onDBReady(db)
+	for index, db := range m.dbs {
+		dbName := "saas"
+		if index > 0 {
+			dbName = fmt.Sprintf("%s%d", constant.DBNamePrefix, index)
+		}
+		m.onDBReady(db, dbName)
 	}
 }
 
@@ -142,7 +148,7 @@ func (m *DBManager) GetDB(index uint64) *gorm.DB {
 	m.lastCheck[index] = time.Now() // 记录检查时间
 
 	// 触发数据库就绪回调（用于启用缓存等）
-	m.triggerOnDBReady(companyDB)
+	m.triggerOnDBReady(companyDB, dbName)
 
 	return companyDB
 }
@@ -233,12 +239,13 @@ func CloseAll() error {
 
 // SetOnDBReady 设置数据库就绪回调
 // 当数据库连接创建或首次返回时，会调用此回调
-// 常用于自动启用 GORM 缓存插件
+// 常用于自动启用 GORM 缓存插件和链路追踪
 //
 // 示例:
 //
-//	database.SetOnDBReady(func(db *gorm.DB) {
+//	database.SetOnDBReady(func(db *gorm.DB, dbName string) {
 //	    gormcache.Enable(db, nil)
+//	    enableGormTracing(db, dbName)
 //	})
 func SetOnDBReady(fn OnDBReadyFunc) {
 	if instance != nil {
@@ -252,9 +259,9 @@ func (m *DBManager) SetOnDBReady(fn OnDBReadyFunc) {
 }
 
 // triggerOnDBReady 触发数据库就绪回调
-func (m *DBManager) triggerOnDBReady(db *gorm.DB) {
+func (m *DBManager) triggerOnDBReady(db *gorm.DB, dbName string) {
 	if m.onDBReady != nil && db != nil {
-		m.onDBReady(db)
+		m.onDBReady(db, dbName)
 	}
 }
 

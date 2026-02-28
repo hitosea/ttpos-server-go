@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
@@ -17,15 +18,16 @@ import (
 //
 //	gorm:cache:{dbName}:{tableName}:{sql}:{params}
 //
-// 表索引 Key 结构（SET 类型）：
+// 表索引 Key 结构（ZSET 类型，score 为时间戳）：
 //
-//	gorm:cache:_idx:{dbName}:{tableName} → SET{key1, key2, ...}
+//	gorm:cache:_idx:{dbName}:{tableName} → ZSET{(key1, timestamp1), (key2, timestamp2), ...}
 //
 // 注意：多实例部署时，索引始终从 Redis 获取，确保缓存一致性
 type RedisCacher struct {
 	client        redis.UniversalClient // Redis 客户端（支持单机和集群）
 	defaultTTL    time.Duration         // 默认过期时间
 	indexTTL      time.Duration         // 索引过期时间（比数据 TTL 长）
+	maxIndexSize  int64                 // 索引最大数量，超过时淘汰最早的缓存
 	enableMetrics bool                  // 是否启用指标统计
 }
 
@@ -58,12 +60,22 @@ func WithMetrics(enable bool) RedisCacherOption {
 	}
 }
 
+// WithMaxIndexSize 设置索引最大数量
+// 超过此数量时，会淘汰最早的缓存键
+// 默认值 1000，设置为 0 表示不限制
+func WithMaxIndexSize(size int64) RedisCacherOption {
+	return func(c *RedisCacher) {
+		c.maxIndexSize = size
+	}
+}
+
 // NewRedisCacher 创建 Redis 缓存实例
 // 使用项目全局的 cache.Global 作为底层存储
 func NewRedisCacher(opts ...RedisCacherOption) *RedisCacher {
 	c := &RedisCacher{
-		defaultTTL: 5 * time.Minute,
-		indexTTL:   6 * time.Minute, // 索引比数据多存 1 分钟
+		defaultTTL:   5 * time.Minute,
+		indexTTL:     6 * time.Minute, // 索引比数据多存 1 分钟
+		maxIndexSize: 1000,            // 默认最大索引数量
 	}
 
 	for _, opt := range opts {
@@ -85,9 +97,10 @@ func NewRedisCacher(opts ...RedisCacherOption) *RedisCacher {
 // NewRedisCacherWithClient 使用指定的 Redis 客户端创建缓存实例
 func NewRedisCacherWithClient(client redis.UniversalClient, opts ...RedisCacherOption) *RedisCacher {
 	c := &RedisCacher{
-		client:     client,
-		defaultTTL: 5 * time.Minute,
-		indexTTL:   6 * time.Minute,
+		client:       client,
+		defaultTTL:   5 * time.Minute,
+		indexTTL:     6 * time.Minute,
+		maxIndexSize: 1000, // 默认最大索引数量
 	}
 
 	for _, opt := range opts {
@@ -102,6 +115,12 @@ func (c *RedisCacher) Get(ctx context.Context, key string) (*QueryResult, bool) 
 	if c.client == nil {
 		return nil, false
 	}
+
+	// 创建 gorm-cache 专属 span
+	ctx, span := startCacheSpan(ctx, "Get",
+		attribute.String("cache.key", key),
+	)
+	defer endSpan(span)
 
 	data, err := c.client.Get(ctx, key).Bytes()
 	if err != nil {
@@ -133,6 +152,13 @@ func (c *RedisCacher) Store(ctx context.Context, tableKey string, key string, re
 		return nil
 	}
 
+	// 创建 gorm-cache 专属 span
+	ctx, span := startCacheSpan(ctx, "Store",
+		attribute.String("cache.key", key),
+		attribute.String("cache.table_key", tableKey),
+	)
+	defer endSpan(span)
+
 	if ttl <= 0 {
 		ttl = c.defaultTTL
 	}
@@ -147,16 +173,18 @@ func (c *RedisCacher) Store(ctx context.Context, tableKey string, key string, re
 		return err
 	}
 
+	// indexKey 格式: gorm:cache:_idx:{dbName}:{tableName}
+	indexKey := indexKeyPrefix + tableKey
+	now := float64(time.Now().UnixNano())
+
 	// 使用 Pipeline 批量操作
 	pipe := c.client.Pipeline()
 
 	// 1. 存储缓存数据
 	pipe.Set(ctx, key, data, ttl)
 
-	// 2. 更新表索引（SET 类型）
-	// indexKey 格式: gorm:cache:_idx:{dbName}:{tableName}
-	indexKey := indexKeyPrefix + tableKey
-	pipe.SAdd(ctx, indexKey, key)
+	// 2. 更新表索引（ZSET 类型，score 为时间戳）
+	pipe.ZAdd(ctx, indexKey, redis.Z{Score: now, Member: key})
 	pipe.Expire(ctx, indexKey, c.indexTTL)
 
 	_, err = pipe.Exec(ctx)
@@ -169,6 +197,11 @@ func (c *RedisCacher) Store(ctx context.Context, tableKey string, key string, re
 		return err
 	}
 
+	// 3. 检查索引大小，超限时淘汰最早的缓存
+	if c.maxIndexSize > 0 {
+		c.evictOldestIfNeeded(ctx, indexKey, tableKey)
+	}
+
 	logDebug("gormcache: 缓存存储成功",
 		zap.String("key", key),
 		zap.String("tableKey", tableKey),
@@ -179,6 +212,37 @@ func (c *RedisCacher) Store(ctx context.Context, tableKey string, key string, re
 	return nil
 }
 
+// evictOldestIfNeeded 如果索引超限，淘汰最早的缓存
+func (c *RedisCacher) evictOldestIfNeeded(ctx context.Context, indexKey string, tableKey string) {
+	// 获取当前索引大小
+	size, err := c.client.ZCard(ctx, indexKey).Result()
+	if err != nil || size <= c.maxIndexSize {
+		return
+	}
+
+	// 计算需要淘汰的数量
+	evictCount := size - c.maxIndexSize
+
+	// 获取最早的 N 个缓存键（score 最小的）
+	oldKeys, err := c.client.ZRange(ctx, indexKey, 0, evictCount-1).Result()
+	if err != nil || len(oldKeys) == 0 {
+		return
+	}
+
+	// 删除缓存数据和索引
+	for _, key := range oldKeys {
+		c.client.Del(ctx, key)
+		c.client.ZRem(ctx, indexKey, key)
+	}
+
+	logDebug("gormcache: 淘汰最早的缓存",
+		zap.String("tableKey", tableKey),
+		zap.Int("evictCount", len(oldKeys)),
+		zap.Int64("currentSize", size),
+		zap.Int64("maxSize", c.maxIndexSize),
+	)
+}
+
 // InvalidateTable 失效指定表的所有缓存
 // tableKey: 表索引键，格式为 {dbName}:{tableName}，用于多租户隔离
 // 注意：始终从 Redis 获取索引，确保多实例部署时缓存一致性
@@ -187,10 +251,33 @@ func (c *RedisCacher) InvalidateTable(ctx context.Context, tableKey string) erro
 		return nil
 	}
 
-	// 从 Redis 获取索引（确保多实例一致性）
+	// 创建 gorm-cache 专属 span
+	ctx, span := startCacheSpan(ctx, "InvalidateTable",
+		attribute.String("cache.table_key", tableKey),
+	)
+	defer endSpan(span)
+
 	// indexKey 格式: gorm:cache:_idx:{dbName}:{tableName}
 	indexKey := indexKeyPrefix + tableKey
-	keys, err := c.client.SMembers(ctx, indexKey).Result()
+
+	// 获取索引大小
+	keyCount, err := c.client.ZCard(ctx, indexKey).Result()
+	if err != nil && err != redis.Nil {
+		logWarn("gormcache: 获取索引大小失败",
+			zap.String("tableKey", tableKey),
+			zap.Error(err),
+		)
+	}
+
+	if keyCount == 0 {
+		logDebug("gormcache: 表缓存为空，跳过失效",
+			zap.String("tableKey", tableKey),
+		)
+		return nil
+	}
+
+	// 从 ZSET 获取所有缓存键
+	keys, err := c.client.ZRange(ctx, indexKey, 0, -1).Result()
 	if err != nil && err != redis.Nil {
 		logWarn("gormcache: 获取表索引失败",
 			zap.String("tableKey", tableKey),
@@ -199,9 +286,6 @@ func (c *RedisCacher) InvalidateTable(ctx context.Context, tableKey string) erro
 	}
 
 	if len(keys) == 0 {
-		logDebug("gormcache: 表缓存为空，跳过失效",
-			zap.String("tableKey", tableKey),
-		)
 		return nil
 	}
 
@@ -243,6 +327,10 @@ func (c *RedisCacher) InvalidateAll(ctx context.Context) error {
 		return nil
 	}
 
+	// 创建 gorm-cache 专属 span
+	ctx, span := startCacheSpan(ctx, "InvalidateAll")
+	defer endSpan(span)
+
 	// 使用 SCAN 查找所有缓存键
 	pattern := IdentifierPrefix + "*"
 	keys, err := cache.ScanRedisKeysDefault(ctx, c.client, pattern)
@@ -281,6 +369,10 @@ func (c *RedisCacher) GetStats(ctx context.Context) map[string]int64 {
 		return nil
 	}
 
+	// 创建 gorm-cache 专属 span
+	ctx, span := startCacheSpan(ctx, "GetStats")
+	defer endSpan(span)
+
 	stats := make(map[string]int64)
 
 	// 扫描所有索引键
@@ -292,7 +384,7 @@ func (c *RedisCacher) GetStats(ctx context.Context) map[string]int64 {
 
 	for _, key := range keys {
 		tableKey := key[len(indexKeyPrefix):]
-		count, _ := c.client.SCard(ctx, key).Result()
+		count, _ := c.client.ZCard(ctx, key).Result()
 		stats[tableKey] = count
 	}
 

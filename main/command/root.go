@@ -91,6 +91,9 @@ var rootCommand = &cobra.Command{
 			fmt.Printf("[FATAL] Failed to initialize OpenTelemetry: %v\n", err)
 			logger.Logger.Error("Failed to initialize OpenTelemetry", zap.Error(err))
 		}
+
+		// 为 Redis 启用链路追踪（必须在 otlp.Init 之后）
+		cache.EnableTracing()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		defer logger.Logger.Sync()
@@ -180,8 +183,8 @@ var rootCommand = &cobra.Command{
 				"ttpos_printer",
 			},
 		})
-		database.SetOnDBReady(func(db *gorm.DB) {
-			gormcache.Enable(db, nil)
+		database.SetOnDBReady(func(db *gorm.DB, dbName string) {
+			gormcache.Enable(db, dbName, nil)
 		})
 		dbm.EnableCacheForAllDBs()
 		// ==================== GORM 查询缓存结束 ====================

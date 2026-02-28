@@ -25,13 +25,12 @@ const (
 // 因此可以安全地在 Query 回调中调用
 //
 // 重要：必须包含 dbName 以区分不同商户数据库，避免多租户数据串库
-func buildIdentifier(db *gorm.DB) (tableName string, key string) {
+func buildIdentifier(db *gorm.DB, dbName string) (tableName string, key string) {
 	// 使用 GORM 官方的 callbacks 包构建 SQL
 	// 这是 go-gorm/caches 官方库使用的方法
 	callbacks.BuildQuerySQL(db)
 
 	tableName = extractTableName(db)
-	dbName := extractDBName(db) // 获取数据库名称（如 shop8267304538112000）
 
 	// 构建唯一标识（包含数据库名以支持多租户隔离）
 	var builder strings.Builder
@@ -50,8 +49,8 @@ func buildIdentifier(db *gorm.DB) (tableName string, key string) {
 
 // buildTableKey 构建表索引键，格式为 {dbName}:{tableName}
 // 用于多租户隔离，确保不同商户的缓存不会混淆
-func buildTableKey(db *gorm.DB, tableName string) string {
-	return extractDBName(db) + ":" + tableName
+func buildTableKey(dbName string, tableName string) string {
+	return dbName + ":" + tableName
 }
 
 // dbNameCache 缓存数据库名（用于非 CustomGormLogger 的备选方案）
