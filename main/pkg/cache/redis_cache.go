@@ -88,8 +88,6 @@ func newRedisCache(conf Config) Cache {
 			log.Fatal("initClusterRedis client.Ping err: ", errPing)
 		}
 	}
-	// 启用 OpenTelemetry 追踪
-	enableRedisTracing(client, clusterClient)
 
 	return &redisCache{
 		client:        client,
