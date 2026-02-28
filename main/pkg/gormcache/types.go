@@ -27,15 +27,16 @@ type Cacher interface {
 	Get(ctx context.Context, key string) (*QueryResult, bool)
 
 	// Store 将查询结果存入缓存
-	// tableName: 表名，用于后续的表级失效
+	// tableKey: 表索引键，格式为 {dbName}:{tableName}，用于多租户隔离和表级失效
 	// key: 缓存键
 	// result: 查询结果
 	// ttl: 过期时间
-	Store(ctx context.Context, tableName string, key string, result *QueryResult, ttl time.Duration) error
+	Store(ctx context.Context, tableKey string, key string, result *QueryResult, ttl time.Duration) error
 
 	// InvalidateTable 失效指定表的所有缓存
+	// tableKey: 表索引键，格式为 {dbName}:{tableName}
 	// 在 INSERT/UPDATE/DELETE 后调用
-	InvalidateTable(ctx context.Context, tableName string) error
+	InvalidateTable(ctx context.Context, tableKey string) error
 
 	// InvalidateAll 失效所有缓存
 	InvalidateAll(ctx context.Context) error
@@ -69,6 +70,17 @@ type Config struct {
 	// 如果设置了 Tables 白名单，此配置无效
 	ExcludeTables []string
 
+	// ExcludeDBs 排除缓存的数据库名列表（商户黑名单）
+	// 在黑名单中的数据库不会启用缓存
+	// 格式示例: []string{"shop1234567890", "shop9876543210"}
+	ExcludeDBs []string
+
+	// AllowDBs 允许缓存的数据库名列表（商户白名单，用于内测）
+	// 如果设置了此配置，只有白名单中的数据库才会启用缓存
+	// 优先级高于 ExcludeDBs（设置白名单后黑名单无效）
+	// 格式示例: []string{"shop1234567890", "shop9876543210"}
+	AllowDBs []string
+
 	// InvalidateOnWrite 写操作后是否自动失效缓存
 	// 默认为 true
 	InvalidateOnWrite *bool
@@ -89,13 +101,3 @@ func DefaultConfig() *Config {
 	}
 }
 
-// HitStats 缓存命中统计
-type HitStats struct {
-	TableName string // 表名
-	Hits      int64  // 命中次数
-	Misses    int64  // 未命中次数
-	Eased     int64  // Easer 合并次数
-}
-
-// StatsCallback 统计回调函数
-type StatsCallback func(stats HitStats)

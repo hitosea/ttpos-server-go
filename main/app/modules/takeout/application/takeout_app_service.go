@@ -632,13 +632,21 @@ func (s *takeoutAppService) handleDebouncedMenuSync(ctx context.Context, req req
 	}
 
 	// 创建新的 timer，2秒后执行同步
-	// 注意：timer 回调在独立 goroutine 中执行，不能复用原请求的 ctx（其数据库连接已关闭）
-	// 需要创建新的 context 并重新获取数据库连接
+	// 注意：timer 回调在独立 goroutine 中执行，不能复用原请求的 ctx（其 gin 与 DB 可能已失效）
+	// 使用 Copy() 会复制 gin 引用，请求结束后 gin 为 nil，故必须用新 DB 且不依赖 GetGin()
 	companyUuid := req.CompanyUuid
 	timer := time.AfterFunc(1*time.Second, func() {
-		// 重新获取数据库连接
+		db := s.dbm.GetDB(companyUuid)
+		if db == nil {
+			logger.Logger.Error("防抖菜单同步失败：无法获取数据库连接",
+				zap.String("sync_key", syncKey),
+				zap.String("platform", req.Platform),
+				zap.Uint64("company_uuid", companyUuid))
+			menuSyncDebounceTimers.Delete(syncKey)
+			return
+		}
 		newCtx := ctx.Copy()
-		newCtx.SetDB(s.dbm.GetDB(companyUuid))
+		newCtx.SetDB(db)
 
 		_, err := s.directSyncMenuChanges(newCtx, req)
 		if err != nil {

@@ -1882,7 +1882,7 @@ func (s *businessSrv) StatsKitchenEfficiencyAnalysis(ctx context.Context) (strin
 	startTime, endTime := timezoneUtils.TodayStartEndUnix()
 	dateString := timezoneUtils.FormatUnixTime(startTime, "2006-01-02")
 
-	logger.Logger.Info("统计当天后厨效率分析数据", zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.String("timezone", timezone), zap.String("dateString", dateString), zap.Int64("startTime", startTime), zap.Int64("endTime", endTime))
+	logger.StockAlertLogger.Info("统计当天后厨效率分析数据", zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.String("timezone", timezone), zap.String("dateString", dateString), zap.Int64("startTime", startTime), zap.Int64("endTime", endTime))
 
 	// 查询所有套餐
 	productPackageRepo := repository.NewProductPackageRepo(db)

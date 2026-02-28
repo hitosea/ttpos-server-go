@@ -964,7 +964,7 @@ func (s *paymentMethodSrv) syncFromERP(ctx context.Context) error {
 
 		if err == gorm.ErrRecordNotFound {
 			// 首次同步：创建新记录
-			if err := s.createPaymentFromERP(tx, erpPayment, companySetting.CompanyUuid); err != nil {
+			if err := s.createPaymentFromERP(tx, erpPayment, companySetting.ErpnextCompanyAbbr); err != nil {
 				tx.Rollback()
 				return errors.WithMessage(err, "创建支付方式失败")
 			}
@@ -1130,10 +1130,43 @@ func (s *paymentMethodSrv) getModeOfPaymentListFromERP(ctx context.Context, comp
 func (s *paymentMethodSrv) createPaymentFromERP(
 	tx *gorm.DB,
 	erpPayment *selling.ModeOfPayment,
-	_ uint64,
+	companyAbbr string,
 ) error {
-	// 1. 生成 code（使用 generatePaymentCode，从 20000 开始，每次递增 100）
+	// 1. 判断是否为 Grab/LINE MAN 系统默认支付方式
+	// ERP 名称格式：{PayType}-0000 - {company_abbr}，如 "Grab-0000 - ABC"
+	name := erpPayment.Name
+	paymentName := erpPayment.Name
 	code := s.generatePaymentCode(tx)
+	source := model.PaymentSourceDefault // 1=手动添加
+	isShowCashier := 1
+	isShowAssistant := 1
+	isShowMemberRecharge := 1
+	defaultImg := "/image/pay/ja_pay.png"
+
+	grabERPName := s.buildERPPaymentName(constant.PaymentMethodNameGrab, companyAbbr)
+	lineManERPName := s.buildERPPaymentName(constant.PaymentMethodNameLineMan, companyAbbr)
+
+	if erpPayment.Name == grabERPName {
+		// Grab 系统默认支付方式
+		name = constant.PaymentMethodNameGrab
+		paymentName = constant.PaymentMethodNameGrab
+		code = constant.PaymentMethodCodeGrab
+		source = constant.PaymentMethodSourceSystem // 0=系统默认
+		isShowCashier = 0
+		isShowAssistant = 0
+		isShowMemberRecharge = 0
+		defaultImg = ""
+	} else if erpPayment.Name == lineManERPName {
+		// LINE MAN 系统默认支付方式
+		name = constant.PaymentMethodNameLineMan
+		paymentName = constant.PaymentMethodNameLineMan
+		code = constant.PaymentMethodCodeLineMan
+		source = constant.PaymentMethodSourceSystem // 0=系统默认
+		isShowCashier = 0
+		isShowAssistant = 0
+		isShowMemberRecharge = 0
+		defaultImg = ""
+	}
 
 	// 2. 确定状态
 	status := 0
@@ -1143,23 +1176,23 @@ func (s *paymentMethodSrv) createPaymentFromERP(
 
 	// 3. 创建支付方式
 	newPayment := model.PaymentMethod{
-		Name:                 erpPayment.Name,
+		Name:                 name,
 		Code:                 code,
-		PaymentName:          erpPayment.Name,
-		Source:               model.PaymentSourceDefault, // 1=手动添加
-		LogoFileUuid:         0,                          // 使用默认图标
+		PaymentName:          paymentName,
+		Source:               source,
+		LogoFileUuid:         0, // 使用默认图标
 		QrcodeFileUuid:       0,
 		FeePercent:           0.0000,
-		IsShowCashier:        1, // 收银机显示
-		IsShowAssistant:      1, // 点餐助手显示
+		IsShowCashier:        isShowCashier,
+		IsShowAssistant:      isShowAssistant,
 		IsShowKiosk:          0, // 自助机不显示
-		IsShowMemberRecharge: 1, // 充值显示
+		IsShowMemberRecharge: isShowMemberRecharge,
 		Status:               status,
 		Sort:                 0,
-		DefaultImg:           "/image/pay/ja_pay.png", // 使用默认图标
-		ErpnextPayment:       erpPayment.Name,         // 关联 ERP 名称（向后兼容）
-		ErpnextPaymentId:     erpPayment.PaymentId,    // 保存 ERP PaymentID（优先关联字段）
-		HeadquarterUuid:      0,                       // 散户/总店/子店=0
+		DefaultImg:           defaultImg,
+		ErpnextPayment:       erpPayment.Name,      // 关联 ERP 名称（向后兼容）
+		ErpnextPaymentId:     erpPayment.PaymentId, // 保存 ERP PaymentID（优先关联字段）
+		HeadquarterUuid:      0,                    // 散户/总店/子店=0
 	}
 	// Uuid 会在 BeforeCreate Hook 中自动生成
 
@@ -1168,9 +1201,11 @@ func (s *paymentMethodSrv) createPaymentFromERP(
 	}
 
 	logger.Logger.Info("创建支付方式成功",
-		zap.String("name", erpPayment.Name),
+		zap.String("name", name),
+		zap.String("erp_name", erpPayment.Name),
 		zap.String("payment_id", erpPayment.PaymentId),
 		zap.Int("code", code),
+		zap.Int("source", source),
 		zap.Int("status", status),
 		zap.Uint64("uuid", newPayment.Uuid))
 
@@ -1223,23 +1258,13 @@ func (s *paymentMethodSrv) SaveGrabPaymentMethod(ctx context.Context, tx *gorm.D
 			return errors.WithMessage(err, "创建 Grab 支付方式失败")
 		}
 
-		// 如果开启了 ERP，同步支付方式到 ERP
+		// 如果开启了 ERP，同步支付方式到 ERP（使用幂等性方法）
 		if ctx.GetCompany().IsOpenErp() {
-			erpSrv := erpService.NewIErpSrv(s.dbm)
-
-			// 根据 source 确定 channel
-			channel := erpService.GetChannelBySource(paymentMethod.Source)
-
-			addedBy := s.getAddedBy(paymentMethod.Source)
-
-			saveModeOfPaymentResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
-				CompanyUuid: ctx.GetCompanyUuid(),
-				Channel:     channel,
-				PayType:     paymentMethod.PaymentName,
-				AddedBy:     &addedBy,
-			})
+			saveModeOfPaymentResp, err := s.ensureERPPaymentMethod(ctx, paymentMethod.PaymentName, paymentMethod.Source)
 			if err != nil || saveModeOfPaymentResp == nil {
-				logger.Logger.Error("同步 Grab 支付方式到 ERP 失败", zap.Error(err))
+				logger.Logger.Error("SaveGrabPaymentMethod-ensureERPPaymentMethod",
+					zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+					zap.Error(err))
 				return errors.WithMessage(err, "创建 Grab 支付方式失败")
 			}
 			if saveModeOfPaymentResp.Name != "" {
@@ -1247,7 +1272,9 @@ func (s *paymentMethodSrv) SaveGrabPaymentMethod(ctx context.Context, tx *gorm.D
 					map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name, "erpnext_payment_id": saveModeOfPaymentResp.PaymentId},
 					repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
 				); err != nil {
-					logger.Logger.Error("更新 Grab 支付方式 ERP 名称失败", zap.Error(err))
+					logger.Logger.Error("SaveGrabPaymentMethod-UpdatePaymentMethod",
+						zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+						zap.Error(err))
 					return errors.WithMessage(err, "创建 Grab 支付方式失败")
 				}
 			}
@@ -1308,23 +1335,13 @@ func (s *paymentMethodSrv) SaveLineManPaymentMethod(ctx context.Context, tx *gor
 			return errors.WithMessage(err, "创建 LINE MAN 支付方式失败")
 		}
 
-		// 如果开启了 ERP，同步支付方式到 ERP
+		// 如果开启了 ERP，同步支付方式到 ERP（使用幂等性方法）
 		if ctx.GetCompany().IsOpenErp() {
-			erpSrv := erpService.NewIErpSrv(s.dbm)
-
-			// 根据 source 确定 channel
-			channel := erpService.GetChannelBySource(paymentMethod.Source)
-
-			addedBy := s.getAddedBy(paymentMethod.Source)
-
-			saveModeOfPaymentResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
-				CompanyUuid: ctx.GetCompanyUuid(),
-				Channel:     channel,
-				PayType:     paymentMethod.PaymentName,
-				AddedBy:     &addedBy,
-			})
+			saveModeOfPaymentResp, err := s.ensureERPPaymentMethod(ctx, paymentMethod.PaymentName, paymentMethod.Source)
 			if err != nil || saveModeOfPaymentResp == nil {
-				logger.Logger.Error("同步 LINE MAN 支付方式到 ERP 失败", zap.Error(err))
+				logger.Logger.Error("SaveLineManPaymentMethod-ensureERPPaymentMethod",
+					zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+					zap.Error(err))
 				return errors.WithMessage(err, "创建 LINE MAN 支付方式失败")
 			}
 			if saveModeOfPaymentResp.Name != "" {
@@ -1332,7 +1349,9 @@ func (s *paymentMethodSrv) SaveLineManPaymentMethod(ctx context.Context, tx *gor
 					map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name, "erpnext_payment_id": saveModeOfPaymentResp.PaymentId},
 					repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
 				); err != nil {
-					logger.Logger.Error("更新 LINE MAN 支付方式 ERP 名称失败", zap.Error(err))
+					logger.Logger.Error("SaveLineManPaymentMethod-UpdatePaymentMethod",
+						zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+						zap.Error(err))
 					return errors.WithMessage(err, "创建 LINE MAN 支付方式失败")
 				}
 			}
@@ -1354,4 +1373,131 @@ func (s *paymentMethodSrv) getAddedBy(source int) string {
 		return "sys"
 	}
 	return ""
+}
+
+// buildERPPaymentName 构造 ERP 支付方式名称
+// 格式：{PayType}-0000 - {company_abbr}（系统默认支付方式序号固定为 0000）
+func (s *paymentMethodSrv) buildERPPaymentName(payType string, companyAbbr string) string {
+	return fmt.Sprintf("%s-0000 - %s", payType, companyAbbr)
+}
+
+// getERPPaymentByName 从 ERP 按名称精确查询支付方式
+// 返回 nil 表示不存在，error 表示查询失败
+// 实现方式：获取支付方式列表后遍历匹配
+func (s *paymentMethodSrv) getERPPaymentByName(
+	ctx context.Context,
+	paymentName string,
+) (*selling.ModeOfPayment, error) {
+	companySetting := ctx.GetCompanySetting()
+
+	// 获取 ERP 支付方式列表
+	erpPayments, err := s.getModeOfPaymentListFromERP(ctx, &companySetting)
+	if err != nil {
+		logger.Logger.Error("getERPPaymentByName-getModeOfPaymentListFromERP",
+			zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+			zap.String("payment_name", paymentName),
+			zap.Error(err))
+		return nil, err
+	}
+
+	// 遍历列表匹配名称
+	for _, payment := range erpPayments {
+		if payment.GetName() == paymentName {
+			logger.Logger.Info("getERPPaymentByName-Found",
+				zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+				zap.String("payment_name", paymentName),
+				zap.String("payment_id", payment.GetPaymentId()))
+			return payment, nil
+		}
+	}
+
+	logger.Logger.Info("getERPPaymentByName-NotFound",
+		zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+		zap.String("payment_name", paymentName),
+		zap.Int("list_count", len(erpPayments)))
+	return nil, nil // 不存在
+}
+
+// ensureERPPaymentMethod 确保 ERP 支付方式存在（幂等性封装）
+// 如果已存在则返回现有数据，不存在则创建
+// 创建失败时重新查询确认状态
+func (s *paymentMethodSrv) ensureERPPaymentMethod(
+	ctx context.Context,
+	payType string,
+	source int,
+) (*selling.SaveModeOfPaymentResp, error) {
+	companySetting := ctx.GetCompanySetting()
+
+	// 1. 构造 ERP 支付方式名称
+	erpPaymentName := s.buildERPPaymentName(payType, companySetting.ErpnextCompanyAbbr)
+
+	logger.Logger.Info("ensureERPPaymentMethod-Start",
+		zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+		zap.String("pay_type", payType),
+		zap.String("erp_payment_name", erpPaymentName))
+
+	// 2. 先查询 ERP 是否已存在
+	erpPayment, err := s.getERPPaymentByName(ctx, erpPaymentName)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. 如果已存在，直接返回
+	if erpPayment != nil {
+		logger.Logger.Info("ensureERPPaymentMethod-AlreadyExists",
+			zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+			zap.String("erp_payment_name", erpPaymentName),
+			zap.String("erp_payment_id", erpPayment.GetPaymentId()))
+		return &selling.SaveModeOfPaymentResp{
+			Name:      erpPayment.GetName(),
+			PaymentId: erpPayment.GetPaymentId(),
+		}, nil
+	}
+
+	// 4. 不存在则创建
+	erpSrv := erpService.NewIErpSrv(s.dbm)
+	channel := erpService.GetChannelBySource(source)
+	addedBy := s.getAddedBy(source)
+
+	logger.Logger.Info("ensureERPPaymentMethod-Creating",
+		zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+		zap.String("pay_type", payType),
+		zap.String("channel", channel))
+
+	saveResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
+		CompanyUuid: ctx.GetCompanyUuid(),
+		Channel:     channel,
+		PayType:     payType,
+		AddedBy:     &addedBy,
+	})
+
+	// 5. 如果创建失败，重新查询确认状态
+	if err != nil {
+		logger.Logger.Warn("ensureERPPaymentMethod-CreateFailed-RetryQuery",
+			zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+			zap.String("erp_payment_name", erpPaymentName),
+			zap.Error(err))
+
+		erpPayment, queryErr := s.getERPPaymentByName(ctx, erpPaymentName)
+		if queryErr == nil && erpPayment != nil {
+			// ERP 实际已创建，返回查询结果
+			logger.Logger.Info("ensureERPPaymentMethod-CreateFailed-ButExists",
+				zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+				zap.String("erp_payment_name", erpPaymentName),
+				zap.String("erp_payment_id", erpPayment.GetPaymentId()))
+			return &selling.SaveModeOfPaymentResp{
+				Name:      erpPayment.GetName(),
+				PaymentId: erpPayment.GetPaymentId(),
+			}, nil
+		}
+		// 确认未创建，返回原始错误
+		return nil, err
+	}
+
+	logger.Logger.Info("ensureERPPaymentMethod-Created",
+		zap.String("company_uuid", fmt.Sprintf("%d", ctx.GetCompanyUuid())),
+		zap.String("erp_name", saveResp.Name),
+		zap.String("erp_payment_id", saveResp.PaymentId))
+
+	return saveResp, nil
 }

@@ -59,6 +59,8 @@ func Init(conf *Config) {
 			zap.Int64("maxRows", conf.MaxRows),
 			zap.Int("tables", len(conf.Tables)),
 			zap.Int("excludeTables", len(conf.ExcludeTables)),
+			zap.Int("allowDBs", len(conf.AllowDBs)),
+			zap.Int("excludeDBs", len(conf.ExcludeDBs)),
 		)
 	})
 }
@@ -81,12 +83,6 @@ func Enable(db *gorm.DB, conf *Config) error {
 		return nil
 	}
 
-	// 检查是否已启用
-	dbPtr := getDBPointer(db)
-	if _, loaded := enabledDBs.LoadOrStore(dbPtr, true); loaded {
-		return nil // 已启用，跳过
-	}
-
 	// 使用传入配置或全局配置
 	if conf == nil {
 		conf = globalConfig
@@ -96,6 +92,40 @@ func Enable(db *gorm.DB, conf *Config) error {
 		conf.Cacher = NewRedisCacher()
 	}
 
+	// 检查数据库访问控制（商户级别）
+	dbName := extractDBName(db)
+
+	// 白名单模式（内测）：只允许指定商户使用缓存
+	if len(conf.AllowDBs) > 0 {
+		allowed := false
+		for _, allowDB := range conf.AllowDBs {
+			if dbName == allowDB {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			// 不在白名单中，跳过
+			return nil
+		}
+	} else if len(conf.ExcludeDBs) > 0 {
+		// 黑名单模式：排除指定商户
+		for _, excludeDB := range conf.ExcludeDBs {
+			if dbName == excludeDB {
+				logDebug("gormcache: 数据库在黑名单中，跳过启用",
+					zap.String("db", dbName),
+				)
+				return nil
+			}
+		}
+	}
+
+	// 检查是否已启用
+	dbPtr := getDBPointer(db)
+	if _, loaded := enabledDBs.LoadOrStore(dbPtr, true); loaded {
+		return nil // 已启用，跳过
+	}
+
 	// 创建并注册插件
 	plugin := New(conf)
 	if err := db.Use(plugin); err != nil {
@@ -103,8 +133,8 @@ func Enable(db *gorm.DB, conf *Config) error {
 		return err
 	}
 
-	logDebug("gormcache: 数据库缓存已启用",
-		zap.String("db", db.Name()),
+	logInfo("gormcache: 数据库缓存已启用",
+		zap.String("db", dbName),
 	)
 
 	return nil
@@ -165,6 +195,22 @@ func WithTables(tables ...string) ConfigOption {
 func WithExcludeTables(tables ...string) ConfigOption {
 	return func(c *Config) {
 		c.ExcludeTables = tables
+	}
+}
+
+// WithExcludeDBs 设置排除数据库黑名单（商户级别禁用缓存）
+// 用于某些商户不希望使用 GORM 缓存的场景
+func WithExcludeDBs(dbs ...string) ConfigOption {
+	return func(c *Config) {
+		c.ExcludeDBs = dbs
+	}
+}
+
+// WithAllowDBs 设置允许数据库白名单（商户级别，用于内测）
+// 设置后只有白名单中的商户才会启用缓存，ExcludeDBs 配置无效
+func WithAllowDBs(dbs ...string) ConfigOption {
+	return func(c *Config) {
+		c.AllowDBs = dbs
 	}
 }
 

@@ -3971,9 +3971,13 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 	// 将物品消耗量与物品信息合并
 	materialConsumptionList := make([]material_resp.MaterialConsumption, 0)
 	for _, itemLog := range itemLogsMap {
+		material, ok := materialMap[itemLog.MaterialUuid]
+		if !ok {
+			continue
+		}
 		materialConsumptionList = append(materialConsumptionList, material_resp.MaterialConsumption{
 			MaterialUuid: itemLog.MaterialUuid,
-			MaterialCode: materialMap[itemLog.MaterialUuid].Code,
+			MaterialCode: material.Code,
 			Consumption:  itemLog.Consumption,
 		})
 	}
@@ -4125,7 +4129,7 @@ func (s *materialSrv) sendStockAlertEmail(ctx context.Context, alertType uint8, 
 		} else {
 			skipReason = "跳过发送预警邮件"
 		}
-		logger.Logger.Info(skipReason,
+		logger.StockAlertLogger.Info(skipReason,
 			zap.Uint64("company_uuid", sendReq.CompanyUuid),
 			zap.Uint64("material_uuid", sendReq.MaterialUuid),
 			zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),

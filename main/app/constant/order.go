@@ -246,4 +246,5 @@ const (
 	PosInvoiceItemCodeMembershipRecharge   = "VP002" // 会员充值
 	PosInvoiceItemCodeDeliveryFee          = "VP003" // 配送费
 	PosInvoiceItemCodePaymentProcessingFee = "VP004" // 支付手续费
+	PosInvoiceItemCodeSpareGoods           = "BY001" // 备用商品（Grab/LINE MAN 未映射商品兜底）
 )

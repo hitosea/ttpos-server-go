@@ -1522,8 +1522,8 @@ func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7Days
 
 	// 累加外卖订单数据
 	for _, item := range takeoutReceivedAmountData {
-		// 使用商家时区将时间戳转换为日期（使用接单时间）
-		day := timezone.FormatUnixTime(item.AcceptedTime, "2006-01-02")
+		// 使用商家时区将时间戳转换为日期（使用动态时间：已完成订单用完成时间，其他用接单时间）
+		day := timezone.FormatUnixTime(item.StatTime, "2006-01-02")
 
 		// 累加统计数据
 		if group, exists := groupedData[day]; exists {
@@ -1663,7 +1663,7 @@ func (s *statisticsSrv) RankProduct(ctx context.Context, req CountReq) []CountPr
 		))
 	}
 
-	// 提取时间范围，用于外卖订单查询（使用 accepted_time）
+	// 提取时间范围，用于外卖订单查询（已完成订单用 completed_time，其他用 accepted_time）
 	// 复用 buildCountOpts 中的时间范围提取逻辑
 	var timeStart, timeEnd int64
 	timezone := req.Timezone

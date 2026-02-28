@@ -301,6 +301,7 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 	// validOrderStates: 10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 60=已取消，且 accepted_time > 0
 	validOrderStates := []int{10, 20, 30, 40, 60}
 
+	// 使用动态时间条件：已完成订单用 completed_time，其他用 accepted_time
 	query5 := queryDb5.Table(takeoutOrderTable+" AS to_order").
 		Select("to_order.platform, "+
 			"CASE "+
@@ -310,7 +311,7 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 			"END AS name, "+
 			"COUNT(DISTINCT to_order.uuid) AS order_count").
 		Where("to_order.delete_time = ?", constant.NotDeleted).
-		Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", startTime, endTime).
+		Where(buildDynamicTimeCondition("to_order", startTime, endTime)).
 		Where("to_order.accepted_time > 0").
 		Where("to_order.order_state IN (?)", validOrderStates).
 		Where("to_order.platform IN (?, ?)", "grab", "lineman") // 只统计 Grab 和 LINE MAN
