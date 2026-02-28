@@ -25,6 +25,7 @@ class Buffet extends Controller
      * @Apidoc\Param("is_remain_continue", type="int", require=true, desc="剩余xx分不可继续点餐开关 0-关闭 1-开启（v1.0.4弃用）")
      * @Apidoc\Param("remain_continue_time", type="string", require=true, desc="剩余xx分不可继续点餐（v1.0.4弃用）")
      * @Apidoc\Param("remain_continue_notice_time", type="string", require=true, desc="剩余xx分提醒不可继续点餐（v1.0.4弃用）")
+     * @Apidoc\Param("is_show_non_buffet_product", type="string", require=true, desc="是否显示非自助餐商品 0-关闭 1-开启")
      * @Apidoc\Param("is_buy_continue", type="string", require=true, desc="非自助餐商品到时是否能继续选购")
      * @Apidoc\Param("is_buffet_discount", type="string", require=true, desc="是否开启自助餐折扣 0-否 1-是（v1.0.2弃用）")
      * @Apidoc\Param("add_buffet_discount", type="array", require=true, desc="自助餐设置（v1.0.2弃用）", children={
@@ -183,6 +184,7 @@ class Buffet extends Controller
             'remain_continue_time' => $data['remain_continue_time'], // 剩余xx分不可继续点餐
             'remain_continue_notice_time' => $data['remain_continue_notice_time'], // 剩余xx分提醒不可继续点餐
             'is_buy_continue' => $data['is_buy_continue'] ?? 0, // 非自助餐商品到时是否能继续选购
+            'is_show_non_buffet_product' => $data['is_show_non_buffet_product'] ?? 1, // 是否显示非自助餐商品 0-关闭 1-开启
             'is_buffet_discount' => $data['is_buffet_discount'] ?? 0, // 是否开启自助餐折扣 0-否 1-是
             'is_add_clock' => $data['is_add_clock'] ?? 0, // 是否开启加钟 0-否 1-是
             'add_clock' => [], // 名称 - 加钟时间（分）- 价格（放表，不放设置里）

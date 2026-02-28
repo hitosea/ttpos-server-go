@@ -27,7 +27,14 @@
         </div>
       </el-form-item>
 
-      <el-form-item :label="$t('用餐时间到后可继续选购非自助餐商品')" :rules="[{ required: true, message: '' }]">
+      <el-form-item :label="$t('是否显示非自助餐商品')" :rules="[{ required: true, message: '' }]">
+        <el-radio-group v-model="form.is_show_non_buffet_product">
+          <el-radio value="1">{{ $t('是') }}</el-radio>
+          <el-radio value="0">{{ $t('否') }}</el-radio>
+        </el-radio-group>
+      </el-form-item>
+
+      <el-form-item v-if="form.is_show_non_buffet_product == '1'" :label="$t('用餐时间到后可继续选购非自助餐商品')" :rules="[{ required: true, message: '' }]">
         <el-radio-group v-model="form.is_buy_continue">
           <el-radio value="1">{{ $t('开') }}</el-radio>
           <el-radio value="0">{{ $t('关') }}</el-radio>
@@ -189,6 +196,7 @@
           is_add_clock: '1',
           add_clock: [],
           fav: [],
+          is_show_non_buffet_product: '1',
           // is_remain_continue: '0',
           // remain_continue_notice_time: '',
           // remain_continue_time: '',

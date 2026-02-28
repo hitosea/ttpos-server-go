@@ -201,6 +201,7 @@ func (s *Srv) getDefaultBuffet() setting.Buffet {
 		RemainContinueNoticeTime: "10",                     // 剩余xx分提醒不可继续点餐
 		IsBuyContinue:            "0",                      // 非自助餐商品到时是否能继续选购 0-关闭 1-开启
 		IsAddClock:               "0",                      // 是否开启加钟 0-关闭 1-开启
+		IsShowNonBuffetProduct:   "1",                      // 是否显示非自助餐商品 0-关闭 1-开启
 		AddClock:                 []setting.AddClockItem{}, // 名称 - 加钟时间（分）- 价格
 	}
 }

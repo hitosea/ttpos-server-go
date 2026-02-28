@@ -425,6 +425,7 @@ func (s *SettingAppServiceImpl) GetBuffetSetting(ctx context.Context, companySet
 		IsBuyContinue:            mergedBuffet.IsBuyContinue,
 		IsAddClock:               mergedBuffet.IsAddClock,
 		IsBuffetDiscount:         mergedBuffet.IsBuffetDiscount,
+		IsShowNonBuffetProduct:   mergedBuffet.IsShowNonBuffetProduct,
 		AddClock:                 mergedBuffet.AddClock,
 	}, nil
 }

@@ -2021,5 +2021,6 @@
     "分批送厨规则": "Parti Parti Mutfak Teslimat Kuralları",
     "安全库存设置": "Güvenli Stok Ayarı",
     "点餐设置": "Sipariş Ayarları",
-    "扫码接单": "QR koduyla sipariş al"
+    "扫码接单": "QR koduyla sipariş al",
+    "是否显示非自助餐商品": "Self-servis olmayan ürünleri gösterilsin mi"
 }
