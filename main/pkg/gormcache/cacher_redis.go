@@ -3,7 +3,6 @@ package gormcache
 import (
 	"context"
 	"encoding/json"
-	"sync"
 	"time"
 
 	"ttpos-server-go/pkg/cache"
@@ -16,16 +15,17 @@ import (
 //
 // 缓存 Key 结构：
 //
-//	gorm:cache:{tableName}:{sql}:{params}
+//	gorm:cache:{dbName}:{tableName}:{sql}:{params}
 //
 // 表索引 Key 结构（SET 类型）：
 //
-//	gorm:cache:_idx:{tableName} → SET{key1, key2, ...}
+//	gorm:cache:_idx:{dbName}:{tableName} → SET{key1, key2, ...}
+//
+// 注意：多实例部署时，索引始终从 Redis 获取，确保缓存一致性
 type RedisCacher struct {
 	client        redis.UniversalClient // Redis 客户端（支持单机和集群）
 	defaultTTL    time.Duration         // 默认过期时间
 	indexTTL      time.Duration         // 索引过期时间（比数据 TTL 长）
-	localIndex    sync.Map              // 本地索引（减少 Redis 访问）
 	enableMetrics bool                  // 是否启用指标统计
 }
 
@@ -127,7 +127,8 @@ func (c *RedisCacher) Get(ctx context.Context, key string) (*QueryResult, bool) 
 }
 
 // Store 将查询结果存入缓存
-func (c *RedisCacher) Store(ctx context.Context, tableName string, key string, result *QueryResult, ttl time.Duration) error {
+// tableKey: 表索引键，格式为 {dbName}:{tableName}，用于多租户隔离
+func (c *RedisCacher) Store(ctx context.Context, tableKey string, key string, result *QueryResult, ttl time.Duration) error {
 	if c.client == nil {
 		return nil
 	}
@@ -153,7 +154,8 @@ func (c *RedisCacher) Store(ctx context.Context, tableName string, key string, r
 	pipe.Set(ctx, key, data, ttl)
 
 	// 2. 更新表索引（SET 类型）
-	indexKey := indexKeyPrefix + tableName
+	// indexKey 格式: gorm:cache:_idx:{dbName}:{tableName}
+	indexKey := indexKeyPrefix + tableKey
 	pipe.SAdd(ctx, indexKey, key)
 	pipe.Expire(ctx, indexKey, c.indexTTL)
 
@@ -161,18 +163,15 @@ func (c *RedisCacher) Store(ctx context.Context, tableName string, key string, r
 	if err != nil {
 		logWarn("gormcache: Pipeline 执行失败",
 			zap.String("key", key),
-			zap.String("table", tableName),
+			zap.String("tableKey", tableKey),
 			zap.Error(err),
 		)
 		return err
 	}
 
-	// 更新本地索引
-	c.addToLocalIndex(tableName, key)
-
 	logDebug("gormcache: 缓存存储成功",
 		zap.String("key", key),
-		zap.String("table", tableName),
+		zap.String("tableKey", tableKey),
 		zap.Duration("ttl", ttl),
 		zap.Int("size", len(data)),
 	)
@@ -181,53 +180,57 @@ func (c *RedisCacher) Store(ctx context.Context, tableName string, key string, r
 }
 
 // InvalidateTable 失效指定表的所有缓存
+// tableKey: 表索引键，格式为 {dbName}:{tableName}，用于多租户隔离
 // 注意：始终从 Redis 获取索引，确保多实例部署时缓存一致性
-func (c *RedisCacher) InvalidateTable(ctx context.Context, tableName string) error {
+func (c *RedisCacher) InvalidateTable(ctx context.Context, tableKey string) error {
 	if c.client == nil {
 		return nil
 	}
 
-	// 清除本地索引（避免内存泄漏）
-	c.getAndClearLocalIndex(tableName)
-
-	// 始终从 Redis 获取索引（确保多实例一致性）
-	indexKey := indexKeyPrefix + tableName
+	// 从 Redis 获取索引（确保多实例一致性）
+	// indexKey 格式: gorm:cache:_idx:{dbName}:{tableName}
+	indexKey := indexKeyPrefix + tableKey
 	keys, err := c.client.SMembers(ctx, indexKey).Result()
 	if err != nil && err != redis.Nil {
 		logWarn("gormcache: 获取表索引失败",
-			zap.String("table", tableName),
+			zap.String("tableKey", tableKey),
 			zap.Error(err),
 		)
 	}
 
 	if len(keys) == 0 {
 		logDebug("gormcache: 表缓存为空，跳过失效",
-			zap.String("table", tableName),
+			zap.String("tableKey", tableKey),
 		)
 		return nil
 	}
 
-	// 批量删除
-	pipe := c.client.Pipeline()
-
-	// 删除所有缓存数据
-	pipe.Del(ctx, keys...)
+	// 删除缓存数据
+	// 注意：Redis 集群模式下，不同 key 可能在不同 slot，不能用 Pipeline 批量删除
+	// 逐个删除以兼容集群模式
+	var delErr error
+	for _, key := range keys {
+		if err := c.client.Del(ctx, key).Err(); err != nil && err != redis.Nil {
+			delErr = err
+		}
+	}
 
 	// 删除索引
-	pipe.Del(ctx, indexKey)
+	if err := c.client.Del(ctx, indexKey).Err(); err != nil && err != redis.Nil {
+		delErr = err
+	}
 
-	_, err = pipe.Exec(ctx)
-	if err != nil {
-		logWarn("gormcache: 批量删除失败",
-			zap.String("table", tableName),
+	if delErr != nil {
+		logWarn("gormcache: 缓存删除部分失败",
+			zap.String("tableKey", tableKey),
 			zap.Int("keyCount", len(keys)),
-			zap.Error(err),
+			zap.Error(delErr),
 		)
-		return err
+		return delErr
 	}
 
 	logDebug("gormcache: 表缓存失效成功",
-		zap.String("table", tableName),
+		zap.String("tableKey", tableKey),
 		zap.Int("keyCount", len(keys)),
 	)
 
@@ -239,12 +242,6 @@ func (c *RedisCacher) InvalidateAll(ctx context.Context) error {
 	if c.client == nil {
 		return nil
 	}
-
-	// 清空本地索引
-	c.localIndex.Range(func(key, value any) bool {
-		c.localIndex.Delete(key)
-		return true
-	})
 
 	// 使用 SCAN 查找所有缓存键
 	pattern := IdentifierPrefix + "*"
@@ -261,15 +258,11 @@ func (c *RedisCacher) InvalidateAll(ctx context.Context) error {
 		return nil
 	}
 
-	// 批量删除（分批，每批 100 个）
-	batchSize := 100
-	for i := 0; i < len(keys); i += batchSize {
-		end := min(i+batchSize, len(keys))
-		batch := keys[i:end]
-
-		if err := c.client.Del(ctx, batch...).Err(); err != nil {
-			logWarn("gormcache: 批量删除失败",
-				zap.Int("batchStart", i),
+	// 逐个删除（Redis 集群模式下不同 key 可能在不同 slot）
+	for _, key := range keys {
+		if err := c.client.Del(ctx, key).Err(); err != nil && err != redis.Nil {
+			logWarn("gormcache: 删除失败",
+				zap.String("key", key),
 				zap.Error(err),
 			)
 		}
@@ -280,30 +273,6 @@ func (c *RedisCacher) InvalidateAll(ctx context.Context) error {
 	)
 
 	return nil
-}
-
-// addToLocalIndex 添加到本地索引
-func (c *RedisCacher) addToLocalIndex(tableName string, key string) {
-	actual, _ := c.localIndex.LoadOrStore(tableName, &sync.Map{})
-	keySet := actual.(*sync.Map)
-	keySet.Store(key, struct{}{})
-}
-
-// getAndClearLocalIndex 获取并清空本地索引
-func (c *RedisCacher) getAndClearLocalIndex(tableName string) []string {
-	actual, ok := c.localIndex.LoadAndDelete(tableName)
-	if !ok {
-		return nil
-	}
-
-	keySet := actual.(*sync.Map)
-	var keys []string
-	keySet.Range(func(k, v any) bool {
-		keys = append(keys, k.(string))
-		return true
-	})
-
-	return keys
 }
 
 // GetStats 获取缓存统计信息
@@ -322,9 +291,9 @@ func (c *RedisCacher) GetStats(ctx context.Context) map[string]int64 {
 	}
 
 	for _, key := range keys {
-		tableName := key[len(indexKeyPrefix):]
+		tableKey := key[len(indexKeyPrefix):]
 		count, _ := c.client.SCard(ctx, key).Result()
-		stats[tableName] = count
+		stats[tableKey] = count
 	}
 
 	return stats

@@ -2,7 +2,6 @@ package gormcache
 
 import (
 	"encoding/json"
-	"reflect"
 	"sync"
 
 	"go.uber.org/zap"
@@ -50,12 +49,12 @@ func New(conf *Config) *Plugin {
 		tableBlacklist: make(map[string]struct{}),
 	}
 
-	// 构建白名单
+	// 构建表白名单
 	for _, t := range conf.Tables {
 		p.tableWhitelist[t] = struct{}{}
 	}
 
-	// 构建黑名单
+	// 构建表黑名单
 	for _, t := range conf.ExcludeTables {
 		p.tableBlacklist[t] = struct{}{}
 	}
@@ -111,8 +110,8 @@ func (p *Plugin) Initialize(db *gorm.DB) error {
 	logInfo("gormcache: 插件初始化完成",
 		zap.Bool("easer", p.conf.Easer),
 		zap.Bool("cacher", p.conf.Cacher != nil),
-		zap.Int("whitelist", len(p.tableWhitelist)),
-		zap.Int("blacklist", len(p.tableBlacklist)),
+		zap.Int("tableWhitelist", len(p.tableWhitelist)),
+		zap.Int("tableBlacklist", len(p.tableBlacklist)),
 	)
 
 	return nil
@@ -192,22 +191,24 @@ func (p *Plugin) invalidateCallback(qt queryType) func(db *gorm.DB) {
 			return
 		}
 
-		// 构建带数据库名的索引 key（多租户隔离）
-		dbName := db.Name()
-		indexKey := dbName + ":" + tableName
+		// 检查表是否在缓存白名单中，不在则跳过（避免无效的 Redis 请求）
+		if !p.shouldCacheTable(tableName) {
+			return
+		}
+
+		// 构建表索引键（多租户隔离）
+		tableKey := buildTableKey(db, tableName)
 
 		// 失效该表的所有缓存
-		if err := p.conf.Cacher.InvalidateTable(db.Statement.Context, indexKey); err != nil {
+		if err := p.conf.Cacher.InvalidateTable(db.Statement.Context, tableKey); err != nil {
 			logWarn("gormcache: 缓存失效失败",
-				zap.String("db", dbName),
-				zap.String("table", tableName),
+				zap.String("tableKey", tableKey),
 				zap.String("operation", string(qt)),
 				zap.Error(err),
 			)
 		} else if p.conf.Debug {
 			logDebug("gormcache: 缓存已失效",
-				zap.String("db", dbName),
-				zap.String("table", tableName),
+				zap.String("tableKey", tableKey),
 				zap.String("operation", string(qt)),
 			)
 		}
@@ -225,6 +226,9 @@ func (p *Plugin) shouldSkipCache(db *gorm.DB) bool {
 	if p.conf.Cacher == nil && !p.conf.Easer {
 		return true
 	}
+
+	// 注意：数据库黑名单检查已移至 Enable 函数
+	// 黑名单中的数据库不会注册插件，无需在此重复检查
 
 	return false
 }
@@ -271,14 +275,12 @@ func (p *Plugin) storeInCache(db *gorm.DB, tableName string, key string) {
 		ttl = DefaultConfig().TTL
 	}
 
-	// 构建带数据库名的索引 key（多租户隔离）
-	dbName := db.Name()
-	indexKey := dbName + ":" + tableName
+	// 构建表索引键（多租户隔离）
+	tableKey := buildTableKey(db, tableName)
 
-	if err := p.conf.Cacher.Store(db.Statement.Context, indexKey, key, result, ttl); err != nil {
+	if err := p.conf.Cacher.Store(db.Statement.Context, tableKey, key, result, ttl); err != nil {
 		logWarn("gormcache: 缓存存储失败",
-			zap.String("db", dbName),
-			zap.String("table", tableName),
+			zap.String("tableKey", tableKey),
 			zap.String("key", key),
 			zap.Error(err),
 		)
@@ -312,16 +314,6 @@ func copyValue(dest any, src any) error {
 
 	// 反序列化到目标
 	return json.Unmarshal(data, dest)
-}
-
-// setPointedValue 使用反射设置指针值
-func setPointedValue(dest any, src any) {
-	destVal := reflect.ValueOf(dest)
-	srcVal := reflect.ValueOf(src)
-
-	if destVal.Kind() == reflect.Ptr && srcVal.Kind() == reflect.Ptr {
-		destVal.Elem().Set(srcVal.Elem())
-	}
 }
 
 // ============ 上下文控制 ============
