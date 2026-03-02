@@ -66,39 +66,48 @@ func Init(conf *Config) {
 }
 
 // Enable 为指定的 GORM 数据库启用缓存
+// dbName: 数据库名称（如 "saas" 或 "shop123456"），用于多租户隔离
 // 如果 conf 为 nil，使用全局配置
 //
 // 示例：
 //
-//	db := dbManager.GetDB(companyUuid)
-//	gormcache.Enable(db, nil)  // 使用全局配置
+//	database.SetOnDBReady(func(db *gorm.DB, dbName string) {
+//	    gormcache.Enable(db, dbName, nil)  // 使用全局配置
+//	})
 //
 //	// 或使用自定义配置
-//	gormcache.Enable(db, &gormcache.Config{
+//	gormcache.Enable(db, dbName, &gormcache.Config{
 //	    Tables: []string{"ttpos_menu_item"},
 //	    TTL: 10 * time.Minute,
 //	})
-func Enable(db *gorm.DB, conf *Config) error {
+func Enable(db *gorm.DB, dbName string, conf *Config) error {
 	if db == nil {
 		return nil
 	}
 
-	// 使用传入配置或全局配置
-	if conf == nil {
-		conf = globalConfig
+	// 获取基础配置
+	baseConf := conf
+	if baseConf == nil {
+		baseConf = globalConfig
 	}
-	if conf == nil {
-		conf = DefaultConfig()
-		conf.Cacher = NewRedisCacher()
+	if baseConf == nil {
+		baseConf = DefaultConfig()
 	}
 
-	// 检查数据库访问控制（商户级别）
-	dbName := extractDBName(db)
+	// 复制配置，避免污染全局配置
+	// 每个数据库需要独立的 Config 实例（DBName 不同）
+	instanceConf := baseConf.Copy()
+	instanceConf.DBName = dbName
+
+	// 如果基础配置没有 Cacher，创建默认的
+	if instanceConf.Cacher == nil {
+		instanceConf.Cacher = NewRedisCacher()
+	}
 
 	// 白名单模式（内测）：只允许指定商户使用缓存
-	if len(conf.AllowDBs) > 0 {
+	if len(instanceConf.AllowDBs) > 0 {
 		allowed := false
-		for _, allowDB := range conf.AllowDBs {
+		for _, allowDB := range instanceConf.AllowDBs {
 			if dbName == allowDB {
 				allowed = true
 				break
@@ -108,9 +117,9 @@ func Enable(db *gorm.DB, conf *Config) error {
 			// 不在白名单中，跳过
 			return nil
 		}
-	} else if len(conf.ExcludeDBs) > 0 {
+	} else if len(instanceConf.ExcludeDBs) > 0 {
 		// 黑名单模式：排除指定商户
-		for _, excludeDB := range conf.ExcludeDBs {
+		for _, excludeDB := range instanceConf.ExcludeDBs {
 			if dbName == excludeDB {
 				logDebug("gormcache: 数据库在黑名单中，跳过启用",
 					zap.String("db", dbName),
@@ -127,7 +136,7 @@ func Enable(db *gorm.DB, conf *Config) error {
 	}
 
 	// 创建并注册插件
-	plugin := New(conf)
+	plugin := New(instanceConf)
 	if err := db.Use(plugin); err != nil {
 		enabledDBs.Delete(dbPtr)
 		return err
@@ -141,12 +150,12 @@ func Enable(db *gorm.DB, conf *Config) error {
 }
 
 // EnableWithOptions 使用选项模式启用缓存
-func EnableWithOptions(db *gorm.DB, opts ...ConfigOption) error {
+func EnableWithOptions(db *gorm.DB, dbName string, opts ...ConfigOption) error {
 	conf := DefaultConfig()
 	for _, opt := range opts {
 		opt(conf)
 	}
-	return Enable(db, conf)
+	return Enable(db, dbName, conf)
 }
 
 // getDBPointer 获取数据库的唯一标识
@@ -292,6 +301,8 @@ func NoCache() func(db *gorm.DB) *gorm.DB {
 // WrapDBManager 包装 DBManager 的 GetDB 方法，自动启用缓存
 // 这是一个辅助函数，用于在不修改 DBManager 源码的情况下集成缓存
 //
+// 已废弃：推荐使用 database.SetOnDBReady 回调方式，可获取准确的 dbName
+//
 // 示例（在 root.go 初始化后使用）：
 //
 //	// 原始方式
@@ -305,7 +316,8 @@ func WrapGetDB(getDB func(uint64) *gorm.DB) func(uint64) *gorm.DB {
 		db := getDB(index)
 		if db != nil {
 			// 尝试启用缓存（如果已启用会自动跳过）
-			Enable(db, nil)
+			// 使用 extractDBName 回退方式获取数据库名
+			Enable(db, extractDBName(db), nil)
 		}
 		return db
 	}
@@ -314,9 +326,12 @@ func WrapGetDB(getDB func(uint64) *gorm.DB) func(uint64) *gorm.DB {
 // AutoEnableOnConnect 创建一个在连接创建时自动启用缓存的钩子
 // 返回一个可以在 GORM 配置中使用的 ConnPool 包装器
 //
+// 已废弃：推荐使用 database.SetOnDBReady 回调方式，可获取准确的 dbName
+//
 // 注意：此方法需要在创建数据库连接时调用，不适合已存在的连接
 func AutoEnableOnConnect(conf *Config) func(*gorm.DB) {
 	return func(db *gorm.DB) {
-		Enable(db, conf)
+		// 使用 extractDBName 回退方式获取数据库名
+		Enable(db, extractDBName(db), conf)
 	}
 }
