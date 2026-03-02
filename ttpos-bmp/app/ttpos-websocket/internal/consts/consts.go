@@ -113,3 +113,8 @@ const (
 const (
 	ChannelWebsocketMsgPush = "websocket_msg_push" // 推送消息频道
 )
+
+// Redis Key
+const (
+	RedisKeyDeviceHeartbeat = "device:heartbeat" // 设备心跳缓存 (HASH: connection_key -> timestamp)
+)

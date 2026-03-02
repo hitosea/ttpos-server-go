@@ -30,8 +30,16 @@ func (r *LanPrinterScanRepository) GetListByDeviceSn(deviceSn string) []model.La
 }
 
 // Update 更新打印机记录
-func (r *LanPrinterScanRepository) Update(id uint, vars map[string]interface{}) error {
+func (r *LanPrinterScanRepository) Update(id uint, vars map[string]any) error {
 	return r.db.Model(&model.LanPrinterScan{}).Where("id = ?", id).Updates(vars).Error
+}
+
+// BatchUpdateByIDs 批量按 ID 更新
+func (r *LanPrinterScanRepository) BatchUpdateByIDs(ids []uint, vars map[string]any) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return r.db.Model(&model.LanPrinterScan{}).Where("id IN ?", ids).Updates(vars).Error
 }
 
 // Create 创建打印机记录

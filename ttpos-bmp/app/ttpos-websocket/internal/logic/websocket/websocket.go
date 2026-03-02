@@ -104,6 +104,8 @@ func init() {
 	globalCtx, globalCancel = context.WithCancel(context.Background())
 	// 启动定时检查心跳超时的连接
 	go checkHeartbeatTimeout()
+	// 启动定时将 Redis 心跳缓存批量刷入 DB
+	go flushHeartbeatToDB()
 }
 
 // 防抖相关的全局变量
@@ -1169,20 +1171,19 @@ func fixJSONFormat(data []byte) []byte {
 	return []byte(str)
 }
 
-// updateDeviceHeartbeat 更新设备心跳时间
-// 在数据库中更新设备的最后心跳时间
+// updateDeviceHeartbeat 缓存设备心跳时间到 Redis
+// 由 flushHeartbeatToDB 定期批量写入数据库，避免高频 DB 写入造成 I/O 瓶颈
 func (s *sWebSocket) updateDeviceHeartbeat(ctx context.Context, connectionKey string) {
-	nowTime := int(time.Now().Unix())
-	_, err := dao.DeviceOnline.Ctx(ctx).
-		Where(dao.DeviceOnline.Columns().ConnectionKey, connectionKey).
-		Where(dao.DeviceOnline.Columns().Status, 1).
-		Update(do.DeviceOnline{
-			LastHeartbeatTime: nowTime,
-			UpdateTime:        nowTime,
-		})
+	nowTime := time.Now().Unix()
+	_, err := g.Redis().HSet(ctx, consts.RedisKeyDeviceHeartbeat, map[string]interface{}{
+		connectionKey: nowTime,
+	})
 	if err != nil {
-		g.Log().Warning(ctx, "更新设备心跳时间失败", err, "connection_key", connectionKey)
+		g.Log().Warning(ctx, "缓存设备心跳时间失败", err, "connection_key", connectionKey)
+		return
 	}
+	// 刷新 TTL 兜底（防止进程崩溃后脏数据残留）
+	_, _ = g.Redis().Expire(ctx, consts.RedisKeyDeviceHeartbeat, 300)
 }
 
 // updateDeviceOffline 更新设备为离线状态
