@@ -4196,8 +4196,9 @@ func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, planAutoFla
 	if errAdd != nil {
 		ctx.Log().Info("自动加购必选商品失败", zap.Error(errAdd))
 	}
-	// 更新sale_bill为自动加购完成
+	// 更新sale_bill为自动加购完成，同时关闭必点弹窗
 	saleBill.AutoAddMustProduct = constant.AutoAddMustProductNo
+	saleBill.ShowMustPlan = constant.SaleBillShowMustPlanNo
 	if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
 		return errors.WithMessage(err)
 	}
