@@ -67,111 +67,95 @@ func LanPrinterReportHandler(ctx context.Context, msg *primitive.MessageExt) err
 	// 获取该设备已有的打印机记录
 	dbLanList := lanPrinterScanRepo.GetListByDeviceSn(reportMsg.DeviceID)
 
-	// 更新为离线：检查数据库中的打印机是否在新上报列表中
-	if len(dbLanList) > 0 {
-		// 优化：创建上报打印机映射以快速查找，避免嵌套循环
-		// 使用 ip:port 作为key，因为同一个IP可能有不同端口
-		printerReportMap := make(map[string]bool)
-		for _, printer := range reportMsg.Printers {
-			if printer.IP != "" && printer.Port > 0 {
-				printerKey := getPrinterKey(printer.IP, printer.Port)
-				printerReportMap[printerKey] = true
-			}
-		}
-
-		// 检查数据库中的打印机是否在新上报列表中
-		for _, lanPrinter := range dbLanList {
-			printerKey := getPrinterKey(lanPrinter.Ip, lanPrinter.Port)
-			// 如果不在新列表中且状态为在线，则更新为离线
-			if !printerReportMap[printerKey] && lanPrinter.Status == 1 {
-				err := lanPrinterScanRepo.Update(lanPrinter.ID, map[string]interface{}{
-					"status": 0,
-				})
-				if err != nil {
-					logger.Logger.Error("更新打印机为离线状态失败",
-						zap.Error(err),
-						zap.String("ip", lanPrinter.Ip),
-						zap.Int("port", lanPrinter.Port),
-						zap.Uint("id", lanPrinter.ID),
-					)
-				} else {
-					if config.Server.Mode == gin.DebugMode {
-						logger.Logger.Debug("更新打印机为离线状态",
-							zap.String("ip", lanPrinter.Ip),
-							zap.Int("port", lanPrinter.Port),
-						)
-					}
-				}
-			}
+	// 构建上报打印机映射 (ip:port -> true)
+	printerReportMap := make(map[string]bool)
+	for _, printer := range reportMsg.Printers {
+		if printer.IP != "" && printer.Port > 0 {
+			printerReportMap[getPrinterKey(printer.IP, printer.Port)] = true
 		}
 	}
 
-	// 处理上报的打印机：创建或更新为在线
-	if len(reportMsg.Printers) > 0 {
-		// 优化：创建已有打印机映射，避免多次循环查询
-		dbLanMap := make(map[string]model.LanPrinterScan)
-		for _, lanPrinter := range dbLanList {
-			printerKey := getPrinterKey(lanPrinter.Ip, lanPrinter.Port)
-			dbLanMap[printerKey] = lanPrinter
+	// 构建已有打印机映射 (ip:port -> record)
+	dbLanMap := make(map[string]model.LanPrinterScan)
+	for _, lanPrinter := range dbLanList {
+		dbLanMap[getPrinterKey(lanPrinter.Ip, lanPrinter.Port)] = lanPrinter
+	}
+
+	// 收集需要批量更新为离线的 ID
+	var offlineIDs []uint
+	for _, lanPrinter := range dbLanList {
+		printerKey := getPrinterKey(lanPrinter.Ip, lanPrinter.Port)
+		if !printerReportMap[printerKey] && lanPrinter.Status == 1 {
+			offlineIDs = append(offlineIDs, lanPrinter.ID)
 		}
+	}
 
-		// 处理每个上报的打印机
-		for _, printer := range reportMsg.Printers {
-			if printer.IP == "" || printer.Port == 0 {
-				if config.Server.Mode == gin.DebugMode {
-					logger.Logger.Warn("跳过无效的打印机信息",
-						zap.String("ip", printer.IP),
-						zap.Int("port", printer.Port),
-					)
-				}
-				continue
-			}
+	// 批量更新为离线
+	if len(offlineIDs) > 0 {
+		if err := lanPrinterScanRepo.BatchUpdateByIDs(offlineIDs, map[string]any{
+			"status": 0,
+		}); err != nil {
+			logger.Logger.Error("批量更新打印机为离线状态失败",
+				zap.Error(err),
+				zap.Uints("ids", offlineIDs),
+			)
+		} else if config.Server.Mode == gin.DebugMode {
+			logger.Logger.Debug("批量更新打印机为离线状态",
+				zap.Uints("ids", offlineIDs),
+			)
+		}
+	}
 
-			printerKey := getPrinterKey(printer.IP, printer.Port)
-			if dbLan, exists := dbLanMap[printerKey]; exists {
-				// 已存在的打印机，更新状态为在线
-				err := lanPrinterScanRepo.Update(dbLan.ID, map[string]interface{}{
-					"status":      1,
-					"remark":      printer.Remark,
-					"update_time": time.Now().Unix(),
-				})
-				if err != nil {
-					logger.Logger.Error("更新打印机状态失败",
-						zap.Error(err),
-						zap.String("ip", printer.IP),
-						zap.Int("port", printer.Port),
-					)
-				}
-			} else {
-				// 不存在的打印机，创建新记录
-				newScan := model.LanPrinterScan{
-					Ip:             printer.IP,
-					Port:           printer.Port,
-					Status:         1, // 新上报的打印机默认为在线
-					Remark:         printer.Remark,
-					SourceDeviceSn: reportMsg.DeviceID,
-				}
-				now := time.Now().Unix()
-				newScan.CreateTime = now
-				newScan.UpdateTime = now
+	// 收集需要批量更新为在线的 ID，以及需要新增的记录
+	var onlineIDs []uint
+	var newScans []model.LanPrinterScan
+	now := time.Now().Unix()
+	for _, printer := range reportMsg.Printers {
+		if printer.IP == "" || printer.Port == 0 {
+			continue
+		}
+		printerKey := getPrinterKey(printer.IP, printer.Port)
+		if dbLan, exists := dbLanMap[printerKey]; exists {
+			onlineIDs = append(onlineIDs, dbLan.ID)
+		} else {
+			newScans = append(newScans, model.LanPrinterScan{
+				Ip:             printer.IP,
+				Port:           printer.Port,
+				Status:         1,
+				Remark:         printer.Remark,
+				SourceDeviceSn: reportMsg.DeviceID,
+				BaseModel:      model.BaseModel{CreateTime: now, UpdateTime: now},
+			})
+		}
+	}
 
-				err := lanPrinterScanRepo.Create(newScan)
-				if err != nil {
-					logger.Logger.Error("创建打印机记录失败",
-						zap.Error(err),
-						zap.String("ip", printer.IP),
-						zap.Int("port", printer.Port),
-					)
-				} else {
-					if config.Server.Mode == gin.DebugMode {
-						logger.Logger.Debug("创建打印机记录",
-							zap.String("ip", printer.IP),
-							zap.Int("port", printer.Port),
-							zap.String("device_sn", reportMsg.DeviceID),
-						)
-					}
-				}
-			}
+	// 批量更新为在线
+	if len(onlineIDs) > 0 {
+		if err := lanPrinterScanRepo.BatchUpdateByIDs(onlineIDs, map[string]any{
+			"status":      1,
+			"update_time": now,
+		}); err != nil {
+			logger.Logger.Error("批量更新打印机为在线状态失败",
+				zap.Error(err),
+				zap.Uints("ids", onlineIDs),
+			)
+		}
+	}
+
+	// 批量创建新记录
+	for _, newScan := range newScans {
+		if err := lanPrinterScanRepo.Create(newScan); err != nil {
+			logger.Logger.Error("创建打印机记录失败",
+				zap.Error(err),
+				zap.String("ip", newScan.Ip),
+				zap.Int("port", newScan.Port),
+			)
+		} else if config.Server.Mode == gin.DebugMode {
+			logger.Logger.Debug("创建打印机记录",
+				zap.String("ip", newScan.Ip),
+				zap.Int("port", newScan.Port),
+				zap.String("device_sn", reportMsg.DeviceID),
+			)
 		}
 	}
 
