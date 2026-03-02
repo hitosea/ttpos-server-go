@@ -369,13 +369,15 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 		}
 	}
 
-	// 设置员工班次信息】
+	// 设置员工班次信息
 	if !order.IsExistShiftLog() {
 		if err := orderRepo.SetStaffShiftLogUuid(order); err != nil {
 			logger.Logger.Error("设置员工班次日志UUID失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		} else {
+		} else if userUuid > 0 {
+			// 手动接单时，使用当前登录用户作为接单人
 			order.AcceptedBy = userUuid
 		}
+		// 自动接单时，AcceptedBy 保留 SetStaffShiftLogUuid 中从班次获取的 staffUuid
 	}
 
 	// 更新订单状态
