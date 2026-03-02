@@ -52,17 +52,19 @@ func (s *takeoutOrderCompletedEventSubscriber) Handle(domainEvent event.DomainEv
 			map[string]any{},
 		)
 
-		// 记录高峰期（订单完成时记录）
+		// 记录高峰期（订单完成时记录，直接使用事件中的订单数据，避免事务可见性问题）
 		dbm := database.GetDBManager(config.DatabaseConf{})
-		db := dbm.GetDB(orderCompletedEvent.CompanyUuid)
 		ctx := appContext.NewContext(
 			appContext.WithContext(context.Background()),
 		)
-		ctx.SetCompanyUuid(orderCompletedEvent.CompanyUuid)
-		ctx.SetDB(db)
 
 		takeoutSrv := takeoutService.NewTakeoutSrvImpl(dbm)
-		if err := takeoutSrv.RecordTakeoutOrderPeakTime(ctx, orderCompletedEvent.OrderUuid, orderCompletedEvent.CompanyUuid); err != nil {
+		if err := takeoutSrv.RecordTakeoutOrderPeakTime(ctx,
+			orderCompletedEvent.AcceptedBy,
+			orderCompletedEvent.CompletedTime,
+			orderCompletedEvent.PlatformTotal,
+			orderCompletedEvent.CompanyUuid,
+		); err != nil {
 			logger.Logger.Error("记录外卖订单高峰期失败",
 				zap.Uint64("orderUuid", orderCompletedEvent.OrderUuid),
 				zap.String("takeoutOrderUuid", orderCompletedEvent.TakeoutOrderUuid),
