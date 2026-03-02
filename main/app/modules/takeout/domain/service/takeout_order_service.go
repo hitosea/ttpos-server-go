@@ -1869,6 +1869,9 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 					order.ShortOrderNumber,
 					order.TakeoutOrderUuid,
 					ctx.GetCompanyUuid(),
+					order.AcceptedBy,
+					order.CompletedTime,
+					order.PlatformTotal,
 				))
 			}
 		}

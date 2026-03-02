@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"ttpos-server-go/app/modules/takeout/domain/event"
+	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	takeoutService "ttpos-server-go/app/service/takeout"
 	"ttpos-server-go/config"
 	appContext "ttpos-server-go/pkg/context"
@@ -61,9 +62,22 @@ func (s *takeoutOrderPeakTimeEventSubscriber) Handle(domainEvent event.DomainEve
 		// 创建 service
 		takeoutSrv := takeoutService.NewTakeoutSrvImpl(dbm)
 
-		// 批量记录高峰期
+		// 批量记录高峰期：先查询订单获取所需字段，再调用记录方法
+		orderRepo := persistence.NewTakeoutOrderRepo(db)
 		for _, orderUuid := range peakTimeEvent.OrderUuids {
-			if err := takeoutSrv.RecordTakeoutOrderPeakTime(ctx, orderUuid, peakTimeEvent.CompanyUuid); err != nil {
+			order, err := orderRepo.GetByUuid(orderUuid)
+			if err != nil || order == nil {
+				logger.Logger.Error("查询外卖订单失败",
+					zap.Uint64("orderUuid", orderUuid),
+					zap.Error(err))
+				continue
+			}
+			if err := takeoutSrv.RecordTakeoutOrderPeakTime(ctx,
+				order.AcceptedBy,
+				order.CompletedTime,
+				order.PlatformTotal,
+				peakTimeEvent.CompanyUuid,
+			); err != nil {
 				logger.Logger.Error("记录外卖订单高峰期失败",
 					zap.Uint64("orderUuid", orderUuid),
 					zap.Uint64("companyUuid", peakTimeEvent.CompanyUuid),
