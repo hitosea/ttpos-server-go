@@ -212,15 +212,15 @@ func GetOrCreateCacheLayer[T any](groupConfig cache.GroupConfig, underlyingCache
 			}
 			// 注意：EnableL1Cache 和 EnableL2Cache 选项由调用方在创建 groupConfig 时应用
 			// 例如 GetOrderObjectCache 函数中会使用 option.EnableL1Cache 和 option.EnableL2Cache
-			// 设置统计回调函数（使用全局统计管理器）
-			globalStats := GetGlobalStatsManager()
-			groupConfig.HitStatsCallback = func(key string, hit bool, level string) {
-				if hit {
-					globalStats.RecordHit(key)
-				} else {
-					globalStats.RecordMiss(key)
-				}
-			}
+			// 命中率统计回调（已禁用）
+			// globalStats := GetGlobalStatsManager()
+			// groupConfig.HitStatsCallback = func(key string, hit bool, level string) {
+			// 	if hit {
+			// 		globalStats.RecordHit(key)
+			// 	} else {
+			// 		globalStats.RecordMiss(key)
+			// 	}
+			// }
 			group = cache.NewCacheGroup[T](groupConfig)
 			// 直接存储实例（作为 L1CacheClearable 接口类型）
 			cacheGroupSingletons.Store(objectType, group)
