@@ -1718,13 +1718,15 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 	if transferOrder != nil && transferOrder.ReceiptOrderErpCode != "" {
 		// 在同步上下文中提取所有需要的数据，避免异步协程访问已回收的 gin.Context
 		baseURL := utils.GetBaseURL(ctx.GetGin().Request)
-		companyUuid := ctx.GetCompanyUuid()
+		// 附件存储在发起方数据库中（UploadFile 和 saveTransferOrderFilesInTx 均写入发起方库），
+		// 因此异步查询附件时必须使用发起方的 companyUuid 和数据库连接
+		initiatorCompanyUuid := transferOrder.CompanyUuid
 
 		ctx2 := ctx.Copy()
-		ctx2.SetDB(s.dbm.GetDB(companyUuid))
+		ctx2.SetDB(s.dbm.GetDB(initiatorCompanyUuid))
 
 		utils.Go(func() {
-			s.uploadFilesToErp(ctx2, transferOrder, baseURL, companyUuid)
+			s.uploadFilesToErp(ctx2, transferOrder, baseURL, initiatorCompanyUuid)
 		})
 	}
 	if err != nil {
@@ -1945,26 +1947,32 @@ func (s *transferOrderSrv) GetTransferOrderWarehouseList(
 // uploadFilesToErp 上传调拨单附件到 ERP
 // baseURL 和 companyUuid 必须在调用前从同步上下文中提取，避免在异步协程中访问 gin.Context
 func (s *transferOrderSrv) uploadFilesToErp(ctx context.Context, transferOrder *model.TransferOrder, baseURL string, companyUuid uint64) {
-	// 获取调拨单附件列表
-	files, err := s.transferOrderFileSrv.GetTransferOrderFiles(ctx, transferOrder.Uuid)
+	// 直接通过 Repository 查询附件，避免在异步协程中通过 Service 层访问可能已回收的 gin.Context
+	db := ctx.GetDB()
+	fileRepo := repository.NewTransferOrderFileRepo(db)
+	orderFiles, err := fileRepo.GetByTransferOrderUuidWithFiles(transferOrder.Uuid)
 	if err != nil {
 		logger.Logger.Warn("获取调拨单附件列表失败",
 			zap.Uint64("transferOrderUuid", transferOrder.Uuid),
 			zap.Error(err))
 		return
 	}
-	if len(files) == 0 {
+	if len(orderFiles) == 0 {
 		return
 	}
 
 	// 逐个上传文件到 ERP
-	for _, f := range files {
+	for _, f := range orderFiles {
+		if f.File == nil {
+			continue
+		}
+
 		fileUrl := fmt.Sprintf("%sapi/v1/passport/file_redirect?uuid=%d&company_uuid=%d",
 			baseURL, f.FileUuid, companyUuid)
 
 		uploadReq := &file.UploadFileUrlReq{
 			FileUrl:  fileUrl,
-			FileName: f.FileName,
+			FileName: f.File.RealName,
 			DocType:  "Purchase Receipt",
 			DocName:  transferOrder.ReceiptOrderErpCode,
 		}
@@ -1974,7 +1982,7 @@ func (s *transferOrderSrv) uploadFilesToErp(ctx context.Context, transferOrder *
 			logger.Logger.Warn("上传调拨单附件到ERP失败",
 				zap.Uint64("transferOrderUuid", transferOrder.Uuid),
 				zap.Uint64("fileUuid", f.FileUuid),
-				zap.String("fileName", f.FileName),
+				zap.String("fileName", f.File.RealName),
 				zap.Error(err))
 			// 不影响主流程，继续上传其他文件
 		}
