@@ -85,7 +85,7 @@ func NewRedSyncLock(rs *redsync.Redsync) *RedSyncLock {
 // 获取uuid锁
 func (d *RedSyncLock) getUuidLock(uuid uint64) *redsync.Mutex {
 	// 三分钟锁. min(过期时间, 重试次数 * 重试间隔) 取最小值, 在该参数下过期时间较小(3分钟),故以过期时间为准
-	mutex := d.rs.NewMutex(fmt.Sprintf("%d", uuid), redsync.WithExpiry(60*3*time.Second), redsync.WithTries(60*4), redsync.WithRetryDelay(1*time.Second))
+	mutex := d.rs.NewMutex(fmt.Sprintf("%d", uuid), redsync.WithExpiry(60*3*time.Second), redsync.WithTries(60*4*10), redsync.WithRetryDelay(100*time.Millisecond))
 	actual, _ := d.uuidLock.LoadOrStore(uuid, mutex)
 	return actual.(*redsync.Mutex)
 }
