@@ -526,7 +526,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 				if refundAmount, ok := refundAmountMap[paymentOrder.Uuid]; ok && refundAmount > 0 {
 					actualAmount = decimal.NewFromFloat(paymentOrder.Amount).Sub(decimal.NewFromFloat(refundAmount)).InexactFloat64()
 				}
-				if actualAmount > 0 {
+				if actualAmount >= 0 {
 					printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(actualAmount), width, 34))
 					if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
 						printer.AppendText(t.base.PrintText(t.base.Translate("找零"), "", t.base.Amount(saleOrder.ChangeAmount), width, 34))

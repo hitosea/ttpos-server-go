@@ -601,7 +601,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 				if refundAmount, ok := refundAmountMap[paymentOrder.Uuid]; ok && refundAmount > 0 {
 					actualAmount = decimal.NewFromFloat(paymentOrder.Amount).Sub(decimal.NewFromFloat(refundAmount)).InexactFloat64()
 				}
-				if actualAmount > 0 {
+				if actualAmount >= 0 {
 					img.PrintInColumns(
 						pkg.ColumnConfig{Text: t.base.Translate("实收金额"), Width: 280, Align: pkg.AlignLeft},
 						pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(actualAmount), Width: 0, Align: pkg.AlignRight},
