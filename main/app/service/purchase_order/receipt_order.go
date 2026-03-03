@@ -1119,26 +1119,32 @@ func (s *purchaseReceiptOrderSrv) asyncUploadFilesToErp(ctx context.Context, db 
 
 // uploadFilesToErp 上传收货单附件到 ERP（内部方法，由 asyncUploadFilesToErp 调用）
 func (s *purchaseReceiptOrderSrv) uploadFilesToErp(ctx context.Context, receiptOrder *model.PurchaseReceiptOrder, baseURL string, companyUuid uint64) {
-	// 获取收货单附件列表
-	files, err := s.receiptFileSrv.GetReceiptFiles(ctx, receiptOrder.Uuid)
+	// 直接通过 Repository 查询附件，避免在异步协程中通过 Service 层访问可能已回收的 gin.Context
+	db := ctx.GetDB()
+	fileRepo := repository.NewPurchaseReceiptFileRepo(db)
+	orderFiles, err := fileRepo.GetByReceiptOrderUuidWithFiles(receiptOrder.Uuid)
 	if err != nil {
 		logger.Logger.Warn("获取收货单附件列表失败",
 			zap.Uint64("receiptOrderUuid", receiptOrder.Uuid),
 			zap.Error(err))
 		return
 	}
-	if len(files) == 0 {
+	if len(orderFiles) == 0 {
 		return
 	}
 
 	// 逐个上传文件到 ERP
-	for _, f := range files {
+	for _, f := range orderFiles {
+		if f.File == nil {
+			continue
+		}
+
 		fileUrl := fmt.Sprintf("%sapi/v1/passport/file_redirect?uuid=%d&company_uuid=%d",
 			baseURL, f.FileUuid, companyUuid)
 
 		uploadReq := &file.UploadFileUrlReq{
 			FileUrl:  fileUrl,
-			FileName: f.FileName,
+			FileName: f.File.RealName,
 			DocType:  "Purchase Receipt",
 			DocName:  receiptOrder.ErpOrderNo,
 		}
@@ -1148,7 +1154,7 @@ func (s *purchaseReceiptOrderSrv) uploadFilesToErp(ctx context.Context, receiptO
 			logger.Logger.Warn("上传收货单附件到ERP失败",
 				zap.Uint64("receiptOrderUuid", receiptOrder.Uuid),
 				zap.Uint64("fileUuid", f.FileUuid),
-				zap.String("fileName", f.FileName),
+				zap.String("fileName", f.File.RealName),
 				zap.Error(err))
 			// 不影响主流程，继续上传其他文件
 		}
