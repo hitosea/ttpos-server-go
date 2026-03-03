@@ -128,12 +128,22 @@ curl -sf "$HOST/api/v1/cashier/desk/list" \
 
 失败时提示检查服务器是否启动。
 
-#### 2.4 桌台准备
+#### 2.4 查询有效 Staff
+
+gen_token 的默认 staff 可能不在目标商户中，需要先查询：
+
+```sql
+SELECT uuid FROM ttpos_staff WHERE delete_time = 0 LIMIT 1;
+```
+
+后续 gen_token 命令加上 `-staff $STAFF_UUID`。
+
+#### 2.5 桌台准备
 
 **查询活跃桌台**：
 
 ```sql
-SELECT d.uuid, d.serial_no, sb.uuid as sale_bill_uuid, so.uuid as sale_order_uuid
+SELECT d.uuid, d.desk_no, sb.uuid as sale_bill_uuid, so.uuid as sale_order_uuid
 FROM ttpos_desk d
 JOIN ttpos_sale_bill sb ON sb.desk_uuid = d.uuid AND sb.status = 0 AND sb.delete_time = 0
 JOIN ttpos_sale_order so ON so.sale_bill_uuid = sb.uuid AND so.delete_time = 0
