@@ -59,7 +59,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 				},
 			)
 			if err != nil {
-				ctx.Log().Error("获取当前员工班次信息失败", zap.Error(err))
+				ctx.Log().Warn("获取当前员工班次信息失败", zap.Error(err))
 			} else {
 				staffShiftLogUuid = staffShiftLog.Uuid
 			}
