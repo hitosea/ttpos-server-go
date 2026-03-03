@@ -22025,12 +22025,12 @@ const docTemplate = `{
         "/passport/file_redirect": {
             "get": {
                 "produces": [
-                    "application/json"
+                    "application/octet-stream"
                 ],
                 "tags": [
                     "通用"
                 ],
-                "summary": "文件重定向",
+                "summary": "文件下载",
                 "parameters": [
                     {
                         "type": "integer",
@@ -22050,8 +22050,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "302": {
-                        "description": "重定向到文件URL"
+                    "200": {
+                        "description": "文件内容"
                     },
                     "400": {
                         "description": "参数错误",
