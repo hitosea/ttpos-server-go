@@ -59,26 +59,45 @@ Options:
     description: "POST /tablet/desk/order/cart/product/add → GET /tablet/desk/ping"
 ```
 
-#### Round 2: 环境参数（可选）
+#### Round 2: 商户 & 环境
 
-仅当需要自定义时提问，否则使用默认值：
+**先从数据库动态查询商户列表**，再以选项形式呈现给用户：
+
+```sql
+-- Agent 先执行此查询，将结果填入 AskUserQuestion 的选项中
+source "$(git rev-parse --show-toplevel)/.env"
+mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USERNAME" -p"$DB_PASSWORD" saas -e "
+  SELECT uuid, name FROM ttpos_company WHERE delete_time = 0 AND status = 1 ORDER BY id DESC LIMIT 8;
+"
+```
 
 ```yaml
-Question: "测试环境配置"
+Question 1: "选择测试商户"
+Header: "商户"
+MultiSelect: false
+Options:
+  # 从上述 SQL 查询结果动态生成，格式：
+  - label: "{name}"
+    description: "company_uuid: {uuid}"
+  - label: "{name}"
+    description: "company_uuid: {uuid}"
+  # ... 用户也可选 "Other" 手动输入 company_uuid
+
+Question 2: "测试环境"
 Header: "环境"
 MultiSelect: false
 Options:
-  - label: "默认 dev 环境"
-    description: "localhost:8080, 商户 8609817471094784, 自动选择空闲桌台"
+  - label: "本地 dev (localhost:8080)"
+    description: "连接本地开发服务器，自动选择空闲桌台"
   - label: "自定义"
-    description: "手动指定服务器地址、商户 UUID、桌台"
+    description: "手动指定服务器地址和桌台"
 ```
 
 默认参数：
 - HOST: `http://localhost:8080`
-- COMPANY: `8609817471094784`
+- COMPANY: 用户选择的商户 UUID
 - DB: 从 `.env` 文件读取
-- DESK: 自动从 DB 查询空闲桌台
+- DESK: 自动从商户 DB 查询空闲桌台
 
 ### Phase 2: 环境搭建
 
