@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -136,10 +137,25 @@ func AddStock(payloadCtx context.Context, db *gorm.DB, saleBillUuid uint64) {
 			}
 		}
 	}
-	productBomsList := make([]*model.ProductBom, 0)
-	for _, productBom := range productBoms {
-		productBomsList = append(productBomsList, productBom)
+	// 提取并排序 ProductBom UUID，避免死锁
+	bomUuids := make([]uint64, 0, len(productBoms))
+	for uuid := range productBoms {
+		bomUuids = append(bomUuids, uuid)
 	}
+	sort.Slice(bomUuids, func(i, j int) bool { return bomUuids[i] < bomUuids[j] })
+
+	productBomsList := make([]*model.ProductBom, 0, len(bomUuids))
+	for _, uuid := range bomUuids {
+		productBomsList = append(productBomsList, productBoms[uuid])
+	}
+
+	// 提取并排序 Material UUID，避免死锁
+	materialUuids := make([]uint64, 0, len(materials))
+	for uuid := range materials {
+		materialUuids = append(materialUuids, uuid)
+	}
+	sort.Slice(materialUuids, func(i, j int) bool { return materialUuids[i] < materialUuids[j] })
+
 	// 更新库存
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseFormItemRecordsAddStock(saleBillUuid); err != nil {
@@ -148,8 +164,9 @@ func AddStock(payloadCtx context.Context, db *gorm.DB, saleBillUuid uint64) {
 		if err := repository.NewProductBomRepo(tx).UpdateProductBoms(productBomsList); err != nil {
 			return err
 		}
-		// 更新仓库物品库存。
-		for _, material := range materials {
+		// 按排序后的顺序更新仓库物品库存
+		for _, materialUuid := range materialUuids {
+			material := materials[materialUuid]
 			if err := base.NewMaterialRepo(tx).UpdateMaterialsStockNum(material.MaterialUuid, material.WarehouseUuid, material.AddStockNum); err != nil {
 				return err
 			}
