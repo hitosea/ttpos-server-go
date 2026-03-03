@@ -771,6 +771,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     INDEX `idx_first_category_uuid` (`first_category_uuid`),
     INDEX `idx_batch_tag_uuid` (`batch_tag_uuid`),
     INDEX `idx_status` (`status`),
+    INDEX `idx_status_delete_finished` (`status`, `delete_time`, `finished_time`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单商品表';
 
