@@ -1,13 +1,17 @@
 package passport
 
 import (
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
+	"time"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
-	"ttpos-server-go/pkg/utils"
 
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 
@@ -157,14 +161,14 @@ func (h *Handler) GetMemoryStats(c *gin.Context) {
 	helper.Success(c, memStats)
 }
 
-// FileRedirect 文件重定向
-// @Summary 文件重定向
+// FileRedirect 文件下载
+// @Summary 文件下载
 // @Tags 通用
 // @Access json
-// @Produce json
+// @Produce octet-stream
 // @Param uuid query uint64 true "文件UUID"
 // @Param company_uuid query uint64 true "公司UUID"
-// @Success 302 "重定向到文件URL"
+// @Success 200 "文件内容"
 // @Failure 400 {object} dto.Response "参数错误"
 // @Failure 404 {object} dto.Response "文件不存在"
 // @Router /passport/file_redirect [get]
@@ -198,11 +202,69 @@ func (h *Handler) FileRedirect(c *gin.Context) {
 		return
 	}
 
-	// 获取文件URL并重定向
-	baseURL := utils.GetBaseURL(c.Request)
-	fileURL := file.GetUrl(baseURL)
+	// 获取下载文件名
+	fileName := file.RealName
+	if fileName == "" {
+		fileName = file.FileName
+	}
 
-	c.Redirect(http.StatusFound, fileURL)
+	// 本地文件：直接从文件系统提供
+	if file.Storage == "local" && file.UrlParam == "" {
+		filePath := filepath.Join("public/uploads", file.SaveName)
+		if _, statErr := os.Stat(filePath); statErr != nil {
+			logger.Logger.Error("本地文件不存在",
+				zap.String("path", filePath),
+				zap.Uint64("company_uuid", redirectReq.CompanyUuid),
+				zap.Error(statErr),
+			)
+			helper.Fail(c, constant.CodeFail, "文件不存在")
+			return
+		}
+		c.FileAttachment(filePath, fileName)
+		return
+	}
+
+	// 远程文件：获取真实远程URL
+	var fileURL string
+	if file.Storage == "google" || strings.Contains(file.UrlParam, "GoogleAccessId") {
+		fileURL = file.FileUrl + "/" + file.SaveName + "?" + file.UrlParam
+	} else {
+		fileURL = file.FileUrl + "/" + file.FileName
+	}
+
+	// 通过HTTP获取远程文件并代理下载
+	client := &http.Client{Timeout: 120 * time.Second}
+	httpResp, err := client.Get(fileURL)
+	if err != nil {
+		logger.Logger.Error("获取远程文件失败",
+			zap.String("url", fileURL),
+			zap.Uint64("company_uuid", redirectReq.CompanyUuid),
+			zap.Error(err),
+		)
+		helper.Fail(c, constant.CodeFail, "获取文件失败")
+		return
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		logger.Logger.Error("远程文件返回非200状态",
+			zap.String("url", fileURL),
+			zap.Int("status", httpResp.StatusCode),
+			zap.Uint64("company_uuid", redirectReq.CompanyUuid),
+		)
+		helper.Fail(c, constant.CodeFail, "获取文件失败")
+		return
+	}
+
+	contentType := httpResp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	extraHeaders := map[string]string{
+		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, fileName),
+	}
+	c.DataFromReader(http.StatusOK, httpResp.ContentLength, contentType, httpResp.Body, extraHeaders)
 }
 
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {

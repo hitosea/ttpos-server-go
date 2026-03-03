@@ -33599,10 +33599,10 @@ paths:
         required: true
         type: integer
       produces:
-      - application/json
+      - application/octet-stream
       responses:
-        "302":
-          description: 重定向到文件URL
+        "200":
+          description: 文件内容
         "400":
           description: 参数错误
           schema:
@@ -33611,7 +33611,7 @@ paths:
           description: 文件不存在
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: 文件重定向
+      summary: 文件下载
       tags:
       - 通用
   /passport/server_public_key:
