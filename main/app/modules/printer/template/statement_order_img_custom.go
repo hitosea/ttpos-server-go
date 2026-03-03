@@ -253,7 +253,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 			if refundAmount, ok := refundAmountMap[paymentOrder.Uuid]; ok && refundAmount > 0 {
 				actualAmount = decimal.NewFromFloat(paymentOrder.Amount).Sub(decimal.NewFromFloat(refundAmount)).InexactFloat64()
 			}
-			if actualAmount > 0 {
+			if actualAmount >= 0 {
 				paymentMethods = append(paymentMethods, structs.StatementPaymentMethod{
 					Name: t.base.Translate("实收金额"),
 					Text: t.base.Amount(actualAmount),

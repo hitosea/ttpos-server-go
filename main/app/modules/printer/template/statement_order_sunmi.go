@@ -606,7 +606,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 				if refundAmount, ok := refundAmountMap[paymentOrder.Uuid]; ok && refundAmount > 0 {
 					actualAmount = decimal.NewFromFloat(paymentOrder.Amount).Sub(decimal.NewFromFloat(refundAmount)).InexactFloat64()
 				}
-				if actualAmount > 0 {
+				if actualAmount >= 0 {
 					printer.PrintInColumns(
 						t.base.Translate("实收金额"),
 						t.base.GetPriceAndUnit(actualAmount),
