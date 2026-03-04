@@ -429,17 +429,28 @@ func (s *rechargeOrderSrv) CancelPaymentMethod(ctx context.Context, cancelReq re
 	order := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(paymentOrder.RelatedUuid),
 		rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod())
 	var cashPaymentOrder model.PaymentOrder
-	var sumPaymentAmount float64
+	var sumNonCashAmount float64
 	for _, po := range order.PaymentOrders {
 		if po.PaymentMethod.Code == constant.PaymentMethodCodeCash {
 			cashPaymentOrder = po
+		} else {
+			sumNonCashAmount = utils.DecimalAdd(sumNonCashAmount, po.PaymentAmount)
 		}
-		sumPaymentAmount = utils.DecimalAdd(sumPaymentAmount, po.PaymentAmount)
 	}
 	if cashPaymentOrder.Uuid != 0 {
-		paymentOrderRepo.Update(cashPaymentOrder.Uuid, map[string]any{
-			"payment_amount": utils.DecimalSub(order.RechargeAmount, sumPaymentAmount),
-		})
+		// 仅在现金有找零时，重新计算现金应付金额（吸收被撤销的部分）
+		cashChargeDue := utils.DecimalSub(cashPaymentOrder.Amount, cashPaymentOrder.PaymentCommissionFee, cashPaymentOrder.PaymentAmount)
+		if cashChargeDue > 0 {
+			newPaymentAmount := utils.DecimalSub(order.RechargeAmount, sumNonCashAmount)
+			// 不能超过现金实收金额
+			maxPaymentAmount := utils.DecimalSub(cashPaymentOrder.Amount, cashPaymentOrder.PaymentCommissionFee)
+			if newPaymentAmount > maxPaymentAmount {
+				newPaymentAmount = maxPaymentAmount
+			}
+			paymentOrderRepo.Update(cashPaymentOrder.Uuid, map[string]any{
+				"payment_amount": newPaymentAmount,
+			})
+		}
 	}
 	return s.GetPendingRechargeOrder(companyUuid), nil
 }
