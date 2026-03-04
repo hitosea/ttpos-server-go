@@ -4399,14 +4399,6 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 
 			totalStock := stockMap[material.Uuid] // 如果没有记录，默认为0
 			if material.SafetyStock != nil && totalStock < *material.SafetyStock {
-				// 库存低于安全库存，记录日志
-				logger.Logger.Warn("物料库存低于安全库存",
-					zap.Uint64("company_uuid", companyUuid),
-					zap.Uint64("material_uuid", material.Uuid),
-					zap.String("material_name", material.MultiLanguageName.GetNameByLang(defaultLanguage)),
-					zap.Float64("current_stock", totalStock),
-					zap.Float64("safety_stock", *material.SafetyStock),
-				)
 
 				// 发送库存预警邮件（异步）
 				utils.Go(func() {

@@ -102,9 +102,8 @@ type takeoutAppService struct {
 	rpcService *rpcAdapter.TakeoutRPCService
 
 	// 菜单管理相关
-	dbm        *database.DBManager
-	menuRepo   repository.IMenuDataRepository
-	converters map[string]service.IPlatformConverter // 平台菜单转换器映射
+	dbm      *database.DBManager
+	menuRepo repository.IMenuDataRepository
 
 	// 订单管理相关
 	orderService service.ITakeoutOrderSrv // 订单服务
@@ -117,12 +116,6 @@ func NewTakeoutAppService(
 	// 初始化 RPC 服务
 	rpcService := rpcAdapter.NewTakeoutRPCService()
 
-	// 初始化平台转换器（用于菜单转换）
-	converters := make(map[string]service.IPlatformConverter)
-	grabConverter := grab.NewGrabConverter(dbm)
-	converters["grab"] = grabConverter
-	converters["lineman"] = grabConverter
-
 	// 初始化订单服务
 	orderService := service.NewTakeoutOrderSrv(dbm)
 
@@ -134,9 +127,8 @@ func NewTakeoutAppService(
 		rpcService: rpcService,
 
 		// 菜单管理相关
-		dbm:        dbm,
-		menuRepo:   persistence.NewMenuDataRepository(dbm),
-		converters: converters,
+		dbm:      dbm,
+		menuRepo: persistence.NewMenuDataRepository(dbm),
 
 		// 订单管理相关
 		orderService: orderService,
@@ -332,24 +324,18 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	}
 
 	// 从数据库加载菜单数据并转换为平台格式
-	var platformData interface{}
-	var singleFlavorMapping map[string]*value_object.SingleFlavorInfo
-	if grabConverter, ok := converter.(*grab.GrabConverter); ok {
-		// Grab 平台使用专用的加载方法（直接返回 Grab 格式）
-		if req.Platform == value_object.TakeoutPlatformLineman {
-			grabConverter.SetNameMaxLength(5000)
-		} else {
-			grabConverter.SetNameMaxLength(40)
-		}
-		platformData, err = grabConverter.LoadMenuFromDatabase(ctx, req.Platform, companyUuid, req.CurrencyUnit, []uint64{})
-		if err != nil {
-			return nil, errors.New("加载菜单数据失败")
-		}
-		// 获取单规格映射
-		singleFlavorMapping = grabConverter.GetSingleFlavorMapping()
+	// Grab 平台使用专用的加载方法（直接返回 Grab 格式）
+	if req.Platform == value_object.TakeoutPlatformLineman {
+		converter.SetNameMaxLength(5000)
 	} else {
-		return nil, errors.New("暂不支持该平台")
+		converter.SetNameMaxLength(40)
 	}
+	platformData, err := converter.LoadMenuFromDatabase(ctx, req.Platform, companyUuid, req.CurrencyUnit, []uint64{})
+	if err != nil {
+		return nil, errors.New("加载菜单数据失败")
+	}
+	// 获取单规格映射
+	singleFlavorMapping := converter.GetSingleFlavorMapping()
 
 	// 保存导出的菜单数据到 ttpos_menu 字段
 	if err := s.takeoutService.UpdateTtposMenuByPlatform(ctx, req.Platform, platformData); err != nil {
@@ -409,13 +395,9 @@ func (s *takeoutAppService) ConvertMenuData(ctx context.Context, req request.Imp
 	if err != nil {
 		return nil, err
 	}
-	grabConverter, ok := converter.(*grab.GrabConverter)
-	if !ok {
-		return nil, errors.New("转换器类型错误")
-	}
 
 	// 解析 Grab 菜单数据（返回 Grab 格式）
-	grabMenu, err := grabConverter.ParseGrabMenu(req.MenuData)
+	grabMenu, err := converter.ParseGrabMenu(req.MenuData)
 	if err != nil {
 		return nil, fmt.Errorf("解析 Grab 菜单失败: %w", err)
 	}
@@ -459,12 +441,16 @@ func (s *takeoutAppService) PushMenu(ctx context.Context, platform string, curre
 }
 
 // getConverter 获取平台转换器
-func (s *takeoutAppService) getConverter(platform string) (service.IPlatformConverter, error) {
-	converter, ok := s.converters[platform]
-	if !ok {
+// getConverter 获取平台转换器（每次创建新实例，避免并发状态污染）
+// GrabConverter 是有状态的（singleFlavorMapping、nameMaxLength 等字段在执行过程中会被修改），
+// 因此不能作为共享单例使用，必须每次创建新实例。
+func (s *takeoutAppService) getConverter(platform string) (*grab.GrabConverter, error) {
+	switch platform {
+	case value_object.TakeoutPlatformGrab, value_object.TakeoutPlatformLineman:
+		return grab.NewGrabConverter(s.dbm), nil
+	default:
 		return nil, errors.New("不支持的平台: " + platform)
 	}
-	return converter, nil
 }
 
 // GetImportProgress 获取导入进度
@@ -701,18 +687,13 @@ func (s *takeoutAppService) directSyncMenuChanges(ctx context.Context, req reque
 		return nil, err
 	}
 
-	grabConverter, ok := converter.(*grab.GrabConverter)
-	if !ok {
-		return nil, errors.New("转换器类型错误")
-	}
-
 	// 3. 解析新旧菜单数据
-	newMenu, err := grabConverter.ParseGrabMenu(newMenuData)
+	newMenu, err := converter.ParseGrabMenu(newMenuData)
 	if err != nil {
 		return nil, fmt.Errorf("解析新菜单数据失败: %w", err)
 	}
 
-	oldMenu, err := grabConverter.ParseGrabMenu(takeout.TtposMenu)
+	oldMenu, err := converter.ParseGrabMenu(takeout.TtposMenu)
 	if err != nil {
 		return nil, fmt.Errorf("解析旧菜单数据失败: %w", err)
 	}

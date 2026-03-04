@@ -388,6 +388,23 @@ func GetContext(c *gin.Context) context.Context {
 			if logger.Logger == nil {
 				return zap.NewNop() // 避免未初始化日志导致nil空指针错误
 			}
+			// 自动附加请求上下文字段，所有 ctx.Log() 调用自动携带
+			fields := make([]zap.Field, 0, 4)
+			if companyUuid := GetCompanyUuid(c); companyUuid > 0 {
+				fields = append(fields, zap.Uint64("company_uuid", companyUuid))
+			}
+			if source := GetSource(c); source != "" {
+				fields = append(fields, zap.String("source", source))
+			}
+			if staffUuid := GetStaffUuid(c); staffUuid > 0 {
+				fields = append(fields, zap.Uint64("staff_uuid", staffUuid))
+			}
+			if deviceUuid := GetDeviceUuid(c); deviceUuid > 0 {
+				fields = append(fields, zap.Uint64("device_uuid", deviceUuid))
+			}
+			if len(fields) > 0 {
+				return logger.Logger.With(fields...)
+			}
 			return logger.Logger
 		}()),
 	)

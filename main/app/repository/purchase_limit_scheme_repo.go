@@ -530,7 +530,7 @@ func (r *purchaseLimitSchemeRepoImpl) GetMinQuotaMinBatchByMaterialCodes(
 // 逻辑：
 //  1. 查询所有启用的、应用到该门店的限购方案
 //  2. 过滤出包含当前星期的方案
-//  3. 对于最大限购数量（quota_limit），取最小值（最严格的限制）
+//  3. 对于最大限购数量（quota_limit），取最大值（多个方案取最宽松的限制）
 //  4. 对于最小采购数量（min_quota_limit），取最小值（最宽松的限制）
 func (r *purchaseLimitSchemeRepoImpl) GetQuotaLimitConfigBatchByMaterialCodes(
 	companyUuid uint64,
@@ -590,13 +590,13 @@ func (r *purchaseLimitSchemeRepoImpl) GetQuotaLimitConfigBatchByMaterialCodes(
 		MinQuotaLimit float64 `gorm:"column:min_quota_limit"`
 	}
 
-	// 使用两个子查询分别计算最大限购和最小采购数量
-	// 最大限购：取 MIN(quota_limit)，排除 0 值
-	// 最小采购：取 MIN(min_quota_limit)，排除 0 值
+	// 使用聚合分别计算最大限购和最小采购数量
+	// 最大限购：取 MAX(quota_limit)，多个方案取最大值（最宽松）
+	// 最小采购：取 MIN(min_quota_limit)，排除 0 值（最宽松）
 	err = r.db.Table("ttpos_purchase_limit_scheme_item").
 		Select(`
 			material_code,
-			COALESCE(MIN(CASE WHEN quota_limit > 0 THEN quota_limit ELSE NULL END), 0) as quota_limit,
+			COALESCE(MAX(CASE WHEN quota_limit > 0 THEN quota_limit ELSE NULL END), 0) as quota_limit,
 			COALESCE(MIN(CASE WHEN min_quota_limit > 0 THEN min_quota_limit ELSE NULL END), 0) as min_quota_limit
 		`).
 		Where("delete_time = ?", 0).

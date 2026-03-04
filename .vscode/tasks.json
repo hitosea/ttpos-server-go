@@ -139,6 +139,15 @@
             "showReuseMessage": false,
             "clear": true
         }
+    },
+    {
+        "label": "Go项目-停止服务",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "stop-service"
+        ],
+        "group": "build",
     }
 ]
 } 

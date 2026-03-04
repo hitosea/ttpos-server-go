@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -231,16 +232,34 @@ func FreeSaleOrderEventHandler() {
 }
 
 // 增加销量（免单）
+// 注意：对 UUID 排序后再更新，保证所有并发事务获取锁的顺序一致，避免死锁
 func HandleAddSalesVolumeForFree(payload event.FreeSaleOrderPayload) {
 	ProductBoms, ProductPackages := GetSalesVolume(payload.SaleBill)
 
-	for productBomUuid, saleNum := range ProductBoms {
+	// 提取并排序 ProductBom UUID，避免死锁
+	bomUuids := make([]uint64, 0, len(ProductBoms))
+	for uuid := range ProductBoms {
+		bomUuids = append(bomUuids, uuid)
+	}
+	sort.Slice(bomUuids, func(i, j int) bool { return bomUuids[i] < bomUuids[j] })
+
+	for _, productBomUuid := range bomUuids {
+		saleNum := ProductBoms[productBomUuid]
 		if err := repository.NewProductBomRepo(payload.Ctx.GetDB()).AddActualSaleNum(productBomUuid, saleNum); err != nil {
 			logger.Logger.Error("HandleAddSalesVolumeForFree process, AddActualSaleNum failed", zap.Any("productBomUuid", productBomUuid), zap.Any("saleNum", saleNum), zap.Error(err))
 			continue
 		}
 	}
-	for productPackageUuid, saleNum := range ProductPackages {
+
+	// 提取并排序 ProductPackage UUID，避免死锁
+	packageUuids := make([]uint64, 0, len(ProductPackages))
+	for uuid := range ProductPackages {
+		packageUuids = append(packageUuids, uuid)
+	}
+	sort.Slice(packageUuids, func(i, j int) bool { return packageUuids[i] < packageUuids[j] })
+
+	for _, productPackageUuid := range packageUuids {
+		saleNum := ProductPackages[productPackageUuid]
 		if err := repository.NewProductPackageRepo(payload.Ctx.GetDB()).AddActualSaleNum(productPackageUuid, saleNum); err != nil {
 			logger.Logger.Error("HandleAddSalesVolumeForFree process, AddActualSaleNum failed", zap.Any("productPackageUuid", productPackageUuid), zap.Any("saleNum", saleNum), zap.Error(err))
 			continue
@@ -249,9 +268,19 @@ func HandleAddSalesVolumeForFree(payload event.FreeSaleOrderPayload) {
 }
 
 // 增加材料销量（免单）
+// 注意：对 UUID 排序后再更新，保证所有并发事务获取锁的顺序一致，避免死锁
 func HandleAddMaterialSalesVolumeForFree(payload event.FreeSaleOrderPayload) {
 	MaterialSalesVolume := GetMaterialSalesVolume(payload.CompanyUuid, payload.SaleOrderUuid)
-	for materialUuid, saleNum := range MaterialSalesVolume {
+
+	// 提取并排序 Material UUID，避免死锁
+	materialUuids := make([]uint64, 0, len(MaterialSalesVolume))
+	for uuid := range MaterialSalesVolume {
+		materialUuids = append(materialUuids, uuid)
+	}
+	sort.Slice(materialUuids, func(i, j int) bool { return materialUuids[i] < materialUuids[j] })
+
+	for _, materialUuid := range materialUuids {
+		saleNum := MaterialSalesVolume[materialUuid]
 		if err := repository.NewMaterialRepo(payload.Ctx.GetDB()).AddActualSaleNum(materialUuid, saleNum); err != nil {
 			logger.Logger.Error("HandleAddMaterialSalesVolumeForFree process, AddActualSaleNum failed", zap.Any("materialUuid", materialUuid), zap.Any("saleNum", saleNum), zap.Error(err))
 			continue
