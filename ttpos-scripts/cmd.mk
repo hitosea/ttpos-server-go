@@ -97,7 +97,6 @@ help:
 	@echo "📦 版本管理"
 	@printf "\033[0m"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "add-ver" "交互式更新版本号"
-	@printf "\033[1;33m  %-25s\033[0m - %s\n" "add-ver-patch" "自动增加补丁版本号 (patch +1)"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "ver-show" "显示当前版本号"
 	@echo ""
 	@printf "\033[1;32m"
@@ -258,23 +257,6 @@ add-ver:
 	printf "  ✓ admin/views/shop/.env.production\n"; \
 	echo ""; \
 	printf "\033[1;32m✅ 版本号已更新为 \033[1;33m$$NEW_VERSION\033[0m\n"
-
-# 快速增加版本号 (patch +1)
-add-ver-patch:
-	@echo "快速增加版本号..."
-	@CURRENT_VERSION=$$(grep 'Version.*=.*"' main/config/version.go | sed 's/.*"\(.*\)".*/\1/'); \
-	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1); \
-	MINOR=$$(echo $$CURRENT_VERSION | cut -d. -f2); \
-	PATCH=$$(echo $$CURRENT_VERSION | cut -d. -f3); \
-	NEW_PATCH=$$((PATCH + 1)); \
-	NEW_VERSION="$$MAJOR.$$MINOR.$$NEW_PATCH"; \
-	CURRENT_DATE=$$(date +%Y-%m-%d); \
-	CURRENT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
-	echo "当前版本: $$CURRENT_VERSION, 新版本: $$NEW_VERSION"; \
-	cd main && go run ./main.go version --version=$$NEW_VERSION --commit=$$CURRENT_COMMIT --build-time=$$CURRENT_DATE
-
-# 兼容旧命令
-add-version: add-ver-patch
 
 # 清空redis的cluster的data-*目录
 redis-clear-data-node-conf:
