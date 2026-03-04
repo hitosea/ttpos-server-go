@@ -33,7 +33,7 @@ type ISaleOrderProductRepo interface {
 type ISaleOrderProductQueryRepo interface {
 	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
 	GetSaleOrderProductsByUuids(uuids []uint64) ([]*model.SaleOrderProduct, error)                                                   // 根据Uuid列表获取销售订单商品
-	GetProductPackageDetail(saleBillUuid uint64, saleOrderUuid uint64, productPackageUuid uint64) ([]*model.SaleOrderProduct, error) // 获取商品选购详情
+	GetProductPackageDetail(saleBillUuid uint64, saleOrderUuid uint64, productPackageUuid uint64, opts ...DBOption) ([]*model.SaleOrderProduct, error) // 获取商品选购详情
 	GetSaleOrderProducts(opts ...DBOption) ([]*model.SaleOrderProduct, error)                                                        // 根据销售订单uuid获取销售订单商品
 	GetSaleOrderProductUuidsByProductBomUuids(saleOrderUuid uint64, productBomUuids []uint64) ([]uint64, error)                      // 通过规格商品uuid列表获取销售订单商品uuid列表
 	GetSaleOrderProductBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]*model.SaleOrderProduct, error)                    // 通过销售订单商品uuid列表获取销售订单商品
@@ -288,8 +288,9 @@ func (r *saleOrderProductRepo) Update(data map[string]any, opts ...DBOption) err
 	return errors.WithMessage(err)
 }
 
-func (r *saleOrderProductRepo) GetProductPackageDetail(saleBillUuid uint64, saleOrderUuid uint64, productPackageUuid uint64) ([]*model.SaleOrderProduct, error) {
-	models, err := r.GetSaleOrderProducts(
+func (r *saleOrderProductRepo) GetProductPackageDetail(saleBillUuid uint64, saleOrderUuid uint64, productPackageUuid uint64, opts ...DBOption) ([]*model.SaleOrderProduct, error) {
+	// 基础查询条件
+	baseOpts := []DBOption{
 		CommonRepo.WhereBySaleBillUuid(saleBillUuid),
 		CommonRepo.WhereBySaleOrderUuid(saleOrderUuid),
 		CommonRepo.WhereByProductPackageUuid(productPackageUuid),
@@ -303,7 +304,11 @@ func (r *saleOrderProductRepo) GetProductPackageDetail(saleBillUuid uint64, sale
 				Query: "SaleOrderProductBoms",
 			},
 		),
-	)
+	}
+	// 追加调用方传入的额外条件（如 device_id 过滤）
+	baseOpts = append(baseOpts, opts...)
+
+	models, err := r.GetSaleOrderProducts(baseOpts...)
 	if err != nil {
 		return nil, err
 	}

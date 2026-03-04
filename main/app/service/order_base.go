@@ -1471,8 +1471,20 @@ func (s *orderSrv) GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid
 // GetProductPackageDetail 获取商品包详情
 func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProductPackageDetailReq) (*resp.ProductPackageDetailRes, error) {
 	db := ctx.GetDB()
+
+	// 构建查询条件：根据来源过滤商品
+	var opts []repository.DBOption
+	switch ctx.GetSource() {
+	case jwt.SourceH5:
+		// H5 来源：只查询 H5 加购的商品
+		opts = append(opts, repository.CommonRepo.WhereByDeviceSn(jwt.SourceH5))
+	case jwt.SourceAssistant:
+		// 助手端来源：排除 H5 加购的商品
+		opts = append(opts, repository.CommonRepo.WhereByDeviceSnNot(jwt.SourceH5))
+	}
+
 	// 获取销售订单中h5未下单的销售订单商品
-	saleOrderProducts, err := repository.NewSaleOrderProductRepo(db).GetProductPackageDetail(req.SaleBillUuid, req.SaleOrderUuid, req.ProductPackageUuid)
+	saleOrderProducts, err := repository.NewSaleOrderProductRepo(db).GetProductPackageDetail(req.SaleBillUuid, req.SaleOrderUuid, req.ProductPackageUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取商品包详情失败")
 	}

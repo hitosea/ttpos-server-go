@@ -102,6 +102,7 @@ type ICommonRepo interface {
 	WhereByAddStock(addStock uint) DBOption                                                   // 根据是否加库存查询
 	WhereByDeviceUuid(deviceUuid uint64) DBOption                                             // 根据设备uuid查询
 	WhereByDeviceSn(deviceSn string) DBOption                                                 // 根据设备Sn查询
+	WhereByDeviceSnNot(deviceSn string) DBOption                                              // 根据设备Sn不等于查询
 	WhereByNoDisable() DBOption                                                               // 根据没禁用查询
 	WhereByBuffetPackageUuid(buffetPackageUuid uint64) DBOption                               // 根据自助餐套餐UUID查询
 	WhereByCustomerTypeUuid(customerTypeUuid uint64) DBOption                                 // 根据顾客类型UUID查询
@@ -481,6 +482,12 @@ func (r *commonRepo) WhereByDeviceUuid(deviceUuid uint64) DBOption {
 func (r *commonRepo) WhereByDeviceSn(deviceSn string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("device_id = ?", deviceSn)
+	}
+}
+
+func (r *commonRepo) WhereByDeviceSnNot(deviceSn string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("device_id <> ?", deviceSn)
 	}
 }
 
