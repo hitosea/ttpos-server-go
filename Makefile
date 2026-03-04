@@ -55,13 +55,7 @@ debug:
 
 # 运行run
 run:
-	@PORT=$$(grep '^DEBUG_SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' '); \
-	[ -z "$$PORT" ] && PORT=$$(grep '^SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo "8080"); \
-	PID=$$(lsof -ti :$$PORT 2>/dev/null); \
-	if [ -n "$$PID" ]; then \
-		echo "🛑 停止端口 $$PORT 上的进程 (PID: $$PID)..."; \
-		kill -9 $$PID 2>/dev/null || true; \
-	fi; \
+	@make stop-service
 	cd main && go run ./main.go
 
 # 启动开发模式 - 热重启

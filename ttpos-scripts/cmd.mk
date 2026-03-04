@@ -64,6 +64,7 @@ help:
 	@printf "\033[0m"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "debug" "切换到调试模式"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "run" "运行项目（调试模式）"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "stop-service" "停止服务"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "dev" "启动开发模式（热重启 + HTTP调试代理）"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build-web" "构建前端项目"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build-doc" "生成API文档"
@@ -343,6 +344,17 @@ stop-http-debug-proxy:
 # 运行数据库迁移
 php-migrate:
 	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh php-migrate
+
+# 停止服务
+stop-service:
+	@PORT=$$(grep '^DEBUG_SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' '); \
+	[ -z "$$PORT" ] && PORT=$$(grep '^SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo "8080"); \
+	PID=$$(lsof -ti :$$PORT 2>/dev/null); \
+	if [ -n "$$PID" ]; then \
+		echo "🛑 停止端口 $$PORT 上的进程 (PID: $$PID)..."; \
+		kill -9 $$PID 2>/dev/null || true; \
+	fi;
+	@echo "✅ 服务已停止"
 
 # 处理额外参数（不包含第一个目标）
 ifneq ($(words $(MAKECMDGOALS)),1)
