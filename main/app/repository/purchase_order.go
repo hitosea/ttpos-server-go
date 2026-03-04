@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -74,6 +75,32 @@ type IPurchaseOrderRepo interface {
 	// 品牌采购限购相关
 	// CountBrandPurchaseByTimeRange 统计指定时间范围内的品牌采购申请次数
 	CountBrandPurchaseByTimeRange(startTime, endTime int64) (int64, error)
+
+	// GetPurchaseReceiptOrderUnionList 采购单与收货单联合分页查询
+	GetPurchaseReceiptOrderUnionList(params PurchaseReceiptUnionListParams) ([]PurchaseReceiptUnionResult, int64, error)
+}
+
+// PurchaseReceiptUnionResult 采购单与收货单联合查询结果
+type PurchaseReceiptUnionResult struct {
+	Uuid         uint64 `json:"uuid"`
+	OrderNo      string `json:"order_no"`
+	ErpOrderNo   string `json:"erp_order_no"`
+	CreateTime   int64  `json:"create_time"`
+	PurchaseType int    `json:"purchase_type"`
+	Type         int    `json:"type"` // 1-收货单 2-采购单
+	ReceiveTime  int64  `json:"receive_time"`
+}
+
+// PurchaseReceiptUnionListParams 采购单与收货单联合查询参数
+type PurchaseReceiptUnionListParams struct {
+	Status           int
+	StatusIn         []int
+	ReceiptType      int
+	OrderNoPattern   string
+	ReceiveTimeStart int64
+	ReceiveTimeEnd   int64
+	PageSize         int
+	PageNo           int
 }
 
 // PurchaseOrderRepoImpl 采购订单Repository实现
@@ -631,4 +658,39 @@ func (r *PurchaseOrderRepoImpl) CountBrandPurchaseByTimeRange(
 		Count(&count).Error
 
 	return count, err
+}
+
+// GetPurchaseReceiptOrderUnionList 采购单与收货单联合分页查询
+func (r *PurchaseOrderRepoImpl) GetPurchaseReceiptOrderUnionList(params PurchaseReceiptUnionListParams) ([]PurchaseReceiptUnionResult, int64, error) {
+	sql := `
+		SELECT * FROM (
+			SELECT uuid, order_no, erp_order_no, create_time, purchase_type, 0 as receive_time, 2 as type FROM ttpos_purchase_order
+			WHERE status = ?
+			UNION ALL
+			SELECT uuid, order_no, erp_order_no, create_time, receipt_type as purchase_type, receive_time, 1 as type FROM ttpos_purchase_receipt_order
+			WHERE status in (?)
+		) t
+		WHERE t.purchase_type = ?
+		AND (t.order_no LIKE ? OR t.erp_order_no LIKE ?)
+	`
+	if params.ReceiveTimeStart > 0 && params.ReceiveTimeEnd > 0 {
+		sql += fmt.Sprintf(" AND (t.receive_time >= %d AND t.receive_time <= %d)", params.ReceiveTimeStart, params.ReceiveTimeEnd)
+	}
+
+	args := []any{params.Status, params.StatusIn, params.ReceiptType, params.OrderNoPattern, params.OrderNoPattern}
+
+	var total int64
+	countSql := fmt.Sprintf(`SELECT COUNT(*) FROM (%s) t`, sql)
+	if err := r.db.Raw(countSql, args...).Scan(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var results []PurchaseReceiptUnionResult
+	offset := params.PageSize * (params.PageNo - 1)
+	listArgs := append(args, params.PageSize, offset)
+	if err := r.db.Raw(sql+" LIMIT ? OFFSET ?", listArgs...).Scan(&results).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return results, total, nil
 }

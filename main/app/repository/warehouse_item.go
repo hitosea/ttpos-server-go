@@ -71,6 +71,9 @@ type IWarehouseItemRepo interface {
 	UpdateStockByWarehouseAndMaterial(warehouseUuid, materialUuid uint64, stock float64) error
 	CreateBatchValues(items []model.WarehouseItem) error
 
+	// 获取所有活跃仓库中的库存物品
+	GetItemsInActiveWarehouses() ([]model.WarehouseItem, error)
+
 	// 条件查询选项
 	WhereMaterialCodeNotEmpty() DBOption
 }
@@ -260,8 +263,7 @@ func (r *WarehouseItemRepoImpl) GetByWarehouseErpCode(warehouseErpCode string, o
 	var warehouseItems []model.WarehouseItem
 	query := r.db.Joins("JOIN ttpos_warehouse ON ttpos_warehouse_item.warehouse_uuid = ttpos_warehouse.uuid").
 		Where("ttpos_warehouse.erp_code = ?", warehouseErpCode).
-		Where("ttpos_warehouse.delete_time = 0").
-		Scopes(NotDeleted)
+		Where("ttpos_warehouse.delete_time = 0")
 	// 应用查询选项
 	for _, opt := range opts {
 		query = opt(query)
@@ -632,4 +634,13 @@ func (r *WarehouseItemRepoImpl) GetTransitWarehouseItemByWarehouseAndMaterial(
 		}
 	}
 	return warehouseItem, nil
+}
+
+// GetItemsInActiveWarehouses 获取所有活跃仓库中的库存物品
+func (r *WarehouseItemRepoImpl) GetItemsInActiveWarehouses() ([]model.WarehouseItem, error) {
+	var warehouseItems []model.WarehouseItem
+	err := r.db.Model(&model.WarehouseItem{}).
+		Where("warehouse_uuid IN (?)", r.db.Model(&model.Warehouse{}).Select("uuid").Where("delete_time = 0")).
+		Find(&warehouseItems).Error
+	return warehouseItems, err
 }

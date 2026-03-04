@@ -406,10 +406,11 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 			return errors.New("角色参数错误"), exists
 		}
 	}
-	err := saasDB.Model(&model.CompanyStaff{}).Where("uuid = ?", updateReq.Uuid).Updates(map[string]any{
+	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+	err := companyStaffRepo.UpdateCompanyStaff(updateReq.Uuid, map[string]any{
 		"username": updateReq.Username,
 		"phone":    updateReq.Phone,
-	}).Error
+	})
 	if err != nil {
 		return errors.WithMessage(errors.New("编辑员工失败"), err.Error()), exists
 	}
@@ -640,7 +641,7 @@ func (s *staffSrv) SaasAddStaff(ctx context.Context, addReq req.AddStaffReq) (er
 		saasStaff.IsDisable = *addReq.IsDisable
 	}
 
-	err = saasDB.Model(&model.SaasStaff{}).Create(&saasStaff).Error
+	err = repository.NewSaasStaffRepo(saasDB).Create(&saasStaff)
 	if err != nil {
 		return errors.WithMessage(errors.New("创建统一账号失败"), err.Error()), exists
 	}
@@ -745,7 +746,7 @@ func (s *staffSrv) SaasAddStaff(ctx context.Context, addReq req.AddStaffReq) (er
 			if addReq.IsDisable != nil {
 				companyStaff.IsDisable = *addReq.IsDisable
 			}
-			err = saasDB.Model(&model.CompanyStaff{}).Create(&companyStaff).Error
+			err = repository.NewCompanyStaffRepo(saasDB).Create(&companyStaff)
 			if err != nil {
 				return errors.WithMessage(errors.New("创建门店关联失败"), err.Error()), exists
 			}
@@ -819,7 +820,7 @@ func (s *staffSrv) SaasAddStaff(ctx context.Context, addReq req.AddStaffReq) (er
 		if addReq.IsDisable != nil {
 			companyStaff.IsDisable = *addReq.IsDisable
 		}
-		err = saasDB.Model(&model.CompanyStaff{}).Create(&companyStaff).Error
+		err = repository.NewCompanyStaffRepo(saasDB).Create(&companyStaff)
 		if err != nil {
 			return errors.WithMessage(errors.New("创建门店关联失败"), err.Error()), exists
 		}
@@ -1050,10 +1051,8 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 			}
 
 			// 检查并更新/创建 saas.ttpos_company_staff 表
-			var companyStaff model.CompanyStaff
-			err = saasDB.Model(&model.CompanyStaff{}).
-				Where("uuid = ? AND company_uuid = ?", updateReq.Uuid, companyRoleItem.CompanyUuid).
-				First(&companyStaff).Error
+			saasCompanyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+			_, err = saasCompanyStaffRepo.FindByStaffAndCompany(updateReq.Uuid, companyRoleItem.CompanyUuid)
 
 			companyStaffUpdate := map[string]any{
 				"username":    updateReq.Username,
@@ -1078,15 +1077,13 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 				if updateReq.IsDisable != nil && companyRoleItem.CompanyUuid == currentCompanyUuid {
 					newCompanyStaff.IsDisable = *updateReq.IsDisable
 				}
-				err = saasDB.Model(&model.CompanyStaff{}).Create(&newCompanyStaff).Error
+				err = saasCompanyStaffRepo.Create(&newCompanyStaff)
 				if err != nil {
 					return errors.WithMessage(errors.New("创建门店关联失败"), err.Error()), exists
 				}
 			} else {
 				// 记录存在，更新记录
-				err = saasDB.Model(&model.CompanyStaff{}).
-					Where("uuid = ? AND company_uuid = ?", updateReq.Uuid, companyRoleItem.CompanyUuid).
-					Updates(companyStaffUpdate).Error
+				err = saasCompanyStaffRepo.UpdateByStaffAndCompany(updateReq.Uuid, companyRoleItem.CompanyUuid, companyStaffUpdate)
 				if err != nil {
 					return errors.WithMessage(errors.New("更新门店关联失败"), err.Error()), exists
 				}
@@ -1208,10 +1205,8 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 		}
 
 		// 检查并更新/创建 saas.ttpos_company_staff 表
-		var companyStaff model.CompanyStaff
-		err = saasDB.Model(&model.CompanyStaff{}).
-			Where("uuid = ? AND company_uuid = ?", updateReq.Uuid, currentCompanyUuid).
-			First(&companyStaff).Error
+		saasCompanyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+		_, err = saasCompanyStaffRepo.FindByStaffAndCompany(updateReq.Uuid, currentCompanyUuid)
 
 		companyStaffUpdate := map[string]any{
 			"username":    updateReq.Username,
@@ -1236,15 +1231,13 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 			if updateReq.IsDisable != nil {
 				newCompanyStaff.IsDisable = *updateReq.IsDisable
 			}
-			err = saasDB.Model(&model.CompanyStaff{}).Create(&newCompanyStaff).Error
+			err = saasCompanyStaffRepo.Create(&newCompanyStaff)
 			if err != nil {
 				return errors.WithMessage(errors.New("创建门店关联失败"), err.Error()), exists
 			}
 		} else {
 			// 记录存在，更新记录
-			err = saasDB.Model(&model.CompanyStaff{}).
-				Where("uuid = ? AND company_uuid = ?", updateReq.Uuid, currentCompanyUuid).
-				Updates(companyStaffUpdate).Error
+			err = saasCompanyStaffRepo.UpdateByStaffAndCompany(updateReq.Uuid, currentCompanyUuid, companyStaffUpdate)
 			if err != nil {
 				return errors.WithMessage(errors.New("更新门店关联失败"), err.Error()), exists
 			}
@@ -1274,9 +1267,7 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 			}
 
 			// 软删除 saas.ttpos_company_staff 中的关联关系
-			err = saasDB.Model(&model.CompanyStaff{}).
-				Where("uuid = ? AND company_uuid = ?", updateReq.Uuid, companyUuid).
-				Update("delete_time", time.Now().Unix()).Error
+			err = repository.NewCompanyStaffRepo(saasDB).DeleteByStaffAndCompany(updateReq.Uuid, companyUuid)
 			if err != nil {
 				return errors.WithMessage(errors.New("删除门店关联失败"), err.Error()), exists
 			}
@@ -1284,17 +1275,15 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 			// 软删除对应商家数据库中的 ttpos_staff
 			shopDB := s.dbm.GetDB(companyUuid)
 			if shopDB != nil {
-				err = shopDB.Model(&model.Staff{}).
-					Where("uuid = ?", updateReq.Uuid).
-					Update("delete_time", time.Now().Unix()).Error
+				err = repository.NewStaffRepo(shopDB).Update(updateReq.Uuid, map[string]any{
+					"delete_time": time.Now().Unix(),
+				})
 				if err != nil {
 					return errors.WithMessage(errors.New("删除员工失败"), err.Error()), exists
 				}
 
 				// 删除角色关联
-				err = shopDB.Model(&model.StaffRole{}).
-					Where("staff_uuid = ?", updateReq.Uuid).
-					Update("delete_time", time.Now().Unix()).Error
+				err = repository.NewStaffRoleRepo(shopDB).DeleteByStaffUuid(updateReq.Uuid)
 				if err != nil {
 					return errors.WithMessage(errors.New("删除员工角色关联失败"), err.Error()), exists
 				}

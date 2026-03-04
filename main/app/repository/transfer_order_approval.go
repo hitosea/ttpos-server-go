@@ -16,6 +16,7 @@ type ITransferOrderApprovalRepo interface {
 	UpdateAll(approval *model.TransferOrderApproval) error // 更新所有字段（包括零值）
 	Delete(uuid uint64) error
 	DeleteByTransferOrderUuid(transferOrderUuid uint64) error
+	HardDeleteByTransferOrderUuid(transferOrderUuid uint64) error
 	GetByUuid(uuid uint64) (*model.TransferOrderApproval, error)
 	GetListByTransferOrderUuid(transferOrderUuid uint64) ([]*model.TransferOrderApproval, error) // 根据调拨单UUID获取审批流程列表
 	GetCurrentApproval(transferOrderUuid uint64, companyUuid uint64) (*model.TransferOrderApproval, error)
@@ -58,6 +59,11 @@ func (r *TransferOrderApprovalRepoImpl) Delete(uuid uint64) error {
 
 func (r *TransferOrderApprovalRepoImpl) DeleteByTransferOrderUuid(transferOrderUuid uint64) error {
 	return r.db.Model(&model.TransferOrderApproval{}).Where("transfer_order_uuid = ?", transferOrderUuid).Update("delete_time", time.Now().Unix()).Error
+}
+
+// HardDeleteByTransferOrderUuid 根据调拨单UUID硬删除审批记录
+func (r *TransferOrderApprovalRepoImpl) HardDeleteByTransferOrderUuid(transferOrderUuid uint64) error {
+	return r.db.Unscoped().Where("transfer_order_uuid = ?", transferOrderUuid).Delete(&model.TransferOrderApproval{}).Error
 }
 
 func (r *TransferOrderApprovalRepoImpl) GetByUuid(uuid uint64) (*model.TransferOrderApproval, error) {

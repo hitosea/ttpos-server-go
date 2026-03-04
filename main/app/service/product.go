@@ -22,7 +22,7 @@ import (
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/modules/printer"
-	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
+
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
@@ -7763,11 +7763,16 @@ func (s *productSrv) SyncUnit(ctx context.Context, syncHeadquarterData bool) err
 	var headquarter model.CompanySetting
 	var headquarterUnits []model.ProductUnit
 	if companySetting.IsSubShop() && syncHeadquarterData {
-		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+		headquarter, err = repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB)).GetOne(
+			repository.CommonRepo.WhereByUuid(companySetting.HeadquarterUuid),
+			repository.NotDeleted,
+		)
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
-		s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductUnit{}).Preload("MultiLanguageName").Find(&headquarterUnits)
+		headquarterUnits, _ = repository.NewProductUnitRepo(s.dbm.GetDB(headquarter.Uuid)).GetUnitListWithScopes(
+			repository.NewCommonRepo().Preload(repository.WithPreload{Query: "MultiLanguageName"}),
+		)
 	}
 
 	// 子店ttpos已有单位 和 要标记删除的单位
@@ -7893,13 +7898,15 @@ func (s *productSrv) SyncSauce(ctx context.Context, syncHeadquarterData bool) er
 	if !companySetting.IsSubShop() || !syncHeadquarterData {
 		return nil
 	}
-	var headquarter model.CompanySetting
-	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+	headquarter, err := repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB)).GetOne(
+		repository.CommonRepo.WhereByUuid(companySetting.HeadquarterUuid),
+		repository.NotDeleted,
+	)
 	if err != nil || headquarter.Uuid == 0 {
 		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
-	var headquarterSauces []model.ProductSauce
-	s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductSauce{}).Preload("MultiLanguageName").Find(&headquarterSauces)
+	hqSauceRepo := repository.NewProductSauceRepo(s.dbm.GetDB(headquarter.Uuid))
+	headquarterSauces := hqSauceRepo.GetProductSauceList(hqSauceRepo.WithMultiLanguageName())
 
 	if len(headquarterSauces) > 0 {
 		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
@@ -7956,14 +7963,15 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context, syncHeadquarterData
 	if !companySetting.IsSubShop() || !syncHeadquarterData {
 		return nil
 	}
-	var headquarter model.CompanySetting
-	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+	headquarter, err := repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB)).GetOne(
+		repository.CommonRepo.WhereByUuid(companySetting.HeadquarterUuid),
+		repository.NotDeleted,
+	)
 	if err != nil || headquarter.Uuid == 0 {
 		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
 
-	var headquarterAttributeGroups []model.ProductAttributeGroup
-	s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductAttributeGroup{}).Preload("MultiLanguageName").Preload("ProductAttributes").Preload("ProductAttributes.MultiLanguageName").Find(&headquarterAttributeGroups)
+	headquarterAttributeGroups, _ := base.NewProductAttributeGroupRepo(s.dbm.GetDB(headquarter.Uuid)).GetProductAttributeGroupListWithAttributes()
 
 	if len(headquarterAttributeGroups) > 0 {
 		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
@@ -8623,8 +8631,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 	headquarterDb *gorm.DB,
 	companySetting *model.CompanySetting,
 ) error {
-	var takeouts []takeoutModel.Takeout
-	err := subDb.Model(&takeoutModel.Takeout{}).Where("enabled = 1").Find(&takeouts).Error
+	takeouts, err := repository.NewTakeoutRepo(subDb).GetEnabledTakeouts()
 	if err != nil {
 		return errors.WithMessage(err, "获取ttpos_takeout中enabled=1的数据失败")
 	}
@@ -9380,27 +9387,10 @@ func (s *productSrv) SyncProductPackageImage(ctx context.Context, syncHeadquarte
 	if !companySetting.IsSubShop() || !syncHeadquarterData {
 		return nil
 	}
-	var files []model.File
-	var fileGroups []model.FileGroup
 	headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
-
-	// 查询店内商品的图片UUID
-	productFileUuidQuery := headquarterDb.Model(&model.ProductPackage{}).Where("image_file_uuid > 0").Select("image_file_uuid")
-
-	// 查询外卖商品的图片UUID
-	takeoutFileUuidQuery := headquarterDb.Model(&model.ProductPackageTakeout{}).Where("image_file_uuid > 0").Select("image_file_uuid")
-
-	// 使用 UNION 合并两个查询
-	fileUuidQuery := headquarterDb.Raw("? UNION ?", productFileUuidQuery, takeoutFileUuidQuery)
-
-	err := headquarterDb.Model(&model.File{}).Where("uuid in (?)", fileUuidQuery).Find(&files).Error
+	files, fileGroups, err := repository.NewFileRepo(headquarterDb).GetProductImageFilesAndGroups()
 	if err != nil {
-		return errors.WithMessage(errors.New("查询文件失败"), err.Error())
-	}
-	fileGroupUuidQuery := headquarterDb.Model(&model.File{}).Where("uuid in (?)", fileUuidQuery).Where("group_uuid > 0").Select("group_uuid")
-	err = headquarterDb.Model(&model.FileGroup{}).Where("uuid in (?)", fileGroupUuidQuery).Find(&fileGroups).Error
-	if err != nil {
-		return errors.WithMessage(err, "查询文件分组失败")
+		return err
 	}
 	var newFiles []model.File
 	var newFileGroups []model.FileGroup

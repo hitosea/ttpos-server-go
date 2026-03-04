@@ -15,6 +15,7 @@ type IFileRepo interface {
 	GetFileByUuid(uuid uint64) (*model.File, error)    // 根据UUID获取未删除的文件
 	HardDeleteFilesByHeadquarter(headquarterUuid uint64) error      // 硬删除指定总部的文件
 	HardDeleteFileGroupsByHeadquarter(headquarterUuid uint64) error // 硬删除指定总部的文件组
+	GetProductImageFilesAndGroups() ([]model.File, []model.FileGroup, error) // 获取商品图片文件及文件组
 }
 
 func NewFileRepo(db *gorm.DB) IFileRepo {
@@ -76,4 +77,24 @@ func (r *fileRepo) HardDeleteFilesByHeadquarter(headquarterUuid uint64) error {
 
 func (r *fileRepo) HardDeleteFileGroupsByHeadquarter(headquarterUuid uint64) error {
 	return r.db.Where("headquarter_uuid = ?", headquarterUuid).Delete(&model.FileGroup{}).Error
+}
+
+// GetProductImageFilesAndGroups 获取商品图片文件及文件组（店内+外卖商品）
+func (r *fileRepo) GetProductImageFilesAndGroups() ([]model.File, []model.FileGroup, error) {
+	productFileUuidQuery := r.db.Model(&model.ProductPackage{}).Where("image_file_uuid > 0").Select("image_file_uuid")
+	takeoutFileUuidQuery := r.db.Model(&model.ProductPackageTakeout{}).Where("image_file_uuid > 0").Select("image_file_uuid")
+	fileUuidQuery := r.db.Raw("? UNION ?", productFileUuidQuery, takeoutFileUuidQuery)
+
+	var files []model.File
+	if err := r.db.Model(&model.File{}).Where("uuid in (?)", fileUuidQuery).Find(&files).Error; err != nil {
+		return nil, nil, errors.WithMessage(err, "查询文件失败")
+	}
+
+	fileGroupUuidQuery := r.db.Model(&model.File{}).Where("uuid in (?)", fileUuidQuery).Where("group_uuid > 0").Select("group_uuid")
+	var fileGroups []model.FileGroup
+	if err := r.db.Model(&model.FileGroup{}).Where("uuid in (?)", fileGroupUuidQuery).Find(&fileGroups).Error; err != nil {
+		return nil, nil, errors.WithMessage(err, "查询文件分组失败")
+	}
+
+	return files, fileGroups, nil
 }

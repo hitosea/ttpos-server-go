@@ -1026,9 +1026,12 @@ func (s *paymentMethodSrv) syncFromHeadquarter(ctx context.Context) error {
 	var createdCount, updatedCount, skippedCount int
 	for _, hqPayment := range hqPayments {
 		// 检查分店是否已有同名支付方式（payment_name）
-		var existPayment model.PaymentMethod
-		err := subShopDB.Where("payment_name = ? and source = ? AND delete_time = 0", hqPayment.PaymentName, model.PaymentSourceDefault).
-			First(&existPayment).Error
+		subPmRepo := repository.NewPaymentMethodRepo(subShopDB)
+		existPayment, err := subPmRepo.GetPaymentMethodError(
+			subPmRepo.WherePaymentName(hqPayment.PaymentName),
+			subPmRepo.WhereSource(model.PaymentSourceDefault),
+			repository.NotDeleted,
+		)
 
 		if err == nil {
 			logger.Logger.Info("支付方式已存在，跳过同步",
@@ -1056,7 +1059,7 @@ func (s *paymentMethodSrv) syncFromHeadquarter(ctx context.Context) error {
 			// 其他字段使用数据库默认值
 		}
 
-		err = subShopDB.Create(&newPayment).Error
+		err = subPmRepo.CreatePaymentMethod(newPayment)
 		if err != nil {
 			logger.Logger.Error("创建支付方式失败",
 				zap.String("name", hqPayment.PaymentName),

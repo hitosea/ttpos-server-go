@@ -359,10 +359,11 @@ func (h *transferOrderHelper) DeleteDataFromHeadquarter(
 
 	// 在总部数据库中开启事务进行删除
 	return sassDb.Transaction(func(hqTx *gorm.DB) error {
+		hqApprovalRepo := repository.NewTransferOrderApprovalRepo(hqTx)
+		hqOrderRepo := repository.NewTransferOrderRepo(hqTx)
+
 		// 1. 先删除审批记录（外键关联）
-		if err := hqTx.Unscoped().
-			Where("transfer_order_uuid = ?", transferOrderUuid).
-			Delete(&model.TransferOrderApproval{}).Error; err != nil {
+		if err := hqApprovalRepo.HardDeleteByTransferOrderUuid(transferOrderUuid); err != nil {
 			logger.Logger.Error("删除总部调拨单审批记录失败",
 				zap.Uint64("transfer_order_uuid", transferOrderUuid),
 				zap.Error(err),
@@ -371,9 +372,7 @@ func (h *transferOrderHelper) DeleteDataFromHeadquarter(
 		}
 
 		// 2. 删除调拨单主表记录
-		if err := hqTx.Unscoped().
-			Where("uuid = ?", transferOrderUuid).
-			Delete(&model.TransferOrder{}).Error; err != nil {
+		if err := hqOrderRepo.HardDelete(transferOrderUuid); err != nil {
 			logger.Logger.Error("删除总部调拨单失败",
 				zap.Uint64("transfer_order_uuid", transferOrderUuid),
 				zap.Error(err),
@@ -428,15 +427,13 @@ func (h *transferOrderHelper) CopyDataToHeadquarter(
 		if existingOrder != nil {
 			// 已存在，更新数据（不更新 ID）
 			transferOrderCopy.ID = existingOrder.ID
-			if err := hqTx.Model(&model.TransferOrder{}).
-				Where("uuid = ?", transferOrderUuid).
-				Updates(&transferOrderCopy).Error; err != nil {
+			if err := hqTransferOrderRepo.Update(&transferOrderCopy); err != nil {
 				return errors.WithMessage(errors.New("更新总部调拨单失败"), err.Error())
 			}
 		} else {
 			// 不存在，插入数据（清空 ID，让数据库自动生成）
 			transferOrderCopy.ID = 0
-			if err := hqTx.Create(&transferOrderCopy).Error; err != nil {
+			if err := hqTransferOrderRepo.Create(&transferOrderCopy); err != nil {
 				return errors.WithMessage(errors.New("创建总部调拨单失败"), err.Error())
 			}
 		}
@@ -456,15 +453,13 @@ func (h *transferOrderHelper) CopyDataToHeadquarter(
 				if existingApproval != nil {
 					// 已存在，更新（不更新 ID）
 					approvalCopy.ID = existingApproval.ID
-					if err := hqTx.Model(&model.TransferOrderApproval{}).
-						Where("uuid = ?", approval.Uuid).
-						Updates(&approvalCopy).Error; err != nil {
+					if err := hqApprovalRepo.Update(&approvalCopy); err != nil {
 						return errors.WithMessage(errors.New("更新总部调拨单审批记录失败"), err.Error())
 					}
 				} else {
 					// 不存在，插入（清空 ID，让数据库自动生成）
 					approvalCopy.ID = 0
-					if err := hqTx.Create(&approvalCopy).Error; err != nil {
+					if err := hqApprovalRepo.Create(&approvalCopy); err != nil {
 						return errors.WithMessage(errors.New("创建总部调拨单审批记录失败"), err.Error())
 					}
 				}

@@ -237,18 +237,16 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 	}
 	// 获取子店所有仓库物品库存（门店数量）
 	if subUuid != 0 {
-		var warehouseItems []model.WarehouseItem
-		subDb := s.dbm.GetDB(subUuid)
-		subDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid in (?)", subDb.Model(&model.Warehouse{}).Select("uuid").Where("delete_time = 0")).Find(&warehouseItems)
+		subWarehouseItemRepo := repository.NewWarehouseItemRepo(s.dbm.GetDB(subUuid))
+		warehouseItems, _ := subWarehouseItemRepo.GetItemsInActiveWarehouses()
 		for _, warehouseItem := range warehouseItems {
 			storeQuantityMap[warehouseItem.MaterialUuid] += warehouseItem.Stock
 		}
 	}
 	// 总店指定仓库物品库存（可采购数量）
 	if hqUuid != 0 {
-		var warehouseItems []model.WarehouseItem
-		hqDb := s.dbm.GetDB(hqUuid)
-		hqDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid = (?)", hqDb.Model(&model.Warehouse{}).Select("uuid").Where("erp_code = ? AND delete_time = 0", purchaseOrder.WarehouseErpCode)).Find(&warehouseItems)
+		hqWarehouseItemRepo := repository.NewWarehouseItemRepo(s.dbm.GetDB(hqUuid))
+		warehouseItems, _ := hqWarehouseItemRepo.GetByWarehouseErpCode(purchaseOrder.WarehouseErpCode)
 		for _, warehouseItem := range warehouseItems {
 			avaliableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
 		}
@@ -1783,14 +1781,13 @@ func (s *purchaseOrderSrv) syncItemSupplierFieldsToSubShop(subDb *gorm.DB, purch
 	}
 
 	// 批量更新子店物品的供应商字段
+	subItemRepo := repository.NewPurchaseOrderItemRepo(subDb)
 	for _, subItem := range subItems {
 		if supplierInfo, ok := materialSupplierMap[subItem.MaterialCode]; ok {
-			if err := subDb.Model(&model.PurchaseOrderItem{}).
-				Where("uuid = ?", subItem.Uuid).
-				Updates(map[string]any{
-					"delivered_by_supplier": supplierInfo.DeliveredBySupplier,
-					"supplier_erp_code":     supplierInfo.SupplierErpCode,
-				}).Error; err != nil {
+			if err := subItemRepo.UpdateByUuid(subItem.Uuid, map[string]any{
+				"delivered_by_supplier": supplierInfo.DeliveredBySupplier,
+				"supplier_erp_code":     supplierInfo.SupplierErpCode,
+			}); err != nil {
 				return err
 			}
 		}
@@ -2073,23 +2070,6 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(
 		return s.receiptSrv.GetPurchaseReceiptOrderList(ctx, reqs)
 	}
 
-	// 定义查询结果结构
-	type QueryResult struct {
-		Uuid         uint64 `json:"uuid"`
-		OrderNo      string `json:"order_no"`
-		ErpOrderNo   string `json:"erp_order_no"`
-		CreateTime   int64  `json:"create_time"`
-		PurchaseType int    `json:"purchase_type"`
-		Type         int    `json:"type"` // 1-收货单 2-采购单
-		ReceiveTime  int64  `json:"receive_time"`
-	}
-
-	var results []QueryResult
-	var total int64
-
-	// 构建查询条件
-	orderNoPattern := "%" + reqs.OrderNo + "%"
-
 	// 时间格式兼容处理函数：前端传毫秒时间戳，数据库存秒时间戳
 	convertTimestamp := func(timestamp int64) int64 {
 		if timestamp <= 0 {
@@ -2102,47 +2082,27 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(
 		return timestamp
 	}
 
-	// 处理时间字段
-	receiveTimeStart := convertTimestamp(reqs.ReceiptTimeStart)
-	receiveTimeEnd := convertTimestamp(reqs.ReceiptTimeEnd)
-
-	// 联合查询
-	sql := `
-		SELECT * FROM (
-			SELECT uuid, order_no, erp_order_no, create_time, purchase_type, 0 as receive_time, 2 as type FROM ttpos_purchase_order
-			WHERE status = ?
-			UNION ALL
-			SELECT uuid, order_no, erp_order_no, create_time, receipt_type as purchase_type, receive_time, 1 as type FROM ttpos_purchase_receipt_order
-			WHERE status in (?)
-		) t 
-		WHERE t.purchase_type = ?
-		AND (t.order_no LIKE ? OR t.erp_order_no LIKE ?)
-	`
-	// 添加收货时间过滤条件
-	if receiveTimeStart > 0 && receiveTimeEnd > 0 {
-		sql += fmt.Sprintf(" AND (t.receive_time >= %d AND t.receive_time <= %d)", receiveTimeStart, receiveTimeEnd)
-	}
-
 	// 状态筛选
 	status := constant.PurchaseOrderStatusApproved
 	if len(reqs.StatusIn) > 0 && reqs.StatusIn[0] != 0 {
 		status = -1
 	}
-
-	// 状态筛选
 	if len(reqs.StatusIn) == 0 {
 		reqs.StatusIn = []int{0, 1, 2}
 	}
 
-	// 先查询总数
-	countSql := fmt.Sprintf(`SELECT COUNT(*) FROM (%s) t`, sql)
-	err := ctx.GetDB().Raw(countSql, status, reqs.StatusIn, reqs.ReceiptType, orderNoPattern, orderNoPattern).Scan(&total).Error
-	if err != nil {
-		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询总数失败"), err.Error())
-	}
-
-	// 执行分页查询
-	err = ctx.GetDB().Raw(sql+" LIMIT ? OFFSET ?", status, reqs.StatusIn, reqs.ReceiptType, orderNoPattern, orderNoPattern, reqs.PageReq.PageSize, reqs.PageSize*(reqs.PageReq.PageNo-1)).Scan(&results).Error
+	// 通过Repository执行联合查询
+	purchaseOrderRepo := repository.NewPurchaseOrderRepo(ctx.GetDB())
+	results, total, err := purchaseOrderRepo.GetPurchaseReceiptOrderUnionList(repository.PurchaseReceiptUnionListParams{
+		Status:           status,
+		StatusIn:         reqs.StatusIn,
+		ReceiptType:      reqs.ReceiptType,
+		OrderNoPattern:   "%" + reqs.OrderNo + "%",
+		ReceiveTimeStart: convertTimestamp(reqs.ReceiptTimeStart),
+		ReceiveTimeEnd:   convertTimestamp(reqs.ReceiptTimeEnd),
+		PageSize:         reqs.PageReq.PageSize,
+		PageNo:           reqs.PageReq.PageNo,
+	})
 	if err != nil {
 		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询列表失败"), err.Error())
 	}

@@ -188,8 +188,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	}
 	// 查询总店指定仓库物品数量
 	hqDb := s.dbm.GetDB(hqUuid)
-	var warehouseItems []model.WarehouseItem
-	hqDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid = (?)", hqDb.Model(&model.Warehouse{}).Select("uuid").Where("erp_code = ?", req.WarehouseErpCode).Limit(1)).Find(&warehouseItems)
+	hqWarehouseItemRepo := repository.NewWarehouseItemRepo(hqDb)
+	warehouseItems, _ := hqWarehouseItemRepo.GetByWarehouseErpCode(req.WarehouseErpCode)
 	for _, warehouseItem := range warehouseItems {
 		availableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
 	}
@@ -4013,7 +4013,8 @@ func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid 
 
 	var companyUuids []uint64
 	if companyUuid == 0 {
-		s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Scopes(repository.NotDeleted).Pluck("uuid", &companyUuids)
+		companyRepo := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB))
+		companyUuids, _ = companyRepo.GetAllCompanyUuids()
 	} else {
 		companyUuids = append(companyUuids, companyUuid)
 	}
@@ -4481,8 +4482,8 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 			for warehouseUuid, stock := range warehouseStocks {
 				warehouseName, exists := warehouseNameMap[warehouseUuid]
 				if !exists {
-					var warehouse model.Warehouse
-					err := s.dbm.GetDB(companyUuid).Model(&model.Warehouse{}).Preload("MultiLanguageName").Where("uuid = ?", warehouseUuid).Find(&warehouse).Error
+					warehouseRepo := repository.NewWarehouseRepo(s.dbm.GetDB(companyUuid))
+					warehouse, err := warehouseRepo.GetByUuid(warehouseUuid, warehouseRepo.WithMultiLanguageName())
 					if err != nil {
 						logger.Logger.Error("查询仓库失败",
 							zap.Uint64("company_uuid", companyUuid),

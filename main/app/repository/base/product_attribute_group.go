@@ -11,6 +11,7 @@ import (
 // IProductAttributeGroupRepo 产品属性组仓库接口
 type IProductAttributeGroupRepo interface {
 	GetProductAttributeGroupList() ([]model.ProductAttributeGroup, error)                          // 获取产品属性组列表
+	GetProductAttributeGroupListWithAttributes() ([]model.ProductAttributeGroup, error)            // 获取属性组列表（含属性及多语言）
 	UpdateProductAttributeGroup(id uint, productAttributeGroup model.ProductAttributeGroup) error  // 更新产品属性组
 	CreateProductAttributeGroup(productAttributeGroup model.ProductAttributeGroup) (uint64, error) // 创建产品属性组
 	CreateRecord(group *model.ProductAttributeGroup) error                                         // 仅创建属性组记录（不含多语言）
@@ -42,6 +43,17 @@ func (r *ProductAttributeGroupRepoImpl) GetProductAttributeGroupList() ([]model.
 	var productAttributeGroups []model.ProductAttributeGroup
 	err := r.db.Model(&model.ProductAttributeGroup{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productAttributeGroups).Error
 	return productAttributeGroups, errors.WithMessage(err)
+}
+
+// GetProductAttributeGroupListWithAttributes 获取属性组列表（含属性及多语言）
+func (r *ProductAttributeGroupRepoImpl) GetProductAttributeGroupListWithAttributes() ([]model.ProductAttributeGroup, error) {
+	var groups []model.ProductAttributeGroup
+	err := r.db.Model(&model.ProductAttributeGroup{}).
+		Preload("MultiLanguageName").
+		Preload("ProductAttributes").
+		Preload("ProductAttributes.MultiLanguageName").
+		Find(&groups).Error
+	return groups, errors.WithMessage(err)
 }
 
 // UpdateProductAttributeGroup 更新退菜原因
