@@ -334,7 +334,7 @@ func (h *TakeoutHandler) GetProductCount(c *gin.Context) {
 	companyUuid := ctx.GetCompanyUuid()
 
 	// 调用Service
-	total, err := h.productTakeoutSrv.GetProductCount(ctx, companyUuid, platform, true)
+	total, err := h.productTakeoutSrv.GetProductCount(ctx, companyUuid, platform)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "查询商品统计失败"))
 		return

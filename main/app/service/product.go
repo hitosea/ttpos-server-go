@@ -3766,10 +3766,6 @@ func (s *productSrv) UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) er
 		}
 	}
 
-	fmt.Println("+++++")
-	fmt.Println("valueList", utils.ToJson(valueList))
-	fmt.Println("+++++")
-
 	erpSrv := erp.NewIErpSrv(s.dbm)
 	err = erpSrv.SaveFlavor(ctx.GetContext(), req.SaveErpFlavorReq{
 		SiteCode:       companySetting.ErpnextSiteCode,

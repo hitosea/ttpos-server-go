@@ -43,7 +43,7 @@ type IProductTakeoutSrv interface {
 	BatchDeleteProducts(ctx context.Context, req req.TakeoutBatchDeleteReq) (*product_resp.TakeoutBatchResp, error)   // 批量删除外卖商品
 
 	// GetProductCount 获取外卖商品统计
-	GetProductCount(ctx context.Context, companyUuid uint64, platform string, forceRefresh bool) (int64, error)
+	GetProductCount(ctx context.Context, companyUuid uint64, platform string) (int64, error)
 }
 
 type productTakeoutSrv struct {
@@ -1093,22 +1093,7 @@ func (s *productTakeoutSrv) GetProductCount(
 	ctx context.Context,
 	companyUuid uint64,
 	platform string,
-	forceRefresh bool,
 ) (int64, error) {
-	// 1. 构造缓存 Key
-	cacheKey := s.buildCountCacheKey(companyUuid, platform)
-
-	// 2. 检查缓存(如果不是强制刷新)
-	if !forceRefresh {
-		cached, ok := s.cache.Get(cacheKey)
-		if ok {
-			if count, ok := cached.(int64); ok {
-				logger.Logger.Debug("缓存命中", zap.String("key", cacheKey), zap.Int64("count", count))
-				return count, nil
-			}
-		}
-	}
-
 	// 3. 查询数据库
 	db := ctx.GetDB()
 
@@ -1143,12 +1128,6 @@ func (s *productTakeoutSrv) GetProductCount(
 			zap.String("platform", platform),
 			zap.Error(err))
 		return 0, errors.WithMessage(err, "查询商品统计失败")
-	}
-
-	// 8. 写入缓存(5分钟)
-	if err := s.cache.Set(cacheKey, count, 5*60); err != nil {
-		logger.Logger.Warn("写入缓存失败", zap.String("key", cacheKey), zap.Error(err))
-		// 缓存失败不影响结果返回
 	}
 
 	return count, nil
@@ -1206,9 +1185,9 @@ func (s *productTakeoutSrv) BatchCreateProducts(ctx context.Context, batchReq re
 	productNames := s.getProductNames(db, batchReq.ProductUuids)
 
 	// 并发处理每个商品
-	for _, productUuid := range batchReq.ProductUuids {
+	for _, uuid := range batchReq.ProductUuids {
 		wg.Add(1)
-		go func(uuid uint64) {
+		utils.Go(func() {
 			defer wg.Done()
 			<-limiter.C // 限流
 
@@ -1231,7 +1210,7 @@ func (s *productTakeoutSrv) BatchCreateProducts(ctx context.Context, batchReq re
 				result.Success++
 			}
 			mu.Unlock()
-		}(productUuid)
+		})
 	}
 
 	wg.Wait()
@@ -1310,9 +1289,9 @@ func (s *productTakeoutSrv) BatchOnlineProducts(ctx context.Context, batchReq re
 	productNames := s.getProductNames(db, batchReq.ProductUuids)
 
 	// 并发处理每个商品
-	for _, productUuid := range batchReq.ProductUuids {
+	for _, uuid := range batchReq.ProductUuids {
 		wg.Add(1)
-		go func(uuid uint64) {
+		utils.Go(func() {
 			defer wg.Done()
 			<-limiter.C // 限流
 
@@ -1341,7 +1320,7 @@ func (s *productTakeoutSrv) BatchOnlineProducts(ctx context.Context, batchReq re
 				result.Success++
 			}
 			mu.Unlock()
-		}(productUuid)
+		})
 	}
 
 	wg.Wait()
@@ -1376,9 +1355,9 @@ func (s *productTakeoutSrv) BatchOfflineProducts(ctx context.Context, batchReq r
 	productNames := s.getProductNames(db, batchReq.ProductUuids)
 
 	// 并发处理每个商品
-	for _, productUuid := range batchReq.ProductUuids {
+	for _, uuid := range batchReq.ProductUuids {
 		wg.Add(1)
-		go func(uuid uint64) {
+		utils.Go(func() {
 			defer wg.Done()
 			<-limiter.C // 限流
 
@@ -1407,7 +1386,7 @@ func (s *productTakeoutSrv) BatchOfflineProducts(ctx context.Context, batchReq r
 				result.Success++
 			}
 			mu.Unlock()
-		}(productUuid)
+		})
 	}
 
 	wg.Wait()
@@ -1442,15 +1421,15 @@ func (s *productTakeoutSrv) BatchDeleteProducts(ctx context.Context, batchReq re
 	productNames := s.getProductNames(db, batchReq.ProductUuids)
 
 	// 并发处理每个商品
-	for _, productUuid := range batchReq.ProductUuids {
+	for _, uuid := range batchReq.ProductUuids {
 		wg.Add(1)
-		go func(uuid uint64) {
+		utils.Go(func() {
 			defer wg.Done()
 			<-limiter.C // 限流
 
 			// 调用删除逻辑
 			deleteReq := req.ProductTakeoutShopDeleteReq{
-				Uuid:     productUuid,
+				Uuid:     uuid,
 				Platform: batchReq.Platform,
 			}
 			err := s.DeleteProductTakeoutShop(ctx, deleteReq)
@@ -1467,7 +1446,7 @@ func (s *productTakeoutSrv) BatchDeleteProducts(ctx context.Context, batchReq re
 				result.Success++
 			}
 			mu.Unlock()
-		}(productUuid)
+		})
 	}
 
 	wg.Wait()

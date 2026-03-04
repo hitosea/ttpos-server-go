@@ -18,7 +18,6 @@ import (
 )
 
 type IOtherSrv interface {
-	Generate() (*resp.Captcha, error)
 	GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResp, error)
 	GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResp, error)
 	GetOrderRemarkList(ctx context.Context) (*resp.OrderRemarkResp, error)
@@ -46,11 +45,6 @@ type otherSrv struct {
 	cachePrefix string
 	dbm         *database.DBManager
 	settingSrv  setting.ISrv
-}
-
-// Generate implements IOtherSrv.
-func (s *otherSrv) Generate() (*resp.Captcha, error) {
-	panic("unimplemented")
 }
 
 func NewOtherSrvImpl(dbm *database.DBManager, cache cache.Cache, settingSrv setting.ISrv) IOtherSrv {
