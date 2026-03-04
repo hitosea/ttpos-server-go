@@ -223,7 +223,7 @@ func serverConf(opt copier.Option) {
 		viper.GetString("SERVER_MODE") == "debug" {
 		if execPath, err := os.Executable(); err == nil {
 			execName := strings.ToLower(execPath)
-			if strings.Contains(execName, "__debug_bin") || strings.Contains(execName, "dlv") {
+			if strings.Contains(execName, "__debug_bin") || strings.Contains(execName, "dlv") || strings.Contains(execName, "go-build") {
 				serverPort = debugServerPort
 			}
 		} else if _, err := os.Stat("/.dockerenv"); err != nil {
