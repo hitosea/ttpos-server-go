@@ -359,7 +359,7 @@ func (s *purchaseLimitSchemeSrv) GetByUuid(ctx context.Context, uuid uint64) (*r
 		UpdateTime:      scheme.UpdateTime,
 	}
 
-	// 填充物品配置 - 需要通过 MaterialCode 查询对应的 MaterialUuid
+	// 填充物品配置 - 需要通过 MaterialCode 查询对应的 MaterialUuid（过滤已禁用或已删除的物品）
 	materialRepo := repository.NewMaterialRepo(db)
 
 	for _, item := range items {
@@ -367,6 +367,11 @@ func (s *purchaseLimitSchemeSrv) GetByUuid(ctx context.Context, uuid uint64) (*r
 		material, err := materialRepo.GetMaterialByCode(item.MaterialCode)
 		if err != nil {
 			logger.Logger.Error("查询物品失败", zap.Error(err), zap.String("material_code", item.MaterialCode))
+			continue
+		}
+
+		// 过滤已禁用或已删除的物品
+		if material.DeleteTime != 0 || !material.Status {
 			continue
 		}
 
@@ -409,10 +414,31 @@ func (s *purchaseLimitSchemeSrv) GetList(ctx context.Context, req req.PurchaseLi
 
 	// 3. 组装响应数据
 	list := make([]resp.PurchaseLimitSchemeSummaryResp, 0, len(schemes))
+	materialRepo := repository.NewMaterialRepo(db)
 	for _, scheme := range schemes {
-		// 3.1 查询物品配置数量
+		// 3.1 查询物品配置数量（过滤已禁用或已删除的物品）
 		itemRepo := repository.NewPurchaseLimitSchemeItemRepo(db)
 		items, _ := itemRepo.GetBySchemeUuid(scheme.Uuid)
+
+		itemCount := 0
+		if len(items) > 0 {
+			materialCodes := make([]string, 0, len(items))
+			for _, item := range items {
+				materialCodes = append(materialCodes, item.MaterialCode)
+			}
+			materials, _ := materialRepo.GetMaterialContainsDeletedByCodes(materialCodes)
+			activeCodes := make(map[string]bool, len(materials))
+			for _, m := range materials {
+				if m.DeleteTime == 0 && m.Status {
+					activeCodes[m.Code] = true
+				}
+			}
+			for _, item := range items {
+				if activeCodes[item.MaterialCode] {
+					itemCount++
+				}
+			}
+		}
 
 		// 3.2 查询门店配置数量
 		shopCount := 0
@@ -429,7 +455,7 @@ func (s *purchaseLimitSchemeSrv) GetList(ctx context.Context, req req.PurchaseLi
 			ApplyToAllShops: scheme.ApplyToAllShops,
 			WeekdayStr:      s.formatWeekdaysFromString(lang, scheme.Weekdays),
 			ShopCount:       shopCount,
-			ItemCount:       len(items),
+			ItemCount:       itemCount,
 			DailyLimit:      scheme.DailyLimit,
 			CreateTime:      scheme.CreateTime,
 			UpdateTime:      scheme.UpdateTime,
