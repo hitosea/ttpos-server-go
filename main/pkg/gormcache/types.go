@@ -9,13 +9,16 @@ package gormcache
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 )
 
 // QueryResult 缓存的查询结果
+// 注意：Dest 使用 json.RawMessage 延迟解析，避免双重序列化
+// 存储时直接序列化原始数据，读取时直接反序列化到目标类型
 type QueryResult struct {
-	Dest         any   `json:"dest"`          // 查询结果数据
-	RowsAffected int64 `json:"rows_affected"` // 影响行数
+	Dest         json.RawMessage `json:"dest"`          // 查询结果数据（延迟解析）
+	RowsAffected int64           `json:"rows_affected"` // 影响行数
 }
 
 // Cacher 缓存存储接口

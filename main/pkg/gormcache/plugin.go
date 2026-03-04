@@ -263,9 +263,19 @@ func (p *Plugin) storeInCache(db *gorm.DB, tableName string, key string) {
 		return
 	}
 
+	// 预先序列化 Dest 为 json.RawMessage，避免后续双重序列化
+	destData, err := json.Marshal(db.Statement.Dest)
+	if err != nil {
+		logWarn("gormcache: Dest 序列化失败，跳过缓存",
+			zap.String("table", tableName),
+			zap.Error(err),
+		)
+		return
+	}
+
 	// 构建缓存结果
 	result := &QueryResult{
-		Dest:         db.Statement.Dest,
+		Dest:         destData,
 		RowsAffected: db.Statement.RowsAffected,
 	}
 
@@ -288,6 +298,8 @@ func (p *Plugin) storeInCache(db *gorm.DB, tableName string, key string) {
 }
 
 // replaceResult 将缓存结果回填到 GORM Statement
+// 优化：result.Dest 已经是 json.RawMessage，直接反序列化到目标类型
+// 避免了之前 copyValue 中的双重序列化（Marshal + Unmarshal）
 func (p *Plugin) replaceResult(db *gorm.DB, result *QueryResult) error {
 	if result == nil {
 		return nil
@@ -296,24 +308,12 @@ func (p *Plugin) replaceResult(db *gorm.DB, result *QueryResult) error {
 	// 回填 RowsAffected
 	db.Statement.RowsAffected = result.RowsAffected
 
-	// 回填 Dest
-	if result.Dest != nil && db.Statement.Dest != nil {
-		return copyValue(db.Statement.Dest, result.Dest)
+	// 回填 Dest：直接将 json.RawMessage 反序列化到目标类型
+	if len(result.Dest) > 0 && db.Statement.Dest != nil {
+		return json.Unmarshal(result.Dest, db.Statement.Dest)
 	}
 
 	return nil
-}
-
-// copyValue 将源值复制到目标（通过 JSON 序列化/反序列化）
-func copyValue(dest any, src any) error {
-	// 序列化源值
-	data, err := json.Marshal(src)
-	if err != nil {
-		return err
-	}
-
-	// 反序列化到目标
-	return json.Unmarshal(data, dest)
 }
 
 // ============ 上下文控制 ============
