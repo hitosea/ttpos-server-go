@@ -54,9 +54,8 @@ type ITakeoutOrderSrv interface {
 	// PrintReturnOrder 打印退菜单（使用变更前的商品信息）
 	// 注意：此方法使用 changeResult.ReturnItems 中的 OldItem 数据，包含变更前的数量
 	PrintReturnOrder(ctx context.Context, orderUuid uint64, changeResult *valueObject.OrderChangeResult) error
-	// RecordTakeoutOrderPeakTime 记录外卖订单高峰期
-	// 自动根据订单状态判断是增加（inc）还是减少（dec）
-	RecordTakeoutOrderPeakTime(ctx context.Context, orderUuid uint64, companyUuid uint64) error
+	// RecordTakeoutOrderPeakTime 记录外卖订单高峰期（仅在订单完成时调用）
+	RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy uint64, completedTime int64, platformTotal float64, companyUuid uint64) error
 }
 
 // ProcessTakeoutOrderOutboundAndSales 处理外卖订单出库和销量
@@ -1586,43 +1585,29 @@ func (s *takeoutSrv) PrintReturnOrder(ctx context.Context, orderUuid uint64, cha
 	return nil
 }
 
-// RecordTakeoutOrderPeakTime 记录外卖订单高峰期
-// 自动根据订单状态判断是增加（inc）还是减少（dec）
-// 判断规则：
-//   - order.AcceptedTime > 0 && order.OrderState == 10 (已接单) → inc
-//   - order.AcceptedTime > 0 && order.OrderState == 60 (已取消) → dec
-//   - 其他情况不记录
-func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, orderUuid uint64, companyUuid uint64) error {
+// RecordTakeoutOrderPeakTime 记录外卖订单高峰期（仅在订单完成时调用）
+// 直接使用传入的订单数据构建 SaleBill，避免重新查询数据库导致的事务可见性问题
+func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy uint64, completedTime int64, platformTotal float64, companyUuid uint64) error {
 	db := s.dbm.GetDB(companyUuid)
 
 	// 设置上下文
 	ctx.SetDB(db)
 	ctx.SetCompanyUuid(companyUuid)
 
-	// 1. 查询外卖订单信息
-	orderRepo := persistence.NewTakeoutOrderRepo(db)
-	order, err := orderRepo.GetByUuid(orderUuid)
-	if err != nil {
-		return err
-	}
-	if order == nil {
+	// 1. 校验参数
+	if acceptedBy <= 0 || completedTime <= 0 {
 		return nil
 	}
 
-	// 2. 自动判断操作类型
-	recordType := determineRecordType(order)
-	if recordType == "" {
-		// 不符合记录条件，直接返回
-		return nil
+	// 2. 构建 SaleBill
+	saleBill := &model.SaleBill{
+		Status:        constant.SaleBillStatusComplete, // 设置为已完成状态，IsFinish() 才能返回 true
+		PaymentAmount: platformTotal,                   // 顾客实付金额（单位：元）
+		CashierUuid:   acceptedBy,                      // 使用接单人
+		FinishTime:    completedTime,                   // 使用完成时间
 	}
 
-	// 3. 构建 SaleBill
-	saleBill := buildSaleBillFromTakeoutOrder(order, recordType)
-	if saleBill == nil {
-		return nil
-	}
-
-	// 4. 获取门店设置（时区）
+	// 3. 获取门店设置（时区）
 	settingSrv := setting.NewSrv(s.dbm, cache.Global)
 	storeSetting, err := settingSrv.GetStoreSetting(ctx)
 	if err != nil {
@@ -1630,74 +1615,7 @@ func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, orderUuid u
 		return err
 	}
 
-	// 5. 记录高峰期
+	// 4. 记录高峰期
 	peakTimeRepo := repository.NewSaleOrderPeakTimeRepo(db)
-	refundMoney := utils.IfFloat64(recordType == "dec", order.PlatformTotal, 0.0)
-	return peakTimeRepo.Record(recordType, saleBill, refundMoney, storeSetting.TimeZone)
-}
-
-// determineRecordType 根据订单状态判断记录类型
-// 返回: "inc" - 增加, "dec" - 减少, "" - 不记录
-func determineRecordType(order *takeoutModel.TakeoutOrder) string {
-	// 必须要有接单人和接单时间
-	if order.AcceptedBy <= 0 || order.AcceptedTime <= 0 {
-		return ""
-	}
-
-	// 判断订单状态
-	if order.OrderState == valueObject.TakeoutOrderStateAccepted {
-		// 已接单配餐中 → inc
-		return "inc"
-	} else if order.OrderState == valueObject.TakeoutOrderStateCanceled {
-		// 已取消 → dec
-		return "dec"
-	}
-
-	// 其他状态不记录
-	return ""
-}
-
-// buildSaleBillFromTakeoutOrder 从外卖订单构建 SaleBill
-// recordType: "inc" - 接单时使用 AcceptedTime, "dec" - 取消时使用 RejectedTime
-func buildSaleBillFromTakeoutOrder(order *takeoutModel.TakeoutOrder, recordType string) *model.SaleBill {
-	saleBill := &model.SaleBill{
-		Status:        constant.SaleBillStatusComplete, // 设置为已完成状态，IsFinish() 才能返回 true
-		PaymentAmount: order.PlatformTotal,             // 顾客实付金额（单位：元）
-		CashierUuid:   0,                               // 默认值
-		FinishTime:    0,                               // 默认值
-	}
-
-	// 根据 recordType 设置不同的时间和收银员
-	if recordType == "inc" {
-		// 接单时：使用接单时间和接单人
-		if order.AcceptedTime > 0 {
-			saleBill.FinishTime = order.AcceptedTime
-			saleBill.CashierUuid = order.AcceptedBy
-		} else {
-			// 如果没有接单时间，使用订单时间
-			saleBill.FinishTime = order.OrderTime
-			saleBill.CashierUuid = order.AcceptedBy
-		}
-	} else if recordType == "dec" {
-		// 取消时：使用取消时间和取消人
-		rejectedBy := order.RejectedBy
-		if rejectedBy == 0 {
-			rejectedBy = order.AcceptedBy
-		}
-		if order.RejectedTime > 0 {
-			saleBill.FinishTime = order.RejectedTime
-			saleBill.CashierUuid = rejectedBy
-		} else {
-			// 如果没有取消时间，使用订单时间
-			saleBill.FinishTime = order.OrderTime
-			saleBill.CashierUuid = rejectedBy
-		}
-	}
-
-	// 如果 FinishTime 为 0，无法记录高峰期
-	if saleBill.FinishTime == 0 {
-		return nil
-	}
-
-	return saleBill
+	return peakTimeRepo.Record("inc", saleBill, 0.0, storeSetting.TimeZone)
 }

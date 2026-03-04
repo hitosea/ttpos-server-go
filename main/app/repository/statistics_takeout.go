@@ -52,6 +52,28 @@ func buildStateInCondition(states []int) string {
 	return condition
 }
 
+// buildDynamicTimeCondition 构建动态时间条件
+// 已完成订单(order_state=40)使用 completed_time
+// 其他状态订单使用 accepted_time
+// tableAlias 为表别名，如 "ttpos_takeout_order" 或 "to_order"
+// 注意：已完成订单要求 completed_time > 0，若为 0 则不纳入统计（异常数据应显式排除，而非静默回退）
+func buildDynamicTimeCondition(tableAlias string, timeStart, timeEnd int64) string {
+	if tableAlias != "" {
+		tableAlias = tableAlias + "."
+	}
+	completedState := valueobject.TakeoutOrderStateCompleted
+	return fmt.Sprintf(`(
+		(%sorder_state = %d AND %scompleted_time > 0 AND %scompleted_time >= %d AND %scompleted_time <= %d)
+		OR
+		(%sorder_state != %d AND %saccepted_time >= %d AND %saccepted_time <= %d)
+	)`,
+		tableAlias, completedState,
+		tableAlias, tableAlias, timeStart, tableAlias, timeEnd,
+		tableAlias, completedState,
+		tableAlias, timeStart, tableAlias, timeEnd,
+	)
+}
+
 // CountTakeoutReq 统计外卖订单请求参数
 type CountTakeoutReq struct {
 	TimeStart         int64  // 时间开始（时间戳）
@@ -91,10 +113,10 @@ type CountTakeoutBusinessSummaryReq struct {
 
 // takeoutBusinessSummaryRawData 外卖订单综合运营统计原始数据
 type takeoutBusinessSummaryRawData struct {
-	AcceptedTime int64   // 接单时间戳
-	OrderUuid    uint64  // 订单UUID
-	OrderAmount  float64 // 订单金额（platform_total）
-	PayAmount    float64 // 实付金额（状态为60时=0，其他状态=platform_total）
+	StatTime    int64   // 统计时间戳（已完成订单用完成时间，其他用接单时间）
+	OrderUuid   uint64  // 订单UUID
+	OrderAmount float64 // 订单金额（platform_total）
+	PayAmount   float64 // 实付金额（状态为60时=0，其他状态=platform_total）
 }
 
 // CountTakeoutChannelSaleReq 统计外卖订单渠道营业请求
@@ -105,17 +127,17 @@ type CountTakeoutChannelSaleReq struct {
 
 // TakeoutChannelSaleRawData 外卖订单渠道营业统计原始数据
 type TakeoutChannelSaleRawData struct {
-	AcceptedTime int64   // 接单时间戳
-	OrderUuid    uint64  // 订单UUID
-	OrderAmount  float64 // 订单金额（platform_total）
-	PayAmount    float64 // 实付金额（状态为60时=0，其他状态=platform_total）
-	OrderNum     int64   // 订单数
-	RefundNum    int64   // 退款笔数
+	StatTime    int64   // 统计时间戳（已完成订单用完成时间，其他用接单时间）
+	OrderUuid   uint64  // 订单UUID
+	OrderAmount float64 // 订单金额（platform_total）
+	PayAmount   float64 // 实付金额（状态为60时=0，其他状态=platform_total）
+	OrderNum    int64   // 订单数
+	RefundNum   int64   // 退款笔数
 }
 
 // TakeoutPaymentMethodRawData 外卖订单支付方式统计原始数据
 type TakeoutPaymentMethodRawData struct {
-	AcceptedTime            int64   // 接单时间戳
+	StatTime                int64   // 统计时间戳（已完成订单用完成时间，其他用接单时间）
 	PaymentMethodUuid       uint64  // 支付方式UUID
 	PaymentMethodSort       int     // 支付方式排序
 	PaymentMethodCreateTime int64   // 支付方式创建时间戳
@@ -162,9 +184,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 	// 只统计未删除的订单
 	baseQuery = baseQuery.Where("ttpos_takeout_order.delete_time = ?", constant.NotDeleted)
 
-	// 按接单时间范围筛选
+	// 按时间范围筛选（已完成订单用完成时间，其他用接单时间）
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
-		baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time >= ? AND ttpos_takeout_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
+		baseQuery = baseQuery.Where(buildDynamicTimeCondition("ttpos_takeout_order", req.TimeStart, req.TimeEnd))
 	}
 
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
@@ -263,9 +285,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPayment(req CountTakeoutReq) []model
 	validStatesStr := buildStateInCondition(validOrderStates)
 	baseQuery = baseQuery.Where(fmt.Sprintf("ttpos_takeout_order.order_state IN %s", validStatesStr))
 
-	// 按接单时间范围筛选
+	// 按时间范围筛选（已完成订单用完成时间，其他用接单时间）
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
-		baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time >= ? AND ttpos_takeout_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
+		baseQuery = baseQuery.Where(buildDynamicTimeCondition("ttpos_takeout_order", req.TimeStart, req.TimeEnd))
 	}
 
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
@@ -339,8 +361,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPayment(req CountTakeoutReq) []model
 
 // CountTakeoutReceivedAmount 统计外卖订单实收金额
 // 查询 validOrderStates 状态下的订单，且 accepted_time > 0（接单后才能统计）
+// 使用动态时间：已完成订单用 completed_time，其他用 accepted_time
 // 使用 IF 判断：如果状态是营业收入状态(10,20,30,40)，则取 platform_total；如果状态是取消状态(60)，则取 0
-// 返回每个订单的接单时间、订单UUID和实收金额
+// 返回每个订单的统计时间、订单UUID和实收金额
 func (r *StatisticsTakeoutRepo) CountTakeoutReceivedAmount(req CountTakeoutReq) []model.StatisticsTakeoutReceivedAmountData {
 	var result []model.StatisticsTakeoutReceivedAmountData
 
@@ -353,9 +376,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutReceivedAmount(req CountTakeoutReq) 
 	validStatesStr := buildStateInCondition(validOrderStates)
 	baseQuery = baseQuery.Where(fmt.Sprintf("ttpos_takeout_order.order_state IN %s", validStatesStr))
 
-	// 按接单时间范围筛选
+	// 按时间范围筛选（已完成订单用完成时间，其他用接单时间）
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
-		baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time >= ? AND ttpos_takeout_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
+		baseQuery = baseQuery.Where(buildDynamicTimeCondition("ttpos_takeout_order", req.TimeStart, req.TimeEnd))
 	}
 
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
@@ -373,17 +396,19 @@ func (r *StatisticsTakeoutRepo) CountTakeoutReceivedAmount(req CountTakeoutReq) 
 
 	// 构建状态条件字符串
 	businessStatesStr := buildStateInCondition(businessOrderStates)
+	completedState := valueobject.TakeoutOrderStateCompleted
 
 	// 计算每个订单的实收金额：
+	// 使用动态时间：已完成订单用完成时间，其他用接单时间
 	// 使用 IF 判断：如果状态是营业收入状态(10,20,30,40)，则取 platform_total；如果状态是取消状态(60)，则取 0
 	selectFields := []string{
-		"ttpos_takeout_order.accepted_time",
+		fmt.Sprintf("CASE WHEN ttpos_takeout_order.order_state = %d AND ttpos_takeout_order.completed_time > 0 THEN ttpos_takeout_order.completed_time ELSE ttpos_takeout_order.accepted_time END AS stat_time", completedState),
 		"ttpos_takeout_order.uuid AS takeout_order_uuid",
 		fmt.Sprintf("IF(ttpos_takeout_order.order_state IN %s, ttpos_takeout_order.platform_total, 0) AS total_received_amount", businessStatesStr),
 	}
 
 	baseQuery.Select(selectFields).
-		Order("ttpos_takeout_order.accepted_time ASC").
+		Order("stat_time ASC").
 		Scan(&result)
 
 	return result
@@ -421,9 +446,9 @@ func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.
 		Where("toi.ttpos_product_package_uuid > 0"). // 只统计已映射的商品
 		Group("toi.ttpos_product_package_uuid")
 
-	// 应用时间条件（使用 accepted_time）
+	// 应用时间条件（已完成订单用完成时间，其他用接单时间）
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
-		query = query.Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
+		query = query.Where(buildDynamicTimeCondition("to_order", req.TimeStart, req.TimeEnd))
 	}
 
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
@@ -462,9 +487,10 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessTimePeriod(req CountTakeoutB
 	businessStatesStr := buildStateInCondition(businessOrderStates)
 
 	// 构建查询SQL
-	// 使用 accepted_time 进行时段分组
+	// 使用动态时间进行时段分组：已完成订单用 completed_time，其他用 accepted_time
+	completedState := valueobject.TakeoutOrderStateCompleted
 	mainQuery := fmt.Sprintf(`
-		SELECT 
+		SELECT
 			period_start_time,
 			SUM(order_amount) AS order_amount,
 			SUM(pay_amount) AS pay_amount,
@@ -472,8 +498,8 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessTimePeriod(req CountTakeoutB
 			COUNT(DISTINCT order_uuid) AS order_num,
 			0 AS meal_num
 		FROM (
-			SELECT 
-				FLOOR(accepted_time / %d) * %d AS period_start_time,
+			SELECT
+				FLOOR(CASE WHEN order_state = %d AND completed_time > 0 THEN completed_time ELSE accepted_time END / %d) * %d AS period_start_time,
 				IF(order_state IN %s, platform_total, 0) AS order_amount,
 				IF(order_state = %d, 0, IF(order_state IN %s, platform_total, 0)) AS pay_amount,
 				uuid AS order_uuid
@@ -481,21 +507,24 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessTimePeriod(req CountTakeoutB
 			WHERE delete_time = ?
 				AND order_state IN %s
 				AND accepted_time > 0
-				AND accepted_time >= ?
-				AND accepted_time <= ?
+				AND (
+					(order_state = %d AND completed_time > 0 AND completed_time >= ? AND completed_time <= ?)
+					OR
+					(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
+				)
 		) AS subquery
 		GROUP BY period_start_time
 		ORDER BY period_start_time ASC
-	`, req.PeriodSeconds, req.PeriodSeconds, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr)
+	`, completedState, req.PeriodSeconds, req.PeriodSeconds, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr, completedState, completedState)
 
-	// 执行查询
-	r.db.Raw(mainQuery, constant.NotDeleted, req.StartTime, req.EndTime).Scan(&result)
+	// 执行查询（参数：delete_time, 完成时间开始, 完成时间结束, 接单时间开始, 接单时间结束）
+	r.db.Raw(mainQuery, constant.NotDeleted, req.StartTime, req.EndTime, req.StartTime, req.EndTime).Scan(&result)
 
 	return result
 }
 
 // CountTakeoutBusinessSummary 统计外卖订单综合运营（返回原始数据，不分组）
-// 使用 accepted_time（接单时间）作为时间字段
+// 使用动态时间：已完成订单用 completed_time，其他用 accepted_time
 // 统计规则：
 //   - 仅统计有效状态的订单（10,20,30,40,60），且 accepted_time > 0（接单后才能统计）
 //   - 取消状态（60）的订单需要 accepted_time > 0 才会被统计
@@ -508,11 +537,13 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessSummary(req CountTakeoutBusi
 	// 构建状态条件字符串
 	validStatesStr := buildStateInCondition(validOrderStates)
 	businessStatesStr := buildStateInCondition(businessOrderStates)
+	completedState := valueobject.TakeoutOrderStateCompleted
 
-	// 构建查询SQL
+	// 构建查询SQL（使用动态时间：已完成订单用完成时间，其他用接单时间）
+	// 注意：已完成订单要求 completed_time > 0，否则不纳入统计（异常数据显式排除）
 	mainQuery := fmt.Sprintf(`
-		SELECT 
-			accepted_time,
+		SELECT
+			CASE WHEN order_state = %d AND completed_time > 0 THEN completed_time ELSE accepted_time END AS stat_time,
 			uuid AS order_uuid,
 			IF(order_state IN %s, platform_total, 0) AS order_amount,
 			IF(order_state = %d, 0, IF(order_state IN %s, platform_total, 0)) AS pay_amount
@@ -520,19 +551,22 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessSummary(req CountTakeoutBusi
 		WHERE delete_time = ?
 			AND order_state IN %s
 			AND accepted_time > 0
-			AND accepted_time >= ?
-			AND accepted_time <= ?
-		ORDER BY accepted_time ASC
-	`, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr)
+			AND (
+				(order_state = %d AND completed_time > 0 AND completed_time >= ? AND completed_time <= ?)
+				OR
+				(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
+			)
+		ORDER BY stat_time ASC
+	`, completedState, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr, completedState, completedState)
 
-	// 执行查询
-	r.db.Raw(mainQuery, constant.NotDeleted, req.StartTime, req.EndTime).Scan(&result)
+	// 执行查询（参数：delete_time, 完成时间开始, 完成时间结束, 接单时间开始, 接单时间结束）
+	r.db.Raw(mainQuery, constant.NotDeleted, req.StartTime, req.EndTime, req.StartTime, req.EndTime).Scan(&result)
 
 	return result
 }
 
 // CountTakeoutChannelSale 统计外卖订单渠道营业（返回原始数据，不分组）
-// 使用 accepted_time（接单时间）作为时间字段
+// 使用动态时间：已完成订单用 completed_time，其他用 accepted_time
 // 订单金额：所有有效状态的 platform_total
 // 实付金额：状态为60（已取消）时=0，其他有效状态=platform_total
 func (r *StatisticsTakeoutRepo) CountTakeoutChannelSale(req CountTakeoutChannelSaleReq) []TakeoutChannelSaleRawData {
@@ -541,11 +575,13 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSale(req CountTakeoutChannelS
 	// 构建状态条件字符串
 	validStatesStr := buildStateInCondition(validOrderStates)
 	businessStatesStr := buildStateInCondition(businessOrderStates)
+	completedState := valueobject.TakeoutOrderStateCompleted
 
-	// 构建查询SQL
+	// 构建查询SQL（使用动态时间：已完成订单用完成时间，其他用接单时间）
+	// 注意：已完成订单要求 completed_time > 0，否则不纳入统计（异常数据显式排除）
 	mainQuery := fmt.Sprintf(`
-		SELECT 
-			accepted_time,
+		SELECT
+			CASE WHEN order_state = %d AND completed_time > 0 THEN completed_time ELSE accepted_time END AS stat_time,
 			uuid AS order_uuid,
 			IF(order_state IN %s, platform_total, 0) AS order_amount,
 			IF(order_state = %d, 0, IF(order_state IN %s, platform_total, 0)) AS pay_amount
@@ -553,19 +589,22 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSale(req CountTakeoutChannelS
 		WHERE delete_time = ?
 			AND order_state IN %s
 			AND accepted_time > 0
-			AND accepted_time >= ?
-			AND accepted_time <= ?
-		ORDER BY accepted_time ASC
-	`, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr)
+			AND (
+				(order_state = %d AND completed_time > 0 AND completed_time >= ? AND completed_time <= ?)
+				OR
+				(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
+			)
+		ORDER BY stat_time ASC
+	`, completedState, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr, completedState, completedState)
 
-	// 执行查询
-	r.db.Raw(mainQuery, constant.NotDeleted, req.StartTime, req.EndTime).Scan(&result)
+	// 执行查询（参数：delete_time, 完成时间开始, 完成时间结束, 接单时间开始, 接单时间结束）
+	r.db.Raw(mainQuery, constant.NotDeleted, req.StartTime, req.EndTime, req.StartTime, req.EndTime).Scan(&result)
 
 	return result
 }
 
 // CountTakeoutChannelSaleByPlatform 统计外卖订单渠道营业（按平台，返回原始数据，不分组）
-// 使用 accepted_time（接单时间）作为时间字段
+// 使用动态时间：已完成订单用 completed_time，其他用 accepted_time
 // 订单金额：所有有效状态的 platform_total
 // 实付金额：状态为60（已取消）时=0，其他有效状态=platform_total
 func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeoutChannelSaleReq, platform string) []TakeoutChannelSaleRawData {
@@ -574,11 +613,13 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeo
 	// 构建状态条件字符串
 	validStatesStr := buildStateInCondition(validOrderStates)
 	businessStatesStr := buildStateInCondition(businessOrderStates)
+	completedState := valueobject.TakeoutOrderStateCompleted
 
-	// 构建查询SQL
+	// 构建查询SQL（使用动态时间：已完成订单用完成时间，其他用接单时间）
+	// 注意：已完成订单要求 completed_time > 0，否则不纳入统计（异常数据显式排除）
 	mainQuery := fmt.Sprintf(`
-		SELECT 
-			accepted_time,
+		SELECT
+			CASE WHEN order_state = %d AND completed_time > 0 THEN completed_time ELSE accepted_time END AS stat_time,
 			uuid AS order_uuid,
 			IF(order_state IN %s, platform_total, 0) AS order_amount,
 			IF(order_state = %d, 0, IF(order_state IN %s, platform_total, 0)) AS pay_amount
@@ -587,13 +628,16 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeo
 			AND order_state IN %s
 			AND platform = ?
 			AND accepted_time > 0
-			AND accepted_time >= ?
-			AND accepted_time <= ?
-		ORDER BY accepted_time ASC
-	`, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr)
+			AND (
+				(order_state = %d AND completed_time > 0 AND completed_time >= ? AND completed_time <= ?)
+				OR
+				(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
+			)
+		ORDER BY stat_time ASC
+	`, completedState, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr, completedState, completedState)
 
-	// 执行查询
-	r.db.Raw(mainQuery, constant.NotDeleted, platform, req.StartTime, req.EndTime).Scan(&result)
+	// 执行查询（参数：delete_time, platform, 完成时间开始, 完成时间结束, 接单时间开始, 接单时间结束）
+	r.db.Raw(mainQuery, constant.NotDeleted, platform, req.StartTime, req.EndTime, req.StartTime, req.EndTime).Scan(&result)
 
 	return result
 }
@@ -614,9 +658,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 	validStatesStr := buildStateInCondition(validOrderStates)
 	baseQuery = baseQuery.Where(fmt.Sprintf("ttpos_takeout_order.order_state IN %s", validStatesStr))
 
-	// 按接单时间范围筛选
+	// 按时间范围筛选（已完成订单用完成时间，其他用接单时间）
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
-		baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time >= ? AND ttpos_takeout_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
+		baseQuery = baseQuery.Where(buildDynamicTimeCondition("ttpos_takeout_order", req.TimeStart, req.TimeEnd))
 	}
 
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
@@ -645,14 +689,18 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 	// 使用子查询先映射 payment_name，然后关联 payment_method 表
 	subQuery := baseQuery.Select([]string{
 		"ttpos_takeout_order.accepted_time",
+		"ttpos_takeout_order.completed_time",
 		"ttpos_takeout_order.order_state",
 		"ttpos_takeout_order.platform_total",
 		paymentNameMapping,
 	})
 
 	// 构建查询字段（使用子查询别名 t）
+	// 使用动态时间：已完成订单用完成时间，其他用接单时间
+	// 注意：已完成订单要求 completed_time > 0，否则不纳入统计（异常数据显式排除）
+	completedState := valueobject.TakeoutOrderStateCompleted
 	selectFields := []string{
-		"t.accepted_time",
+		fmt.Sprintf("CASE WHEN t.order_state = %d AND t.completed_time > 0 THEN t.completed_time ELSE t.accepted_time END AS stat_time", completedState),
 		"pm.uuid AS payment_method_uuid",
 		"pm.sort AS payment_method_sort",
 		"pm.create_time AS payment_method_create_time",
@@ -670,7 +718,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 		Joins("LEFT JOIN ttpos_payment_method AS pm ON t.mapped_payment_name = pm.payment_name AND pm.delete_time = ? AND pm.source = ? AND pm.code IN (?, ?)", constant.NotDeleted, constant.PaymentMethodSourceSystem, constant.PaymentMethodCodeGrab, constant.PaymentMethodCodeLineMan).
 		Where("t.mapped_payment_name IS NOT NULL"). // 只统计有映射的支付方式
 		Where("pm.uuid IS NOT NULL").               // 只统计关联到支付方式的记录
-		Order("t.accepted_time ASC").
+		Order("stat_time ASC").
 		Scan(&result)
 
 	return result
@@ -709,9 +757,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutCategory(req CountTakeoutReq, catego
 		Where("toi.ttpos_product_package_uuid > 0"). // 只统计已映射的商品
 		Where("pp.category_uuid > 0")                // 只统计有分类的商品
 
-	// 应用时间条件（使用 accepted_time）
+	// 应用时间条件（已完成订单用完成时间，其他用接单时间）
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
-		baseQuery = baseQuery.Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
+		baseQuery = baseQuery.Where(buildDynamicTimeCondition("to_order", req.TimeStart, req.TimeEnd))
 	}
 
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
@@ -814,9 +862,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 		Where(fmt.Sprintf("to_order.order_state IN %s", validStatesStr)).
 		Where("toi.ttpos_product_package_uuid > 0") // 只统计已映射的商品
 
-	// 应用时间条件（使用 accepted_time）
+	// 应用时间条件（已完成订单用完成时间，其他用接单时间）
 	if req.TimeStart > 0 && req.TimeEnd > 0 {
-		baseQuery = baseQuery.Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", req.TimeStart, req.TimeEnd)
+		baseQuery = baseQuery.Where(buildDynamicTimeCondition("to_order", req.TimeStart, req.TimeEnd))
 	}
 
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）

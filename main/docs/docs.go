@@ -22022,6 +22022,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/passport/file_redirect": {
+            "get": {
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "通用"
+                ],
+                "summary": "文件下载",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "文件UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "公司UUID",
+                        "name": "company_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "文件内容"
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "文件不存在",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/passport/server_public_key": {
             "get": {
                 "produces": [
@@ -22985,6 +23031,170 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/desk/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加桌台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "添加桌台",
+                "parameters": [
+                    {
+                        "description": "桌台添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/desk/delete": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除桌台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "删除桌台",
+                "parameters": [
+                    {
+                        "description": "桌台删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/desk/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑桌台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "编辑桌台",
+                "parameters": [
+                    {
+                        "description": "桌台编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/desk/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取桌台管理列表（分页）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "获取桌台列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.DeskManageListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/desk/map/areas": {
             "get": {
                 "security": [
@@ -23110,6 +23320,302 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
+                    }
+                }
+            }
+        },
+        "/shop/desk/region/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加桌台区域",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "添加区域",
+                "parameters": [
+                    {
+                        "description": "区域添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskRegionAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/desk/region/delete": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除桌台区域",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "删除区域",
+                "parameters": [
+                    {
+                        "description": "区域删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskRegionDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/desk/region/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑桌台区域",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "编辑区域",
+                "parameters": [
+                    {
+                        "description": "区域编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskRegionEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/desk/region/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取桌台区域列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "获取区域列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.DeskRegionListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/desk/type/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加桌台类型",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "添加类型",
+                "parameters": [
+                    {
+                        "description": "类型添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskTypeAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/desk/type/delete": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除桌台类型",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "删除类型",
+                "parameters": [
+                    {
+                        "description": "类型删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskTypeDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/desk/type/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑桌台类型",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "编辑类型",
+                "parameters": [
+                    {
+                        "description": "类型编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskTypeEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/desk/type/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取桌台类型列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.桌台管理"
+                ],
+                "summary": "获取类型列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.DeskTypeListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
                     }
                 }
             }
@@ -41138,6 +41644,10 @@ const docTemplate = `{
                     "description": "是否允许采购 yes/no",
                     "type": "string"
                 },
+                "min_quota_limit": {
+                    "description": "最小限购数量",
+                    "type": "number"
+                },
                 "quota_limit": {
                     "description": "限购数量",
                     "type": "number"
@@ -44925,6 +45435,10 @@ const docTemplate = `{
                     "description": "分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)",
                     "type": "integer"
                 },
+                "company_uuid": {
+                    "description": "可选，指定查询的门店UUID（用于多店切换查看）",
+                    "type": "integer"
+                },
                 "duty_no": {
                     "description": "班次编号",
                     "type": "string"
@@ -45019,6 +45533,10 @@ const docTemplate = `{
         "req.BusinessDataRankProductReq": {
             "type": "object",
             "properties": {
+                "company_uuid": {
+                    "description": "可选，指定查询的门店UUID（用于多店切换查看）",
+                    "type": "integer"
+                },
                 "exclude_data_manage": {
                     "description": "是否排除数据管理订单",
                     "type": "boolean"
@@ -45545,6 +46063,38 @@ const docTemplate = `{
                 }
             }
         },
+        "req.DeskAddReq": {
+            "type": "object",
+            "required": [
+                "desk_no"
+            ],
+            "properties": {
+                "default_people_num": {
+                    "description": "默认人数",
+                    "type": "integer"
+                },
+                "desk_no": {
+                    "description": "桌位编号",
+                    "type": "string"
+                },
+                "is_open_default_people_num": {
+                    "description": "是否开启默认人数 0-否 1-是",
+                    "type": "integer"
+                },
+                "region_uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "type_uuid": {
+                    "description": "类型UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.DeskBuffetCustomerType": {
             "type": "object",
             "properties": {
@@ -45554,6 +46104,59 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "自助餐顾客类型uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.DeskDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "桌台UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.DeskEditReq": {
+            "type": "object",
+            "required": [
+                "desk_no",
+                "uuid"
+            ],
+            "properties": {
+                "default_people_num": {
+                    "description": "默认人数",
+                    "type": "integer"
+                },
+                "desk_no": {
+                    "description": "桌位编号",
+                    "type": "string"
+                },
+                "is_disable": {
+                    "description": "是否禁用 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_open_default_people_num": {
+                    "description": "是否开启默认人数 0-否 1-是",
+                    "type": "integer"
+                },
+                "region_uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "type_uuid": {
+                    "description": "类型UUID",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "桌台UUID",
                     "type": "integer"
                 }
             }
@@ -45671,6 +46274,120 @@ const docTemplate = `{
                 "remark": {
                     "description": "备注: 最小空字符串,最大50字符",
                     "type": "string"
+                }
+            }
+        },
+        "req.DeskRegionAddReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "description": "区域名称",
+                    "type": "string"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.DeskRegionDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.DeskRegionEditReq": {
+            "type": "object",
+            "required": [
+                "name",
+                "uuid"
+            ],
+            "properties": {
+                "name": {
+                    "description": "区域名称",
+                    "type": "string"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.DeskTypeAddReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "description": "类型名称",
+                    "type": "string"
+                },
+                "range_max": {
+                    "description": "最多人数",
+                    "type": "integer"
+                },
+                "range_min": {
+                    "description": "最少人数",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.DeskTypeDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "类型UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.DeskTypeEditReq": {
+            "type": "object",
+            "required": [
+                "name",
+                "uuid"
+            ],
+            "properties": {
+                "name": {
+                    "description": "类型名称",
+                    "type": "string"
+                },
+                "range_max": {
+                    "description": "最多人数",
+                    "type": "integer"
+                },
+                "range_min": {
+                    "description": "最少人数",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "类型UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -50741,8 +51458,12 @@ const docTemplate = `{
                     "description": "物品UUID",
                     "type": "integer"
                 },
+                "min_quota_limit": {
+                    "description": "最小采购数量",
+                    "type": "number"
+                },
                 "quota_limit": {
-                    "description": "限购数量",
+                    "description": "最大采购数量",
                     "type": "number"
                 }
             }
@@ -53532,6 +54253,10 @@ const docTemplate = `{
                     "description": "货币单位",
                     "type": "string"
                 },
+                "is_save_single_flavor_mapping": {
+                    "description": "是否保存单规格映射，默认不保存",
+                    "type": "boolean"
+                },
                 "platform": {
                     "description": "平台名称：grab, lineman 等",
                     "type": "string"
@@ -54472,6 +55197,22 @@ const docTemplate = `{
         "resp.BuffetProduct": {
             "type": "object",
             "properties": {
+                "is_show_assistant": {
+                    "description": "是否在助手显示, 0-否、1-是",
+                    "type": "integer"
+                },
+                "is_show_cashier": {
+                    "description": "是否在收银台显示, 0-否、1-是",
+                    "type": "integer"
+                },
+                "is_show_kitchen": {
+                    "description": "是否在厨房显示, 0-否、1-是",
+                    "type": "integer"
+                },
+                "is_show_tablet": {
+                    "description": "是否在平板显示, 0-否、1-是",
+                    "type": "integer"
+                },
                 "limit": {
                     "description": "限购数量， 限购数量=单人限购数量*用餐人数",
                     "type": "integer"
@@ -54489,6 +55230,10 @@ const docTemplate = `{
         "resp.BuffetProductList": {
             "type": "object",
             "properties": {
+                "is_show_non_buffet_product": {
+                    "description": "是否显示非自助餐商品 0-关闭 1-开启",
+                    "type": "string"
+                },
                 "list": {
                     "description": "商品列表",
                     "type": "array",
@@ -56128,6 +56873,71 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.DeskManageItem": {
+            "type": "object",
+            "properties": {
+                "default_people_num": {
+                    "description": "默认人数",
+                    "type": "integer"
+                },
+                "desk_no": {
+                    "description": "桌位编号",
+                    "type": "string"
+                },
+                "is_disable": {
+                    "description": "是否禁用 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_open_default_people_num": {
+                    "description": "是否开启默认人数",
+                    "type": "integer"
+                },
+                "region_name": {
+                    "description": "区域名称",
+                    "type": "string"
+                },
+                "region_uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态 0-未开台 1-已开台",
+                    "type": "integer"
+                },
+                "type_name": {
+                    "description": "类型名称",
+                    "type": "string"
+                },
+                "type_uuid": {
+                    "description": "类型UUID",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "桌台UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.DeskManageListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "桌台列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.DeskManageItem"
+                    }
+                },
+                "total": {
+                    "description": "总数",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.DeskMapAreaInfo": {
             "type": "object",
             "properties": {
@@ -56420,6 +57230,39 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.DeskRegionItem": {
+            "type": "object",
+            "properties": {
+                "desk_count": {
+                    "description": "桌台数量",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "区域名称",
+                    "type": "string"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.DeskRegionListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "区域列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.DeskRegionItem"
+                    }
+                }
+            }
+        },
         "resp.DeskType": {
             "type": "object",
             "properties": {
@@ -56430,6 +57273,43 @@ const docTemplate = `{
                 "uuid": {
                     "description": "餐桌类型ID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.DeskTypeItem": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "类型名称",
+                    "type": "string"
+                },
+                "range_max": {
+                    "description": "最多人数",
+                    "type": "integer"
+                },
+                "range_min": {
+                    "description": "最少人数",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "类型UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.DeskTypeListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "类型列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.DeskTypeItem"
+                    }
                 }
             }
         },
@@ -61734,6 +62614,9 @@ const docTemplate = `{
                 "material_uuid": {
                     "type": "integer"
                 },
+                "min_quota_limit": {
+                    "type": "number"
+                },
                 "quota_limit": {
                     "type": "number"
                 }
@@ -62202,6 +63085,10 @@ const docTemplate = `{
                 "is_allow_purchase": {
                     "description": "是否允许采购 yes/no",
                     "type": "string"
+                },
+                "min_quota_limit": {
+                    "description": "最小限购数量",
+                    "type": "number"
                 },
                 "quota_limit": {
                     "description": "限购数量",
@@ -68099,6 +68986,10 @@ const docTemplate = `{
                 },
                 "is_remain_continue": {
                     "description": "剩余xx分不可继续点餐开关 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_show_non_buffet_product": {
+                    "description": "是否显示非自助餐商品 0-关闭 1-开启",
                     "type": "string"
                 },
                 "remain_continue_notice_time": {

@@ -1244,6 +1244,9 @@ definitions:
       is_allow_purchase:
         description: 是否允许采购 yes/no
         type: string
+      min_quota_limit:
+        description: 最小限购数量
+        type: number
       quota_limit:
         description: 限购数量
         type: number
@@ -3775,6 +3778,9 @@ definitions:
       category_type:
         description: 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
         type: integer
+      company_uuid:
+        description: 可选，指定查询的门店UUID（用于多店切换查看）
+        type: integer
       duty_no:
         description: 班次编号
         type: string
@@ -3844,6 +3850,9 @@ definitions:
     type: object
   req.BusinessDataRankProductReq:
     properties:
+      company_uuid:
+        description: 可选，指定查询的门店UUID（用于多店切换查看）
+        type: integer
       exclude_data_manage:
         description: 是否排除数据管理订单
         type: boolean
@@ -4215,6 +4224,29 @@ definitions:
     required:
     - uuid
     type: object
+  req.DeskAddReq:
+    properties:
+      default_people_num:
+        description: 默认人数
+        type: integer
+      desk_no:
+        description: 桌位编号
+        type: string
+      is_open_default_people_num:
+        description: 是否开启默认人数 0-否 1-是
+        type: integer
+      region_uuid:
+        description: 区域UUID
+        type: integer
+      sort:
+        description: 排序
+        type: integer
+      type_uuid:
+        description: 类型UUID
+        type: integer
+    required:
+    - desk_no
+    type: object
   req.DeskBuffetCustomerType:
     properties:
       meal_num:
@@ -4223,6 +4255,44 @@ definitions:
       uuid:
         description: 自助餐顾客类型uuid
         type: integer
+    type: object
+  req.DeskDeleteReq:
+    properties:
+      uuid:
+        description: 桌台UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.DeskEditReq:
+    properties:
+      default_people_num:
+        description: 默认人数
+        type: integer
+      desk_no:
+        description: 桌位编号
+        type: string
+      is_disable:
+        description: 是否禁用 0-否 1-是
+        type: integer
+      is_open_default_people_num:
+        description: 是否开启默认人数 0-否 1-是
+        type: integer
+      region_uuid:
+        description: 区域UUID
+        type: integer
+      sort:
+        description: 排序
+        type: integer
+      type_uuid:
+        description: 类型UUID
+        type: integer
+      uuid:
+        description: 桌台UUID
+        type: integer
+    required:
+    - desk_no
+    - uuid
     type: object
   req.DeskInfoReq:
     properties:
@@ -4306,6 +4376,86 @@ definitions:
       remark:
         description: '备注: 最小空字符串,最大50字符'
         type: string
+    type: object
+  req.DeskRegionAddReq:
+    properties:
+      name:
+        description: 区域名称
+        type: string
+      sort:
+        description: 排序
+        type: integer
+    required:
+    - name
+    type: object
+  req.DeskRegionDeleteReq:
+    properties:
+      uuid:
+        description: 区域UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.DeskRegionEditReq:
+    properties:
+      name:
+        description: 区域名称
+        type: string
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 区域UUID
+        type: integer
+    required:
+    - name
+    - uuid
+    type: object
+  req.DeskTypeAddReq:
+    properties:
+      name:
+        description: 类型名称
+        type: string
+      range_max:
+        description: 最多人数
+        type: integer
+      range_min:
+        description: 最少人数
+        type: integer
+      sort:
+        description: 排序
+        type: integer
+    required:
+    - name
+    type: object
+  req.DeskTypeDeleteReq:
+    properties:
+      uuid:
+        description: 类型UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.DeskTypeEditReq:
+    properties:
+      name:
+        description: 类型名称
+        type: string
+      range_max:
+        description: 最多人数
+        type: integer
+      range_min:
+        description: 最少人数
+        type: integer
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 类型UUID
+        type: integer
+    required:
+    - name
+    - uuid
     type: object
   req.EditDeviceRemarkReq:
     properties:
@@ -7821,8 +7971,11 @@ definitions:
       material_uuid:
         description: 物品UUID
         type: integer
+      min_quota_limit:
+        description: 最小采购数量
+        type: number
       quota_limit:
-        description: 限购数量
+        description: 最大采购数量
         type: number
     required:
     - material_uuid
@@ -9839,6 +9992,9 @@ definitions:
       currency_unit:
         description: 货币单位
         type: string
+      is_save_single_flavor_mapping:
+        description: 是否保存单规格映射，默认不保存
+        type: boolean
       platform:
         description: 平台名称：grab, lineman 等
         type: string
@@ -10475,6 +10631,18 @@ definitions:
     type: object
   resp.BuffetProduct:
     properties:
+      is_show_assistant:
+        description: 是否在助手显示, 0-否、1-是
+        type: integer
+      is_show_cashier:
+        description: 是否在收银台显示, 0-否、1-是
+        type: integer
+      is_show_kitchen:
+        description: 是否在厨房显示, 0-否、1-是
+        type: integer
+      is_show_tablet:
+        description: 是否在平板显示, 0-否、1-是
+        type: integer
       limit:
         description: 限购数量， 限购数量=单人限购数量*用餐人数
         type: integer
@@ -10487,6 +10655,9 @@ definitions:
     type: object
   resp.BuffetProductList:
     properties:
+      is_show_non_buffet_product:
+        description: 是否显示非自助餐商品 0-关闭 1-开启
+        type: string
       list:
         description: 商品列表
         items:
@@ -11602,6 +11773,53 @@ definitions:
         - $ref: '#/definitions/dto.PageResponse'
         description: 分页信息
     type: object
+  resp.DeskManageItem:
+    properties:
+      default_people_num:
+        description: 默认人数
+        type: integer
+      desk_no:
+        description: 桌位编号
+        type: string
+      is_disable:
+        description: 是否禁用 0-否 1-是
+        type: integer
+      is_open_default_people_num:
+        description: 是否开启默认人数
+        type: integer
+      region_name:
+        description: 区域名称
+        type: string
+      region_uuid:
+        description: 区域UUID
+        type: integer
+      sort:
+        description: 排序
+        type: integer
+      status:
+        description: 状态 0-未开台 1-已开台
+        type: integer
+      type_name:
+        description: 类型名称
+        type: string
+      type_uuid:
+        description: 类型UUID
+        type: integer
+      uuid:
+        description: 桌台UUID
+        type: integer
+    type: object
+  resp.DeskManageListResp:
+    properties:
+      list:
+        description: 桌台列表
+        items:
+          $ref: '#/definitions/resp.DeskManageItem'
+        type: array
+      total:
+        description: 总数
+        type: integer
+    type: object
   resp.DeskMapAreaInfo:
     properties:
       region_name:
@@ -11788,6 +12006,29 @@ definitions:
         description: 更新时间
         type: integer
     type: object
+  resp.DeskRegionItem:
+    properties:
+      desk_count:
+        description: 桌台数量
+        type: integer
+      name:
+        description: 区域名称
+        type: string
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 区域UUID
+        type: integer
+    type: object
+  resp.DeskRegionListResp:
+    properties:
+      list:
+        description: 区域列表
+        items:
+          $ref: '#/definitions/resp.DeskRegionItem'
+        type: array
+    type: object
   resp.DeskType:
     properties:
       name:
@@ -11796,6 +12037,32 @@ definitions:
       uuid:
         description: 餐桌类型ID
         type: integer
+    type: object
+  resp.DeskTypeItem:
+    properties:
+      name:
+        description: 类型名称
+        type: string
+      range_max:
+        description: 最多人数
+        type: integer
+      range_min:
+        description: 最少人数
+        type: integer
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 类型UUID
+        type: integer
+    type: object
+  resp.DeskTypeListResp:
+    properties:
+      list:
+        description: 类型列表
+        items:
+          $ref: '#/definitions/resp.DeskTypeItem'
+        type: array
     type: object
   resp.DeviceItem:
     properties:
@@ -15329,6 +15596,8 @@ definitions:
         type: string
       material_uuid:
         type: integer
+      min_quota_limit:
+        type: number
       quota_limit:
         type: number
     type: object
@@ -15651,6 +15920,9 @@ definitions:
       is_allow_purchase:
         description: 是否允许采购 yes/no
         type: string
+      min_quota_limit:
+        description: 最小限购数量
+        type: number
       quota_limit:
         description: 限购数量
         type: number
@@ -19688,6 +19960,9 @@ definitions:
         type: string
       is_remain_continue:
         description: 剩余xx分不可继续点餐开关 0-关闭 1-开启
+        type: string
+      is_show_non_buffet_product:
+        description: 是否显示非自助餐商品 0-关闭 1-开启
         type: string
       remain_continue_notice_time:
         description: 剩余xx秒提醒不可继续点餐
@@ -33545,6 +33820,37 @@ paths:
       summary: 获取验证码
       tags:
       - 通用
+  /passport/file_redirect:
+    get:
+      parameters:
+      - description: 文件UUID
+        format: int64
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      - description: 公司UUID
+        format: int64
+        in: query
+        name: company_uuid
+        required: true
+        type: integer
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: 文件内容
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: 文件不存在
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 文件下载
+      tags:
+      - 通用
   /passport/server_public_key:
     get:
       parameters:
@@ -34117,6 +34423,108 @@ paths:
       summary: 获取国家列表
       tags:
       - 商家端.物品管理
+  /shop/desk/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加桌台
+      parameters:
+      - description: 桌台添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加桌台
+      tags:
+      - 商家端.桌台管理
+  /shop/desk/delete:
+    post:
+      consumes:
+      - application/json
+      description: 删除桌台
+      parameters:
+      - description: 桌台删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除桌台
+      tags:
+      - 商家端.桌台管理
+  /shop/desk/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑桌台
+      parameters:
+      - description: 桌台编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑桌台
+      tags:
+      - 商家端.桌台管理
+  /shop/desk/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取桌台管理列表（分页）
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.DeskManageListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取桌台列表
+      tags:
+      - 商家端.桌台管理
   /shop/desk/map/areas:
     get:
       consumes:
@@ -34192,6 +34600,188 @@ paths:
       summary: 保存区域布局
       tags:
       - 商家端.桌台地图
+  /shop/desk/region/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加桌台区域
+      parameters:
+      - description: 区域添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskRegionAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加区域
+      tags:
+      - 商家端.桌台管理
+  /shop/desk/region/delete:
+    post:
+      consumes:
+      - application/json
+      description: 删除桌台区域
+      parameters:
+      - description: 区域删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskRegionDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除区域
+      tags:
+      - 商家端.桌台管理
+  /shop/desk/region/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑桌台区域
+      parameters:
+      - description: 区域编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskRegionEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑区域
+      tags:
+      - 商家端.桌台管理
+  /shop/desk/region/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取桌台区域列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.DeskRegionListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取区域列表
+      tags:
+      - 商家端.桌台管理
+  /shop/desk/type/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加桌台类型
+      parameters:
+      - description: 类型添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskTypeAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加类型
+      tags:
+      - 商家端.桌台管理
+  /shop/desk/type/delete:
+    post:
+      consumes:
+      - application/json
+      description: 删除桌台类型
+      parameters:
+      - description: 类型删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskTypeDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除类型
+      tags:
+      - 商家端.桌台管理
+  /shop/desk/type/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑桌台类型
+      parameters:
+      - description: 类型编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskTypeEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑类型
+      tags:
+      - 商家端.桌台管理
+  /shop/desk/type/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取桌台类型列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.DeskTypeListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取类型列表
+      tags:
+      - 商家端.桌台管理
   /shop/export_record/delete:
     delete:
       consumes:

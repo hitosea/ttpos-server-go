@@ -97,6 +97,7 @@ func TakeoutProviderOrderUpdateHandler(ctx context.Context, msg *primitive.Messa
 		logger.Logger.Error("获取公司信息失败", zap.Error(err))
 		return err
 	}
+
 	// 设置上下文
 	ctxHelper := ttposContext.NewDefaultContext()
 	ctxHelper.SetBasicInfo(db, companyInfo)

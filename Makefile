@@ -54,8 +54,8 @@ debug:
 	$(call update_env_and_debug)
 
 # 运行run
-run: debug
-	$(call update_env_and_run)
+run:
+	@make stop-service
 	cd main && go run ./main.go
 
 # 启动开发模式 - 热重启

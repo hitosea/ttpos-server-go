@@ -771,6 +771,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     INDEX `idx_first_category_uuid` (`first_category_uuid`),
     INDEX `idx_batch_tag_uuid` (`batch_tag_uuid`),
     INDEX `idx_status` (`status`),
+    INDEX `idx_status_delete_finished` (`status`, `delete_time`, `finished_time`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单商品表';
 
@@ -2184,7 +2185,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     INDEX `idx_warehouse_out_form_uuid` (`warehouse_out_form_uuid`),
     INDEX `idx_material_uuid` (`material_uuid`),
     INDEX `idx_product_bom_uuid` (`product_bom_uuid`),
-    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`)
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
+    INDEX `idx_staff_shift_log_uuid` (`staff_shift_log_uuid`),
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '出库单明细表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (
@@ -4354,7 +4357,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_limit_scheme_item` (
     `scheme_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '限购方案UUID',
     `material_code` varchar(50) NOT NULL DEFAULT '' COMMENT '物品编码',
     `unit_code` varchar(50) NOT NULL DEFAULT '' COMMENT '单位编码',
-    `quota_limit` decimal(20,8) NOT NULL DEFAULT 0 COMMENT '限购数量（0=不限制）',
+    `quota_limit` decimal(20,8) NOT NULL DEFAULT 0 COMMENT '最大采购数量（0=不限制）',
+    `min_quota_limit` decimal(20,8) NOT NULL DEFAULT 0 COMMENT '最小采购数量（0=不限制）',
     `is_allow_purchase` varchar(10) NOT NULL DEFAULT 'yes' COMMENT '是否允许采购 yes/no',
     `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',

@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 交互约定
+
+### "help" 命令
+当用户输入 "help" 时，执行 `make help` 并将结果解析为可点击的 `<options>` 列表。每个选项格式为 `make <command> — <description>`。用户点击后直接执行对应的 make 命令。
+
 ## 项目概述
 
 TTPOS 是一个现代化的餐饮收银系统后端，支持多终端（pos/shop/kds/qds/assistant/tablet/mobile/menu/member）和业务场景（点餐、桌位管理、会员、外卖、报表等）。采用微服务架构设计，包含以下模块：
@@ -33,11 +38,16 @@ TTPOS 是一个现代化的餐饮收银系统后端，支持多终端（pos/shop
 3. 如果相对路径不可用，回退到 `_ABS` 绝对路径
 4. 使用 `read_file` 或 `list_dir` 或其他 MCP 服务的工具访问对应路径下的文件
 
+## 开发环境约束
+
+- **启动服务**：必须在项目根目录使用 `make run`，禁止 `cd main && go run main.go`
+- **接口访问**：所有 API 请求必须通过 http-proxy-debug-view 代理访问（`http://localhost:8080`），禁止直接访问 Go 服务端口
+
 ## 常用命令
 
 ### Main 模块 (main/)
 ```bash
-cd main && go run main.go           # 启动主服务
+make run                            # 启动主服务（在项目根目录执行，必须使用此方式）
 cd main && go test ./...            # 运行所有测试
 cd main && go test ./app/service    # 运行指定包测试
 cd main && go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out  # 测试覆盖率

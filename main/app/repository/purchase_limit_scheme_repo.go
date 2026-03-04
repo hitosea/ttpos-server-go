@@ -8,6 +8,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// QuotaLimitConfig 限购配置
+type QuotaLimitConfig struct {
+	QuotaLimit    float64 // 最大限购数量
+	MinQuotaLimit float64 // 最小采购数量
+}
+
 // IPurchaseLimitSchemeRepo 限购方案数据访问接口
 type IPurchaseLimitSchemeRepo interface {
 	// Create 创建限购方案
@@ -33,6 +39,14 @@ type IPurchaseLimitSchemeRepo interface {
 
 	// GetMinDailyLimit 获取当天最小的每日申请次数限制
 	GetMinDailyLimit(companyUuid uint64, currentWeekday int8) (int, error)
+
+	// GetMinQuotaMinBatchByMaterialCodes 批量获取物品的最小采购数量限制
+	// 多个限购方案生效时，取最小值（最宽松的限制）
+	GetMinQuotaMinBatchByMaterialCodes(companyUuid uint64, materialCodes []string, currentWeekday int8) (map[string]float64, error)
+
+	// GetQuotaLimitConfigBatchByMaterialCodes 批量获取物品的限购配置（包含最大和最小限购数量）
+	// 多个限购方案生效时，最大限购取最小值（最严格），最小采购取最小值（最宽松）
+	GetQuotaLimitConfigBatchByMaterialCodes(companyUuid uint64, materialCodes []string, currentWeekday int8) (map[string]QuotaLimitConfig, error)
 
 	// Delete 软删除限购方案
 	Delete(uuid uint64) error
@@ -404,6 +418,207 @@ func (r *purchaseLimitSchemeRepoImpl) GetMinDailyLimit(
 	}
 
 	return minDailyLimit, nil
+}
+
+// GetMinQuotaMinBatchByMaterialCodes 批量获取物品的最小采购数量限制
+//
+// 参数：
+//   - companyUuid: 门店UUID（用于判断方案是否应用到该门店）
+//   - materialCodes: 物品编码列表
+//   - currentWeekday: 当前星期几（1-7，1=周一，7=周日）
+//
+// 返回：
+//   - map[string]float64: 物品编码 -> 最小采购数量的映射
+//   - error: 错误信息
+//
+// 逻辑：
+//  1. 查询所有启用的、应用到该门店的限购方案
+//  2. 过滤出包含当前星期的方案
+//  3. 在这些方案中查找有最小采购数量配置的物品
+//  4. 对每个物品取最小的最小采购数量（最宽松的限制）
+func (r *purchaseLimitSchemeRepoImpl) GetMinQuotaMinBatchByMaterialCodes(
+	companyUuid uint64,
+	materialCodes []string,
+	currentWeekday int8,
+) (map[string]float64, error) {
+	if len(materialCodes) == 0 {
+		return make(map[string]float64), nil
+	}
+
+	// 1. 子查询：查找应用到该门店的方案UUID
+	subQuery := r.db.Table("ttpos_purchase_limit_scheme_shop").
+		Select("scheme_uuid").
+		Where("company_uuid = ?", companyUuid).
+		Where("delete_time = ?", 0)
+
+	// 2. 查询所有启用的、应用到该门店的限购方案（只查询有最小采购数量配置的物品）
+	var schemes []struct {
+		SchemeUuid uint64 `gorm:"column:scheme_uuid"`
+		Weekdays   string `gorm:"column:weekdays"`
+	}
+
+	err := r.db.Table("ttpos_purchase_limit_scheme_item as item").
+		Select("DISTINCT scheme.uuid as scheme_uuid, scheme.weekdays").
+		Joins("INNER JOIN ttpos_purchase_limit_scheme as scheme ON scheme.uuid = item.scheme_uuid").
+		Where("item.delete_time = ?", 0).
+		Where("item.material_code IN ?", materialCodes).
+		Where("item.min_quota_limit > ?", 0). // 只查询有最小采购数量配置的物品
+		Where("scheme.delete_time = ?", 0).
+		Where("scheme.status = ?", 1).
+		Where("(scheme.apply_to_all_shops = 1 OR scheme.uuid IN (?))", subQuery).
+		Find(&schemes).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(schemes) == 0 {
+		return make(map[string]float64), nil
+	}
+
+	// 3. 过滤出包含当前星期的方案
+	validSchemeUuids := make([]uint64, 0)
+	for _, scheme := range schemes {
+		if isWeekdayInScheme(currentWeekday, scheme.Weekdays) {
+			validSchemeUuids = append(validSchemeUuids, scheme.SchemeUuid)
+		}
+	}
+
+	if len(validSchemeUuids) == 0 {
+		return make(map[string]float64), nil
+	}
+
+	// 4. 查询这些方案中的物品配置，按物品分组取最小的最小采购数量（最宽松）
+	var results []struct {
+		MaterialCode  string  `gorm:"column:material_code"`
+		MinQuotaLimit float64 `gorm:"column:min_quota_limit"`
+	}
+
+	err = r.db.Table("ttpos_purchase_limit_scheme_item").
+		Select("material_code, MIN(min_quota_limit) as min_quota_limit").
+		Where("delete_time = ?", 0).
+		Where("material_code IN ?", materialCodes).
+		Where("scheme_uuid IN ?", validSchemeUuids).
+		Where("min_quota_limit > ?", 0). // 排除 0 值（0 表示不限制）
+		Group("material_code").
+		Find(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 5. 转换为 map
+	quotaMap := make(map[string]float64, len(results))
+	for _, result := range results {
+		quotaMap[result.MaterialCode] = result.MinQuotaLimit
+	}
+
+	return quotaMap, nil
+}
+
+// GetQuotaLimitConfigBatchByMaterialCodes 批量获取物品的限购配置（包含最大和最小限购数量）
+//
+// 参数：
+//   - companyUuid: 门店UUID（用于判断方案是否应用到该门店）
+//   - materialCodes: 物品编码列表
+//   - currentWeekday: 当前星期几（1-7，1=周一，7=周日）
+//
+// 返回：
+//   - map[string]QuotaLimitConfig: 物品编码 -> 限购配置
+//   - error: 错误信息
+//
+// 逻辑：
+//  1. 查询所有启用的、应用到该门店的限购方案
+//  2. 过滤出包含当前星期的方案
+//  3. 对于最大限购数量（quota_limit），取最大值（多个方案取最宽松的限制）
+//  4. 对于最小采购数量（min_quota_limit），取最小值（最宽松的限制）
+func (r *purchaseLimitSchemeRepoImpl) GetQuotaLimitConfigBatchByMaterialCodes(
+	companyUuid uint64,
+	materialCodes []string,
+	currentWeekday int8,
+) (map[string]QuotaLimitConfig, error) {
+	if len(materialCodes) == 0 {
+		return make(map[string]QuotaLimitConfig), nil
+	}
+
+	// 1. 子查询：查找应用到该门店的方案UUID
+	subQuery := r.db.Table("ttpos_purchase_limit_scheme_shop").
+		Select("scheme_uuid").
+		Where("company_uuid = ?", companyUuid).
+		Where("delete_time = ?", 0)
+
+	// 2. 查询所有启用的、应用到该门店的限购方案
+	var schemes []struct {
+		SchemeUuid uint64 `gorm:"column:scheme_uuid"`
+		Weekdays   string `gorm:"column:weekdays"`
+	}
+
+	err := r.db.Table("ttpos_purchase_limit_scheme_item as item").
+		Select("DISTINCT scheme.uuid as scheme_uuid, scheme.weekdays").
+		Joins("INNER JOIN ttpos_purchase_limit_scheme as scheme ON scheme.uuid = item.scheme_uuid").
+		Where("item.delete_time = ?", 0).
+		Where("item.material_code IN ?", materialCodes).
+		Where("scheme.delete_time = ?", 0).
+		Where("scheme.status = ?", 1).
+		Where("(scheme.apply_to_all_shops = 1 OR scheme.uuid IN (?))", subQuery).
+		Find(&schemes).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(schemes) == 0 {
+		return make(map[string]QuotaLimitConfig), nil
+	}
+
+	// 3. 过滤出包含当前星期的方案
+	validSchemeUuids := make([]uint64, 0)
+	for _, scheme := range schemes {
+		if isWeekdayInScheme(currentWeekday, scheme.Weekdays) {
+			validSchemeUuids = append(validSchemeUuids, scheme.SchemeUuid)
+		}
+	}
+
+	if len(validSchemeUuids) == 0 {
+		return make(map[string]QuotaLimitConfig), nil
+	}
+
+	// 4. 查询这些方案中的物品配置，同时获取最大限购和最小采购数量
+	var results []struct {
+		MaterialCode  string  `gorm:"column:material_code"`
+		QuotaLimit    float64 `gorm:"column:quota_limit"`
+		MinQuotaLimit float64 `gorm:"column:min_quota_limit"`
+	}
+
+	// 使用聚合分别计算最大限购和最小采购数量
+	// 最大限购：取 MAX(quota_limit)，多个方案取最大值（最宽松）
+	// 最小采购：取 MIN(min_quota_limit)，排除 0 值（最宽松）
+	err = r.db.Table("ttpos_purchase_limit_scheme_item").
+		Select(`
+			material_code,
+			COALESCE(MAX(CASE WHEN quota_limit > 0 THEN quota_limit ELSE NULL END), 0) as quota_limit,
+			COALESCE(MIN(CASE WHEN min_quota_limit > 0 THEN min_quota_limit ELSE NULL END), 0) as min_quota_limit
+		`).
+		Where("delete_time = ?", 0).
+		Where("material_code IN ?", materialCodes).
+		Where("scheme_uuid IN ?", validSchemeUuids).
+		Group("material_code").
+		Find(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 5. 转换为 map
+	configMap := make(map[string]QuotaLimitConfig, len(results))
+	for _, result := range results {
+		configMap[result.MaterialCode] = QuotaLimitConfig{
+			QuotaLimit:    result.QuotaLimit,
+			MinQuotaLimit: result.MinQuotaLimit,
+		}
+	}
+
+	return configMap, nil
 }
 
 // isWeekdayInScheme 检查当前星期是否在方案的限购周期内

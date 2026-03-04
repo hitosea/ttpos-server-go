@@ -88,14 +88,6 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 
 		// 成功后，推送到厨显端更新订单
 		sendUpdateKitchenWebSocketNotification(orderAcceptedEvent.CompanyUuid)
-
-		// 记录高峰期
-		if err := takeoutSrv.RecordTakeoutOrderPeakTime(ctx, orderAcceptedEvent.OrderUuid, orderAcceptedEvent.CompanyUuid); err != nil {
-			logger.Logger.Error("记录外卖订单高峰期失败",
-				zap.Uint64("orderUuid", orderAcceptedEvent.OrderUuid),
-				zap.String("takeoutOrderUuid", orderAcceptedEvent.TakeoutOrderUuid),
-				zap.Error(err))
-		}
 	})
 
 	// 异步打印外卖订单小票

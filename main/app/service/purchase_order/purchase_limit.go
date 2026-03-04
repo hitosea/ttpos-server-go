@@ -55,10 +55,15 @@ func (s *purchaseOrderSrv) checkPurchaseLimit(ctx context.Context, order *model.
 		}
 	}
 
-	// 3 检查物品数量限制
-	quotaMap := s.helper.getQuotaLimitMap(ctx, s.dbm, order)
-	if len(quotaMap) > 0 {
-		if err := s.checkItemLimitByScheme(ctx, order, quotaMap); err != nil {
+	// 3 检查物品数量限制（最大和最小采购数量）
+	quotaConfigMap := s.helper.getQuotaLimitMap(ctx, s.dbm, order)
+	if len(quotaConfigMap) > 0 {
+		// 3.1 检查最大采购数量
+		if err := s.checkItemLimitByScheme(ctx, order, quotaConfigMap); err != nil {
+			return err
+		}
+		// 3.2 检查最小采购数量
+		if err := s.checkMinItemLimitByScheme(ctx, order, quotaConfigMap); err != nil {
 			return err
 		}
 	}
@@ -185,7 +190,7 @@ func (s *purchaseOrderSrv) checkSalesUnitChanged(
 func (s *purchaseOrderSrv) checkItemLimitByScheme(
 	ctx context.Context,
 	order *model.PurchaseOrder,
-	quotaMap map[string]float64,
+	quotaConfigMap map[string]repository.QuotaLimitConfig,
 ) error {
 	lang := ctx.GetLanguage()
 
@@ -200,10 +205,10 @@ func (s *purchaseOrderSrv) checkItemLimitByScheme(
 
 	// 遍历订单明细
 	for _, orderItem := range order.Items {
-		// 检查是否在限购配置中
-		_, inQuota := quotaMap[orderItem.MaterialCode]
-		if !inQuota {
-			continue // 不在限购配置中，跳过
+		// 检查是否在限购配置中，且有最大限购数量
+		quotaConfig, inQuota := quotaConfigMap[orderItem.MaterialCode]
+		if !inQuota || quotaConfig.QuotaLimit <= 0 {
+			continue // 不在限购配置中或无最大限购数量，跳过
 		}
 		// 获取限购配置单位
 		if orderItem.Material == nil {
@@ -248,7 +253,7 @@ func (s *purchaseOrderSrv) checkItemLimitByScheme(
 	// 5. 逐个检查物品是否超限
 	for _, summary := range summaries {
 		// 获取限购限制（前面已经过滤，这里肯定存在）
-		quotaLimit := quotaMap[summary.MaterialCode]
+		quotaLimit := quotaConfigMap[summary.MaterialCode].QuotaLimit
 		// 校验是否超限
 		if summary.TotalQty > quotaLimit {
 			return errors.NewWithCode(constant.CodeErrorConfirmRefresh, fmt.Sprintf(i18n.Translate(lang, "物品 %s 超出限购/单位变动，请检查物品和数量"), summary.MaterialName))
@@ -256,4 +261,87 @@ func (s *purchaseOrderSrv) checkItemLimitByScheme(
 	}
 
 	return nil
+}
+
+// checkMinItemLimitByScheme 检查物品最小采购数量限制（按方案）
+func (s *purchaseOrderSrv) checkMinItemLimitByScheme(
+	ctx context.Context,
+	order *model.PurchaseOrder,
+	quotaConfigMap map[string]repository.QuotaLimitConfig,
+) error {
+	lang := ctx.GetLanguage()
+
+	// 1. 定义物品汇总结构
+	type MaterialSummary struct {
+		MaterialCode string
+		MaterialName string
+		TotalQty     float64
+	}
+
+	materialSummaryMap := make(map[string]*MaterialSummary)
+
+	// 2. 遍历订单明细，汇总物品数量
+	for _, orderItem := range order.Items {
+		// 检查是否在限购配置中，且有最小采购数量
+		quotaConfig, inQuota := quotaConfigMap[orderItem.MaterialCode]
+		if !inQuota || quotaConfig.MinQuotaLimit <= 0 {
+			continue // 不在配置中或无最小采购数量，跳过
+		}
+		if orderItem.Material == nil {
+			continue // Material 未加载，跳过
+		}
+		// 获取限购配置单位
+		quotaUnit := orderItem.Material.GetUnitByUuidForQuotaConfig()
+		if quotaUnit == nil {
+			continue // 未找到限购配置单位，跳过
+		}
+		quotaUnitUuid := quotaUnit.Uuid
+
+		materialName := language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(lang)
+
+		// 累加单位申请数量
+		for _, unit := range orderItem.Units {
+			// 只累加限购单位的数量
+			if unit.UnitUuid != quotaUnitUuid {
+				continue
+			}
+			key := orderItem.MaterialCode
+			if summary, exists := materialSummaryMap[key]; exists {
+				summary.TotalQty += unit.Num
+			} else {
+				materialSummaryMap[key] = &MaterialSummary{
+					MaterialCode: orderItem.MaterialCode,
+					MaterialName: materialName,
+					TotalQty:     unit.Num,
+				}
+			}
+		}
+	}
+
+	// 3. 逐个检查物品是否低于最小采购数量
+	for _, summary := range materialSummaryMap {
+		minQuotaLimit := quotaConfigMap[summary.MaterialCode].MinQuotaLimit
+		if summary.TotalQty < minQuotaLimit {
+			// 错误提示：物品 {name} 申请总数（{actual}），不能小于（{min}），请调整后提交
+			return errors.NewWithCode(
+				constant.CodeErrorConfirmRefresh,
+				fmt.Sprintf(
+					i18n.Translate(lang, "物品 %s 申请总数（%s），不能小于（%s），请调整后提交"),
+					summary.MaterialName,
+					formatQuantity(summary.TotalQty),
+					formatQuantity(minQuotaLimit),
+				),
+			)
+		}
+	}
+
+	return nil
+}
+
+// formatQuantity 格式化数量，去掉不必要的小数位
+func formatQuantity(qty float64) string {
+	if qty == float64(int64(qty)) {
+		return fmt.Sprintf("%d", int64(qty))
+	}
+	return fmt.Sprintf("%.2f", qty)
 }

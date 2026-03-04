@@ -369,13 +369,15 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 		}
 	}
 
-	// 设置员工班次信息】
+	// 设置员工班次信息
 	if !order.IsExistShiftLog() {
 		if err := orderRepo.SetStaffShiftLogUuid(order); err != nil {
 			logger.Logger.Error("设置员工班次日志UUID失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		} else {
+		} else if userUuid > 0 {
+			// 手动接单时，使用当前登录用户作为接单人
 			order.AcceptedBy = userUuid
 		}
+		// 自动接单时，AcceptedBy 保留 SetStaffShiftLogUuid 中从班次获取的 staffUuid
 	}
 
 	// 更新订单状态
@@ -620,6 +622,33 @@ func (s *takeoutOrderSrv) CheckOrderCancelable(ctx context.Context, req *request
 	// 调用 CheckOrderCancelable 接口
 	canCancel, reason, rawData, err := rpcClient.CheckOrderCancelable(ctx.GetContext(), order.TakeoutOrderUuid)
 	if err != nil {
+		// 判断错误信息存在 get order cancelable fail 和 invalid_argument 时，直接更改订单状态为取消并返回成功
+		if strings.Contains(err.Error(), "get order cancelable fail") || strings.Contains(err.Error(), "invalid_argument") {
+			// 更新订单状态为已取消
+			if err := orderRepo.UpdateByMap(order.Uuid, map[string]interface{}{
+				"order_state": valueobject.TakeoutOrderStateCanceled,
+				"update_time": time.Now().Unix(),
+			}); err != nil {
+				logger.Logger.Error("更新订单状态失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			}
+			// 发布订单取消事件
+			event.GetDispatcher().Publish(event.NewOrderCancelEvent(
+				order.Uuid,
+				order.Platform,
+				order.PlatformOrderId,
+				order.ShortOrderNumber,
+				order.TakeoutOrderUuid,
+				ctx.GetCompanyUuid(),
+				i18n.Translate(ctx.GetLanguage(), "订单已取消"),
+				valueobject.TakeoutOrderStateCanceled,
+			))
+			// 返回成功
+			return &response.TakeoutOrderCancelCheckResp{
+				CanCancel:             false,
+				NonCancellationReason: i18n.Translate(ctx.GetLanguage(), "订单已取消"),
+				CancelReasons:         []response.TakeoutOrderCancelReason{},
+			}, nil
+		}
 		logger.Logger.Error("调用 BMP CheckOrderCancelable 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 		return nil, errors.WithMessage(errors.New("检查订单可取消状态失败"), err.Error())
 	}
@@ -828,11 +857,11 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 	}
 
 	// 设置员工班次信息】
-	if !order.IsExistShiftLog() {
-		if err := orderRepo.SetStaffShiftLogUuid(order); err != nil {
-			logger.Logger.Error("设置员工班次日志UUID失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		}
-	}
+	// if !order.IsExistShiftLog() {
+	// 	if err := orderRepo.SetStaffShiftLogUuid(order); err != nil {
+	// 		logger.Logger.Error("设置员工班次日志UUID失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+	// 	}
+	// }
 
 	// 开启事务
 	if err := db.Transaction(func(tx *gorm.DB) error {
@@ -1760,8 +1789,7 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		}
 
 		if order == nil {
-			logger.Logger.Error("订单不存在", zap.String("order_uuid", orderUuid))
-			return errors.New("订单不存在")
+			return nil
 		}
 
 		// 3. 转换并更新订单状态
@@ -1841,6 +1869,9 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 					order.ShortOrderNumber,
 					order.TakeoutOrderUuid,
 					ctx.GetCompanyUuid(),
+					order.AcceptedBy,
+					order.CompletedTime,
+					order.PlatformTotal,
 				))
 			}
 		}
@@ -2067,6 +2098,9 @@ func (s *takeoutOrderSrv) BatchAssignShiftLogToPendingOrders(ctx context.Context
 	var ordersNoErpInvoice []*takeoutModel.TakeoutOrder
 
 	for _, order := range pendingOrders {
+		if order.OrderState == valueobject.TakeoutOrderStatePending {
+			continue
+		}
 		// 需要生成 ERP 发票的条件：已接单且未同步 ERP 发票
 		if order.OrderState != valueobject.TakeoutOrderStatePending && !order.IsErpInvoiceSynced() {
 			ordersNeedErpInvoice = append(ordersNeedErpInvoice, order)
@@ -2124,26 +2158,31 @@ func (s *takeoutOrderSrv) BatchAssignShiftLogToPendingOrders(ctx context.Context
 		}
 	}
 
-	// 5. 批量记录高峰期（包括已接单和已取消的订单）
+	// 5. 批量记录高峰期（仅已完成的订单）
 	allProcessedOrders := append(ordersNeedErpInvoice, ordersNoErpInvoice...)
-	// 批量发布高峰期记录事件
-	if len(allProcessedOrders) > 0 {
-		companyUuid := ctx.GetCompanyUuid()
-		// 收集订单UUID列表
-		orderUuids := make([]uint64, 0, len(allProcessedOrders))
-		for _, order := range allProcessedOrders {
-			orderUuids = append(orderUuids, order.Uuid)
+	// 过滤出已完成的订单
+	var completedOrderUuids []uint64
+	for _, order := range allProcessedOrders {
+		// 仅已完成且有完成时间和接单人的订单才记录高峰期
+		if order.OrderState == valueobject.TakeoutOrderStateCompleted &&
+			order.CompletedTime > 0 &&
+			order.AcceptedBy > 0 &&
+			order.AcceptedTime > 0 {
+			completedOrderUuids = append(completedOrderUuids, order.Uuid)
 		}
-		// 创建单个批量事件并发布
-		peakTimeEvent := event.NewOrderPeakTimeRecordEvent(orderUuids, companyUuid)
+	}
+	// 批量发布高峰期记录事件
+	if len(completedOrderUuids) > 0 {
+		companyUuid := ctx.GetCompanyUuid()
+		peakTimeEvent := event.NewOrderPeakTimeRecordEvent(completedOrderUuids, companyUuid)
 		event.GetDispatcher().Publish(peakTimeEvent)
-		logger.Logger.Debug("批量发布高峰期记录事件完成", zap.Int("count", len(orderUuids)))
+		logger.Logger.Debug("批量发布高峰期记录事件完成", zap.Int("count", len(completedOrderUuids)))
 	}
 
 	logger.Logger.Debug("批量分配班次完成", zap.Int("erpInvoiceSuccessCount", successCount),
 		zap.Int("erpInvoiceTotalCount", len(ordersNeedErpInvoice)),
 		zap.Int("noErpInvoiceCount", len(ordersNoErpInvoice)),
-		zap.Int("peakTimeRecordCount", len(allProcessedOrders)))
+		zap.Int("peakTimeRecordCount", len(completedOrderUuids)))
 
 	return nil
 }

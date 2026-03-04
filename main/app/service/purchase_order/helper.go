@@ -930,14 +930,14 @@ func (h *purchaseOrderHelper) checkCompanyShopNeedSync(
 	return false
 }
 
-// 品牌采购：批量查询限购配置（避免 N+1 查询问题）
+// 品牌采购：批量查询限购配置（包含最大和最小限购数量，避免 N+1 查询问题）
 func (h *purchaseOrderHelper) getQuotaLimitMap(
 	ctx context.Context,
 	dbm *database.DBManager,
 	purchaseOrder *model.PurchaseOrder,
-) map[string]float64 { // 品牌采购：批量查询限购配置（避免 N+1 查询问题）
+) map[string]repository.QuotaLimitConfig {
 	companySetting := ctx.GetCompanySetting()
-	var quotaLimitMap map[string]float64
+	var quotaLimitMap map[string]repository.QuotaLimitConfig
 	if purchaseOrder.IsHeadquarterPurchase() && len(purchaseOrder.Items) > 0 {
 		// 提取所有物品编码
 		materialCodes := make([]string, 0, len(purchaseOrder.Items))
@@ -949,7 +949,7 @@ func (h *purchaseOrderHelper) getQuotaLimitMap(
 		if headquarterUuid > 0 {
 			headquarterDb := dbm.GetDB(headquarterUuid)
 			schemeRepo := repository.NewPurchaseLimitSchemeRepo(headquarterDb)
-			quotaLimits, err := schemeRepo.GetMinQuotaLimitBatchByMaterialCodes(
+			quotaLimits, err := schemeRepo.GetQuotaLimitConfigBatchByMaterialCodes(
 				companySetting.CompanyUuid,
 				materialCodes,
 				utils.SetTimezone(companySetting.GetTimezone()).CurrentWeekday(),

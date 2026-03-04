@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "Inventory Type",
+  "fieldname": "custom_inventory_type",
+  "fieldtype": "Select",
+  "options": "Daily inventory\nWeekly inventory\nMonthly inventory\nDesignated item inventory\nInventory of all items",
+  "insert_after": "purpose",
+  "dt": "Stock Reconciliation"
+}

@@ -20,6 +20,7 @@ type PurchaseLimitSchemeResp struct {
 type PurchaseLimitSchemeItemResp struct {
 	MaterialUuid    uint64  `json:"material_uuid"`
 	QuotaLimit      float64 `json:"quota_limit"`
+	MinQuotaLimit   float64 `json:"min_quota_limit"`
 	IsAllowPurchase string  `json:"is_allow_purchase"`
 }
 

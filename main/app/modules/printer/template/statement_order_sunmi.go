@@ -505,7 +505,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	}
 	// 退款金额
 	if returnAmount := saleOrder.GetReturnAmount(); returnAmount > 0 {
-		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("退款金额"), t.base.GetPriceAndUnit(returnAmount)))
+		printer.AppendText(fmt.Sprintf("%s: -%s", t.base.Translate("退款金额"), t.base.GetPriceAndUnit(returnAmount)))
 		printer.LineFeed(1)
 	}
 	// 支付手续费
@@ -532,12 +532,12 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		[]int{280, pkg.AlignLeft, 0},
 		[]int{0, pkg.AlignRight, 0},
 	)
-	// 应收
+	// 应收（扣除退款金额）
 	printer.AppendText("\x1D\x21\x01\x01")
 	printer.SetPrintModes(true, true, false)
 	printer.PrintInColumns(
 		t.base.Translate("合计应收"),
-		t.base.GetPriceAndUnit(saleOrder.GetPrintReceivablePrice()),
+		t.base.GetPriceAndUnit(saleOrder.GetPrintReceivablePriceAfterRefund()),
 	)
 	printer.SetPrintModes(false, false, false)
 	printer.SetLineSpacing(20)
@@ -594,20 +594,29 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 			)
 		}
 		if len(saleOrder.PaymentOrders) > 0 {
+			// 获取每个支付单的退款金额映射（独立查询数据库）
+			refundAmountMap := saleOrder.GetPaymentOrderRefundAmountMap(t.base.Ctx.GetDB())
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				printer.PrintInColumns(
 					t.base.Translate("支付方式"),
 					paymentOrder.PaymentMethod.GetName(),
 				)
-				printer.PrintInColumns(
-					t.base.Translate("实收金额"),
-					t.base.GetPriceAndUnit(paymentOrder.Amount),
-				)
-				if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+				// 实收金额扣除退款：根据每个支付单的实际退款金额扣除
+				actualAmount := paymentOrder.Amount
+				if refundAmount, ok := refundAmountMap[paymentOrder.Uuid]; ok && refundAmount > 0 {
+					actualAmount = decimal.NewFromFloat(paymentOrder.Amount).Sub(decimal.NewFromFloat(refundAmount)).InexactFloat64()
+				}
+				if actualAmount >= 0 {
 					printer.PrintInColumns(
-						t.base.Translate("找零"),
-						t.base.Amount(saleOrder.ChangeAmount),
+						t.base.Translate("实收金额"),
+						t.base.GetPriceAndUnit(actualAmount),
 					)
+					if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+						printer.PrintInColumns(
+							t.base.Translate("找零"),
+							t.base.Amount(saleOrder.ChangeAmount),
+						)
+					}
 				}
 			}
 		}

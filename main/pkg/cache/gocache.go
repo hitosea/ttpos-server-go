@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"time"
 
 	gocache "github.com/patrickmn/go-cache"
@@ -66,4 +67,27 @@ func (c *goCache) GetClient() *redis.Client {
 
 func (c *goCache) GetClusterClient() *redis.ClusterClient {
 	return nil
+}
+
+// ==================== WithContext 方法 - goCache 不支持追踪，忽略 ctx ====================
+
+func (c *goCache) SetWithContext(_ context.Context, key string, value interface{}, expiration time.Duration) error {
+	c.cache.Set(key, value, expiration)
+	return nil
+}
+
+func (c *goCache) GetWithContext(_ context.Context, key string) (interface{}, bool) {
+	return c.cache.Get(key)
+}
+
+func (c *goCache) GetBytesWithContext(_ context.Context, key string) ([]byte, bool) {
+	return nil, false
+}
+
+func (c *goCache) GetBatchBytesWithContext(_ context.Context, keys []string) (map[string][]byte, []string) {
+	return c.GetBatchBytes(keys)
+}
+
+func (c *goCache) DelWithContext(_ context.Context, keys ...string) {
+	c.Del(keys...)
 }

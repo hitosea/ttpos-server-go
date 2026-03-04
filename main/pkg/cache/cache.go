@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -16,6 +17,13 @@ type Cache interface {
 	Del(keys ...string)
 	GetClient() *redis.Client
 	GetClusterClient() *redis.ClusterClient
+
+	// WithContext 方法 - 支持链路追踪
+	SetWithContext(ctx context.Context, key string, value any, expiration time.Duration) error
+	GetWithContext(ctx context.Context, key string) (any, bool)
+	GetBytesWithContext(ctx context.Context, key string) ([]byte, bool)
+	GetBatchBytesWithContext(ctx context.Context, keys []string) (map[string][]byte, []string)
+	DelWithContext(ctx context.Context, keys ...string)
 }
 
 // CacheType 缓存类型

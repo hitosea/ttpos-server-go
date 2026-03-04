@@ -62,6 +62,7 @@ class AuthService
         '/product/store/product/batchUpdateTax', // 批量修改税率
         '/product/store/product/batchUpdateCategory', // 批量修改分类
         '/product/store/product/batchUpdateOpenOverallDiscount', // 批量修改整单折扣
+        '/file/upload/repeatlist', // 批量修改图片
 
         // 订单
         '/store/operate/orderProductList', // 订单商品列表

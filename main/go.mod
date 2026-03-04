@@ -8,6 +8,7 @@ require (
 	cloud.google.com/go/storage v1.55.0
 	github.com/Masterminds/semver v1.5.0
 	github.com/ace-zhaoy/go-id v1.0.6
+	github.com/allegro/bigcache/v3 v3.1.0
 	github.com/apache/rocketmq-client-go/v2 v2.1.3-0.20250427084711-67ec50b93040
 	github.com/boombuler/barcode v1.0.2
 	github.com/disintegration/imaging v1.6.2
@@ -29,7 +30,8 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
-	github.com/redis/go-redis/v9 v9.12.1
+	github.com/redis/go-redis/extra/redisotel/v9 v9.18.0
+	github.com/redis/go-redis/v9 v9.18.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shopspring/decimal v1.4.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
@@ -53,6 +55,7 @@ require (
 	golang.org/x/image v0.25.0
 	golang.org/x/sync v0.16.0
 	golang.org/x/text v0.28.0
+	golang.org/x/time v0.11.0
 	google.golang.org/api v0.236.0
 	google.golang.org/grpc v1.75.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -142,6 +145,7 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/redis/go-redis/extra/rediscmd/v9 v9.18.0 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.4 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
@@ -165,7 +169,6 @@ require (
 	go.opentelemetry.io/proto/otlp v1.7.1 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20250505200425-f936aa4a68b2 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect

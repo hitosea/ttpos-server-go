@@ -17,6 +17,7 @@ import (
 
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 func (model *SaleOrder) GetDiscountInfo() DiscountInfo {
@@ -273,6 +274,68 @@ func (model *SaleOrder) GetPrintReceivablePrice() float64 {
 		return 0
 	}
 	return finalPrice
+}
+
+// 打印 - 获取扣除退款后的应收金额（打印结账单用）
+// 合计应收 = 原应收 - 退款金额
+func (model *SaleOrder) GetPrintReceivablePriceAfterRefund() float64 {
+	finalPrice := model.GetPrintReceivablePrice()
+	returnAmount := model.GetReturnAmount()
+	if returnAmount > 0 {
+		return decimal.NewFromFloat(finalPrice).Sub(decimal.NewFromFloat(returnAmount)).InexactFloat64()
+	}
+	return finalPrice
+}
+
+// 打印 - 获取扣除退款后的实收金额（打印结账单用）
+// 实收金额 = 原实收 - 退款金额
+func (model *SaleOrder) GetPrintActualAmountAfterRefund() float64 {
+	totalActual := decimal.NewFromFloat(0)
+	for _, paymentOrder := range model.PaymentOrders {
+		totalActual = totalActual.Add(decimal.NewFromFloat(paymentOrder.Amount))
+	}
+	returnAmount := model.GetReturnAmount()
+	if returnAmount > 0 {
+		return totalActual.Sub(decimal.NewFromFloat(returnAmount)).InexactFloat64()
+	}
+	return totalActual.InexactFloat64()
+}
+
+// 打印 - 获取每个支付单的退款金额映射（打印结账单用）
+// 返回 map[PaymentOrderUuid]退款金额
+// 通过独立查询数据库获取，不依赖预加载的 ReturnOrders
+func (model *SaleOrder) GetPaymentOrderRefundAmountMap(db *gorm.DB) map[uint64]float64 {
+	refundMap := make(map[uint64]float64)
+	if db == nil {
+		return refundMap
+	}
+
+	// 查询该订单所有退款记录中每个支付单的退款金额
+	var results []struct {
+		PaymentOrderUuid uint64  `gorm:"column:payment_order_uuid"`
+		TotalAmount      float64 `gorm:"column:total_amount"`
+	}
+
+	// 通过 return_order 表关联查询 return_order_amount 表
+	// 获取该销售订单下所有支付单的退款金额汇总
+	err := db.Table("ttpos_return_order_amount roa").
+		Select("roa.payment_order_uuid, SUM(roa.amount) as total_amount").
+		Joins("JOIN ttpos_return_order ro ON ro.uuid = roa.return_order_uuid").
+		Where("ro.related_order_uuid = ?", model.Uuid).
+		Where("roa.payment_order_uuid > 0").
+		Where("ro.delete_time = 0").
+		Where("roa.delete_time = 0").
+		Group("roa.payment_order_uuid").
+		Find(&results).Error
+
+	if err != nil {
+		return refundMap
+	}
+
+	for _, result := range results {
+		refundMap[result.PaymentOrderUuid] = result.TotalAmount
+	}
+	return refundMap
 }
 
 // 根据sign获取销售订单商品

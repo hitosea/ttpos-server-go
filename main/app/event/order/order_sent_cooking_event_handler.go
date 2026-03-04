@@ -1,6 +1,7 @@
 package event
 
 import (
+	"sort"
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -182,14 +183,37 @@ func ReduceStock(payloadCtx context.Context, db *gorm.DB, saleBillUuid uint64) {
 		}
 	}
 
-	ProductBomsList := make([]*model.ProductBom, 0)
-	ProductPackagesList := make([]*model.ProductPackage, 0)
-	for _, productBom := range ProductBoms {
-		ProductBomsList = append(ProductBomsList, productBom)
+	// 提取并排序 ProductBom UUID，避免死锁
+	bomUuids := make([]uint64, 0, len(ProductBoms))
+	for uuid := range ProductBoms {
+		bomUuids = append(bomUuids, uuid)
 	}
-	for _, productPackage := range ProducttPackages {
-		ProductPackagesList = append(ProductPackagesList, productPackage)
+	sort.Slice(bomUuids, func(i, j int) bool { return bomUuids[i] < bomUuids[j] })
+
+	ProductBomsList := make([]*model.ProductBom, 0, len(bomUuids))
+	for _, uuid := range bomUuids {
+		ProductBomsList = append(ProductBomsList, ProductBoms[uuid])
 	}
+
+	// 提取并排序 ProductPackage UUID，避免死锁
+	packageUuids := make([]uint64, 0, len(ProducttPackages))
+	for uuid := range ProducttPackages {
+		packageUuids = append(packageUuids, uuid)
+	}
+	sort.Slice(packageUuids, func(i, j int) bool { return packageUuids[i] < packageUuids[j] })
+
+	ProductPackagesList := make([]*model.ProductPackage, 0, len(packageUuids))
+	for _, uuid := range packageUuids {
+		ProductPackagesList = append(ProductPackagesList, ProducttPackages[uuid])
+	}
+
+	// 提取并排序 Material UUID，避免死锁
+	materialUuids := make([]uint64, 0, len(Materials))
+	for uuid := range Materials {
+		materialUuids = append(materialUuids, uuid)
+	}
+	sort.Slice(materialUuids, func(i, j int) bool { return materialUuids[i] < materialUuids[j] })
+
 	// 更新库存
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsReduceStock(saleBillUuid); err != nil {
@@ -200,14 +224,16 @@ func ReduceStock(payloadCtx context.Context, db *gorm.DB, saleBillUuid uint64) {
 			logger.Logger.Error("SubscribeSentCookingEvent process, UpdateProductBomStockNum failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
 			return err
 		}
-		for _, material := range Materials {
+		// 按排序后的顺序更新材料库存
+		for _, materialUuid := range materialUuids {
+			material := Materials[materialUuid]
 			if err := base.NewMaterialRepo(tx).UpdateMaterialsStockNum(material.MaterialUuid, material.WarehouseUuid, -material.ReduceStockNum); err != nil {
 				logger.Logger.Error("SubscribeSentCookingEvent process, UpdateMaterialsStockNum failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
 				return err
 			}
 		}
 
-		// 更新product_package的actual_sale_num字段
+		// 更新product_package的actual_sale_num字段（已排序）
 		for _, productPackage := range ProductPackagesList {
 			if err := base.NewProductPackageRepo(tx).UpdateProductPackageActualSaleNum(*productPackage); err != nil {
 				logger.Logger.Error("SubscribeSentCookingEvent process, UpdateProductPackageActualSaleNum failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))

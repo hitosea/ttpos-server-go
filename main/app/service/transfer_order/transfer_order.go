@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"ttpos-bmp/app/ttpos-erp/api/file"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -13,6 +14,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -53,12 +55,13 @@ type ITransferOrderSrv interface {
 
 // transferOrderSrv 调拨单服务实现
 type transferOrderSrv struct {
-	dbm         *database.DBManager
-	materialSrv service.IMaterialSrv
-	lock        lock.Lock
-	validator   *transferOrderValidator
-	helper      *transferOrderHelper
-	settingSrv  setting.ISrv
+	dbm                  *database.DBManager
+	materialSrv          service.IMaterialSrv
+	lock                 lock.Lock
+	validator            *transferOrderValidator
+	helper               *transferOrderHelper
+	settingSrv           setting.ISrv
+	transferOrderFileSrv service.ITransferOrderFileSrv
 }
 
 // NewTransferOrderSrv 创建调拨单服务
@@ -69,12 +72,13 @@ func NewTransferOrderSrv(dbm *database.DBManager, materialSrv service.IMaterialS
 // NewTransferOrderSrvImpl 创建调拨单服务实现
 func NewTransferOrderSrvImpl(dbm *database.DBManager, materialSrv service.IMaterialSrv, settingSrv setting.ISrv) ITransferOrderSrv {
 	return &transferOrderSrv{
-		dbm:         dbm,
-		materialSrv: materialSrv,
-		lock:        lock.NewSystemLock(),
-		validator:   &transferOrderValidator{},
-		helper:      &transferOrderHelper{},
-		settingSrv:  settingSrv,
+		dbm:                  dbm,
+		materialSrv:          materialSrv,
+		lock:                 lock.NewSystemLock(),
+		validator:            &transferOrderValidator{},
+		helper:               &transferOrderHelper{},
+		settingSrv:           settingSrv,
+		transferOrderFileSrv: service.NewTransferOrderFileSrv(dbm),
 	}
 }
 
@@ -1710,6 +1714,21 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 
 		return nil
 	})
+
+	if transferOrder != nil && transferOrder.ReceiptOrderErpCode != "" {
+		// 在同步上下文中提取所有需要的数据，避免异步协程访问已回收的 gin.Context
+		baseURL := utils.GetBaseURL(ctx.GetGin().Request)
+		// 附件存储在发起方数据库中（UploadFile 和 saveTransferOrderFilesInTx 均写入发起方库），
+		// 因此异步查询附件时必须使用发起方的 companyUuid 和数据库连接
+		initiatorCompanyUuid := transferOrder.CompanyUuid
+
+		ctx2 := ctx.Copy()
+		ctx2.SetDB(s.dbm.GetDB(initiatorCompanyUuid))
+
+		utils.Go(func() {
+			s.uploadFilesToErp(ctx2, transferOrder, baseURL, initiatorCompanyUuid)
+		})
+	}
 	if err != nil {
 		return err
 	}
@@ -1923,4 +1942,49 @@ func (s *transferOrderSrv) GetTransferOrderWarehouseList(
 	return resp.TransferOrderWarehouseListResp{
 		List: list,
 	}, nil
+}
+
+// uploadFilesToErp 上传调拨单附件到 ERP
+// baseURL 和 companyUuid 必须在调用前从同步上下文中提取，避免在异步协程中访问 gin.Context
+func (s *transferOrderSrv) uploadFilesToErp(ctx context.Context, transferOrder *model.TransferOrder, baseURL string, companyUuid uint64) {
+	// 直接通过 Repository 查询附件，避免在异步协程中通过 Service 层访问可能已回收的 gin.Context
+	db := ctx.GetDB()
+	fileRepo := repository.NewTransferOrderFileRepo(db)
+	orderFiles, err := fileRepo.GetByTransferOrderUuidWithFiles(transferOrder.Uuid)
+	if err != nil {
+		logger.Logger.Warn("获取调拨单附件列表失败",
+			zap.Uint64("transferOrderUuid", transferOrder.Uuid),
+			zap.Error(err))
+		return
+	}
+	if len(orderFiles) == 0 {
+		return
+	}
+
+	// 逐个上传文件到 ERP
+	for _, f := range orderFiles {
+		if f.File == nil {
+			continue
+		}
+
+		fileUrl := fmt.Sprintf("%sapi/v1/passport/file_redirect?uuid=%d&company_uuid=%d",
+			baseURL, f.FileUuid, companyUuid)
+
+		uploadReq := &file.UploadFileUrlReq{
+			FileUrl:  fileUrl,
+			FileName: f.File.RealName,
+			DocType:  "Purchase Receipt",
+			DocName:  transferOrder.ReceiptOrderErpCode,
+		}
+
+		_, err := erp.NewIErpSrv(s.dbm).UploadFileUrl(ctx, uploadReq)
+		if err != nil {
+			logger.Logger.Warn("上传调拨单附件到ERP失败",
+				zap.Uint64("transferOrderUuid", transferOrder.Uuid),
+				zap.Uint64("fileUuid", f.FileUuid),
+				zap.String("fileName", f.File.RealName),
+				zap.Error(err))
+			// 不影响主流程，继续上传其他文件
+		}
+	}
 }

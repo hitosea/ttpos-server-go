@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,52 @@ import (
 type statisticsHandler struct {
 	businessSrv service.IBusinessSrv
 	settingSrv  setting.ISrv
+	dbm         *database.DBManager
+}
+
+// switchCompanyContext 切换到指定门店的数据库上下文
+// 如果 companyUuid 为空（0），返回原 ctx；否则校验权限并切换数据库
+func (h *statisticsHandler) switchCompanyContext(ctx context.Context, companyUuid uint64) (context.Context, error) {
+	if companyUuid == 0 {
+		return ctx, nil
+	}
+
+	// 权限校验：检查用户是否有权限访问该门店
+	companyListResp, err := h.businessSrv.GetCompanyList(ctx)
+	if err != nil {
+		return nil, errors.New("获取门店列表失败")
+	}
+
+	hasPermission := false
+	for _, c := range companyListResp.List {
+		if c.CompanyUuid == companyUuid {
+			hasPermission = true
+			break
+		}
+	}
+	if !hasPermission {
+		return nil, errors.New("无权限访问该门店")
+	}
+
+	// 切换数据库连接
+	shopDB := h.dbm.GetDB(companyUuid)
+	if shopDB == nil {
+		return nil, errors.New("门店数据库连接失败")
+	}
+
+	// 创建新的 context 并设置数据库连接和门店UUID
+	newCtx := ctx.Copy()
+	newCtx.SetDB(shopDB)
+	newCtx.SetCompanyUuid(companyUuid)
+
+	// 重新加载目标门店的 CompanySetting
+	companySetting, err := h.settingSrv.GetCompanySetting(newCtx)
+	if err != nil {
+		return nil, errors.New("获取门店设置失败")
+	}
+	newCtx.SetCompanySetting(companySetting)
+
+	return newCtx, nil
 }
 
 // CountBusiness 统计营业数据，移动管理端首页-店内概况
@@ -36,11 +83,19 @@ func (h *statisticsHandler) CountBusiness(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+
+	// 切换门店上下文（如果指定了 company_uuid）
+	targetCtx, err := h.switchCompanyContext(ctx, countReq.CompanyUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
 	// 判断数据管理功能是否开启
-	companySetting := ctx.GetCompanySetting()
-	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	companySetting := targetCtx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(targetCtx)
 	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
-	businessData, err := h.businessSrv.CountBusiness(ctx, countReq)
+	businessData, err := h.businessSrv.CountBusiness(targetCtx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -148,11 +203,19 @@ func (h *statisticsHandler) CountArea(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+
+	// 切换门店上下文（如果指定了 company_uuid）
+	targetCtx, err := h.switchCompanyContext(ctx, countReq.CompanyUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
 	// 判断数据管理功能是否开启
-	companySetting := ctx.GetCompanySetting()
-	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	companySetting := targetCtx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(targetCtx)
 	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
-	areaData, err := h.businessSrv.CountArea(ctx, countReq)
+	areaData, err := h.businessSrv.CountArea(targetCtx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -177,11 +240,19 @@ func (h *statisticsHandler) CountProductRank(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+
+	// 切换门店上下文（如果指定了 company_uuid）
+	targetCtx, err := h.switchCompanyContext(ctx, countReq.CompanyUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
 	// 判断数据管理功能是否开启
-	companySetting := ctx.GetCompanySetting()
-	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	companySetting := targetCtx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(targetCtx)
 	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
-	productRankData, err := h.businessSrv.RankProduct(ctx, countReq)
+	productRankData, err := h.businessSrv.RankProduct(targetCtx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -863,6 +934,7 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 	wrapper := &statisticsHandler{
 		businessSrv: businessSrv,
 		settingSrv:  settingSrv,
+		dbm:         dbm,
 	}
 
 	// 需要认证

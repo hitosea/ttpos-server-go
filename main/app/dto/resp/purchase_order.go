@@ -71,6 +71,7 @@ type PurchaseOrderItemUnit struct {
 // PurchaseOrderItemQuotaConfig 采购订单商品限购配置
 type PurchaseOrderItemQuotaConfig struct {
 	QuotaLimit          float64            `json:"quota_limit"`            // 限购数量
+	MinQuotaLimit       float64            `json:"min_quota_limit"`        // 最小限购数量
 	QuotaUnitUuid       uint64             `json:"quota_unit_uuid"`        // 限购单位UUID
 	QuotaUnitName       string             `json:"quota_unit_name"`        // 限购单位名称
 	QuotaUnitLocaleName dto.LocaleResponse `json:"quota_unit_locale_name"` // 限购单位名称

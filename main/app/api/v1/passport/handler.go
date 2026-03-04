@@ -1,7 +1,14 @@
 package passport
 
 import (
+	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
+	"time"
+	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -16,6 +23,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/model"
 	printerPkg "ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
@@ -153,6 +161,112 @@ func (h *Handler) GetMemoryStats(c *gin.Context) {
 	helper.Success(c, memStats)
 }
 
+// FileRedirect 文件下载
+// @Summary 文件下载
+// @Tags 通用
+// @Access json
+// @Produce octet-stream
+// @Param uuid query uint64 true "文件UUID"
+// @Param company_uuid query uint64 true "公司UUID"
+// @Success 200 "文件内容"
+// @Failure 400 {object} dto.Response "参数错误"
+// @Failure 404 {object} dto.Response "文件不存在"
+// @Router /passport/file_redirect [get]
+func (h *Handler) FileRedirect(c *gin.Context) {
+	var redirectReq req.FileRedirectRequest
+	if err := c.ShouldBindQuery(&redirectReq); err != nil {
+		helper.HandleValidationError(c, err, redirectReq, req.FileRedirectRequestMessage)
+		return
+	}
+
+	// 根据 company_uuid 获取对应门店数据库
+	db := h.dbm.GetDB(redirectReq.CompanyUuid)
+	if db == nil {
+		logger.Logger.Error("获取数据库连接失败",
+			zap.Uint64("company_uuid", redirectReq.CompanyUuid),
+		)
+		helper.Fail(c, constant.CodeFail, "获取数据库连接失败")
+		return
+	}
+
+	// 查询文件记录
+	var file model.File
+	err := db.Model(&model.File{}).Where("uuid = ? AND delete_time = 0", redirectReq.Uuid).First(&file).Error
+	if err != nil {
+		logger.Logger.Error("查询文件失败",
+			zap.Uint64("uuid", redirectReq.Uuid),
+			zap.Uint64("company_uuid", redirectReq.CompanyUuid),
+			zap.Error(err),
+		)
+		helper.Fail(c, constant.CodeFail, "文件不存在")
+		return
+	}
+
+	// 获取下载文件名
+	fileName := file.RealName
+	if fileName == "" {
+		fileName = file.FileName
+	}
+
+	// 本地文件：直接从文件系统提供
+	if file.Storage == "local" && file.UrlParam == "" {
+		filePath := filepath.Join("public/uploads", file.SaveName)
+		if _, statErr := os.Stat(filePath); statErr != nil {
+			logger.Logger.Error("本地文件不存在",
+				zap.String("path", filePath),
+				zap.Uint64("company_uuid", redirectReq.CompanyUuid),
+				zap.Error(statErr),
+			)
+			helper.Fail(c, constant.CodeFail, "文件不存在")
+			return
+		}
+		c.FileAttachment(filePath, fileName)
+		return
+	}
+
+	// 远程文件：获取真实远程URL
+	var fileURL string
+	if file.Storage == "google" || strings.Contains(file.UrlParam, "GoogleAccessId") {
+		fileURL = file.FileUrl + "/" + file.SaveName + "?" + file.UrlParam
+	} else {
+		fileURL = file.FileUrl + "/" + file.FileName
+	}
+
+	// 通过HTTP获取远程文件并代理下载
+	client := &http.Client{Timeout: 120 * time.Second}
+	httpResp, err := client.Get(fileURL)
+	if err != nil {
+		logger.Logger.Error("获取远程文件失败",
+			zap.String("url", fileURL),
+			zap.Uint64("company_uuid", redirectReq.CompanyUuid),
+			zap.Error(err),
+		)
+		helper.Fail(c, constant.CodeFail, "获取文件失败")
+		return
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		logger.Logger.Error("远程文件返回非200状态",
+			zap.String("url", fileURL),
+			zap.Int("status", httpResp.StatusCode),
+			zap.Uint64("company_uuid", redirectReq.CompanyUuid),
+		)
+		helper.Fail(c, constant.CodeFail, "获取文件失败")
+		return
+	}
+
+	contentType := httpResp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	extraHeaders := map[string]string{
+		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, fileName),
+	}
+	c.DataFromReader(http.StatusOK, httpResp.ContentLength, contentType, httpResp.Body, extraHeaders)
+}
+
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	wrapper := &Handler{
 		dbm:        dbm,
@@ -161,6 +275,8 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	}
 	router.GET("/captcha", wrapper.GetCaptcha)
 	router.GET("/server_public_key", wrapper.GetServerPublicKey)
+	// 文件重定向接口，全局限流：每秒 10 次，突发容量 20
+	router.GET("/file_redirect", middleware.RateLimitGlobal(10, 20), wrapper.FileRedirect)
 	router.POST("/lianlian/callback", wrapper.LianLianCallback)
 	router.POST("/lianlian/refund/callback", wrapper.LianLianRefundCallback)
 }

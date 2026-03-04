@@ -67,7 +67,14 @@ func (s *purchaseLimitSchemeSrv) Create(ctx context.Context, req req.PurchaseLim
 	// 	return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "请选择适用的门店"))
 	// }
 
-	// 3. 验证物品是否存在并获取 Code
+	// 3. 校验最大采购数量不能小于最小采购数量
+	for _, item := range req.Items {
+		if item.QuotaLimit > 0 && item.MinQuotaLimit > 0 && item.QuotaLimit < item.MinQuotaLimit {
+			return 0, errors.New(i18n.Translate(ctx.GetLanguage(), "最大采购数量不能小于最小采购数量"))
+		}
+	}
+
+	// 4. 验证物品是否存在并获取 Code
 	materialRepo := repository.NewMaterialRepo(db)
 
 	itemCodes := make(map[uint64]string) // materialUuid -> materialCode
@@ -123,6 +130,7 @@ func (s *purchaseLimitSchemeSrv) Create(ctx context.Context, req req.PurchaseLim
 				SchemeUuid:      scheme.Uuid,
 				MaterialCode:    itemCodes[item.MaterialUuid],
 				QuotaLimit:      item.QuotaLimit,
+				MinQuotaLimit:   item.MinQuotaLimit,
 				IsAllowPurchase: isAllowPurchase,
 			}
 			itemModel.CreateTime = currentTime
@@ -189,6 +197,13 @@ func (s *purchaseLimitSchemeSrv) Update(ctx context.Context, req req.PurchaseLim
 	// 	return errors.New(i18n.Translate(ctx.GetLanguage(), "请选择适用的门店"))
 	// }
 
+	// 3.5 校验最大采购数量不能小于最小采购数量
+	for _, item := range req.Items {
+		if item.QuotaLimit > 0 && item.MinQuotaLimit > 0 && item.QuotaLimit < item.MinQuotaLimit {
+			return errors.New(i18n.Translate(ctx.GetLanguage(), "最大采购数量不能小于最小采购数量"))
+		}
+	}
+
 	// 4. 验证物品是否存在并获取 Code
 	materialRepo := repository.NewMaterialRepo(db)
 
@@ -225,9 +240,9 @@ func (s *purchaseLimitSchemeSrv) Update(ctx context.Context, req req.PurchaseLim
 			return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "更新限购方案失败"))
 		}
 
-		// 5.2 删除旧的物品配置
+		// 5.2 物理删除旧的物品配置
 		itemRepo := repository.NewPurchaseLimitSchemeItemRepo(tx)
-		if err := itemRepo.DeleteBySchemeUuid(scheme.Uuid); err != nil {
+		if err := itemRepo.HardDeleteBySchemeUuid(scheme.Uuid); err != nil {
 			logger.Logger.Error("删除旧物品配置失败", zap.Error(err))
 			return errors.WithMessage(err, i18n.Translate(ctx.GetLanguage(), "删除旧物品配置失败"))
 		}
@@ -247,6 +262,7 @@ func (s *purchaseLimitSchemeSrv) Update(ctx context.Context, req req.PurchaseLim
 				SchemeUuid:      scheme.Uuid,
 				MaterialCode:    itemCodes[item.MaterialUuid],
 				QuotaLimit:      item.QuotaLimit,
+				MinQuotaLimit:   item.MinQuotaLimit,
 				IsAllowPurchase: isAllowPurchase,
 			}
 			itemModel.CreateTime = currentTime
@@ -343,7 +359,7 @@ func (s *purchaseLimitSchemeSrv) GetByUuid(ctx context.Context, uuid uint64) (*r
 		UpdateTime:      scheme.UpdateTime,
 	}
 
-	// 填充物品配置 - 需要通过 MaterialCode 查询对应的 MaterialUuid
+	// 填充物品配置 - 需要通过 MaterialCode 查询对应的 MaterialUuid（过滤已禁用或已删除的物品）
 	materialRepo := repository.NewMaterialRepo(db)
 
 	for _, item := range items {
@@ -354,9 +370,15 @@ func (s *purchaseLimitSchemeSrv) GetByUuid(ctx context.Context, uuid uint64) (*r
 			continue
 		}
 
+		// 过滤已禁用或已删除的物品
+		if material.DeleteTime != 0 || !material.Status {
+			continue
+		}
+
 		result.Items = append(result.Items, resp.PurchaseLimitSchemeItemResp{
 			MaterialUuid:    material.Uuid,
 			QuotaLimit:      item.QuotaLimit,
+			MinQuotaLimit:   item.MinQuotaLimit,
 			IsAllowPurchase: item.IsAllowPurchase,
 		})
 	}
@@ -392,10 +414,31 @@ func (s *purchaseLimitSchemeSrv) GetList(ctx context.Context, req req.PurchaseLi
 
 	// 3. 组装响应数据
 	list := make([]resp.PurchaseLimitSchemeSummaryResp, 0, len(schemes))
+	materialRepo := repository.NewMaterialRepo(db)
 	for _, scheme := range schemes {
-		// 3.1 查询物品配置数量
+		// 3.1 查询物品配置数量（过滤已禁用或已删除的物品）
 		itemRepo := repository.NewPurchaseLimitSchemeItemRepo(db)
 		items, _ := itemRepo.GetBySchemeUuid(scheme.Uuid)
+
+		itemCount := 0
+		if len(items) > 0 {
+			materialCodes := make([]string, 0, len(items))
+			for _, item := range items {
+				materialCodes = append(materialCodes, item.MaterialCode)
+			}
+			materials, _ := materialRepo.GetMaterialContainsDeletedByCodes(materialCodes)
+			activeCodes := make(map[string]bool, len(materials))
+			for _, m := range materials {
+				if m.DeleteTime == 0 && m.Status {
+					activeCodes[m.Code] = true
+				}
+			}
+			for _, item := range items {
+				if activeCodes[item.MaterialCode] {
+					itemCount++
+				}
+			}
+		}
 
 		// 3.2 查询门店配置数量
 		shopCount := 0
@@ -412,7 +455,7 @@ func (s *purchaseLimitSchemeSrv) GetList(ctx context.Context, req req.PurchaseLi
 			ApplyToAllShops: scheme.ApplyToAllShops,
 			WeekdayStr:      s.formatWeekdaysFromString(lang, scheme.Weekdays),
 			ShopCount:       shopCount,
-			ItemCount:       len(items),
+			ItemCount:       itemCount,
 			DailyLimit:      scheme.DailyLimit,
 			CreateTime:      scheme.CreateTime,
 			UpdateTime:      scheme.UpdateTime,

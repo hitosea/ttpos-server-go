@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
+	"ttpos-bmp/app/ttpos-erp/api/file"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -407,6 +408,8 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			logger.Logger.Warn("保存收货单附件失败", zap.Error(err), zap.Uint64("receiptOrderUuid", result.Uuid))
 			// 不影响收货单创建，只记录日志
 		}
+
+		s.asyncUploadFilesToErp(ctx, db, result.Uuid)
 	}
 
 	return result, nil
@@ -676,6 +679,8 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 			}
 		}
 	}
+
+	s.asyncUploadFilesToErp(ctx, db, req.Uuid)
 
 	return nil
 }
@@ -1085,4 +1090,73 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 	}
 
 	return nil
+}
+
+// asyncUploadFilesToErp 异步上传收货单附件到 ERP
+// 在同步上下文中提取必要数据后启动异步协程
+func (s *purchaseReceiptOrderSrv) asyncUploadFilesToErp(ctx context.Context, db *gorm.DB, receiptOrderUuid uint64) {
+	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
+	receipt, err := receiptOrderRepo.GetByUuid(receiptOrderUuid)
+	if err != nil {
+		logger.Logger.Error("查询收货单失败", zap.Uint64("receiptOrderUuid", receiptOrderUuid), zap.Error(err))
+		return
+	}
+	if receipt == nil || receipt.ErpOrderNo == "" {
+		return
+	}
+
+	// 在同步上下文中提取所有需要的数据，避免异步协程访问已回收的 gin.Context
+	baseURL := utils.GetBaseURL(ctx.GetGin().Request)
+	companyUuid := ctx.GetCompanyUuid()
+
+	ctx2 := ctx.Copy()
+	ctx2.SetDB(s.dbm.GetDB(companyUuid))
+
+	utils.Go(func() {
+		s.uploadFilesToErp(ctx2, receipt, baseURL, companyUuid)
+	})
+}
+
+// uploadFilesToErp 上传收货单附件到 ERP（内部方法，由 asyncUploadFilesToErp 调用）
+func (s *purchaseReceiptOrderSrv) uploadFilesToErp(ctx context.Context, receiptOrder *model.PurchaseReceiptOrder, baseURL string, companyUuid uint64) {
+	// 直接通过 Repository 查询附件，避免在异步协程中通过 Service 层访问可能已回收的 gin.Context
+	db := ctx.GetDB()
+	fileRepo := repository.NewPurchaseReceiptFileRepo(db)
+	orderFiles, err := fileRepo.GetByReceiptOrderUuidWithFiles(receiptOrder.Uuid)
+	if err != nil {
+		logger.Logger.Warn("获取收货单附件列表失败",
+			zap.Uint64("receiptOrderUuid", receiptOrder.Uuid),
+			zap.Error(err))
+		return
+	}
+	if len(orderFiles) == 0 {
+		return
+	}
+
+	// 逐个上传文件到 ERP
+	for _, f := range orderFiles {
+		if f.File == nil {
+			continue
+		}
+
+		fileUrl := fmt.Sprintf("%sapi/v1/passport/file_redirect?uuid=%d&company_uuid=%d",
+			baseURL, f.FileUuid, companyUuid)
+
+		uploadReq := &file.UploadFileUrlReq{
+			FileUrl:  fileUrl,
+			FileName: f.File.RealName,
+			DocType:  "Purchase Receipt",
+			DocName:  receiptOrder.ErpOrderNo,
+		}
+
+		_, err := erp.NewIErpSrv(s.dbm).UploadFileUrl(ctx, uploadReq)
+		if err != nil {
+			logger.Logger.Warn("上传收货单附件到ERP失败",
+				zap.Uint64("receiptOrderUuid", receiptOrder.Uuid),
+				zap.Uint64("fileUuid", f.FileUuid),
+				zap.String("fileName", f.File.RealName),
+				zap.Error(err))
+			// 不影响主流程，继续上传其他文件
+		}
+	}
 }

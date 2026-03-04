@@ -87,6 +87,7 @@ type BusinessDataCountReq struct {
 	SortType          int    `form:"sort_type" json:"sort_type"`                     // 排序类型 0=默认、 1=按销售数量、 2=按原销售额
 	SortDirection     int    `form:"sort_direction" json:"sort_direction"`           // 排序方向 0=默认、 1=升序、 2=降序
 	ExcludeDataManage bool   `form:"exclude_data_manage" json:"exclude_data_manage"` // 是否排除数据管理订单
+	CompanyUuid       uint64 `form:"company_uuid" json:"company_uuid"`               // 可选，指定查询的门店UUID（用于多店切换查看）
 }
 
 // GetParam 获取参数
@@ -153,6 +154,7 @@ type BusinessDataRankProductReq struct {
 	QueryEndDate      string `form:"query_end_date" json:"query_end_date"`           // 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
 	RankType          int    `form:"rank_type" json:"rank_type"`                     // 排行类型 (1 按销量, 2 按销售额)
 	ExcludeDataManage bool   `form:"exclude_data_manage" json:"exclude_data_manage"` // 是否排除数据管理订单
+	CompanyUuid       uint64 `form:"company_uuid" json:"company_uuid"`               // 可选，指定查询的门店UUID（用于多店切换查看）
 }
 
 // BusinessDataCountProductSalesReq 营业数据商品销售统计列表请求
