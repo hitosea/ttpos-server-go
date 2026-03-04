@@ -22,6 +22,8 @@ type ICompanySettingRepo interface {
 	GetCompanySettingsByCompanyUuids(companyUuids []uint64) ([]*model.CompanySetting, error)
 	GetAllByHeadquarterUuid(headquarterUuid uint64) ([]model.CompanySetting, error) // 获取总部下所有公司的设置
 	UpdateSmsQuota(companyUuid uint64, quota int) error                             // 扣减公司的短信余额
+	UpdateByCompanyUuid(companyUuid uint64, data map[string]any) error                              // 根据公司UUID更新设置
+	UpdateBySiteCodeAndCompanyAbbr(siteCode, companyAbbr string, data map[string]any) error // 根据站点编码和公司缩写更新设置
 
 	GetErpnextCompanyAbbrUuidMap(opts ...DBOption) (map[string]uint64, error)
 }
@@ -120,6 +122,16 @@ func (r *companySettingRepo) GetCompanySettingsByCompanyUuids(companyUuids []uin
 		return nil, errors.WithMessage(err)
 	}
 	return companySettings, nil
+}
+
+// UpdateByCompanyUuid 根据公司UUID更新设置
+func (r *companySettingRepo) UpdateByCompanyUuid(companyUuid uint64, data map[string]any) error {
+	return r.db.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Updates(data).Error
+}
+
+// UpdateBySiteCodeAndCompanyAbbr 根据站点编码和公司缩写更新设置
+func (r *companySettingRepo) UpdateBySiteCodeAndCompanyAbbr(siteCode, companyAbbr string, data map[string]any) error {
+	return r.db.Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", siteCode, companyAbbr).Updates(data).Error
 }
 
 func (r *companySettingRepo) WhereErpnextCompanyAbbr(erpCompanyAbbr string) DBOption {

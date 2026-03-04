@@ -40,7 +40,9 @@ type ISaleBillQueryRepo interface {
 	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
 	GetDeskSaleBillUnPay() ([]*model.SaleBill, error) // 获取所有未付款的桌台账单
-	GetCompleteTotal() (int64, error)                 // 获取总数量
+	GetCompleteTotal() (int64, error)                                              // 获取总数量
+	PluckOrderNos(orderNoPrefix string, startTime, endTime int64) ([]string, error)   // 查询订单编号
+	PluckPendingUuidsWithBatchTag() ([]uint64, error)                                // 获取有分批类型的进行中账单UUID列表
 }
 
 type saleBillRepo struct {
@@ -331,6 +333,27 @@ func (r *saleBillRepo) GetCompleteTotal() (int64, error) {
 		return 0, errors.WithMessage(err)
 	}
 	return total, nil
+}
+
+// PluckOrderNos 查询指定前缀和时间范围内的订单编号
+func (r *saleBillRepo) PluckOrderNos(orderNoPrefix string, startTime, endTime int64) ([]string, error) {
+	var orderNos []string
+	err := r.db.Model(&model.SaleBill{}).
+		Where("order_no LIKE ?", orderNoPrefix+"%").
+		Where("create_time >= ? AND create_time <= ?", startTime, endTime).
+		Pluck("order_no", &orderNos).Error
+	return orderNos, err
+}
+
+// PluckPendingUuidsWithBatchTag 获取有分批类型的进行中账单UUID列表
+func (r *saleBillRepo) PluckPendingUuidsWithBatchTag() ([]uint64, error) {
+	var uuids []uint64
+	err := r.db.Model(&model.SaleBill{}).
+		Where("status = ?", constant.SaleBillStatusPending).
+		Where("delete_time = ?", 0).
+		Where("batch_tag_uuid <> ?", 0).
+		Select("uuid").Scan(&uuids).Error
+	return uuids, err
 }
 
 // UpdateDutyNo 更新销售账单的当班编号

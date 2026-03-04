@@ -1527,9 +1527,9 @@ func (s *takeoutSrv) asyncUploadProductImage(
 	}
 
 	// 5. 更新商品的 image_file_uuid
-	err = db.Model(&model.ProductPackage{}).
-		Where("uuid = ?", productUuid).
-		Update("image_file_uuid", uploadResp.Uuid).Error
+	err = repository.NewProductPackageRepo(db).UpdateProductPackage(map[string]any{
+		"image_file_uuid": uploadResp.Uuid,
+	}, repository.CommonRepo.WhereByUuid(productUuid))
 	if err != nil {
 		logger.Logger.Warn("更新商品图片UUID失败",
 			zap.String("product_id", productID),

@@ -65,6 +65,14 @@ type IWarehouseItemRepo interface {
 	GetMaterialStockInNormalWarehouses(materialUuids []uint64) (map[uint64]float64, error)
 	// 按照物料UUID和仓库UUID分组获取物品库存
 	GetMaterialStockByWarehouse(materialUuids []uint64) ([]MaterialWarehouseStockResult, error)
+
+	// 批量操作
+	UpdateStockByUuid(uuid uint64, stock float64) error
+	UpdateStockByWarehouseAndMaterial(warehouseUuid, materialUuid uint64, stock float64) error
+	CreateBatchValues(items []model.WarehouseItem) error
+
+	// 条件查询选项
+	WhereMaterialCodeNotEmpty() DBOption
 }
 
 // WarehouseItemRepoImpl 仓库商品库存Repository实现
@@ -565,6 +573,33 @@ func (r *WarehouseItemRepoImpl) GetMaterialStockByWarehouse(materialUuids []uint
 	}
 
 	return results, nil
+}
+
+// UpdateStockByUuid 根据UUID更新库存数量
+func (r *WarehouseItemRepoImpl) UpdateStockByUuid(uuid uint64, stock float64) error {
+	return r.db.Model(&model.WarehouseItem{}).Where("uuid = ?", uuid).Update("stock", stock).Error
+}
+
+// UpdateStockByWarehouseAndMaterial 根据仓库和物品UUID更新库存数量
+func (r *WarehouseItemRepoImpl) UpdateStockByWarehouseAndMaterial(warehouseUuid, materialUuid uint64, stock float64) error {
+	return r.db.Model(&model.WarehouseItem{}).
+		Where("warehouse_uuid = ? AND material_uuid = ?", warehouseUuid, materialUuid).
+		Update("stock", stock).Error
+}
+
+// CreateBatchValues 批量创建仓库物品（值类型切片）
+func (r *WarehouseItemRepoImpl) CreateBatchValues(items []model.WarehouseItem) error {
+	if len(items) == 0 {
+		return nil
+	}
+	return r.db.Create(&items).Error
+}
+
+// WhereMaterialCodeNotEmpty 物品编码非空条件
+func (r *WarehouseItemRepoImpl) WhereMaterialCodeNotEmpty() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("material_code != ''")
+	}
 }
 
 // GetTransitWarehouseItemByWarehouseAndMaterial 获取在途仓库库存

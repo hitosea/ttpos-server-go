@@ -13,6 +13,7 @@ type IPurchaseOrderRepo interface {
 	// 基础操作
 	Create(purchaseOrder *model.PurchaseOrder) error
 	Update(purchaseOrder *model.PurchaseOrder) error
+	UpdateByMap(data map[string]any, opts ...DBOption) error // 根据条件更新指定字段
 	Delete(uuid uint64) error
 	ForceDelete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.PurchaseOrder, error)
@@ -94,6 +95,15 @@ func (r *PurchaseOrderRepoImpl) Create(purchaseOrder *model.PurchaseOrder) error
 // Update 更新采购订单
 func (r *PurchaseOrderRepoImpl) Update(purchaseOrder *model.PurchaseOrder) error {
 	return r.db.Model(&model.PurchaseOrder{}).Where("uuid = ?", purchaseOrder.Uuid).Updates(purchaseOrder).Error
+}
+
+// UpdateByMap 根据条件更新指定字段
+func (r *PurchaseOrderRepoImpl) UpdateByMap(data map[string]any, opts ...DBOption) error {
+	db := r.db.Model(&model.PurchaseOrder{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(data).Error
 }
 
 // Delete 删除采购订单

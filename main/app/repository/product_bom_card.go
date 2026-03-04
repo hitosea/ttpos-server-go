@@ -18,6 +18,9 @@ type IProductBomCardRepo interface {
 	UpdateProductBomCardErpCode(uuid uint64, erpCode string) error
 	UpdateProductBomCardIsUsed(uuid uint64, isUsed int) error
 	GetSubShopProductBomCardList(headquarterUuid uint64) ([]*model.ProductBomCard, error) // 获取子店中来自总部的成本卡列表
+	UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error
+	HardDeleteByHeadquarterUuid(headquarterUuid uint64) error            // 硬删除指定总部的成本卡
+	HardDeleteRelatedMaterialsByUuids(relatedUuids []uint64) error       // 硬删除指定关联UUID的RelatedMaterial
 }
 
 type IProductBomCardQueryRepo interface {
@@ -262,4 +265,22 @@ func (r *productBomCardRepoImpl) GetSubShopProductBomCardList(headquarterUuid ui
 		return nil, errors.WithMessage(err)
 	}
 	return productBomCards, nil
+}
+
+// UpdateNameByMultiLanguageNameUuid 根据多语言名称UUID更新name字段
+func (r *productBomCardRepoImpl) UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error {
+	return r.db.Model(&model.ProductBomCard{}).Where("multi_language_name_uuid = ?", multiLanguageNameUuid).Update("name", name).Error
+}
+
+// HardDeleteByHeadquarterUuid 硬删除指定总部的成本卡
+func (r *productBomCardRepoImpl) HardDeleteByHeadquarterUuid(headquarterUuid uint64) error {
+	return r.db.Where("headquarter_uuid = ?", headquarterUuid).Delete(&model.ProductBomCard{}).Error
+}
+
+// HardDeleteRelatedMaterialsByUuids 硬删除指定关联UUID的RelatedMaterial
+func (r *productBomCardRepoImpl) HardDeleteRelatedMaterialsByUuids(relatedUuids []uint64) error {
+	if len(relatedUuids) == 0 {
+		return nil
+	}
+	return r.db.Where("related_uuid IN (?)", relatedUuids).Delete(&model.RelatedMaterial{}).Error
 }

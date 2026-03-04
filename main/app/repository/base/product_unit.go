@@ -13,6 +13,8 @@ type IProductUnitRepo interface {
 	GetProductUnitList() ([]model.ProductUnit, error)
 	UpdateProductUnit(id uint, productUnit model.ProductUnit) error
 	CreateProductUnit(productUnit model.ProductUnit) (uint64, error)
+	CreateRecord(unit *model.ProductUnit) error // 仅创建单位记录（不含多语言）
+	GetMaxSort() (int, error)                   // 获取最大排序值
 	DeleteProductUnit(id uint) error
 	GetProductUnitUuidByNameOptimized(name string) (uint64, error)
 }
@@ -81,6 +83,18 @@ func (r *ProductUnitRepoImpl) CreateProductUnit(productUnit model.ProductUnit) (
 	}
 
 	return productUnit.Uuid, tx.Commit().Error // 提交事务
+}
+
+// CreateRecord 仅创建单位记录（不含多语言名称创建）
+func (r *ProductUnitRepoImpl) CreateRecord(unit *model.ProductUnit) error {
+	return errors.WithMessage(r.db.Create(unit).Error)
+}
+
+// GetMaxSort 获取最大排序值
+func (r *ProductUnitRepoImpl) GetMaxSort() (int, error) {
+	var maxSort int
+	err := r.db.Model(&model.ProductUnit{}).Select("IFNULL(MAX(sort), 0)").Scan(&maxSort).Error
+	return maxSort, errors.WithMessage(err)
 }
 
 // DeleteProductUnit 软删除商品规格

@@ -1198,14 +1198,16 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 			logStatus = constant.PurchaseOrderStatusRecommitted
 
 			// 子店采购单驳回理由清空
-			tx.Model(&model.PurchaseOrder{}).Where("uuid = ?", req.Uuid).Updates(map[string]any{
+			repository.NewPurchaseOrderRepo(tx).UpdateByMap(map[string]any{
 				"reject_reason":      "",
 				"headquarter_status": constant.HeadquarterStatusDraft,
-			})
+			}, repository.CommonRepo.WhereByUuid(req.Uuid))
 			// 总店子店采购单标记删除、清空驳回理由
-			s.dbm.GetDB(companySetting.HeadquarterUuid).Model(&model.PurchaseOrder{}).Where("sub_uuid = ?", req.Uuid).Updates(map[string]any{
+			repository.NewPurchaseOrderRepo(s.dbm.GetDB(companySetting.HeadquarterUuid)).UpdateByMap(map[string]any{
 				"delete_time":   time.Now().Unix(),
 				"reject_reason": "",
+			}, func(db *gorm.DB) *gorm.DB {
+				return db.Where("sub_uuid = ?", req.Uuid)
 			})
 		}
 

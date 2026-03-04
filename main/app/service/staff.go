@@ -522,7 +522,7 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 		IsDisable: 0,
 	}
 	saasDB.Transaction(func(tx *gorm.DB) error {
-		err = tx.Model(&model.SaasStaff{}).Create(&saasStaff).Error
+		err = repository.NewSaasStaffRepo(tx).Create(&saasStaff)
 		if err != nil {
 			return err
 		}
@@ -535,7 +535,7 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 		}
 		companyStaff.Uuid = saasStaff.Uuid
 		// 保存saas库
-		return tx.Model(&model.CompanyStaff{}).Create(&companyStaff).Error
+		return repository.NewCompanyStaffRepo(tx).Create(&companyStaff)
 	})
 	if err != nil {
 		return errors.WithMessage(errors.New("添加员工失败"), err.Error()), exists
@@ -561,12 +561,13 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 	staff.Uuid = saasStaff.Uuid
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Model(&model.Staff{}).Create(&staff).Error
+		txStaffRepo := repository.NewStaffRepo(tx)
+		err := txStaffRepo.CreateStaff(staff)
 		if err != nil {
 			return err
 		}
 		// 保存员工角色
-		err = repository.NewStaffRepo(tx).UpdateStaffRoles(staff.Uuid, addReq.Roles)
+		err = txStaffRepo.UpdateStaffRoles(staff.Uuid, addReq.Roles)
 		if err != nil {
 			return err
 		}
@@ -715,13 +716,14 @@ func (s *staffSrv) SaasAddStaff(ctx context.Context, addReq req.AddStaffReq) (er
 			staff.Uuid = saasStaff.Uuid
 
 			err = shopDB.Transaction(func(tx *gorm.DB) error {
+				txStaffRepo := repository.NewStaffRepo(tx)
 				// 创建员工
-				err := tx.Model(&model.Staff{}).Create(&staff).Error
+				err := txStaffRepo.CreateStaff(staff)
 				if err != nil {
 					return err
 				}
 				// 添加员工和角色的关联关系
-				err = repository.NewStaffRepo(tx).UpdateStaffRoles(staff.Uuid, companyRoleItem.RoleUuids)
+				err = txStaffRepo.UpdateStaffRoles(staff.Uuid, companyRoleItem.RoleUuids)
 				if err != nil {
 					return err
 				}
@@ -788,13 +790,14 @@ func (s *staffSrv) SaasAddStaff(ctx context.Context, addReq req.AddStaffReq) (er
 		staff.Uuid = saasStaff.Uuid
 
 		err = db.Transaction(func(tx *gorm.DB) error {
+			txStaffRepo := repository.NewStaffRepo(tx)
 			// 创建员工
-			err := tx.Model(&model.Staff{}).Create(&staff).Error
+			err := txStaffRepo.CreateStaff(staff)
 			if err != nil {
 				return err
 			}
 			// 添加 staff 和角色的关联
-			err = repository.NewStaffRepo(tx).UpdateStaffRoles(staff.Uuid, addReq.Roles)
+			err = txStaffRepo.UpdateStaffRoles(staff.Uuid, addReq.Roles)
 			if err != nil {
 				return err
 			}
@@ -1030,7 +1033,7 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 					if updateReq.IsDisable != nil && companyRoleItem.CompanyUuid == currentCompanyUuid {
 						newStaff.IsDisable = *updateReq.IsDisable
 					}
-					err := tx.Model(&model.Staff{}).Create(&newStaff).Error
+					err := txStaffRepo.CreateStaff(newStaff)
 					if err != nil {
 						return err
 					}
@@ -1188,7 +1191,7 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 				if updateReq.IsDisable != nil {
 					newStaff.IsDisable = *updateReq.IsDisable
 				}
-				err := tx.Model(&model.Staff{}).Create(&newStaff).Error
+				err := txStaffRepo.CreateStaff(newStaff)
 				if err != nil {
 					return err
 				}

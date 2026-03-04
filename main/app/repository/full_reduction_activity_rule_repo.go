@@ -16,6 +16,7 @@ type IFullReductionActivityRuleRepo interface {
 	GetByFullReductionActivityUuid(activityUuid uint64, options ...DBOption) ([]*model.FullReductionActivityRule, error)
 	DeleteByFullReductionActivityUuid(activityUuid uint64) error
 	Delete(uuid uint64) error
+	UnscopedDeleteByActivityUuid(activityUuid uint64) error
 }
 
 // NewFullReductionActivityRuleRepo 创建满减活动规则仓库
@@ -77,4 +78,9 @@ func (r *FullReductionActivityRuleRepoImpl) Delete(uuid uint64) error {
 			Where("uuid = ? AND delete_time = ?", uuid, constant.NotDeleted).
 			Update("delete_time", time.Now().Unix()).Error,
 	)
+}
+
+// UnscopedDeleteByActivityUuid 根据活动UUID硬删除所有规则
+func (r *FullReductionActivityRuleRepoImpl) UnscopedDeleteByActivityUuid(activityUuid uint64) error {
+	return r.db.Unscoped().Where("full_reduction_activity_uuid = ?", activityUuid).Delete(&model.FullReductionActivityRule{}).Error
 }

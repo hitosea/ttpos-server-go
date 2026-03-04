@@ -21,6 +21,7 @@ type ICompanyStaffRepo interface {
 	GetByCompanyUuid(companyUuid uint64, options ...DBOption) ([]*model.CompanyStaff, error)
 	GetByCompanyUuids(companyUuids []uint64, options ...DBOption) ([]*model.CompanyStaff, error)
 	GetByStaffAndCompany(staffUuid, companyUuid uint64, options ...DBOption) (*model.CompanyStaff, error)
+	Create(companyStaff *model.CompanyStaff) error
 	CreateCompanyStaff(companyStaff *model.CompanyStaff) *model.CompanyStaff
 	UpdateCompanyStaff(uuid uint64, vars map[string]any) error
 	Delete(uuid uint64) error
@@ -52,6 +53,11 @@ func (r *companyStaffRepo) GetCompanyStaff(opts ...DBOption) model.CompanyStaff 
 	}
 	db.First(&companyStaff)
 	return companyStaff
+}
+
+// Create 创建账号-门店关联记录
+func (r *companyStaffRepo) Create(companyStaff *model.CompanyStaff) error {
+	return r.db.Model(&model.CompanyStaff{}).Create(companyStaff).Error
 }
 
 func (r *companyStaffRepo) CreateCompanyStaff(companyStaff *model.CompanyStaff) *model.CompanyStaff {

@@ -20,6 +20,14 @@ type IFullReductionActivityRepo interface {
 	GetList(options ...DBOption) ([]*model.FullReductionActivity, int64, error)
 	Delete(uuid uint64) error
 
+	// 同步相关方法
+	SoftDeleteByHeadquarterExcludeUuids(headquarterUuid uint64, excludeUuids []uint64) error
+	FindHeadquarterByUuidsWithRules(uuids []uint64) ([]model.FullReductionActivity, error)
+	UnscopedDeleteByUuid(uuid uint64) error
+	UnscopedDeleteByHeadquarter(headquarterUuid uint64) error
+	FindByHeadquarter(headquarterUuid uint64) ([]model.FullReductionActivity, error)
+	FindAllHeadquarterWithRules() ([]model.FullReductionActivity, error)
+
 	// 选项方法
 	WhereUuid(uuid uint64) DBOption
 	WhereStatus(status string, now int64) DBOption
@@ -156,6 +164,58 @@ func (r *FullReductionActivityRepoImpl) Delete(uuid uint64) error {
 			Where("uuid = ? AND delete_time = ?", uuid, constant.NotDeleted).
 			Update("delete_time", time.Now().Unix()).Error,
 	)
+}
+
+// SoftDeleteByHeadquarterExcludeUuids 根据总部UUID软删除排除指定UUID的活动
+func (r *FullReductionActivityRepoImpl) SoftDeleteByHeadquarterExcludeUuids(headquarterUuid uint64, excludeUuids []uint64) error {
+	return r.db.Model(&model.FullReductionActivity{}).
+		Where("headquarter_uuid = ?", headquarterUuid).
+		Where("uuid NOT IN (?)", excludeUuids).
+		Update("delete_time", time.Now().Unix()).Error
+}
+
+// FindHeadquarterByUuidsWithRules 根据UUID列表查询总部满减活动（含规则）
+func (r *FullReductionActivityRepoImpl) FindHeadquarterByUuidsWithRules(uuids []uint64) ([]model.FullReductionActivity, error) {
+	var activities []model.FullReductionActivity
+	err := r.db.Where("headquarter_uuid = 0 AND delete_time = 0 AND uuid IN (?)", uuids).
+		Preload("Rules").
+		Find(&activities).Error
+	if err != nil {
+		return nil, err
+	}
+	return activities, nil
+}
+
+// UnscopedDeleteByUuid 根据UUID硬删除满减活动
+func (r *FullReductionActivityRepoImpl) UnscopedDeleteByUuid(uuid uint64) error {
+	return r.db.Unscoped().Where("uuid = ?", uuid).Delete(&model.FullReductionActivity{}).Error
+}
+
+// UnscopedDeleteByHeadquarter 根据总部UUID硬删除所有满减活动
+func (r *FullReductionActivityRepoImpl) UnscopedDeleteByHeadquarter(headquarterUuid uint64) error {
+	return r.db.Unscoped().Where("headquarter_uuid = ?", headquarterUuid).Delete(&model.FullReductionActivity{}).Error
+}
+
+// FindByHeadquarter 根据总部UUID查询满减活动
+func (r *FullReductionActivityRepoImpl) FindByHeadquarter(headquarterUuid uint64) ([]model.FullReductionActivity, error) {
+	var activities []model.FullReductionActivity
+	err := r.db.Where("headquarter_uuid = ?", headquarterUuid).Find(&activities).Error
+	if err != nil {
+		return nil, err
+	}
+	return activities, nil
+}
+
+// FindAllHeadquarterWithRules 查询所有总部满减活动（含规则）
+func (r *FullReductionActivityRepoImpl) FindAllHeadquarterWithRules() ([]model.FullReductionActivity, error) {
+	var activities []model.FullReductionActivity
+	err := r.db.Where("headquarter_uuid = 0 AND delete_time = 0").
+		Preload("Rules").
+		Find(&activities).Error
+	if err != nil {
+		return nil, err
+	}
+	return activities, nil
 }
 
 // WhereUuid 根据UUID查询选项

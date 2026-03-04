@@ -3524,13 +3524,18 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 				}
 				if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeFlavor { // 规格商品
 					// 更新product_bom表的成本卡uuid
-					if err := tx.Model(&model.ProductBom{}).Where("uuid = ?", objectByItemCodeResp.ProductBom.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
+					txProductBomRepo := repository.NewProductBomRepo(tx)
+					commonRepo := repository.NewCommonRepo()
+					if err := txProductBomRepo.UpdateProductBom(
+						map[string]any{"product_bom_card_uuid": bomCard.Uuid},
+						commonRepo.WhereByUuid(objectByItemCodeResp.ProductBom.Uuid),
+					); err != nil {
 						logger.Logger.Info("同步成本卡时，更新product_bom表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
 						continue
 					}
 				} else if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeSauce { // 小料
 					// 更新product_sauce表的成本卡uuid
-					if err := tx.Model(&model.ProductSauce{}).Where("uuid = ?", objectByItemCodeResp.ProductSauce.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
+					if err := repository.NewProductSauceRepo(tx).UpdateProductBomCard(objectByItemCodeResp.ProductSauce.Uuid, bomCard.Uuid); err != nil {
 						logger.Logger.Info("同步成本卡时，更新product_sauce表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
 						continue
 					}
@@ -3584,12 +3589,17 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			// 删除所有总部的成本卡
-			tx.Model(&model.ProductBomCard{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.ProductBomCard{})
+			txBomCardRepo := repository.NewProductBomCardRepo(tx)
+			if err := txBomCardRepo.HardDeleteByHeadquarterUuid(companySetting.HeadquarterUuid); err != nil {
+				return errors.WithMessage(err, "删除总部成本卡失败")
+			}
 			productBomCardUuids := []uint64{}
 			for _, productBomCard := range productBomCardList {
 				productBomCardUuids = append(productBomCardUuids, productBomCard.Uuid)
 			}
-			tx.Model(&model.RelatedMaterial{}).Where("related_uuid IN (?)", productBomCardUuids).Delete(&model.RelatedMaterial{})
+			if err := txBomCardRepo.HardDeleteRelatedMaterialsByUuids(productBomCardUuids); err != nil {
+				return errors.WithMessage(err, "删除总部成本卡关联物料失败")
+			}
 
 			for _, productBomCard := range productBomCardList {
 				// 过滤掉数据不完整的成本卡（如无多语言名称）

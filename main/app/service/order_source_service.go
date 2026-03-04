@@ -101,7 +101,8 @@ func (s *orderSourceSrv) Create(ctx context.Context, req req.OrderSourceCreateRe
 	}
 	multiLanguageName.InitByLocaleResponse(req.LocaleName)
 
-	if err := db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error; err != nil {
+	multiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(multiLanguageName)
+	if err != nil {
 		return resp.OrderSourceCreateResp{}, errors.WithMessage(err, "创建多语言名称失败")
 	}
 
@@ -112,7 +113,7 @@ func (s *orderSourceSrv) Create(ctx context.Context, req req.OrderSourceCreateRe
 			CreateTime: currentTime,
 			UpdateTime: currentTime,
 		},
-		MultiLanguageNameUuid: multiLangUuid,
+		MultiLanguageNameUuid: multiLanguageNameUuid,
 		Sort:                  req.Sort,
 		Status:                1, // 默认启用
 	}
@@ -149,9 +150,8 @@ func (s *orderSourceSrv) Update(ctx context.Context, req req.OrderSourceUpdateRe
 	}
 
 	// 更新多语言名称
-	err = db.Model(&model.MultiLanguageName{}).
-		Where("uuid = ?", orderSource.MultiLanguageNameUuid).
-		Updates(map[string]interface{}{
+	err = repository.NewMultiLanguageNameRepo(db).UpdateMultiLanguageNameData(
+		map[string]any{
 			"zh_name":     req.LocaleName.ZH,
 			"en_name":     req.LocaleName.EN,
 			"th_name":     req.LocaleName.TH,
@@ -162,7 +162,9 @@ func (s *orderSourceSrv) Update(ctx context.Context, req req.OrderSourceUpdateRe
 			"tr_name":     req.LocaleName.TR,
 			"sv_name":     req.LocaleName.SV,
 			"update_time": currentTime,
-		}).Error
+		},
+		repository.CommonRepo.WhereByUuid(orderSource.MultiLanguageNameUuid),
+	)
 	if err != nil {
 		return errors.WithMessage(err, "更新多语言名称失败")
 	}

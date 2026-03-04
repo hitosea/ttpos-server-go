@@ -1971,7 +1971,9 @@ func (s *businessSrv) StatsKitchenEfficiencyAnalysis(ctx context.Context) (strin
 		if len(updateList) > 0 {
 			for _, item := range updateList {
 				item.UpdateTime = time.Now().Unix()
-				if err := tx.Model(&model.KitchenEfficiencyAnalysis{}).Where("product_package_uuid = ?", item.ProductPackageUuid).Where("date = ?", item.Date).Updates(item).Error; err != nil {
+				if err := repository.NewKitchenEfficiencyAnalysisRepo(tx).UpdateKitchenEfficiencyAnalysisByStruct(*item, func(db *gorm.DB) *gorm.DB {
+					return db.Where("product_package_uuid = ?", item.ProductPackageUuid).Where("date = ?", item.Date)
+				}); err != nil {
 					return err
 				}
 			}

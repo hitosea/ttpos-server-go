@@ -413,13 +413,7 @@ func (s *paymentMethodSrv) GetDefaultPayList(ctx context.Context) []*resp.Defaul
 
 // generatePaymentCode 生成支付方式 code（手动添加 source=1）
 func (s *paymentMethodSrv) generatePaymentCode(db *gorm.DB) int {
-	var maxCode int
-	db.Model(&model.PaymentMethod{}).Unscoped(). // 包含已删除的
-							Where("source = ? AND code >= 20000", constant.PaymentMethodSourceDefault).
-							Select("COALESCE(MAX(code), 19900)"). // 如果找不到，返回19900，+100后为20000
-							Scan(&maxCode)
-
-	return maxCode + 100 // 每次递增100
+	return repository.NewPaymentMethodRepo(db).GetMaxCodeBySource(constant.PaymentMethodSourceDefault, 20000) + 100
 }
 
 // Create 批量创建支付方式
@@ -780,7 +774,7 @@ func (s *paymentMethodSrv) UpdateLianlianPayConfig(ctx context.Context, configRe
 	if err != nil {
 		if strings.Contains(err.Error(), "record not found") {
 			// 配置不存在，创建新配置
-			if err := db.Create(&model.PaymentApp{
+			if err := paymentAppRepo.Create(&model.PaymentApp{
 				CompanyUuid:          companyUuid,
 				LlWhiteIp:            configReq.LlWhiteIp,
 				LlMerchantId:         configReq.LlMerchantId,
@@ -789,7 +783,7 @@ func (s *paymentMethodSrv) UpdateLianlianPayConfig(ctx context.Context, configRe
 				LlMerchantPrivateKey: configReq.LlMerchantPrivateKey,
 				LlToken:              configReq.LlToken,
 				LlSignSalt:           signSalt,
-			}).Error; err != nil {
+			}); err != nil {
 				return errors.WithMessage(err, "更新支付配置失败")
 			}
 		} else {
@@ -931,76 +925,68 @@ func (s *paymentMethodSrv) syncFromERP(ctx context.Context) error {
 		zap.Uint64("company_uuid", companySetting.CompanyUuid),
 		zap.String("company_abbr", companySetting.ErpnextCompanyAbbr))
 
-	// 2. 开启事务
-	tx := db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			logger.Logger.Error("从 ERP 同步支付方式 panic", zap.Any("panic", r))
-		}
-	}()
-
-	// 3. 遍历 ERP 支付方式
+	// 2. 遍历 ERP 支付方式
 	var createdCount, updatedCount int
-	for _, erpPayment := range erpPayments {
-		// 4. 检查是否已存在（优先使用 PaymentID 匹配，降级使用 Name 匹配）
-		var existPayment model.PaymentMethod
-		var err error
+	err = repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		txPaymentMethodRepo := repository.NewPaymentMethodRepo(tx)
+		commonRepo := repository.NewCommonRepo()
 
-		if erpPayment.PaymentId != "" {
-			// 优先使用 PaymentID 匹配
-			err = tx.Where("erpnext_payment_id = ? AND delete_time = 0", erpPayment.PaymentId).
-				First(&existPayment).Error
-			logger.Logger.Debug("使用 PaymentID 匹配",
-				zap.String("payment_id", erpPayment.PaymentId),
-				zap.String("name", erpPayment.Name))
-		} else {
-			// 降级使用 Name 匹配
-			err = tx.Where("erpnext_payment = ? AND delete_time = 0", erpPayment.Name).
-				First(&existPayment).Error
-			logger.Logger.Info("ERP 未返回 PaymentID，使用 Name 匹配",
-				zap.String("name", erpPayment.Name))
-		}
+		for _, erpPayment := range erpPayments {
+			// 3. 检查是否已存在（优先使用 PaymentID 匹配，降级使用 Name 匹配）
+			var existPayment *model.PaymentMethod
+			var err error
 
-		if err == gorm.ErrRecordNotFound {
-			// 首次同步：创建新记录
-			if err := s.createPaymentFromERP(tx, erpPayment, companySetting.ErpnextCompanyAbbr); err != nil {
-				tx.Rollback()
-				return errors.WithMessage(err, "创建支付方式失败")
-			}
-			createdCount++
-		} else if err != nil {
-			tx.Rollback()
-			return errors.WithMessage(err, "查询支付方式失败")
-		} else {
-			// 后续同步：仅更新状态
-			updates := map[string]any{
-				"status": 0,
-			}
-			if erpPayment.Enabled {
-				updates["status"] = 1
-			}
 			if erpPayment.PaymentId != "" {
-				updates["erpnext_payment_id"] = erpPayment.PaymentId
+				existPayment, err = txPaymentMethodRepo.GetPaymentMethodError(
+					txPaymentMethodRepo.WhereErpnextPaymentId(erpPayment.PaymentId),
+					commonRepo.WhereBySoftDelete(),
+				)
+				logger.Logger.Debug("使用 PaymentID 匹配",
+					zap.String("payment_id", erpPayment.PaymentId),
+					zap.String("name", erpPayment.Name))
+			} else {
+				existPayment, err = txPaymentMethodRepo.GetPaymentMethodError(
+					txPaymentMethodRepo.WhereErpnextPayment(erpPayment.Name),
+					commonRepo.WhereBySoftDelete(),
+				)
+				logger.Logger.Info("ERP 未返回 PaymentID，使用 Name 匹配",
+					zap.String("name", erpPayment.Name))
 			}
-			if err := tx.Model(&model.PaymentMethod{}).
-				Where("uuid = ?", existPayment.Uuid).
-				Updates(updates).Error; err != nil {
-				tx.Rollback()
-				return errors.WithMessage(err, "更新支付方式状态失败")
-			}
-			logger.Logger.Info("更新支付方式状态",
-				zap.String("name", erpPayment.Name),
-				zap.String("payment_id", erpPayment.PaymentId),
-				zap.Any("updates", updates),
-				zap.Uint64("uuid", existPayment.Uuid))
-			updatedCount++
-		}
-	}
 
-	// 5. 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return errors.WithMessage(err, "提交事务失败")
+			if err == gorm.ErrRecordNotFound {
+				// 首次同步：创建新记录
+				if err := s.createPaymentFromERP(tx, erpPayment, companySetting.ErpnextCompanyAbbr); err != nil {
+					return errors.WithMessage(err, "创建支付方式失败")
+				}
+				createdCount++
+			} else if err != nil {
+				return errors.WithMessage(err, "查询支付方式失败")
+			} else {
+				// 后续同步：仅更新状态
+				updates := map[string]any{
+					"status": 0,
+				}
+				if erpPayment.Enabled {
+					updates["status"] = 1
+				}
+				if erpPayment.PaymentId != "" {
+					updates["erpnext_payment_id"] = erpPayment.PaymentId
+				}
+				if err := txPaymentMethodRepo.UpdatePaymentMethod(updates, txPaymentMethodRepo.WhereUuid(existPayment.Uuid)); err != nil {
+					return errors.WithMessage(err, "更新支付方式状态失败")
+				}
+				logger.Logger.Info("更新支付方式状态",
+					zap.String("name", erpPayment.Name),
+					zap.String("payment_id", erpPayment.PaymentId),
+					zap.Any("updates", updates),
+					zap.Uint64("uuid", existPayment.Uuid))
+				updatedCount++
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	logger.Logger.Info("从 ERP 同步支付方式完成",
@@ -1196,7 +1182,7 @@ func (s *paymentMethodSrv) createPaymentFromERP(
 	}
 	// Uuid 会在 BeforeCreate Hook 中自动生成
 
-	if err := tx.Create(&newPayment).Error; err != nil {
+	if err := repository.NewPaymentMethodRepo(tx).CreatePaymentMethodReturnRow(&newPayment); err != nil {
 		return errors.WithMessage(err, "插入支付方式失败")
 	}
 
