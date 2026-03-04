@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 交互约定
+
+### "help" 命令
+当用户输入 "help" 时，执行 `make help` 并将结果解析为可点击的 `<options>` 列表。每个选项格式为 `make <command> — <description>`。用户点击后直接执行对应的 make 命令。
+
 ## 项目概述
 
 TTPOS 是一个现代化的餐饮收银系统后端，支持多终端（pos/shop/kds/qds/assistant/tablet/mobile/menu/member）和业务场景（点餐、桌位管理、会员、外卖、报表等）。采用微服务架构设计，包含以下模块：
