@@ -377,12 +377,33 @@ func (r *MemberSaleOrderRepo) WhereUpdateTimeGt(ts int64) DBOption {
 	}
 }
 
+// languageColumnMap 语言代码到 multi_language_name 表列名的安全映射
+var languageColumnMap = map[string]string{
+	"zh":   "zh_name",
+	"en":   "en_name",
+	"th":   "th_name",
+	"zhtw": "zh_tw_name",
+	"ja":   "ja_name",
+	"ko":   "ko_name",
+	"my":   "my_name",
+	"tr":   "tr_name",
+	"sv":   "sv_name",
+	"de":   "en_name", // 德语暂无独立列，回退到英语
+}
+
 // WhereKeyword 根据订单号或商品名称搜索
 func (r *MemberSaleOrderRepo) WhereKeyword(keyword string, language string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if keyword == "" {
 			return db
 		}
+
+		// 安全列名映射，防止 SQL 注入
+		columnName, ok := languageColumnMap[language]
+		if !ok {
+			columnName = "en_name"
+		}
+
 		// 获取表前缀
 		prefix := config.Database.TablePrefix
 
@@ -391,7 +412,7 @@ func (r *MemberSaleOrderRepo) WhereKeyword(keyword string, language string) DBOp
 			Select("DISTINCT sop.sale_order_uuid").
 			Joins("LEFT JOIN "+prefix+"multi_language_name so ON sop.multi_language_name_uuid = so.uuid").
 			Where("sop.delete_time = ?", 0).
-			Where("so."+language+"_name LIKE ?", "%"+keyword+"%")
+			Where("so."+columnName+" LIKE ?", "%"+keyword+"%")
 
 		return db.Where("(sale_order_uuid IN (?) OR order_no LIKE ?)", subQuery, "%"+keyword+"%")
 	}
