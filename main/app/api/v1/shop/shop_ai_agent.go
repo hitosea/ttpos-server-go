@@ -48,8 +48,7 @@ type GetSessionReq struct {
 // @Tags 商家端.AI采购
 // @Accept json
 // @Produce json
-// @Param warehouse_uuid body uint64 false "仓库UUID（不传则使用默认仓库）"
-// @Param forecast_days body int false "预测天数(默认3天)" default(3)
+// @Param data body RunAnalysisReq true "采购分析请求参数"
 // @Security JwtToken
 // @Success 200 {object} map[string]any "分析结果"
 // @Router /shop/ai/procurement/analysis [post]
@@ -93,9 +92,7 @@ func (h *AIAgentHandler) RunAnalysis(c *gin.Context) {
 // @Tags 商家端.AI采购
 // @Accept json
 // @Produce json
-// @Param session_id body string true "会话ID"
-// @Param decision body string true "审核决定: approved/rejected"
-// @Param comment body string false "审核意见"
+// @Param data body SubmitReviewReq true "审核请求参数"
 // @Security JwtToken
 // @Success 200 {object} map[string]any "审核结果"
 // @Router /shop/ai/procurement/review [post]
@@ -129,7 +126,7 @@ func (h *AIAgentHandler) SubmitReview(c *gin.Context) {
 // @Tags 商家端.AI采购
 // @Accept json
 // @Produce json
-// @Param session_id query string true "会话ID"
+// @Param data body GetSessionReq true "查询请求参数"
 // @Security JwtToken
 // @Success 200 {object} map[string]any "会话状态"
 // @Router /shop/ai/procurement/session [get]
