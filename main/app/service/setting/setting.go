@@ -23,6 +23,7 @@ import (
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
@@ -127,10 +128,8 @@ func (s *Srv) GetShopAppMinVersion() string {
 	if saasDB == nil {
 		return defaultShopAppMinVersion
 	}
-	var setting model.Setting
-	if err := saasDB.Table("ttpos_setting").Where("`key` = ? AND delete_time = 0", model.SettingKeyShopApp).First(&setting).Error; err != nil {
-		return defaultShopAppMinVersion
-	}
+	settingRepo := repository.NewSettingRepo(saasDB)
+	setting := settingRepo.GetByKeyNotDeleted(model.SettingKeyShopApp)
 	if setting.Values == "" {
 		return defaultShopAppMinVersion
 	}
@@ -2237,11 +2236,11 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 
 	err = companyDB.Transaction(func(tx *gorm.DB) error {
 		// 保存到saas.company_setting\saas.company\商家company_setting\商家company表
-		err := saasDB.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Model(&model.Company{}).Where("uuid = ?", companyUuid).Debug().Updates(updateCompany).Error; err != nil {
+		err := saasDB.Transaction(func(saasTx *gorm.DB) error {
+			if err := repository.NewCompanyRepo(saasTx).UpdateCompany(companyUuid, updateCompany); err != nil {
 				return errors.WithMessage(errors.New("保存saas.company设置失败"), err.Error())
 			}
-			if err := tx.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Debug().Updates(updateCompanySetting).Error; err != nil {
+			if err := repository.NewCompanySettingRepo(saasTx).UpdateByCompanyUuid(companyUuid, updateCompanySetting); err != nil {
 				return errors.WithMessage(errors.New("保存saas.company_setting设置失败"), err.Error())
 			}
 			return nil
@@ -2249,10 +2248,10 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		if err != nil {
 			return err
 		}
-		if err := tx.Model(&model.Company{}).Where("uuid = ?", companyUuid).Debug().Updates(updateCompany).Error; err != nil {
+		if err := repository.NewCompanyRepo(tx).UpdateCompany(companyUuid, updateCompany); err != nil {
 			return errors.WithMessage(errors.New("保存商家company设置失败"), err.Error())
 		}
-		if err := tx.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Debug().Updates(updateCompanySetting).Error; err != nil {
+		if err := repository.NewCompanySettingRepo(tx).UpdateByCompanyUuid(companyUuid, updateCompanySetting); err != nil {
 			return errors.WithMessage(errors.New("保存store设置失败"), err.Error())
 		}
 
@@ -2296,7 +2295,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 			if err != nil {
 				return errors.WithMessage(errors.New("更新Headquarters - Supplier供应商名称失败"), err.Error())
 			}
-			if err := tx.Model(&model.Supplier{}).Where("headquarter_uuid = 0 AND erp_code = ?", constant.ErpHeadquartersSupplierCode).Update("name", storeSettingReq.Name).Error; err != nil {
+			if err := repository.NewSupplierRepo(tx).UpdateNameByHeadquarterErpCode(constant.ErpHeadquartersSupplierCode, storeSettingReq.Name); err != nil {
 				return errors.WithMessage(errors.New("更新Headquarters - Supplier供应商名称失败"), err.Error())
 			}
 		}
@@ -2427,8 +2426,8 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 	})
 
 	// 将本店非当前安全库存类型的预警记录删除
-	err = s.dbm.GetDB(companyUuid).Model(&model.MaterialStockAlertLog{}).Where("alert_type != ?", businessSetting.SafetyStockType).Update("delete_time", time.Now().Unix()).Error
-	if err != nil {
+	alertLogRepo := repository.NewMaterialStockAlertLogRepo(s.dbm.GetDB(companyUuid))
+	if err = alertLogRepo.DeleteByAlertTypeNot(businessSetting.SafetyStockType); err != nil {
 		logger.Logger.Error("删除本店非当前安全库存类型的预警记录失败", zap.Error(err))
 	}
 
@@ -2445,27 +2444,27 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 	}
 
 	var freeReasonCount, returnFoodReasonCount, orderRemarkCount, orderItemRemarkCount, orderSourceCount, nationalityCount int64
-	err = db.Model(&model.FreeReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&freeReasonCount).Error
+	freeReasonCount, err = base.NewGiftOrFreeOrderReasonRepo(db).CountFreeReason()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
-	err = db.Model(&model.ReturnFoodReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&returnFoodReasonCount).Error
+	returnFoodReasonCount, err = base.NewReturnFoodReasonRepo(db).CountReturnFoodReason()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
-	err = db.Model(&model.OrderRemark{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderRemarkCount).Error
+	orderRemarkCount, err = base.NewOrderRemarkRepo(db).CountOrderRemark()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
-	err = db.Model(&model.OrderItemRemark{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderItemRemarkCount).Error
+	orderItemRemarkCount, err = base.NewOrderItemRemarkRepo(db).CountOrderItemRemark()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
-	err = db.Model(&model.OrderSource{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderSourceCount).Error
+	orderSourceCount, err = repository.NewOrderSourceRepo(db).Count()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
-	err = db.Model(&model.Nationality{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&nationalityCount).Error
+	nationalityCount, err = repository.NewNationalityRepo(db).Count()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}

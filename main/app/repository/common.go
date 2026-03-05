@@ -1038,3 +1038,25 @@ func (r *commonRepo) WhereBetweenFinishTime(startTime int64, endTime int64) DBOp
 		return db.Where("finish_time BETWEEN ? AND ?", startTime, endTime)
 	}
 }
+
+// CountByTable 通用表计数查询（适用于动态表名场景）
+func CountByTable(db *gorm.DB, tableName string, opts ...DBOption) (int64, error) {
+	var count int64
+	query := db.Table(tableName)
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.Count(&count).Error
+	return count, err
+}
+
+// SelectColumnFromTable 从指定表中查询单列数据（适用于动态表名场景）
+func SelectColumnFromTable(db *gorm.DB, tableName string, column string, opts ...DBOption) ([]map[string]any, error) {
+	var records []map[string]any
+	query := db.Table(tableName).Select(column)
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.Find(&records).Error
+	return records, err
+}

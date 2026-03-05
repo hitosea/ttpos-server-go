@@ -89,6 +89,8 @@ type IProductRepo interface {
 	CheckSauceUsageInShop(sauceUuid uint64) (bool, error)                   // 检查当前子店是否使用了指定加料
 	CheckUnitUsageInShop(unitUuid uint64) (bool, error)                     // 检查当前子店是否使用了指定单位
 	CheckProductUsageInPackage(productUuid uint64) (bool, error)            // 检查当前子店的套餐是否使用了指定商品
+	UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error
+	UpdateDescribeByDescribeMultiLanguageNameUuid(describeMultiLanguageNameUuid uint64, describe string) error
 }
 
 // IProductQueryRepo 商品查询仓库接口
@@ -1721,4 +1723,14 @@ func (r *productRepo) CheckProductUsageInPackage(productUuid uint64) (bool, erro
 	}
 
 	return count > 0, nil
+}
+
+// UpdateNameByMultiLanguageNameUuid 根据多语言名称UUID更新name字段
+func (r *productRepo) UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error {
+	return r.db.Model(&model.ProductPackage{}).Where("multi_language_name_uuid = ?", multiLanguageNameUuid).Update("name", name).Error
+}
+
+// UpdateDescribeByDescribeMultiLanguageNameUuid 根据描述多语言名称UUID更新describe字段
+func (r *productRepo) UpdateDescribeByDescribeMultiLanguageNameUuid(describeMultiLanguageNameUuid uint64, describe string) error {
+	return r.db.Model(&model.ProductPackage{}).Where("describe_multi_language_name_uuid = ?", describeMultiLanguageNameUuid).Update("describe", describe).Error
 }

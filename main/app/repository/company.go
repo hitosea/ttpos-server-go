@@ -21,6 +21,7 @@ type ICompanyRepo interface {
 	GetCompanyInfoByUuid(uuid uint64) (*model.Company, error)
 	CreateCompany(obj model.Company) error
 	UpdateCompany(uuid uint64, vars map[string]any) error
+	GetAllCompanyUuids() ([]uint64, error) // 获取所有未删除公司的UUID列表
 }
 
 func NewCompanyRepo(db *gorm.DB) ICompanyRepo {
@@ -170,4 +171,11 @@ func (r *companyRepo) GetCompanyInfoByUuid(uuid uint64) (*model.Company, error) 
 
 func (r *companyRepo) UpdateCompany(uuid uint64, vars map[string]any) error {
 	return r.db.Model(&model.Company{}).Where("uuid = ?", uuid).Updates(vars).Error
+}
+
+// GetAllCompanyUuids 获取所有未删除公司的UUID列表
+func (r *companyRepo) GetAllCompanyUuids() ([]uint64, error) {
+	var uuids []uint64
+	err := r.db.Model(&model.Company{}).Scopes(NotDeleted).Pluck("uuid", &uuids).Error
+	return uuids, err
 }

@@ -3,7 +3,6 @@ package service
 import (
 	"slices"
 	"strings"
-	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -65,7 +64,7 @@ func (s *supplierSrv) GetSupplierList(ctx context.Context, req req.SupplierListR
 		opts = append(opts, supplierRepo.WhereNameOrCodeLike(req.Keyword))
 	}
 	companySetting := ctx.GetCompanySetting()
-	// 总部过滤掉“总部-供应商”
+	// 总部过滤掉"总部-供应商"
 	if companySetting.IsHeadquarter() {
 		opts = append(opts, supplierRepo.WhereErpCodeNot(constant.ErpHeadquartersSupplierCode))
 	}
@@ -392,11 +391,14 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context, syncHeadquarterData bool
 	var headquarterSuppliers []model.Supplier
 	var headquarter model.CompanySetting
 	if companySetting.IsSubShop() && syncHeadquarterData {
-		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+		headquarter, err = repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB)).GetOne(
+			repository.CommonRepo.WhereByUuid(companySetting.HeadquarterUuid),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
-		s.dbm.GetDB(headquarter.Uuid).Model(&model.Supplier{}).Find(&headquarterSuppliers)
+		headquarterSuppliers, _ = repository.NewSupplierRepo(s.dbm.GetDB(headquarter.Uuid)).GetList()
 	}
 
 	// 本店ttpos供应商
@@ -405,7 +407,8 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context, syncHeadquarterData bool
 	var deletingSupplierUuids []uint64
 	supplierMap := make(map[string]model.Supplier)
 	db := s.dbm.GetDB(companySetting.CompanyUuid)
-	db.Model(&model.Supplier{}).Scopes(repository.ExcludeHeadquarter).Where("erp_code != ''").Find(&suppliers)
+	supplierRepo := repository.NewSupplierRepo(db)
+	suppliers, _ = supplierRepo.GetList(repository.ExcludeHeadquarter, supplierRepo.WhereErpCodeNot(""))
 	for _, supplier := range suppliers {
 		if !slices.Contains(supplierErpCodes, supplier.ErpCode) {
 			deletingSupplierUuids = append(deletingSupplierUuids, supplier.Uuid)
@@ -415,8 +418,9 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context, syncHeadquarterData bool
 
 	// 同步供应商
 	err = db.Transaction(func(tx *gorm.DB) error {
+		txSupplierRepo := repository.NewSupplierRepo(tx)
 		if len(deletingSupplierUuids) > 0 {
-			err := tx.Model(&model.Supplier{}).Where("uuid IN (?)", deletingSupplierUuids).Update("delete_time", time.Now().Unix()).Error
+			err := txSupplierRepo.SoftDeleteByUuids(deletingSupplierUuids)
 			if err != nil {
 				return errors.WithMessage(err, "erp已删除供应商，标记删除ttpos供应商失败")
 			}
@@ -434,7 +438,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context, syncHeadquarterData bool
 			contactName := supplier.ContactName
 			contactPhone := supplier.ContactPhone
 			code := supplier.Code
-			// “总部-供应商”固定code HSP00001
+			// "总部-供应商"固定code HSP00001
 			if erpSupplier.Name == constant.ErpHeadquartersSupplierCode {
 				code = constant.HeadquartersSupplierCode
 			}
@@ -461,7 +465,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context, syncHeadquarterData bool
 					IsInternalSupplier: isInternalSupplier,
 				})
 			} else { // 更新供应商
-				tx.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
+				txSupplierRepo.Update(supplier.Uuid, map[string]any{
 					"name":                 name,
 					"code":                 code,
 					"status":               status,
@@ -475,7 +479,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context, syncHeadquarterData bool
 			}
 		}
 		if len(headquarterSuppliers) > 0 && syncHeadquarterData {
-			tx.Where("headquarter_uuid > 0").Delete(&model.Supplier{})
+			txSupplierRepo.HardDeleteHeadquarterSuppliers()
 			for _, headquarterSupplier := range headquarterSuppliers {
 				insertingHeadquarterSuppliers = append(insertingHeadquarterSuppliers, model.Supplier{
 					BaseModel: model.BaseModel{
@@ -500,7 +504,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context, syncHeadquarterData bool
 			}
 		}
 		if len(insertingHeadquarterSuppliers) > 0 {
-			tx.Model(&model.Supplier{}).Create(&insertingHeadquarterSuppliers)
+			txSupplierRepo.CreateBatch(insertingHeadquarterSuppliers)
 		}
 
 		return nil
@@ -512,7 +516,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context, syncHeadquarterData bool
 
 	// 同步供应商物品关联关系
 	erpSrv := erp.NewIErpSrv(s.dbm)
-	supplierRepo := repository.NewSupplierRepo(db)
+	supplierRepo = repository.NewSupplierRepo(db)
 	materialRepo := repository.NewMaterialRepo(db)
 	materialSupplierRepo := repository.NewMaterialSupplierRepo(db)
 	supplierList, err := supplierRepo.GetList(supplierRepo.WhereNotDeleted())

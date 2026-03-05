@@ -61,10 +61,6 @@ type GetErpFlavorListReq struct {
 	AliasName     string `form:"alias_name" json:"alias_name" binding:"required"`         // 属性别名
 }
 
-type SyncUomAndAttributeReq struct {
-	SiteCode string `form:"site_code" json:"site_code" binding:"required"` // 站点编码
-}
-
 type GetPosProfileListReq struct {
 	SiteCode       string `form:"site_code" json:"site_code" binding:"required"`               // 站点编码
 	Company        string `form:"company" json:"company" binding:"required"`                   // 公司名称

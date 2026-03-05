@@ -656,11 +656,13 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 func (s *staffShiftSrv) CountInvoiceCount(ctx context.Context, shiftLogUuid uint64) int64 {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	// 查询当前班次中，所有完成结账的sale_order数量
-	saleOrderCount := int64(0)
-	db.Model(&model.SaleOrder{}).Where("staff_shift_log_uuid = ? and delete_time = 0 and status = ?", shiftLogUuid, constant.SaleOrderStatusFinish).Count(&saleOrderCount)
+	saleOrderCount, _ := repository.NewSaleOrderRepo(db).CountSaleOrders(func(db *gorm.DB) *gorm.DB {
+		return db.Where("staff_shift_log_uuid = ? AND delete_time = 0 AND status = ?", shiftLogUuid, constant.SaleOrderStatusFinish)
+	})
 	// 查询当前班次中，所有return_order数量
-	returnOrderCount := int64(0)
-	db.Model(&model.ReturnOrder{}).Where("staff_shift_log_uuid = ? and delete_time = 0", shiftLogUuid).Count(&returnOrderCount)
+	returnOrderCount, _ := repository.NewReturnOrderRepo(db).CountReturnOrders(func(db *gorm.DB) *gorm.DB {
+		return db.Where("staff_shift_log_uuid = ? AND delete_time = 0", shiftLogUuid)
+	})
 	return returnOrderCount + saleOrderCount
 }
 

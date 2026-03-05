@@ -314,8 +314,8 @@ type KitchenEfficiencyAnalysisItem struct {
 	Max                float64            `json:"max"`                  // 最长出品时长
 	Avg                float64            `json:"avg"`                  // 平均出品时长
 
-	exist bool `json:"exist"` // 是否存在
-	index int  `json:"index"` // 排序
+	exist bool // 是否存在
+	index int  // 排序
 }
 
 func (item *KitchenEfficiencyAnalysisItem) SetIndex(index int) {

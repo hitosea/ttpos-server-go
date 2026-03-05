@@ -14,6 +14,11 @@ type IProductAttributeRepo interface {
 	GetProductAttributesByUuids(uuids []uint64) ([]*model.ProductAttribute, error)               // 批量根据UUID列表查询商品属性（包含Preload）
 	GetProductAttributeWithMultiLanguageName(uuid uint64) (*model.ProductAttribute, error)       // 根据UUID查询商品属性（包含MultiLanguageName）
 	GetProductAttributesWithMultiLanguageName(uuids []uint64) ([]*model.ProductAttribute, error) // 批量根据UUID列表查询商品属性（包含MultiLanguageName）
+	UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error
+	CreateRecord(attr *model.ProductAttribute) error
+	CreateBatch(attrs []model.ProductAttribute) error
+	UpdateProductAttributeData(data map[string]any, opts ...DBOption) error
+	HardDeleteByAttributeGroupUuids(uuids []uint64) error
 }
 
 type productAttributeRepoImpl struct {
@@ -126,4 +131,36 @@ func (r *productAttributeRepoImpl) GetProductAttributesWithMultiLanguageName(uui
 		return nil, errors.WithMessage(err, "批量查询商品属性失败")
 	}
 	return productAttributes, nil
+}
+
+// CreateRecord 创建属性记录
+func (r *productAttributeRepoImpl) CreateRecord(attr *model.ProductAttribute) error {
+	return r.db.Create(attr).Error
+}
+
+// UpdateNameByMultiLanguageNameUuid 根据多语言名称UUID更新name字段
+func (r *productAttributeRepoImpl) UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error {
+	return r.db.Model(&model.ProductAttribute{}).Where("multi_language_name_uuid = ?", multiLanguageNameUuid).Update("name", name).Error
+}
+
+func (r *productAttributeRepoImpl) CreateBatch(attrs []model.ProductAttribute) error {
+	if len(attrs) == 0 {
+		return nil
+	}
+	return r.db.Create(&attrs).Error
+}
+
+func (r *productAttributeRepoImpl) UpdateProductAttributeData(data map[string]any, opts ...DBOption) error {
+	db := r.db.Model(&model.ProductAttribute{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(data).Error
+}
+
+func (r *productAttributeRepoImpl) HardDeleteByAttributeGroupUuids(uuids []uint64) error {
+	if len(uuids) == 0 {
+		return nil
+	}
+	return r.db.Where("attribute_group_uuid IN (?)", uuids).Delete(&model.ProductAttribute{}).Error
 }

@@ -14,6 +14,7 @@ type paymentAppRepo struct {
 type IPaymentAppRepo interface {
 	GetPaymentAppCompanyUuid(uuid uint64) (*model.PaymentApp, error)
 	UpdatePaymentApp(data map[string]any, companyUuid uint64) error
+	Create(paymentApp *model.PaymentApp) error
 }
 
 func NewPaymentAppRepo(db *gorm.DB) IPaymentAppRepo {
@@ -31,6 +32,11 @@ func (r *paymentAppRepo) GetPaymentAppCompanyUuid(uuid uint64) (*model.PaymentAp
 		return nil, errors.WithMessage(err)
 	}
 	return &paymentApp, nil
+}
+
+// Create 创建支付配置
+func (r *paymentAppRepo) Create(paymentApp *model.PaymentApp) error {
+	return r.db.Create(paymentApp).Error
 }
 
 func (r *paymentAppRepo) UpdatePaymentApp(data map[string]any, companyUuid uint64) error {

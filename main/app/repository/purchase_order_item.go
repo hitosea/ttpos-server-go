@@ -28,6 +28,9 @@ type IPurchaseOrderItemRepo interface {
 	GetList(opts ...DBOption) ([]model.PurchaseOrderItem, error)
 	Count(opts ...DBOption) (int64, error)
 
+	// 按UUID更新指定字段
+	UpdateByUuid(uuid uint64, data map[string]any) error
+
 	// 条件查询选项
 	WhereUuid(uuid uint64) DBOption
 	WherePurchaseOrderUuid(purchaseOrderUuid uint64) DBOption
@@ -327,6 +330,11 @@ func (r *PurchaseOrderItemRepoImpl) GetNotReceivedQuantityByMaterialUuid(materia
 		return 0, fmt.Errorf("GetNotReceivedQuantityByMaterialUuid: %v", err)
 	}
 	return count, nil
+}
+
+// UpdateByUuid 按UUID更新指定字段
+func (r *PurchaseOrderItemRepoImpl) UpdateByUuid(uuid uint64, data map[string]any) error {
+	return r.db.Model(&model.PurchaseOrderItem{}).Where("uuid = ?", uuid).Updates(data).Error
 }
 
 // WithPreloadUnits 预加载单位

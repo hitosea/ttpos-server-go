@@ -29,6 +29,10 @@ type ISaleOrderQueryRepo interface {
 	GetSaleOrder(opts ...DBOption) (model.SaleOrder, error)
 	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
 	GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, error)
+	PluckOrderNos(orderNoPrefix string, startTime, endTime int64) ([]string, error) // 查询订单编号
+	GetSaleOrderList(opts ...DBOption) ([]model.SaleOrder, error)                  // 查询销售订单列表
+	CountSaleOrders(opts ...DBOption) (int64, error)                               // 统计销售订单数量
+	SumPaymentAmount(opts ...DBOption) (float64, error)                            // 统计支付金额总和
 }
 
 type saleOrderRepo struct {
@@ -67,6 +71,16 @@ func (r *saleOrderRepo) GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, er
 	var memberUuid uint64
 	err := r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Select("consumer_uuid").Scan(&memberUuid).Error
 	return memberUuid, errors.WithMessage(err)
+}
+
+// PluckOrderNos 查询指定前缀和时间范围内的订单编号
+func (r *saleOrderRepo) PluckOrderNos(orderNoPrefix string, startTime, endTime int64) ([]string, error) {
+	var orderNos []string
+	err := r.db.Model(&model.SaleOrder{}).
+		Where("order_no LIKE ?", orderNoPrefix+"%").
+		Where("create_time >= ? AND create_time <= ?", startTime, endTime).
+		Pluck("order_no", &orderNos).Error
+	return orderNos, err
 }
 
 func (r *saleOrderRepo) UpdateSaleOrderRecord(obj model.SaleOrder) error {
@@ -127,6 +141,39 @@ func (r *saleOrderRepo) UpdateSaleOrderErpInvoice(saleOrderUuid uint64, products
 		"erp_products_invoice_name": productsInvoiceName,
 		"erp_material_invoice_name": materialInvoiceName,
 	}).Error
+}
+
+// GetSaleOrderList 查询销售订单列表
+func (r *saleOrderRepo) GetSaleOrderList(opts ...DBOption) ([]model.SaleOrder, error) {
+	var saleOrders []model.SaleOrder
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&saleOrders).Error
+	return saleOrders, err
+}
+
+// CountSaleOrders 统计销售订单数量
+func (r *saleOrderRepo) CountSaleOrders(opts ...DBOption) (int64, error) {
+	var count int64
+	db := r.db.Model(&model.SaleOrder{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&count).Error
+	return count, err
+}
+
+// SumPaymentAmount 统计支付金额总和
+func (r *saleOrderRepo) SumPaymentAmount(opts ...DBOption) (float64, error) {
+	var result struct{ Amount float64 }
+	db := r.db.Model(&model.SaleOrder{}).Select("COALESCE(SUM(payment_amount), 0) AS amount")
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Scan(&result).Error
+	return result.Amount, err
 }
 
 func (r *saleOrderRepo) UpdateSaleOrderActivity(saleOrderUuid uint64, fullReductionActivityUuid uint64, fullReductionActivityMessage string, activityAmount float64, autoPointsExchange uint) error {

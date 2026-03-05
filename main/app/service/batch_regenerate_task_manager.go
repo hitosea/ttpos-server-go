@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -16,6 +17,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // IBatchRegenerateTaskManager 批量重新生成任务管理器接口
@@ -129,17 +131,22 @@ func (m *batchRegenerateTaskManager) GenerateTaskList(
 		db := m.dbm.GetDB(companyUuid)
 
 		// 查询符合条件的订单（status=1已结账，created_at >= startDate，未删除）
-		var saleOrders []model.SaleOrder
-		query := db.Model(&model.SaleOrder{}).
-			Where("status = ?", 1). // 已结账
-			Where("create_time >= ?", startTimestamp).
-			Where("delete_time = ?", 0)
-		// 如果提供了结束日期，添加结束日期条件（使用结束日期的 23:59:59）
-		if endTimestamp > 0 {
-			query = query.Where("create_time <= ?", endTimestamp)
+		opts := []repository.DBOption{
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("status = ?", constant.SaleOrderStatusFinish).
+					Where("create_time >= ?", startTimestamp).
+					Where("delete_time = ?", constant.NotDeleted)
+			},
 		}
-		err = query.Order("create_time ASC").
-			Find(&saleOrders).Error
+		if endTimestamp > 0 {
+			opts = append(opts, func(db *gorm.DB) *gorm.DB {
+				return db.Where("create_time <= ?", endTimestamp)
+			})
+		}
+		opts = append(opts, func(db *gorm.DB) *gorm.DB {
+			return db.Order("create_time ASC")
+		})
+		saleOrders, err := repository.NewSaleOrderRepo(db).GetSaleOrderList(opts...)
 		if err != nil {
 			return nil, errors.WithMessage(err, fmt.Sprintf("查询订单失败: company_uuid=%d", companyUuid))
 		}

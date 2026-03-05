@@ -674,13 +674,11 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 			for _, item := range materialItems {
 				uuids = append(uuids, item.Uuid)
 			}
-			result := tx.Model(&model.WarehouseOutFormItem{}).
-				Where("uuid in (?)", uuids).
-				Update("delete_time", time.Now().Unix())
-			if result.Error != nil {
-				return errors.WithMessage(result.Error, "软删除原记录失败")
+			affected, err := repository.NewWarehouseFormRepo(tx).SoftDeleteWarehouseOutFormItems(uuids)
+			if err != nil {
+				return errors.WithMessage(err, "软删除原记录失败")
 			}
-			deletedCount = result.RowsAffected
+			deletedCount = affected
 		}
 
 		// 4.3 创建新记录并关联原出库单UUID

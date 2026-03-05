@@ -1098,12 +1098,15 @@ func (s *productTakeoutSrv) GetProductCount(
 	db := ctx.GetDB()
 
 	// 4. 构造查询条件
-	var count int64
-	query := db.Model(&model.ProductPackageTakeout{}).
-		Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package_takeout.product_package_uuid = ttpos_product_package.uuid").
-		Joins("LEFT JOIN ttpos_product_category ON ttpos_product_package_takeout.category_uuid = ttpos_product_category.uuid").
-		Where("ttpos_product_package_takeout.delete_time = ?", 0).
-		Where("ttpos_product_package.delete_time = ?", 0)
+	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
+	opts := []repository.DBOption{
+		func(db *gorm.DB) *gorm.DB {
+			return db.Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package_takeout.product_package_uuid = ttpos_product_package.uuid").
+				Joins("LEFT JOIN ttpos_product_category ON ttpos_product_package_takeout.category_uuid = ttpos_product_category.uuid").
+				Where("ttpos_product_package_takeout.delete_time = ?", 0).
+				Where("ttpos_product_package.delete_time = ?", 0)
+		},
+	}
 
 	// 5. 如果指定了平台，添加平台过滤 (使用 takeout_type 字段)
 	if platform != "" {
@@ -1113,16 +1116,18 @@ func (s *productTakeoutSrv) GetProductCount(
 			"grab":    1,
 			"lineman": 2, // LINE MAN
 		}
-		if takeoutType, exists := platformTypeMap[platform]; exists {
-			query = query.Where("ttpos_product_package_takeout.takeout_type = ?", takeoutType)
-		} else {
-			// 未知平台，使用类型 3（其他）
-			query = query.Where("ttpos_product_package_takeout.takeout_type = ?", 3)
+		takeoutType := uint(3)
+		if t, exists := platformTypeMap[platform]; exists {
+			takeoutType = t
 		}
+		opts = append(opts, func(db *gorm.DB) *gorm.DB {
+			return db.Where("ttpos_product_package_takeout.takeout_type = ?", takeoutType)
+		})
 	}
 
 	// 7. 执行统计
-	if err := query.Count(&count).Error; err != nil {
+	count, err := takeoutRepo.GetProductPackageTakeoutCount(opts...)
+	if err != nil {
 		logger.Logger.Error("查询商品统计失败",
 			zap.Uint64("company_uuid", companyUuid),
 			zap.String("platform", platform),
@@ -1242,19 +1247,19 @@ func (s *productTakeoutSrv) getProductNames(db *gorm.DB, productUuids []uint64) 
 		return names
 	}
 
-	var products []model.ProductPackage
-	err := db.Model(&model.ProductPackage{}).
-		Where("uuid IN ?", productUuids).
-		Where("delete_time = ?", 0).
-		Select("uuid, name").
-		Find(&products).Error
-
+	productList, err := repository.NewProductPackageRepo(db).GetProductPackageList(
+		repository.CommonRepo.WhereInUuids(productUuids),
+		repository.CommonRepo.WhereBySoftDelete(),
+		func(db *gorm.DB) *gorm.DB {
+			return db.Select("uuid, name")
+		},
+	)
 	if err != nil {
 		logger.Logger.Warn("获取商品名称失败", zap.Error(err))
 		return names
 	}
 
-	for _, product := range products {
+	for _, product := range productList {
 		names[product.Uuid] = product.Name
 	}
 

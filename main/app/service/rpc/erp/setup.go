@@ -62,8 +62,8 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 	}
 	// 连锁店-总部关联处理
 	if headquarterAbbr != "" {
-		var headquarter model.CompanySetting
-		s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", initShopReq.SiteCode, initShopReq.HeadquarterAbbr).Scopes(repository.NotDeleted).First(&headquarter)
+		saasCompanySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB))
+		headquarter, _ := saasCompanySettingRepo.GetOne(saasCompanySettingRepo.WhereSiteCode(initShopReq.SiteCode), saasCompanySettingRepo.WhereErpnextCompanyAbbr(initShopReq.HeadquarterAbbr), repository.CommonRepo.WhereBySoftDelete())
 		headquarterUuid = headquarter.Uuid
 	}
 
@@ -115,10 +115,8 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 	}
 
 	// 更新saas库
-	s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Where("uuid = ?", company.Uuid).Updates(map[string]any{
-		"is_enable_erp": 1,
-	})
-	s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("company_uuid = ?", company.Uuid).Updates(map[string]any{
+	erpCompanyData := map[string]any{"is_enable_erp": 1}
+	erpSettingData := map[string]any{
 		"erpnext_site_code":        initShopReq.SiteCode,
 		"erpnext_company_abbr":     initShopReq.CompanyAbbr,
 		"erpnext_branch_name":      response.BranchName,
@@ -126,25 +124,17 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_admin_email":      response.AdminEmail,
 		"erpnext_headquarter_abbr": headquarterAbbr,
 		"headquarter_uuid":         headquarterUuid,
-	})
+	}
+	repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).UpdateCompany(company.Uuid, erpCompanyData)
+	repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB)).UpdateByCompanyUuid(company.Uuid, erpSettingData)
 
 	// 更新商家库
-	s.dbm.GetDB(company.Uuid).Model(&model.Company{}).Where("uuid = ?", company.Uuid).Updates(map[string]any{
-		"is_enable_erp": 1,
-	})
-	s.dbm.GetDB(company.Uuid).Model(&model.CompanySetting{}).Where("company_uuid = ?", company.Uuid).Updates(map[string]any{
-		"erpnext_site_code":        initShopReq.SiteCode,
-		"erpnext_company_abbr":     initShopReq.CompanyAbbr,
-		"erpnext_branch_name":      response.BranchName,
-		"erpnext_pos_profile_name": response.PosProfile,
-		"erpnext_admin_email":      response.AdminEmail,
-		"erpnext_headquarter_abbr": headquarterAbbr,
-		"headquarter_uuid":         headquarterUuid,
-	})
+	repository.NewCompanyRepo(s.dbm.GetDB(company.Uuid)).UpdateCompany(company.Uuid, erpCompanyData)
+	repository.NewCompanySettingRepo(s.dbm.GetDB(company.Uuid)).UpdateByCompanyUuid(company.Uuid, erpSettingData)
 
 	// 修改ttpos仓库erp_code
-	var warehouses []model.Warehouse
-	s.dbm.GetDB(company.Uuid).Model(&model.Warehouse{}).Scopes(repository.NotDeleted).Find(&warehouses)
+	warehouseRepo := repository.NewWarehouseRepo(s.dbm.GetDB(company.Uuid))
+	warehouses, _ := warehouseRepo.Get(repository.CommonRepo.WhereBySoftDelete())
 	erpWarehouseNameMap := make(map[string]string)
 	for _, erpWarehouse := range warehouseList.WarehouseList {
 		if strings.Contains(erpWarehouse.Name, constant.NormalWarehouseCodeContains) {
@@ -153,11 +143,11 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 			erpWarehouseNameMap[constant.TransitWarehouseCodeContains] = erpWarehouse.Name
 		}
 	}
-	for _, warehouse := range warehouses {
-		if warehouse.IsDefault == 1 {
-			s.dbm.GetDB(company.Uuid).Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Update("erp_code", erpWarehouseNameMap[constant.NormalWarehouseCodeContains])
-		} else if warehouse.Type == "transit" {
-			s.dbm.GetDB(company.Uuid).Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Update("erp_code", erpWarehouseNameMap[constant.TransitWarehouseCodeContains])
+	for _, wh := range warehouses {
+		if wh.IsDefault == 1 {
+			warehouseRepo.UpdateByUuid(wh.Uuid, map[string]any{"erp_code": erpWarehouseNameMap[constant.NormalWarehouseCodeContains]})
+		} else if wh.Type == "transit" {
+			warehouseRepo.UpdateByUuid(wh.Uuid, map[string]any{"erp_code": erpWarehouseNameMap[constant.TransitWarehouseCodeContains]})
 		}
 	}
 
@@ -338,16 +328,14 @@ func (s *erpSrv) UpdateTtposCompanyParentUuids(siteCode string) error {
 		slices.Reverse(parentCompanyUuids)
 		parentCompanyUuidsStr := strings.Join(parentCompanyUuids, ",")
 
-		s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", siteCode, companyAbbr).Updates(map[string]any{
+		treeUpdateData := map[string]any{
 			"parent_company_uuids": parentCompanyUuidsStr,
 			"has_children":         hasChildren,
-		})
+		}
+		repository.NewCompanySettingRepo(s.dbm.GetDB(0)).UpdateBySiteCodeAndCompanyAbbr(siteCode, companyAbbr, treeUpdateData)
 		uuid := companyAbbrUuidMap[companyAbbr]
 		if uuid > 0 {
-			s.dbm.GetDB(uuid).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", siteCode, companyAbbr).Updates(map[string]any{
-				"parent_company_uuids": parentCompanyUuidsStr,
-				"has_children":         hasChildren,
-			})
+			repository.NewCompanySettingRepo(s.dbm.GetDB(uuid)).UpdateBySiteCodeAndCompanyAbbr(siteCode, companyAbbr, treeUpdateData)
 		}
 	}
 	return nil

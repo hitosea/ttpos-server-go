@@ -1029,25 +1029,32 @@ func (s *orderSrv) updateProductBatchFlagToZero(tx *gorm.DB, productUuids []uint
 		return nil
 	}
 	now := time.Now().Unix()
+	saleOrderProductRepo := repository.NewSaleOrderProductRepo(tx)
+	productionRepo := repository.NewProductionRepo(tx)
+	whereProductUuids := repository.CommonRepo.WhereInUuids(productUuids)
+	whereSaleOrderProductUuids := func(db *gorm.DB) *gorm.DB {
+		return db.Where("sale_order_product_uuid IN (?)", productUuids)
+	}
+
 	// 后置模式下，取消分批类型
 	if modeType == constant.BatchCookingModePost {
-		if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", productUuids).Updates(map[string]interface{}{"is_batch": 0, "batch_time": now}).Error; err != nil {
+		if err := saleOrderProductRepo.Update(map[string]any{"is_batch": 0, "batch_time": now}, whereProductUuids); err != nil {
 			return errors.WithMessage(err, "更新销售订单商品 is_batch 失败")
 		}
-		if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", productUuids).Updates(map[string]interface{}{
+		if err := productionRepo.UpdateProduct([]repository.DBOption{whereSaleOrderProductUuids}, map[string]any{
 			"is_batch":    0,
 			"batch_time":  now,
 			"create_time": now,
-		}).Error; err != nil {
+		}); err != nil {
 			return errors.WithMessage(err, "更新生产订单商品 is_batch 失败")
 		}
 	}
 	// 前置模式下，只更新 batch_time 字段. 不取消分批类型
 	if modeType == constant.BatchCookingModePre {
-		if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", productUuids).Updates(map[string]interface{}{"batch_time": now}).Error; err != nil {
+		if err := saleOrderProductRepo.Update(map[string]any{"batch_time": now}, whereProductUuids); err != nil {
 			return errors.WithMessage(err, "更新销售订单商品 is_batch 失败")
 		}
-		if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", productUuids).Updates(map[string]interface{}{"batch_time": now}).Error; err != nil {
+		if err := productionRepo.UpdateProduct([]repository.DBOption{whereSaleOrderProductUuids}, map[string]any{"batch_time": now}); err != nil {
 			return errors.WithMessage(err, "更新生产订单商品 is_batch 失败")
 		}
 	}

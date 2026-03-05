@@ -1447,28 +1447,16 @@ func (s *orderSrv) recoverOrderNoSetFromDB(db *gorm.DB, redisClient redis.Cmdabl
 	// 构建订单编号前缀：日期(8位) + 订单来源类型(1位)
 	orderNoPrefix := datePart + orderSourceType
 
-	// 查询当天所有订单编号（从 sale_bill 和 sale_order 表）
+	// 查询当天所有订单编号（从 sale_bill 和 sale_order 表，包括已删除的订单）
 	var orderNos []string
 
-	// 查询 sale_bill 表中的订单编号
-	var saleBillOrderNos []string
-	err := db.Model(&model.SaleBill{}).
-		Where("order_no LIKE ?", orderNoPrefix+"%").
-		Where("create_time >= ? AND create_time <= ?", startTime, endTime).
-		// Where("delete_time = 0").  // 查询所有订单编号，包括已删除的订单
-		Pluck("order_no", &saleBillOrderNos).Error
+	saleBillOrderNos, err := repository.NewSaleBillRepo(db).PluckOrderNos(orderNoPrefix, startTime, endTime)
 	if err != nil {
 		return errors.WithMessage(err, "查询 sale_bill 订单编号失败")
 	}
 	orderNos = append(orderNos, saleBillOrderNos...)
 
-	// 查询 sale_order 表中的订单编号
-	var saleOrderOrderNos []string
-	err = db.Model(&model.SaleOrder{}).
-		Where("order_no LIKE ?", orderNoPrefix+"%").
-		Where("create_time >= ? AND create_time <= ?", startTime, endTime).
-		// Where("delete_time = 0").  // 查询所有订单编号，包括已删除的订单
-		Pluck("order_no", &saleOrderOrderNos).Error
+	saleOrderOrderNos, err := repository.NewSaleOrderRepo(db).PluckOrderNos(orderNoPrefix, startTime, endTime)
 	if err != nil {
 		return errors.WithMessage(err, "查询 sale_order 订单编号失败")
 	}
