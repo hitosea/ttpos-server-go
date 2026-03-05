@@ -74,6 +74,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterMaterialCategoryVisibilityHandlers(shopGroup, dbm, cache) // 物品分类可见性
 			shop.RegisterMiscHandlers(shopGroup, dbm, cache)                       // 杂项
 			shop.RegisterPurchaseHandlers(shopGroup, dbm, cache)                   // 采购
+			shop.RegisterAIAgentHandlers(shopGroup, dbm, cache)                    // AI智能采购
 			shop.RegisterSupplierHandlers(shopGroup, dbm, cache)                   // 供应商
 			shop.RegisterCallBoardHandlers(shopGroup, dbm, cache)                  // 叫号展示
 			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache)                  // 仓库管理
