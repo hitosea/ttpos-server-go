@@ -140,8 +140,9 @@ func (s *sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req
 		item.DeliveryDate = req.DeliveryDate
 	}
 
-	// 处理dropship商品的供应商交付逻辑
-	if err := s.processDripShopItems(ctx, salesOrder.Items); err != nil {
+	// 处理dropship商品的供应商交付逻辑，同时判断是否全部为直送商品
+	allDropShip, err := s.processDripShopItems(ctx, salesOrder.Items)
+	if err != nil {
 		g.Log().Warningf(ctx, "处理dropship商品失败: %v", err)
 		// 不中断流程，继续创建订单
 	}
@@ -209,11 +210,13 @@ func (s *sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req
 	j.GetJson("data").Scan(&salesOrder)
 
 	//20251226 任务 38171 ERP-品采销售订单审批需求，在品采流程中，把销售订单状态变为草稿，结合工作审批流。
-	// 提交订单
-	// _, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, salesOrder.Name, erp.DocstatusSubmitted)
-	// if err != nil {
-	// 	return nil, gerror.Wrapf(err, "提交内部销售订单失败")
-	// }
+	//20260305 任务 40167 如果全部物品都是直送(dropship)，SO 直接提交，跳过审批流。
+	if allDropShip {
+		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, salesOrder.Name, erp.DocstatusSubmitted)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "提交内部销售订单失败")
+		}
+	}
 	return salesOrder, nil
 }
 
@@ -638,21 +641,28 @@ func (s *sBuying) buildPurchaseOrderCountFilters(ctx context.Context, req *buyin
 //   - items: 销售订单商品列表
 //
 // 返回：
+//   - allDropShip: 是否所有商品都是dropship类型
 //   - error: 错误信息
-func (s *sBuying) processDripShopItems(ctx context.Context, items []*erp.SaleOrderItem) error {
+func (s *sBuying) processDripShopItems(ctx context.Context, items []*erp.SaleOrderItem) (allDropShip bool, err error) {
+	if len(items) == 0 {
+		return false, nil
+	}
+	allDropShip = true
 	for _, orderItem := range items {
 		// 获取商品信息
 		itemDetail, err := service.Item().GetItem(ctx, &item.GetItemReq{
 			ItemCode: orderItem.ItemCode,
 		})
 		if err != nil {
-			// 获取商品信息失败，记录日志但不中断流程
+			// 获取商品信息失败，记录日志但不中断流程，保守视为非dropship
 			g.Log().Warningf(ctx, "获取商品信息失败，跳过dropship处理: %s, err: %v", orderItem.ItemCode, err)
+			allDropShip = false
 			continue
 		}
 
 		// 检查是否为dropship商品
 		if !s.isDripShopItem(itemDetail) {
+			allDropShip = false
 			continue // 非dropship商品，跳过处理
 		}
 
@@ -671,7 +681,7 @@ func (s *sBuying) processDripShopItems(ctx context.Context, items []*erp.SaleOrd
 		}
 	}
 
-	return nil
+	return allDropShip, nil
 }
 
 // isDripShopItem 判断商品是否为dropship商品
