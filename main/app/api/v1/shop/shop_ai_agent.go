@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/ai_agent"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	purchaseorder "ttpos-server-go/app/service/purchase_order"
 	message "ttpos-server-go/app/service/rpc/message"
@@ -25,7 +26,7 @@ type AIAgentHandler struct {
 
 // RunAnalysisReq request for running procurement analysis.
 type RunAnalysisReq struct {
-	WarehouseUuid uint64 `json:"warehouse_uuid" form:"warehouse_uuid" binding:"required"`
+	WarehouseUuid uint64 `json:"warehouse_uuid" form:"warehouse_uuid" binding:"omitempty"`
 	ForecastDays  int    `json:"forecast_days" form:"forecast_days" binding:"omitempty,min=1,max=30"`
 }
 
@@ -47,7 +48,7 @@ type GetSessionReq struct {
 // @Tags 商家端.AI采购
 // @Accept json
 // @Produce json
-// @Param warehouse_uuid body uint64 true "仓库UUID"
+// @Param warehouse_uuid body uint64 false "仓库UUID（不传则使用默认仓库）"
 // @Param forecast_days body int false "预测天数(默认3天)" default(3)
 // @Security JwtToken
 // @Success 200 {object} map[string]any "分析结果"
@@ -60,9 +61,20 @@ func (h *AIAgentHandler) RunAnalysis(c *gin.Context) {
 	}
 
 	ctx := helper.GetContext(c)
-	sessionID := uuid.New().String()
 
-	state := h.agent.RunAnalysis(ctx, sessionID, request.WarehouseUuid, request.ForecastDays)
+	// 未传 warehouse_uuid 时自动使用默认仓库
+	warehouseUuid := request.WarehouseUuid
+	if warehouseUuid == 0 {
+		wh, err := repository.NewWarehouseRepo(ctx.GetDB()).GetDefaultWarehouse()
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("获取默认仓库失败"))
+			return
+		}
+		warehouseUuid = wh.Uuid
+	}
+
+	sessionID := uuid.New().String()
+	state := h.agent.RunAnalysis(ctx, sessionID, warehouseUuid, request.ForecastDays)
 
 	helper.Success(c, map[string]any{
 		"session_id": sessionID,
