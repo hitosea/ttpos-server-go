@@ -1023,6 +1023,51 @@ func (h *SettingHandler) SaveKioskSetting(c *gin.Context) {
 	helper.Success(c, "保存成功")
 }
 
+// GetStoreScanOrderSetting 获取门店点餐配置
+// @Summary 获取门店点餐配置
+// @Description 获取门店点餐配置，包含业务开关、外送服务、到店自取等
+// @Tags 商家端.门店点餐设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.StoreScanOrderSettingResp}
+// @Router /shop/setting/store_scan_order [get]
+func (h *SettingHandler) GetStoreScanOrderSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	result, err := h.settingSrv.GetStoreScanOrderSetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, result)
+}
+
+// SaveStoreScanOrderSetting 保存门店点餐配置
+// @Summary 保存门店点餐配置
+// @Description 保存门店点餐配置，包含业务开关、外送服务、到店自取等
+// @Tags 商家端.门店点餐设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaveStoreScanOrderSettingReq true "保存门店点餐配置"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/store_scan_order [post]
+func (h *SettingHandler) SaveStoreScanOrderSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var settingReq req.SaveStoreScanOrderSettingReq
+	if err := c.ShouldBindJSON(&settingReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	err := h.settingSrv.SaveStoreScanOrderSetting(ctx, settingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "保存成功")
+}
+
 // GetKitchenSetting 获取厨显设置
 // @Summary 获取厨显设置
 // @Description 获取厨显设置
@@ -1308,8 +1353,10 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/setting/kiosk", wrapper.GetKioskSetting)                          // 获取自助点餐机设置
 		privateApi.POST("/setting/kiosk", wrapper.SaveKioskSetting)                        // 保存自助点餐机设置
 		privateApi.POST("/setting/kiosk/carousel/upload", wrapper.UploadKioskCarousel)     // 上传自助点餐机轮播内容
-		privateApi.GET("/setting/kitchen", wrapper.GetKitchenSetting)                      // 获取厨显设置
-		privateApi.POST("/setting/kitchen", wrapper.SaveKitchenSetting)                    // 保存厨显设置
+		privateApi.GET("/setting/kitchen", wrapper.GetKitchenSetting)                          // 获取厨显设置
+		privateApi.POST("/setting/kitchen", wrapper.SaveKitchenSetting)                     // 保存厨显设置
+		privateApi.GET("/setting/store_scan_order", wrapper.GetStoreScanOrderSetting)       // 获取门店点餐配置
+		privateApi.POST("/setting/store_scan_order", wrapper.SaveStoreScanOrderSetting)     // 保存门店点餐配置
 
 		privateApi.GET("/setting/free_reason", wrapper.GetFreeReason)                     // 获取免单原因
 		privateApi.POST("/setting/free_reason/add", wrapper.AddFreeReason)                // 新增免单原因

@@ -92,6 +92,8 @@ type ISrv interface {
 	GetPaymentMethodList(ctx context.Context, opts ...bool) setting.PaymentMethodListResp                                                 // 获取支付方式列表
 	GetDataManageSetting(ctx context.Context) model.DataManageSetting                                                                     // 获取数据管理设置
 	GetShopAppMinVersion() string                                                                                                         // 获取 shop_app 配置的最小版本号
+	GetStoreScanOrderSetting(ctx context.Context) (setting.StoreScanOrderSettingResp, error)                                              // 获取门店点餐配置
+	SaveStoreScanOrderSetting(ctx context.Context, settingReq req.SaveStoreScanOrderSettingReq) error                                     // 保存门店点餐配置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -2565,4 +2567,84 @@ func (s *Srv) GetDataManageSetting(ctx context.Context) model.DataManageSetting 
 		}
 	}
 	return dataManageSetting
+}
+
+// GetStoreScanOrderSetting 获取门店点餐配置
+func (s *Srv) GetStoreScanOrderSetting(ctx context.Context) (setting.StoreScanOrderSettingResp, error) {
+	companySetting, err := s.GetCompanySetting(ctx)
+	if err != nil {
+		return setting.StoreScanOrderSettingResp{}, errors.WithMessage(err, "获取公司设置失败")
+	}
+
+	// 获取云平台设置（判断外送和到店自取是否可用）
+	// 外送服务可用性与 /member/base 接口的 is_open_rider 字段保持一致
+	deliveryAvailable := 0
+	if companySetting.IsOpenRider() {
+		deliveryAvailable = 1
+	}
+	selfPickupAvailable := 0
+	if companySetting.IsOpenMemberInstant == 1 {
+		selfPickupAvailable = 1
+	}
+
+	// 获取门店点餐设置
+	storeScanOrderSetting := s.getSettingByKey(ctx, constant.SettingStoreScanOrder)
+	if storeScanOrderSetting.Key == "" {
+		// 返回默认值
+		return setting.StoreScanOrderSettingResp{
+			IsEnabled:           0,
+			EnableDelivery:      0,
+			EnableSelfPickup:    0,
+			DeliveryAvailable:   deliveryAvailable,
+			SelfPickupAvailable: selfPickupAvailable,
+		}, nil
+	}
+
+	var result setting.StoreScanOrderSettingResp
+	if err := json.Unmarshal([]byte(storeScanOrderSetting.Values), &result); err != nil {
+		return setting.StoreScanOrderSettingResp{
+			IsEnabled:           0,
+			EnableDelivery:      0,
+			EnableSelfPickup:    0,
+			DeliveryAvailable:   deliveryAvailable,
+			SelfPickupAvailable: selfPickupAvailable,
+		}, nil
+	}
+
+	// 更新可用状态
+	result.DeliveryAvailable = deliveryAvailable
+	result.SelfPickupAvailable = selfPickupAvailable
+
+	return result, nil
+}
+
+// SaveStoreScanOrderSetting 保存门店点餐配置
+func (s *Srv) SaveStoreScanOrderSetting(ctx context.Context, settingReq req.SaveStoreScanOrderSettingReq) error {
+	companySetting, err := s.GetCompanySetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "获取公司设置失败")
+	}
+
+	// 校验：如果要开启外送服务，云平台必须已开启外送功能（与 is_open_rider 保持一致）
+	if settingReq.EnableDelivery == 1 && !companySetting.IsOpenRider() {
+		return errors.New("暂未开启，请联系销售代表")
+	}
+
+	// 校验：如果要开启到店自取，云平台必须已开启会员端即时点餐功能
+	if settingReq.EnableSelfPickup == 1 && companySetting.IsOpenMemberInstant != 1 {
+		return errors.New("暂未开启，请联系销售代表")
+	}
+
+	// 保存设置
+	data := setting.StoreScanOrderSettingResp{
+		IsEnabled:        settingReq.IsEnabled,
+		EnableDelivery:   settingReq.EnableDelivery,
+		EnableSelfPickup: settingReq.EnableSelfPickup,
+	}
+
+	if err := s.UpdateSetting(ctx, constant.SettingStoreScanOrder, data); err != nil {
+		return errors.WithMessage(err, "保存设置失败")
+	}
+
+	return nil
 }

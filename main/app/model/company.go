@@ -112,6 +112,7 @@ type CompanySetting struct {
 	EnableKiosk               int    `gorm:"column:enable_kiosk;type:int(11);default:0;comment:是否开启自助点餐机: 0-否 1-是;NOT NULL" json:"enable_kiosk"`
 	EnableGrabDelivery        int    `gorm:"column:enable_grab_delivery;type:int(11);default:0;comment:是否启用Grab外卖: 0-否 1-是;NOT NULL" json:"enable_grab_delivery"`
 	EnableLinemanDelivery     int    `gorm:"column:enable_lineman_delivery;type:int(11);default:0;comment:是否启用LINE MAN外卖: 0-否 1-是;NOT NULL" json:"enable_lineman_delivery"`
+	IsOpenMemberInstant       int    `gorm:"column:is_open_member_instant;type:int(10);default:0;comment:是否开启会员端即时点餐功能（扫码点餐到店自取）: 0不开启, 1开启;NOT NULL" json:"is_open_member_instant"`
 }
 
 // 连锁子店
