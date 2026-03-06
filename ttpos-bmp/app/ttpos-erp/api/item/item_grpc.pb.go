@@ -21,20 +21,21 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ItemService_GetItemList_FullMethodName             = "/item.ItemService/GetItemList"
-	ItemService_GetUomList_FullMethodName              = "/item.ItemService/GetUomList"
-	ItemService_GetUom_FullMethodName                  = "/item.ItemService/GetUom"
-	ItemService_SaveUom_FullMethodName                 = "/item.ItemService/SaveUom"
-	ItemService_DeleteUom_FullMethodName               = "/item.ItemService/DeleteUom"
-	ItemService_GetAttributeList_FullMethodName        = "/item.ItemService/GetAttributeList"
-	ItemService_SaveAttribute_FullMethodName           = "/item.ItemService/SaveAttribute"
-	ItemService_SaveItem_FullMethodName                = "/item.ItemService/SaveItem"
-	ItemService_GetItemStock_FullMethodName            = "/item.ItemService/GetItemStock"
-	ItemService_GetItem_FullMethodName                 = "/item.ItemService/GetItem"
-	ItemService_DeleteItem_FullMethodName              = "/item.ItemService/DeleteItem"
-	ItemService_SavePosAttribute_FullMethodName        = "/item.ItemService/SavePosAttribute"
-	ItemService_SavePosAddon_FullMethodName            = "/item.ItemService/SavePosAddon"
-	ItemService_CreateSingleVariantItem_FullMethodName = "/item.ItemService/CreateSingleVariantItem"
+	ItemService_GetItemList_FullMethodName              = "/item.ItemService/GetItemList"
+	ItemService_GetUomList_FullMethodName               = "/item.ItemService/GetUomList"
+	ItemService_GetUom_FullMethodName                   = "/item.ItemService/GetUom"
+	ItemService_SaveUom_FullMethodName                  = "/item.ItemService/SaveUom"
+	ItemService_DeleteUom_FullMethodName                = "/item.ItemService/DeleteUom"
+	ItemService_GetAttributeList_FullMethodName         = "/item.ItemService/GetAttributeList"
+	ItemService_SaveAttribute_FullMethodName            = "/item.ItemService/SaveAttribute"
+	ItemService_SaveItem_FullMethodName                 = "/item.ItemService/SaveItem"
+	ItemService_GetItemStock_FullMethodName             = "/item.ItemService/GetItemStock"
+	ItemService_GetItem_FullMethodName                  = "/item.ItemService/GetItem"
+	ItemService_DeleteItem_FullMethodName               = "/item.ItemService/DeleteItem"
+	ItemService_SavePosAttribute_FullMethodName         = "/item.ItemService/SavePosAttribute"
+	ItemService_SavePosAddon_FullMethodName             = "/item.ItemService/SavePosAddon"
+	ItemService_CreateSingleVariantItem_FullMethodName  = "/item.ItemService/CreateSingleVariantItem"
+	ItemService_GetItemDefaultWarehouses_FullMethodName = "/item.ItemService/GetItemDefaultWarehouses"
 )
 
 // ItemServiceClient is the client API for ItemService service.
@@ -90,6 +91,10 @@ type ItemServiceClient interface {
 	SavePosAddon(ctx context.Context, in *SavePosAddonReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// CreateSingleVariantItem 创建变体商品
 	CreateSingleVariantItem(ctx context.Context, in *CreateSingleVariantItemReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 批量获取物品默认仓库
+	// 根据物品编码列表和公司简称，查询每个物品在 item_defaults 中配置的默认仓库
+	// 返回：物品编码 -> 默认仓库编码的映射
+	GetItemDefaultWarehouses(ctx context.Context, in *GetItemDefaultWarehousesReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type itemServiceClient struct {
@@ -240,6 +245,16 @@ func (c *itemServiceClient) CreateSingleVariantItem(ctx context.Context, in *Cre
 	return out, nil
 }
 
+func (c *itemServiceClient) GetItemDefaultWarehouses(ctx context.Context, in *GetItemDefaultWarehousesReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, ItemService_GetItemDefaultWarehouses_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemServiceServer is the server API for ItemService service.
 // All implementations must embed UnimplementedItemServiceServer
 // for forward compatibility.
@@ -293,6 +308,10 @@ type ItemServiceServer interface {
 	SavePosAddon(context.Context, *SavePosAddonReq) (*api.ResponseInfo, error)
 	// CreateSingleVariantItem 创建变体商品
 	CreateSingleVariantItem(context.Context, *CreateSingleVariantItemReq) (*api.ResponseInfo, error)
+	// 批量获取物品默认仓库
+	// 根据物品编码列表和公司简称，查询每个物品在 item_defaults 中配置的默认仓库
+	// 返回：物品编码 -> 默认仓库编码的映射
+	GetItemDefaultWarehouses(context.Context, *GetItemDefaultWarehousesReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedItemServiceServer()
 }
 
@@ -344,6 +363,9 @@ func (UnimplementedItemServiceServer) SavePosAddon(context.Context, *SavePosAddo
 }
 func (UnimplementedItemServiceServer) CreateSingleVariantItem(context.Context, *CreateSingleVariantItemReq) (*api.ResponseInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSingleVariantItem not implemented")
+}
+func (UnimplementedItemServiceServer) GetItemDefaultWarehouses(context.Context, *GetItemDefaultWarehousesReq) (*api.ResponseInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetItemDefaultWarehouses not implemented")
 }
 func (UnimplementedItemServiceServer) mustEmbedUnimplementedItemServiceServer() {}
 func (UnimplementedItemServiceServer) testEmbeddedByValue()                     {}
@@ -618,6 +640,24 @@ func _ItemService_CreateSingleVariantItem_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ItemService_GetItemDefaultWarehouses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetItemDefaultWarehousesReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemServiceServer).GetItemDefaultWarehouses(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemService_GetItemDefaultWarehouses_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemServiceServer).GetItemDefaultWarehouses(ctx, req.(*GetItemDefaultWarehousesReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ItemService_ServiceDesc is the grpc.ServiceDesc for ItemService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -680,6 +720,10 @@ var ItemService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateSingleVariantItem",
 			Handler:    _ItemService_CreateSingleVariantItem_Handler,
+		},
+		{
+			MethodName: "GetItemDefaultWarehouses",
+			Handler:    _ItemService_GetItemDefaultWarehouses_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -2,6 +2,7 @@ package stock
 
 import (
 	"context"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
@@ -72,36 +73,31 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 		}
 		resp.PurchaseOrder = purchaseOrder.Name
 
-		saleOrder, err := service.Buying().CreateInnerSaleOrderFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
-			SourceName:      purchaseOrder.Name,
-			DeliveryDate:    requiredBy,
-			SourceWarehouse: req.SourceWarehouse,
+		// 按仓库拆分创建多个 SO（集采物品按默认仓库分组，直采物品单独一张 SO）
+		saleOrders, err := service.Buying().CreateSplitSaleOrdersFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
+			SourceName:   purchaseOrder.Name,
+			DeliveryDate: requiredBy,
 		})
 		if err != nil {
-			//需要回退之前创建的材料申请
 			g.Log().Warningf(ctx, "创建内部销售订单失败，回退之前创建的材料申请:%s\n %v", resp.MaterialRequestName, err)
+			// 回退已创建的 SO：已提交的取消，草稿的删除
+			for _, so := range saleOrders {
+				if so.Docstatus == 1 {
+					service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, so.Name, erp.DocstatusCancelled)
+				} else {
+					service.Document().Delete(ctx, &erp.ErpReq{DocType: erp.DocTypeSaleOrder, Name: so.Name})
+				}
+			}
 			service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, purchaseOrder.Name, erp.DocstatusCancelled)
 			service.Document().ChangeDocStatus(ctx, erp.DocTypeMaterialRequest, resp.MaterialRequestName, erp.DocstatusCancelled)
 			return rpc.ApiError(err.Error()), nil
 		}
-		resp.SalesOrder = saleOrder.Name
-
-		//直接创建发货单，后续接入物流方
-		// update: 需求36978 调整
-
-		// _, err = service.Buying().CreateDeliveryNoteFromInnerSaleOrder(ctx, &dto.CreateDeliveryNoteFromInnerSaleOrderReq{
-		// 	SourceName:      saleOrder.Name,
-		// 	SourceWarehouse: req.SourceWarehouse,
-		// 	//TargetWarehouse: "", // TODO 取在途仓
-		// })
-		// if err != nil {
-		// 	g.Log().Warningf(ctx, "创建发货单失败，回退之前创建的内部销售订单及材料申请:%s, %s\n %v", saleOrder.Name, resp.MaterialRequestName, err)
-		// 	service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, saleOrder.Name, erp.DocstatusCancelled)
-		// 	service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, purchaseOrder.Name, erp.DocstatusCancelled)
-		// 	service.Document().ChangeDocStatus(ctx, erp.DocTypeMaterialRequest, resp.MaterialRequestName, erp.DocstatusCancelled)
-
-		// 	return rpc.ApiError(err.Error()), nil
-		// }
+		// 收集所有 SO 名称（逗号分隔）
+		soNames := make([]string, 0, len(saleOrders))
+		for _, so := range saleOrders {
+			soNames = append(soNames, so.Name)
+		}
+		resp.SalesOrder = strings.Join(soNames, ",")
 	}
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("保存物品申请单成功", resp), nil

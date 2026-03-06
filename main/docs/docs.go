@@ -51657,6 +51657,10 @@ const docTemplate = `{
                         "reject"
                     ]
                 },
+                "is_confirm": {
+                    "description": "是否确认审核（跳过默认仓库校验提示）",
+                    "type": "boolean"
+                },
                 "reject_reason": {
                     "description": "驳回备注，可以为空最大100个字符",
                     "type": "string"

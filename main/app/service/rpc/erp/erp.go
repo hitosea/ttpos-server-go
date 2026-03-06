@@ -72,6 +72,7 @@ type IErpSrv interface {
 	DeleteSupplier(ctx context.Context, deleteSupplierReq req.DeleteSupplierReq) error
 
 	// 物品
+	GetItemDefaultWarehouses(ctx pkgCtx.Context, itemCodes []string, companyAbbr string, onlyItemDefaults bool) (map[string]string, error) // 批量获取物品默认仓库
 	AddMaterial(ctx pkgCtx.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)                                   // 添加物品
 	AddProductBomCard(ctx pkgCtx.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error)               // 添加成本卡
 	AddProduct(ctx pkgCtx.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)                                     // 添加商品

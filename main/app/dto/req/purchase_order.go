@@ -113,6 +113,7 @@ type PurchaseOrderApproveReq struct {
 	Action       string `json:"action" binding:"required,oneof=approve reject"` // 审核动作：approve-通过，reject-驳回
 	RejectReason string `json:"reject_reason"`                                  // 驳回备注，可以为空最大100个字符
 	Remark       string `json:"remark"`                                         // 批注, 可以为空最大100个字符
+	IsConfirm    bool   `json:"is_confirm"`                                     // 是否确认审核（跳过默认仓库校验提示）
 }
 
 // PurchaseOrderSubmitReq 提交采购订单请求

@@ -2290,6 +2290,112 @@ func (x *DeleteItemResp) GetItemCode() string {
 	return ""
 }
 
+// GetItemDefaultWarehousesReq 批量获取物品默认仓库请求
+type GetItemDefaultWarehousesReq struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ItemCodes        []string               `protobuf:"bytes,1,rep,name=item_codes,json=itemCodes,proto3" json:"item_codes,omitempty" dc:"物品编码列表"`                                                               // 物品编码列表
+	CompanyAbbr      string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，用于匹配 item_defaults 中的 company"`                             // 公司简称，用于匹配 item_defaults 中的 company
+	OnlyItemDefaults bool                   `protobuf:"varint,3,opt,name=only_item_defaults,json=onlyItemDefaults,proto3" json:"only_item_defaults,omitempty" dc:"仅检查 item_defaults 的 default_warehouse，不走回退逻辑"` // 仅检查 item_defaults 的 default_warehouse，不走回退逻辑
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GetItemDefaultWarehousesReq) Reset() {
+	*x = GetItemDefaultWarehousesReq{}
+	mi := &file_item_item_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetItemDefaultWarehousesReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetItemDefaultWarehousesReq) ProtoMessage() {}
+
+func (x *GetItemDefaultWarehousesReq) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetItemDefaultWarehousesReq.ProtoReflect.Descriptor instead.
+func (*GetItemDefaultWarehousesReq) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *GetItemDefaultWarehousesReq) GetItemCodes() []string {
+	if x != nil {
+		return x.ItemCodes
+	}
+	return nil
+}
+
+func (x *GetItemDefaultWarehousesReq) GetCompanyAbbr() string {
+	if x != nil {
+		return x.CompanyAbbr
+	}
+	return ""
+}
+
+func (x *GetItemDefaultWarehousesReq) GetOnlyItemDefaults() bool {
+	if x != nil {
+		return x.OnlyItemDefaults
+	}
+	return false
+}
+
+// GetItemDefaultWarehousesResp 批量获取物品默认仓库响应
+type GetItemDefaultWarehousesResp struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ItemWarehouses map[string]string      `protobuf:"bytes,1,rep,name=item_warehouses,json=itemWarehouses,proto3" json:"item_warehouses,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value" dc:"物品编码 -> 默认仓库编码"` // 物品编码 -> 默认仓库编码
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetItemDefaultWarehousesResp) Reset() {
+	*x = GetItemDefaultWarehousesResp{}
+	mi := &file_item_item_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetItemDefaultWarehousesResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetItemDefaultWarehousesResp) ProtoMessage() {}
+
+func (x *GetItemDefaultWarehousesResp) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetItemDefaultWarehousesResp.ProtoReflect.Descriptor instead.
+func (*GetItemDefaultWarehousesResp) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *GetItemDefaultWarehousesResp) GetItemWarehouses() map[string]string {
+	if x != nil {
+		return x.ItemWarehouses
+	}
+	return nil
+}
+
 var File_item_item_proto protoreflect.FileDescriptor
 
 const file_item_item_proto_rawDesc = "" +
@@ -2480,7 +2586,17 @@ const file_item_item_proto_rawDesc = "" +
 	"\rDeleteItemReq\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\"-\n" +
 	"\x0eDeleteItemResp\x12\x1b\n" +
-	"\titem_code\x18\x01 \x01(\tR\bitemCode*w\n" +
+	"\titem_code\x18\x01 \x01(\tR\bitemCode\"\x8d\x01\n" +
+	"\x1bGetItemDefaultWarehousesReq\x12\x1d\n" +
+	"\n" +
+	"item_codes\x18\x01 \x03(\tR\titemCodes\x12!\n" +
+	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12,\n" +
+	"\x12only_item_defaults\x18\x03 \x01(\bR\x10onlyItemDefaults\"\xc2\x01\n" +
+	"\x1cGetItemDefaultWarehousesResp\x12_\n" +
+	"\x0fitem_warehouses\x18\x01 \x03(\v26.item.GetItemDefaultWarehousesResp.ItemWarehousesEntryR\x0eitemWarehouses\x1aA\n" +
+	"\x13ItemWarehousesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*w\n" +
 	"\tItemGroup\x12\n" +
 	"\n" +
 	"\x06Others\x10\x00\x12\x0f\n" +
@@ -2489,7 +2605,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\aPackage\x10\x03\x12\x12\n" +
 	"\x0eVirtualProduct\x10\x04\x12\x10\n" +
 	"\fPosAttribute\x10\x05\x12\f\n" +
-	"\bPosAddon\x10\x062\xa0\x06\n" +
+	"\bPosAddon\x10\x062\xf2\x06\n" +
 	"\vItemService\x126\n" +
 	"\vGetItemList\x12\x14.item.GetItemListReq\x1a\x11.erp.ResponseInfo\x124\n" +
 	"\n" +
@@ -2506,7 +2622,8 @@ const file_item_item_proto_rawDesc = "" +
 	"DeleteItem\x12\x13.item.DeleteItemReq\x1a\x11.erp.ResponseInfo\x12@\n" +
 	"\x10SavePosAttribute\x12\x19.item.SavePosAttributeReq\x1a\x11.erp.ResponseInfo\x128\n" +
 	"\fSavePosAddon\x12\x15.item.SavePosAddonReq\x1a\x11.erp.ResponseInfo\x12N\n" +
-	"\x17CreateSingleVariantItem\x12 .item.CreateSingleVariantItemReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
+	"\x17CreateSingleVariantItem\x12 .item.CreateSingleVariantItemReq\x1a\x11.erp.ResponseInfo\x12P\n" +
+	"\x18GetItemDefaultWarehouses\x12!.item.GetItemDefaultWarehousesReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
 
 var (
 	file_item_item_proto_rawDescOnce sync.Once
@@ -2521,43 +2638,46 @@ func file_item_item_proto_rawDescGZIP() []byte {
 }
 
 var file_item_item_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_item_item_proto_goTypes = []any{
-	(ItemGroup)(0),                      // 0: item.ItemGroup
-	(*GetItemListReq)(nil),              // 1: item.GetItemListReq
-	(*GetItemListResp)(nil),             // 2: item.GetItemListResp
-	(*ItemInfo)(nil),                    // 3: item.ItemInfo
-	(*SupplierItem)(nil),                // 4: item.SupplierItem
-	(*ItemAttribute)(nil),               // 5: item.ItemAttribute
-	(*UomDetail)(nil),                   // 6: item.UomDetail
-	(*GetUomListReq)(nil),               // 7: item.GetUomListReq
-	(*GetUomListResp)(nil),              // 8: item.GetUomListResp
-	(*GetUomReq)(nil),                   // 9: item.GetUomReq
-	(*GetUomResp)(nil),                  // 10: item.GetUomResp
-	(*UomInfo)(nil),                     // 11: item.UomInfo
-	(*GetAttributeListReq)(nil),         // 12: item.GetAttributeListReq
-	(*AttributeInfo)(nil),               // 13: item.AttributeInfo
-	(*AttributeValueInfo)(nil),          // 14: item.AttributeValueInfo
-	(*GetAttributeListResp)(nil),        // 15: item.GetAttributeListResp
-	(*ItemStock)(nil),                   // 16: item.ItemStock
-	(*GetItemStockReq)(nil),             // 17: item.GetItemStockReq
-	(*GetItemStockResp)(nil),            // 18: item.GetItemStockResp
-	(*GetItemReq)(nil),                  // 19: item.GetItemReq
-	(*GetItemResp)(nil),                 // 20: item.GetItemResp
-	(*BomInfo)(nil),                     // 21: item.BomInfo
-	(*BomItem)(nil),                     // 22: item.BomItem
-	(*PosSpecItem)(nil),                 // 23: item.PosSpecItem
-	(*CreateSingleVariantItemReq)(nil),  // 24: item.CreateSingleVariantItemReq
-	(*CreateSingleVariantItemResp)(nil), // 25: item.CreateSingleVariantItemResp
-	(*SavePosAttributeReq)(nil),         // 26: item.SavePosAttributeReq
-	(*SavePosAttributeResp)(nil),        // 27: item.SavePosAttributeResp
-	(*SavePosAddonReq)(nil),             // 28: item.SavePosAddonReq
-	(*SavePosAddonResp)(nil),            // 29: item.SavePosAddonResp
-	(*DeleteUomReq)(nil),                // 30: item.DeleteUomReq
-	(*DeleteUomResp)(nil),               // 31: item.DeleteUomResp
-	(*DeleteItemReq)(nil),               // 32: item.DeleteItemReq
-	(*DeleteItemResp)(nil),              // 33: item.DeleteItemResp
-	(*api.ResponseInfo)(nil),            // 34: erp.ResponseInfo
+	(ItemGroup)(0),                       // 0: item.ItemGroup
+	(*GetItemListReq)(nil),               // 1: item.GetItemListReq
+	(*GetItemListResp)(nil),              // 2: item.GetItemListResp
+	(*ItemInfo)(nil),                     // 3: item.ItemInfo
+	(*SupplierItem)(nil),                 // 4: item.SupplierItem
+	(*ItemAttribute)(nil),                // 5: item.ItemAttribute
+	(*UomDetail)(nil),                    // 6: item.UomDetail
+	(*GetUomListReq)(nil),                // 7: item.GetUomListReq
+	(*GetUomListResp)(nil),               // 8: item.GetUomListResp
+	(*GetUomReq)(nil),                    // 9: item.GetUomReq
+	(*GetUomResp)(nil),                   // 10: item.GetUomResp
+	(*UomInfo)(nil),                      // 11: item.UomInfo
+	(*GetAttributeListReq)(nil),          // 12: item.GetAttributeListReq
+	(*AttributeInfo)(nil),                // 13: item.AttributeInfo
+	(*AttributeValueInfo)(nil),           // 14: item.AttributeValueInfo
+	(*GetAttributeListResp)(nil),         // 15: item.GetAttributeListResp
+	(*ItemStock)(nil),                    // 16: item.ItemStock
+	(*GetItemStockReq)(nil),              // 17: item.GetItemStockReq
+	(*GetItemStockResp)(nil),             // 18: item.GetItemStockResp
+	(*GetItemReq)(nil),                   // 19: item.GetItemReq
+	(*GetItemResp)(nil),                  // 20: item.GetItemResp
+	(*BomInfo)(nil),                      // 21: item.BomInfo
+	(*BomItem)(nil),                      // 22: item.BomItem
+	(*PosSpecItem)(nil),                  // 23: item.PosSpecItem
+	(*CreateSingleVariantItemReq)(nil),   // 24: item.CreateSingleVariantItemReq
+	(*CreateSingleVariantItemResp)(nil),  // 25: item.CreateSingleVariantItemResp
+	(*SavePosAttributeReq)(nil),          // 26: item.SavePosAttributeReq
+	(*SavePosAttributeResp)(nil),         // 27: item.SavePosAttributeResp
+	(*SavePosAddonReq)(nil),              // 28: item.SavePosAddonReq
+	(*SavePosAddonResp)(nil),             // 29: item.SavePosAddonResp
+	(*DeleteUomReq)(nil),                 // 30: item.DeleteUomReq
+	(*DeleteUomResp)(nil),                // 31: item.DeleteUomResp
+	(*DeleteItemReq)(nil),                // 32: item.DeleteItemReq
+	(*DeleteItemResp)(nil),               // 33: item.DeleteItemResp
+	(*GetItemDefaultWarehousesReq)(nil),  // 34: item.GetItemDefaultWarehousesReq
+	(*GetItemDefaultWarehousesResp)(nil), // 35: item.GetItemDefaultWarehousesResp
+	nil,                                  // 36: item.GetItemDefaultWarehousesResp.ItemWarehousesEntry
+	(*api.ResponseInfo)(nil),             // 37: erp.ResponseInfo
 }
 var file_item_item_proto_depIdxs = []int32{
 	0,  // 0: item.GetItemListReq.item_group:type_name -> item.ItemGroup
@@ -2580,39 +2700,42 @@ var file_item_item_proto_depIdxs = []int32{
 	3,  // 17: item.SavePosAttributeResp.item_info:type_name -> item.ItemInfo
 	23, // 18: item.SavePosAddonReq.item:type_name -> item.PosSpecItem
 	3,  // 19: item.SavePosAddonResp.item_info:type_name -> item.ItemInfo
-	1,  // 20: item.ItemService.GetItemList:input_type -> item.GetItemListReq
-	7,  // 21: item.ItemService.GetUomList:input_type -> item.GetUomListReq
-	9,  // 22: item.ItemService.GetUom:input_type -> item.GetUomReq
-	11, // 23: item.ItemService.SaveUom:input_type -> item.UomInfo
-	30, // 24: item.ItemService.DeleteUom:input_type -> item.DeleteUomReq
-	12, // 25: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
-	13, // 26: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
-	3,  // 27: item.ItemService.SaveItem:input_type -> item.ItemInfo
-	17, // 28: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
-	19, // 29: item.ItemService.GetItem:input_type -> item.GetItemReq
-	32, // 30: item.ItemService.DeleteItem:input_type -> item.DeleteItemReq
-	26, // 31: item.ItemService.SavePosAttribute:input_type -> item.SavePosAttributeReq
-	28, // 32: item.ItemService.SavePosAddon:input_type -> item.SavePosAddonReq
-	24, // 33: item.ItemService.CreateSingleVariantItem:input_type -> item.CreateSingleVariantItemReq
-	34, // 34: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
-	34, // 35: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
-	34, // 36: item.ItemService.GetUom:output_type -> erp.ResponseInfo
-	34, // 37: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
-	34, // 38: item.ItemService.DeleteUom:output_type -> erp.ResponseInfo
-	34, // 39: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
-	34, // 40: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
-	34, // 41: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
-	34, // 42: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
-	34, // 43: item.ItemService.GetItem:output_type -> erp.ResponseInfo
-	34, // 44: item.ItemService.DeleteItem:output_type -> erp.ResponseInfo
-	34, // 45: item.ItemService.SavePosAttribute:output_type -> erp.ResponseInfo
-	34, // 46: item.ItemService.SavePosAddon:output_type -> erp.ResponseInfo
-	34, // 47: item.ItemService.CreateSingleVariantItem:output_type -> erp.ResponseInfo
-	34, // [34:48] is the sub-list for method output_type
-	20, // [20:34] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	36, // 20: item.GetItemDefaultWarehousesResp.item_warehouses:type_name -> item.GetItemDefaultWarehousesResp.ItemWarehousesEntry
+	1,  // 21: item.ItemService.GetItemList:input_type -> item.GetItemListReq
+	7,  // 22: item.ItemService.GetUomList:input_type -> item.GetUomListReq
+	9,  // 23: item.ItemService.GetUom:input_type -> item.GetUomReq
+	11, // 24: item.ItemService.SaveUom:input_type -> item.UomInfo
+	30, // 25: item.ItemService.DeleteUom:input_type -> item.DeleteUomReq
+	12, // 26: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
+	13, // 27: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
+	3,  // 28: item.ItemService.SaveItem:input_type -> item.ItemInfo
+	17, // 29: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
+	19, // 30: item.ItemService.GetItem:input_type -> item.GetItemReq
+	32, // 31: item.ItemService.DeleteItem:input_type -> item.DeleteItemReq
+	26, // 32: item.ItemService.SavePosAttribute:input_type -> item.SavePosAttributeReq
+	28, // 33: item.ItemService.SavePosAddon:input_type -> item.SavePosAddonReq
+	24, // 34: item.ItemService.CreateSingleVariantItem:input_type -> item.CreateSingleVariantItemReq
+	34, // 35: item.ItemService.GetItemDefaultWarehouses:input_type -> item.GetItemDefaultWarehousesReq
+	37, // 36: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
+	37, // 37: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
+	37, // 38: item.ItemService.GetUom:output_type -> erp.ResponseInfo
+	37, // 39: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
+	37, // 40: item.ItemService.DeleteUom:output_type -> erp.ResponseInfo
+	37, // 41: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
+	37, // 42: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
+	37, // 43: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
+	37, // 44: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
+	37, // 45: item.ItemService.GetItem:output_type -> erp.ResponseInfo
+	37, // 46: item.ItemService.DeleteItem:output_type -> erp.ResponseInfo
+	37, // 47: item.ItemService.SavePosAttribute:output_type -> erp.ResponseInfo
+	37, // 48: item.ItemService.SavePosAddon:output_type -> erp.ResponseInfo
+	37, // 49: item.ItemService.CreateSingleVariantItem:output_type -> erp.ResponseInfo
+	37, // 50: item.ItemService.GetItemDefaultWarehouses:output_type -> erp.ResponseInfo
+	36, // [36:51] is the sub-list for method output_type
+	21, // [21:36] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_item_item_proto_init() }
@@ -2627,7 +2750,7 @@ func file_item_item_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_item_item_proto_rawDesc), len(file_item_item_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   33,
+			NumMessages:   36,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

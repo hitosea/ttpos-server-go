@@ -8,10 +8,11 @@ package file
 
 import (
 	context "context"
+	api "ttpos-bmp/app/ttpos-erp/api"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	api "ttpos-bmp/app/ttpos-erp/api"
 )
 
 // This is a compile-time assertion to ensure that this generated file
