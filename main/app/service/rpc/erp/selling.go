@@ -409,9 +409,11 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 		return errors.WithMessage(errors.New("商家erp未开启"))
 	}
 	// 判断支付方式名称是否已经存在
-	var exists int64
-	db.Model(&model.PaymentMethod{}).Where("(payment_name = ? and source = ?) or erpnext_payment = ?",
-		addPaymentMethodReq.Name, constant.PaymentMethodSourceDefault, addPaymentMethodReq.ErpnextPayment).Scopes(repository.NotDeleted).Count(&exists)
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	exists, _ := paymentMethodRepo.Count(
+		paymentMethodRepo.WhereNameSourceOrErpnextPayment(addPaymentMethodReq.Name, constant.PaymentMethodSourceDefault, addPaymentMethodReq.ErpnextPayment),
+		repository.NewCommonRepo().WhereBySoftDelete(),
+	)
 	if exists > 0 {
 		return errors.WithMessage(errors.New("支付方式已存在"))
 	}
@@ -435,8 +437,7 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 		return errors.WithMessage(errors.New(result.GetMessage()))
 	}
 	// 获取来源是1的支付方式code最大值
-	var maxCode = 20000
-	db.Model(&model.PaymentMethod{}).Where("source = ?", constant.PaymentMethodSourceDefault).Scopes(repository.NotDeleted).Select("ifnull(max(code), 20000) as code").Scan(&maxCode)
+	maxCode := paymentMethodRepo.GetMaxCodeBySource(constant.PaymentMethodSourceDefault, 20000)
 
 	isShowCashier := 0
 	isShowAssistant := 0

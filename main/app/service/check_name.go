@@ -1,13 +1,12 @@
 package service
 
 import (
-	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
-	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"unicode/utf8"
@@ -36,254 +35,50 @@ func NewCheckNameSrvImpl(dbm *database.DBManager) ICheckNameSrv {
 
 // CheckNameExists 检查名称是否存在
 func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.CheckNameRequest) (resp.CheckNameResp, error) {
-	keyMap := map[string]string{
-		"zh":   "zh_name",
-		"zhtw": "zh_tw_name",
-		"en":   "en_name",
-		"ja":   "ja_name",
-		"ko":   "ko_name",
-		"my":   "my_name",
-		"sv":   "sv_name",
-		"th":   "th_name",
-		"tr":   "tr_name",
+	// source -> 业务表名映射（不含前缀，由 repo 层自动拼接）
+	tableMap := map[string]string{
+		constant.CheckNameSourceUnit:             "product_unit",
+		constant.CheckNameSourceProduct:          "product_package",
+		constant.CheckNameSourceCategory:         "product_category",
+		constant.CheckNameSourceSauce:            "product_sauce",
+		constant.CheckNameSourceAttribute:        "product_attribute",
+		constant.CheckNameSourceAttributeGroup:   "product_attribute_group",
+		constant.CheckNameSourceFlavor:           "product_flavor",
+		constant.CheckNameSourceMaterial:         "material",
+		constant.CheckNameSourceMaterialCategory: "material_category",
+		constant.CheckNameSourceMaterialUnit:     "material_unit",
+		constant.CheckNameSourceWarehouse:        "warehouse",
+		constant.CheckNameSourceBatchTag:         "batch_tag",
 	}
 
-	var result []resp.CheckNameItem
+	// 套餐组不检查重名
+	if checkNameReq.Source == constant.CheckNameSourceProductPackageGroup {
+		result := make([]resp.CheckNameItem, 0, len(checkNameReq.Names))
+		for _, name := range checkNameReq.Names {
+			result = append(result, resp.CheckNameItem{
+				Lang:      name.Lang,
+				TextExist: false,
+			})
+		}
+		return resp.CheckNameResp{List: result}, nil
+	}
 
+	tableName, ok := tableMap[checkNameReq.Source]
+	if !ok {
+		return resp.CheckNameResp{}, errors.New("类型不支持")
+	}
+
+	multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	var result []resp.CheckNameItem
 	for _, name := range checkNameReq.Names {
-		// 如果语言不在keyMap中，则跳过
-		if _, ok := keyMap[name.Lang]; !ok {
+		count, err := multiLanguageNameRepo.CountNameExistsByTable(tableName, name.Lang, name.Text, checkNameReq.Uuid)
+		if err != nil {
 			continue
 		}
-
-		// 为每个查询创建新的数据库连接实例
-		db := s.dbm.GetDB(ctx.GetCompanyUuid())
-
-		switch checkNameReq.Source {
-		case constant.CheckNameSourceUnit:
-			{
-				var count int64
-				query := db.Model(&model.ProductUnit{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_product_unit.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_product_unit.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-		case constant.CheckNameSourceProductPackageGroup:
-			{
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: false,
-				})
-			}
-
-		case constant.CheckNameSourceProduct:
-			{
-				var count int64
-				query := db.Model(&model.ProductPackage{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_product_package.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_product_package.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-
-		case constant.CheckNameSourceCategory:
-			{
-				var count int64
-				query := db.Model(&model.ProductCategory{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_product_category.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_product_category.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-
-		case constant.CheckNameSourceSauce:
-			{
-				var count int64
-				query := db.Model(&model.ProductSauce{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_product_sauce.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_product_sauce.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-
-		case constant.CheckNameSourceAttribute:
-			{
-				var count int64
-				query := db.Model(&model.ProductAttribute{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_product_attribute.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_product_attribute.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-
-		case constant.CheckNameSourceAttributeGroup:
-			{
-				var count int64
-				query := db.Model(&model.ProductAttributeGroup{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_product_attribute_group.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_product_attribute_group.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-
-		case constant.CheckNameSourceFlavor:
-			{
-				var count int64
-				query := db.Model(&model.ProductFlavor{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_product_flavor.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_product_flavor.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-
-		case constant.CheckNameSourceMaterial:
-			{
-				var count int64
-				query := db.Model(&model.Material{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_material.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_material.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-
-		case constant.CheckNameSourceMaterialCategory:
-			{
-				var count int64
-				query := db.Model(&model.MaterialCategory{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_material_category.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_material_category.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-
-		case constant.CheckNameSourceMaterialUnit:
-			{
-				var count int64
-				query := db.Model(&model.MaterialUnit{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_material_unit.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_material_unit.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-		case constant.CheckNameSourceWarehouse:
-			{
-				var count int64
-				query := db.Model(&model.Warehouse{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_warehouse.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_warehouse.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-		case constant.CheckNameSourceBatchTag:
-			{
-				var count int64
-				query := db.Model(&model.BatchTag{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_batch_tag.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_batch_tag.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
-				result = append(result, resp.CheckNameItem{
-					Lang:      name.Lang,
-					TextExist: count > 0,
-				})
-			}
-		default:
-			return resp.CheckNameResp{}, errors.New("类型不支持")
-		}
+		result = append(result, resp.CheckNameItem{
+			Lang:      name.Lang,
+			TextExist: count > 0,
+		})
 	}
 
 	return resp.CheckNameResp{

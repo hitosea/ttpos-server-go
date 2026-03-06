@@ -27,6 +27,7 @@ type IOrderSourceQueryRepo interface {
 	FindByUuidWithDeleted(uuid uint64) (*model.OrderSource, error)
 	FindByUuidsWithDeleted(uuids []uint64) ([]*model.OrderSource, error) // 批量根据UUID查找外卖来源（包含已删除）
 	CountOrdersBySourceUuid(uuid uint64) (int64, error)
+	Count() (int64, error) // 获取外卖来源数量
 }
 
 // NewOrderSourceRepo 创建外卖来源仓库
@@ -142,6 +143,13 @@ func (r *OrderSourceRepoImpl) FindByUuidsWithDeleted(uuids []uint64) ([]*model.O
 	}
 
 	return orderSources, nil
+}
+
+// Count 获取外卖来源数量
+func (r *OrderSourceRepoImpl) Count() (int64, error) {
+	var count int64
+	err := r.db.Model(&model.OrderSource{}).Where("delete_time = 0").Count(&count).Error
+	return count, errors.WithMessage(err)
 }
 
 // CountOrdersBySourceUuid 统计使用该外卖来源的订单数量

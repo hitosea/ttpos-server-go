@@ -851,10 +851,8 @@ func (s *stockLossSrv) ApproveStockLoss(ctx context.Context, approveReq req.Stoc
 			if newStock < 0 {
 				newStock = 0 // 防止负库存
 			}
-			if err := tx.Model(&model.WarehouseItem{}).
-				Where("warehouse_uuid = ?", stockLoss.WarehouseUuid).
-				Where("material_uuid = ?", item.MaterialUuid).
-				Update("stock", newStock).Error; err != nil {
+			if err := repository.NewWarehouseItemRepo(tx).UpdateStockByWarehouseAndMaterial(
+				stockLoss.WarehouseUuid, item.MaterialUuid, newStock); err != nil {
 				return errors.WithMessage(errors.New("更新仓库物品库存失败"), err.Error())
 			}
 
@@ -886,7 +884,7 @@ func (s *stockLossSrv) ApproveStockLoss(ctx context.Context, approveReq req.Stoc
 		}
 
 		if len(warehouseLogs) > 0 {
-			if err := tx.Create(&warehouseLogs).Error; err != nil {
+			if err := repository.NewWarehouseInOutLogRepo(tx).CreateBatch(warehouseLogs); err != nil {
 				return errors.WithMessage(errors.New("创建报损出库记录失败"), err.Error())
 			}
 		}

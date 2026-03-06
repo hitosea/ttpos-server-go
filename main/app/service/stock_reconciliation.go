@@ -938,20 +938,20 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 			}
 			stockQuantity := item.CountedQuantity.Truncate(3).InexactFloat64()
 			_, exists := warehouseMaterialUuids[item.MaterialUuid]
+			txWarehouseItemRepo := repository.NewWarehouseItemRepo(tx)
 			if !exists { // 仓库不存在该物品，则新增仓库物品，库存数量为实盘数量
-				if err := tx.Create(&model.WarehouseItem{
+				if err := txWarehouseItemRepo.Create(&model.WarehouseItem{
 					WarehouseUuid: stockReconciliation.WarehouseUuid,
 					MaterialUuid:  item.MaterialUuid,
 					MaterialCode:  item.Material.Code,
 					Stock:         stockQuantity,
 					Valuation:     1.0, // 和同步仓库物品库存一致
-				}).Error; err != nil {
+				}); err != nil {
 					return errors.WithMessage(errors.New("创建仓库物品失败"), err.Error())
 				}
 			} else { // 仓库存在该物品，则更新仓库物品库存为实盘数量
-				if err := tx.Model(&model.WarehouseItem{}).
-					Where("warehouse_uuid = ?", stockReconciliation.WarehouseUuid).
-					Where("material_uuid = ?", item.MaterialUuid).Update("stock", stockQuantity).Error; err != nil {
+				if err := txWarehouseItemRepo.UpdateStockByWarehouseAndMaterial(
+					stockReconciliation.WarehouseUuid, item.MaterialUuid, stockQuantity); err != nil {
 					return errors.WithMessage(errors.New("更新仓库物品库存失败"), err.Error())
 				}
 			}
@@ -982,7 +982,7 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 			}
 		}
 		if len(warehouseLogs) > 0 {
-			if err := tx.Create(&warehouseLogs).Error; err != nil {
+			if err := repository.NewWarehouseInOutLogRepo(tx).CreateBatch(warehouseLogs); err != nil {
 				return errors.WithMessage(errors.New("创建盘盈盘亏出入库记录失败"), err.Error())
 			}
 		}
@@ -1321,8 +1321,12 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 			itemMap[item.MaterialUuid] = item
 		}
 
-		var materials []model.Material
-		db.Model(&model.Material{}).Preload("MultiLanguageName").Where("uuid IN (?)", newMaterialUuids).Find(&materials)
+		materialRepo := repository.NewMaterialRepo(db)
+		materialPtrs, _ := materialRepo.GetMaterialByUuids(newMaterialUuids, materialRepo.WithMultiLanguageName())
+		materials := make([]model.Material, 0, len(materialPtrs))
+		for _, m := range materialPtrs {
+			materials = append(materials, *m)
+		}
 
 		for _, material := range materials {
 			countedQuantity := itemMap[material.Uuid].CountedQuantity

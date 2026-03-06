@@ -7,7 +7,7 @@ import (
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 
 	cc "ttpos-server-go/pkg/context"
 	pkgCtx "ttpos-server-go/pkg/context"
@@ -201,7 +201,8 @@ func (s *erpSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.Updat
 	})
 	// 总部供应商更新ttpos供应商名称
 	if updateSupplierReq.Name == constant.ErpHeadquartersSupplierCode {
-		s.dbm.GetDB(updateSupplierReq.CompanyUuid).Model(&model.Supplier{}).Where("erp_code = ? AND headquarter_uuid = 0", updateSupplierReq.Name).Update("name", updateSupplierReq.SupplierName)
+		supplierRepo := repository.NewSupplierRepo(s.dbm.GetDB(updateSupplierReq.CompanyUuid))
+		supplierRepo.UpdateNameByHeadquarterErpCode(updateSupplierReq.Name, updateSupplierReq.SupplierName)
 	}
 	if err != nil {
 		return err

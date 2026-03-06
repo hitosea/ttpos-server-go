@@ -188,8 +188,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	}
 	// 查询总店指定仓库物品数量
 	hqDb := s.dbm.GetDB(hqUuid)
-	var warehouseItems []model.WarehouseItem
-	hqDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid = (?)", hqDb.Model(&model.Warehouse{}).Select("uuid").Where("erp_code = ?", req.WarehouseErpCode).Limit(1)).Find(&warehouseItems)
+	hqWarehouseItemRepo := repository.NewWarehouseItemRepo(hqDb)
+	warehouseItems, _ := hqWarehouseItemRepo.GetByWarehouseErpCode(req.WarehouseErpCode)
 	for _, warehouseItem := range warehouseItems {
 		availableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
 	}
@@ -651,7 +651,12 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		}(),
 		PurchaseUnitUuid:           material.PurchaseUnitUuid,
 		FromPurchaseUnitUuid:       fromPurchaseUnitUuid,
-		CostUnitName:               material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		CostUnitName: func() string {
+			if material.CostUnit == nil {
+				return ""
+			}
+			return material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+		}(),
 		CostUnitUuid:               material.CostUnitUuid,
 		FromCostUnitUuid:           fromCostUnitUuid,
 		PurchaseUnitLocaleName:     purchaseUnitLocaleName,
@@ -3519,13 +3524,18 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 				}
 				if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeFlavor { // 规格商品
 					// 更新product_bom表的成本卡uuid
-					if err := tx.Model(&model.ProductBom{}).Where("uuid = ?", objectByItemCodeResp.ProductBom.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
+					txProductBomRepo := repository.NewProductBomRepo(tx)
+					commonRepo := repository.NewCommonRepo()
+					if err := txProductBomRepo.UpdateProductBom(
+						map[string]any{"product_bom_card_uuid": bomCard.Uuid},
+						commonRepo.WhereByUuid(objectByItemCodeResp.ProductBom.Uuid),
+					); err != nil {
 						logger.Logger.Info("同步成本卡时，更新product_bom表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
 						continue
 					}
 				} else if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeSauce { // 小料
 					// 更新product_sauce表的成本卡uuid
-					if err := tx.Model(&model.ProductSauce{}).Where("uuid = ?", objectByItemCodeResp.ProductSauce.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
+					if err := repository.NewProductSauceRepo(tx).UpdateProductBomCard(objectByItemCodeResp.ProductSauce.Uuid, bomCard.Uuid); err != nil {
 						logger.Logger.Info("同步成本卡时，更新product_sauce表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
 						continue
 					}
@@ -3579,12 +3589,17 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			// 删除所有总部的成本卡
-			tx.Model(&model.ProductBomCard{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.ProductBomCard{})
+			txBomCardRepo := repository.NewProductBomCardRepo(tx)
+			if err := txBomCardRepo.HardDeleteByHeadquarterUuid(companySetting.HeadquarterUuid); err != nil {
+				return errors.WithMessage(err, "删除总部成本卡失败")
+			}
 			productBomCardUuids := []uint64{}
 			for _, productBomCard := range productBomCardList {
 				productBomCardUuids = append(productBomCardUuids, productBomCard.Uuid)
 			}
-			tx.Model(&model.RelatedMaterial{}).Where("related_uuid IN (?)", productBomCardUuids).Delete(&model.RelatedMaterial{})
+			if err := txBomCardRepo.HardDeleteRelatedMaterialsByUuids(productBomCardUuids); err != nil {
+				return errors.WithMessage(err, "删除总部成本卡关联物料失败")
+			}
 
 			for _, productBomCard := range productBomCardList {
 				// 过滤掉数据不完整的成本卡（如无多语言名称）
@@ -3998,7 +4013,8 @@ func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid 
 
 	var companyUuids []uint64
 	if companyUuid == 0 {
-		s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Scopes(repository.NotDeleted).Pluck("uuid", &companyUuids)
+		companyRepo := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB))
+		companyUuids, _ = companyRepo.GetAllCompanyUuids()
 	} else {
 		companyUuids = append(companyUuids, companyUuid)
 	}
@@ -4466,8 +4482,8 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 			for warehouseUuid, stock := range warehouseStocks {
 				warehouseName, exists := warehouseNameMap[warehouseUuid]
 				if !exists {
-					var warehouse model.Warehouse
-					err := s.dbm.GetDB(companyUuid).Model(&model.Warehouse{}).Preload("MultiLanguageName").Where("uuid = ?", warehouseUuid).Find(&warehouse).Error
+					warehouseRepo := repository.NewWarehouseRepo(s.dbm.GetDB(companyUuid))
+					warehouse, err := warehouseRepo.GetByUuid(warehouseUuid, warehouseRepo.WithMultiLanguageName())
 					if err != nil {
 						logger.Logger.Error("查询仓库失败",
 							zap.Uint64("company_uuid", companyUuid),

@@ -101,7 +101,8 @@ func (s *nationalitySrv) Create(ctx context.Context, req req.NationalityCreateRe
 	}
 	multiLanguageName.InitByLocaleResponse(req.LocaleName)
 
-	if err := db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error; err != nil {
+	multiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(multiLanguageName)
+	if err != nil {
 		return resp.NationalityCreateResp{}, errors.WithMessage(err, "创建多语言名称失败")
 	}
 
@@ -112,7 +113,7 @@ func (s *nationalitySrv) Create(ctx context.Context, req req.NationalityCreateRe
 			CreateTime: currentTime,
 			UpdateTime: currentTime,
 		},
-		MultiLanguageNameUuid: multiLangUuid,
+		MultiLanguageNameUuid: multiLanguageNameUuid,
 		Sort:                  req.Sort,
 		Status:                1, // 默认启用
 	}
@@ -149,9 +150,10 @@ func (s *nationalitySrv) Update(ctx context.Context, req req.NationalityUpdateRe
 	}
 
 	// 更新多语言名称
-	err = db.Model(&model.MultiLanguageName{}).
-		Where("uuid = ?", nationality.MultiLanguageNameUuid).
-		Updates(req.LocaleName.ToMultiLanguageUpdateMap(currentTime)).Error
+	err = repository.NewMultiLanguageNameRepo(db).UpdateMultiLanguageNameData(
+		req.LocaleName.ToMultiLanguageUpdateMap(currentTime),
+		repository.CommonRepo.WhereByUuid(nationality.MultiLanguageNameUuid),
+	)
 	if err != nil {
 		return errors.WithMessage(err, "更新多语言名称失败")
 	}

@@ -145,8 +145,7 @@ func (s *DataManageSrv) SetDataManage(ctx context.Context, req shop_req.SetDataM
 
 		// 更新公司数据管理状态
 		setting.IsEnableDataManage = req.IsEnableDataManage
-		s.settingSrv.UpdateSetting(ctx, constant.SettingDataManage, setting)
-		if err != nil {
+		if err := s.settingSrv.UpdateSetting(ctx, constant.SettingDataManage, setting); err != nil {
 			return err
 		}
 
@@ -162,17 +161,58 @@ func (s *DataManageSrv) SetDataManage(ctx context.Context, req shop_req.SetDataM
 			}
 		}
 
-		// 删除数据管理数据
-		err = dataManageRepo.Delete(
+		// 增量更新数据管理数据
+		commonRepo := repository.NewCommonRepo()
+		existingUuids := dataManageRepo.GetDataUuids(
 			dataManageRepo.WhereByType(model.DataManageTypeOrder),
+			commonRepo.WhereBySoftDelete(),
 		)
-		if err != nil {
-			return err
+
+		existingSet := make(map[uint64]struct{}, len(existingUuids))
+		for _, uid := range existingUuids {
+			existingSet[uid] = struct{}{}
 		}
-		if len(req.SaleBillUuids) > 0 {
+		newSet := make(map[uint64]struct{}, len(req.SaleBillUuids))
+		for _, uid := range req.SaleBillUuids {
+			newSet[uid] = struct{}{}
+		}
+
+		// 需要删除的（旧有新无）
+		toDelete := make([]uint64, 0)
+		for _, uid := range existingUuids {
+			if _, ok := newSet[uid]; !ok {
+				toDelete = append(toDelete, uid)
+			}
+		}
+		// 需要新增的（新有旧无）
+		toAdd := make([]uint64, 0)
+		for _, uid := range req.SaleBillUuids {
+			if _, ok := existingSet[uid]; !ok {
+				toAdd = append(toAdd, uid)
+			}
+		}
+
+		// 批量删除
+		const deleteBatchSize = 1000
+		for i := 0; i < len(toDelete); i += deleteBatchSize {
+			end := i + deleteBatchSize
+			if end > len(toDelete) {
+				end = len(toDelete)
+			}
+			if err = dataManageRepo.Delete(
+				dataManageRepo.WhereByType(model.DataManageTypeOrder),
+				dataManageRepo.WhereInDataUuids(toDelete[i:end]),
+			); err != nil {
+				return err
+			}
+		}
+
+		// 批量新增
+		if len(toAdd) > 0 {
 			staff := ctx.GetStaff()
-			dataManages := []*model.DataManage{}
-			for _, saleBillUuid := range req.SaleBillUuids {
+			now := time.Now().Unix()
+			dataManages := make([]*model.DataManage, 0, len(toAdd))
+			for _, saleBillUuid := range toAdd {
 				uuid, err := utils.GetID()
 				if err != nil {
 					return err
@@ -180,16 +220,15 @@ func (s *DataManageSrv) SetDataManage(ctx context.Context, req shop_req.SetDataM
 				dataManages = append(dataManages, &model.DataManage{
 					BaseModel: model.BaseModel{
 						Uuid:       uuid,
-						CreateTime: time.Now().Unix(),
-						UpdateTime: time.Now().Unix(),
+						CreateTime: now,
+						UpdateTime: now,
 					},
 					Type:      model.DataManageTypeOrder,
 					DataUuid:  saleBillUuid,
 					StaffUuid: staff.Uuid,
 				})
 			}
-			err = dataManageRepo.Creates(dataManages)
-			if err != nil {
+			if err = dataManageRepo.Creates(dataManages); err != nil {
 				return err
 			}
 		}

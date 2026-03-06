@@ -19,6 +19,12 @@ type IMarketingCouponRepo interface {
 	CreateCommonCouponRecordCancel(marketingCouponUuid uint64, leftCount int) error              // 创建通用优惠券记录（反结账退还）
 	UpdateCommonCouponCount(marketingCouponUuid uint64) error                                    // 通用优惠券核销，数量减1
 	UpdateCommonCouponCountCancel(marketingCouponUuid uint64) error                              // 通用优惠券取消核销，数量加1，反结账场景
+	SoftDeleteByHeadquarterExcludeUuids(headquarterUuid uint64, excludeUuids []uint64) error     // 软删除总部优惠券（排除指定uuid）
+	FindHeadquarterByUuids(uuids []uint64) ([]model.MarketingCoupon, error)                      // 根据uuid列表查找总部优惠券
+	UnscopedDeleteByUuid(uuid uint64) error                                                      // 硬删除优惠券
+	CreateCoupon(coupon *model.MarketingCoupon) error                                            // 创建优惠券
+	UnscopedDeleteByHeadquarter(headquarterUuid uint64) error                                    // 硬删除指定总部的所有优惠券
+	FindAllHeadquarter() ([]model.MarketingCoupon, error)                                        // 查找所有总部优惠券
 }
 
 // IMarketingCouponQuery 营销优惠券查询接口,查询单独定义一个接口，方便后续扩展缓存
@@ -249,4 +255,50 @@ func (r *MarketingCouponRepo) UpdateCommonCouponCount(marketingCouponUuid uint64
 // UpdateCommonCouponCountCancel 更新通用优惠券数量
 func (r *MarketingCouponRepo) UpdateCommonCouponCountCancel(marketingCouponUuid uint64) error {
 	return r.db.Model(&model.MarketingCoupon{}).Where("uuid = ?", marketingCouponUuid).Update("count", gorm.Expr("count + 1")).Error
+}
+
+// SoftDeleteByHeadquarterExcludeUuids 软删除总部优惠券（排除指定uuid）
+func (r *MarketingCouponRepo) SoftDeleteByHeadquarterExcludeUuids(headquarterUuid uint64, excludeUuids []uint64) error {
+	return r.db.Model(&model.MarketingCoupon{}).
+		Where("headquarter_uuid = ? AND delete_time = 0 AND uuid NOT IN (?)", headquarterUuid, excludeUuids).
+		Update("delete_time", time.Now().Unix()).Error
+}
+
+// FindHeadquarterByUuids 根据uuid列表查找总部优惠券
+func (r *MarketingCouponRepo) FindHeadquarterByUuids(uuids []uint64) ([]model.MarketingCoupon, error) {
+	coupons := make([]model.MarketingCoupon, 0)
+	err := r.db.Model(&model.MarketingCoupon{}).
+		Where("headquarter_uuid = 0 AND delete_time = 0 AND uuid IN (?)", uuids).
+		Find(&coupons).Error
+	if err != nil {
+		return nil, err
+	}
+	return coupons, nil
+}
+
+// UnscopedDeleteByUuid 硬删除优惠券
+func (r *MarketingCouponRepo) UnscopedDeleteByUuid(uuid uint64) error {
+	return r.db.Unscoped().Where("uuid = ?", uuid).Delete(&model.MarketingCoupon{}).Error
+}
+
+// CreateCoupon 创建优惠券
+func (r *MarketingCouponRepo) CreateCoupon(coupon *model.MarketingCoupon) error {
+	return r.db.Create(coupon).Error
+}
+
+// UnscopedDeleteByHeadquarter 硬删除指定总部的所有优惠券
+func (r *MarketingCouponRepo) UnscopedDeleteByHeadquarter(headquarterUuid uint64) error {
+	return r.db.Unscoped().Where("headquarter_uuid = ?", headquarterUuid).Delete(&model.MarketingCoupon{}).Error
+}
+
+// FindAllHeadquarter 查找所有总部优惠券
+func (r *MarketingCouponRepo) FindAllHeadquarter() ([]model.MarketingCoupon, error) {
+	coupons := make([]model.MarketingCoupon, 0)
+	err := r.db.Model(&model.MarketingCoupon{}).
+		Where("headquarter_uuid = 0 AND delete_time = 0").
+		Find(&coupons).Error
+	if err != nil {
+		return nil, err
+	}
+	return coupons, nil
 }

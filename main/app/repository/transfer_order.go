@@ -17,6 +17,7 @@ type ITransferOrderRepo interface {
 	Create(transferOrder *model.TransferOrder) error
 	Update(transferOrder *model.TransferOrder) error
 	Delete(uuid uint64) error
+	HardDelete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.TransferOrder, error)
 	GetByOrderNo(orderNo string, opts ...DBOption) (*model.TransferOrder, error)
 
@@ -88,6 +89,11 @@ func (r *TransferOrderRepoImpl) Update(transferOrder *model.TransferOrder) error
 // Delete 删除调拨单（软删除）
 func (r *TransferOrderRepoImpl) Delete(uuid uint64) error {
 	return r.db.Model(&model.TransferOrder{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error
+}
+
+// HardDelete 硬删除调拨单
+func (r *TransferOrderRepoImpl) HardDelete(uuid uint64) error {
+	return r.db.Unscoped().Where("uuid = ?", uuid).Delete(&model.TransferOrder{}).Error
 }
 
 // GetByUuid 根据UUID获取调拨单

@@ -22,6 +22,14 @@ type ISupplierRepo interface {
 	IsNameExists(name string, excludeUuid uint64) (bool, error)
 	IsCodeExists(code string, excludeUuid uint64) (bool, error)
 
+	// 批量操作
+	CreateBatch(suppliers []model.Supplier) error
+	SoftDeleteByUuids(uuids []uint64) error
+	HardDeleteHeadquarterSuppliers() error
+
+	// 按总部ERP编码更新供应商名称
+	UpdateNameByHeadquarterErpCode(erpCode string, name string) error
+
 	// 条件查询选项
 	WhereNameOrCodeLike(name string) DBOption
 	OrderByCreateTime(desc bool) DBOption
@@ -149,6 +157,26 @@ func (r *SupplierRepoImpl) IsCodeExists(code string, excludeUuid uint64) (bool, 
 		return false, err
 	}
 	return count > 0, nil
+}
+
+// CreateBatch 批量创建供应商
+func (r *SupplierRepoImpl) CreateBatch(suppliers []model.Supplier) error {
+	return r.db.Create(&suppliers).Error
+}
+
+// SoftDeleteByUuids 批量软删除供应商
+func (r *SupplierRepoImpl) SoftDeleteByUuids(uuids []uint64) error {
+	return r.db.Model(&model.Supplier{}).Where("uuid IN (?)", uuids).Update("delete_time", time.Now().Unix()).Error
+}
+
+// HardDeleteHeadquarterSuppliers 硬删除总部同步的供应商
+func (r *SupplierRepoImpl) HardDeleteHeadquarterSuppliers() error {
+	return r.db.Where("headquarter_uuid > 0").Delete(&model.Supplier{}).Error
+}
+
+// UpdateNameByHeadquarterErpCode 按总部ERP编码更新供应商名称
+func (r *SupplierRepoImpl) UpdateNameByHeadquarterErpCode(erpCode string, name string) error {
+	return r.db.Model(&model.Supplier{}).Where("headquarter_uuid = 0 AND erp_code = ?", erpCode).Update("name", name).Error
 }
 
 // applyOptions 应用查询选项

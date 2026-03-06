@@ -22097,6 +22097,126 @@
                 }
             }
         },
+        "/shop/ai/procurement/analysis": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "分析仓库库存、预测需求、生成采购建议。返回分析结果和采购提案，等待审核。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.AI采购"
+                ],
+                "summary": "AI 智能采购分析",
+                "parameters": [
+                    {
+                        "description": "采购分析请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/shop.RunAnalysisReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分析结果",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/ai/procurement/review": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "对AI生成的采购提案进行审核。通过后自动创建采购订单。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.AI采购"
+                ],
+                "summary": "审核采购提案",
+                "parameters": [
+                    {
+                        "description": "审核请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/shop.SubmitReviewReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "审核结果",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/ai/procurement/session": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "查询AI采购分析会话的当前状态。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.AI采购"
+                ],
+                "summary": "查询分析状态",
+                "parameters": [
+                    {
+                        "description": "查询请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/shop.GetSessionReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "会话状态",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/shop/ai/translate": {
             "post": {
                 "security": [
@@ -70227,6 +70347,53 @@
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "shop.GetSessionReq": {
+            "type": "object",
+            "required": [
+                "session_id"
+            ],
+            "properties": {
+                "session_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "shop.RunAnalysisReq": {
+            "type": "object",
+            "properties": {
+                "forecast_days": {
+                    "type": "integer",
+                    "maximum": 30,
+                    "minimum": 1
+                },
+                "warehouse_uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "shop.SubmitReviewReq": {
+            "type": "object",
+            "required": [
+                "decision",
+                "session_id"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "decision": {
+                    "type": "string",
+                    "enum": [
+                        "approved",
+                        "rejected"
+                    ]
+                },
+                "session_id": {
                     "type": "string"
                 }
             }
