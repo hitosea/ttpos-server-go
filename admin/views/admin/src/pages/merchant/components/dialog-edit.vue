@@ -119,6 +119,13 @@
             <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
         </el-form-item>
+        <!-- 扫码点餐到店自取 -->
+        <el-form-item :label="$t('扫码点餐到店自取')" prop="is_open_member_instant">
+          <el-radio-group v-model="formData.is_open_member_instant">
+            <el-radio :value="1">{{ $t('开启') }}</el-radio>
+            <el-radio :value="0">{{ $t('关闭') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item :label="$t('短信服务')" prop="enable_sms">
           <el-radio-group v-model="formData.enable_sms" @click="handleChangeSms">
             <el-radio :value="1">{{ $t('开启') }}</el-radio>
@@ -398,6 +405,7 @@
     enable_lineman_delivery: 0, // 是否开启LINE MAN外卖: 0不开启, 1开启
     enable_data_management: 0, // 是否启用数据管理能力: 0不开启, 1开启
     enable_kiosk: 0, // 是否开启自助点餐机: 0不开启, 1开启
+    is_open_member_instant: 0, // 是否开启扫码点餐到店自取: 0不开启, 1开启
   });
 
   const limitTable = ref(false);
@@ -678,6 +686,7 @@
         enable_lineman_delivery: props.detail?.enable_lineman_delivery || 0, //
         enable_data_management: props.detail?.enable_data_management || 0, //
         enable_kiosk: props.detail?.enable_kiosk || 0, //
+        is_open_member_instant: props.detail?.is_open_member_instant || 0, //
       };
       props.detail?.printer_limit == -1 ? (limitPrinter.value = true) : (limitPrinter.value = false);
       props.detail?.table_limit == -1 ? (limitTable.value = true) : (limitTable.value = false);

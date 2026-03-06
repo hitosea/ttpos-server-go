@@ -2577,6 +2577,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `enable_table_map` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用桌台地图能力：0-否；1-是',
     `enable_data_management` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用数据管理能力：0-否；1-是',
     `enable_kiosk` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用自助点餐机：0-否；1-是',
+    `is_open_member_instant` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启会员端即时点餐功能（扫码点餐到店自取）: 0不开启, 1开启',
     `enable_grab_delivery` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用Grab外卖：0-否；1-是',
     `enable_lineman_delivery` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用LINE MAN外卖：0-否；1-是',
     `is_open_kitchen_kds` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
