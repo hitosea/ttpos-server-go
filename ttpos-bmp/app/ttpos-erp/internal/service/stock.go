@@ -48,6 +48,9 @@ type (
 		// DeleteItem 删除物品
 		// 删除模板商品时，变体商品都会被移除
 		DeleteItem(ctx context.Context, req *item.DeleteItemReq) (*item.DeleteItemResp, error)
+		// GetItemDefaultWarehouses 批量获取物品在指定公司的默认仓库
+		// onlyItemDefaults=true 时仅检查 item_defaults，false 时走 4 级优先级回退
+		GetItemDefaultWarehouses(ctx context.Context, itemCodes []string, companyAbbr string, onlyItemDefaults bool) (map[string]string, error)
 	}
 	IItemGroup interface {
 		// GetItemGroupList 获取物品分组列表

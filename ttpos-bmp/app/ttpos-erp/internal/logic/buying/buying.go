@@ -801,3 +801,190 @@ func (s *sBuying) convertSalesTaxesToInterface(taxes []*erp.SalesTaxesAndCharges
 	}
 	return result
 }
+
+// CreateSplitSaleOrdersFromPurchaseOrder 从采购订单创建按仓库拆分的内部销售订单
+// 按物品默认仓库分组，为每个仓库创建独立的 SO
+// 直采物品（delivered_by_supplier）单独生成一张 SO 并自动提交
+func (s *sBuying) CreateSplitSaleOrdersFromPurchaseOrder(ctx context.Context, req *dto.CreateInnerSaleOrderFromPurchaseOrderReq) ([]*erp.SaleOrder, error) {
+	// 1. 调用 ERPNext API 获取 SO 模板（包含 PO 的所有物品）
+	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+		Method: erp.ApiMethodMakeMappedDoc,
+	}, g.MapStrStr{
+		"method":      "erpnext.buying.doctype.purchase_order.purchase_order.make_inter_company_sales_order",
+		"source_name": req.SourceName,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建内部销售订单模板失败")
+	}
+
+	soTemplate := &erp.SaleOrder{}
+	resp.GetJson("data").Scan(&soTemplate)
+	soTemplate.DeliveryDate = req.DeliveryDate
+	for _, itm := range soTemplate.Items {
+		itm.DeliveryDate = req.DeliveryDate
+	}
+
+	// 2. 标记直采物品
+	_, err = s.processDripShopItems(ctx, soTemplate.Items)
+	if err != nil {
+		g.Log().Warningf(ctx, "处理dropship商品失败: %v", err)
+	}
+
+	// 3. 查询 SO 所属公司（总部）的 abbr，用于获取物品默认仓库
+	companyAbbr := ""
+	if erpCompany, err := service.Company().GetCompany(ctx, soTemplate.Company); err == nil && erpCompany != nil {
+		companyAbbr = erpCompany.Abbr
+	} else {
+		g.Log().Warningf(ctx, "获取SO公司简称失败, company: %s, err: %v", soTemplate.Company, err)
+	}
+
+	// 4. 收集物品编码，查询默认仓库
+	itemCodes := make([]string, 0, len(soTemplate.Items))
+	for _, itm := range soTemplate.Items {
+		if itm.ItemCode != "" {
+			itemCodes = append(itemCodes, itm.ItemCode)
+		}
+	}
+	itemWarehouses := make(map[string]string)
+	if companyAbbr != "" && len(itemCodes) > 0 {
+		itemWarehouses, err = service.Item().GetItemDefaultWarehouses(ctx, itemCodes, companyAbbr, false)
+		if err != nil {
+			g.Log().Warningf(ctx, "查询物品默认仓库失败: %v", err)
+			itemWarehouses = make(map[string]string)
+		}
+	}
+
+	// 5. 分组：直采组 + 按仓库的集采组
+	var dropshipItems []*erp.SaleOrderItem
+	warehouseGroups := make(map[string][]*erp.SaleOrderItem)
+
+	for _, itm := range soTemplate.Items {
+		if itm.DeliveredBySupplier {
+			dropshipItems = append(dropshipItems, itm)
+		} else {
+			warehouse := itemWarehouses[itm.ItemCode]
+			if warehouse == "" {
+				// 回退到公司默认仓库
+				wh, whErr := service.Warehouse().GetDefaultWarehouse(ctx, soTemplate.Company, "")
+				if whErr == nil && wh != nil {
+					warehouse = wh.Name
+				}
+			}
+			warehouseGroups[warehouse] = append(warehouseGroups[warehouse], itm)
+		}
+	}
+
+	// 6. 获取公共配置（价格表、税费）
+	sellingPriceList := s.resolveSellingPriceList(ctx, req.SellingPriceList, soTemplate.Company)
+	taxTemplateName, taxes := s.resolveSalesTax(ctx, req.TaxesAndCharges, soTemplate.Company)
+
+	// 7. 为每个仓库组创建 SO
+	var createdOrders []*erp.SaleOrder
+
+	for warehouse, items := range warehouseGroups {
+		so, err := s.createSingleSaleOrder(ctx, soTemplate, items, warehouse, sellingPriceList, taxTemplateName, taxes, req.TaxCategory, false)
+		if err != nil {
+			return createdOrders, gerror.Wrapf(err, "创建仓库 %s 的销售订单失败", warehouse)
+		}
+		createdOrders = append(createdOrders, so)
+	}
+
+	// 8. 直采物品单独 SO（自动提交）
+	if len(dropshipItems) > 0 {
+		so, err := s.createSingleSaleOrder(ctx, soTemplate, dropshipItems, "", sellingPriceList, taxTemplateName, taxes, req.TaxCategory, true)
+		if err != nil {
+			return createdOrders, gerror.Wrapf(err, "创建直采销售订单失败")
+		}
+		createdOrders = append(createdOrders, so)
+	}
+
+	return createdOrders, nil
+}
+
+// createSingleSaleOrder 根据 SO 模板创建单个销售订单
+func (s *sBuying) createSingleSaleOrder(
+	ctx context.Context,
+	template *erp.SaleOrder,
+	items []*erp.SaleOrderItem,
+	setWarehouse string,
+	sellingPriceList string,
+	taxTemplateName string,
+	taxes []interface{},
+	taxCategory string,
+	autoSubmit bool,
+) (*erp.SaleOrder, error) {
+	so := &erp.SaleOrder{
+		Doctype:                    template.Doctype,
+		Customer:                   template.Customer,
+		CustomerName:               template.CustomerName,
+		OrderType:                  template.OrderType,
+		Company:                    template.Company,
+		Currency:                   template.Currency,
+		ConversionRate:             template.ConversionRate,
+		PriceListCurrency:          template.PriceListCurrency,
+		PlcConversionRate:          template.PlcConversionRate,
+		DeliveryDate:               template.DeliveryDate,
+		IsInternalCustomer:         template.IsInternalCustomer,
+		RepresentsCompany:          template.RepresentsCompany,
+		InterCompanyOrderReference: template.InterCompanyOrderReference,
+		IgnorePricingRule:          template.IgnorePricingRule,
+		Items:                      items,
+		SetWarehouse:               setWarehouse,
+		SellingPriceList:           sellingPriceList,
+		TaxCategory:                taxCategory,
+	}
+
+	if taxTemplateName != "" {
+		so.TaxesAndCharges = taxTemplateName
+		so.Taxes = taxes
+	}
+
+	resp, err := service.Document().Create(ctx, erp.DocTypeSaleOrder, so)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建销售订单失败")
+	}
+
+	resultSO := &erp.SaleOrder{}
+	resp.GetJson("data").Scan(&resultSO)
+
+	if autoSubmit {
+		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, resultSO.Name, erp.DocstatusSubmitted)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "提交销售订单失败")
+		}
+	}
+
+	return resultSO, nil
+}
+
+// resolveSellingPriceList 获取销售价格表
+func (s *sBuying) resolveSellingPriceList(ctx context.Context, reqPriceList string, company string) string {
+	if reqPriceList != "" {
+		return reqPriceList
+	}
+	defaultPriceList, err := service.PosPriceList().GetPosPriceListByCompany(ctx, company)
+	if err != nil {
+		g.Log().Warningf(ctx, "获取销售价格表失败，company: %s", company)
+		defaultPriceList, err = service.PosPriceList().GetDefaultPosPriceList(ctx)
+		if err != nil {
+			return ""
+		}
+	}
+	return defaultPriceList.SellingPriceList
+}
+
+// resolveSalesTax 获取销售税费模板和明细
+func (s *sBuying) resolveSalesTax(ctx context.Context, reqTax string, company string) (string, []interface{}) {
+	taxTemplateName := reqTax
+	if taxTemplateName == "" {
+		taxTemplateName = service.Accounts().GetDefaultSalesTaxTemplate(ctx, company)
+	}
+	if taxTemplateName == "" {
+		return "", nil
+	}
+	taxDetails := service.Accounts().GetSalesTaxTemplateDetails(ctx, taxTemplateName)
+	if len(taxDetails) > 0 {
+		return taxTemplateName, s.convertSalesTaxesToInterface(taxDetails)
+	}
+	return taxTemplateName, nil
+}

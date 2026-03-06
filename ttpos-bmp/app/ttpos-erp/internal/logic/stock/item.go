@@ -994,3 +994,159 @@ func convertSupplierItems(dtoItems []erp.ItemSupplier) []*item.SupplierItem {
 	}
 	return result
 }
+
+// GetItemDefaultWarehouses 批量获取物品在指定公司的发货仓库
+// 按以下优先级为每个物品确定仓库：
+//  1. Item Defaults 的 default_warehouse（物品主数据中配置的默认发货仓库，公司维度）
+//  2. Bin 表中该物品库存最多的仓库（该公司下）
+//  3. 公司默认仓库（is_default / alias=Default）
+//  4. 公司下任意可用仓库
+func (s *sItem) GetItemDefaultWarehouses(ctx context.Context, itemCodes []string, companyAbbr string, onlyItemDefaults bool) (map[string]string, error) {
+	if len(itemCodes) == 0 {
+		return make(map[string]string), nil
+	}
+
+	// 将公司简称转换为公司全名
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, companyAbbr)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取公司名称失败, companyAbbr: %s", companyAbbr)
+	}
+
+	result := make(map[string]string, len(itemCodes))
+	var pendingItemCodes []string
+
+	// ── 优先级 1：Item Defaults 的 default_warehouse ──
+	for _, itemCode := range itemCodes {
+		itemInfo, err := s.GetItem(ctx, &item.GetItemReq{
+			ItemCode: itemCode,
+		})
+		if err != nil {
+			g.Log().Warningf(ctx, "GetItemDefaultWarehouses-获取物品信息失败, itemCode: %s, err: %v", itemCode, err)
+			pendingItemCodes = append(pendingItemCodes, itemCode)
+			continue
+		}
+
+		found := false
+		for _, itemDefault := range itemInfo.ItemDefaults {
+			if itemDefault.Company == companyName && itemDefault.DefaultWarehouse != "" {
+				result[itemCode] = itemDefault.DefaultWarehouse
+				found = true
+				break
+			}
+		}
+		if !found {
+			pendingItemCodes = append(pendingItemCodes, itemCode)
+		}
+	}
+
+	// 仅检查 item_defaults 时，不走回退逻辑
+	if onlyItemDefaults {
+		return result, nil
+	}
+
+	// ── 优先级 2：Bin 表中该物品库存最多的仓库 ──
+	// 查询公司下所有仓库名称（ERPNext 仓库名格式：WarehouseName - CompanyAbbr）
+	companyWarehouses, err := s.getCompanyWarehouseNames(ctx, companyName)
+	if err != nil {
+		g.Log().Warningf(ctx, "GetItemDefaultWarehouses-查询公司仓库列表失败, company: %s, err: %v", companyName, err)
+	}
+
+	if len(companyWarehouses) > 0 {
+		var stillPending []string
+		for _, itemCode := range pendingItemCodes {
+			warehouseName := s.getMaxStockWarehouse(ctx, itemCode, companyWarehouses)
+			if warehouseName != "" {
+				result[itemCode] = warehouseName
+			} else {
+				stillPending = append(stillPending, itemCode)
+			}
+		}
+		pendingItemCodes = stillPending
+	}
+
+	if len(pendingItemCodes) == 0 {
+		return result, nil
+	}
+
+	// ── 优先级 3：公司默认仓库 ──
+	defaultWarehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName, "")
+	if err == nil && defaultWarehouse != nil && defaultWarehouse.Name != "" {
+		for _, itemCode := range pendingItemCodes {
+			result[itemCode] = defaultWarehouse.Name
+		}
+		return result, nil
+	}
+
+	// ── 优先级 4：公司下任意可用仓库 ──
+	if len(companyWarehouses) > 0 {
+		fallbackWarehouse := companyWarehouses[0]
+		for _, itemCode := range pendingItemCodes {
+			result[itemCode] = fallbackWarehouse
+		}
+	}
+
+	return result, nil
+}
+
+// getCompanyWarehouseNames 获取公司下所有非禁用仓库名称列表
+func (s *sItem) getCompanyWarehouseNames(ctx context.Context, companyName string) ([]string, error) {
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeWarehouse,
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{"name"},
+		Filters: [][]string{
+			{"company", "=", companyName},
+			{"disabled", "=", "0"},
+			{"is_group", "=", "0"},
+		},
+		Limit: consts.Limit999,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for _, wh := range resp.GetJsons("data") {
+		if name := wh.Get("name").String(); name != "" {
+			names = append(names, name)
+		}
+	}
+	return names, nil
+}
+
+// getMaxStockWarehouse 从 Bin 表查询物品在指定仓库列表中库存最多的仓库
+func (s *sItem) getMaxStockWarehouse(ctx context.Context, itemCode string, warehouses []string) string {
+	// 查询该物品在所有仓库的库存
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeBin,
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{"warehouse", "actual_qty"},
+		Filters: [][]string{
+			{"item_code", "=", itemCode},
+			{"actual_qty", ">", "0"},
+		},
+		Limit: consts.Limit999,
+	})
+	if err != nil {
+		return ""
+	}
+
+	// 构建公司仓库集合，用于过滤
+	warehouseSet := make(map[string]bool, len(warehouses))
+	for _, wh := range warehouses {
+		warehouseSet[wh] = true
+	}
+
+	// 在公司仓库中找库存最多的
+	var maxWarehouse string
+	var maxQty float64
+	for _, binData := range resp.GetJsons("data") {
+		wh := binData.Get("warehouse").String()
+		qty := binData.Get("actual_qty").Float64()
+		if warehouseSet[wh] && qty > maxQty {
+			maxQty = qty
+			maxWarehouse = wh
+		}
+	}
+	return maxWarehouse
+}

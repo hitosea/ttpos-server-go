@@ -5,13 +5,17 @@ import (
 	"sort"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/language"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 )
 
@@ -344,4 +348,56 @@ func formatQuantity(qty float64) string {
 		return fmt.Sprintf("%d", int64(qty))
 	}
 	return fmt.Sprintf("%.2f", qty)
+}
+
+// checkItemDefaultWarehouse 校验品牌采购物品是否在 ERPNext 中配置了默认发货仓
+// 通过查询 ERPNext 物品的 item_defaults，检查是否存在 company 为总部 erpnext_company_abbr 的记录
+// 返回未配置默认仓库的物品描述列表（格式：物品名称（内部编码））
+func (s *purchaseOrderSrv) checkItemDefaultWarehouse(ctx context.Context, purchaseOrder *model.PurchaseOrder) []string {
+	if len(purchaseOrder.Items) == 0 {
+		return nil
+	}
+
+	// 获取总部的 erpnext_company_abbr
+	companySetting := ctx.GetCompanySetting()
+	companyAbbr := companySetting.ErpnextCompanyAbbr
+
+	// 收集物品编码（跳过直采物品）
+	itemCodes := make([]string, 0, len(purchaseOrder.Items))
+	for _, item := range purchaseOrder.Items {
+		if item.MaterialCode != "" && item.DeliveredBySupplier != 1 {
+			itemCodes = append(itemCodes, item.MaterialCode)
+		}
+	}
+
+	// 从 ERPNext 批量查询物品默认仓库
+	erpSrv := erp.NewIErpSrv(s.dbm)
+	itemWarehouses, err := erpSrv.GetItemDefaultWarehouses(ctx, itemCodes, companyAbbr, true)
+	if err != nil {
+		logger.Logger.Warn("checkItemDefaultWarehouse-查询ERPNext物品默认仓库失败",
+			zap.Error(err),
+			zap.Strings("item_codes", itemCodes),
+		)
+		return nil
+	}
+
+	// 检查未配置默认仓库的物品
+	lang := ctx.GetLanguage()
+	var noWarehouseItems []string
+	for _, item := range purchaseOrder.Items {
+		if item.DeliveredBySupplier == 1 {
+			continue
+		}
+		if warehouse, ok := itemWarehouses[item.MaterialCode]; !ok || warehouse == "" {
+			materialName := language.JsonToLocaleResponse(item.MaterialName).GetLocale(lang)
+			// 优先显示内部编码，没有则显示 ERPNext 物品编码
+			code := item.MaterialCode
+			if item.Material != nil && item.Material.InternalCode != "" {
+				code = item.Material.InternalCode
+			}
+			noWarehouseItems = append(noWarehouseItems, fmt.Sprintf("%s%s", materialName, "（"+code+"）"))
+		}
+	}
+
+	return noWarehouseItems
 }

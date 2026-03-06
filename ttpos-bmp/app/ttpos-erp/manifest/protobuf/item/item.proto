@@ -250,6 +250,18 @@ message DeleteItemResp {
   string item_code = 1; //物品编码，必填
 }
 
+// GetItemDefaultWarehousesReq 批量获取物品默认仓库请求
+message GetItemDefaultWarehousesReq {
+  repeated string item_codes = 1;    // 物品编码列表
+  string company_abbr = 2;          // 公司简称，用于匹配 item_defaults 中的 company
+  bool only_item_defaults = 3;      // 仅检查 item_defaults 的 default_warehouse，不走回退逻辑
+}
+
+// GetItemDefaultWarehousesResp 批量获取物品默认仓库响应
+message GetItemDefaultWarehousesResp {
+  map<string, string> item_warehouses = 1; // 物品编码 -> 默认仓库编码
+}
+
 
 service ItemService {
   // 获取物品列表
@@ -315,4 +327,9 @@ service ItemService {
 
   //CreateSingleVariantItem 创建变体商品
   rpc CreateSingleVariantItem(item.CreateSingleVariantItemReq) returns (erp.ResponseInfo);
+
+  // 批量获取物品默认仓库
+  // 根据物品编码列表和公司简称，查询每个物品在 item_defaults 中配置的默认仓库
+  // 返回：物品编码 -> 默认仓库编码的映射
+  rpc GetItemDefaultWarehouses(item.GetItemDefaultWarehousesReq) returns (erp.ResponseInfo);
 }

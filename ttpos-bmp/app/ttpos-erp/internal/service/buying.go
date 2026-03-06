@@ -25,6 +25,9 @@ type (
 		//   - res: 创建后的销售订单信息
 		//   - err: 错误信息
 		CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *dto.CreateInnerSaleOrderFromPurchaseOrderReq) (res *erp.SaleOrder, err error)
+		// CreateSplitSaleOrdersFromPurchaseOrder 从采购订单创建按仓库拆分的内部销售订单
+		// 按物品默认仓库分组，为每个仓库创建独立的 SO；直采物品单独一张 SO 并自动提交
+		CreateSplitSaleOrdersFromPurchaseOrder(ctx context.Context, req *dto.CreateInnerSaleOrderFromPurchaseOrderReq) ([]*erp.SaleOrder, error)
 		CreateDeliveryNoteFromInnerSaleOrder(ctx context.Context, req *dto.CreateDeliveryNoteFromInnerSaleOrderReq) (res *erp.DeliveryNote, err error)
 		// GetPurchaseOrder 获取采购订单
 		GetPurchaseOrder(ctx context.Context, req *buying.GetPurchaseOrderReq) (*erp.PurchaseOrder, error)
