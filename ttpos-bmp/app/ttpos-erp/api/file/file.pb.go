@@ -7,12 +7,13 @@
 package file
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	api "ttpos-bmp/app/ttpos-erp/api"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -25,12 +26,12 @@ const (
 // 文件上传请求（二进制方式）
 type UploadFileReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	FileName      string                 `protobuf:"bytes,1,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`          // 文件名，必填
-	FileContent   []byte                 `protobuf:"bytes,2,opt,name=file_content,json=fileContent,proto3" json:"file_content,omitempty"` // 文件内容（二进制），必填
-	DocType       string                 `protobuf:"bytes,3,opt,name=doc_type,json=docType,proto3" json:"doc_type,omitempty"`             // 关联的文档类型，可选
-	DocName       string                 `protobuf:"bytes,4,opt,name=doc_name,json=docName,proto3" json:"doc_name,omitempty"`             // 关联的文档名称，可选
-	IsPrivate     int32                  `protobuf:"varint,5,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty"`      // 是否私有（0: 公开, 1: 私有），可选
-	Folder        string                 `protobuf:"bytes,6,opt,name=folder,proto3" json:"folder,omitempty"`                              // 文件夹路径，可选
+	FileName      string                 `protobuf:"bytes,1,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty" dc:"文件名，必填"`                    // 文件名，必填
+	FileContent   []byte                 `protobuf:"bytes,2,opt,name=file_content,json=fileContent,proto3" json:"file_content,omitempty" dc:"文件内容（二进制），必填"`     // 文件内容（二进制），必填
+	DocType       string                 `protobuf:"bytes,3,opt,name=doc_type,json=docType,proto3" json:"doc_type,omitempty" dc:"关联的文档类型，可选"`                   // 关联的文档类型，可选
+	DocName       string                 `protobuf:"bytes,4,opt,name=doc_name,json=docName,proto3" json:"doc_name,omitempty" dc:"关联的文档名称，可选"`                   // 关联的文档名称，可选
+	IsPrivate     int32                  `protobuf:"varint,5,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty" dc:"是否私有（0: 公开, 1: 私有），可选"` // 是否私有（0: 公开, 1: 私有），可选
+	Folder        string                 `protobuf:"bytes,6,opt,name=folder,proto3" json:"folder,omitempty" dc:"文件夹路径，可选"`                                      // 文件夹路径，可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -110,11 +111,11 @@ func (x *UploadFileReq) GetFolder() string {
 // Base64 编码方式的文件上传请求
 type UploadFileBase64Req struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	FileName      string                 `protobuf:"bytes,1,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`     // 文件名，必填
-	FileData      string                 `protobuf:"bytes,2,opt,name=file_data,json=fileData,proto3" json:"file_data,omitempty"`     // Base64 编码的文件内容，必填
-	DocType       string                 `protobuf:"bytes,3,opt,name=doc_type,json=docType,proto3" json:"doc_type,omitempty"`        // 关联的文档类型，可选
-	DocName       string                 `protobuf:"bytes,4,opt,name=doc_name,json=docName,proto3" json:"doc_name,omitempty"`        // 关联的文档名称，可选
-	IsPrivate     int32                  `protobuf:"varint,5,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty"` // 是否私有（0: 公开, 1: 私有），可选
+	FileName      string                 `protobuf:"bytes,1,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty" dc:"文件名，必填"`                    // 文件名，必填
+	FileData      string                 `protobuf:"bytes,2,opt,name=file_data,json=fileData,proto3" json:"file_data,omitempty" dc:"Base64 编码的文件内容，必填"`         // Base64 编码的文件内容，必填
+	DocType       string                 `protobuf:"bytes,3,opt,name=doc_type,json=docType,proto3" json:"doc_type,omitempty" dc:"关联的文档类型，可选"`                   // 关联的文档类型，可选
+	DocName       string                 `protobuf:"bytes,4,opt,name=doc_name,json=docName,proto3" json:"doc_name,omitempty" dc:"关联的文档名称，可选"`                   // 关联的文档名称，可选
+	IsPrivate     int32                  `protobuf:"varint,5,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty" dc:"是否私有（0: 公开, 1: 私有），可选"` // 是否私有（0: 公开, 1: 私有），可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -187,12 +188,12 @@ func (x *UploadFileBase64Req) GetIsPrivate() int32 {
 // URL 方式的文件上传请求（ERPNext 自动下载远程文件）
 type UploadFileUrlReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	FileUrl       string                 `protobuf:"bytes,1,opt,name=file_url,json=fileUrl,proto3" json:"file_url,omitempty"`        // 远程文件 URL，必填
-	FileName      string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`     // 文件名，可选（不填则从 URL 提取）
-	DocType       string                 `protobuf:"bytes,3,opt,name=doc_type,json=docType,proto3" json:"doc_type,omitempty"`        // 关联的文档类型，可选
-	DocName       string                 `protobuf:"bytes,4,opt,name=doc_name,json=docName,proto3" json:"doc_name,omitempty"`        // 关联的文档名称，可选
-	IsPrivate     int32                  `protobuf:"varint,5,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty"` // 是否私有（0: 公开, 1: 私有），可选
-	Folder        string                 `protobuf:"bytes,6,opt,name=folder,proto3" json:"folder,omitempty"`                         // 文件夹路径，可选
+	FileUrl       string                 `protobuf:"bytes,1,opt,name=file_url,json=fileUrl,proto3" json:"file_url,omitempty" dc:"远程文件 URL，必填"`                  // 远程文件 URL，必填
+	FileName      string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty" dc:"文件名，可选（不填则从 URL 提取）"`       // 文件名，可选（不填则从 URL 提取）
+	DocType       string                 `protobuf:"bytes,3,opt,name=doc_type,json=docType,proto3" json:"doc_type,omitempty" dc:"关联的文档类型，可选"`                   // 关联的文档类型，可选
+	DocName       string                 `protobuf:"bytes,4,opt,name=doc_name,json=docName,proto3" json:"doc_name,omitempty" dc:"关联的文档名称，可选"`                   // 关联的文档名称，可选
+	IsPrivate     int32                  `protobuf:"varint,5,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty" dc:"是否私有（0: 公开, 1: 私有），可选"` // 是否私有（0: 公开, 1: 私有），可选
+	Folder        string                 `protobuf:"bytes,6,opt,name=folder,proto3" json:"folder,omitempty" dc:"文件夹路径，可选"`                                      // 文件夹路径，可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -272,14 +273,14 @@ func (x *UploadFileUrlReq) GetFolder() string {
 // 文件上传响应
 type UploadFileResp struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	Name              string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                      // 文件文档名称（File doctype 的 name 字段）
-	FileName          string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`                              // 文件名
-	FileUrl           string                 `protobuf:"bytes,3,opt,name=file_url,json=fileUrl,proto3" json:"file_url,omitempty"`                                 // 文件访问 URL
-	IsPrivate         int32                  `protobuf:"varint,4,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty"`                          // 是否私有
-	AttachedToDoctype string                 `protobuf:"bytes,5,opt,name=attached_to_doctype,json=attachedToDoctype,proto3" json:"attached_to_doctype,omitempty"` // 关联的文档类型
-	AttachedToName    string                 `protobuf:"bytes,6,opt,name=attached_to_name,json=attachedToName,proto3" json:"attached_to_name,omitempty"`          // 关联的文档名称
-	FileSize          int64                  `protobuf:"varint,7,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty"`                             // 文件大小（字节）
-	ContentType       string                 `protobuf:"bytes,8,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`                     // 文件 MIME 类型
+	Name              string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"文件文档名称（File doctype 的 name 字段）"`                               // 文件文档名称（File doctype 的 name 字段）
+	FileName          string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty" dc:"文件名"`                                  // 文件名
+	FileUrl           string                 `protobuf:"bytes,3,opt,name=file_url,json=fileUrl,proto3" json:"file_url,omitempty" dc:"文件访问 URL"`                                // 文件访问 URL
+	IsPrivate         int32                  `protobuf:"varint,4,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty" dc:"是否私有"`                             // 是否私有
+	AttachedToDoctype string                 `protobuf:"bytes,5,opt,name=attached_to_doctype,json=attachedToDoctype,proto3" json:"attached_to_doctype,omitempty" dc:"关联的文档类型"` // 关联的文档类型
+	AttachedToName    string                 `protobuf:"bytes,6,opt,name=attached_to_name,json=attachedToName,proto3" json:"attached_to_name,omitempty" dc:"关联的文档名称"`          // 关联的文档名称
+	FileSize          int64                  `protobuf:"varint,7,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty" dc:"文件大小（字节）"`                            // 文件大小（字节）
+	ContentType       string                 `protobuf:"bytes,8,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty" dc:"文件 MIME 类型"`                  // 文件 MIME 类型
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -373,12 +374,12 @@ func (x *UploadFileResp) GetContentType() string {
 // 文件列表查询请求
 type ListFilesReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	DocType       string                 `protobuf:"bytes,1,opt,name=doc_type,json=docType,proto3" json:"doc_type,omitempty"`           // 关联的文档类型，可选
-	DocName       string                 `protobuf:"bytes,2,opt,name=doc_name,json=docName,proto3" json:"doc_name,omitempty"`           // 关联的文档名称，可选
-	IsPrivate     int32                  `protobuf:"varint,3,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty"`    // 是否私有（-1: 不限, 0: 公开, 1: 私有），可选
-	Folder        string                 `protobuf:"bytes,4,opt,name=folder,proto3" json:"folder,omitempty"`                            // 文件夹，可选
-	LimitStart    int32                  `protobuf:"varint,5,opt,name=limit_start,json=limitStart,proto3" json:"limit_start,omitempty"` // 分页起始位置，可选
-	Limit         int32                  `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`                             // 分页数量，可选，默认 20
+	DocType       string                 `protobuf:"bytes,1,opt,name=doc_type,json=docType,proto3" json:"doc_type,omitempty" dc:"关联的文档类型，可选"`                           // 关联的文档类型，可选
+	DocName       string                 `protobuf:"bytes,2,opt,name=doc_name,json=docName,proto3" json:"doc_name,omitempty" dc:"关联的文档名称，可选"`                           // 关联的文档名称，可选
+	IsPrivate     int32                  `protobuf:"varint,3,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty" dc:"是否私有（-1: 不限, 0: 公开, 1: 私有），可选"` // 是否私有（-1: 不限, 0: 公开, 1: 私有），可选
+	Folder        string                 `protobuf:"bytes,4,opt,name=folder,proto3" json:"folder,omitempty" dc:"文件夹，可选"`                                                // 文件夹，可选
+	LimitStart    int32                  `protobuf:"varint,5,opt,name=limit_start,json=limitStart,proto3" json:"limit_start,omitempty" dc:"分页起始位置，可选"`                  // 分页起始位置，可选
+	Limit         int32                  `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty" dc:"分页数量，可选，默认 20"`                                          // 分页数量，可选，默认 20
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -458,7 +459,7 @@ func (x *ListFilesReq) GetLimit() int32 {
 // 文件列表响应
 type ListFilesResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Files         []*UploadFileResp      `protobuf:"bytes,1,rep,name=files,proto3" json:"files,omitempty"` // 文件列表
+	Files         []*UploadFileResp      `protobuf:"bytes,1,rep,name=files,proto3" json:"files,omitempty" dc:"文件列表"` // 文件列表
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -503,7 +504,7 @@ func (x *ListFilesResp) GetFiles() []*UploadFileResp {
 // 获取单个文件请求
 type GetFileReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // 文件文档名称，必填
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"文件文档名称，必填"` // 文件文档名称，必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -548,7 +549,7 @@ func (x *GetFileReq) GetName() string {
 // 删除文件请求
 type DeleteFileReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // 文件文档名称，必填
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"文件文档名称，必填"` // 文件文档名称，必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -593,7 +594,7 @@ func (x *DeleteFileReq) GetName() string {
 // 删除文件响应
 type DeleteFileResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"` // 操作结果消息
+	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty" dc:"操作结果消息"` // 操作结果消息
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

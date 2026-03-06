@@ -23,6 +23,11 @@ type (
 		ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error)
 		ClosePosEntry(ctx context.Context, req *selling.ClosePosEntryReq) (*selling.ClosePosEntryResp, error)
 		GetLatestReceivePosInvoice(ctx context.Context, req *do.ReceivePosInvoice) (*entity.ReceivePosInvoice, error)
+		// Sales Invoice 异步方法
+		SaveSalesInvoice(ctx context.Context, req *selling.SaveSalesInvoiceReq) (*selling.SaveSalesInvoiceResp, error)
+		CancelSalesInvoice(ctx context.Context, req *selling.CancelSalesInvoiceReq) (*selling.CancelSalesInvoiceResp, error)
+		ReturnSalesInvoice(ctx context.Context, req *selling.ReturnSalesInvoiceReq) (*selling.ReturnSalesInvoiceResp, error)
+		GetLatestReceiveSalesInvoice(ctx context.Context, saleOrderUuid string) (*entity.ReceiveSalesInvoice, error)
 	}
 	IDeliveryNote interface {
 		// CreateDeliveryNote 创建送货单
@@ -356,6 +361,10 @@ type (
 		//   - []*erp.Customer: 客户列表
 		//   - error: 错误信息
 		ListCustomers(ctx context.Context, req *dtoSelling.ListCustomersReq) ([]*erp.Customer, error)
+		// Sales Invoice 同步方法
+		SaveSalesInvoice(ctx context.Context, req *selling.SaveSalesInvoiceReq) (*selling.SaveSalesInvoiceResp, error)
+		CancelSalesInvoice(ctx context.Context, req *selling.CancelSalesInvoiceReq) error
+		ReturnSalesInvoice(ctx context.Context, req *selling.ReturnSalesInvoiceReq) (*selling.ReturnSalesInvoiceResp, error)
 	}
 )
 

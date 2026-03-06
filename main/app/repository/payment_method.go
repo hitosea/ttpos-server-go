@@ -19,15 +19,15 @@ type IPaymentMethodRepo interface {
 	WhereAssistant() DBOption             // 在助手端结账时显示
 	WhereKiosk() DBOption                 // 在自助点餐机结账时显示
 	WhereStatus(status int) DBOption
-	WhereExistsErpnextPayment() DBOption          // 存在ERPNext支付方式
-	WhereNotExistsErpnextPayment() DBOption       // 不存在ERPNext支付方式
-	WhereNotCode(codes []int) DBOption            // 排除支付方式代号
-	WherePaymentName(paymentName string) DBOption // 按支付方式名称查询
-	WhereCode(code int) DBOption                  // 按支付方式code查询
-	WhereSource(source int) DBOption              // 按来源查询
-	WhereNotSource(source int) DBOption                       // 排除指定来源
-	WhereErpnextPaymentId(paymentId string) DBOption          // 按ERPNext PaymentID查询
-	WhereErpnextPayment(erpnextPayment string) DBOption       // 按ERPNext支付名称查询
+	WhereExistsErpnextPayment() DBOption                // 存在ERPNext支付方式
+	WhereNotExistsErpnextPayment() DBOption             // 不存在ERPNext支付方式
+	WhereNotCode(codes []int) DBOption                  // 排除支付方式代号
+	WherePaymentName(paymentName string) DBOption       // 按支付方式名称查询
+	WhereCode(code int) DBOption                        // 按支付方式code查询
+	WhereSource(source int) DBOption                    // 按来源查询
+	WhereNotSource(source int) DBOption                 // 排除指定来源
+	WhereErpnextPaymentId(paymentId string) DBOption    // 按ERPNext PaymentID查询
+	WhereErpnextPayment(erpnextPayment string) DBOption // 按ERPNext支付名称查询
 
 	WithLogoFile() DBOption   // 关联logo文件
 	WithQrcodeFile() DBOption // 关联二维码文件

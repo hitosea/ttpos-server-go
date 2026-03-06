@@ -1023,20 +1023,37 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 			}
 		}
 
+		// 生成盘点快照（SI 模式下记录未扣减订单）
+		companySetting := ctx.GetCompanySetting()
+		if companySetting.IsErpSalesInvoiceMode() && stockReconciliation.Warehouse != nil {
+			erpStockEntrySrv := NewErpStockEntrySrv(s.dbm)
+			if err := erpStockEntrySrv.GenerateStocktakeSnapshot(tx, stockReconciliation.Uuid, stockReconciliation.Warehouse.ErpCode); err != nil {
+				logger.Logger.Error("生成盘点快照失败", zap.Error(err))
+				// 快照生成失败不阻塞盘点流程
+			}
+		}
+
 		return nil
 	})
 	if err != nil {
 		return disabledMaterials, err
 	}
 
-	// 修复任务:38268 v2.12.5-收银端-将成本卡中物品盘点为0后，可售设置自动变为0
-	// utils.Go(func() {
-	// 	// 计算所有关联成本卡的商品的库存
-	// 	err = s.productSrv.SyncProductStockByBomCard(ctx)
-	// 	if err != nil {
-	// 		logger.Logger.Error("审核通过盘点单-计算商品库存失败", zap.Error(err))
-	// 	}
-	// })
+	// 异步触发 Stock Entry 合并扣减（SI 模式下，盘点审核后触发未扣减订单的库存扣减）
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsErpSalesInvoiceMode() {
+		utils.Go(func() {
+			companyUuid := ctx.GetCompanyUuid()
+			erpCtx := ctx.Copy()
+			erpCtx.SetDB(s.dbm.GetDB(companyUuid))
+			erpStockEntrySrv := NewErpStockEntrySrv(s.dbm)
+			if err := erpStockEntrySrv.TriggerStockEntryDeduction(erpCtx, companyUuid); err != nil {
+				logger.Logger.Error("盘点触发Stock Entry合并扣减失败",
+					zap.Uint64("company_uuid", companyUuid),
+					zap.Error(err))
+			}
+		})
+	}
 
 	return disabledMaterials, nil
 }

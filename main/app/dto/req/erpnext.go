@@ -174,6 +174,60 @@ type ReturnPosInvoiceReq struct {
 	Payments         []*selling.PosInvoicePayment `form:"payments" json:"payments" binding:"required"`                       // 付款列表 必填
 }
 
+// SaveSalesInvoiceReq 保存 Sales Invoice 请求（替代 SavePosInvoiceReq）
+type SaveSalesInvoiceReq struct {
+	SiteCode          string                       `json:"site_code"`
+	OrderNo           string                       `json:"order_no"`
+	SaleOrderUuid     string                       `json:"sale_order_uuid"`
+	SaleBillUuid      string                       `json:"sale_bill_uuid"`
+	PosProfile        string                       `json:"pos_profile"`
+	Company           string                       `json:"company"`
+	Customer          string                       `json:"customer"`
+	Currency          string                       `json:"currency"`
+	PriceListCurrency string                       `json:"price_list_currency"`
+	PostingDatetime   int64                        `json:"posting_datetime"`
+	Branch            string                       `json:"branch"`
+	UpdateStock       int32                        `json:"update_stock"`
+	Items             []*selling.PosInvoiceItem    `json:"items"`
+	MaterialItems     []*selling.PosInvoiceItem    `json:"material_items"`
+	Taxes             []*selling.PosInvoiceTax     `json:"taxes"`
+	Payments          []*selling.PosInvoicePayment `json:"payments"`
+	DiscountAmount    float64                      `json:"discount_amount"`
+	AmendedFrom       string                       `json:"amended_from"`
+	Remark            string                       `json:"remark"`
+	TakeoutOrderNo    *string                      `json:"takeout_order_no"`
+	TakeoutProvider   *string                      `json:"takeout_provider"`
+	CompanyUuid       string                       `json:"company_uuid"`
+}
+
+// CancelSalesInvoiceReq 取消 Sales Invoice 请求
+type CancelSalesInvoiceReq struct {
+	SiteCode          string   `json:"site_code"`
+	OrderNo           string   `json:"order_no"`
+	SaleOrderUuid     string   `json:"sale_order_uuid"`
+	SalesInvoiceName  string   `json:"sales_invoice_name"`
+	PaymentEntryNames []string `json:"payment_entry_names"`
+	StockDeducted     bool     `json:"stock_deducted"`
+	Remark            string   `json:"remark"`
+}
+
+// ReturnSalesInvoiceReq 退款 Sales Invoice 请求（Credit Note）
+type ReturnSalesInvoiceReq struct {
+	SiteCode         string                       `json:"site_code"`
+	OrderNo          string                       `json:"order_no"`
+	SaleOrderUuid    string                       `json:"sale_order_uuid"`
+	SalesInvoiceName string                       `json:"sales_invoice_name"`
+	PostingDatetime  int64                        `json:"posting_datetime"`
+	Company          string                       `json:"company"`
+	Customer         string                       `json:"customer"`
+	Items            []*selling.PosInvoiceItem    `json:"items"`
+	MaterialItems    []*selling.PosInvoiceItem    `json:"material_items"`
+	Taxes            []*selling.PosInvoiceTax     `json:"taxes"`
+	Payments         []*selling.PosInvoicePayment `json:"payments"`
+	RefundType       string                       `json:"refund_type"` // full_refund / partial_refund
+	Remark           string                       `json:"remark"`
+}
+
 type GetPaymentMethodListReq struct {
 	CompanyUuid uint64 `form:"company_uuid" json:"company_uuid" binding:"required"` // 公司UUID
 }

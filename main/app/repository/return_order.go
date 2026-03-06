@@ -31,9 +31,9 @@ type IReturnOrderRepo interface {
 
 // IReturnOrderQueryRepo 退货单查询仓库接口
 type IReturnOrderQueryRepo interface {
-	GetReturnOrder(opts ...DBOption) (model.ReturnOrder, error)             // 获取退货单
-	GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error) // 获取退货金额
-	CountReturnOrders(opts ...DBOption) (int64, error)                      // 统计退货单数量
+	GetReturnOrder(opts ...DBOption) (model.ReturnOrder, error)               // 获取退货单
+	GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error)   // 获取退货金额
+	CountReturnOrders(opts ...DBOption) (int64, error)                        // 统计退货单数量
 	SumRefundAmountWithSaleOrderJoin(saleBillUuids []uint64) (float64, error) // 统计退款金额（关联销售订单）
 }
 

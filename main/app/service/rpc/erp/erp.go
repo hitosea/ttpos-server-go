@@ -39,6 +39,10 @@ type IErpSrv interface {
 	ParseSavePosInvoiceError(err error) (*resp.GetPosInvoiceErrorResp, error)
 	CancelPosInvoice(ctx pkgCtx.Context, cancelPosInvoiceReq req.CancelPosInvoiceReq) error
 	ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error)
+	// Sales Invoice 模式（替代 POS Invoice）
+	SaveSalesInvoice(ctx pkgCtx.Context, saveSalesInvoiceReq req.SaveSalesInvoiceReq) (*selling.SaveSalesInvoiceResp, error)
+	CancelSalesInvoice(ctx pkgCtx.Context, cancelSalesInvoiceReq req.CancelSalesInvoiceReq) (*selling.CancelSalesInvoiceResp, error)
+	ReturnSalesInvoice(ctx pkgCtx.Context, returnSalesInvoiceReq req.ReturnSalesInvoiceReq) (*selling.ReturnSalesInvoiceResp, error)
 	GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetPaymentMethodListReq) (*resp.GetPaymentMethodListResp, error)
 	AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.AddPaymentMethodReq) error
 	SaveModeOfPayment(ctx pkgCtx.Context, saveModeOfPaymentReq req.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error)

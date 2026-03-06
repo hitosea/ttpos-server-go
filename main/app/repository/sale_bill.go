@@ -39,10 +39,10 @@ type ISaleBillQueryRepo interface {
 	GetMemberSaleBillLatest() (*model.SaleBill, error)                                             // 获取最新的一条会员端销售账单
 	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
-	GetDeskSaleBillUnPay() ([]*model.SaleBill, error) // 获取所有未付款的桌台账单
-	GetCompleteTotal() (int64, error)                                              // 获取总数量
-	PluckOrderNos(orderNoPrefix string, startTime, endTime int64) ([]string, error)   // 查询订单编号
-	PluckPendingUuidsWithBatchTag() ([]uint64, error)                                // 获取有分批类型的进行中账单UUID列表
+	GetDeskSaleBillUnPay() ([]*model.SaleBill, error)                               // 获取所有未付款的桌台账单
+	GetCompleteTotal() (int64, error)                                               // 获取总数量
+	PluckOrderNos(orderNoPrefix string, startTime, endTime int64) ([]string, error) // 查询订单编号
+	PluckPendingUuidsWithBatchTag() ([]uint64, error)                               // 获取有分批类型的进行中账单UUID列表
 }
 
 type saleBillRepo struct {

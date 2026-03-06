@@ -219,17 +219,17 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 
 		for uuid, translated := range translatedMultiLanguageMap {
 			translatedText := translated.ToJson()
-			productUnitRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)            // 单位
-			warehouseRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)               // 仓库
-			materialRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)                // 物品
-			productFlavorRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)           // 规格
-			productAttributeRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)        // 属性
-			productSauceRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)            // 加料
-			productRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)                 // 商品
-			productRepo.UpdateDescribeByDescribeMultiLanguageNameUuid(uuid, translatedText)     // 商品描述
-			productBomCardRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)          // 成本卡
-			productCategoryRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)         // 分类
-			productPackageTakeoutRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)   // 外卖商品
+			productUnitRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)           // 单位
+			warehouseRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)             // 仓库
+			materialRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)              // 物品
+			productFlavorRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)         // 规格
+			productAttributeRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)      // 属性
+			productSauceRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)          // 加料
+			productRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)               // 商品
+			productRepo.UpdateDescribeByDescribeMultiLanguageNameUuid(uuid, translatedText)   // 商品描述
+			productBomCardRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)        // 成本卡
+			productCategoryRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)       // 分类
+			productPackageTakeoutRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText) // 外卖商品
 		}
 	}
 

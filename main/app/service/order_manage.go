@@ -1372,11 +1372,21 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, saleBill, db, returnType, isPartReturn)
-			if err != nil {
-				return errors.WithMessage(err)
+			if saleOrder.ErpSalesInvoiceName != "" {
+				// Sales Invoice 模式：生成 Credit Note
+				res, err := s.ReturnSalesInvoice(ctx, saleOrder, returnOrder, saleBill, db, returnType, isPartReturn)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				returnOrder.ErpInvoiceName = res.CreditNoteName
+			} else {
+				// POS Invoice 模式（旧模式）
+				res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, saleBill, db, returnType, isPartReturn)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				returnOrder.ErpInvoiceName = res.InvoiceName
 			}
-			returnOrder.ErpInvoiceName = res.InvoiceName
 		}
 		// 更新退货单erp发票名
 		if err := repository.NewReturnOrderRepo(db).UpdateReturnOrderRecordErpInvoiceName(returnOrder.Uuid, returnOrder.ErpInvoiceName); err != nil {
@@ -2266,37 +2276,35 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			staff := ctx.GetStaff()
-			shiftLogRepo := repository.NewShiftLogRepo(db)
-			shiftLog, err := shiftLogRepo.GetShiftLog(
-				repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
-				repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
-			)
-			if err != nil {
-				return errors.WithMessage(err)
-			}
-			if shiftLog.IsHandedOver() {
-				return errors.New("当前班次已交班，无法保存发票")
-			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			for _, saleOrder := range saleBill.SaleOrders {
 				if saleOrder.IsDelete() {
 					continue
 				}
-				// 根据反结账次数生成 OrderNo：首次使用原始 OrderNo，反结账后加后缀 -1, -2...
 				orderNo := saleOrder.OrderNo
 				if reverseSettleCount > 0 {
 					orderNo = fmt.Sprintf("%s-%d", saleOrder.OrderNo, reverseSettleCount)
 				}
-				err := erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
-					ProductsInvoiceName: saleOrder.ErpProductsInvoiceName,
-					MaterialInvoiceName: saleOrder.ErpMaterialInvoiceName,
-					OpenPosEntryName:    shiftLog.ErpnextOpenPosEntryName, //异步模式必填
-					OrderNo:             orderNo,                          //异步模式必填
-				})
-				if err != nil {
-					return errors.WithMessage(err)
+
+				if saleOrder.ErpSalesInvoiceName != "" {
+					// Sales Invoice 模式：取消 SI + PE，联动反向 Stock Entry
+					var peNames []string
+					if saleOrder.ErpPaymentEntryNames != "" {
+						_ = json.Unmarshal([]byte(saleOrder.ErpPaymentEntryNames), &peNames)
+					}
+					_, err := erpSrv.CancelSalesInvoice(ctx, req.CancelSalesInvoiceReq{
+						SiteCode:          companySetting.ErpnextSiteCode,
+						OrderNo:           orderNo,
+						SaleOrderUuid:     fmt.Sprintf("%d", saleOrder.Uuid),
+						SalesInvoiceName:  saleOrder.ErpSalesInvoiceName,
+						PaymentEntryNames: peNames,
+						StockDeducted:     saleOrder.ErpStockDeducted == 1,
+					})
+					if err != nil {
+						return errors.WithMessage(err)
+					}
 				}
+					// NOTE: POS Invoice 反结账路径已废弃，发票名称不再持久化到 sale_order
 			}
 			ctx.Mark("erp_invoice_cancelled")
 		}

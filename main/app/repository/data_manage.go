@@ -8,7 +8,8 @@ import (
 
 // IDataManageRepo 数据管理仓库
 type IDataManageRepo interface {
-	WhereByType(typ int) DBOption // 根据数据类型查询
+	WhereByType(typ int) DBOption             // 根据数据类型查询
+	WhereInDataUuids(uuids []uint64) DBOption // 根据数据UUID列表查询
 
 	Count(opts ...DBOption) (int64, error)         // 统计数据管理数据
 	List(opts ...DBOption) []model.DataManage      // 查询数据管理数据
@@ -76,7 +77,17 @@ func (r *dataManageRepo) Delete(opts ...DBOption) error {
 
 // Creates 批量创建数据管理数据
 func (r *dataManageRepo) Creates(dataManages []*model.DataManage) error {
-	return r.db.Create(dataManages).Error
+	return r.db.CreateInBatches(dataManages, 100).Error
+}
+
+// WhereInDataUuids 根据数据UUID列表查询
+func (r *dataManageRepo) WhereInDataUuids(uuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if len(uuids) == 0 {
+			return db.Where("1 = 0")
+		}
+		return db.Where("data_uuid IN ?", uuids)
+	}
 }
 
 // GetDataUuids 获取数据管理数据UUID列表

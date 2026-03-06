@@ -1976,6 +1976,612 @@ func (x *GetModeOfPaymentResp) GetModeOfPayment() *ModeOfPayment {
 	return nil
 }
 
+// SaveSalesInvoiceReq 保存 Sales Invoice 请求 (替代 POS Invoice)
+type SaveSalesInvoiceReq struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	OrderNo           string                 `protobuf:"bytes,1,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty" dc:"TTPOS 订单号"`                                  // TTPOS 订单号
+	SaleOrderUuid     string                 `protobuf:"bytes,2,opt,name=sale_order_uuid,json=saleOrderUuid,proto3" json:"sale_order_uuid,omitempty" dc:"TTPOS 订单 UUID（幂等键）"`     // TTPOS 订单 UUID（幂等键）
+	SaleBillUuid      string                 `protobuf:"bytes,3,opt,name=sale_bill_uuid,json=saleBillUuid,proto3" json:"sale_bill_uuid,omitempty" dc:"TTPOS 账单 UUID"`             // TTPOS 账单 UUID
+	PosProfile        string                 `protobuf:"bytes,4,opt,name=pos_profile,json=posProfile,proto3" json:"pos_profile,omitempty" dc:"POS Profile 名称"`                    // POS Profile 名称
+	Company           string                 `protobuf:"bytes,5,opt,name=company,proto3" json:"company,omitempty" dc:"公司"`                                                        // 公司
+	Customer          string                 `protobuf:"bytes,6,opt,name=customer,proto3" json:"customer,omitempty" dc:"客户（默认客户或会员）"`                                             // 客户（默认客户或会员）
+	Currency          string                 `protobuf:"bytes,7,opt,name=currency,proto3" json:"currency,omitempty" dc:"货币 THB/CNY"`                                              // 货币 THB/CNY
+	PriceListCurrency string                 `protobuf:"bytes,8,opt,name=price_list_currency,json=priceListCurrency,proto3" json:"price_list_currency,omitempty" dc:"价格表货币"`      // 价格表货币
+	PostingDatetime   int64                  `protobuf:"varint,9,opt,name=posting_datetime,json=postingDatetime,proto3" json:"posting_datetime,omitempty" dc:"支付完成时间戳"`           // 支付完成时间戳
+	Branch            string                 `protobuf:"bytes,10,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店"`                                                         // 分店
+	UpdateStock       int32                  `protobuf:"varint,11,opt,name=update_stock,json=updateStock,proto3" json:"update_stock,omitempty" dc:"0=不扣库存"`                       // 0=不扣库存
+	Items             []*PosInvoiceItem      `protobuf:"bytes,12,rep,name=items,proto3" json:"items,omitempty" dc:"商品明细（复用 PosInvoiceItem）"`                                      // 商品明细（复用 PosInvoiceItem）
+	MaterialItems     []*PosInvoiceItem      `protobuf:"bytes,13,rep,name=material_items,json=materialItems,proto3" json:"material_items,omitempty" dc:"物品明细（价格为0）"`              // 物品明细（价格为0）
+	Taxes             []*PosInvoiceTax       `protobuf:"bytes,14,rep,name=taxes,proto3" json:"taxes,omitempty" dc:"税费"`                                                           // 税费
+	Payments          []*PosInvoicePayment   `protobuf:"bytes,15,rep,name=payments,proto3" json:"payments,omitempty" dc:"支付方式列表"`                                                 // 支付方式列表
+	Remark            string                 `protobuf:"bytes,16,opt,name=remark,proto3" json:"remark,omitempty" dc:"备注"`                                                         // 备注
+	OrderSourceUuid   *string                `protobuf:"bytes,17,opt,name=order_source_uuid,json=orderSourceUuid,proto3,oneof" json:"order_source_uuid,omitempty" dc:"订单来源UUID"`  // 订单来源UUID
+	OrderSourceName   *string                `protobuf:"bytes,18,opt,name=order_source_name,json=orderSourceName,proto3,oneof" json:"order_source_name,omitempty" dc:"订单来源名称"`    // 订单来源名称
+	TakeoutOrderNo    *string                `protobuf:"bytes,19,opt,name=takeout_order_no,json=takeoutOrderNo,proto3,oneof" json:"takeout_order_no,omitempty" dc:"外卖订单号"`        // 外卖订单号
+	TakeoutProvider   *string                `protobuf:"bytes,20,opt,name=takeout_provider,json=takeoutProvider,proto3,oneof" json:"takeout_provider,omitempty" dc:"外卖平台"`        // 外卖平台
+	DiscountAmount    float64                `protobuf:"fixed64,21,opt,name=discount_amount,json=discountAmount,proto3" json:"discount_amount,omitempty" dc:"额外折扣金额"`             // 额外折扣金额
+	AmendedFrom       string                 `protobuf:"bytes,22,opt,name=amended_from,json=amendedFrom,proto3" json:"amended_from,omitempty" dc:"反结账后的原单据号"`                     // 反结账后的原单据号
+	CompanyUuid       string                 `protobuf:"bytes,23,opt,name=company_uuid,json=companyUuid,proto3" json:"company_uuid,omitempty" dc:"TTPOS 商户UUID（用于异步回写 shop 数据库）"` // TTPOS 商户UUID（用于异步回写 shop 数据库）
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *SaveSalesInvoiceReq) Reset() {
+	*x = SaveSalesInvoiceReq{}
+	mi := &file_selling_selling_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveSalesInvoiceReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveSalesInvoiceReq) ProtoMessage() {}
+
+func (x *SaveSalesInvoiceReq) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveSalesInvoiceReq.ProtoReflect.Descriptor instead.
+func (*SaveSalesInvoiceReq) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *SaveSalesInvoiceReq) GetOrderNo() string {
+	if x != nil {
+		return x.OrderNo
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetSaleOrderUuid() string {
+	if x != nil {
+		return x.SaleOrderUuid
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetSaleBillUuid() string {
+	if x != nil {
+		return x.SaleBillUuid
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetPosProfile() string {
+	if x != nil {
+		return x.PosProfile
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetCompany() string {
+	if x != nil {
+		return x.Company
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetCustomer() string {
+	if x != nil {
+		return x.Customer
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetPriceListCurrency() string {
+	if x != nil {
+		return x.PriceListCurrency
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetPostingDatetime() int64 {
+	if x != nil {
+		return x.PostingDatetime
+	}
+	return 0
+}
+
+func (x *SaveSalesInvoiceReq) GetBranch() string {
+	if x != nil {
+		return x.Branch
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetUpdateStock() int32 {
+	if x != nil {
+		return x.UpdateStock
+	}
+	return 0
+}
+
+func (x *SaveSalesInvoiceReq) GetItems() []*PosInvoiceItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *SaveSalesInvoiceReq) GetMaterialItems() []*PosInvoiceItem {
+	if x != nil {
+		return x.MaterialItems
+	}
+	return nil
+}
+
+func (x *SaveSalesInvoiceReq) GetTaxes() []*PosInvoiceTax {
+	if x != nil {
+		return x.Taxes
+	}
+	return nil
+}
+
+func (x *SaveSalesInvoiceReq) GetPayments() []*PosInvoicePayment {
+	if x != nil {
+		return x.Payments
+	}
+	return nil
+}
+
+func (x *SaveSalesInvoiceReq) GetRemark() string {
+	if x != nil {
+		return x.Remark
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetOrderSourceUuid() string {
+	if x != nil && x.OrderSourceUuid != nil {
+		return *x.OrderSourceUuid
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetOrderSourceName() string {
+	if x != nil && x.OrderSourceName != nil {
+		return *x.OrderSourceName
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetTakeoutOrderNo() string {
+	if x != nil && x.TakeoutOrderNo != nil {
+		return *x.TakeoutOrderNo
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetTakeoutProvider() string {
+	if x != nil && x.TakeoutProvider != nil {
+		return *x.TakeoutProvider
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetDiscountAmount() float64 {
+	if x != nil {
+		return x.DiscountAmount
+	}
+	return 0
+}
+
+func (x *SaveSalesInvoiceReq) GetAmendedFrom() string {
+	if x != nil {
+		return x.AmendedFrom
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetCompanyUuid() string {
+	if x != nil {
+		return x.CompanyUuid
+	}
+	return ""
+}
+
+// SaveSalesInvoiceResp 保存 Sales Invoice 响应
+type SaveSalesInvoiceResp struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	SalesInvoiceName  string                 `protobuf:"bytes,1,opt,name=sales_invoice_name,json=salesInvoiceName,proto3" json:"sales_invoice_name,omitempty" dc:"SI 单据名称"`      // SI 单据名称
+	PaymentEntryNames []string               `protobuf:"bytes,2,rep,name=payment_entry_names,json=paymentEntryNames,proto3" json:"payment_entry_names,omitempty" dc:"PE 单据名称列表"` // PE 单据名称列表
+	AsyncRecordId     string                 `protobuf:"bytes,3,opt,name=async_record_id,json=asyncRecordId,proto3" json:"async_record_id,omitempty" dc:"异步记录ID"`                // 异步记录ID
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *SaveSalesInvoiceResp) Reset() {
+	*x = SaveSalesInvoiceResp{}
+	mi := &file_selling_selling_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveSalesInvoiceResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveSalesInvoiceResp) ProtoMessage() {}
+
+func (x *SaveSalesInvoiceResp) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveSalesInvoiceResp.ProtoReflect.Descriptor instead.
+func (*SaveSalesInvoiceResp) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *SaveSalesInvoiceResp) GetSalesInvoiceName() string {
+	if x != nil {
+		return x.SalesInvoiceName
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceResp) GetPaymentEntryNames() []string {
+	if x != nil {
+		return x.PaymentEntryNames
+	}
+	return nil
+}
+
+func (x *SaveSalesInvoiceResp) GetAsyncRecordId() string {
+	if x != nil {
+		return x.AsyncRecordId
+	}
+	return ""
+}
+
+// CancelSalesInvoiceReq 取消 Sales Invoice 请求
+type CancelSalesInvoiceReq struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	OrderNo           string                 `protobuf:"bytes,1,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty" dc:"TTPOS 订单号"`                                 // TTPOS 订单号
+	SaleOrderUuid     string                 `protobuf:"bytes,2,opt,name=sale_order_uuid,json=saleOrderUuid,proto3" json:"sale_order_uuid,omitempty" dc:"订单 UUID（幂等键）"`          // 订单 UUID（幂等键）
+	SalesInvoiceName  string                 `protobuf:"bytes,3,opt,name=sales_invoice_name,json=salesInvoiceName,proto3" json:"sales_invoice_name,omitempty" dc:"SI 单据名称"`      // SI 单据名称
+	PaymentEntryNames []string               `protobuf:"bytes,4,rep,name=payment_entry_names,json=paymentEntryNames,proto3" json:"payment_entry_names,omitempty" dc:"PE 单据名称列表"` // PE 单据名称列表
+	StockDeducted     bool                   `protobuf:"varint,5,opt,name=stock_deducted,json=stockDeducted,proto3" json:"stock_deducted,omitempty" dc:"是否已通过 Stock Entry 扣库存"`  // 是否已通过 Stock Entry 扣库存
+	Remark            string                 `protobuf:"bytes,6,opt,name=remark,proto3" json:"remark,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *CancelSalesInvoiceReq) Reset() {
+	*x = CancelSalesInvoiceReq{}
+	mi := &file_selling_selling_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelSalesInvoiceReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelSalesInvoiceReq) ProtoMessage() {}
+
+func (x *CancelSalesInvoiceReq) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelSalesInvoiceReq.ProtoReflect.Descriptor instead.
+func (*CancelSalesInvoiceReq) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *CancelSalesInvoiceReq) GetOrderNo() string {
+	if x != nil {
+		return x.OrderNo
+	}
+	return ""
+}
+
+func (x *CancelSalesInvoiceReq) GetSaleOrderUuid() string {
+	if x != nil {
+		return x.SaleOrderUuid
+	}
+	return ""
+}
+
+func (x *CancelSalesInvoiceReq) GetSalesInvoiceName() string {
+	if x != nil {
+		return x.SalesInvoiceName
+	}
+	return ""
+}
+
+func (x *CancelSalesInvoiceReq) GetPaymentEntryNames() []string {
+	if x != nil {
+		return x.PaymentEntryNames
+	}
+	return nil
+}
+
+func (x *CancelSalesInvoiceReq) GetStockDeducted() bool {
+	if x != nil {
+		return x.StockDeducted
+	}
+	return false
+}
+
+func (x *CancelSalesInvoiceReq) GetRemark() string {
+	if x != nil {
+		return x.Remark
+	}
+	return ""
+}
+
+// CancelSalesInvoiceResp 取消 Sales Invoice 响应
+type CancelSalesInvoiceResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AsyncRecordId string                 `protobuf:"bytes,1,opt,name=async_record_id,json=asyncRecordId,proto3" json:"async_record_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelSalesInvoiceResp) Reset() {
+	*x = CancelSalesInvoiceResp{}
+	mi := &file_selling_selling_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelSalesInvoiceResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelSalesInvoiceResp) ProtoMessage() {}
+
+func (x *CancelSalesInvoiceResp) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelSalesInvoiceResp.ProtoReflect.Descriptor instead.
+func (*CancelSalesInvoiceResp) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *CancelSalesInvoiceResp) GetAsyncRecordId() string {
+	if x != nil {
+		return x.AsyncRecordId
+	}
+	return ""
+}
+
+// ReturnSalesInvoiceReq 退款 (Credit Note) 请求
+type ReturnSalesInvoiceReq struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	OrderNo          string                 `protobuf:"bytes,1,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty"`
+	SaleOrderUuid    string                 `protobuf:"bytes,2,opt,name=sale_order_uuid,json=saleOrderUuid,proto3" json:"sale_order_uuid,omitempty"`
+	SalesInvoiceName string                 `protobuf:"bytes,3,opt,name=sales_invoice_name,json=salesInvoiceName,proto3" json:"sales_invoice_name,omitempty" dc:"原 SI 名称"` // 原 SI 名称
+	PostingDatetime  int64                  `protobuf:"varint,4,opt,name=posting_datetime,json=postingDatetime,proto3" json:"posting_datetime,omitempty"`
+	Company          string                 `protobuf:"bytes,5,opt,name=company,proto3" json:"company,omitempty"`
+	Customer         string                 `protobuf:"bytes,6,opt,name=customer,proto3" json:"customer,omitempty"`
+	Items            []*PosInvoiceItem      `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty" dc:"退款商品"`                                      // 退款商品
+	MaterialItems    []*PosInvoiceItem      `protobuf:"bytes,8,rep,name=material_items,json=materialItems,proto3" json:"material_items,omitempty" dc:"退款物品"` // 退款物品
+	Taxes            []*PosInvoiceTax       `protobuf:"bytes,9,rep,name=taxes,proto3" json:"taxes,omitempty"`
+	Payments         []*PosInvoicePayment   `protobuf:"bytes,10,rep,name=payments,proto3" json:"payments,omitempty" dc:"原支付方式的退款金额"`                                         // 原支付方式的退款金额
+	RefundType       string                 `protobuf:"bytes,11,opt,name=refund_type,json=refundType,proto3" json:"refund_type,omitempty" dc:"full_refund / partial_refund"` // full_refund / partial_refund
+	Remark           string                 `protobuf:"bytes,12,opt,name=remark,proto3" json:"remark,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ReturnSalesInvoiceReq) Reset() {
+	*x = ReturnSalesInvoiceReq{}
+	mi := &file_selling_selling_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReturnSalesInvoiceReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReturnSalesInvoiceReq) ProtoMessage() {}
+
+func (x *ReturnSalesInvoiceReq) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReturnSalesInvoiceReq.ProtoReflect.Descriptor instead.
+func (*ReturnSalesInvoiceReq) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *ReturnSalesInvoiceReq) GetOrderNo() string {
+	if x != nil {
+		return x.OrderNo
+	}
+	return ""
+}
+
+func (x *ReturnSalesInvoiceReq) GetSaleOrderUuid() string {
+	if x != nil {
+		return x.SaleOrderUuid
+	}
+	return ""
+}
+
+func (x *ReturnSalesInvoiceReq) GetSalesInvoiceName() string {
+	if x != nil {
+		return x.SalesInvoiceName
+	}
+	return ""
+}
+
+func (x *ReturnSalesInvoiceReq) GetPostingDatetime() int64 {
+	if x != nil {
+		return x.PostingDatetime
+	}
+	return 0
+}
+
+func (x *ReturnSalesInvoiceReq) GetCompany() string {
+	if x != nil {
+		return x.Company
+	}
+	return ""
+}
+
+func (x *ReturnSalesInvoiceReq) GetCustomer() string {
+	if x != nil {
+		return x.Customer
+	}
+	return ""
+}
+
+func (x *ReturnSalesInvoiceReq) GetItems() []*PosInvoiceItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ReturnSalesInvoiceReq) GetMaterialItems() []*PosInvoiceItem {
+	if x != nil {
+		return x.MaterialItems
+	}
+	return nil
+}
+
+func (x *ReturnSalesInvoiceReq) GetTaxes() []*PosInvoiceTax {
+	if x != nil {
+		return x.Taxes
+	}
+	return nil
+}
+
+func (x *ReturnSalesInvoiceReq) GetPayments() []*PosInvoicePayment {
+	if x != nil {
+		return x.Payments
+	}
+	return nil
+}
+
+func (x *ReturnSalesInvoiceReq) GetRefundType() string {
+	if x != nil {
+		return x.RefundType
+	}
+	return ""
+}
+
+func (x *ReturnSalesInvoiceReq) GetRemark() string {
+	if x != nil {
+		return x.Remark
+	}
+	return ""
+}
+
+// ReturnSalesInvoiceResp 退款 (Credit Note) 响应
+type ReturnSalesInvoiceResp struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	CreditNoteName    string                 `protobuf:"bytes,1,opt,name=credit_note_name,json=creditNoteName,proto3" json:"credit_note_name,omitempty"`
+	PaymentEntryNames []string               `protobuf:"bytes,2,rep,name=payment_entry_names,json=paymentEntryNames,proto3" json:"payment_entry_names,omitempty"`
+	AsyncRecordId     string                 `protobuf:"bytes,3,opt,name=async_record_id,json=asyncRecordId,proto3" json:"async_record_id,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ReturnSalesInvoiceResp) Reset() {
+	*x = ReturnSalesInvoiceResp{}
+	mi := &file_selling_selling_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReturnSalesInvoiceResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReturnSalesInvoiceResp) ProtoMessage() {}
+
+func (x *ReturnSalesInvoiceResp) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReturnSalesInvoiceResp.ProtoReflect.Descriptor instead.
+func (*ReturnSalesInvoiceResp) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ReturnSalesInvoiceResp) GetCreditNoteName() string {
+	if x != nil {
+		return x.CreditNoteName
+	}
+	return ""
+}
+
+func (x *ReturnSalesInvoiceResp) GetPaymentEntryNames() []string {
+	if x != nil {
+		return x.PaymentEntryNames
+	}
+	return nil
+}
+
+func (x *ReturnSalesInvoiceResp) GetAsyncRecordId() string {
+	if x != nil {
+		return x.AsyncRecordId
+	}
+	return ""
+}
+
 var File_selling_selling_proto protoreflect.FileDescriptor
 
 const file_selling_selling_proto_rawDesc = "" +
@@ -2149,7 +2755,69 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x05_nameB\r\n" +
 	"\v_payment_id\"V\n" +
 	"\x14GetModeOfPaymentResp\x12>\n" +
-	"\x0fmode_of_payment\x18\x01 \x01(\v2\x16.selling.ModeOfPaymentR\rmodeOfPayment2\xbd\x05\n" +
+	"\x0fmode_of_payment\x18\x01 \x01(\v2\x16.selling.ModeOfPaymentR\rmodeOfPayment\"\xfa\a\n" +
+	"\x13SaveSalesInvoiceReq\x12\x19\n" +
+	"\border_no\x18\x01 \x01(\tR\aorderNo\x12&\n" +
+	"\x0fsale_order_uuid\x18\x02 \x01(\tR\rsaleOrderUuid\x12$\n" +
+	"\x0esale_bill_uuid\x18\x03 \x01(\tR\fsaleBillUuid\x12\x1f\n" +
+	"\vpos_profile\x18\x04 \x01(\tR\n" +
+	"posProfile\x12\x18\n" +
+	"\acompany\x18\x05 \x01(\tR\acompany\x12\x1a\n" +
+	"\bcustomer\x18\x06 \x01(\tR\bcustomer\x12\x1a\n" +
+	"\bcurrency\x18\a \x01(\tR\bcurrency\x12.\n" +
+	"\x13price_list_currency\x18\b \x01(\tR\x11priceListCurrency\x12)\n" +
+	"\x10posting_datetime\x18\t \x01(\x03R\x0fpostingDatetime\x12\x16\n" +
+	"\x06branch\x18\n" +
+	" \x01(\tR\x06branch\x12!\n" +
+	"\fupdate_stock\x18\v \x01(\x05R\vupdateStock\x12-\n" +
+	"\x05items\x18\f \x03(\v2\x17.selling.PosInvoiceItemR\x05items\x12>\n" +
+	"\x0ematerial_items\x18\r \x03(\v2\x17.selling.PosInvoiceItemR\rmaterialItems\x12,\n" +
+	"\x05taxes\x18\x0e \x03(\v2\x16.selling.PosInvoiceTaxR\x05taxes\x126\n" +
+	"\bpayments\x18\x0f \x03(\v2\x1a.selling.PosInvoicePaymentR\bpayments\x12\x16\n" +
+	"\x06remark\x18\x10 \x01(\tR\x06remark\x12/\n" +
+	"\x11order_source_uuid\x18\x11 \x01(\tH\x00R\x0forderSourceUuid\x88\x01\x01\x12/\n" +
+	"\x11order_source_name\x18\x12 \x01(\tH\x01R\x0forderSourceName\x88\x01\x01\x12-\n" +
+	"\x10takeout_order_no\x18\x13 \x01(\tH\x02R\x0etakeoutOrderNo\x88\x01\x01\x12.\n" +
+	"\x10takeout_provider\x18\x14 \x01(\tH\x03R\x0ftakeoutProvider\x88\x01\x01\x12'\n" +
+	"\x0fdiscount_amount\x18\x15 \x01(\x01R\x0ediscountAmount\x12!\n" +
+	"\famended_from\x18\x16 \x01(\tR\vamendedFrom\x12!\n" +
+	"\fcompany_uuid\x18\x17 \x01(\tR\vcompanyUuidB\x14\n" +
+	"\x12_order_source_uuidB\x14\n" +
+	"\x12_order_source_nameB\x13\n" +
+	"\x11_takeout_order_noB\x13\n" +
+	"\x11_takeout_provider\"\x9c\x01\n" +
+	"\x14SaveSalesInvoiceResp\x12,\n" +
+	"\x12sales_invoice_name\x18\x01 \x01(\tR\x10salesInvoiceName\x12.\n" +
+	"\x13payment_entry_names\x18\x02 \x03(\tR\x11paymentEntryNames\x12&\n" +
+	"\x0fasync_record_id\x18\x03 \x01(\tR\rasyncRecordId\"\xf7\x01\n" +
+	"\x15CancelSalesInvoiceReq\x12\x19\n" +
+	"\border_no\x18\x01 \x01(\tR\aorderNo\x12&\n" +
+	"\x0fsale_order_uuid\x18\x02 \x01(\tR\rsaleOrderUuid\x12,\n" +
+	"\x12sales_invoice_name\x18\x03 \x01(\tR\x10salesInvoiceName\x12.\n" +
+	"\x13payment_entry_names\x18\x04 \x03(\tR\x11paymentEntryNames\x12%\n" +
+	"\x0estock_deducted\x18\x05 \x01(\bR\rstockDeducted\x12\x16\n" +
+	"\x06remark\x18\x06 \x01(\tR\x06remark\"@\n" +
+	"\x16CancelSalesInvoiceResp\x12&\n" +
+	"\x0fasync_record_id\x18\x01 \x01(\tR\rasyncRecordId\"\xf7\x03\n" +
+	"\x15ReturnSalesInvoiceReq\x12\x19\n" +
+	"\border_no\x18\x01 \x01(\tR\aorderNo\x12&\n" +
+	"\x0fsale_order_uuid\x18\x02 \x01(\tR\rsaleOrderUuid\x12,\n" +
+	"\x12sales_invoice_name\x18\x03 \x01(\tR\x10salesInvoiceName\x12)\n" +
+	"\x10posting_datetime\x18\x04 \x01(\x03R\x0fpostingDatetime\x12\x18\n" +
+	"\acompany\x18\x05 \x01(\tR\acompany\x12\x1a\n" +
+	"\bcustomer\x18\x06 \x01(\tR\bcustomer\x12-\n" +
+	"\x05items\x18\a \x03(\v2\x17.selling.PosInvoiceItemR\x05items\x12>\n" +
+	"\x0ematerial_items\x18\b \x03(\v2\x17.selling.PosInvoiceItemR\rmaterialItems\x12,\n" +
+	"\x05taxes\x18\t \x03(\v2\x16.selling.PosInvoiceTaxR\x05taxes\x126\n" +
+	"\bpayments\x18\n" +
+	" \x03(\v2\x1a.selling.PosInvoicePaymentR\bpayments\x12\x1f\n" +
+	"\vrefund_type\x18\v \x01(\tR\n" +
+	"refundType\x12\x16\n" +
+	"\x06remark\x18\f \x01(\tR\x06remark\"\x9a\x01\n" +
+	"\x16ReturnSalesInvoiceResp\x12(\n" +
+	"\x10credit_note_name\x18\x01 \x01(\tR\x0ecreditNoteName\x12.\n" +
+	"\x13payment_entry_names\x18\x02 \x03(\tR\x11paymentEntryNames\x12&\n" +
+	"\x0fasync_record_id\x18\x03 \x01(\tR\rasyncRecordId2\x94\a\n" +
 	"\x0eSellingService\x12>\n" +
 	"\x11GetPosProfileList\x12\x16.selling.PosProfileReq\x1a\x11.erp.ResponseInfo\x12K\n" +
 	"\x14CreatePaymentAccount\x12 .selling.CreatePaymentAccountReq\x1a\x11.erp.ResponseInfo\x12;\n" +
@@ -2157,7 +2825,10 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\rClosePosEntry\x12\x19.selling.ClosePosEntryReq\x1a\x11.erp.ResponseInfo\x12?\n" +
 	"\x0eSavePosInvoice\x12\x1a.selling.SavePosInvoiceReq\x1a\x11.erp.ResponseInfo\x12C\n" +
 	"\x10ReturnPosInvoice\x12\x1c.selling.ReturnPosInvoiceReq\x1a\x11.erp.ResponseInfo\x12C\n" +
-	"\x10CancelPosInvoice\x12\x1c.selling.CancelPosInvoiceReq\x1a\x11.erp.ResponseInfo\x12K\n" +
+	"\x10CancelPosInvoice\x12\x1c.selling.CancelPosInvoiceReq\x1a\x11.erp.ResponseInfo\x12C\n" +
+	"\x10SaveSalesInvoice\x12\x1c.selling.SaveSalesInvoiceReq\x1a\x11.erp.ResponseInfo\x12G\n" +
+	"\x12CancelSalesInvoice\x12\x1e.selling.CancelSalesInvoiceReq\x1a\x11.erp.ResponseInfo\x12G\n" +
+	"\x12ReturnSalesInvoice\x12\x1e.selling.ReturnSalesInvoiceReq\x1a\x11.erp.ResponseInfo\x12K\n" +
 	"\x14GetModeOfPaymentList\x12 .selling.GetModeOfPaymentListReq\x1a\x11.erp.ResponseInfo\x12C\n" +
 	"\x10GetModeOfPayment\x12\x1c.selling.GetModeOfPaymentReq\x1a\x11.erp.ResponseInfo\x12E\n" +
 	"\x11SaveModeOfPayment\x12\x1d.selling.SaveModeOfPaymentReq\x1a\x11.erp.ResponseInfoB%Z#ttpos-bmp/app/ttpos-erp/api/sellingb\x06proto3"
@@ -2174,7 +2845,7 @@ func file_selling_selling_proto_rawDescGZIP() []byte {
 	return file_selling_selling_proto_rawDescData
 }
 
-var file_selling_selling_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_selling_selling_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_selling_selling_proto_goTypes = []any{
 	(*PosProfileReq)(nil),            // 0: selling.PosProfileReq
 	(*PosProfile)(nil),               // 1: selling.PosProfile
@@ -2204,7 +2875,13 @@ var file_selling_selling_proto_goTypes = []any{
 	(*GetModeOfPaymentListResp)(nil), // 25: selling.GetModeOfPaymentListResp
 	(*GetModeOfPaymentReq)(nil),      // 26: selling.GetModeOfPaymentReq
 	(*GetModeOfPaymentResp)(nil),     // 27: selling.GetModeOfPaymentResp
-	(*api.ResponseInfo)(nil),         // 28: erp.ResponseInfo
+	(*SaveSalesInvoiceReq)(nil),      // 28: selling.SaveSalesInvoiceReq
+	(*SaveSalesInvoiceResp)(nil),     // 29: selling.SaveSalesInvoiceResp
+	(*CancelSalesInvoiceReq)(nil),    // 30: selling.CancelSalesInvoiceReq
+	(*CancelSalesInvoiceResp)(nil),   // 31: selling.CancelSalesInvoiceResp
+	(*ReturnSalesInvoiceReq)(nil),    // 32: selling.ReturnSalesInvoiceReq
+	(*ReturnSalesInvoiceResp)(nil),   // 33: selling.ReturnSalesInvoiceResp
+	(*api.ResponseInfo)(nil),         // 34: erp.ResponseInfo
 }
 var file_selling_selling_proto_depIdxs = []int32{
 	1,  // 0: selling.PosProfileListResp.profile_list:type_name -> selling.PosProfile
@@ -2223,31 +2900,45 @@ var file_selling_selling_proto_depIdxs = []int32{
 	16, // 13: selling.ReturnPosInvoiceReq.payments:type_name -> selling.PosInvoicePayment
 	21, // 14: selling.GetModeOfPaymentListResp.mode_of_payment_list:type_name -> selling.ModeOfPayment
 	21, // 15: selling.GetModeOfPaymentResp.mode_of_payment:type_name -> selling.ModeOfPayment
-	0,  // 16: selling.SellingService.GetPosProfileList:input_type -> selling.PosProfileReq
-	3,  // 17: selling.SellingService.CreatePaymentAccount:input_type -> selling.CreatePaymentAccountReq
-	4,  // 18: selling.SellingService.OpenPosEntry:input_type -> selling.OpenPosEntryReq
-	8,  // 19: selling.SellingService.ClosePosEntry:input_type -> selling.ClosePosEntryReq
-	12, // 20: selling.SellingService.SavePosInvoice:input_type -> selling.SavePosInvoiceReq
-	17, // 21: selling.SellingService.ReturnPosInvoice:input_type -> selling.ReturnPosInvoiceReq
-	19, // 22: selling.SellingService.CancelPosInvoice:input_type -> selling.CancelPosInvoiceReq
-	24, // 23: selling.SellingService.GetModeOfPaymentList:input_type -> selling.GetModeOfPaymentListReq
-	26, // 24: selling.SellingService.GetModeOfPayment:input_type -> selling.GetModeOfPaymentReq
-	22, // 25: selling.SellingService.SaveModeOfPayment:input_type -> selling.SaveModeOfPaymentReq
-	28, // 26: selling.SellingService.GetPosProfileList:output_type -> erp.ResponseInfo
-	28, // 27: selling.SellingService.CreatePaymentAccount:output_type -> erp.ResponseInfo
-	28, // 28: selling.SellingService.OpenPosEntry:output_type -> erp.ResponseInfo
-	28, // 29: selling.SellingService.ClosePosEntry:output_type -> erp.ResponseInfo
-	28, // 30: selling.SellingService.SavePosInvoice:output_type -> erp.ResponseInfo
-	28, // 31: selling.SellingService.ReturnPosInvoice:output_type -> erp.ResponseInfo
-	28, // 32: selling.SellingService.CancelPosInvoice:output_type -> erp.ResponseInfo
-	28, // 33: selling.SellingService.GetModeOfPaymentList:output_type -> erp.ResponseInfo
-	28, // 34: selling.SellingService.GetModeOfPayment:output_type -> erp.ResponseInfo
-	28, // 35: selling.SellingService.SaveModeOfPayment:output_type -> erp.ResponseInfo
-	26, // [26:36] is the sub-list for method output_type
-	16, // [16:26] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	14, // 16: selling.SaveSalesInvoiceReq.items:type_name -> selling.PosInvoiceItem
+	14, // 17: selling.SaveSalesInvoiceReq.material_items:type_name -> selling.PosInvoiceItem
+	15, // 18: selling.SaveSalesInvoiceReq.taxes:type_name -> selling.PosInvoiceTax
+	16, // 19: selling.SaveSalesInvoiceReq.payments:type_name -> selling.PosInvoicePayment
+	14, // 20: selling.ReturnSalesInvoiceReq.items:type_name -> selling.PosInvoiceItem
+	14, // 21: selling.ReturnSalesInvoiceReq.material_items:type_name -> selling.PosInvoiceItem
+	15, // 22: selling.ReturnSalesInvoiceReq.taxes:type_name -> selling.PosInvoiceTax
+	16, // 23: selling.ReturnSalesInvoiceReq.payments:type_name -> selling.PosInvoicePayment
+	0,  // 24: selling.SellingService.GetPosProfileList:input_type -> selling.PosProfileReq
+	3,  // 25: selling.SellingService.CreatePaymentAccount:input_type -> selling.CreatePaymentAccountReq
+	4,  // 26: selling.SellingService.OpenPosEntry:input_type -> selling.OpenPosEntryReq
+	8,  // 27: selling.SellingService.ClosePosEntry:input_type -> selling.ClosePosEntryReq
+	12, // 28: selling.SellingService.SavePosInvoice:input_type -> selling.SavePosInvoiceReq
+	17, // 29: selling.SellingService.ReturnPosInvoice:input_type -> selling.ReturnPosInvoiceReq
+	19, // 30: selling.SellingService.CancelPosInvoice:input_type -> selling.CancelPosInvoiceReq
+	28, // 31: selling.SellingService.SaveSalesInvoice:input_type -> selling.SaveSalesInvoiceReq
+	30, // 32: selling.SellingService.CancelSalesInvoice:input_type -> selling.CancelSalesInvoiceReq
+	32, // 33: selling.SellingService.ReturnSalesInvoice:input_type -> selling.ReturnSalesInvoiceReq
+	24, // 34: selling.SellingService.GetModeOfPaymentList:input_type -> selling.GetModeOfPaymentListReq
+	26, // 35: selling.SellingService.GetModeOfPayment:input_type -> selling.GetModeOfPaymentReq
+	22, // 36: selling.SellingService.SaveModeOfPayment:input_type -> selling.SaveModeOfPaymentReq
+	34, // 37: selling.SellingService.GetPosProfileList:output_type -> erp.ResponseInfo
+	34, // 38: selling.SellingService.CreatePaymentAccount:output_type -> erp.ResponseInfo
+	34, // 39: selling.SellingService.OpenPosEntry:output_type -> erp.ResponseInfo
+	34, // 40: selling.SellingService.ClosePosEntry:output_type -> erp.ResponseInfo
+	34, // 41: selling.SellingService.SavePosInvoice:output_type -> erp.ResponseInfo
+	34, // 42: selling.SellingService.ReturnPosInvoice:output_type -> erp.ResponseInfo
+	34, // 43: selling.SellingService.CancelPosInvoice:output_type -> erp.ResponseInfo
+	34, // 44: selling.SellingService.SaveSalesInvoice:output_type -> erp.ResponseInfo
+	34, // 45: selling.SellingService.CancelSalesInvoice:output_type -> erp.ResponseInfo
+	34, // 46: selling.SellingService.ReturnSalesInvoice:output_type -> erp.ResponseInfo
+	34, // 47: selling.SellingService.GetModeOfPaymentList:output_type -> erp.ResponseInfo
+	34, // 48: selling.SellingService.GetModeOfPayment:output_type -> erp.ResponseInfo
+	34, // 49: selling.SellingService.SaveModeOfPayment:output_type -> erp.ResponseInfo
+	37, // [37:50] is the sub-list for method output_type
+	24, // [24:37] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_selling_selling_proto_init() }
@@ -2261,13 +2952,14 @@ func file_selling_selling_proto_init() {
 	file_selling_selling_proto_msgTypes[16].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[22].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[26].OneofWrappers = []any{}
+	file_selling_selling_proto_msgTypes[28].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_selling_selling_proto_rawDesc), len(file_selling_selling_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   28,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

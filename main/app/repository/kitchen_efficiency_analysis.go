@@ -13,7 +13,7 @@ type IKitchenEfficiencyAnalysisRepo interface {
 	GetKitchenEfficiencyAnalysis(opts ...DBOption) (*model.KitchenEfficiencyAnalysis, error)                                                             // 获取后厨效率分析记录
 	GetKitchenEfficiencyAnalysisList(pageNo, pageSize int, opts ...DBOption) ([]*model.KitchenEfficiencyAnalysis, int64, error)                          // 获取后厨效率分析记录列表
 	UpdateKitchenEfficiencyAnalysis(opts []DBOption, vars map[string]any) error                                                                          // 更新后厨效率分析记录
-	UpdateKitchenEfficiencyAnalysisByStruct(analysis model.KitchenEfficiencyAnalysis, opts ...DBOption) error                                             // 使用结构体更新后厨效率分析记录
+	UpdateKitchenEfficiencyAnalysisByStruct(analysis model.KitchenEfficiencyAnalysis, opts ...DBOption) error                                            // 使用结构体更新后厨效率分析记录
 	GetKitchenEfficiencyAnalysisByProductPackageUuid(productPackageUuids []uint64, startTime, endTime int64) ([]*KitchenEfficiencyAnalysisResult, error) // 根据product_package_uuid查询后厨效率分析记录
 	GetKitchenEfficiencyAnalysisAvg(startTime, endTime int64) (float64, error)                                                                           // 获取后厨效率分析平均值
 	CalculateKitchenEfficiencyAnalysis(startTime, endTime int64) ([]*model.KitchenEfficiencyAnalysis, error)                                             // 计算后厨效率分析记录

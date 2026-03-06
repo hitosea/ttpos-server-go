@@ -19,8 +19,8 @@ type IProductBomCardRepo interface {
 	UpdateProductBomCardIsUsed(uuid uint64, isUsed int) error
 	GetSubShopProductBomCardList(headquarterUuid uint64) ([]*model.ProductBomCard, error) // 获取子店中来自总部的成本卡列表
 	UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error
-	HardDeleteByHeadquarterUuid(headquarterUuid uint64) error            // 硬删除指定总部的成本卡
-	HardDeleteRelatedMaterialsByUuids(relatedUuids []uint64) error       // 硬删除指定关联UUID的RelatedMaterial
+	HardDeleteByHeadquarterUuid(headquarterUuid uint64) error      // 硬删除指定总部的成本卡
+	HardDeleteRelatedMaterialsByUuids(relatedUuids []uint64) error // 硬删除指定关联UUID的RelatedMaterial
 }
 
 type IProductBomCardQueryRepo interface {

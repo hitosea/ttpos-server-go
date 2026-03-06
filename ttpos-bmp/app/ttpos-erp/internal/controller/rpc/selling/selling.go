@@ -537,3 +537,69 @@ func (c *Controller) validateSaveModeOfPaymentReq(req *selling.SaveModeOfPayment
 
 	return nil
 }
+
+// ========== Sales Invoice 控制器方法 ==========
+
+// SaveSalesInvoice 保存 Sales Invoice（替代 POS Invoice）
+func (c *Controller) SaveSalesInvoice(ctx context.Context, req *selling.SaveSalesInvoiceReq) (*api.ResponseInfo, error) {
+	if err := c.validateSaveSalesInvoiceReq(req); err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	resp, err := service.AsyncSelling().SaveSalesInvoice(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	return rpc.ApiSuccessWithData("保存SI成功", resp), nil
+}
+
+func (c *Controller) validateSaveSalesInvoiceReq(req *selling.SaveSalesInvoiceReq) error {
+	if strings.TrimSpace(req.OrderNo) == "" {
+		return gerror.New("订单号不能为空")
+	}
+	if strings.TrimSpace(req.SaleOrderUuid) == "" {
+		return gerror.New("订单UUID不能为空")
+	}
+	if strings.TrimSpace(req.Company) == "" {
+		return gerror.New("公司不能为空")
+	}
+	if strings.TrimSpace(req.Customer) == "" {
+		return gerror.New("客户不能为空")
+	}
+	if len(req.Items) == 0 {
+		return gerror.New("商品明细不能为空")
+	}
+	return nil
+}
+
+// CancelSalesInvoice 取消 Sales Invoice（反结账时调用）
+func (c *Controller) CancelSalesInvoice(ctx context.Context, req *selling.CancelSalesInvoiceReq) (*api.ResponseInfo, error) {
+	if strings.TrimSpace(req.SaleOrderUuid) == "" {
+		return rpc.ApiError("订单UUID不能为空"), nil
+	}
+
+	resp, err := service.AsyncSelling().CancelSalesInvoice(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	return rpc.ApiSuccessWithData("取消SI成功", resp), nil
+}
+
+// ReturnSalesInvoice 退款 Sales Invoice（Credit Note）
+func (c *Controller) ReturnSalesInvoice(ctx context.Context, req *selling.ReturnSalesInvoiceReq) (*api.ResponseInfo, error) {
+	if strings.TrimSpace(req.SaleOrderUuid) == "" {
+		return rpc.ApiError("订单UUID不能为空"), nil
+	}
+	if strings.TrimSpace(req.SalesInvoiceName) == "" {
+		return rpc.ApiError("原SI名称不能为空"), nil
+	}
+
+	resp, err := service.AsyncSelling().ReturnSalesInvoice(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	return rpc.ApiSuccessWithData("退款SI成功", resp), nil
+}

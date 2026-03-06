@@ -230,6 +230,18 @@ func (o *TakeoutOrder) GetErpPosInvoiceResp() *selling.SavePosInvoiceResp {
 	return &erpPosInvoiceResp
 }
 
+// GetErpSalesInvoiceResp 获取 ERP Sales Invoice 响应数据（SI 模式）
+func (o *TakeoutOrder) GetErpSalesInvoiceResp() *selling.SaveSalesInvoiceResp {
+	if len(o.ErpPosInvoiceResp) == 0 {
+		return nil
+	}
+	var resp selling.SaveSalesInvoiceResp
+	if err := json.Unmarshal([]byte(o.ErpPosInvoiceResp), &resp); err != nil {
+		return nil
+	}
+	return &resp
+}
+
 // 获取外卖订单编号
 func (o *TakeoutOrder) GetKdsTakeoutPlatformAndOrderNumber() string {
 	if o == nil {
