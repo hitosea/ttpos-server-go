@@ -16,12 +16,14 @@ type UserResp struct {
 }
 
 type MemberResp struct {
-	LanguageList        []dto.LanguageItem `json:"language_list"`           // 语言列表
-	IsMemberShowSoldOut bool               `json:"is_member_show_sold_out"` // 是否显示售罄商品
-	IsOpenRider         bool               `json:"is_open_rider"`           // 是否开启外送
-	AreaCode            []string           `json:"area_code"`               // 区号列表
-	Language            []string           `json:"language"`                // 常用语言
-	DefaultLanguage     string             `json:"default_language"`        // 默认语言
+	LanguageList         []dto.LanguageItem `json:"language_list"`            // 语言列表
+	IsMemberShowSoldOut  bool               `json:"is_member_show_sold_out"`  // 是否显示售罄商品
+	IsOpenRider          bool               `json:"is_open_rider"`            // 是否开启外送
+	IsOpenStoreScanOrder bool               `json:"is_open_store_scan_order"` // 是否开启门店扫码点餐
+	IsStoreResting       bool               `json:"is_store_resting"`         // 商家是否休息中
+	AreaCode             []string           `json:"area_code"`                // 区号列表
+	Language             []string           `json:"language"`                 // 常用语言
+	DefaultLanguage      string             `json:"default_language"`         // 默认语言
 }
 
 type CompanyResp struct {
