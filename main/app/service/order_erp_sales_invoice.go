@@ -556,6 +556,7 @@ func (s *orderSrv) SaveSalesInvoice(ctx context.Context, saleOrder *model.SaleOr
 		Taxes:             taxes,
 		Payments:          payments,
 		CompanyUuid:       fmt.Sprintf("%d", ctx.GetCompanyUuid()),
+		OrderType:         "sale_order",
 	}
 	// 反结账后重新结账时，设置 AmendedFrom
 	if saleOrder.ErpSalesInvoiceName != "" {

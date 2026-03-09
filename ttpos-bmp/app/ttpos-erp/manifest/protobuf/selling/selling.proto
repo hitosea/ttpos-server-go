@@ -253,6 +253,7 @@ message SaveSalesInvoiceReq {
   double discount_amount = 21;                      // 额外折扣金额
   string amended_from = 22;                         // 反结账后的原单据号
   string company_uuid = 23;                         // TTPOS 商户UUID（用于异步回写 shop 数据库）
+  string order_type = 24;                            // 订单类型: sale_order/recharge/takeout
 }
 
 // SaveSalesInvoiceResp 保存 Sales Invoice 响应

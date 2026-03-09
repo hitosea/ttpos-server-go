@@ -2002,6 +2002,7 @@ type SaveSalesInvoiceReq struct {
 	DiscountAmount    float64                `protobuf:"fixed64,21,opt,name=discount_amount,json=discountAmount,proto3" json:"discount_amount,omitempty" dc:"额外折扣金额"`             // 额外折扣金额
 	AmendedFrom       string                 `protobuf:"bytes,22,opt,name=amended_from,json=amendedFrom,proto3" json:"amended_from,omitempty" dc:"反结账后的原单据号"`                     // 反结账后的原单据号
 	CompanyUuid       string                 `protobuf:"bytes,23,opt,name=company_uuid,json=companyUuid,proto3" json:"company_uuid,omitempty" dc:"TTPOS 商户UUID（用于异步回写 shop 数据库）"` // TTPOS 商户UUID（用于异步回写 shop 数据库）
+	OrderType         string                 `protobuf:"bytes,24,opt,name=order_type,json=orderType,proto3" json:"order_type,omitempty" dc:"订单类型: sale_order/recharge/takeout"`   // 订单类型: sale_order/recharge/takeout
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -2193,6 +2194,13 @@ func (x *SaveSalesInvoiceReq) GetAmendedFrom() string {
 func (x *SaveSalesInvoiceReq) GetCompanyUuid() string {
 	if x != nil {
 		return x.CompanyUuid
+	}
+	return ""
+}
+
+func (x *SaveSalesInvoiceReq) GetOrderType() string {
+	if x != nil {
+		return x.OrderType
 	}
 	return ""
 }
@@ -2755,7 +2763,7 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x05_nameB\r\n" +
 	"\v_payment_id\"V\n" +
 	"\x14GetModeOfPaymentResp\x12>\n" +
-	"\x0fmode_of_payment\x18\x01 \x01(\v2\x16.selling.ModeOfPaymentR\rmodeOfPayment\"\xfa\a\n" +
+	"\x0fmode_of_payment\x18\x01 \x01(\v2\x16.selling.ModeOfPaymentR\rmodeOfPayment\"\x99\b\n" +
 	"\x13SaveSalesInvoiceReq\x12\x19\n" +
 	"\border_no\x18\x01 \x01(\tR\aorderNo\x12&\n" +
 	"\x0fsale_order_uuid\x18\x02 \x01(\tR\rsaleOrderUuid\x12$\n" +
@@ -2781,7 +2789,9 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x10takeout_provider\x18\x14 \x01(\tH\x03R\x0ftakeoutProvider\x88\x01\x01\x12'\n" +
 	"\x0fdiscount_amount\x18\x15 \x01(\x01R\x0ediscountAmount\x12!\n" +
 	"\famended_from\x18\x16 \x01(\tR\vamendedFrom\x12!\n" +
-	"\fcompany_uuid\x18\x17 \x01(\tR\vcompanyUuidB\x14\n" +
+	"\fcompany_uuid\x18\x17 \x01(\tR\vcompanyUuid\x12\x1d\n" +
+	"\n" +
+	"order_type\x18\x18 \x01(\tR\torderTypeB\x14\n" +
 	"\x12_order_source_uuidB\x14\n" +
 	"\x12_order_source_nameB\x13\n" +
 	"\x11_takeout_order_noB\x13\n" +

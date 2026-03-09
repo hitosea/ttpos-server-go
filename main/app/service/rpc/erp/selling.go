@@ -374,6 +374,7 @@ func (s *erpSrv) SaveSalesInvoice(ctx pkgCtx.Context, saveSalesInvoiceReq req.Sa
 		TakeoutOrderNo:    saveSalesInvoiceReq.TakeoutOrderNo,
 		TakeoutProvider:   saveSalesInvoiceReq.TakeoutProvider,
 		CompanyUuid:       saveSalesInvoiceReq.CompanyUuid,
+		OrderType:         saveSalesInvoiceReq.OrderType,
 	}
 	res, err := client.SaveSalesInvoice(WithSiteCode(ctx.GetContext(), saveSalesInvoiceReq.SiteCode), params)
 	if err != nil {

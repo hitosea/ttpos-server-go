@@ -258,6 +258,7 @@ func buildSalesInvoiceRequest(
 		TakeoutOrderNo:    &takeoutOrder.PlatformOrderId,
 		TakeoutProvider:   &takeoutProvider,
 		CompanyUuid:       strconv.FormatUint(companyUuid, 10),
+		OrderType:         "takeout",
 	}
 }
 
@@ -560,15 +561,19 @@ func (s *takeoutErpSyncService) SyncOrderCancelledToERP(ctx appContext.Context, 
 		// SI 模式：解析 SI 响应，调用 CancelSalesInvoice
 		siResp := takeoutOrder.GetErpSalesInvoiceResp()
 		salesInvoiceName := ""
+		var paymentEntryNames []string
 		if siResp != nil {
 			salesInvoiceName = siResp.SalesInvoiceName
+			paymentEntryNames = siResp.PaymentEntryNames
 		}
 		err = erpAdapter.CancelSalesInvoice(ctx, req.CancelSalesInvoiceReq{
-			SiteCode:         companySetting.ErpnextSiteCode,
-			OrderNo:          strconv.FormatUint(takeoutOrder.Uuid, 10),
-			SaleOrderUuid:    strconv.FormatUint(takeoutOrder.Uuid, 10),
-			SalesInvoiceName: salesInvoiceName,
-			Remark:           remarkData,
+			SiteCode:          companySetting.ErpnextSiteCode,
+			OrderNo:           strconv.FormatUint(takeoutOrder.Uuid, 10),
+			SaleOrderUuid:     strconv.FormatUint(takeoutOrder.Uuid, 10),
+			SalesInvoiceName:  salesInvoiceName,
+			PaymentEntryNames: paymentEntryNames,
+			StockDeducted:     takeoutOrder.ErpStockDeducted == 1,
+			Remark:            remarkData,
 		})
 		if err != nil {
 			logger.Logger.Error("取消外卖订单 ERP 发票失败(SI模式)",

@@ -415,6 +415,9 @@ func RegisterRocketMqProducer() (mqIns *RocketMq, err error) {
 
 	_, err = mqIns.producerIns.SendSync(globalCtx, primitive.NewMessage("ttpos-ping", []byte("1")))
 	if err != nil {
+		// 连通性测试失败时必须关闭已启动的生产者，否则 RocketMQ SDK 内部会保留已注册的 group name，
+		// 导致后续创建同组生产者时报 "producer group has been created"
+		_ = mqIns.producerIns.Shutdown()
 		err = gerror.Newf("连通性测试不通过，请检查`queue.rocketmq.nameSrvAdders`或权限配置是否有误。err:%+v", err.Error())
 		return nil, err
 	}

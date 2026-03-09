@@ -198,6 +198,7 @@ type SaveSalesInvoiceReq struct {
 	TakeoutOrderNo    *string                      `json:"takeout_order_no"`
 	TakeoutProvider   *string                      `json:"takeout_provider"`
 	CompanyUuid       string                       `json:"company_uuid"`
+	OrderType         string                       `json:"order_type"` // 订单类型: sale_order/recharge/takeout
 }
 
 // CancelSalesInvoiceReq 取消 Sales Invoice 请求

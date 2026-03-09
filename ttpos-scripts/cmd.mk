@@ -81,6 +81,8 @@ help:
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "resync-product-data-to-erp" "重新同步本地产品数据ERP"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "check-db-host-open-mysql" "检查DB_HOST并开启MySQL端口"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "add-item-stock" "添加物品库存"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "db-export" "导出所有数据库备份（压缩）"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "db-import FILE=xxx.sql.gz" "导入数据库备份"
 	@echo ""
 	@printf "\033[1;32m"
 	@echo "🔐 系统管理命令"

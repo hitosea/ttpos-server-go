@@ -872,6 +872,7 @@ func (s *rechargeOrderSrv) SaveSalesInvoice(ctx context.Context, memberRechargeO
 		Items:             items,
 		Payments:          payments,
 		CompanyUuid:       fmt.Sprintf("%d", ctx.GetCompanyUuid()),
+		OrderType:         "recharge",
 	}
 	// 反结账后重新充值时，设置 AmendedFrom
 	if memberRechargeOrder.ErpProductsInvoiceName != "" {

@@ -1327,12 +1327,24 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
-			if err != nil {
-				return errors.WithMessage(err)
+			if companySetting.IsErpSalesInvoiceMode() {
+				// Sales Invoice 模式: 异步创建 SI + PE（BMP consumer 成功后回写 shop 数据库）
+				_, err := s.SaveSalesInvoice(ctx, saleOrder, saleBill, db)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				// 更新 erp_sync_status=1（已入队待处理），SI/PE 名称由 BMP consumer 异步回写
+				if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderErpSyncStatus(saleOrder.Uuid, 1, "", ""); err != nil {
+					return errors.WithMessage(err)
+				}
+			} else {
+				// POS Invoice 模式（默认）
+				res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				_ = res
 			}
-			// POS Invoice 结果不再持久化到 sale_order（已迁移到 SI 模式）
-			_ = res
 		}
 
 		// 更新销售订单

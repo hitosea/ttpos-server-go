@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
@@ -17,10 +18,11 @@ import (
 type ErpSalesInvoiceCallbackMsg struct {
 	CompanyUuid       string `json:"company_uuid"`
 	SaleOrderUuid     string `json:"sale_order_uuid"`
-	SyncStatus        int    `json:"sync_status"`         // 3=成功 4=失败
+	SyncStatus        int    `json:"sync_status"`         // 0=未同步 1=已入队 2=进行中 3=成功 4=失败
 	SalesInvoiceName  string `json:"sales_invoice_name"`
 	PaymentEntryNames string `json:"payment_entry_names"`
 	ErrorMsg          string `json:"error_msg,omitempty"`
+	OrderType         string `json:"order_type"`          // 订单类型: sale_order/recharge/takeout
 }
 
 // ErpSalesInvoiceCallbackHandler 处理 BMP 的 Sales Invoice 异步回调
@@ -80,39 +82,57 @@ func ErpSalesInvoiceCallbackHandler(ctx context.Context, msg *primitive.MessageE
 		return nil
 	}
 
-	// 更新 sale_order（普通订单）
-	err = repository.NewSaleOrderRepo(db).UpdateSaleOrderErpSyncStatus(
-		saleOrderUuid,
-		callbackMsg.SyncStatus,
-		callbackMsg.SalesInvoiceName,
-		callbackMsg.PaymentEntryNames,
-	)
-	if err != nil {
-		logger.Logger.Error("更新 sale_order ERP 同步状态失败",
-			zap.Uint64("company_uuid", companyUuid),
-			zap.Uint64("sale_order_uuid", saleOrderUuid),
-			zap.Error(err))
-		return err // 返回错误触发重试
-	}
-
-	// 同时尝试更新 member_recharge_order（充值订单复用 sale_order_uuid 存储 recharge_order UUID）
-	if callbackMsg.SalesInvoiceName != "" {
-		_ = repository.NewMemberRechargeOrderRepo(db).UpdateErpProductsInvoiceName(
-			saleOrderUuid,
-			callbackMsg.SalesInvoiceName,
-		)
-	}
-
-	// 同时尝试更新 takeout_order（外卖订单使用 takeoutOrder.Uuid 作为 sale_order_uuid）
-	if callbackMsg.SalesInvoiceName != "" {
-		siResp := map[string]any{
-			"sales_invoice_name":  callbackMsg.SalesInvoiceName,
-			"payment_entry_names": callbackMsg.PaymentEntryNames,
+	// 根据订单类型路由更新
+	switch callbackMsg.OrderType {
+	case "recharge":
+		// 充值订单：更新 member_recharge_order
+		if callbackMsg.SalesInvoiceName != "" {
+			if err := repository.NewMemberRechargeOrderRepo(db).UpdateErpProductsInvoiceName(
+				saleOrderUuid,
+				callbackMsg.SalesInvoiceName,
+			); err != nil {
+				logger.Logger.Error("更新充值订单 ERP 发票名称失败",
+					zap.Uint64("company_uuid", companyUuid),
+					zap.Uint64("order_uuid", saleOrderUuid),
+					zap.Error(err))
+				return err
+			}
 		}
-		if respJSON, err := json.Marshal(siResp); err == nil {
-			_ = db.Table("ttpos_takeout_order").
-				Where("uuid = ?", saleOrderUuid).
-				Update("erp_pos_invoice_resp", string(respJSON)).Error
+
+	case "takeout":
+		// 外卖订单：通过 Repository 更新 takeout_order
+		if callbackMsg.SalesInvoiceName != "" {
+			siResp := map[string]any{
+				"sales_invoice_name":  callbackMsg.SalesInvoiceName,
+				"payment_entry_names": callbackMsg.PaymentEntryNames,
+			}
+			if respJSON, err := json.Marshal(siResp); err == nil {
+				if err := persistence.NewTakeoutOrderRepo(db).UpdateByMap(saleOrderUuid, map[string]interface{}{
+					"erp_pos_invoice_resp": string(respJSON),
+				}); err != nil {
+					logger.Logger.Error("更新外卖订单 ERP 发票信息失败",
+						zap.Uint64("company_uuid", companyUuid),
+						zap.Uint64("order_uuid", saleOrderUuid),
+						zap.Error(err))
+					return err
+				}
+			}
+		}
+
+	default:
+		// POS 订单（sale_order）
+		err = repository.NewSaleOrderRepo(db).UpdateSaleOrderErpSyncStatus(
+			saleOrderUuid,
+			callbackMsg.SyncStatus,
+			callbackMsg.SalesInvoiceName,
+			callbackMsg.PaymentEntryNames,
+		)
+		if err != nil {
+			logger.Logger.Error("更新 sale_order ERP 同步状态失败",
+				zap.Uint64("company_uuid", companyUuid),
+				zap.Uint64("sale_order_uuid", saleOrderUuid),
+				zap.Error(err))
+			return err
 		}
 	}
 
@@ -120,7 +140,8 @@ func ErpSalesInvoiceCallbackHandler(ctx context.Context, msg *primitive.MessageE
 		zap.Uint64("company_uuid", companyUuid),
 		zap.Uint64("sale_order_uuid", saleOrderUuid),
 		zap.Int("sync_status", callbackMsg.SyncStatus),
-		zap.String("si_name", callbackMsg.SalesInvoiceName))
+		zap.String("si_name", callbackMsg.SalesInvoiceName),
+		zap.String("order_type", callbackMsg.OrderType))
 
 	return nil
 }

@@ -78,6 +78,7 @@ type TakeoutOrder struct {
 	AcceptedBy        uint64 `gorm:"column:accepted_by" json:"accepted_by"`
 	StaffShiftLogUuid uint64 `gorm:"column:staff_shift_log_uuid" json:"staff_shift_log_uuid"`
 	ErpPosInvoiceResp string `gorm:"column:erp_pos_invoice_resp;type:text" json:"erp_pos_invoice_resp"` // ERP POS Invoice响应数据(JSON格式)
+	ErpStockDeducted  int    `gorm:"column:erp_stock_deducted;type:tinyint(1);default:0;comment:库存是否已通过StockEntry扣减" json:"erp_stock_deducted"`
 	RejectedBy        uint64 `gorm:"column:rejected_by" json:"rejected_by"`
 	RejectReasonCode  string `gorm:"column:reject_reason_code" json:"reject_reason_code"`
 	RejectReason      string `gorm:"column:reject_reason" json:"reject_reason"`

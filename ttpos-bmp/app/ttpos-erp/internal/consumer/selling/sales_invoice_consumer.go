@@ -29,7 +29,7 @@ const (
 // retryDelay 根据重试次数计算延迟时间（指数退避：5s, 10s, 20s, 40s, 80s）
 func retryDelay(retryCount int) time.Duration {
 	d := 5 * time.Second
-	for i := 0; i < retryCount; i++ {
+	for range retryCount {
 		d *= 2
 	}
 	return d
@@ -104,7 +104,7 @@ func (*SaveSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) 
 			return nil // 不返回 error，避免 RocketMQ 自身重试
 		}
 		// 重试耗尽，发送失败回调到 Main
-		sendSalesInvoiceCallback(ctx, req.CompanyUuid, req.SaleOrderUuid, 4, "", "", err.Error())
+		sendSalesInvoiceCallback(ctx, req.CompanyUuid, req.SaleOrderUuid, 4, "", "", err.Error(), req.OrderType)
 		return nil
 	}
 
@@ -126,7 +126,7 @@ func (*SaveSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) 
 		}
 
 		// 发送成功回调到 Main
-		sendSalesInvoiceCallback(ctx, req.CompanyUuid, req.SaleOrderUuid, 3, resp.SalesInvoiceName, string(peNamesJson), "")
+		sendSalesInvoiceCallback(ctx, req.CompanyUuid, req.SaleOrderUuid, 3, resp.SalesInvoiceName, string(peNamesJson), "", req.OrderType)
 	}
 
 	return nil
@@ -134,7 +134,7 @@ func (*SaveSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) 
 
 // sendSalesInvoiceCallback 通过 MQ 发送 SI 回调消息到 Main
 // syncStatus: 0=未同步 1=已入队 2=进行中 3=成功 4=失败
-func sendSalesInvoiceCallback(ctx context.Context, companyUuid, saleOrderUuid string, syncStatus int, siName, peNamesJson, errMsg string) {
+func sendSalesInvoiceCallback(ctx context.Context, companyUuid, saleOrderUuid string, syncStatus int, siName, peNamesJson, errMsg, orderType string) {
 	if companyUuid == "" {
 		g.Log().Warningf(ctx, "SI回调跳过: company_uuid为空, sale_order_uuid=%s", saleOrderUuid)
 		return
@@ -146,12 +146,29 @@ func sendSalesInvoiceCallback(ctx context.Context, companyUuid, saleOrderUuid st
 		SalesInvoiceName:  siName,
 		PaymentEntryNames: peNamesJson,
 		ErrorMsg:          errMsg,
+		OrderType:         orderType,
 	}
 	if err := queue.PushWithContext(ctx, string(consts.TopicErpSalesInvoiceCallback), callbackMsg); err != nil {
 		g.Log().Errorf(ctx, "发送SI回调消息失败: uuid=%s, err=%v", saleOrderUuid, err)
 	} else {
 		g.Log().Infof(ctx, "发送SI回调消息成功: uuid=%s, status=%d, si=%s", saleOrderUuid, syncStatus, siName)
 	}
+}
+
+// extractReqMetadata 从 ReceiveSalesInvoice 的 ReqMessage 中提取 CompanyUuid 和 OrderType
+func extractReqMetadata(record *entity.ReceiveSalesInvoice) (companyUuid, orderType string) {
+	if record == nil || record.ReqMessage == "" {
+		return "", ""
+	}
+	reqBuf, err := gbase64.DecodeString(record.ReqMessage)
+	if err != nil {
+		return "", ""
+	}
+	req := &selling.SaveSalesInvoiceReq{}
+	if err = proto.Unmarshal(reqBuf, req); err != nil {
+		return "", ""
+	}
+	return req.CompanyUuid, req.OrderType
 }
 
 // ========== CancelSalesInvoiceConsumer ==========
@@ -247,6 +264,9 @@ func (*CancelSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg
 			}, retryDelay(retryCount))
 			return nil
 		}
+		// 重试耗尽，发送失败回调
+		companyUuid, orderType := extractReqMetadata(originalRecord)
+		sendSalesInvoiceCallback(ctx, companyUuid, originalRecord.SaleOrderUuid, 4, "", "", err.Error(), orderType)
 		return nil
 	}
 
@@ -359,6 +379,9 @@ func (*ReturnSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg
 			}, retryDelay(retryCount))
 			return nil
 		}
+		// 重试耗尽，发送失败回调
+		companyUuid, orderType := extractReqMetadata(originalRecord)
+		sendSalesInvoiceCallback(ctx, companyUuid, req.SaleOrderUuid, 4, "", "", err.Error(), orderType)
 		return nil
 	}
 
