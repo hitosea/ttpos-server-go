@@ -1964,8 +1964,9 @@ func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) 
 	set := settingRepo.GetByKey(settingKey)
 	if set.Key == "" {
 		if _, err := settingRepo.Create(model.Setting{
-			Key:    settingKey,
-			Values: value,
+			Key:      settingKey,
+			Describe: constant.GetSettingDescribe(settingKey),
+			Values:   value,
 		}); err != nil {
 			return errors.New("更新设置失败")
 		}
