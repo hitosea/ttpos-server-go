@@ -20,11 +20,11 @@ type IProductLabelRepo interface {
 	ClearProductPackageLabelRelation(labelUuid uint64) error                                                          // 清除商品包与标签的关联关系
 	UpdateProductPackageLabelRelation(productPackageUuids []uint64, labelUuid uint64) error                           // 建立商品包与标签的关联关系
 	CheckHeadquarterLabelConflict(productPackageUuids []uint64) ([]model.ProductPackage, []model.ProductLabel, error) // 检查商品是否已被总部标签关联
-	SoftDeleteByHeadquarterExcludeUuids(headquarterUuid uint64, excludeUuids []uint64) error                        // 软删除总部标签（排除指定UUID）
-	FindHeadquarterByUuids(uuids []uint64) ([]model.ProductLabel, error)                                            // 根据UUID列表查询总部标签
-	UnscopedDeleteByUuid(uuid uint64) error                                                                         // 物理删除指定UUID的标签
-	UnscopedDeleteByHeadquarter(headquarterUuid uint64) error                                                       // 物理删除总部标签
-	FindAllHeadquarter() ([]model.ProductLabel, error)                                                               // 查询所有总部标签
+	SoftDeleteByHeadquarterExcludeUuids(headquarterUuid uint64, excludeUuids []uint64) error                          // 软删除总部标签（排除指定UUID）
+	FindHeadquarterByUuids(uuids []uint64) ([]model.ProductLabel, error)                                              // 根据UUID列表查询总部标签
+	UnscopedDeleteByUuid(uuid uint64) error                                                                           // 物理删除指定UUID的标签
+	UnscopedDeleteByHeadquarter(headquarterUuid uint64) error                                                         // 物理删除总部标签
+	FindAllHeadquarter() ([]model.ProductLabel, error)                                                                // 查询所有总部标签
 
 	// 查询选项
 	WhereUuid(uuid uint64) DBOption

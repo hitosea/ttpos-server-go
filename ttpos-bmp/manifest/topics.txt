@@ -13,6 +13,12 @@ close-pos-entry
 redo-pos
 #退款通知回调
 erp-invoice-cancel
+#保存sales invoice
+save-sales-invoice
+cancel-sales-invoice
+return-sales-invoice
+#SI异步回调(BMP→Main)
+erp-sales-invoice-callback
 #--- END ERP
 
 #---- Message ttpos-message ----

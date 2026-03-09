@@ -370,6 +370,11 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 		tasks.NewCheckMaterialStockTask(dbm, cache).Execute()
 	})
 
+	// 每天凌晨0点执行 ERP Stock Entry 合并扣减任务
+	_, _ = c.AddFunc("0 0 0 * * *", func() {
+		tasks.NewErpStockEntryTask(dbm, cache).Execute()
+	})
+
 	// 启动定时器
 	c.Start()
 }

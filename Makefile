@@ -173,3 +173,42 @@ update-mcp-token:
 # 验证数据库结构
 verify-db-structure:
 	cd ./main && go run main.go verify-db-structure
+
+# 导出数据库备份
+db-export:
+	@echo "🗄️  导出数据库备份..."
+	@APP_ID=$$(grep '^APP_ID=' .env | cut -d '=' -f 2 | tr -d ' '); \
+	DB_ROOT_PASSWORD=$$(grep '^DB_ROOT_PASSWORD=' .env | cut -d '=' -f 2 | tr -d ' '); \
+	CONTAINER="saas-db-$$APP_ID"; \
+	BACKUP_FILE="backup_all_$$(date +%Y%m%d_%H%M%S).sql.gz"; \
+	echo "📦 容器: $$CONTAINER"; \
+	echo "📁 备份文件: $$BACKUP_FILE"; \
+	docker exec $$CONTAINER mysqldump -uroot -p$$DB_ROOT_PASSWORD \
+		--all-databases \
+		--single-transaction \
+		--routines \
+		--triggers \
+		--events \
+		--set-gtid-purged=OFF \
+		| gzip > $$BACKUP_FILE; \
+	echo "✅ 数据库备份完成: $$BACKUP_FILE ($$(du -h $$BACKUP_FILE | cut -f1))"
+
+# 导入数据库备份
+# 用法: make db-import FILE=backup_all_20260307.sql.gz
+db-import:
+	@if [ -z "$(FILE)" ]; then \
+		echo "❌ 请指定备份文件: make db-import FILE=backup_all_xxx.sql.gz"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(FILE)" ]; then \
+		echo "❌ 文件不存在: $(FILE)"; \
+		exit 1; \
+	fi
+	@echo "🗄️  导入数据库备份: $(FILE)"
+	@APP_ID=$$(grep '^APP_ID=' .env | cut -d '=' -f 2 | tr -d ' '); \
+	DB_ROOT_PASSWORD=$$(grep '^DB_ROOT_PASSWORD=' .env | cut -d '=' -f 2 | tr -d ' '); \
+	CONTAINER="saas-db-$$APP_ID"; \
+	echo "📦 容器: $$CONTAINER"; \
+	echo "⏳ 正在导入，请稍候..."; \
+	gunzip < $(FILE) | docker exec -i $$CONTAINER mysql -uroot -p$$DB_ROOT_PASSWORD; \
+	echo "✅ 数据库导入完成"

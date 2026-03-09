@@ -20,9 +20,9 @@ type ICompanySettingRepo interface {
 	Get() model.CompanySetting
 	GetCompanySetting() model.CompanySetting
 	GetCompanySettingsByCompanyUuids(companyUuids []uint64) ([]*model.CompanySetting, error)
-	GetAllByHeadquarterUuid(headquarterUuid uint64) ([]model.CompanySetting, error) // 获取总部下所有公司的设置
-	UpdateSmsQuota(companyUuid uint64, quota int) error                             // 扣减公司的短信余额
-	UpdateByCompanyUuid(companyUuid uint64, data map[string]any) error                              // 根据公司UUID更新设置
+	GetAllByHeadquarterUuid(headquarterUuid uint64) ([]model.CompanySetting, error)         // 获取总部下所有公司的设置
+	UpdateSmsQuota(companyUuid uint64, quota int) error                                     // 扣减公司的短信余额
+	UpdateByCompanyUuid(companyUuid uint64, data map[string]any) error                      // 根据公司UUID更新设置
 	UpdateBySiteCodeAndCompanyAbbr(siteCode, companyAbbr string, data map[string]any) error // 根据站点编码和公司缩写更新设置
 
 	GetErpnextCompanyAbbrUuidMap(opts ...DBOption) (map[string]uint64, error)

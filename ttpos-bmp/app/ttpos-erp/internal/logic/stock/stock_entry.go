@@ -69,11 +69,16 @@ func (s *sStock) SubmitStockEntry(ctx context.Context, req *stock.SubmitStockEnt
 		}
 
 		itemData := erp.StockEntryDetail{
-			ItemCode:   item.ItemCode,
-			ItemName:   item.ItemName,
-			Qty:        item.Qty,
-			SWarehouse: itemWarehouse,
-			DocType:    erp.DocTypeStockEntryDetail,
+			ItemCode: item.ItemCode,
+			ItemName: item.ItemName,
+			Qty:      item.Qty,
+			DocType:  erp.DocTypeStockEntryDetail,
+		}
+		// Material Receipt 入库用 t_warehouse，其他出库类型用 s_warehouse
+		if stockEntryType == erp.StockEntryTypeMaterialReceipt {
+			itemData.TWarehouse = itemWarehouse
+		} else {
+			itemData.SWarehouse = itemWarehouse
 		}
 
 		itemList = append(itemList, itemData)

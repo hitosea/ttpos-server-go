@@ -636,7 +636,7 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 	for _, cfg := range tableConfigs {
 		opts := []repository.DBOption{
 			func(db *gorm.DB) *gorm.DB { return db.Where("delete_time = 0") },
-			func(db *gorm.DB) *gorm.DB { return db.Where(cfg.multiLanguageUuidColumn+" > 0") },
+			func(db *gorm.DB) *gorm.DB { return db.Where(cfg.multiLanguageUuidColumn + " > 0") },
 		}
 		if cfg.filterCondition != "" {
 			opts = append(opts, func(db *gorm.DB) *gorm.DB { return db.Where(cfg.filterCondition) })

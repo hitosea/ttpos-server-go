@@ -20,7 +20,8 @@ type ISaleOrderRepo interface {
 	UpdateOrCreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
 	DeleteSaleOrder(saleOrderUuid uint64) error
-	UpdateSaleOrderErpInvoice(saleOrderUuid uint64, productsInvoiceName string, materialInvoiceName string) error
+	UpdateSaleOrderErpSalesInvoice(saleOrderUuid uint64, salesInvoiceName string, paymentEntryNames string) error
+	UpdateSaleOrderErpSyncStatus(saleOrderUuid uint64, syncStatus int, salesInvoiceName string, paymentEntryNames string) error
 	UpdateSaleOrderActivity(saleOrderUuid uint64, fullReductionActivityUuid uint64, fullReductionActivityMessage string, activityAmount float64, autoPointsExchange uint) error // 更新销售订单的满减活动信息
 }
 
@@ -30,9 +31,9 @@ type ISaleOrderQueryRepo interface {
 	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
 	GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, error)
 	PluckOrderNos(orderNoPrefix string, startTime, endTime int64) ([]string, error) // 查询订单编号
-	GetSaleOrderList(opts ...DBOption) ([]model.SaleOrder, error)                  // 查询销售订单列表
-	CountSaleOrders(opts ...DBOption) (int64, error)                               // 统计销售订单数量
-	SumPaymentAmount(opts ...DBOption) (float64, error)                            // 统计支付金额总和
+	GetSaleOrderList(opts ...DBOption) ([]model.SaleOrder, error)                   // 查询销售订单列表
+	CountSaleOrders(opts ...DBOption) (int64, error)                                // 统计销售订单数量
+	SumPaymentAmount(opts ...DBOption) (float64, error)                             // 统计支付金额总和
 }
 
 type saleOrderRepo struct {
@@ -136,11 +137,25 @@ func (r *saleOrderRepo) SetCheckoutZeroRuleCancel(saleOrderUuid uint64) error {
 	}).Error
 }
 
-func (r *saleOrderRepo) UpdateSaleOrderErpInvoice(saleOrderUuid uint64, productsInvoiceName string, materialInvoiceName string) error {
+func (r *saleOrderRepo) UpdateSaleOrderErpSalesInvoice(saleOrderUuid uint64, salesInvoiceName string, paymentEntryNames string) error {
 	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
-		"erp_products_invoice_name": productsInvoiceName,
-		"erp_material_invoice_name": materialInvoiceName,
+		"erp_sales_invoice_name":  salesInvoiceName,
+		"erp_payment_entry_names": paymentEntryNames,
 	}).Error
+}
+
+// UpdateSaleOrderErpSyncStatus 更新 ERP 同步状态及 SI/PE 名称（MQ 回调使用）
+func (r *saleOrderRepo) UpdateSaleOrderErpSyncStatus(saleOrderUuid uint64, syncStatus int, salesInvoiceName string, paymentEntryNames string) error {
+	data := map[string]any{
+		"erp_sync_status": syncStatus,
+	}
+	if salesInvoiceName != "" {
+		data["erp_sales_invoice_name"] = salesInvoiceName
+	}
+	if paymentEntryNames != "" {
+		data["erp_payment_entry_names"] = paymentEntryNames
+	}
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(data).Error
 }
 
 // GetSaleOrderList 查询销售订单列表

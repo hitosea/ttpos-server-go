@@ -219,8 +219,8 @@ type POSPaymentReconciliation struct {
 	Doctype        string  `json:"doctype,omitempty"`         // 文档类型
 }
 
-// SalesInvoice 销售发票主结构
-type SalesInvoice struct {
+// SalesInvoiceDoc 销售发票完整文档结构（ERPNext 响应）
+type SalesInvoiceDoc struct {
 	Name                                   string                `json:"name,omitempty"`                                       // 销售发票名称
 	Owner                                  string                `json:"owner,omitempty"`                                      // 所有者
 	Creation                               string                `json:"creation,omitempty"`                                   // 创建时间
@@ -325,8 +325,8 @@ type SalesInvoice struct {
 	PackedItems                            []interface{}         `json:"packed_items,omitempty"`                               // 包装商品
 }
 
-// SalesInvoiceItem 销售发票商品项目结构
-type SalesInvoiceItem struct {
+// SalesInvoiceItemDoc 销售发票商品项目完整结构（ERPNext 响应）
+type SalesInvoiceItemDoc struct {
 	Name                      string  `json:"name,omitempty"`                        // 项目名称
 	Owner                     string  `json:"owner,omitempty"`                       // 所有者
 	Creation                  string  `json:"creation,omitempty"`                    // 创建时间

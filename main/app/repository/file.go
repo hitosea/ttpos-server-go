@@ -8,13 +8,13 @@ import (
 )
 
 type IFileRepo interface {
-	CreateFileGroup(fileGroup model.FileGroup) error   // 创建文件组
-	CreateFile(file model.File) error                  // 创建文件
-	CreateFiles(files []model.File) error              // 批量创建文件
-	CreateFileGroups(fileGroups []model.FileGroup) error // 批量创建文件组
-	GetFileByUuid(uuid uint64) (*model.File, error)    // 根据UUID获取未删除的文件
-	HardDeleteFilesByHeadquarter(headquarterUuid uint64) error      // 硬删除指定总部的文件
-	HardDeleteFileGroupsByHeadquarter(headquarterUuid uint64) error // 硬删除指定总部的文件组
+	CreateFileGroup(fileGroup model.FileGroup) error                         // 创建文件组
+	CreateFile(file model.File) error                                        // 创建文件
+	CreateFiles(files []model.File) error                                    // 批量创建文件
+	CreateFileGroups(fileGroups []model.FileGroup) error                     // 批量创建文件组
+	GetFileByUuid(uuid uint64) (*model.File, error)                          // 根据UUID获取未删除的文件
+	HardDeleteFilesByHeadquarter(headquarterUuid uint64) error               // 硬删除指定总部的文件
+	HardDeleteFileGroupsByHeadquarter(headquarterUuid uint64) error          // 硬删除指定总部的文件组
 	GetProductImageFilesAndGroups() ([]model.File, []model.FileGroup, error) // 获取商品图片文件及文件组
 }
 

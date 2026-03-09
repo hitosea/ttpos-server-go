@@ -148,9 +148,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     -- 收银员名称
     `cashier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银员名称',
     -- erp相关
-    `erp_products_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品发票名称',
-    `erp_material_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原材料发票名称',
     `erp_discount_amount` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '订单应收优惠金额，整单改价优惠掉的金额',
+    `erp_sales_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'Sales Invoice名称',
+    `erp_payment_entry_names` TEXT NULL COMMENT 'Payment Entry名称(JSON)',
+    `erp_sync_status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'ERP同步状态: 0=未同步 1=已入队 2=进行中 3=成功 4=失败',
+    `erp_reverse_count` INT(11) NOT NULL DEFAULT 0 COMMENT '反结账次数',
+    `erp_stock_deducted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '库存是否已通过StockEntry扣减',
     -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
@@ -2580,6 +2583,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `is_open_member_instant` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启会员端即时点餐功能（扫码点餐到店自取）: 0不开启, 1开启',
     `enable_grab_delivery` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用Grab外卖：0-否；1-是',
     `enable_lineman_delivery` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用LINE MAN外卖：0-否；1-是',
+    `erp_invoice_mode` INT(11) NOT NULL DEFAULT 1 COMMENT 'ERP发票模式: 0=POS Invoice 1=Sales Invoice',
     `is_open_kitchen_kds` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
     `is_open_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
     `is_open_h5_order` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
@@ -2788,6 +2792,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_shift_log` (
     `erpnext_close_pos_entry_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext结账名称',
     `erpnext_async_record_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext异步记录ID',
     `opening_payment_methods` VARCHAR(2000) NOT NULL DEFAULT '' COMMENT '开账时的支付方式UUID列表（逗号分隔）',
+    `shift_version` TINYINT(1) NOT NULL DEFAULT 2 COMMENT '班次版本: 1=旧版(有ERP开关帐) 2=新版(无ERP开关帐)',
     `shift_end_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '当班结束时间',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -3578,6 +3583,41 @@ CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation_annotation` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点单批注表';
 
+-- 盘点快照-未出库订单快照
+CREATE TABLE IF NOT EXISTS `ttpos_stocktake_snapshot` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT 'UUID',
+  `stock_reconciliation_uuid` bigint NOT NULL DEFAULT 0 COMMENT '关联盘点单UUID',
+  `item_code` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP物品编码',
+  `warehouse_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP仓库编码',
+  `pending_qty` decimal(12,3) NOT NULL DEFAULT 0 COMMENT '待扣减数量',
+  `order_count` int NOT NULL DEFAULT 0 COMMENT '涉及订单数',
+  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `idx_uuid` (`uuid`),
+  KEY `idx_stock_reconciliation_uuid` (`stock_reconciliation_uuid`),
+  KEY `idx_item_warehouse` (`item_code`, `warehouse_erp_code`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点快照-未出库订单快照';
+
+-- 库存扣减日志-Stock Entry item级别记录
+CREATE TABLE IF NOT EXISTS `ttpos_stock_deduction_log` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT 'UUID',
+  `sale_order_uuid` bigint NOT NULL DEFAULT 0 COMMENT '关联订单UUID',
+  `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP物品编码(item_code)',
+  `qty` decimal(14,4) NOT NULL DEFAULT 0 COMMENT '扣减数量',
+  `stock_entry_name` varchar(255) NOT NULL DEFAULT '' COMMENT '关联的Stock Entry单据名',
+  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `idx_uuid` (`uuid`),
+  KEY `idx_order_erp_code` (`sale_order_uuid`, `erp_code`),
+  KEY `idx_erp_code` (`erp_code`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='库存扣减日志-Stock Entry item级别记录';
+
 -- 报损单主表
 CREATE TABLE IF NOT EXISTS `ttpos_stock_loss` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
@@ -4104,6 +4144,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order` (
     `accepted_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '接单人UUID',
     `staff_shift_log_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '员工班次日志UUID',
     `erp_pos_invoice_resp` text COMMENT 'ERP POS Invoice响应数据(JSON)',
+    `erp_stock_deducted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '库存是否已通过StockEntry扣减',
     `rejected_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '拒单人UUID',
     `reject_reason_code` varchar(50) NOT NULL DEFAULT '' COMMENT '拒单原因代码',
     `reject_reason` varchar(255) NOT NULL DEFAULT '' COMMENT '拒单原因',

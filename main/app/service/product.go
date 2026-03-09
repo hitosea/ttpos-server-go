@@ -8936,10 +8936,10 @@ func (s *productSrv) updateSubTakeoutProduct(
 		if subGroupItem, exists := subGroupItemMap[key]; exists {
 			// 更新：同步 create_time、update_time、delete_time
 			err := groupItemTakeoutRepo.UpdateData(subGroupItem.Uuid, map[string]any{
-					"create_time": headGroupItem.CreateTime,
-					"update_time": headGroupItem.UpdateTime,
-					"delete_time": headGroupItem.DeleteTime,
-				})
+				"create_time": headGroupItem.CreateTime,
+				"update_time": headGroupItem.UpdateTime,
+				"delete_time": headGroupItem.DeleteTime,
+			})
 			if err != nil {
 				logger.Logger.Error("更新子店外卖套餐子商品价格失败",
 					zap.Uint64("uuid", subGroupItem.Uuid),

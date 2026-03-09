@@ -928,16 +928,7 @@ func (s *salesOutboundSummarySrv) RegenerateOrderPosInvoice(
 		return nil, errors.WithMessage(err, "保存发票失败")
 	}
 
-	// 9. 更新订单发票信息
-	err = saleOrderRepo.UpdateSaleOrderErpInvoice(
-		saleOrder.Uuid,
-		savePosInvoiceResp.ProductsInvoiceName,
-		savePosInvoiceResp.MaterialInvoiceName,
-	)
-	if err != nil {
-		logger.Logger.Warn("更新订单发票信息失败", zap.Uint64("saleOrderUuid", saleOrder.Uuid), zap.Error(err))
-		// 发票已保存到ERP，但更新订单信息失败，返回警告但不影响整体流程
-	}
+	// 9. POS Invoice 结果不再持久化到 sale_order（已迁移到 SI 模式）
 
 	durationMs := time.Since(startTime).Milliseconds()
 

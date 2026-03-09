@@ -71,8 +71,14 @@ type StaffShiftLog struct {
 	ErpnextClosePosEntryName string `gorm:"column:erpnext_close_pos_entry_name;type:varchar(255);NOT NULL;default:'';comment:erpnext结账名称" json:"erpnext_close_pos_entry_name"`
 	ErpnextAsyncRecordId     string `gorm:"column:erpnext_async_record_id;type:varchar(255);NOT NULL;default:'';comment:erpnext异步记录ID" json:"erpnext_async_record_id"`
 	OpeningPaymentMethods    string `gorm:"column:opening_payment_methods;type:varchar(2000);comment:开账时的支付方式UUID列表（逗号分隔）" json:"opening_payment_methods"`
+	ShiftVersion             int    `gorm:"column:shift_version;type:tinyint(1);NOT NULL;default:2;comment:班次版本: 1=旧版(有ERP开关帐) 2=新版(无ERP开关帐)" json:"shift_version"`
 
 	Staff *Staff `gorm:"foreignKey:StaffUuid;references:Uuid"`
+}
+
+// IsNewShiftVersion 是否为新版班次（无ERP开关帐）
+func (model *StaffShiftLog) IsNewShiftVersion() bool {
+	return model.ShiftVersion == 0 || model.ShiftVersion == constant.ShiftVersionNew
 }
 
 // StaffShiftSnapshot 员工交班快照表

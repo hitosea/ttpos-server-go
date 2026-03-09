@@ -15,6 +15,7 @@ type ISaleOrderMaterialRepo interface {
 	DeleteSaleOrderMaterial(saleBillUuid uint64) error                                                       // 删除销售订单原料（按 sale_bill_uuid）
 	DeleteSaleOrderMaterialBySaleOrderUuid(saleOrderUuid uint64) error                                       // 删除销售订单原料（按 sale_order_uuid）
 	GetSaleOrderMaterialBySaleOrderUuid(saleOrderUuid uint64) ([]*model.SaleOrderMaterial, error)            // 获取指定订单的材料记录
+	GetBySaleOrderUuids(saleOrderUuids []uint64) ([]*model.SaleOrderMaterial, error)                         // 批量查询订单的材料记录（带 Material 预加载）
 	GetSaleOrderMaterialByCreateTimeBetween(startTime, endTime int64) ([]*model.SaleOrderMaterial, error)    // 获取某时间范围内的销售订单原料（仅未统计的）
 	GetSaleOrderMaterialByCreateTimeBetweenAll(startTime, endTime int64) ([]*model.SaleOrderMaterial, error) // 获取某时间范围内的销售订单原料（包含已统计的）
 	UpdateSaleOrderMaterialIsSummarized(uuids []uint64) error                                                // 更新销售订单原料的统计状态
@@ -72,6 +73,18 @@ func (r *SaleOrderMaterialRepoImpl) GetSaleOrderMaterialByCreateTimeBetweenAll(s
 	var saleOrderMaterials []*model.SaleOrderMaterial
 	err := r.db.Model(&model.SaleOrderMaterial{}).Preload("Material.Unit").Where("create_time BETWEEN ? AND ? AND delete_time = 0", startTime, endTime).Find(&saleOrderMaterials).Error
 	return saleOrderMaterials, errors.WithMessage(err)
+}
+
+// GetBySaleOrderUuids 批量查询订单的材料记录（带 Material 预加载，用于获取 Material.Code 作为 ERP item_code）
+func (r *SaleOrderMaterialRepoImpl) GetBySaleOrderUuids(saleOrderUuids []uint64) ([]*model.SaleOrderMaterial, error) {
+	if len(saleOrderUuids) == 0 {
+		return nil, nil
+	}
+	var materials []*model.SaleOrderMaterial
+	err := r.db.Preload("Material").
+		Where("sale_order_uuid IN ? AND delete_time = 0", saleOrderUuids).
+		Find(&materials).Error
+	return materials, errors.WithMessage(err)
 }
 
 func (r *SaleOrderMaterialRepoImpl) UpdateSaleOrderMaterialIsSummarized(uuids []uint64) error {

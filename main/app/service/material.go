@@ -704,8 +704,8 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 			}
 			return material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
 		}(),
-		PurchaseUnitUuid:           material.PurchaseUnitUuid,
-		FromPurchaseUnitUuid:       fromPurchaseUnitUuid,
+		PurchaseUnitUuid:     material.PurchaseUnitUuid,
+		FromPurchaseUnitUuid: fromPurchaseUnitUuid,
 		CostUnitName: func() string {
 			if material.CostUnit == nil {
 				return ""
