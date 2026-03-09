@@ -32120,6 +32120,322 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/setting/data_manage/order_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取数据管理中已选的订单列表，支持分页和搜索",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.数据管理"
+                ],
+                "summary": "获取已选订单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页面大小",
+                        "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "订单编号搜索",
+                        "name": "order_no",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.DataManageOrderListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/data_manage/order_restore": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "从数据管理中移除单条已选订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.数据管理"
+                ],
+                "summary": "恢复单条已选订单",
+                "parameters": [
+                    {
+                        "description": "恢复订单",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.RestoreDataManageOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/data_manage/order_select": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取可供选择的订单列表，支持筛选和分页，标记已选状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.数据管理"
+                ],
+                "summary": "获取可选订单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页面大小",
+                        "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "订单编号搜索",
+                        "name": "order_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "时间类型,-1=全部、0=今天、1=昨天、2=本周",
+                        "name": "date_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "查询开始日期",
+                        "name": "query_start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "查询结束日期",
+                        "name": "query_end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "订单类型,-1=全部、0=餐单、1=外卖",
+                        "name": "bill_type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.DataManageOrderSelectResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/data_manage/order_select_stats": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "预览提交后的选中数量和实付金额，不持久化",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.数据管理"
+                ],
+                "summary": "获取可选订单统计预览",
+                "parameters": [
+                    {
+                        "description": "统计预览参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.GetDataManageOrderSelectStatsReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.DataManageOrderSelectStatsResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/data_manage/order_submit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "提交当前筛选范围内的订单选择结果，与筛选范围外的已选订单合并",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.数据管理"
+                ],
+                "summary": "提交订单选择",
+                "parameters": [
+                    {
+                        "description": "提交订单选择",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SubmitDataManageOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/data_manage/save_status": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "仅保存数据管理开关状态，不影响操作人员和订单选择",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.数据管理"
+                ],
+                "summary": "保存数据管理开关状态",
+                "parameters": [
+                    {
+                        "description": "保存数据管理状态",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SaveDataManageStatusReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/data_manage/set": {
             "post": {
                 "security": [
@@ -32146,6 +32462,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.SetDataManageReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/data_manage/set_staff": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "设置操作人员，立即生效",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.数据管理"
+                ],
+                "summary": "设置数据管理操作人员",
+                "parameters": [
+                    {
+                        "description": "设置操作人员",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SetDataManageStaffReq"
                         }
                     }
                 ],
@@ -46181,6 +46536,31 @@ const docTemplate = `{
                 }
             }
         },
+        "req.DataManageOrderSubmitFilter": {
+            "type": "object",
+            "properties": {
+                "bill_type": {
+                    "description": "订单类型,-1=全部、0=餐单、1=外卖",
+                    "type": "integer"
+                },
+                "date_type": {
+                    "description": "时间类型,-1=全部、0=今天、1=昨天、2=本周",
+                    "type": "integer"
+                },
+                "order_no": {
+                    "description": "订单编号搜索",
+                    "type": "string"
+                },
+                "query_end_date": {
+                    "description": "查询结束日期",
+                    "type": "string"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期",
+                    "type": "string"
+                }
+            }
+        },
         "req.DecryptQrCodeReq": {
             "type": "object",
             "required": [
@@ -46919,6 +47299,37 @@ const docTemplate = `{
             "properties": {
                 "device_id": {
                     "type": "string"
+                }
+            }
+        },
+        "req.GetDataManageOrderSelectStatsReq": {
+            "type": "object",
+            "properties": {
+                "deselected_uuids": {
+                    "description": "取消勾选的UUID（select_all=true时使用）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "filter": {
+                    "description": "筛选条件",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
+                        }
+                    ]
+                },
+                "select_all": {
+                    "description": "是否全选当前筛选范围",
+                    "type": "boolean"
+                },
+                "selected_uuids": {
+                    "description": "手动勾选的UUID（select_all=false时使用）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -52318,6 +52729,18 @@ const docTemplate = `{
                 }
             }
         },
+        "req.RestoreDataManageOrderReq": {
+            "type": "object",
+            "required": [
+                "sale_bill_uuid"
+            ],
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.SaveBatchProductReq": {
             "type": "object",
             "required": [
@@ -52361,6 +52784,15 @@ const docTemplate = `{
                 "order_display_mode": {
                     "description": "点餐时展示模式 carousel/order/order_carousel，默认carousel",
                     "type": "string"
+                }
+            }
+        },
+        "req.SaveDataManageStatusReq": {
+            "type": "object",
+            "properties": {
+                "is_enable_data_manage": {
+                    "description": "是否启用数据管理",
+                    "type": "boolean"
                 }
             }
         },
@@ -52476,6 +52908,18 @@ const docTemplate = `{
                         "type": "integer"
                     }
                 },
+                "staff_uuids": {
+                    "description": "员工UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "req.SetDataManageStaffReq": {
+            "type": "object",
+            "properties": {
                 "staff_uuids": {
                     "description": "员工UUID列表",
                     "type": "array",
@@ -53018,6 +53462,37 @@ const docTemplate = `{
                 "company_uuid": {
                     "description": "要切换到的门店UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "req.SubmitDataManageOrderReq": {
+            "type": "object",
+            "properties": {
+                "deselected_uuids": {
+                    "description": "取消勾选的UUID（select_all=true时使用）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "filter": {
+                    "description": "筛选条件（与查询列表时相同的参数）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
+                        }
+                    ]
+                },
+                "select_all": {
+                    "description": "是否全选当前筛选范围",
+                    "type": "boolean"
+                },
+                "selected_uuids": {
+                    "description": "手动勾选的UUID（select_all=false时使用）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -69707,6 +70182,134 @@ const docTemplate = `{
                 "vice_unit_position": {
                     "description": "副货币显示位置 0-金额前 1-金额后",
                     "type": "string"
+                }
+            }
+        },
+        "setting.DataManageOrderItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "订单金额",
+                    "type": "number"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "is_selected": {
+                    "description": "是否已选中（用于可选订单列表）",
+                    "type": "boolean"
+                },
+                "order_no": {
+                    "description": "订单编号",
+                    "type": "string"
+                },
+                "payment_amount": {
+                    "description": "实付金额",
+                    "type": "number"
+                },
+                "payment_method": {
+                    "description": "支付方式",
+                    "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "setting.DataManageOrderListMeta": {
+            "type": "object",
+            "properties": {
+                "order_count": {
+                    "description": "已选订单数量（全量，不受搜索影响）",
+                    "type": "integer"
+                },
+                "page_no": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer"
+                },
+                "paid_amount": {
+                    "description": "实付金额合计（全量，不受搜索影响）",
+                    "type": "number"
+                },
+                "total": {
+                    "description": "总数",
+                    "type": "integer"
+                }
+            }
+        },
+        "setting.DataManageOrderListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.DataManageOrderItem"
+                    }
+                },
+                "meta": {
+                    "description": "Meta信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.DataManageOrderListMeta"
+                        }
+                    ]
+                }
+            }
+        },
+        "setting.DataManageOrderSelectMeta": {
+            "type": "object",
+            "properties": {
+                "page_no": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer"
+                },
+                "total": {
+                    "description": "总数",
+                    "type": "integer"
+                }
+            }
+        },
+        "setting.DataManageOrderSelectResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.DataManageOrderItem"
+                    }
+                },
+                "meta": {
+                    "description": "Meta信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.DataManageOrderSelectMeta"
+                        }
+                    ]
+                }
+            }
+        },
+        "setting.DataManageOrderSelectStatsResp": {
+            "type": "object",
+            "properties": {
+                "paid_amount": {
+                    "description": "预览选中实付金额合计",
+                    "type": "number"
+                },
+                "selected_count": {
+                    "description": "预览选中数量",
+                    "type": "integer"
                 }
             }
         },

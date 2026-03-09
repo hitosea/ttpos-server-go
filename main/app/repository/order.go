@@ -74,7 +74,10 @@ type IOrderQueryRepo interface {
 	GetSaleBillBatchCookingMode(saleBillUuid uint64) (string, error)                                                                           // 获取销售账单当前的分批送厨模式
 	UpdateSaleBillOrderRemark(saleBillUuid uint64, orderRemark string) error                                                                   // 更新销售账单整单备注
 	GetSaleOrderUuids(opts ...DBOption) []uint64
-	GetSaleBillList(opts ...DBOption) []model.SaleBill // 获取销售账单列表
+	GetSaleBillList(opts ...DBOption) []model.SaleBill   // 获取销售账单列表
+	GetSaleBillUuids(opts ...DBOption) []uint64          // 获取销售账单UUID列表
+	SumSaleBillPaymentAmount(opts ...DBOption) float64   // 统计销售账单实付金额合计
+	CountAndSumSaleBill(opts ...DBOption) (int64, float64) // 统计销售账单数量和实付金额合计
 }
 
 // orderRepo 订单仓库
@@ -463,13 +466,21 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 		}(),
 	}
 	if param.IsOnlyDataManage == 1 {
-		uuidList := strings.Split(param.SaleBillUuids, ",")
-		uuids := []uint64{}
-		for _, uuid := range uuidList {
-			uuid, _ := strconv.ParseUint(uuid, 10, 64)
-			uuids = append(uuids, uint64(uuid))
+		if param.SaleBillUuids != "" {
+			uuidList := strings.Split(param.SaleBillUuids, ",")
+			uuids := []uint64{}
+			for _, uuid := range uuidList {
+				uuid, _ := strconv.ParseUint(uuid, 10, 64)
+				uuids = append(uuids, uint64(uuid))
+			}
+			opts = append(opts, CommonRepo.WhereInUuids(uuids))
+		} else {
+			// 子查询模式：通过子查询关联 data_manage 表筛选，避免全量加载 UUID
+			opts = append(opts, CommonRepo.WhereInDataManageSubQuery(r.db, "uuid",
+				CommonRepo.WhereByType(model.DataManageTypeOrder),
+				CommonRepo.WhereBySoftDelete(),
+			))
 		}
-		opts = append(opts, CommonRepo.WhereInUuids(uuids))
 	}
 	if param.IsOnlyDataManage == 0 && param.IsContainDataManage == 0 {
 		opts = append(opts,
@@ -2584,6 +2595,42 @@ func (r *orderRepo) GetSaleBillList(opts ...DBOption) []model.SaleBill {
 	}
 	db.Find(&saleBills)
 	return saleBills
+}
+
+// GetSaleBillUuids 获取销售账单UUID列表
+func (r *orderRepo) GetSaleBillUuids(opts ...DBOption) []uint64 {
+	var uuids []uint64
+	db := r.db.Model(&model.SaleBill{}).Session(&gorm.Session{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Pluck("uuid", &uuids)
+	return uuids
+}
+
+// SumSaleBillPaymentAmount 统计销售账单实付金额合计
+func (r *orderRepo) SumSaleBillPaymentAmount(opts ...DBOption) float64 {
+	var result struct{ Total float64 }
+	db := r.db.Model(&model.SaleBill{}).Session(&gorm.Session{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Select("COALESCE(SUM(payment_amount), 0) as total").Scan(&result)
+	return result.Total
+}
+
+// CountAndSumSaleBill 统计销售账单数量和实付金额合计
+func (r *orderRepo) CountAndSumSaleBill(opts ...DBOption) (int64, float64) {
+	var result struct {
+		Count int64
+		Total float64
+	}
+	db := r.db.Model(&model.SaleBill{}).Session(&gorm.Session{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Select("COUNT(*) as count, COALESCE(SUM(payment_amount), 0) as total").Scan(&result)
+	return result.Count, result.Total
 }
 
 // extractUUIDFromKey 从缓存 key 中提取 UUID

@@ -203,13 +203,21 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 			dbOption,
 		}
 		if reqs.IsOnlyDataManage == 1 {
-			uuidList := strings.Split(reqs.SaleBillUuids, ",")
-			uuids := []uint64{}
-			for _, uuid := range uuidList {
-				uuid, _ := strconv.ParseUint(uuid, 10, 64)
-				uuids = append(uuids, uint64(uuid))
+			if reqs.SaleBillUuids != "" {
+				uuidList := strings.Split(reqs.SaleBillUuids, ",")
+				uuids := []uint64{}
+				for _, uuid := range uuidList {
+					uuid, _ := strconv.ParseUint(uuid, 10, 64)
+					uuids = append(uuids, uint64(uuid))
+				}
+				opts = append(opts, repository.CommonRepo.WhereInUuids(uuids))
+			} else {
+				// 子查询模式：与 GetCashierOrderListWithPagination 保持一致
+				opts = append(opts, repository.CommonRepo.WhereInDataManageSubQuery(s.dbm.GetDB(ctx.GetDbId()), "uuid",
+					repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+					repository.CommonRepo.WhereBySoftDelete(),
+				))
 			}
-			opts = append(opts, repository.CommonRepo.WhereInUuids(uuids))
 		}
 		if reqs.IsOnlyDataManage == 0 && reqs.IsContainDataManage == 0 {
 			opts = append(opts,
