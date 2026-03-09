@@ -1889,6 +1889,12 @@ definitions:
       is_open_rider:
         description: 是否开启外送
         type: boolean
+      is_open_store_scan_order:
+        description: 是否开启门店扫码点餐
+        type: boolean
+      is_store_resting:
+        description: 商家是否休息中
+        type: boolean
       language:
         description: 常用语言
         items:
@@ -8510,6 +8516,18 @@ definitions:
     required:
     - is_wait_color
     - wait_time_color_ranges
+    type: object
+  req.SaveStoreScanOrderSettingReq:
+    properties:
+      enable_delivery:
+        description: 外送服务：0-关闭，1-开启
+        type: integer
+      enable_self_pickup:
+        description: 到店自取：0-关闭，1-开启
+        type: integer
+      is_enabled:
+        description: 启用状态：0-关闭，1-开启
+        type: integer
     type: object
   req.SendMemberRechargeSMS:
     properties:
@@ -20768,6 +20786,24 @@ definitions:
         items:
           $ref: '#/definitions/setting.ZeroingMethodItem'
         type: array
+    type: object
+  setting.StoreScanOrderSettingResp:
+    properties:
+      delivery_available:
+        description: 外送服务是否可用（云平台是否开启）：0-不可用，1-可用
+        type: integer
+      enable_delivery:
+        description: 外送服务：0-关闭，1-开启
+        type: integer
+      enable_self_pickup:
+        description: 到店自取：0-关闭，1-开启
+        type: integer
+      is_enabled:
+        description: 启用状态：0-关闭，1-开启
+        type: integer
+      self_pickup_available:
+        description: 到店自取是否可用（云平台是否开启）：0-不可用，1-可用
+        type: integer
     type: object
   setting.TabletResp:
     properties:
@@ -33593,7 +33629,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取会员端产品列表
+      description: 获取会员端产品列表，支持区分外送和堂食订单类型
       parameters:
       - description: 页码
         in: query
@@ -33604,6 +33640,10 @@ paths:
         in: query
         name: page_size
         required: true
+        type: integer
+      - description: 订单类型：0-外送（默认，价格应用外送折扣率），1-堂食/到店自取（价格与收银机相同）
+        in: query
+        name: order_type
         type: integer
       produces:
       - application/json
@@ -33649,6 +33689,10 @@ paths:
         name: keyword
         required: true
         type: string
+      - description: 订单类型：0-外送（默认），1-堂食（到店自取）
+        in: query
+        name: order_type
+        type: integer
       produces:
       - application/json
       responses:
@@ -40686,6 +40730,51 @@ paths:
       summary: 保存门店设置
       tags:
       - 商家端.门店设置
+  /shop/setting/store_scan_order:
+    get:
+      consumes:
+      - application/json
+      description: 获取门店点餐配置，包含业务开关、外送服务、到店自取等
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/setting.StoreScanOrderSettingResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取门店点餐配置
+      tags:
+      - 商家端.门店点餐设置
+    post:
+      consumes:
+      - application/json
+      description: 保存门店点餐配置，包含业务开关、外送服务、到店自取等
+      parameters:
+      - description: 保存门店点餐配置
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SaveStoreScanOrderSettingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 保存门店点餐配置
+      tags:
+      - 商家端.门店点餐设置
   /shop/setting/sync:
     post:
       consumes:

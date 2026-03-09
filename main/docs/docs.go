@@ -21583,7 +21583,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "获取会员端产品列表",
+                "description": "获取会员端产品列表，支持区分外送和堂食订单类型",
                 "consumes": [
                     "application/json"
                 ],
@@ -21608,6 +21608,12 @@ const docTemplate = `{
                         "name": "page_size",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "订单类型：0-外送（默认，价格应用外送折扣率），1-堂食/到店自取（价格与收银机相同）",
+                        "name": "order_type",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -21679,6 +21685,12 @@ const docTemplate = `{
                         "name": "keyword",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "订单类型：0-外送（默认），1-堂食（到店自取）",
+                        "name": "order_type",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -33259,6 +33271,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/setting/store_scan_order": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取门店点餐配置，包含业务开关、外送服务、到店自取等",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店点餐设置"
+                ],
+                "summary": "获取门店点餐配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.StoreScanOrderSettingResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "保存门店点餐配置，包含业务开关、外送服务、到店自取等",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店点餐设置"
+                ],
+                "summary": "保存门店点餐配置",
+                "parameters": [
+                    {
+                        "description": "保存门店点餐配置",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SaveStoreScanOrderSettingReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/sync": {
             "post": {
                 "security": [
@@ -42730,6 +42819,14 @@ const docTemplate = `{
                 },
                 "is_open_rider": {
                     "description": "是否开启外送",
+                    "type": "boolean"
+                },
+                "is_open_store_scan_order": {
+                    "description": "是否开启门店扫码点餐",
+                    "type": "boolean"
+                },
+                "is_store_resting": {
+                    "description": "商家是否休息中",
                     "type": "boolean"
                 },
                 "language": {
@@ -52319,6 +52416,23 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.WaitTimeColorRange"
                     }
+                }
+            }
+        },
+        "req.SaveStoreScanOrderSettingReq": {
+            "type": "object",
+            "properties": {
+                "enable_delivery": {
+                    "description": "外送服务：0-关闭，1-开启",
+                    "type": "integer"
+                },
+                "enable_self_pickup": {
+                    "description": "到店自取：0-关闭，1-开启",
+                    "type": "integer"
+                },
+                "is_enabled": {
+                    "description": "启用状态：0-关闭，1-开启",
+                    "type": "integer"
                 }
             }
         },
@@ -70242,6 +70356,31 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/setting.ZeroingMethodItem"
                     }
+                }
+            }
+        },
+        "setting.StoreScanOrderSettingResp": {
+            "type": "object",
+            "properties": {
+                "delivery_available": {
+                    "description": "外送服务是否可用（云平台是否开启）：0-不可用，1-可用",
+                    "type": "integer"
+                },
+                "enable_delivery": {
+                    "description": "外送服务：0-关闭，1-开启",
+                    "type": "integer"
+                },
+                "enable_self_pickup": {
+                    "description": "到店自取：0-关闭，1-开启",
+                    "type": "integer"
+                },
+                "is_enabled": {
+                    "description": "启用状态：0-关闭，1-开启",
+                    "type": "integer"
+                },
+                "self_pickup_available": {
+                    "description": "到店自取是否可用（云平台是否开启）：0-不可用，1-可用",
+                    "type": "integer"
                 }
             }
         },
