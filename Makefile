@@ -162,6 +162,7 @@ rmi-docker-images:
 chown-all:
 	sudo chown -R $(shell whoami):$(shell id -gn) $(CURDIR)
 	sudo chown -R www-data:www-data $(CURDIR)/admin/runtime
+	sudo chown -R www-data:www-data $(CURDIR)/admin/public/uploads
 	sudo chmod -R 755 $(CURDIR)/admin/runtime
 	sudo rm -rf $(CURDIR)/admin/runtime/logs/*
 
