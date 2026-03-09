@@ -288,19 +288,6 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 		return orderResp, errors.New("不能使用余额支付充值")
 	}
 
-	if order.DutyNo != "" {
-		isValid, err := s.staffShiftSrv.ValidatePaymentMethod(ctx, order.DutyNo, paymentMethod.Uuid)
-
-		if err != nil {
-			return orderResp, errors.WithMessage(err)
-		}
-		if !isValid {
-			return orderResp, errors.New("请交班后再重新选择该支付方式")
-		}
-	} else {
-		return orderResp, errors.New("请交班后再重新选择该支付方式")
-	}
-
 	// 默认支付订单状态
 	paymentOrderStatus := constant.PaymentOrderStatusPaid
 

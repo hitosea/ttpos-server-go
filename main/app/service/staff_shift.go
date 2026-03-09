@@ -498,20 +498,13 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			})
 			if err != nil {
 				ctx.Log().Info("ClosePosEntry", zap.String("msg", err.Error()))
-				// 1、交班时物品被禁用
+				// 1、交班时物品被禁用 - 记录日志但不阻塞交班
 				msg := utils.ShortenErpnextError(err.Error())
 				if isItemDisabled, itemCode := utils.IsItemDisabledError(msg); isItemDisabled {
-					material, err := repository.NewMaterialRepo(db).GetMaterialByErpCode(itemCode)
-					if err != nil {
-						ctx.Log().Info("GetMaterialByErpCode", zap.String("msg", err.Error()), zap.String("erp_msg", msg))
-						return errors.WithMessage(err)
-					}
-					// 物品被禁用，无法交班
-					tips := i18n.Translate(ctx.GetLanguage(), "物品被禁用，无法交班")
-					name := material.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-					return errors.WithMessage(errors.New(fmt.Sprintf("%s: %s", tips, name)), fmt.Sprintf("物品%s已禁用", name))
+					ctx.Log().Info("ClosePosEntry ItemDisabled, skip", zap.String("item_code", itemCode), zap.String("erp_msg", msg))
+				} else {
+					return errors.WithMessage(errors.New("交班失败，请重试"), "交班失败")
 				}
-				return errors.WithMessage(errors.New("交班失败，请重试"), "交班失败")
 			}
 		}
 		shiftEndTime := time.Now().Unix()

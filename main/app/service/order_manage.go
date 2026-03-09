@@ -2321,6 +2321,11 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 					if err != nil {
 						return errors.WithMessage(err)
 					}
+					// 加分布式锁，防止与0点Stock Entry扣减任务竞态
+					seLockKey := fmt.Sprintf("stock_entry_deduction_%d", company.Uuid)
+					sysLock := lock.NewSystemLock()
+					sysLock.LockUuidString(seLockKey)
+
 					// 已通过 Stock Entry 扣减库存的订单，创建反向 Stock Entry（Material Receipt）恢复库存
 					if stockDeductedMap[saleOrder.Uuid] == 1 {
 						deductionLogs, _ := repository.NewStockDeductionLogRepo(db).GetByOrderUuids([]uint64{saleOrder.Uuid})
@@ -2340,17 +2345,23 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 								Remarks:        fmt.Sprintf("TTPOS反结账库存恢复, order=%s, uuid=%d", orderNo, saleOrder.Uuid),
 							})
 							if seErr != nil {
-								logger.Logger.Error("反结账创建反向Stock Entry失败",
+								logger.Logger.Error("反结账创建反向Stock Entry失败，保留扣减日志以便重试",
 									zap.Uint64("company_uuid", company.Uuid),
 									zap.Uint64("sale_order_uuid", saleOrder.Uuid),
 									zap.Error(seErr),
 								)
-								// 不阻塞反结账流程，记录日志即可
+								// 不阻塞反结账流程，但不删除deduction log，避免重新结账后二次扣减
+							} else {
+								// 反向SE成功，清理扣减日志
+								_ = repository.NewStockDeductionLogRepo(db).DeleteByOrderUuid(saleOrder.Uuid)
 							}
 						}
 					}
-					// 无论是否扣减过库存，都清理扣减日志
-					_ = repository.NewStockDeductionLogRepo(db).DeleteByOrderUuid(saleOrder.Uuid)
+					// 未扣减过库存的订单，直接清理可能存在的部分扣减日志
+					if stockDeductedMap[saleOrder.Uuid] != 1 {
+						_ = repository.NewStockDeductionLogRepo(db).DeleteByOrderUuid(saleOrder.Uuid)
+					}
+					sysLock.UnlockUuidString(seLockKey)
 				}
 					// NOTE: POS Invoice 反结账路径已废弃，发票名称不再持久化到 sale_order
 			}

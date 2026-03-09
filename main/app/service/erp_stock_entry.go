@@ -294,7 +294,9 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 		)
 
 		// 写入所有扣减日志
-		s.writeDeductionLogs(db, companyUuid, allDetails, resp.StockEntryName)
+		if err := s.writeDeductionLogs(db, companyUuid, allDetails, resp.StockEntryName); err != nil {
+			return fmt.Errorf("Stock Entry扣减成功但写入日志失败: %w", err)
+		}
 
 		// 所有待扣减项都成功，更新 deductedSet 后标记完成的订单
 		for _, d := range allDetails {
@@ -379,7 +381,9 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 				successDetails = append(successDetails, d)
 			}
 		}
-		s.writeDeductionLogs(db, companyUuid, successDetails, retryResp.StockEntryName)
+		if err := s.writeDeductionLogs(db, companyUuid, successDetails, retryResp.StockEntryName); err != nil {
+			return fmt.Errorf("Stock Entry排除后扣减成功但写入日志失败: %w", err)
+		}
 
 		for _, d := range successDetails {
 			deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
@@ -433,9 +437,9 @@ func parseStockEntryErrorItemCodes(errMsg string) []string {
 }
 
 // writeDeductionLogs 写入扣减日志
-func (s *erpStockEntrySrv) writeDeductionLogs(db *gorm.DB, companyUuid uint64, details []orderItemDetail, stockEntryName string) {
+func (s *erpStockEntrySrv) writeDeductionLogs(db *gorm.DB, companyUuid uint64, details []orderItemDetail, stockEntryName string) error {
 	if len(details) == 0 {
-		return
+		return nil
 	}
 
 	logs := make([]*model.StockDeductionLog, 0, len(details))
@@ -455,7 +459,9 @@ func (s *erpStockEntrySrv) writeDeductionLogs(db *gorm.DB, companyUuid uint64, d
 			zap.Int("count", len(logs)),
 			zap.Error(err),
 		)
+		return err
 	}
+	return nil
 }
 
 // markFullyDeductedOrders 检查并标记所有 item 都已扣减完成的订单
@@ -599,6 +605,30 @@ func (s *erpStockEntrySrv) GenerateStocktakeSnapshot(db *gorm.DB, stockReconcili
 			} else {
 				mergeMap[m.ErpCode] = &snapshotItem{
 					Qty: m.Num,
+				}
+			}
+		}
+	}
+
+	if len(mergeMap) == 0 {
+		return nil
+	}
+
+	// 扣除已部分扣减的数量（部分item已通过Stock Entry扣减但订单整体尚未标记为erp_stock_deducted=1）
+	allSnapshotOrderUuids := make([]uint64, 0, len(orderSet))
+	for uuid := range orderSet {
+		allSnapshotOrderUuids = append(allSnapshotOrderUuids, uuid)
+	}
+	if len(allSnapshotOrderUuids) > 0 {
+		existingLogs, logErr := repository.NewStockDeductionLogRepo(db).GetByOrderUuids(allSnapshotOrderUuids)
+		if logErr != nil {
+			logger.Logger.Error("查询已扣减日志失败（快照）", zap.Error(logErr))
+		}
+		for _, log := range existingLogs {
+			if item, ok := mergeMap[log.ErpCode]; ok {
+				item.Qty -= log.Qty
+				if item.Qty <= 0 {
+					delete(mergeMap, log.ErpCode)
 				}
 			}
 		}
