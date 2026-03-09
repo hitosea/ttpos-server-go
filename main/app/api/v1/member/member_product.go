@@ -112,6 +112,7 @@ func (h *ProductHandler) GetProductRecommendList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param keyword query string true "搜索关键词"
+// @Param order_type query int false "订单类型：0-外送（默认），1-堂食（到店自取）"
 // @Success 200 {object} dto.Response{data=[]product_resp.Product} "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/product/search [get]

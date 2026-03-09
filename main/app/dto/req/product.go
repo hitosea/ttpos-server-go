@@ -27,8 +27,9 @@ type ProductRecommendListReq struct {
 
 // ProductSearchReq 商品搜索查询
 type ProductSearchReq struct {
-	Keyword  string `form:"keyword" json:"keyword" binding:"required"` // 搜索关键词
-	IsMember bool   `json:"-"`                                         // 是否是会员端查询商品列表
+	Keyword   string `form:"keyword" json:"keyword" binding:"required"` // 搜索关键词
+	OrderType int    `form:"order_type" json:"order_type"`              // 订单类型：0-外送（默认），1-堂食（到店自取）
+	IsMember  bool   `json:"-"`                                         // 是否是会员端查询商品列表
 }
 
 // ProductUnitListReq 商品单位列表查询

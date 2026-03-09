@@ -2205,7 +2205,18 @@ func (s *productSrv) SearchProducts(ctx context.Context, req req.ProductSearchRe
 
 	// 如果是会员端查询商品列表
 	if req.IsMember {
-		// 获取外送折扣率
+		// 堂食/到店自取订单：价格与收银机相同，不应用外送折扣率
+		if req.OrderType == constant.MemberOrderTypeSelfPickup {
+			productList := FormatProducts(ctx, products)
+			// 注入商品规格和小料的库存
+			s.injectProductListStockNum(ctx, productList)
+			// 返回响应对象
+			return &product_resp.ProductSearchResp{
+				List: productList,
+			}, nil
+		}
+
+		// 外送订单：应用外送折扣率
 		// 获取门店业务设置
 		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 		if err != nil {
