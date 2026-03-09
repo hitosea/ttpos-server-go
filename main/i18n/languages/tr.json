@@ -7801,5 +7801,7 @@
   "點餐-店內": "주문 - 매장 내",
   "龘": "龘",
   "物品 %s 未配置默认发货仓，请联系管理员处理。是否继续审核？（将由系统指定物品库存仓库进行发货）": "Ürün %s için varsayılan sevkiyat deposu yapılandırılmamış. Lütfen yönetici ile iletişime geçin. Onaya devam edilsin mi? (Sistem, ürün stok deposundan sevkiyat yapacaktır)",
-  "龙": "Ejderha"
+  "龙": "Ejderha",
+  "查询物品估值率失败": "Ürün değerleme oranı sorgulanamadı",
+  "物品%s估值率为0，无法提交。（请联系管理员进行处理）": "Ürün %s değerleme oranı 0 olduğu için gönderilemez. (Lütfen yönetici ile iletişime geçin)"
 }

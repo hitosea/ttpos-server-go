@@ -53651,6 +53651,14 @@ const docTemplate = `{
                 "zeroing_method"
             ],
             "properties": {
+                "allow_zero_valuation_rate": {
+                    "description": "估值率设置",
+                    "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
+                    ]
+                },
                 "allowed_transfer_types": {
                     "description": "调拨规则-允许的调拨类型 \"in\"-只允许调入 \"out\"-只允许调出 \"in,out\"-都允许",
                     "type": "string"
@@ -66084,6 +66092,10 @@ const docTemplate = `{
         "resp.StockReconciliationCheckMaterialsListResp": {
             "type": "object",
             "properties": {
+                "allow_zero_valuation_rate": {
+                    "description": "是否允许盘点估值率为0",
+                    "type": "boolean"
+                },
                 "list": {
                     "description": "物品列表",
                     "type": "array",
@@ -66104,12 +66116,20 @@ const docTemplate = `{
                     "description": "是否在仓库中",
                     "type": "boolean"
                 },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
+                },
                 "is_deleted": {
                     "description": "是否已删除",
                     "type": "boolean"
                 },
                 "is_inventory_status_exception": {
                     "description": "是否盈亏异常",
+                    "type": "boolean"
+                },
+                "is_zero_valuation_rate": {
+                    "description": "估值率是否为0",
                     "type": "boolean"
                 },
                 "locale_name": {
@@ -69247,6 +69267,10 @@ const docTemplate = `{
         "setting.Business": {
             "type": "object",
             "properties": {
+                "allow_zero_valuation_rate": {
+                    "description": "估值率设置",
+                    "type": "string"
+                },
                 "allowed_transfer_types": {
                     "description": "调拨规则-允许的调拨类型 \"in\"-只允许调入 \"out\"-只允许调出 \"in,out\"-都允许",
                     "type": "string"
@@ -70172,6 +70196,10 @@ const docTemplate = `{
         "setting.ShopBusiness": {
             "type": "object",
             "properties": {
+                "allow_zero_valuation_rate": {
+                    "description": "估值率设置",
+                    "type": "string"
+                },
                 "allowed_transfer_types": {
                     "description": "调拨规则-允许的调拨类型 \"in\"-只允许调入 \"out\"-只允许调出 \"in,out\"-都允许",
                     "type": "string"

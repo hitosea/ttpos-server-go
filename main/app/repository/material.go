@@ -468,7 +468,7 @@ func (r *MaterialRepoImpl) UpdateMaterialCode(uuid uint64, code string) error {
 
 // UpdateMaterial 更新物品
 func (r *MaterialRepoImpl) UpdateMaterial(material model.Material) error {
-	if err := r.db.Model(&model.Material{}).Where("uuid = ?", material.Uuid).Updates(material).Error; err != nil {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", material.Uuid).Debug().Updates(material).Error; err != nil {
 		return errors.WithMessage(err, "更新物品失败")
 	}
 	return nil
