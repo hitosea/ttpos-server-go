@@ -38,6 +38,12 @@ var SaleBillDiningMethodMap = map[uint]uint{
 	1: SaleBillDiningMethodTakeout,
 }
 
+// 会员端订单类型（用于商品列表查询）
+const (
+	MemberOrderTypeDelivery   = 0 // 外送（默认）- 商品价格应用外送折扣率
+	MemberOrderTypeSelfPickup = 1 // 堂食/到店自取 - 商品价格与收银机相同
+)
+
 const (
 	SaleBillStatusPending  = 0 // 待付款
 	SaleBillStatusComplete = 1 // 已完成

@@ -268,7 +268,23 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 
 		// 如果是会员端查询商品列表
 		if req.IsMember {
-			// 获取外送折扣率
+			// 堂食/到店自取订单：价格与收银机相同，不应用外送折扣率
+			if req.OrderType == constant.MemberOrderTypeSelfPickup {
+				// 格式化产品列表（不应用外送折扣率）
+				productList := FormatProducts(ctx, products)
+
+				// 返回响应对象（不注入库存，库存数据在缓存外注入）
+				return product_resp.ProductListWithPaginationResp{
+					List: productList,
+					Meta: dto.PageResponse{
+						PageNo:   req.PageNo,
+						PageSize: req.PageSize,
+						Total:    total,
+					},
+				}, nil
+			}
+
+			// 外送订单：应用外送折扣率
 			// 获取门店业务设置
 			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 			if err != nil {
@@ -323,6 +339,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 			req.PageNo,
 			req.PageSize,
 			req.IsMember,
+			req.OrderType,
 			req.RecommendProductPackageUuids,
 		)
 		result, err = cacheLayer.GET(cacheKey, queryFunc)
