@@ -1,0 +1,71 @@
+//go:build integration
+
+package {SERVICE}_test
+
+import (
+	"testing"
+
+	"ttpos-bmp/tests/fixture"
+)
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const (
+	// API paths
+	path{Domain}{Action} = "{API_PATH}"
+)
+
+// ---------------------------------------------------------------------------
+// P0 — Critical Path
+// ---------------------------------------------------------------------------
+
+// Test_P0_{Service}_{Domain}_{Action}_HappyPath tests the complete {description}.
+// Route: {METHOD} {API_PATH}
+func Test_P0_{Service}_{Domain}_{Action}_HappyPath(t *testing.T) {
+	client := fixture.New{Service}Client()
+
+	resp := client.{METHOD}(t, path{Domain}{Action})
+
+	resp.AssertOK(t)
+	// assert response body fields
+}
+
+// Test_P0_{Service}_{Domain}_{Action}_Unauthorized tests that requests
+// without valid credentials are rejected.
+// Route: {METHOD} {API_PATH}
+func Test_P0_{Service}_{Domain}_{Action}_Unauthorized(t *testing.T) {
+	client := fixture.New{Service}Client()
+
+	resp := client.{METHOD}(t, path{Domain}{Action})
+
+	// assert error response
+	resp.AssertStatus(t, 401)
+}
+
+// ---------------------------------------------------------------------------
+// P1 — Important Validation
+// ---------------------------------------------------------------------------
+
+// Test_P1_{Service}_{Domain}_{Action}_InvalidInput tests that malformed
+// requests are rejected.
+// Route: {METHOD} {API_PATH}
+func Test_P1_{Service}_{Domain}_{Action}_InvalidInput(t *testing.T) {
+	client := fixture.New{Service}Client()
+
+	resp := client.Post(t, path{Domain}{Action}, map[string]any{
+		// deliberately invalid payload
+	})
+
+	resp.AssertOK(t)
+	// assert specific validation error
+}
+
+// ---------------------------------------------------------------------------
+// P2 — Edge Cases
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------

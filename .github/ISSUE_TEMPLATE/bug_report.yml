@@ -1,0 +1,186 @@
+name: Bug Report
+description: Report a bug to help us improve and prevent recurrence
+title: "[BUG] "
+labels: ["bug", "status:open"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+        Please fill in all sections carefully. The **Analysis** section is required — it helps us prevent similar bugs in the future.
+
+  # ── Basic Info ──────────────────────────────────────────────────────────────
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Technical impact level
+      options:
+        - "critical — system crash / data loss / security"
+        - "major — key feature broken, no workaround"
+        - "minor — feature degraded, workaround exists"
+        - "trivial — cosmetic / UX issue"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: Business urgency
+      options:
+        - "P0 — fix immediately (blocking production)"
+        - "P1 — fix this sprint"
+        - "P2 — fix next sprint"
+        - "P3 — backlog"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      description: Which module is affected?
+      options:
+        - main
+        - bmp/erp
+        - bmp/takeout
+        - bmp/message
+        - bmp/websocket
+        - admin (legacy)
+        - infrastructure
+        - multiple modules
+    validations:
+      required: true
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Affected Layer
+      description: Which architectural layer is the bug in?
+      options:
+        - API layer (controller/handler)
+        - Service layer (business logic)
+        - Repository layer (data access)
+        - Database / migration
+        - Queue / async job
+        - gRPC / inter-service
+        - Configuration / environment
+        - External dependency
+    validations:
+      required: true
+
+  # ── Description ─────────────────────────────────────────────────────────────
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect?
+      placeholder: |
+        **Actual behavior:** ...
+        **Expected behavior:** ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. Call API `POST /api/v1/...`
+        2. With payload `{...}`
+        3. Observe error `...`
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        - Branch/Commit:
+        - Deployment: dev / staging / production
+        - Related config or feature flags:
+    validations:
+      required: true
+
+  # ── Test Case Relation ───────────────────────────────────────────────────────
+
+  - type: textarea
+    id: test_cases
+    attributes:
+      label: Test Case Relation
+      description: Link this bug to integration/unit test cases
+      placeholder: |
+        - **Exposed by test**: (test ID / test name that should have caught this, or "none — not covered")
+        - **New test to cover fix**: (test ID / test name added as part of fix)
+        - **Regression tests**: (related test IDs to watch)
+    validations:
+      required: true
+
+  # ── Root Cause Analysis ──────────────────────────────────────────────────────
+
+  - type: dropdown
+    id: root_cause_category
+    attributes:
+      label: Root Cause Category
+      description: Classify WHY this bug happened (fill after investigation)
+      options:
+        - "logic-error — wrong business logic"
+        - "missing-validation — input not validated"
+        - "race-condition — concurrency issue"
+        - "missing-edge-case — unhandled scenario"
+        - "data-migration — schema/seed issue"
+        - "config-error — wrong env/config value"
+        - "dependency-change — upstream API/library change"
+        - "performance — timeout / memory / deadlock"
+        - "security — auth/permission bypass"
+        - "integration — inter-service contract mismatch"
+        - "unknown — still investigating"
+    validations:
+      required: true
+
+  - type: textarea
+    id: root_cause_detail
+    attributes:
+      label: Root Cause Detail
+      description: Technical explanation of the root cause (fill after investigation)
+      placeholder: |
+        Explain what exactly went wrong technically.
+        Example: "The order total was recalculated after discount, but the tax was applied
+        to the pre-discount amount because service A cached the base price."
+
+  - type: textarea
+    id: affected_files
+    attributes:
+      label: Affected Files
+      placeholder: |
+        - `main/app/service/order_service.go:142`
+        - `main/app/repository/order_repo.go:87`
+
+  - type: textarea
+    id: prevention_action
+    attributes:
+      label: Prevention Action
+      description: What was done (or should be done) to prevent this class of bug from recurring?
+      placeholder: |
+        - [ ] Added integration test case `TC-ORDER-012`
+        - [ ] Added input validation in service layer
+        - [ ] Updated API contract documentation
+        - [ ] Added monitoring alert for error rate on this endpoint
+
+  # ── Progress ─────────────────────────────────────────────────────────────────
+
+  - type: textarea
+    id: progress_log
+    attributes:
+      label: Progress Log
+      description: Update this as the bug moves through stages
+      value: |
+        | Date | Status | Who | Note |
+        |------|--------|-----|------|
+        |      | open   |     | reported |
