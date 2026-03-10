@@ -5,10 +5,11 @@ const (
 )
 
 const (
-	OrderSourceInstant  = "instant"  // 点餐
-	OrderSourceDesk     = "desk"     // 桌台
-	OrderSourceRecharge = "recharge" // 充值
-	OrderSourceMember   = "member"   // 会员端
+	OrderSourceInstant       = "instant"         // 点餐
+	OrderSourceDesk          = "desk"            // 桌台
+	OrderSourceRecharge      = "recharge"        // 充值
+	OrderSourceMember        = "member"          // 会员端-外送
+	OrderSourceMemberDineIn  = "member_dine_in"  // 会员端-堂食
 )
 
 const (
@@ -127,17 +128,19 @@ const (
 
 // OrderSourceMapToOrderNoType 订单来源映射到订单编号类型
 var OrderSourceMapToOrderNoType = map[string]string{
-	OrderSourceInstant:  "1", // 点餐
-	OrderSourceDesk:     "2", // 桌台
-	OrderSourceRecharge: "3", // 充值
-	OrderSourceMember:   "4", // 会员端
+	OrderSourceInstant:      "1", // 点餐
+	OrderSourceDesk:         "2", // 桌台
+	OrderSourceRecharge:     "3", // 充值
+	OrderSourceMember:       "4", // 会员端-外送
+	OrderSourceMemberDineIn: "5", // 会员端-堂食
 }
 
 // OrderSourceMapToBillType 订单来源映射到销售账单类型
 var OrderSourceMapToBillType = map[string]uint{
-	OrderSourceInstant: SaleBillTypeInstant, // 点餐
-	OrderSourceDesk:    SaleBillTypeDesk,    // 桌台
-	OrderSourceMember:  SaleBillTypeTakeout, // 会员端
+	OrderSourceInstant:      SaleBillTypeInstant, // 点餐
+	OrderSourceDesk:         SaleBillTypeDesk,    // 桌台
+	OrderSourceMember:       SaleBillTypeTakeout, // 会员端-外送
+	OrderSourceMemberDineIn: SaleBillTypeInstant, // 会员端-堂食（使用点餐类型，价格与收银机一致）
 }
 
 // 订单操作类型

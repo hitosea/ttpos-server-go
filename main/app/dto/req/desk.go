@@ -93,6 +93,28 @@ type GetMemberOrderFormInfoReq struct {
 	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 }
 
+// 创建会员端堂食订单请求参数
+type CreateMemberDineInOrderReq struct {
+	SaleBillUuid  uint64               `json:"sale_bill_uuid"`  // 销售账单UUID. 值为0时，表示创建新订单。值不为0时，表示向已有订单添加商品。
+	SaleOrderUuid uint64               `json:"sale_order_uuid"` // 销售订单UUID. 更新订单时必填。
+	Products      []OrderProductAddReq `json:"products"`        // 商品列表
+}
+
+func (req *CreateMemberDineInOrderReq) Validate() error {
+	if len(req.Products) == 0 {
+		return errors.New("未选购商品，请先选购商品")
+	}
+	for _, product := range req.Products {
+		if product.Num <= 0 {
+			return errors.New("商品数量不能为0")
+		}
+		if product.FlavorUuid <= 0 {
+			return errors.New("商品规格ID不能为0")
+		}
+	}
+	return nil
+}
+
 type OrderProductAddReq struct {
 	FlavorUuid        uint64   `json:"flavor_uuid"`    // 某个规格商品ID
 	SauceUuidList     []uint64 `json:"sauce_uuid"`     // 小料ID列表

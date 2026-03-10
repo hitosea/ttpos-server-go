@@ -21137,6 +21137,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/order/dine_in/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建会员端堂食订单，与收银机即时点餐价格一致，适用于到店自取/堂食场景",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "创建会员端堂食订单",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CreateMemberDineInOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.CreateMemberOrderResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/member/order/form/info": {
             "get": {
                 "security": [
@@ -46445,6 +46487,26 @@ const docTemplate = `{
             "properties": {
                 "member_sale_order_uuid": {
                     "description": "会员端销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.CreateMemberDineInOrderReq": {
+            "type": "object",
+            "properties": {
+                "products": {
+                    "description": "商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.OrderProductAddReq"
+                    }
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID. 值为0时，表示创建新订单。值不为0时，表示向已有订单添加商品。",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID. 更新订单时必填。",
                     "type": "integer"
                 }
             }

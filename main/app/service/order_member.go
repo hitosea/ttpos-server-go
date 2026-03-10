@@ -37,7 +37,8 @@ import (
 
 type IMemberOrderSrv interface {
 	// 会员端
-	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)    // 创建会员端订单
+	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error) // 创建会员端外送订单
+	CreateMemberDineInOrder(ctx context.Context, req req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error)               // 创建会员端堂食订单
 	GetMemberOrderFormInfo(ctx context.Context, req req.GetMemberOrderFormInfoReq) (*resp.CreateMemberOrderResp, error)                      // 获取订单提交表单信息
 	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                 // 设置会员端订单地址
 	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                          // 会员端订单提交支付，状态变为待支付
@@ -2277,3 +2278,203 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 
 	return nil
 }
+
+// CreateMemberDineInOrder 创建会员端堂食订单
+// 1. sale_bill_uuid 为0时，新建订单并添加商品
+// 2. sale_bill_uuid 不为0时，更新已有订单（识别新增、修改、删除的商品）
+// 与外送订单的核心差异：BillType=Instant, DiningMethod=DineIn, 商品价格与收银机一致
+func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error) {
+	if err := request.Validate(); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if request.SaleBillUuid == 0 {
+		// 新建订单
+		return s.createDineInOrder(ctx, request)
+	}
+	// 更新已有订单
+	return s.updateDineInOrder(ctx, request)
+}
+
+// createDineInOrder 创建堂食订单（内部方法）
+func (s *orderSrv) createDineInOrder(ctx context.Context, request req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error) {
+	// 创建订单
+	instantOrder, err := s.createInstantOrder(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取销售账单信息
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	targetSaleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(instantOrder.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "订单不存在")
+	}
+
+	// 添加所有商品
+	if err := s.addDineInProducts(ctx, instantOrder.SaleBillUuid, instantOrder.SaleOrderUuid, request.Products, targetSaleBill); err != nil {
+		return nil, err
+	}
+
+	return &resp.CreateInstantOrderResp{
+		SaleBillUuid:  instantOrder.SaleBillUuid,
+		SaleOrderUuid: instantOrder.SaleOrderUuid,
+	}, nil
+}
+
+// updateDineInOrder 更新堂食订单（内部方法）
+// 实现增量更新：识别新增、修改、删除的商品
+func (s *orderSrv) updateDineInOrder(ctx context.Context, request req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	saleBillUuid := request.SaleBillUuid
+	saleOrderUuid := request.SaleOrderUuid
+
+	// 获取销售账单信息
+	targetSaleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "订单不存在")
+	}
+
+	// 检查订单状态：已取消或已完成的订单不允许更新
+	if targetSaleBill.IsCanceled() {
+		return nil, errors.New("订单已取消，无法更新")
+	}
+	if targetSaleBill.IsFinish() {
+		return nil, errors.New("订单已完成，无法更新")
+	}
+
+	// 如果未指定 SaleOrderUuid，使用第一个销售订单
+	if saleOrderUuid == 0 && len(targetSaleBill.SaleOrders) > 0 {
+		saleOrderUuid = targetSaleBill.SaleOrders[0].Uuid
+	}
+
+	// 计算商品差异
+	addProducts, deleteProducts, updateProducts, updateOlderProducts, err := s.diffDineInProducts(ctx, db, request.Products, targetSaleBill)
+	if err != nil {
+		return nil, err
+	}
+
+	// 执行删除
+	for _, saleOrderProduct := range deleteProducts {
+		saleOrderProduct.DeleteProduct()
+	}
+
+	// 执行修改
+	for key, product := range updateProducts {
+		saleOrderProduct := updateOlderProducts[key]
+		saleOrderProduct.Num = product.Num
+		saleOrderProduct.SetUpdate() // 标记该商品需要更新
+	}
+
+	// 执行新增
+	if err := s.addDineInProducts(ctx, saleBillUuid, saleOrderUuid, s.toOrderProductAddReqSlice(addProducts), targetSaleBill); err != nil {
+		return nil, err
+	}
+
+	return &resp.CreateInstantOrderResp{
+		SaleBillUuid:  saleBillUuid,
+		SaleOrderUuid: saleOrderUuid,
+	}, nil
+}
+
+// diffDineInProducts 计算堂食订单商品差异
+// 返回：新增商品、删除商品、修改商品、修改前商品
+func (s *orderSrv) diffDineInProducts(ctx context.Context, db *gorm.DB, products []req.OrderProductAddReq, saleBill *model.SaleBill) (
+	addProducts map[string]req.OrderProductAddReq,
+	deleteProducts map[string]*model.SaleOrderProduct,
+	updateProducts map[string]req.OrderProductAddReq,
+	updateOlderProducts map[string]*model.SaleOrderProduct,
+	err error,
+) {
+	// 构建提交商品映射
+	commitProductMap := make(map[string]req.OrderProductAddReq)
+	for index := range products {
+		product := products[index]
+		productPackageAttributes, err := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(ctx.GetCompanyUuid(), product.AttributeUuidList)
+		if err != nil {
+			return nil, nil, nil, nil, errors.WithMessage(err)
+		}
+		attributeUuids := make([]uint64, 0)
+		for _, attribute := range productPackageAttributes {
+			attributeUuids = append(attributeUuids, attribute.AttributeUuid)
+		}
+		key := product.ProductKey(attributeUuids)
+		commitProductMap[key] = product
+	}
+
+	// 构建已有商品映射（过滤已软删除的商品）
+	olderProductMap := make(map[string]*model.SaleOrderProduct)
+	if len(saleBill.SaleOrders) > 0 {
+		for index := range saleBill.SaleOrders[0].SaleOrderProducts {
+			product := saleBill.SaleOrders[0].SaleOrderProducts[index]
+			// 跳过已删除的商品
+			if product.DeleteTime != 0 {
+				continue
+			}
+			key := product.ProductKey()
+			olderProductMap[key] = product
+		}
+	}
+
+	addProducts = make(map[string]req.OrderProductAddReq)
+	deleteProducts = make(map[string]*model.SaleOrderProduct)
+	updateProducts = make(map[string]req.OrderProductAddReq)
+	updateOlderProducts = make(map[string]*model.SaleOrderProduct)
+
+	// 提交中存在，订单中不存在 → 新增
+	for key, product := range commitProductMap {
+		if _, ok := olderProductMap[key]; !ok {
+			addProducts[key] = product
+		}
+	}
+
+	// 提交中不存在，订单中存在 → 删除
+	for key, product := range olderProductMap {
+		if _, ok := commitProductMap[key]; !ok {
+			deleteProducts[key] = product
+		}
+	}
+
+	// 提交和订单都存在 → 修改
+	for key, product := range commitProductMap {
+		if _, ok := olderProductMap[key]; ok {
+			updateProducts[key] = product
+			updateOlderProducts[key] = olderProductMap[key]
+		}
+	}
+
+	return addProducts, deleteProducts, updateProducts, updateOlderProducts, nil
+}
+
+// addDineInProducts 添加堂食订单商品
+// 注意：即使 products 为空，也需要调用 ActionAdd 来保存 targetSaleBill 中已标记为更新的对象（删除、修改）
+func (s *orderSrv) addDineInProducts(ctx context.Context, saleBillUuid, saleOrderUuid uint64, products []req.OrderProductAddReq, targetSaleBill *model.SaleBill) error {
+	productParams := make([]req.ProductParams, 0, len(products))
+	for _, product := range products {
+		param := req.ProductParams{
+			FlavorProductBomUuid:            product.FlavorUuid,
+			Num:                             product.Num,
+			SauceProductBomUuidList:         product.SauceUuidList,
+			ProductPackageAttributeUuidList: product.AttributeUuidList,
+		}
+		productParams = append(productParams, param)
+	}
+
+	params := req.ProductAddReq{
+		SaleBillUuid:  saleBillUuid,
+		SaleOrderUuid: saleOrderUuid,
+		Products:      productParams,
+		IsMemberAdd:   false, // 堂食订单不应用外送折扣率
+	}
+	return s.ActionAdd(ctx, params, targetSaleBill)
+}
+
+// toOrderProductAddReqSlice 将 map 转换为 slice
+func (s *orderSrv) toOrderProductAddReqSlice(products map[string]req.OrderProductAddReq) []req.OrderProductAddReq {
+	result := make([]req.OrderProductAddReq, 0, len(products))
+	for _, product := range products {
+		result = append(result, product)
+	}
+	return result
+}
+
