@@ -131,6 +131,37 @@ func (h *OrderHandler) GetMemberOrderFormInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetDineInOrderFormInfo 获取堂食订单提交表单信息
+// @Summary 获取堂食订单提交表单信息
+// @Description 获取堂食订单提交表单信息，包含商品列表、金额信息、支付方式等
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data query req.GetDineInOrderFormInfoReq true "详情参数"
+// @Success 200 {object} resp.DineInOrderFormResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/dine_in/form_info [get]
+func (h *OrderHandler) GetDineInOrderFormInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetDineInOrderFormInfoReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("获取堂食订单提交表单信息", zap.Any("params", params))
+
+	// 获取堂食订单提交表单信息
+	res, err := h.orderSrv.GetDineInOrderFormInfo(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // SetOrderAddress 设置订单地址
 // @Summary 设置订单地址
 // @Description 设置订单地址
@@ -466,9 +497,10 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 需要认证
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
-		privateApi.POST("/order/create", wrapper.CreateOrder)                  // 创建外送订单
+		privateApi.POST("/order/create", wrapper.CreateOrder)                     // 创建外送订单
 		privateApi.POST("/order/dine_in/create", wrapper.CreateDineInOrder)    // 创建堂食订单
-		privateApi.GET("/order/form/info", wrapper.GetMemberOrderFormInfo)                    // 获取订单提交表单信息
+		privateApi.GET("/order/form/info", wrapper.GetMemberOrderFormInfo)     // 获取外送订单提交表单信息
+		privateApi.GET("/order/dine_in/form_info", wrapper.GetDineInOrderFormInfo) // 获取堂食订单提交表单信息
 		privateApi.POST("/order/address", wrapper.SetOrderAddress)                            // 设置订单地址
 		privateApi.POST("/order/pay", wrapper.PayOrder)                                       // 提交支付
 		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)                               // 获取支付信息

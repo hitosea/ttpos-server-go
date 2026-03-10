@@ -222,3 +222,40 @@ type DeskMergeShopCartResp struct {
 	IsResetDiscount bool      `json:"is_reset_discount"`
 	ShopCart        *ShopCart `json:"shop_cart"`
 }
+
+// DineInOrderFormResp 会员端堂食订单提交表单响应
+type DineInOrderFormResp struct {
+	SaleBillUuid   uint64            `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid  uint64            `json:"sale_order_uuid"` // 销售订单UUID
+	DiningMethod   uint              `json:"dining_method"`   // 用餐方式 0:堂食 1:打包
+	ProductList    DineInProductList `json:"product_list"`    // 商品列表
+	AmountInfo     DineInAmountInfo  `json:"amount_info"`     // 金额信息
+	PaymentMethods PaymentMethodList `json:"payment_methods"` // 支付方式列表
+	Remark         string            `json:"remark"`          // 订单备注
+}
+
+// DineInProductList 堂食订单商品列表
+type DineInProductList struct {
+	List []DineInProduct `json:"list"`
+}
+
+// DineInProduct 堂食订单商品
+type DineInProduct struct {
+	SaleOrderProductUuid uint64             `json:"sale_order_product_uuid"` // 销售订单商品UUID
+	LocaleName           dto.LocaleResponse `json:"locale_name"`             // 商品名称
+	LocaleAttributeName  dto.LocaleResponse `json:"locale_attribute_name"`   // 商品属性（规格+小料+属性）
+	Num                  float64            `json:"num"`                     // 数量
+	UnitPrice            float64            `json:"unit_price"`              // 单价（折前）,含税费
+	Amount               float64            `json:"amount"`                  // 商品金额（折前）
+	Image                string             `json:"image"`                   // 商品图片URL
+}
+
+// DineInAmountInfo 堂食订单金额信息
+type DineInAmountInfo struct {
+	ProductAmount  float64 `json:"product_amount"`  // 商品金额（合计）
+	TaxAmount      float64 `json:"tax_amount"`      // 消费税
+	ServiceAmount  float64 `json:"service_amount"`  // 服务费
+	MemberDiscount float64 `json:"member_discount"` // 会员折扣金额
+	TotalAmount    float64 `json:"total_amount"`    // 应付金额
+}
+

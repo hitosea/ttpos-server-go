@@ -39,6 +39,7 @@ type IMemberOrderSrv interface {
 	// 会员端
 	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error) // 创建会员端外送订单
 	CreateMemberDineInOrder(ctx context.Context, req req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error)               // 创建会员端堂食订单
+	GetDineInOrderFormInfo(ctx context.Context, req req.GetDineInOrderFormInfoReq) (*resp.DineInOrderFormResp, error)                        // 获取堂食订单提交表单信息
 	GetMemberOrderFormInfo(ctx context.Context, req req.GetMemberOrderFormInfoReq) (*resp.CreateMemberOrderResp, error)                      // 获取订单提交表单信息
 	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                 // 设置会员端订单地址
 	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                          // 会员端订单提交支付，状态变为待支付
@@ -226,6 +227,116 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 		// 订单未取消，更新订单
 		return s.updateMemberOrder(ctx, req, memberSaleOrder)
 	}
+}
+
+// GetDineInOrderFormInfo 获取堂食订单提交表单信息
+// 用于会员端堂食订单的提交页面，显示商品列表、金额信息、支付方式等
+func (s *orderSrv) GetDineInOrderFormInfo(ctx context.Context, request req.GetDineInOrderFormInfoReq) (*resp.DineInOrderFormResp, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "订单不存在")
+	}
+
+	// 验证订单类型
+	if !saleBill.IsInstantBill() {
+		return nil, errors.New("不是堂食订单")
+	}
+
+	// 验证订单状态
+	if saleBill.IsCanceled() {
+		return nil, errors.New("订单已取消")
+	}
+	if saleBill.IsFinish() {
+		return nil, errors.New("订单已完成")
+	}
+
+	// 获取指定的销售订单
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 重新计算金额并保存
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, errors.WithMessage(err, "计算订单金额失败")
+	}
+
+	// 构建商品列表
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+	products := make([]resp.DineInProduct, 0)
+	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+		// 跳过已删除的商品
+		if saleOrderProduct.DeleteTime != 0 {
+			continue
+		}
+		products = append(products, resp.DineInProduct{
+			SaleOrderProductUuid: saleOrderProduct.Uuid,
+			LocaleName:           saleOrderProduct.GetLocaleName(),
+			LocaleAttributeName:  saleOrderProduct.GetAttributeName(), // 包含规格+小料+属性
+			Num:                  saleOrderProduct.Num,
+			UnitPrice:            saleOrderProduct.OriginTotalPrice, // 折前单价，含税费
+			Amount:               saleOrderProduct.GetTotalPriceOrigin(),
+			Image: func() string {
+				if saleOrderProduct.ImageFileUuid != 0 && saleOrderProduct.ImageFile != nil {
+					return saleOrderProduct.ImageFile.GetUrl(baseUrl)
+				}
+				return ""
+			}(),
+		})
+	}
+
+	// 构建金额信息
+	amountInfo := resp.DineInAmountInfo{
+		ProductAmount:  saleOrder.ProductAmount,    // 商品金额
+		TaxAmount:      saleOrder.TaxFee,           // 消费税
+		ServiceAmount:  saleOrder.ServiceFee,       // 服务费
+		MemberDiscount: saleOrder.MemberDiscountFee, // 会员折扣
+		TotalAmount:    saleOrder.Amount,           // 应付金额（已包含税费和服务费）
+	}
+
+	// 获取支付方式列表
+	paymentMethods, err := repository.NewPaymentMethodRepo(db).GetLianLianPayPaymentMethodList()
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取支付方式失败")
+	}
+	payList := make([]resp.PaymentMethodItem, 0)
+	for _, paymentMethod := range paymentMethods {
+		payList = append(payList, resp.PaymentMethodItem{
+			Source:        paymentMethod.Source,
+			SourceText:    constant.PaymentMethodSourceTextMap[paymentMethod.Source],
+			Uuid:          paymentMethod.Uuid,
+			PaymentName:   paymentMethod.GetPaymentName(),
+			PaymentMethod: paymentMethod.GetName(),
+			FeePercent:    paymentMethod.FeePercent,
+			Logo: func() string {
+				if paymentMethod.IsWechatPay() {
+					return baseUrl + "/image/pay/wechat_pay.png"
+				}
+				if paymentMethod.IsAliPay() {
+					return baseUrl + "/image/pay/alipay.png"
+				}
+				if paymentMethod.IsQrPromptPay() {
+					return baseUrl + "/image/pay/qr_prompt_pay.png"
+				}
+				return ""
+			}(),
+			Code: paymentMethod.Code,
+		})
+	}
+
+	return &resp.DineInOrderFormResp{
+		SaleBillUuid:   saleBill.Uuid,
+		SaleOrderUuid:  saleOrder.Uuid,
+		DiningMethod:   saleBill.DiningMethod,
+		ProductList:    resp.DineInProductList{List: products},
+		AmountInfo:     amountInfo,
+		PaymentMethods: resp.PaymentMethodList{List: payList},
+		Remark:         saleBill.Remark,
+	}, nil
 }
 
 // GetMemberOrderFormInfo 获取订单提交表单信息

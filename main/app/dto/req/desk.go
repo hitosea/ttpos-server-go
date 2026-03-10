@@ -93,6 +93,12 @@ type GetMemberOrderFormInfoReq struct {
 	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 }
 
+// GetDineInOrderFormInfoReq 获取堂食订单提交表单信息请求参数
+type GetDineInOrderFormInfoReq struct {
+	SaleBillUuid  uint64 `form:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
+	SaleOrderUuid uint64 `form:"sale_order_uuid" binding:"required"` // 销售订单UUID
+}
+
 // 创建会员端堂食订单请求参数
 type CreateMemberDineInOrderReq struct {
 	SaleBillUuid  uint64               `json:"sale_bill_uuid"`  // 销售账单UUID. 值为0时，表示创建新订单。值不为0时，表示向已有订单添加商品。
