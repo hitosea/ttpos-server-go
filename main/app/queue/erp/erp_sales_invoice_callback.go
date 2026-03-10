@@ -86,10 +86,12 @@ func ErpSalesInvoiceCallbackHandler(ctx context.Context, msg *primitive.MessageE
 	switch callbackMsg.OrderType {
 	case "recharge":
 		// 充值订单：更新 member_recharge_order
+		rechargeRepo := repository.NewMemberRechargeOrderRepo(db)
 		if callbackMsg.SalesInvoiceName != "" {
-			if err := repository.NewMemberRechargeOrderRepo(db).UpdateErpProductsInvoiceName(
+			if err := rechargeRepo.UpdateErpSalesInvoiceInfo(
 				saleOrderUuid,
 				callbackMsg.SalesInvoiceName,
+				callbackMsg.PaymentEntryNames,
 			); err != nil {
 				logger.Logger.Error("更新充值订单 ERP 发票名称失败",
 					zap.Uint64("company_uuid", companyUuid),
@@ -98,25 +100,38 @@ func ErpSalesInvoiceCallbackHandler(ctx context.Context, msg *primitive.MessageE
 				return err
 			}
 		}
+		// 回写同步状态（成功=3 / 失败=4）
+		if err := rechargeRepo.Update(saleOrderUuid, map[string]any{
+			"erp_sync_status": callbackMsg.SyncStatus,
+		}); err != nil {
+			logger.Logger.Error("更新充值订单 ERP 同步状态失败",
+				zap.Uint64("company_uuid", companyUuid),
+				zap.Uint64("order_uuid", saleOrderUuid),
+				zap.Error(err))
+			return err
+		}
 
 	case "takeout":
 		// 外卖订单：通过 Repository 更新 takeout_order
+		takeoutRepo := persistence.NewTakeoutOrderRepo(db)
+		updateMap := map[string]interface{}{
+			"erp_sync_status": callbackMsg.SyncStatus,
+		}
 		if callbackMsg.SalesInvoiceName != "" {
 			siResp := map[string]any{
 				"sales_invoice_name":  callbackMsg.SalesInvoiceName,
 				"payment_entry_names": callbackMsg.PaymentEntryNames,
 			}
 			if respJSON, err := json.Marshal(siResp); err == nil {
-				if err := persistence.NewTakeoutOrderRepo(db).UpdateByMap(saleOrderUuid, map[string]interface{}{
-					"erp_pos_invoice_resp": string(respJSON),
-				}); err != nil {
-					logger.Logger.Error("更新外卖订单 ERP 发票信息失败",
-						zap.Uint64("company_uuid", companyUuid),
-						zap.Uint64("order_uuid", saleOrderUuid),
-						zap.Error(err))
-					return err
-				}
+				updateMap["erp_pos_invoice_resp"] = string(respJSON)
 			}
+		}
+		if err := takeoutRepo.UpdateByMap(saleOrderUuid, updateMap); err != nil {
+			logger.Logger.Error("更新外卖订单 ERP 同步状态失败",
+				zap.Uint64("company_uuid", companyUuid),
+				zap.Uint64("order_uuid", saleOrderUuid),
+				zap.Error(err))
+			return err
 		}
 
 	default:

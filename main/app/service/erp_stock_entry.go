@@ -410,6 +410,10 @@ var stockEntryErrorItemCodeRegex = regexp.MustCompile(`Item Code: <strong>([^<]+
 // 匹配模式：SP3700735403493377_01 is not a stock Item
 var stockEntryNotStockItemRegex = regexp.MustCompile(`(\S+) is not a stock Item`)
 
+// stockEntryDisabledItemRegex 匹配 ERPNext "Item is disabled" 错误中的 item_code
+// 匹配模式：Item WPR3685375438618625 is disabled
+var stockEntryDisabledItemRegex = regexp.MustCompile(`Item (\S+) is disabled`)
+
 // parseStockEntryErrorItemCodes 从 ERPNext 错误信息中提取有问题的 item_code 列表
 func parseStockEntryErrorItemCodes(errMsg string) []string {
 	seen := make(map[string]bool)
@@ -426,6 +430,15 @@ func parseStockEntryErrorItemCodes(errMsg string) []string {
 
 	// 匹配非库存物料: XXX is not a stock Item
 	for _, m := range stockEntryNotStockItemRegex.FindAllStringSubmatch(errMsg, -1) {
+		code := m[1]
+		if !seen[code] {
+			seen[code] = true
+			codes = append(codes, code)
+		}
+	}
+
+	// 匹配禁用物品: Item XXX is disabled
+	for _, m := range stockEntryDisabledItemRegex.FindAllStringSubmatch(errMsg, -1) {
 		code := m[1]
 		if !seen[code] {
 			seen[code] = true

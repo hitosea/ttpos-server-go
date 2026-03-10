@@ -146,6 +146,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 		} else {
 			if err := takeoutOrderRepo.UpdateByMap(takeoutOrder.Uuid, map[string]interface{}{
 				"erp_pos_invoice_resp": string(respJson),
+				"erp_sync_status":     1, // 已入队待处理，SI/PE 名称由 BMP consumer 异步回写
 			}); err != nil {
 				logger.Logger.Error("保存 ERP 响应数据到订单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
 			}

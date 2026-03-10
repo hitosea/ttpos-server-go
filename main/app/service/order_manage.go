@@ -1381,8 +1381,11 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			if saleOrder.ErpSalesInvoiceName != "" {
+			if companySetting.IsErpSalesInvoiceMode() {
 				// Sales Invoice 模式：生成 Credit Note
+				if saleOrder.ErpSalesInvoiceName == "" {
+					return errors.New("Sales Invoice 尚未同步完成，请稍后再试")
+				}
 				res, err := s.ReturnSalesInvoice(ctx, saleOrder, returnOrder, saleBill, db, returnType, isPartReturn)
 				if err != nil {
 					return errors.WithMessage(err)
