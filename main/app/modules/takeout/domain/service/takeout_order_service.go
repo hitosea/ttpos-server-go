@@ -622,8 +622,13 @@ func (s *takeoutOrderSrv) CheckOrderCancelable(ctx context.Context, req *request
 	// 调用 CheckOrderCancelable 接口
 	canCancel, reason, rawData, err := rpcClient.CheckOrderCancelable(ctx.GetContext(), order.TakeoutOrderUuid)
 	if err != nil {
+		logger.Logger.Error("调用 BMP CheckOrderCancelable 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+		// 判断错误信息存在 failed to get store info 和 invalid_argument 时，直接返回错误
+		if strings.Contains(err.Error(), "failed to get store info") && strings.Contains(err.Error(), "invalid_argument") {
+			return nil, errors.WithMessage(errors.New("failed to get store info"), err.Error())
+		}
 		// 判断错误信息存在 get order cancelable fail 和 invalid_argument 时，直接更改订单状态为取消并返回成功
-		if strings.Contains(err.Error(), "get order cancelable fail") || strings.Contains(err.Error(), "invalid_argument") {
+		if strings.Contains(err.Error(), "get order cancelable fail") {
 			// 更新订单状态为已取消
 			if err := orderRepo.UpdateByMap(order.Uuid, map[string]interface{}{
 				"order_state": valueobject.TakeoutOrderStateCanceled,
@@ -649,7 +654,6 @@ func (s *takeoutOrderSrv) CheckOrderCancelable(ctx context.Context, req *request
 				CancelReasons:         []response.TakeoutOrderCancelReason{},
 			}, nil
 		}
-		logger.Logger.Error("调用 BMP CheckOrderCancelable 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 		return nil, errors.WithMessage(errors.New("检查订单可取消状态失败"), err.Error())
 	}
 
@@ -1824,7 +1828,7 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		}
 
 		// 判断状态是否下降
-		if newOrderState < oldOrderState {
+		if newOrderState < oldOrderState && newOrderState != valueobject.TakeoutOrderStateCompleted {
 			logger.Logger.Info("订单状态下降，不处理", zap.String("order_uuid", orderUuid), zap.Int("old_order_state", oldOrderState), zap.Int("new_order_state", newOrderState))
 			return nil
 		}
