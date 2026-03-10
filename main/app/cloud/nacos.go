@@ -2,6 +2,8 @@ package cloud
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"ttpos-server-go/app/errors"
 
 	"go.uber.org/zap"
@@ -71,6 +73,18 @@ func Startup() error {
 }
 
 func GetServiceGrpcAddr(serviceName string) (string, error) {
+	// Check for environment variable override first (for testing)
+	// Environment variable format: GRPC_{SERVICE_NAME}_ADDR
+	// e.g., GRPC_ERP_ADDR, GRPC_TAKEOUT_ADDR, GRPC_MESSAGE_ADDR, GRPC_WEBSOCKET_ADDR
+	envVarName := fmt.Sprintf("GRPC_%s_ADDR", strings.ToUpper(strings.ReplaceAll(serviceName, "ttpos-", "")))
+	if envAddr := os.Getenv(envVarName); envAddr != "" {
+		logger.Logger.Debug("Using gRPC address from environment variable",
+			zap.String("service", serviceName),
+			zap.String("env_var", envVarName),
+			zap.String("addr", envAddr))
+		return envAddr, nil
+	}
+
 	if nacosClient == nil {
 		return "", errors.WithMessage(errors.New("服务中心未启动，请稍等"))
 	}

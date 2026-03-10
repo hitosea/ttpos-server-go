@@ -1,0 +1,42 @@
+# Dockerfile.dockerignore (test runner)
+# Only affects test runner builds — does NOT apply to production Dockerfiles.
+# BuildKit feature: <Dockerfile>.dockerignore scopes exclusions per Dockerfile.
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+.cursor
+
+# CI/CD and docs
+.github
+.scannerwork
+docs
+openspec
+tools
+
+# Admin (legacy PHP/Vue) - only seeds SQL needed for test DB init
+admin/app
+admin/config
+admin/database/migrations
+admin/extend
+admin/public
+admin/route
+admin/runtime
+admin/vendor
+admin/views
+
+# Coverage output
+coverage
+
+# Docker configs (not needed inside containers)
+docker
+docker-compose*.yml
+
+# Other
+*.md
+*.log
+LICENSE
