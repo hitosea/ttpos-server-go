@@ -1537,6 +1537,8 @@ return [
     "东京" => "Tokyo",
     "北京，重庆，香港特别行政区，乌鲁木齐" => "Beijing, Chongqing, Hong Kong Special Administrative Region, Urumqi",
     "曼谷，河内，雅加达" => "Bangkok, Hanoi, Jakarta",
+    "胡志明市，河内" => "Ho Chi Minh City, Hanoi",
+    "内比都，仰光" => "Naypyidaw, Yangon",
     "安卡拉" => "Ankara",
     "当前支付已完成，请选择其他方式支付" => "Current payment is completed, please choose another payment method",
     "处理LianLian回调: shop_supplier_id不存在" => "Processing LianLian callback: shop_supplier_id does not exist",

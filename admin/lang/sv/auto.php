@@ -1155,6 +1155,8 @@ return [
     "更新成功" => "Uppdatering lyckades",
     "更新日志必填" => "Uppdateringslogg är obligatorisk",
     "曼谷，河内，雅加达" => "Bangkok, Hanoi, Jakarta",
+    "胡志明市，河内" => "Ho Chi Minh-staden, Hanoi",
+    "内比都，仰光" => "Naypyidaw, Yangon",
     "最低充值金额" => "Lägsta påfyllningsbelopp",
     "最低提现佣金" => "Lägsta uttagsprovision",
     "最低提现金额为" => "Lägsta uttagsbelopp är",

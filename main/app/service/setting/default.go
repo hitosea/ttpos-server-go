@@ -346,6 +346,14 @@ func (s *Srv) getDefaultStore(language string) setting.Store {
 				Key:   "Asia/Bangkok",
 				Value: "（UTC+07:00）" + i18n.Translate(language, "曼谷，河内，雅加达"),
 			}, {
+				Name:  "（UTC+07:00）" + i18n.Translate(language, "胡志明市，河内"),
+				Key:   "Asia/Ho_Chi_Minh",
+				Value: "（UTC+07:00）" + i18n.Translate(language, "胡志明市，河内"),
+			}, {
+				Name:  "（UTC+06:30）" + i18n.Translate(language, "内比都，仰光"),
+				Key:   "Asia/Yangon",
+				Value: "（UTC+06:30）" + i18n.Translate(language, "内比都，仰光"),
+			}, {
 				Name:  "（UTC+3:00）" + i18n.Translate(language, "安卡拉"),
 				Key:   "Europe/Istanbul",
 				Value: "（UTC+3:00）" + i18n.Translate(language, "安卡拉"),
