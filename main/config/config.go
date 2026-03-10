@@ -279,7 +279,7 @@ func metricsConf(opt copier.Option) {
 		Enabled: true,
 		Port:    "9090",
 	}
-	copier.CopyWithOption(&Metrics, MetricsConf{
+	_ = copier.CopyWithOption(&Metrics, MetricsConf{
 		Enabled: viper.GetBool("METRICS_ENABLED"),
 		Port:    viper.GetString("METRICS_PORT"),
 	}, opt)

@@ -17,17 +17,29 @@ services:
       MYSQL_USER: ${DB_USERNAME:-test}
       MYSQL_PASSWORD: ${DB_PASSWORD:-test}
       TZ: "Asia/Bangkok"
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=64M
+      --innodb-log-file-size=16M
+      --innodb-flush-log-at-trx-commit=0
+      --sync-binlog=0
+      --skip-log-bin
+    # tmpfs for MySQL data dir: keeps all test data in RAM, making DDL (CREATE/DROP TABLE)
+    # near-instant. Safe because test data is always ephemeral.
+    # 1536m supports ~60 tenant databases with tuned InnoDB settings above.
+    tmpfs:
+      - /var/lib/mysql:size=1536m
     volumes:
       - ../../admin/database/seeds/saas.sql:/docker-entrypoint-initdb.d/saas.sql:ro
     healthcheck:
       # Check a table created by the init script so the health check only passes
       # after saas.sql has been applied and the real MySQL server has restarted.
       test: ["CMD", "mysql", "-h", "127.0.0.1", "-P", "3306", "-u", "root", "-ptestroot", "saas", "-e", "SELECT 1 FROM ttpos_admin_access LIMIT 1"]
-      interval: 2s
-      timeout: 3s
-      retries: 30
-      start_period: 10s
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 30s
     networks:
       - test-network
 
@@ -38,8 +50,11 @@ services:
       - test-network
 
   # WireMock with gRPC Extension (mock BMP services)
+  # Proto descriptors are compiled from source at build time (see Dockerfile.wiremock).
   wiremock:
-    image: hub.hitosea.com/infra/wiremock:3.9.1
+    build:
+      context: ../..
+      dockerfile: main/tests/Dockerfile.wiremock
     command: ["--port", "8080", "--https-port", "8443"]
     networks:
       - test-network
@@ -70,6 +85,9 @@ services:
       # JWT
       - JWT_SECRET=${JWT_SECRET:-test-secret-key-for-integration-tests}
       # gRPC Mock Overrides (bypass Nacos)
+      # WireMock serves gRPC on HTTPS port 8443 (TLS with self-signed cert).
+      # GRPC_TLS_INSECURE=true makes the server accept any cert (InsecureSkipVerify).
+      - GRPC_TLS_INSECURE=true
       - GRPC_ERP_ADDR=wiremock:8443
       - GRPC_TAKEOUT_ADDR=wiremock:8443
       - GRPC_MESSAGE_ADDR=wiremock:8443
@@ -128,6 +146,10 @@ services:
       - DB_DATABASE=${DB_DATABASE:-saas}
       - WIREMOCK_URL=http://wiremock:8080
       - JWT_SECRET=${JWT_SECRET:-test-secret-key-for-integration-tests}
+      # Redis (used by internal integration tests in pkg/lock and pkg/cache)
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
       # Go cache environment
       - GOMODCACHE=/go/pkg/mod
       - GOCACHE=/root/.cache/go-build

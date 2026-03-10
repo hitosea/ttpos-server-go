@@ -1,0 +1,63 @@
+# BMP Multi-Service Coverage Build
+# ===================================
+# Builds ttpos-erp, ttpos-takeout, ttpos-message, and ttpos-websocket with coverage instrumentation.
+# The correct binary is selected at runtime via BMP_SERVICE env var.
+
+FROM golang:1.23 AS builder
+
+ARG GOPROXY=https://goproxy.cn,direct
+ENV GOPROXY=${GOPROXY}
+
+# Setup ttpos-api (shared API definitions, required by replace directive)
+WORKDIR /ttpos-api
+COPY ttpos-api/ ./
+
+# Setup BMP module
+WORKDIR /ttpos-bmp
+COPY ttpos-bmp/go.mod ttpos-bmp/go.sum ./
+
+# Download dependencies (cached layer)
+RUN go mod download
+
+# Copy source code
+COPY ttpos-bmp/ ./
+
+# Build all 4 services with coverage instrumentation
+# -cover: Enable coverage collection (writes to GOCOVERDIR on exit)
+# -ldflags="-s -w": Strip debug info for smaller binaries
+RUN go build -cover -ldflags="-s -w" -o /app/ttpos-erp ./app/ttpos-erp/main.go && \
+    go build -cover -ldflags="-s -w" -o /app/ttpos-takeout ./app/ttpos-takeout/main.go && \
+    go build -cover -ldflags="-s -w" -o /app/ttpos-message ./app/ttpos-message/main.go && \
+    go build -cover -ldflags="-s -w" -o /app/ttpos-websocket ./app/ttpos-websocket/main.go
+
+# Runtime image
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y ca-certificates curl && \
+    apt-get clean && apt-get autoclean && apt-get autoremove --yes && \
+    rm -rf /var/lib/{apt,dpkg,cache,log}/ && \
+    groupadd -r ttpos && useradd -r -g ttpos -s /bin/false ttpos
+
+WORKDIR /app
+
+# Copy all 4 service binaries
+COPY --from=builder /app/ttpos-erp .
+COPY --from=builder /app/ttpos-takeout .
+COPY --from=builder /app/ttpos-message .
+COPY --from=builder /app/ttpos-websocket .
+
+# Create coverage directory and set ownership
+RUN mkdir -p /coverage && \
+    chown -R ttpos:ttpos /app /coverage
+
+# Switch to non-root user
+USER ttpos
+
+# BMP_SERVICE selects which binary to run (e.g. ttpos-erp, ttpos-takeout, ttpos-message, ttpos-websocket)
+ENV BMP_SERVICE=ttpos-takeout
+
+# GoFrame reads config from ./config/config.yaml relative to the binary
+# Mount the correct config file at /app/config/config.yaml in docker-compose
+EXPOSE 14021 14022 14031 14032 14041 14042 14051 14052
+
+CMD ["sh", "-c", "exec /app/${BMP_SERVICE}"]

@@ -22,5 +22,11 @@ COPY . ./
 
 WORKDIR /app/main/tests
 
-# Wait for DNS resolution and run tests
-CMD ["sh", "-c", "go test -tags=integration -v -count=1 -timeout=10m ./..."]
+# Blackbox API tests only — unit tests (pkg/lock, pkg/cache, etc.) belong in
+# their own CI stage, not the integration test phase.
+# All packages run concurrently (default -p). Each test creates an isolated
+# tenant DB with a unique company_uuid, so there are no cross-package DB
+# collisions. WireMock default stubs are registered once via fixture.SetupWireMock
+# (sync.Once) and never reset.
+CMD ["sh", "-c", \
+  "go test -tags=integration -v -count=1 -timeout=10m ./..."]
