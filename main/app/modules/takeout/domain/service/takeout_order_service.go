@@ -1828,7 +1828,7 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		}
 
 		// 判断状态是否下降
-		if newOrderState < oldOrderState {
+		if newOrderState < oldOrderState && newOrderState != valueobject.TakeoutOrderStateCompleted {
 			logger.Logger.Info("订单状态下降，不处理", zap.String("order_uuid", orderUuid), zap.Int("old_order_state", oldOrderState), zap.Int("new_order_state", newOrderState))
 			return nil
 		}

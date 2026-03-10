@@ -27,6 +27,7 @@ type IMemberRechargeOrderRepo interface {
 	CreateOldRecord(rechargeOrder model.MemberRechargeOrder) error                     // 创建充值订单,仅用于迁移数据
 	Update(uuid uint64, vars map[string]any) error                                     // 更新充值订单
 	UpdateErpProductsInvoiceName(uuid uint64, erpProductsInvoiceName string) error     // 更新充值订单的商品发票名称
+	UpdateErpSalesInvoiceInfo(uuid uint64, salesInvoiceName string, paymentEntryNames string) error // 更新充值订单的 SI 名称和 PE 名称
 }
 
 // IMemberRechargeOrderQueryRepo 充值订单查询
@@ -324,5 +325,13 @@ func (r *memberRechargeOrderRepo) GetMemberRechargeOrderList(opts ...DBOption) (
 func (r *memberRechargeOrderRepo) UpdateErpProductsInvoiceName(uuid uint64, erpProductsInvoiceName string) error {
 	return r.db.Model(&model.MemberRechargeOrder{}).Where("uuid = ?", uuid).Updates(map[string]interface{}{
 		"erp_products_invoice_name": erpProductsInvoiceName,
+	}).Error
+}
+
+// UpdateErpSalesInvoiceInfo 更新充值订单的 SI 名称和 PE 名称（MQ 回调使用）
+func (r *memberRechargeOrderRepo) UpdateErpSalesInvoiceInfo(uuid uint64, salesInvoiceName string, paymentEntryNames string) error {
+	return r.db.Model(&model.MemberRechargeOrder{}).Where("uuid = ?", uuid).Updates(map[string]interface{}{
+		"erp_products_invoice_name": salesInvoiceName,
+		"erp_payment_entry_names":   paymentEntryNames,
 	}).Error
 }

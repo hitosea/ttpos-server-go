@@ -347,7 +347,14 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 				zap.Uint64("company_uuid", companyUuid),
 				zap.Int("excluded_count", len(excludedSet)),
 			)
-			return fmt.Errorf("Stock Entry所有item均被排除: excluded=%d", len(excludedSet))
+			// 将排除的 item 视为已处理，标记订单
+			for _, d := range allDetails {
+				if excludedSet[d.ErpCode] {
+					deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
+				}
+			}
+			s.markFullyDeductedOrders(db, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
+			return nil
 		}
 
 		excludedCodes := make([]string, 0, len(excludedSet))
@@ -388,16 +395,29 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 		for _, d := range successDetails {
 			deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
 		}
+		// 将排除的 item 也视为已处理
+		for _, d := range allDetails {
+			if excludedSet[d.ErpCode] {
+				deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
+			}
+		}
 
 		s.markFullyDeductedOrders(db, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
 
-		if len(excludedSet) > 0 {
-			return fmt.Errorf("Stock Entry部分item被排除: %v (成功=%d, 排除=%d)",
-				excludedCodes, len(retryItems), len(excludedSet))
-		}
-
 		return nil
 	}
+
+	// 重试耗尽：将最后一批错误 item 也加入排除集合
+	lastCodes := parseStockEntryErrorItemCodes(lastErr.Error())
+	for _, code := range lastCodes {
+		excludedSet[code] = true
+	}
+	for _, d := range allDetails {
+		if excludedSet[d.ErpCode] {
+			deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
+		}
+	}
+	s.markFullyDeductedOrders(db, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
 
 	return fmt.Errorf("Stock Entry重试%d次后仍失败: %w (排除=%v)", maxRetry, lastErr, excludedSet)
 }
@@ -409,6 +429,10 @@ var stockEntryErrorItemCodeRegex = regexp.MustCompile(`Item Code: <strong>([^<]+
 // stockEntryNotStockItemRegex 匹配 ERPNext "is not a stock Item" 错误中的 item_code
 // 匹配模式：SP3700735403493377_01 is not a stock Item
 var stockEntryNotStockItemRegex = regexp.MustCompile(`(\S+) is not a stock Item`)
+
+// stockEntryDisabledItemRegex 匹配 ERPNext "Item is disabled" 错误中的 item_code
+// 匹配模式：Item WPR3685375438618625 is disabled
+var stockEntryDisabledItemRegex = regexp.MustCompile(`Item (\S+) is disabled`)
 
 // parseStockEntryErrorItemCodes 从 ERPNext 错误信息中提取有问题的 item_code 列表
 func parseStockEntryErrorItemCodes(errMsg string) []string {
@@ -426,6 +450,15 @@ func parseStockEntryErrorItemCodes(errMsg string) []string {
 
 	// 匹配非库存物料: XXX is not a stock Item
 	for _, m := range stockEntryNotStockItemRegex.FindAllStringSubmatch(errMsg, -1) {
+		code := m[1]
+		if !seen[code] {
+			seen[code] = true
+			codes = append(codes, code)
+		}
+	}
+
+	// 匹配禁用物品: Item XXX is disabled
+	for _, m := range stockEntryDisabledItemRegex.FindAllStringSubmatch(errMsg, -1) {
 		code := m[1]
 		if !seen[code] {
 			seen[code] = true

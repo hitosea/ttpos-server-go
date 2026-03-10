@@ -577,6 +577,12 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 				if err != nil {
 					return errors.WithMessage(err)
 				}
+				// 更新 erp_sync_status=1（已入队待处理），SI/PE 名称由 BMP consumer 异步回写
+				if err := repository.NewMemberRechargeOrderRepo(tx).Update(order.Uuid, map[string]any{
+					"erp_sync_status": 1,
+				}); err != nil {
+					return errors.WithMessage(err)
+				}
 			} else {
 				// POS Invoice 模式（默认）
 				invoiceResp, err := s.SavePosInvoice(ctx, &order, tx)
@@ -1743,11 +1749,16 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				if order.ReverseSettleCount > 0 {
 					cancelOrderNo = fmt.Sprintf("%s-%d", order.OrderNo, order.ReverseSettleCount)
 				}
+				var peNames []string
+				if order.ErpPaymentEntryNames != "" {
+					_ = json.Unmarshal([]byte(order.ErpPaymentEntryNames), &peNames)
+				}
 				_, err := erpSrv.CancelSalesInvoice(ctx, req.CancelSalesInvoiceReq{
-					SiteCode:         companySetting.ErpnextSiteCode,
-					OrderNo:          cancelOrderNo,
-					SaleOrderUuid:    fmt.Sprintf("%d", order.Uuid),
-					SalesInvoiceName: order.ErpProductsInvoiceName,
+					SiteCode:          companySetting.ErpnextSiteCode,
+					OrderNo:           cancelOrderNo,
+					SaleOrderUuid:     fmt.Sprintf("%d", order.Uuid),
+					SalesInvoiceName:  order.ErpProductsInvoiceName,
+					PaymentEntryNames: peNames,
 				})
 				if err != nil {
 					return errors.WithMessage(err)

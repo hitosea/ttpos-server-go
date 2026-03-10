@@ -19,7 +19,6 @@ func InitConsumer(ctx context.Context) {
 	queue.RegisterConsumer(&selling.SaveSalesInvoiceConsumer{})
 	queue.RegisterConsumer(&selling.CancelSalesInvoiceConsumer{})
 	queue.RegisterConsumer(&selling.ReturnSalesInvoiceConsumer{})
-	queue.RegisterConsumer(&selling.SalesInvoiceCallbackConsumer{})
 
 	queue.StartConsumersListener(ctx)
 }
