@@ -260,7 +260,7 @@
 
 | 字段名 | 类型 | 说明 | 取值参考 |
 |--------|------|------|----------|
-| `bill_type` | uint | 账单类型 | 0-桌台订单、1-点餐订单、2-会员端订单 |
+| `bill_type` | uint | 账单类型 | 0-桌台订单、1-点餐订单(包括会员端的堂食订单)、2-会员端订单(仅外送) |
 | `dining_method` | uint | 用餐方式 | 0-堂食、1-打包 |
 | `order_source_uuid` | uint64 | 订单来源UUID | 0=店内，>0=外卖（关联OrderSource表） |
 | `nationality_uuid` | uint64 | 国籍UUID | 0=未记录，>0=关联Nationality表 |

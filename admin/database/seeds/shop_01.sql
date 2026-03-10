@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '销售账单编号',
     `duty_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '当班编号,用于标记该账单属于哪个当班',
     `serial_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号 (点餐流水号)',
-    `bill_type` INT(10) NOT NULL DEFAULT 0 COMMENT '账单类型, 0-桌台订单、1-点餐订单、2-会员端订单',
+    `bill_type` INT(10) NOT NULL DEFAULT 0 COMMENT '账单类型, 0-桌台订单、1-点餐订单(包括会员端的堂食订单)、2-会员端订单(仅外送)',
     `dining_method` INT(10) NOT NULL DEFAULT 0 COMMENT '用餐方式,0-堂食(店内就餐) 1-打包',
     `order_source_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '订单来源UUID（0=店内，>0=外卖）',
     `order_source_name` TEXT COMMENT '订单来源名称快照（JSON），不随后台更新',
