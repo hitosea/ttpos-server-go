@@ -32,9 +32,19 @@ import (
 
 // CreateInstantOrder 创建点餐订单
 func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 判断是否有待支付、未挂单的订单（收银机端特有检查）
+	_, hasInstantOrder, err := HasInstantOrder(ctx, db)
+	if err != nil {
+		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
+	}
+	if hasInstantOrder {
+		return resp.CreateInstantOrderResp{}, errors.New("有待支付、未挂单的订单")
+	}
+
 	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		if config.Server.Mode == constant.ServerModeStop { // 暂时关闭特性功能
-			db := ctx.GetDB()
 			// 创建订单编号
 			orderNo, err := s.createOrderNo(ctx, db, constant.OrderSourceInstant)
 			if err != nil {
@@ -70,21 +80,14 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	return s.createInstantOrder(ctx)
 }
 
-// createInstantOrder 创建点餐订单
+// createInstantOrder 创建点餐订单（内部方法，不检查 HasInstantOrder）
+// 调用方需自行决定是否检查 HasInstantOrder
 func (s *orderSrv) createInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error) {
 	dbId := ctx.GetDbId()
 	var billUuid uint64
 	var orderUuid uint64
 	db := s.dbm.GetDB(dbId)
 
-	// 判断是否有待支付、未挂单的订单
-	_, hasInstantOrder, err := HasInstantOrder(ctx, db)
-	if err != nil {
-		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
-	}
-	if hasInstantOrder {
-		return resp.CreateInstantOrderResp{}, errors.New("有待支付、未挂单的订单")
-	}
 	if err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 创建订单编号
 		orderNo, err := s.createOrderNo(ctx, tx, constant.OrderSourceInstant)

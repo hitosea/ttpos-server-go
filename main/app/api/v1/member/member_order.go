@@ -63,6 +63,43 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// CreateDineInOrder 创建会员端堂食订单
+// @Summary 创建会员端堂食订单
+// @Description 创建会员端堂食订单，与收银机即时点餐价格一致，适用于到店自取/堂食场景
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.CreateMemberDineInOrderReq true "详情参数"
+// @Success 200 {object} resp.CreateInstantOrderResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/dine_in/create [post]
+func (h *OrderHandler) CreateDineInOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.CreateMemberDineInOrderReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("创建会员端堂食订单", zap.Any("params", params))
+
+	// 开始耗时跟踪
+	tracker := helper.StartTrack(ctx, constant.ActionMemberOrderCreate).
+		WithPath(c.Request.URL.Path)
+	// 创建会员端堂食订单
+	res, err := h.orderSrv.CreateMemberDineInOrder(ctx, params)
+	// 记录耗时
+	tracker.End(ctx, err)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // GetMemberOrderFormInfo 获取订单提交表单信息
 // @Summary 获取订单提交表单信息
 // @Description 获取订单提交表单信息
@@ -429,7 +466,8 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 需要认证
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
-		privateApi.POST("/order/create", wrapper.CreateOrder)                                 // 创建订单
+		privateApi.POST("/order/create", wrapper.CreateOrder)                  // 创建外送订单
+		privateApi.POST("/order/dine_in/create", wrapper.CreateDineInOrder)    // 创建堂食订单
 		privateApi.GET("/order/form/info", wrapper.GetMemberOrderFormInfo)                    // 获取订单提交表单信息
 		privateApi.POST("/order/address", wrapper.SetOrderAddress)                            // 设置订单地址
 		privateApi.POST("/order/pay", wrapper.PayOrder)                                       // 提交支付
