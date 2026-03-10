@@ -10,8 +10,8 @@ alwaysApply: true
   #安装编译器
   sudo apt update && apt install -y protobuf-compiler
   # 安装 protocol 编译器插件
-  go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+  go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.0
   # 更新 PATH 以便 protoc 能找到插件
   export PATH="$PATH:$(go env GOPATH)/bin"
   # 验证安装
