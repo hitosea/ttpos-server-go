@@ -21170,7 +21170,232 @@ const docTemplate = `{
                     "200": {
                         "description": "成功",
                         "schema": {
-                            "$ref": "#/definitions/resp.CreateMemberOrderResp"
+                            "$ref": "#/definitions/resp.CreateInstantOrderResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/dine_in/dining_method": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "设置堂食订单用餐方式（堂食/打包）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "设置堂食订单用餐方式",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SetDineInOrderDiningMethodReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/dine_in/form_info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取堂食订单提交表单信息，包含商品列表、金额信息、支付方式等",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "获取堂食订单提交表单信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单UUID",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.DineInOrderFormResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/dine_in/pay": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "堂食订单提交支付",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "堂食订单提交支付",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PayDineInOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/dine_in/pay/info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取堂食订单支付信息，返回支付二维码或跳转链接",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "获取堂食订单支付信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "支付方式UUID",
+                        "name": "payment_method_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单UUID",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.DineInOrderPaymentInfoResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/dine_in/pay/status": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取堂食订单支付状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "获取堂食订单支付状态",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单UUID",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.DineInOrderPaymentStatusResp"
                         }
                     },
                     "400": {
@@ -46633,6 +46858,13 @@ const docTemplate = `{
                     "description": "时间类型,-1=全部、0=今天、1=昨天、2=本周",
                     "type": "integer"
                 },
+                "deselected_uuids": {
+                    "description": "取消/移除的UUID（select_all=true时排除，select_all=false时移除）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "order_no": {
                     "description": "订单编号搜索",
                     "type": "string"
@@ -46644,6 +46876,17 @@ const docTemplate = `{
                 "query_start_date": {
                     "description": "查询开始日期",
                     "type": "string"
+                },
+                "select_all": {
+                    "description": "是否全选当前筛选范围",
+                    "type": "boolean"
+                },
+                "selected_uuids": {
+                    "description": "手动新增的UUID（select_all=false时使用）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -47391,29 +47634,11 @@ const docTemplate = `{
         "req.GetDataManageOrderSelectStatsReq": {
             "type": "object",
             "properties": {
-                "deselected_uuids": {
-                    "description": "取消勾选的UUID（select_all=true时使用）",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "filter": {
-                    "description": "筛选条件（多组，聚合统计）",
+                "filters": {
+                    "description": "筛选条件数组，聚合统计",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
-                    }
-                },
-                "select_all": {
-                    "description": "是否全选当前筛选范围",
-                    "type": "boolean"
-                },
-                "selected_uuids": {
-                    "description": "手动勾选的UUID（select_all=false时使用）",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
                     }
                 }
             }
@@ -49389,6 +49614,32 @@ const docTemplate = `{
             "properties": {
                 "sale_bill_uuid": {
                     "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.PayDineInOrderReq": {
+            "type": "object",
+            "required": [
+                "payment_method_uuid",
+                "sale_bill_uuid",
+                "sale_order_uuid"
+            ],
+            "properties": {
+                "payment_method_uuid": {
+                    "description": "支付方式UUID",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "订单备注",
+                    "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
                     "type": "integer"
                 }
             }
@@ -53026,6 +53277,22 @@ const docTemplate = `{
                 }
             }
         },
+        "req.SetDineInOrderDiningMethodReq": {
+            "type": "object",
+            "required": [
+                "sale_bill_uuid"
+            ],
+            "properties": {
+                "dining_method": {
+                    "description": "用餐方式 0:堂食 1:打包",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.ShiftDepositReq": {
             "type": "object",
             "properties": {
@@ -53553,30 +53820,11 @@ const docTemplate = `{
         "req.SubmitDataManageOrderReq": {
             "type": "object",
             "properties": {
-                "deselected_uuids": {
-                    "description": "取消勾选的UUID（select_all=true时使用）",
+                "filters": {
+                    "description": "筛选条件数组，每组独立处理",
                     "type": "array",
                     "items": {
-                        "type": "integer"
-                    }
-                },
-                "filter": {
-                    "description": "筛选条件（与查询列表时相同的参数）",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
-                        }
-                    ]
-                },
-                "select_all": {
-                    "description": "是否全选当前筛选范围",
-                    "type": "boolean"
-                },
-                "selected_uuids": {
-                    "description": "手动勾选的UUID（select_all=false时使用）",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
+                        "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
                     }
                 }
             }
@@ -57306,6 +57554,19 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.CreateInstantOrderResp": {
+            "type": "object",
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.CreateMemberOrderResp": {
             "type": "object",
             "properties": {
@@ -58166,6 +58427,186 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.DeviceItem"
+                    }
+                }
+            }
+        },
+        "resp.DineInAmountInfo": {
+            "type": "object",
+            "properties": {
+                "member_discount": {
+                    "description": "会员折扣金额",
+                    "type": "number"
+                },
+                "product_amount": {
+                    "description": "商品金额（合计）",
+                    "type": "number"
+                },
+                "service_amount": {
+                    "description": "服务费",
+                    "type": "number"
+                },
+                "tax_amount": {
+                    "description": "消费税",
+                    "type": "number"
+                },
+                "total_amount": {
+                    "description": "应付金额",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.DineInOrderFormResp": {
+            "type": "object",
+            "properties": {
+                "amount_info": {
+                    "description": "金额信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.DineInAmountInfo"
+                        }
+                    ]
+                },
+                "dining_method": {
+                    "description": "用餐方式 0:堂食 1:打包",
+                    "type": "integer"
+                },
+                "payment_methods": {
+                    "description": "支付方式列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PaymentMethodList"
+                        }
+                    ]
+                },
+                "product_list": {
+                    "description": "商品列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.DineInProductList"
+                        }
+                    ]
+                },
+                "remark": {
+                    "description": "订单备注",
+                    "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.DineInOrderPaymentInfoResp": {
+            "type": "object",
+            "properties": {
+                "is_wechat_pay": {
+                    "description": "是否是微信支付",
+                    "type": "boolean"
+                },
+                "link_url": {
+                    "description": "支付单链接 (返回跳转地址)",
+                    "type": "string"
+                },
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "payment_method_name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "payment_order_uuid": {
+                    "description": "支付单UUID",
+                    "type": "integer"
+                },
+                "qr_code": {
+                    "description": "支付单二维码 (返回base64图片)",
+                    "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "支付单状态 0-未支付 1-已支付",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.DineInOrderPaymentStatusResp": {
+            "type": "object",
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "支付状态 0-未支付 1-已支付 2-支付失败",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.DineInProduct": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "商品金额（折前）",
+                    "type": "number"
+                },
+                "image": {
+                    "description": "商品图片URL",
+                    "type": "string"
+                },
+                "locale_attribute_name": {
+                    "description": "商品属性（规格+小料+属性）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "locale_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "num": {
+                    "description": "数量",
+                    "type": "number"
+                },
+                "sale_order_product_uuid": {
+                    "description": "销售订单商品UUID",
+                    "type": "integer"
+                },
+                "unit_price": {
+                    "description": "单价（折前）,含税费",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.DineInProductList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.DineInProduct"
                     }
                 }
             }
@@ -59114,7 +59555,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "desk_no": {
-                    "description": "桌台编号",
+                    "description": "桌台编号（桌台扫码订单）或取餐号（会员端堂食订单，值为sale_bill.serial_no）",
                     "type": "string"
                 },
                 "desk_uuid": {
@@ -59131,6 +59572,10 @@ const docTemplate = `{
                 },
                 "order_time": {
                     "description": "h5订单下单时间",
+                    "type": "integer"
+                },
+                "order_type": {
+                    "description": "订单类型：0=桌台扫码订单、1=会员端堂食订单",
                     "type": "integer"
                 },
                 "price": {
@@ -59192,7 +59637,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "desk_no": {
-                    "description": "桌台编号",
+                    "description": "桌台编号（桌台扫码订单）或取餐号（会员端堂食订单，值为sale_bill.serial_no）",
                     "type": "string"
                 },
                 "desk_region_uuid": {
@@ -59213,6 +59658,10 @@ const docTemplate = `{
                 },
                 "order_time": {
                     "description": "h5订单下单时间",
+                    "type": "integer"
+                },
+                "order_type": {
+                    "description": "订单类型：0=桌台扫码订单、1=会员端堂食订单",
                     "type": "integer"
                 },
                 "price": {
@@ -70388,6 +70837,14 @@ const docTemplate = `{
         "setting.DataManageOrderSelectStatsResp": {
             "type": "object",
             "properties": {
+                "is_select_all": {
+                    "description": "是否全选（所有筛选范围内的订单都已选中）",
+                    "type": "boolean"
+                },
+                "new_count": {
+                    "description": "新增总数（尚未在 data_manage 中的订单数）",
+                    "type": "integer"
+                },
                 "paid_amount": {
                     "description": "预览选中实付金额合计",
                     "type": "number"
