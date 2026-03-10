@@ -2335,6 +2335,11 @@ func (s *orderSrv) updateDineInOrder(ctx context.Context, request req.CreateMemb
 		return nil, errors.WithMessage(err, "订单不存在")
 	}
 
+	// 检查订单类型：只能更新堂食订单
+	if !targetSaleBill.IsInstantBill() {
+		return nil, errors.New("只能更新堂食订单")
+	}
+
 	// 检查订单状态：已取消或已完成的订单不允许更新
 	if targetSaleBill.IsCanceled() {
 		return nil, errors.New("订单已取消，无法更新")
@@ -2344,7 +2349,10 @@ func (s *orderSrv) updateDineInOrder(ctx context.Context, request req.CreateMemb
 	}
 
 	// 如果未指定 SaleOrderUuid，使用第一个销售订单
-	if saleOrderUuid == 0 && len(targetSaleBill.SaleOrders) > 0 {
+	if saleOrderUuid == 0 {
+		if len(targetSaleBill.SaleOrders) == 0 {
+			return nil, errors.New("订单数据异常：无销售订单")
+		}
 		saleOrderUuid = targetSaleBill.SaleOrders[0].Uuid
 	}
 
