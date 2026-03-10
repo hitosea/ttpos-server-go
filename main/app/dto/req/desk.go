@@ -99,6 +99,33 @@ type GetDineInOrderFormInfoReq struct {
 	SaleOrderUuid uint64 `form:"sale_order_uuid" binding:"required"` // 销售订单UUID
 }
 
+// PayDineInOrderReq 堂食订单提交支付请求参数
+type PayDineInOrderReq struct {
+	SaleBillUuid      uint64 `json:"sale_bill_uuid" binding:"required"`      // 销售账单UUID
+	SaleOrderUuid     uint64 `json:"sale_order_uuid" binding:"required"`     // 销售订单UUID
+	PaymentMethodUuid uint64 `json:"payment_method_uuid" binding:"required"` // 支付方式UUID
+	Remark            string `json:"remark"`                                 // 订单备注
+}
+
+// SetDineInOrderDiningMethodReq 设置堂食订单用餐方式请求参数
+type SetDineInOrderDiningMethodReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+	DiningMethod uint   `json:"dining_method"`                     // 用餐方式 0:堂食 1:打包
+}
+
+// GetDineInOrderPayInfoReq 获取堂食订单支付信息请求参数
+type GetDineInOrderPayInfoReq struct {
+	SaleBillUuid      uint64 `form:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
+	SaleOrderUuid     uint64 `form:"sale_order_uuid" binding:"required"` // 销售订单UUID
+	PaymentMethodUuid uint64 `form:"payment_method_uuid"`                // 支付方式UUID
+}
+
+// GetDineInOrderPayStatusReq 获取堂食订单支付状态请求参数
+type GetDineInOrderPayStatusReq struct {
+	SaleBillUuid  uint64 `form:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
+	SaleOrderUuid uint64 `form:"sale_order_uuid" binding:"required"` // 销售订单UUID
+}
+
 // 创建会员端堂食订单请求参数
 type CreateMemberDineInOrderReq struct {
 	SaleBillUuid  uint64               `json:"sale_bill_uuid"`  // 销售账单UUID. 值为0时，表示创建新订单。值不为0时，表示向已有订单添加商品。

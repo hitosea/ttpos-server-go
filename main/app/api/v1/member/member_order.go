@@ -162,6 +162,126 @@ func (h *OrderHandler) GetDineInOrderFormInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// SetDineInOrderDiningMethod 设置堂食订单用餐方式
+// @Summary 设置堂食订单用餐方式
+// @Description 设置堂食订单用餐方式（堂食/打包）
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.SetDineInOrderDiningMethodReq true "详情参数"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/dine_in/dining_method [post]
+func (h *OrderHandler) SetDineInOrderDiningMethod(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.SetDineInOrderDiningMethodReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("设置堂食订单用餐方式", zap.Any("params", params))
+
+	// 设置用餐方式
+	err := h.orderSrv.SetDineInOrderDiningMethod(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// PayDineInOrder 堂食订单提交支付
+// @Summary 堂食订单提交支付
+// @Description 堂食订单提交支付
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.PayDineInOrderReq true "详情参数"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/dine_in/pay [post]
+func (h *OrderHandler) PayDineInOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.PayDineInOrderReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("堂食订单提交支付", zap.Any("params", params))
+
+	// 提交支付
+	err := h.orderSrv.PayDineInOrder(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// GetDineInOrderPayInfo 获取堂食订单支付信息
+// @Summary 获取堂食订单支付信息
+// @Description 获取堂食订单支付信息，返回支付二维码或跳转链接
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data query req.GetDineInOrderPayInfoReq true "详情参数"
+// @Success 200 {object} resp.DineInOrderPaymentInfoResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/dine_in/pay/info [get]
+func (h *OrderHandler) GetDineInOrderPayInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetDineInOrderPayInfoReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取支付信息
+	res, err := h.orderSrv.GetDineInOrderPayInfo(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetDineInOrderPayStatus 获取堂食订单支付状态
+// @Summary 获取堂食订单支付状态
+// @Description 获取堂食订单支付状态
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data query req.GetDineInOrderPayStatusReq true "详情参数"
+// @Success 200 {object} resp.DineInOrderPaymentStatusResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/dine_in/pay/status [get]
+func (h *OrderHandler) GetDineInOrderPayStatus(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetDineInOrderPayStatusReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取支付状态
+	res, err := h.orderSrv.GetDineInOrderPayStatus(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // SetOrderAddress 设置订单地址
 // @Summary 设置订单地址
 // @Description 设置订单地址
@@ -497,14 +617,18 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 需要认证
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
-		privateApi.POST("/order/create", wrapper.CreateOrder)                     // 创建外送订单
-		privateApi.POST("/order/dine_in/create", wrapper.CreateDineInOrder)    // 创建堂食订单
-		privateApi.GET("/order/form/info", wrapper.GetMemberOrderFormInfo)     // 获取外送订单提交表单信息
-		privateApi.GET("/order/dine_in/form_info", wrapper.GetDineInOrderFormInfo) // 获取堂食订单提交表单信息
+		privateApi.POST("/order/create", wrapper.CreateOrder)                                 // 创建外送订单
+		privateApi.POST("/order/dine_in/create", wrapper.CreateDineInOrder)                   // 创建堂食订单
+		privateApi.GET("/order/form/info", wrapper.GetMemberOrderFormInfo)                    // 获取外送订单提交表单信息
+		privateApi.GET("/order/dine_in/form_info", wrapper.GetDineInOrderFormInfo)            // 获取堂食订单提交表单信息
+		privateApi.POST("/order/dine_in/dining_method", wrapper.SetDineInOrderDiningMethod)   // 设置堂食订单用餐方式
 		privateApi.POST("/order/address", wrapper.SetOrderAddress)                            // 设置订单地址
-		privateApi.POST("/order/pay", wrapper.PayOrder)                                       // 提交支付
-		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)                               // 获取支付信息
-		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                           // 获取支付状态
+		privateApi.POST("/order/pay", wrapper.PayOrder)                                       // 外送订单提交支付
+		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)                               // 外送订单获取支付信息
+		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                           // 外送订单获取支付状态
+		privateApi.POST("/order/dine_in/pay", wrapper.PayDineInOrder)                         // 堂食订单提交支付
+		privateApi.GET("/order/dine_in/pay/info", wrapper.GetDineInOrderPayInfo)              // 堂食订单获取支付信息
+		privateApi.GET("/order/dine_in/pay/status", wrapper.GetDineInOrderPayStatus)          // 堂食订单获取支付状态
 		privateApi.GET("/order/list", wrapper.GetMemberOrderList)                             // 获取会员端订单列表
 		privateApi.GET("/order/detail", wrapper.GetMemberOrderDetail)                         // 获取会员端订单详情
 		privateApi.GET("/order/payment/method/list", wrapper.GetMemberOrderPaymentMethodList) // 获取会员端订单支付方式列表

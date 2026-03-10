@@ -39,12 +39,16 @@ type IMemberOrderSrv interface {
 	// 会员端
 	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error) // 创建会员端外送订单
 	CreateMemberDineInOrder(ctx context.Context, req req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error)               // 创建会员端堂食订单
-	GetDineInOrderFormInfo(ctx context.Context, req req.GetDineInOrderFormInfoReq) (*resp.DineInOrderFormResp, error)                        // 获取堂食订单提交表单信息
-	GetMemberOrderFormInfo(ctx context.Context, req req.GetMemberOrderFormInfoReq) (*resp.CreateMemberOrderResp, error)                      // 获取订单提交表单信息
-	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                 // 设置会员端订单地址
-	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                          // 会员端订单提交支付，状态变为待支付
-	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)        // 会员端订单获取支付信息
-	GetMemberOrderPayStatus(ctx context.Context, request member_req.GetMemberOrderPayStatusReq) (*resp.MemberOrderPaymentStatusResp, error)  // 会员端订单获取支付状态
+	GetDineInOrderFormInfo(ctx context.Context, req req.GetDineInOrderFormInfoReq) (*resp.DineInOrderFormResp, error)                    // 获取堂食订单提交表单信息
+	SetDineInOrderDiningMethod(ctx context.Context, req req.SetDineInOrderDiningMethodReq) error                                         // 设置堂食订单用餐方式
+	PayDineInOrder(ctx context.Context, req req.PayDineInOrderReq) error                                                                 // 堂食订单提交支付
+	GetDineInOrderPayInfo(ctx context.Context, req req.GetDineInOrderPayInfoReq) (*resp.DineInOrderPaymentInfoResp, error)               // 获取堂食订单支付信息
+	GetDineInOrderPayStatus(ctx context.Context, req req.GetDineInOrderPayStatusReq) (*resp.DineInOrderPaymentStatusResp, error)         // 获取堂食订单支付状态
+	GetMemberOrderFormInfo(ctx context.Context, req req.GetMemberOrderFormInfoReq) (*resp.CreateMemberOrderResp, error)                  // 获取订单提交表单信息
+	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)             // 设置会员端订单地址
+	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                      // 会员端订单提交支付，状态变为待支付
+	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)    // 会员端订单获取支付信息
+	GetMemberOrderPayStatus(ctx context.Context, request member_req.GetMemberOrderPayStatusReq) (*resp.MemberOrderPaymentStatusResp, error) // 会员端订单获取支付状态
 	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                                // 查询收银机"外送"页面的订单列表
 	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                       // 查询会员端订单详情
 	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error) // 获取会员端订单支付方式列表
@@ -336,6 +340,260 @@ func (s *orderSrv) GetDineInOrderFormInfo(ctx context.Context, request req.GetDi
 		AmountInfo:     amountInfo,
 		PaymentMethods: resp.PaymentMethodList{List: payList},
 		Remark:         saleBill.Remark,
+	}, nil
+}
+
+// SetDineInOrderDiningMethod 设置堂食订单用餐方式
+func (s *orderSrv) SetDineInOrderDiningMethod(ctx context.Context, request req.SetDineInOrderDiningMethodReq) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "订单不存在")
+	}
+
+	// 验证订单类型
+	if !saleBill.IsInstantBill() {
+		return errors.New("不是堂食订单")
+	}
+
+	// 验证订单状态
+	if saleBill.IsCanceled() {
+		return errors.New("订单已取消")
+	}
+	if saleBill.IsFinish() {
+		return errors.New("订单已完成")
+	}
+
+	// 更新用餐方式
+	saleBill.DiningMethod = request.DiningMethod
+
+	// 保存更新
+	if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
+		return errors.WithMessage(err, "更新订单失败")
+	}
+
+	return nil
+}
+
+// PayDineInOrder 堂食订单提交支付
+func (s *orderSrv) PayDineInOrder(ctx context.Context, request req.PayDineInOrderReq) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "订单不存在")
+	}
+
+	// 验证订单类型
+	if !saleBill.IsInstantBill() {
+		return errors.New("不是堂食订单")
+	}
+
+	// 验证订单状态
+	if saleBill.IsCanceled() {
+		return errors.New("订单已取消")
+	}
+	if saleBill.IsFinish() {
+		return errors.New("订单已完成")
+	}
+
+	// 获取指定的销售订单
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return errors.New("销售订单不存在")
+	}
+
+	// 验证订单金额
+	if saleOrder.Amount < 1 {
+		return errors.New("订单金额小于1，无法支付")
+	}
+
+	// 验证支付方式
+	if request.PaymentMethodUuid == 0 {
+		return errors.New("请选择支付方式")
+	}
+
+	// 更新订单备注
+	if request.Remark != "" {
+		saleBill.Remark = request.Remark
+		// 保存更新
+		if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
+			return errors.WithMessage(err, "更新订单失败")
+		}
+	}
+
+	return nil
+}
+
+// GetDineInOrderPayInfo 获取堂食订单支付信息
+func (s *orderSrv) GetDineInOrderPayInfo(ctx context.Context, request req.GetDineInOrderPayInfoReq) (*resp.DineInOrderPaymentInfoResp, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "订单不存在")
+	}
+
+	// 验证订单类型
+	if !saleBill.IsInstantBill() {
+		return nil, errors.New("不是堂食订单")
+	}
+
+	// 获取指定的销售订单
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 验证订单金额
+	if saleOrder.Amount < 1 {
+		return nil, errors.NewWithCode(constant.CodeOrderAmountLessThan1, "订单金额小于1，无法支付")
+	}
+
+	// 获取支付方式
+	var paymentMethod *model.PaymentMethod
+	if request.PaymentMethodUuid != 0 {
+		paymentMethod, err = repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(request.PaymentMethodUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if paymentMethod.Uuid == 0 {
+			return nil, errors.New("支付方式不存在")
+		}
+	} else {
+		return nil, errors.New("请选择支付方式")
+	}
+
+	// 验证支付方式是否可用
+	if !paymentMethod.IsLianLianPay() {
+		return nil, errors.New("支付方式不可用")
+	}
+
+	// 关联UUID使用销售订单UUID
+	relatedUuid := saleOrder.Uuid
+
+	// 查询或创建支付订单
+	paymentOrderRepo := repository.NewPaymentOrderRepo(db)
+	paymentOrder, err := paymentOrderRepo.GetPaymentOrderInfo(
+		repository.CommonRepo.WhereBySoftDelete(),
+		paymentOrderRepo.WhereRelatedUuid(relatedUuid),
+		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
+		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
+	)
+	if err == nil && paymentOrder.Uuid != 0 {
+		// 已有支付订单且已支付
+		if paymentOrder.Status == constant.PaymentOrderStatusPaid {
+			return &resp.DineInOrderPaymentInfoResp{
+				SaleBillUuid:      saleBill.Uuid,
+				SaleOrderUuid:     saleOrder.Uuid,
+				PaymentOrderUuid:  paymentOrder.Uuid,
+				PaymentMethodName: paymentMethod.PaymentName,
+				Status:            paymentOrder.Status,
+				PaymentAmount:     paymentOrder.PaymentAmount,
+			}, nil
+		}
+	} else {
+		// 创建支付订单
+		createPaymentOrder, err := paymentOrderRepo.Create(model.PaymentOrder{
+			PaymentMethodName: paymentMethod.PaymentName,
+			PaymentMethodUuid: paymentMethod.Uuid,
+			PaymentFeePercent: 0,
+			RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
+			RelatedUuid:       relatedUuid,
+			CurrencyUnit: func() string {
+				currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+				if err != nil {
+					return "THB"
+				}
+				return currencySetting.Unit
+			}(),
+			PaymentAmount:        saleOrder.Amount,
+			PaymentCommissionFee: 0,
+			Amount:               saleOrder.Amount,
+			Status:               constant.PaymentOrderStatusUnPay,
+		})
+		if err != nil {
+			return nil, errors.WithMessage(err, "创建支付订单失败")
+		}
+		paymentOrder = &createPaymentOrder
+	}
+
+	// 判断当前是手机端还是PC端
+	isOpenPc := !ctx.IsMobile() && viper.GetString("OPEN_MEMBER_PC_PAY") == "true"
+
+	// 创建连连支付订单
+	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
+		PaymentOrderUuid:  paymentOrder.Uuid,
+		RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
+		RelatedUuid:       relatedUuid,
+		PaymentMethodUuid: paymentMethod.Uuid,
+		PaymentMethodCode: paymentMethod.Code,
+		PaymentAmount:     saleOrder.Amount,
+		CommissionFee:     0,
+		PaymentMethod: func() string {
+			if isOpenPc {
+				return PaymentMethodWechatPay
+			}
+			return PaymentMethodH5Payment
+		}(),
+		RedirectUrl: func() string {
+			if ctx.IsMobile() && paymentMethod.IsWechatPay() {
+				return fmt.Sprintf("%s/company/%d/dine_in/payment_result/%d/", config.Server.MemberBaseUrl, ctx.GetCompanyUuid(), saleBill.Uuid)
+			}
+			return ""
+		}(),
+	})
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &resp.DineInOrderPaymentInfoResp{
+		SaleBillUuid:      saleBill.Uuid,
+		SaleOrderUuid:     saleOrder.Uuid,
+		PaymentOrderUuid:  payment.PaymentOrderUuid,
+		PaymentMethodName: paymentMethod.PaymentName,
+		IsWechatPay:       paymentMethod.IsWechatPay(),
+		QrCode:            utils.IfString(isOpenPc || paymentMethod.IsQrPromptPay(), payment.LinkUrl, ""),
+		LinkUrl:           utils.IfString(isOpenPc || paymentMethod.IsQrPromptPay(), "", payment.LinkUrl),
+		Status:            payment.GetStatus(),
+		PaymentAmount:     payment.OrderAmount,
+	}, nil
+}
+
+// GetDineInOrderPayStatus 获取堂食订单支付状态
+func (s *orderSrv) GetDineInOrderPayStatus(ctx context.Context, request req.GetDineInOrderPayStatusReq) (*resp.DineInOrderPaymentStatusResp, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "订单不存在")
+	}
+
+	// 获取指定的销售订单
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 获取支付状态
+	status := uint(0)
+	if saleOrder.Status == constant.SaleOrderStatusFinish {
+		status = 1
+	}
+
+	return &resp.DineInOrderPaymentStatusResp{
+		SaleBillUuid:  saleBill.Uuid,
+		SaleOrderUuid: saleOrder.Uuid,
+		Status:        status,
 	}, nil
 }
 
