@@ -347,7 +347,14 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 				zap.Uint64("company_uuid", companyUuid),
 				zap.Int("excluded_count", len(excludedSet)),
 			)
-			return fmt.Errorf("Stock Entry所有item均被排除: excluded=%d", len(excludedSet))
+			// 将排除的 item 视为已处理，标记订单
+			for _, d := range allDetails {
+				if excludedSet[d.ErpCode] {
+					deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
+				}
+			}
+			s.markFullyDeductedOrders(db, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
+			return nil
 		}
 
 		excludedCodes := make([]string, 0, len(excludedSet))
@@ -388,16 +395,29 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 		for _, d := range successDetails {
 			deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
 		}
+		// 将排除的 item 也视为已处理
+		for _, d := range allDetails {
+			if excludedSet[d.ErpCode] {
+				deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
+			}
+		}
 
 		s.markFullyDeductedOrders(db, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
 
-		if len(excludedSet) > 0 {
-			return fmt.Errorf("Stock Entry部分item被排除: %v (成功=%d, 排除=%d)",
-				excludedCodes, len(retryItems), len(excludedSet))
-		}
-
 		return nil
 	}
+
+	// 重试耗尽：将最后一批错误 item 也加入排除集合
+	lastCodes := parseStockEntryErrorItemCodes(lastErr.Error())
+	for _, code := range lastCodes {
+		excludedSet[code] = true
+	}
+	for _, d := range allDetails {
+		if excludedSet[d.ErpCode] {
+			deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
+		}
+	}
+	s.markFullyDeductedOrders(db, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
 
 	return fmt.Errorf("Stock Entry重试%d次后仍失败: %w (排除=%v)", maxRetry, lastErr, excludedSet)
 }
