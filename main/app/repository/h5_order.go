@@ -41,6 +41,7 @@ type IH5OrderRepo interface {
 	CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (*model.H5OrderProduct, error) // 快照销售订单商品
 
 	WhereSaleBillUuid(uuid uint64) DBOption // 扫码订单商品销售账单Uuid条件
+	WhereOrderType(orderType int) DBOption  // 订单类型条件
 
 	WithSaleOrderProduct() DBOption // 关联销售订单商品
 	WithH5Order() DBOption          // 关联扫码订单
@@ -460,6 +461,15 @@ func (r *H5OrderRepoImpl) WhereDeskRegionUuid(uuid uint64) DBOption {
 func (r *H5OrderRepoImpl) WhereSaleBillUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("sale_bill_uuid = ?", uuid)
+	}
+}
+
+func (r *H5OrderRepoImpl) WhereOrderType(orderType int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if orderType < 0 {
+			return db // -1 表示全部，不添加条件
+		}
+		return db.Where("order_type = ?", orderType)
 	}
 }
 

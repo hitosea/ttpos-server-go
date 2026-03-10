@@ -286,9 +286,15 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		return nil, nil
 	}
 
+	// 获取销售账单UUID（兼容桌台扫码订单和会员端堂食订单）
+	saleBillUuid := h5Order.SaleBillUuid
+	if saleBillUuid == 0 && h5Order.SaleOrder != nil {
+		saleBillUuid = h5Order.SaleOrder.SaleBillUuid
+	}
+
 	if ctx.NoLock() {
-		s.lock.LockUuid(h5Order.SaleOrder.SaleBillUuid)
-		defer s.lock.UnlockUuid(h5Order.SaleOrder.SaleBillUuid)
+		s.lock.LockUuid(saleBillUuid)
+		defer s.lock.UnlockUuid(saleBillUuid)
 		ctx.AddLock()
 	}
 
@@ -305,7 +311,7 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	{
 		ignoreMust := true // 接单，送厨忽略必点方案
 		// 获取销售账单信息
-		saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(h5Order.SaleOrder.SaleBillUuid)
+		saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
 		if errSaleBill != nil {
 			return nil, errors.WithMessage(errSaleBill, "repository.NewOrderRepo(db).GetSaleBillAllInfo")
 		}
