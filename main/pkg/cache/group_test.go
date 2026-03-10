@@ -3,13 +3,21 @@ package cache
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
+	"ttpos-server-go/pkg/logger"
 )
+
+func TestMain(m *testing.M) {
+	logger.Logger = zap.NewNop()
+	os.Exit(m.Run())
+}
 
 // mockTask 模拟一个耗时任务
 type mockTask struct {

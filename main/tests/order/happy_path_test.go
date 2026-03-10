@@ -8,7 +8,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hitosea/wiremock/client"
 	"ttpos-server-go/tests/fixture"
 )
 
@@ -21,7 +20,7 @@ const codeTokenInvalid = -102
 // This is returned when JWT is valid but company / staff auth fails.
 const codeAccessDenied = -103
 
-// TestCreateOrder_HappyPath tests the complete instant order creation workflow.
+// Test_P0_Cashier_InstantOrder_Create_HappyPath tests the complete instant order creation workflow.
 // Route: POST /api/v1/cashier/instant/order/create
 //
 // Auth requirements for this test:
@@ -29,7 +28,7 @@ const codeAccessDenied = -103
 //   - Device must be registered with source="cashier" and matching device_id in JWT
 //   - Staff must have duty_no set (on-duty) and is_super=1 (bypasses role/permission tables)
 //   - Full tenant schema loaded via shop_01.sql (NewTestTenantFull)
-func TestCreateOrder_HappyPath(t *testing.T) {
+func Test_P0_Cashier_InstantOrder_Create_HappyPath(t *testing.T) {
 	const testDeviceId = "test-cashier-device-001"
 
 	// 1. Create tenant database with full production schema (shop_01.sql)
@@ -59,10 +58,7 @@ func TestCreateOrder_HappyPath(t *testing.T) {
 	)
 
 	// 5. Setup WireMock: register default catch-all stubs for all gRPC services
-	wiremockURL := getEnv("WIREMOCK_URL", "http://wiremock:8080")
-	wmClient := client.NewClient(wiremockURL)
-	wmClient.Reset(t)
-	client.RegisterTTPOSDefaults(wmClient, t)
+	fixture.SetupWireMock(t)
 
 	// 6. Generate JWT with device_id matching the seeded device
 	token := fixture.GenerateStaffToken(t,
@@ -100,13 +96,13 @@ func TestCreateOrder_HappyPath(t *testing.T) {
 	// Cleanup is automatic via t.Cleanup() in fixture functions
 }
 
-// TestGetOrder_NotFound tests that a valid JWT for a company without seeded company/setting
-// data is rejected by the auth layer with codeAccessDenied.
+// Test_P1_Cashier_InstantOrder_GetCart_AccessDenied tests that a valid JWT for a company
+// without seeded company/setting data is rejected by the auth layer with codeAccessDenied.
 // Route: GET /api/v1/cashier/instant/order/cart/info
 //
 // Auth fails because WithCompany() preload returns nil (no ttpos_company row for this UUID),
 // so authSrv.Auth returns an error which the middleware wraps as codeAccessDenied (-103).
-func TestGetOrder_NotFound(t *testing.T) {
+func Test_P1_Cashier_InstantOrder_GetCart_AccessDenied(t *testing.T) {
 	companyUUID := fixture.GenerateCompanyUUID(t)
 	db := fixture.NewTestTenant(t, companyUUID)
 
@@ -114,9 +110,7 @@ func TestGetOrder_NotFound(t *testing.T) {
 		fixture.WithStaffCompanyUUID(mustParseInt64(companyUUID)),
 	)
 
-	wmClient := client.NewClient(getEnv("WIREMOCK_URL", "http://wiremock:8080"))
-	wmClient.Reset(t)
-	client.RegisterTTPOSDefaults(wmClient, t)
+	fixture.SetupWireMock(t)
 
 	token := fixture.GenerateStaffToken(t, companyUUID, mustParseString(staff.UUID), staff.Username, 1)
 	httpClient := fixture.NewHTTPClient().WithToken(token)
@@ -128,11 +122,11 @@ func TestGetOrder_NotFound(t *testing.T) {
 	resp.AssertOK(t).AssertErrorCode(t, codeAccessDenied)
 }
 
-// TestCreateOrder_Unauthorized tests that requests without a token are rejected.
+// Test_P0_Cashier_InstantOrder_Create_Unauthorized tests that requests without a token are rejected.
 // Route: POST /api/v1/cashier/instant/order/create
 //
 // The server responds HTTP 200 with code=-102 (token invalid) rather than HTTP 401.
-func TestCreateOrder_Unauthorized(t *testing.T) {
+func Test_P0_Cashier_InstantOrder_Create_Unauthorized(t *testing.T) {
 	httpClient := fixture.NewHTTPClient() // No token
 
 	resp := httpClient.Post(t, "/api/v1/cashier/instant/order/create", nil)

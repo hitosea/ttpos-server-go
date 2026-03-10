@@ -79,6 +79,29 @@ func GenerateStaffToken(tb testing.TB, companyUUID, staffUUID, username string, 
 	return GenerateToken(tb, claims, config.Secret)
 }
 
+// GenerateShopToken generates a JWT token for a shop (management) staff member.
+// Unlike cashier tokens, shop tokens skip device binding checks server-side.
+func GenerateShopToken(tb testing.TB, companyUUID, staffUUID string) string {
+	tb.Helper()
+
+	companyUUIDInt, _ := strconv.ParseUint(companyUUID, 10, 64)
+	staffUUIDInt, _ := strconv.ParseUint(staffUUID, 10, 64)
+
+	config := DefaultJWTConfig()
+	claims := TestClaims{
+		Source:      "shop",
+		CompanyUUID: companyUUIDInt,
+		StaffUUID:   staffUUIDInt,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(config.ExpiresAt),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    config.Issuer,
+		},
+	}
+
+	return GenerateToken(tb, claims, config.Secret)
+}
+
 // GenerateAdminToken generates a JWT token with admin privileges.
 func GenerateAdminToken(tb testing.TB, companyUUID string) string {
 	tb.Helper()

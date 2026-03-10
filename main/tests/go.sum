@@ -6,5 +6,5 @@ github.com/golang-jwt/jwt/v5 v5.3.0 h1:pv4AsKCKKZuqlgs5sUmn4x8UlGa0kEVt/puTpKx9v
 github.com/golang-jwt/jwt/v5 v5.3.0/go.mod h1:fxCRLWMO43lRc8nhHWY6LGqRcf+1gQWArsqaEUEa5bE=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/phona/wiremock v0.0.0-20260305015502-5f84796bf5ac h1:fXKPf/a6OtUtZYL3ONPprXMcR8mScK6dmXKezVFkVhw=
-github.com/phona/wiremock v0.0.0-20260305015502-5f84796bf5ac/go.mod h1:el8fDkQi1Fo+JB2uRBOBwH/wyj8TfvHhsSf/+LUox/Y=
+github.com/phona/wiremock v0.0.0-20260310141106-6dd8831fdabc h1:WZXeVP9x0y57DZGzBbDiPtsjKp80FW7+ZK2wfmv6l0Y=
+github.com/phona/wiremock v0.0.0-20260310141106-6dd8831fdabc/go.mod h1:el8fDkQi1Fo+JB2uRBOBwH/wyj8TfvHhsSf/+LUox/Y=

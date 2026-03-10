@@ -5,10 +5,175 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
+	"sync"
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
 )
+
+const templateDBName = "shop_template"
+
+var (
+	templateOnce      sync.Once
+	templateErr       error
+	cachedTableList   []string
+	cachedTableListMu sync.Mutex
+)
+
+// templateLockName is the MySQL advisory lock name used for cross-process synchronization.
+const templateLockName = "ttpos_test_template_setup"
+
+// ensureTemplateDB creates the shop_template database exactly once.
+// Uses sync.Once for in-process deduplication and MySQL GET_LOCK for cross-process
+// synchronization when parallel test packages run as separate binaries.
+func ensureTemplateDB(tb testing.TB) {
+	tb.Helper()
+	templateOnce.Do(func() {
+		rootConfig := RootDBConfig()
+
+		rootDB, err := sql.Open("mysql", rootConfig.DSNWithoutDB())
+		if err != nil {
+			templateErr = fmt.Errorf("open root connection for template: %w", err)
+			return
+		}
+		defer rootDB.Close()
+
+		// Acquire MySQL advisory lock — blocks until the lock holder (first process) finishes.
+		var lockResult int
+		if err := rootDB.QueryRow("SELECT GET_LOCK(?, 120)", templateLockName).Scan(&lockResult); err != nil || lockResult != 1 {
+			templateErr = fmt.Errorf("failed to acquire MySQL advisory lock %q: err=%v result=%d", templateLockName, err, lockResult)
+			return
+		}
+		defer rootDB.Exec("SELECT RELEASE_LOCK(?)", templateLockName)
+
+		_, err = rootDB.Exec(fmt.Sprintf(
+			"CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+			templateDBName,
+		))
+		if err != nil {
+			templateErr = fmt.Errorf("create template database: %w", err)
+			return
+		}
+
+		// Check if tables already exist (another process already imported under the lock).
+		var count int
+		row := rootDB.QueryRow(
+			"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?",
+			templateDBName,
+		)
+		if err := row.Scan(&count); err != nil || count > 0 {
+			// Template fully populated — just cache the table list.
+			templateErr = cacheTableList(rootDB)
+			return
+		}
+
+		// Import the full schema SQL into the template database.
+		sqlPath := getEnv("SHOP_SQL_PATH", "../../../admin/database/seeds/shop_01.sql")
+		sqlBytes, err := os.ReadFile(sqlPath)
+		if err != nil {
+			templateErr = fmt.Errorf("read shop SQL file %s: %w", sqlPath, err)
+			return
+		}
+
+		multiDSN := fmt.Sprintf(
+			"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&multiStatements=true",
+			rootConfig.Username, rootConfig.Password, rootConfig.Host, rootConfig.Port, templateDBName,
+		)
+		schemaDB, err := sql.Open("mysql", multiDSN)
+		if err != nil {
+			templateErr = fmt.Errorf("open multiStatements connection for template: %w", err)
+			return
+		}
+		sqlContent := strings.ReplaceAll(string(sqlBytes), "CREATE TABLE `", "CREATE TABLE IF NOT EXISTS `")
+		if _, err = schemaDB.Exec(sqlContent); err != nil {
+			schemaDB.Close()
+			templateErr = fmt.Errorf("apply schema to template database: %w", err)
+			return
+		}
+		schemaDB.Close()
+
+		templateErr = cacheTableList(rootDB)
+	})
+
+	if templateErr != nil {
+		tb.Fatalf("template database setup failed: %v", templateErr)
+	}
+}
+
+// cacheTableList queries INFORMATION_SCHEMA for all base tables in the template DB
+// and stores them for use by cloneFromTemplate.
+func cacheTableList(rootDB *sql.DB) error {
+	rows, err := rootDB.Query(
+		"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE'",
+		templateDBName,
+	)
+	if err != nil {
+		return fmt.Errorf("query template table list: %w", err)
+	}
+	defer rows.Close()
+
+	cachedTableListMu.Lock()
+	defer cachedTableListMu.Unlock()
+	cachedTableList = cachedTableList[:0]
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return fmt.Errorf("scan table name: %w", err)
+		}
+		cachedTableList = append(cachedTableList, name)
+	}
+	return rows.Err()
+}
+
+// cloneFromTemplate creates targetDB and copies all table structures from shop_template
+// using a single batched CREATE TABLE LIKE execution via multiStatements=true.
+// Safe for parallel packages: ensureTemplateDB uses sync.Once within each process,
+// and CREATE TABLE IF NOT EXISTS in the template import is idempotent across processes.
+func cloneFromTemplate(tb testing.TB, rootDB *sql.DB, targetDB string) {
+	tb.Helper()
+
+	_, err := rootDB.Exec(fmt.Sprintf(
+		"CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+		targetDB,
+	))
+	if err != nil {
+		tb.Fatalf("failed to create tenant database %s: %v", targetDB, err)
+	}
+
+	cachedTableListMu.Lock()
+	tables := make([]string, len(cachedTableList))
+	copy(tables, cachedTableList)
+	cachedTableListMu.Unlock()
+
+	if len(tables) == 0 {
+		tb.Fatalf("template table list is empty — ensureTemplateDB may have failed")
+	}
+
+	// Build a single batched DDL string and execute in one round-trip.
+	// MySQL executes all statements before sending any response, so all tables
+	// are created even though database/sql only reads the first OK packet.
+	var batch strings.Builder
+	for _, table := range tables {
+		fmt.Fprintf(&batch, "CREATE TABLE `%s`.`%s` LIKE `%s`.`%s`;\n",
+			targetDB, table, templateDBName, table)
+	}
+
+	rootConfig := RootDBConfig()
+	multiDSN := fmt.Sprintf(
+		"%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True&loc=Local&multiStatements=true",
+		rootConfig.Username, rootConfig.Password, rootConfig.Host, rootConfig.Port,
+	)
+	multiDB, err := sql.Open("mysql", multiDSN)
+	if err != nil {
+		tb.Fatalf("failed to open multiStatements connection for clone: %v", err)
+	}
+	defer multiDB.Close()
+
+	if _, err = multiDB.Exec(batch.String()); err != nil {
+		tb.Fatalf("failed to clone template tables into %s: %v", targetDB, err)
+	}
+}
 
 // DBConfig holds database connection configuration.
 type DBConfig struct {
@@ -137,16 +302,18 @@ func NewTestTenant(tb testing.TB, tenantUUID string) *sql.DB {
 }
 
 // NewTestTenantFull creates a new test tenant database with the full production schema.
-// It reads shop_01.sql from SHOP_SQL_PATH env var (default: ../../admin/database/seeds/shop_01.sql)
-// and executes it to create all tenant tables. This is required for tests that exercise
-// business logic beyond auth (e.g. order creation).
+// On the first call it creates a shared shop_template database by importing shop_01.sql once.
+// Subsequent calls clone the template via CREATE TABLE LIKE (one round-trip), making each
+// call roughly 10-20× faster than re-importing the full SQL file.
 func NewTestTenantFull(tb testing.TB, tenantUUID string) *sql.DB {
 	tb.Helper()
+
+	// Ensure the shared template DB exists (imports shop_01.sql exactly once per process).
+	ensureTemplateDB(tb)
 
 	config := DefaultDBConfig()
 	rootConfig := RootDBConfig()
 
-	// Connect as root to create the database
 	rootDB, err := sql.Open("mysql", rootConfig.DSNWithoutDB())
 	if err != nil {
 		tb.Fatalf("failed to open root database connection: %v", err)
@@ -154,10 +321,9 @@ func NewTestTenantFull(tb testing.TB, tenantUUID string) *sql.DB {
 	defer rootDB.Close()
 
 	dbName := fmt.Sprintf("shop%s", tenantUUID)
-	_, err = rootDB.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", dbName))
-	if err != nil {
-		tb.Fatalf("failed to create tenant database %s: %v", dbName, err)
-	}
+
+	// Clone table structures from the template (fast metadata-only operation).
+	cloneFromTemplate(tb, rootDB, dbName)
 
 	_, err = rootDB.Exec(fmt.Sprintf("GRANT ALL PRIVILEGES ON `%s`.* TO '%s'@'%%'", dbName, config.Username))
 	if err != nil {
@@ -165,33 +331,12 @@ func NewTestTenantFull(tb testing.TB, tenantUUID string) *sql.DB {
 	}
 	_, _ = rootDB.Exec(fmt.Sprintf("GRANT CREATE ON *.* TO '%s'@'%%'", config.Username))
 
-	// Use multiStatements=true DSN to execute the full schema SQL file
-	// Default path is relative from the test package directory (e.g. main/tests/order/).
-	// In Docker, SHOP_SQL_PATH env var overrides this to the absolute container path.
-	sqlPath := getEnv("SHOP_SQL_PATH", "../../../admin/database/seeds/shop_01.sql")
-	sqlBytes, err := os.ReadFile(sqlPath)
-	if err != nil {
-		tb.Fatalf("failed to read shop SQL file %s: %v", sqlPath, err)
-	}
-
-	multiDSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&multiStatements=true",
-		rootConfig.Username, rootConfig.Password, rootConfig.Host, rootConfig.Port, dbName)
-	schemaDB, err := sql.Open("mysql", multiDSN)
-	if err != nil {
-		tb.Fatalf("failed to open schema connection: %v", err)
-	}
-	if _, err := schemaDB.Exec(string(sqlBytes)); err != nil {
-		schemaDB.Close()
-		tb.Fatalf("failed to apply shop schema to %s: %v", dbName, err)
-	}
-	schemaDB.Close()
-
-	// Return a regular single-statement connection
 	tenantConfig := config
 	tenantConfig.Database = dbName
 	db := NewDB(tb, tenantConfig)
 
-	// Cleanup: drop the database when test is done
+	// Cleanup: drop the test database after the test completes.
+	// With MySQL data on tmpfs, DROP DATABASE (195 tables) takes ~0.3s instead of ~25s.
 	tb.Cleanup(func() {
 		dropConfig := RootDBConfig()
 		dropDB, err := sql.Open("mysql", dropConfig.DSNWithoutDB())
