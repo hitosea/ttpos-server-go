@@ -34,6 +34,8 @@ func init() {
 	member.RejectMemberSaleOrderEventHandler()
 	// 自动注册"会员订单支付完成"事件处理器
 	member.PayFinishMemberSaleOrderEventHandler()
+	// 自动注册"会员端堂食订单支付完成"事件处理器
+	member.PayFinishMemberDineInOrderEventHandler()
 	// 自动注册"接受会员订单"事件处理器
 	member.AcceptMemberSaleOrderEventHandler()
 
