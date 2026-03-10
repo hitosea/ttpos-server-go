@@ -4186,6 +4186,11 @@ definitions:
       date_type:
         description: 时间类型,-1=全部、0=今天、1=昨天、2=本周
         type: integer
+      deselected_uuids:
+        description: 取消/移除的UUID（select_all=true时排除，select_all=false时移除）
+        items:
+          type: integer
+        type: array
       order_no:
         description: 订单编号搜索
         type: string
@@ -4195,6 +4200,14 @@ definitions:
       query_start_date:
         description: 查询开始日期
         type: string
+      select_all:
+        description: 是否全选当前筛选范围
+        type: boolean
+      selected_uuids:
+        description: 手动新增的UUID（select_all=false时使用）
+        items:
+          type: integer
+        type: array
     type: object
   req.DecryptQrCodeReq:
     properties:
@@ -4705,22 +4718,10 @@ definitions:
     type: object
   req.GetDataManageOrderSelectStatsReq:
     properties:
-      deselected_uuids:
-        description: 取消勾选的UUID（select_all=true时使用）
+      filters:
+        description: 筛选条件数组，聚合统计
         items:
-          type: integer
-        type: array
-      filter:
-        allOf:
-        - $ref: '#/definitions/req.DataManageOrderSubmitFilter'
-        description: 筛选条件
-      select_all:
-        description: 是否全选当前筛选范围
-        type: boolean
-      selected_uuids:
-        description: 手动勾选的UUID（select_all=false时使用）
-        items:
-          type: integer
+          $ref: '#/definitions/req.DataManageOrderSubmitFilter'
         type: array
     type: object
   req.GetOrderCartProductBatchCookingListReq:
@@ -6113,6 +6114,25 @@ definitions:
       sale_bill_uuid:
         description: 销售账单UUID, 必填
         type: integer
+    type: object
+  req.PayDineInOrderReq:
+    properties:
+      payment_method_uuid:
+        description: 支付方式UUID
+        type: integer
+      remark:
+        description: 订单备注
+        type: string
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+    required:
+    - payment_method_uuid
+    - sale_bill_uuid
+    - sale_order_uuid
     type: object
   req.PaymentMethodCreateItem:
     properties:
@@ -8644,6 +8664,17 @@ definitions:
     required:
     - uuid
     type: object
+  req.SetDineInOrderDiningMethodReq:
+    properties:
+      dining_method:
+        description: 用餐方式 0:堂食 1:打包
+        type: integer
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+    required:
+    - sale_bill_uuid
+    type: object
   req.ShiftDepositReq:
     properties:
       deposit_cash:
@@ -9019,22 +9050,10 @@ definitions:
     type: object
   req.SubmitDataManageOrderReq:
     properties:
-      deselected_uuids:
-        description: 取消勾选的UUID（select_all=true时使用）
+      filters:
+        description: 筛选条件数组，每组独立处理
         items:
-          type: integer
-        type: array
-      filter:
-        allOf:
-        - $ref: '#/definitions/req.DataManageOrderSubmitFilter'
-        description: 筛选条件（与查询列表时相同的参数）
-      select_all:
-        description: 是否全选当前筛选范围
-        type: boolean
-      selected_uuids:
-        description: 手动勾选的UUID（select_all=false时使用）
-        items:
-          type: integer
+          $ref: '#/definitions/req.DataManageOrderSubmitFilter'
         type: array
     type: object
   req.SubmitShiftReq:
@@ -11629,6 +11648,15 @@ definitions:
         description: 销售订单UUID
         type: integer
     type: object
+  resp.CreateInstantOrderResp:
+    properties:
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+    type: object
   resp.CreateMemberOrderResp:
     properties:
       member_sale_order_info:
@@ -12218,6 +12246,126 @@ definitions:
       list:
         items:
           $ref: '#/definitions/resp.DeviceItem'
+        type: array
+    type: object
+  resp.DineInAmountInfo:
+    properties:
+      member_discount:
+        description: 会员折扣金额
+        type: number
+      product_amount:
+        description: 商品金额（合计）
+        type: number
+      service_amount:
+        description: 服务费
+        type: number
+      tax_amount:
+        description: 消费税
+        type: number
+      total_amount:
+        description: 应付金额
+        type: number
+    type: object
+  resp.DineInOrderFormResp:
+    properties:
+      amount_info:
+        allOf:
+        - $ref: '#/definitions/resp.DineInAmountInfo'
+        description: 金额信息
+      dining_method:
+        description: 用餐方式 0:堂食 1:打包
+        type: integer
+      payment_methods:
+        allOf:
+        - $ref: '#/definitions/resp.PaymentMethodList'
+        description: 支付方式列表
+      product_list:
+        allOf:
+        - $ref: '#/definitions/resp.DineInProductList'
+        description: 商品列表
+      remark:
+        description: 订单备注
+        type: string
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+    type: object
+  resp.DineInOrderPaymentInfoResp:
+    properties:
+      is_wechat_pay:
+        description: 是否是微信支付
+        type: boolean
+      link_url:
+        description: 支付单链接 (返回跳转地址)
+        type: string
+      payment_amount:
+        description: 支付金额
+        type: number
+      payment_method_name:
+        description: 支付方式名称
+        type: string
+      payment_order_uuid:
+        description: 支付单UUID
+        type: integer
+      qr_code:
+        description: 支付单二维码 (返回base64图片)
+        type: string
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+      status:
+        description: 支付单状态 0-未支付 1-已支付
+        type: integer
+    type: object
+  resp.DineInOrderPaymentStatusResp:
+    properties:
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+      status:
+        description: 支付状态 0-未支付 1-已支付 2-支付失败
+        type: integer
+    type: object
+  resp.DineInProduct:
+    properties:
+      amount:
+        description: 商品金额（折前）
+        type: number
+      image:
+        description: 商品图片URL
+        type: string
+      locale_attribute_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性（规格+小料+属性）
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      num:
+        description: 数量
+        type: number
+      sale_order_product_uuid:
+        description: 销售订单商品UUID
+        type: integer
+      unit_price:
+        description: 单价（折前）,含税费
+        type: number
+    type: object
+  resp.DineInProductList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.DineInProduct'
         type: array
     type: object
   resp.DriverInfoResp:
@@ -12833,7 +12981,7 @@ definitions:
         description: 接单、拒单操作人
         type: string
       desk_no:
-        description: 桌台编号
+        description: 桌台编号（桌台扫码订单）或取餐号（会员端堂食订单，值为sale_bill.serial_no）
         type: string
       desk_uuid:
         description: 桌台Uuid
@@ -12846,6 +12994,9 @@ definitions:
         type: integer
       order_time:
         description: h5订单下单时间
+        type: integer
+      order_type:
+        description: 订单类型：0=桌台扫码订单、1=会员端堂食订单
         type: integer
       price:
         description: 订单金额
@@ -12882,7 +13033,7 @@ definitions:
   resp.H5OrderItem:
     properties:
       desk_no:
-        description: 桌台编号
+        description: 桌台编号（桌台扫码订单）或取餐号（会员端堂食订单，值为sale_bill.serial_no）
         type: string
       desk_region_uuid:
         description: 桌台区域Uuid
@@ -12898,6 +13049,9 @@ definitions:
         type: number
       order_time:
         description: h5订单下单时间
+        type: integer
+      order_type:
+        description: 订单类型：0=桌台扫码订单、1=会员端堂食订单
         type: integer
       price:
         description: 订单金额
@@ -20502,6 +20656,12 @@ definitions:
     type: object
   setting.DataManageOrderSelectStatsResp:
     properties:
+      is_select_all:
+        description: 是否全选（所有筛选范围内的订单都已选中）
+        type: boolean
+      new_count:
+        description: 新增总数（尚未在 data_manage 中的订单数）
+        type: integer
       paid_amount:
         description: 预览选中实付金额合计
         type: number
@@ -33569,12 +33729,154 @@ paths:
         "200":
           description: 成功
           schema:
-            $ref: '#/definitions/resp.CreateMemberOrderResp'
+            $ref: '#/definitions/resp.CreateInstantOrderResp'
         "400":
           description: 错误请求
       security:
       - JwtToken: []
       summary: 创建会员端堂食订单
+      tags:
+      - 会员端-订单
+  /member/order/dine_in/dining_method:
+    post:
+      consumes:
+      - application/json
+      description: 设置堂食订单用餐方式（堂食/打包）
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SetDineInOrderDiningMethodReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 设置堂食订单用餐方式
+      tags:
+      - 会员端-订单
+  /member/order/dine_in/form_info:
+    get:
+      consumes:
+      - application/json
+      description: 获取堂食订单提交表单信息，包含商品列表、金额信息、支付方式等
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      - description: 销售订单UUID
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.DineInOrderFormResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取堂食订单提交表单信息
+      tags:
+      - 会员端-订单
+  /member/order/dine_in/pay:
+    post:
+      consumes:
+      - application/json
+      description: 堂食订单提交支付
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PayDineInOrderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 堂食订单提交支付
+      tags:
+      - 会员端-订单
+  /member/order/dine_in/pay/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取堂食订单支付信息，返回支付二维码或跳转链接
+      parameters:
+      - description: 支付方式UUID
+        in: query
+        name: payment_method_uuid
+        type: integer
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      - description: 销售订单UUID
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.DineInOrderPaymentInfoResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取堂食订单支付信息
+      tags:
+      - 会员端-订单
+  /member/order/dine_in/pay/status:
+    get:
+      consumes:
+      - application/json
+      description: 获取堂食订单支付状态
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      - description: 销售订单UUID
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.DineInOrderPaymentStatusResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取堂食订单支付状态
       tags:
       - 会员端-订单
   /member/order/form/info:
@@ -40289,6 +40591,22 @@ paths:
         in: query
         name: order_no
         type: string
+      - description: 时间类型,-1=全部、0=今天、1=昨天、2=本周
+        in: query
+        name: date_type
+        type: integer
+      - description: 查询开始日期
+        in: query
+        name: query_start_date
+        type: string
+      - description: 查询结束日期
+        in: query
+        name: query_end_date
+        type: string
+      - description: 订单类型,-1=全部、0=餐单、1=外卖
+        in: query
+        name: bill_type
+        type: integer
       produces:
       - application/json
       responses:
