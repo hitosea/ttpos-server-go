@@ -19,9 +19,10 @@ type H5OrderInfo struct {
 	OrderTime    int64   `json:"order_time"`     // h5订单下单时间
 	HandleTime   int64   `json:"handle_time"`    // 接单、拒单时间
 	WaitTime     int64   `json:"wait_time"`      // 等待时间，单位：秒
-	DeskNo       string  `json:"desk_no"`        // 桌台编号
+	DeskNo       string  `json:"desk_no"`        // 桌台编号（桌台扫码订单）或取餐号（会员端堂食订单，值为sale_bill.serial_no）
 	Price        float64 `json:"price"`          // 订单金额
 	Status       uint    `json:"status"`         // 状态：1-待处理; 2-已接单; 3-已拒单
+	OrderType    uint    `json:"order_type"`     // 订单类型：0=桌台扫码订单、1=会员端堂食订单
 }
 
 type H5OrderItem struct {

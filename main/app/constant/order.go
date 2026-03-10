@@ -213,6 +213,12 @@ const (
 	H5OrderStatusRejected      = 3 // 已拒单
 )
 
+// H5订单类型
+const (
+	H5OrderTypeDesk           = 0 // 桌台扫码订单
+	H5OrderTypeMemberDineIn   = 1 // 会员端堂食订单
+)
+
 const (
 	SaleBillIsLockYes   = 1 // 账单锁定
 	SaleBillIsLockNo    = 0 // 账单未锁定
