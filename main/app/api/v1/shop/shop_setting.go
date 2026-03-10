@@ -1020,6 +1020,10 @@ func (h *SettingHandler) SetDataManageStaff(c *gin.Context) {
 // @param page_no query int true "页码"
 // @param page_size query int true "页面大小"
 // @param order_no query string false "订单编号搜索"
+// @param date_type query int false "时间类型,-1=全部、0=今天、1=昨天、2=本周"
+// @param query_start_date query string false "查询开始日期"
+// @param query_end_date query string false "查询结束日期"
+// @param bill_type query int false "订单类型,-1=全部、0=餐单、1=外卖"
 // @Success 200 {object} dto.Response{data=setting.DataManageOrderListResp}
 // @Router /shop/setting/data_manage/order_list [get]
 func (h *SettingHandler) GetDataManageOrderList(c *gin.Context) {
@@ -1532,10 +1536,10 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/setting/kiosk", wrapper.GetKioskSetting)                          // 获取自助点餐机设置
 		privateApi.POST("/setting/kiosk", wrapper.SaveKioskSetting)                        // 保存自助点餐机设置
 		privateApi.POST("/setting/kiosk/carousel/upload", wrapper.UploadKioskCarousel)     // 上传自助点餐机轮播内容
-		privateApi.GET("/setting/kitchen", wrapper.GetKitchenSetting)                          // 获取厨显设置
-		privateApi.POST("/setting/kitchen", wrapper.SaveKitchenSetting)                     // 保存厨显设置
-		privateApi.GET("/setting/store_scan_order", wrapper.GetStoreScanOrderSetting)       // 获取门店点餐配置
-		privateApi.POST("/setting/store_scan_order", wrapper.SaveStoreScanOrderSetting)     // 保存门店点餐配置
+		privateApi.GET("/setting/kitchen", wrapper.GetKitchenSetting)                      // 获取厨显设置
+		privateApi.POST("/setting/kitchen", wrapper.SaveKitchenSetting)                    // 保存厨显设置
+		privateApi.GET("/setting/store_scan_order", wrapper.GetStoreScanOrderSetting)      // 获取门店点餐配置
+		privateApi.POST("/setting/store_scan_order", wrapper.SaveStoreScanOrderSetting)    // 保存门店点餐配置
 
 		privateApi.GET("/setting/free_reason", wrapper.GetFreeReason)                     // 获取免单原因
 		privateApi.POST("/setting/free_reason/add", wrapper.AddFreeReason)                // 新增免单原因
@@ -1568,12 +1572,12 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/setting/data_manage", wrapper.GetDataManage)      // 获取数据管理
 		privateApi.POST("/setting/data_manage/set", wrapper.SetDataManage) // 设置数据管理
 		// 数据管理 - 拆分接口
-		privateApi.POST("/setting/data_manage/save_status", wrapper.SaveDataManageStatus)       // 保存数据管理开关状态
-		privateApi.POST("/setting/data_manage/set_staff", wrapper.SetDataManageStaff)            // 设置操作人员
-		privateApi.GET("/setting/data_manage/order_list", wrapper.GetDataManageOrderList)        // 获取已选订单列表
-		privateApi.POST("/setting/data_manage/order_restore", wrapper.RestoreDataManageOrder)    // 恢复单条已选订单
-		privateApi.GET("/setting/data_manage/order_select", wrapper.GetDataManageOrderSelect)    // 获取可选订单列表
-		privateApi.POST("/setting/data_manage/order_submit", wrapper.SubmitDataManageOrder)             // 提交订单选择
+		privateApi.POST("/setting/data_manage/save_status", wrapper.SaveDataManageStatus)                 // 保存数据管理开关状态
+		privateApi.POST("/setting/data_manage/set_staff", wrapper.SetDataManageStaff)                     // 设置操作人员
+		privateApi.GET("/setting/data_manage/order_list", wrapper.GetDataManageOrderList)                 // 获取已选订单列表
+		privateApi.POST("/setting/data_manage/order_restore", wrapper.RestoreDataManageOrder)             // 恢复单条已选订单
+		privateApi.GET("/setting/data_manage/order_select", wrapper.GetDataManageOrderSelect)             // 获取可选订单列表
+		privateApi.POST("/setting/data_manage/order_submit", wrapper.SubmitDataManageOrder)               // 提交订单选择
 		privateApi.POST("/setting/data_manage/order_select_stats", wrapper.GetDataManageOrderSelectStats) // 可选订单统计预览
 
 		// 门店管理（总部功能）

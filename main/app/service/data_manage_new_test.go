@@ -600,13 +600,15 @@ func TestSubmitOrder_ManualSelect(t *testing.T) {
 	// 初始选中 1001、1002
 	insertTestDataManages(t, db, []uint64{1001, 1002})
 
-	// 手动勾选：选中 1002、1003（移除 1001，新增 1003，保留 1002）
+	// 手动勾选：新增 1003，移除 1001（1002 不变）
 	err := srv.SubmitOrder(ctx, shop_req.SubmitDataManageOrderReq{
-		SelectAll:     false,
-		SelectedUuids: []uint64{1002, 1003},
-		Filter: shop_req.DataManageOrderSubmitFilter{
-			DateType: -1,
-			BillType: -1,
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{
+				SelectedUuids:   []uint64{1003},
+				DeselectedUuids: []uint64{1001},
+				DateType:        -1,
+				BillType:        -1,
+			},
 		},
 	})
 	if err != nil {
@@ -655,10 +657,12 @@ func TestSubmitOrder_SelectAll(t *testing.T) {
 
 	// 全选：应该选中所有 4 个订单
 	err := srv.SubmitOrder(ctx, shop_req.SubmitDataManageOrderReq{
-		SelectAll: true,
-		Filter: shop_req.DataManageOrderSubmitFilter{
-			DateType: -1,
-			BillType: -1,
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{
+				SelectAll: true,
+				DateType:  -1,
+				BillType:  -1,
+			},
 		},
 	})
 	if err != nil {
@@ -691,13 +695,17 @@ func TestSubmitOrder_SelectAllWithDeselect(t *testing.T) {
 	// 初始选中 1001、1002
 	insertTestDataManages(t, db, []uint64{1001, 1002})
 
-	// 全选后取消 1002、1004 → 最终应保留 1001、1003
+	// 手动模式 + DeselectedUuids：筛选范围-取消的=新增，取消的=移除
+	// DeselectedUuids=[1002,1004]，筛选范围=[1001,1002,1003,1004]
+	// → 新增 1001,1003（1001 已存在跳过），移除 1002,1004（1004 不存在跳过）
+	// → 最终: 1001, 1003
 	err := srv.SubmitOrder(ctx, shop_req.SubmitDataManageOrderReq{
-		SelectAll:       true,
-		DeselectedUuids: []uint64{1002, 1004},
-		Filter: shop_req.DataManageOrderSubmitFilter{
-			DateType: -1,
-			BillType: -1,
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{
+				DeselectedUuids: []uint64{1002, 1004},
+				DateType:        -1,
+				BillType:        -1,
+			},
 		},
 	})
 	if err != nil {
@@ -825,11 +833,11 @@ func TestGetOrderSelectStats_SelectAll(t *testing.T) {
 
 	// 全选所有（3条，总金额 600）
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		SelectAll: true,
-		Filter: shop_req.DataManageOrderSubmitFilter{
-			DateType: -1,
-			BillType: -1,
-		},
+		Filters: []shop_req.DataManageOrderSubmitFilter{{
+			SelectAll: true,
+			DateType:  -1,
+			BillType:  -1,
+		}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -862,14 +870,14 @@ func TestGetOrderSelectStats_SelectAllWithDeselect(t *testing.T) {
 		{BaseModel: model.BaseModel{Uuid: 2003, CreateTime: now, UpdateTime: now}, SaleBillUuid: 1003, Status: 1},
 	})
 
-	// 全选后取消 1002 → 预览：2条，金额 400
+	// 手动模式 + DeselectedUuids：筛选范围-取消的=计入，取消的=排除
+	// DeselectedUuids=[1002]，筛选范围=[1001,1002,1003] → 计入 1001,1003 → 预览：2条，金额 400
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		SelectAll:       true,
-		DeselectedUuids: []uint64{1002},
-		Filter: shop_req.DataManageOrderSubmitFilter{
-			DateType: -1,
-			BillType: -1,
-		},
+		Filters: []shop_req.DataManageOrderSubmitFilter{{
+			DeselectedUuids: []uint64{1002},
+			DateType:        -1,
+			BillType:        -1,
+		}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -904,12 +912,11 @@ func TestGetOrderSelectStats_ManualSelect(t *testing.T) {
 
 	// 手动选 1001、1003 → 预览：2条，金额 400
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		SelectAll:     false,
-		SelectedUuids: []uint64{1001, 1003},
-		Filter: shop_req.DataManageOrderSubmitFilter{
-			DateType: -1,
-			BillType: -1,
-		},
+		Filters: []shop_req.DataManageOrderSubmitFilter{{
+			SelectedUuids: []uint64{1001, 1003},
+			DateType:      -1,
+			BillType:      -1,
+		}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -923,12 +930,10 @@ func TestGetOrderSelectStats_ManualSelect(t *testing.T) {
 
 	// 空选 → 预览：0条，金额 0
 	stats, err = srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		SelectAll:     false,
-		SelectedUuids: []uint64{},
-		Filter: shop_req.DataManageOrderSubmitFilter{
+		Filters: []shop_req.DataManageOrderSubmitFilter{{
 			DateType: -1,
 			BillType: -1,
-		},
+		}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats empty failed: %v", err)
@@ -961,11 +966,11 @@ func TestGetOrderSelectStats_WithFilter(t *testing.T) {
 
 	// 全选仅餐单（bill_type=0）→ 预览：2条，金额 300
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		SelectAll: true,
-		Filter: shop_req.DataManageOrderSubmitFilter{
-			DateType: -1,
-			BillType: 0,
-		},
+		Filters: []shop_req.DataManageOrderSubmitFilter{{
+			SelectAll: true,
+			DateType:  -1,
+			BillType:  0,
+		}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats with filter failed: %v", err)
@@ -975,5 +980,44 @@ func TestGetOrderSelectStats_WithFilter(t *testing.T) {
 	}
 	if stats.PaidAmount != 300 {
 		t.Errorf("Expected paid_amount=300, got %f", stats.PaidAmount)
+	}
+}
+
+// TestGetOrderSelectStats_MultiFilter 多组 Filter 聚合统计
+func TestGetOrderSelectStats_MultiFilter(t *testing.T) {
+	dbm := setupDataManageTestDBWithOrders(t)
+	ctx := createDataManageTestContext(t, dbm)
+	db := dbm.GetDB(constant.MockDB)
+	srv := newTestDataManageSrv(dbm)
+
+	now := time.Now().Unix()
+
+	// 2 个餐单 + 1 个外卖
+	insertTestSaleBills(t, db, []model.SaleBill{
+		{BaseModel: model.BaseModel{Uuid: 1001, CreateTime: now, UpdateTime: now}, OrderNo: "ORD001", Status: 1, BillType: 0, ProductionTime: now, PaymentAmount: 100},
+		{BaseModel: model.BaseModel{Uuid: 1002, CreateTime: now, UpdateTime: now}, OrderNo: "ORD002", Status: 1, BillType: 0, ProductionTime: now, PaymentAmount: 200},
+		{BaseModel: model.BaseModel{Uuid: 1003, CreateTime: now, UpdateTime: now}, OrderNo: "ORD003", Status: 1, BillType: 1, ProductionTime: now, PaymentAmount: 300},
+	})
+	insertTestSaleOrders(t, db, []model.SaleOrder{
+		{BaseModel: model.BaseModel{Uuid: 2001, CreateTime: now, UpdateTime: now}, SaleBillUuid: 1001, Status: 1},
+		{BaseModel: model.BaseModel{Uuid: 2002, CreateTime: now, UpdateTime: now}, SaleBillUuid: 1002, Status: 1},
+		{BaseModel: model.BaseModel{Uuid: 2003, CreateTime: now, UpdateTime: now}, SaleBillUuid: 1003, Status: 1},
+	})
+
+	// 多组 Filter 聚合：餐单(bill_type=0) + 外卖(bill_type=1) → 去重后应为全部3条，金额600
+	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{SelectAll: true, DateType: -1, BillType: 0},
+			{SelectAll: true, DateType: -1, BillType: 1},
+		},
+	})
+	if err != nil {
+		t.Fatalf("GetOrderSelectStats multi filter failed: %v", err)
+	}
+	if stats.SelectedCount != 3 {
+		t.Errorf("Expected selected_count=3 (aggregated), got %d", stats.SelectedCount)
+	}
+	if stats.PaidAmount != 600 {
+		t.Errorf("Expected paid_amount=600, got %f", stats.PaidAmount)
 	}
 }

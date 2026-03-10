@@ -32200,6 +32200,30 @@ const docTemplate = `{
                         "description": "订单编号搜索",
                         "name": "order_no",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "时间类型,-1=全部、0=今天、1=昨天、2=本周",
+                        "name": "date_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "查询开始日期",
+                        "name": "query_start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "查询结束日期",
+                        "name": "query_end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "订单类型,-1=全部、0=餐单、1=外卖",
+                        "name": "bill_type",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -47375,12 +47399,11 @@ const docTemplate = `{
                     }
                 },
                 "filter": {
-                    "description": "筛选条件",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
-                        }
-                    ]
+                    "description": "筛选条件（多组，聚合统计）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
+                    }
                 },
                 "select_all": {
                     "description": "是否全选当前筛选范围",

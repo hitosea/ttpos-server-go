@@ -38,30 +38,28 @@ type GetDataManageOrderSelectReq struct {
 }
 
 // SubmitDataManageOrderReq 提交订单选择
-// 支持三种交互模式：
-//   - 全选：SelectAll=true, DeselectedUuids=[]
-//   - 全选后取消部分：SelectAll=true, DeselectedUuids=[取消的UUID]
-//   - 手动勾选部分：SelectAll=false, SelectedUuids=[选中的UUID]
+// Filters 数组中每个元素独立处理：
+//   - SelectAll=true：当前筛选条件范围内全部加入数据管理（DeselectedUuids 可排除部分）
+//   - SelectAll=false + SelectedUuids：将指定订单新增到数据管理
+//   - SelectAll=false + DeselectedUuids：将指定订单从数据管理移除
 type SubmitDataManageOrderReq struct {
-	SelectAll       bool                       `json:"select_all"`        // 是否全选当前筛选范围
-	SelectedUuids   []uint64                   `json:"selected_uuids"`    // 手动勾选的UUID（select_all=false时使用）
-	DeselectedUuids []uint64                   `json:"deselected_uuids"`  // 取消勾选的UUID（select_all=true时使用）
-	Filter          DataManageOrderSubmitFilter `json:"filter"`            // 筛选条件（与查询列表时相同的参数）
+	Filters []DataManageOrderSubmitFilter `json:"filters"` // 筛选条件数组，每组独立处理
 }
 
 // GetDataManageOrderSelectStatsReq 获取可选订单统计预览（参数同提交，不持久化）
+// Filters 数组，支持多组筛选条件聚合统计
 type GetDataManageOrderSelectStatsReq struct {
-	SelectAll       bool                       `json:"select_all"`        // 是否全选当前筛选范围
-	SelectedUuids   []uint64                   `json:"selected_uuids"`    // 手动勾选的UUID（select_all=false时使用）
-	DeselectedUuids []uint64                   `json:"deselected_uuids"`  // 取消勾选的UUID（select_all=true时使用）
-	Filter          DataManageOrderSubmitFilter `json:"filter"`            // 筛选条件
+	Filters []DataManageOrderSubmitFilter `json:"filters"` // 筛选条件数组，聚合统计
 }
 
-// DataManageOrderSubmitFilter 提交订单时的筛选条件
+// DataManageOrderSubmitFilter 提交/预览时的筛选条件（含选择操作）
 type DataManageOrderSubmitFilter struct {
-	OrderNo        string `json:"order_no"`         // 订单编号搜索
-	DateType       int    `json:"date_type"`        // 时间类型,-1=全部、0=今天、1=昨天、2=本周
-	QueryStartDate string `json:"query_start_date"` // 查询开始日期
-	QueryEndDate   string `json:"query_end_date"`   // 查询结束日期
-	BillType       int    `json:"bill_type"`        // 订单类型,-1=全部、0=餐单、1=外卖
+	SelectAll       bool     `json:"select_all"`        // 是否全选当前筛选范围
+	SelectedUuids   []uint64 `json:"selected_uuids"`    // 手动新增的UUID（select_all=false时使用）
+	DeselectedUuids []uint64 `json:"deselected_uuids"`  // 取消/移除的UUID（select_all=true时排除，select_all=false时移除）
+	OrderNo         string   `json:"order_no"`          // 订单编号搜索
+	DateType        int      `json:"date_type"`         // 时间类型,-1=全部、0=今天、1=昨天、2=本周
+	QueryStartDate  string   `json:"query_start_date"`  // 查询开始日期
+	QueryEndDate    string   `json:"query_end_date"`    // 查询结束日期
+	BillType        int      `json:"bill_type"`         // 订单类型,-1=全部、0=餐单、1=外卖
 }

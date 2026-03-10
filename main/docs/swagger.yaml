@@ -4711,9 +4711,10 @@ definitions:
           type: integer
         type: array
       filter:
-        allOf:
-        - $ref: '#/definitions/req.DataManageOrderSubmitFilter'
-        description: 筛选条件
+        description: 筛选条件（多组，聚合统计）
+        items:
+          $ref: '#/definitions/req.DataManageOrderSubmitFilter'
+        type: array
       select_all:
         description: 是否全选当前筛选范围
         type: boolean
@@ -40289,6 +40290,22 @@ paths:
         in: query
         name: order_no
         type: string
+      - description: 时间类型,-1=全部、0=今天、1=昨天、2=本周
+        in: query
+        name: date_type
+        type: integer
+      - description: 查询开始日期
+        in: query
+        name: query_start_date
+        type: string
+      - description: 查询结束日期
+        in: query
+        name: query_end_date
+        type: string
+      - description: 订单类型,-1=全部、0=餐单、1=外卖
+        in: query
+        name: bill_type
+        type: integer
       produces:
       - application/json
       responses:
