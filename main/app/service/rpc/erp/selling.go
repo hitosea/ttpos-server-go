@@ -344,6 +344,134 @@ func (s *erpSrv) ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.Re
 	return nil, errors.WithMessage(errors.New("退款POS发票异常, data为空"))
 }
 
+// SaveSalesInvoice 保存 Sales Invoice（替代 SavePosInvoice）
+func (s *erpSrv) SaveSalesInvoice(ctx pkgCtx.Context, saveSalesInvoiceReq req.SaveSalesInvoiceReq) (*selling.SaveSalesInvoiceResp, error) {
+	client, conn, err := NewErpSellingClient()
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	defer conn.Close()
+
+	params := &selling.SaveSalesInvoiceReq{
+		OrderNo:           saveSalesInvoiceReq.OrderNo,
+		SaleOrderUuid:     saveSalesInvoiceReq.SaleOrderUuid,
+		SaleBillUuid:      saveSalesInvoiceReq.SaleBillUuid,
+		PosProfile:        saveSalesInvoiceReq.PosProfile,
+		Company:           saveSalesInvoiceReq.Company,
+		Customer:          saveSalesInvoiceReq.Customer,
+		Currency:          saveSalesInvoiceReq.Currency,
+		PriceListCurrency: saveSalesInvoiceReq.PriceListCurrency,
+		PostingDatetime:   saveSalesInvoiceReq.PostingDatetime,
+		Branch:            saveSalesInvoiceReq.Branch,
+		UpdateStock:       saveSalesInvoiceReq.UpdateStock,
+		Items:             saveSalesInvoiceReq.Items,
+		MaterialItems:     saveSalesInvoiceReq.MaterialItems,
+		Taxes:             saveSalesInvoiceReq.Taxes,
+		Payments:          saveSalesInvoiceReq.Payments,
+		DiscountAmount:    saveSalesInvoiceReq.DiscountAmount,
+		AmendedFrom:       saveSalesInvoiceReq.AmendedFrom,
+		Remark:            saveSalesInvoiceReq.Remark,
+		TakeoutOrderNo:    saveSalesInvoiceReq.TakeoutOrderNo,
+		TakeoutProvider:   saveSalesInvoiceReq.TakeoutProvider,
+		CompanyUuid:       saveSalesInvoiceReq.CompanyUuid,
+		OrderType:         saveSalesInvoiceReq.OrderType,
+	}
+	res, err := client.SaveSalesInvoice(WithSiteCode(ctx.GetContext(), saveSalesInvoiceReq.SiteCode), params)
+	if err != nil {
+		ctx.Log().Info("SaveSalesInvoice", zap.String("msg", err.Error()))
+		msg := utils.ShortenErpnextError(err.Error())
+		return nil, errors.WithMessage(errors.New(msg))
+	}
+	if res.GetCode() != "0" {
+		ctx.Log().Info("SaveSalesInvoice", zap.String("msg", res.Message), zap.String("code", res.GetCode()))
+		msg := utils.ShortenErpnextError(res.Message)
+		return nil, errors.WithMessage(errors.New(msg))
+	}
+	if res.Data != nil {
+		var saveSalesInvoiceResp selling.SaveSalesInvoiceResp
+		if err := res.Data.UnmarshalTo(&saveSalesInvoiceResp); err != nil {
+			logger.Logger.Error("SaveSalesInvoice-UnmarshalTo", zap.Any("err", err))
+			return nil, errors.WithMessage(err)
+		}
+		return &saveSalesInvoiceResp, nil
+	}
+	return nil, errors.WithMessage(errors.New("保存Sales Invoice异常, data为空"))
+}
+
+// CancelSalesInvoice 取消 Sales Invoice
+func (s *erpSrv) CancelSalesInvoice(ctx pkgCtx.Context, cancelSalesInvoiceReq req.CancelSalesInvoiceReq) (*selling.CancelSalesInvoiceResp, error) {
+	client, conn, err := NewErpSellingClient()
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	defer conn.Close()
+
+	params := &selling.CancelSalesInvoiceReq{
+		OrderNo:           cancelSalesInvoiceReq.OrderNo,
+		SaleOrderUuid:     cancelSalesInvoiceReq.SaleOrderUuid,
+		SalesInvoiceName:  cancelSalesInvoiceReq.SalesInvoiceName,
+		PaymentEntryNames: cancelSalesInvoiceReq.PaymentEntryNames,
+		StockDeducted:     cancelSalesInvoiceReq.StockDeducted,
+		Remark:            cancelSalesInvoiceReq.Remark,
+	}
+	res, err := client.CancelSalesInvoice(WithSiteCode(ctx.GetContext(), cancelSalesInvoiceReq.SiteCode), params)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if res.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(res.Message))
+	}
+	if res.Data != nil {
+		var cancelSalesInvoiceResp selling.CancelSalesInvoiceResp
+		if err := res.Data.UnmarshalTo(&cancelSalesInvoiceResp); err != nil {
+			logger.Logger.Error("CancelSalesInvoice-UnmarshalTo", zap.Any("err", err))
+			return nil, errors.WithMessage(err)
+		}
+		return &cancelSalesInvoiceResp, nil
+	}
+	return nil, errors.WithMessage(errors.New("取消Sales Invoice异常, data为空"))
+}
+
+// ReturnSalesInvoice 退款 Sales Invoice (Credit Note)
+func (s *erpSrv) ReturnSalesInvoice(ctx pkgCtx.Context, returnSalesInvoiceReq req.ReturnSalesInvoiceReq) (*selling.ReturnSalesInvoiceResp, error) {
+	client, conn, err := NewErpSellingClient()
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	defer conn.Close()
+
+	params := &selling.ReturnSalesInvoiceReq{
+		OrderNo:          returnSalesInvoiceReq.OrderNo,
+		SaleOrderUuid:    returnSalesInvoiceReq.SaleOrderUuid,
+		SalesInvoiceName: returnSalesInvoiceReq.SalesInvoiceName,
+		PostingDatetime:  returnSalesInvoiceReq.PostingDatetime,
+		Company:          returnSalesInvoiceReq.Company,
+		Customer:         returnSalesInvoiceReq.Customer,
+		Items:            returnSalesInvoiceReq.Items,
+		MaterialItems:    returnSalesInvoiceReq.MaterialItems,
+		Taxes:            returnSalesInvoiceReq.Taxes,
+		Payments:         returnSalesInvoiceReq.Payments,
+		RefundType:       returnSalesInvoiceReq.RefundType,
+		Remark:           returnSalesInvoiceReq.Remark,
+	}
+	res, err := client.ReturnSalesInvoice(WithSiteCode(ctx.GetContext(), returnSalesInvoiceReq.SiteCode), params)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if res.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(res.Message))
+	}
+	if res.Data != nil {
+		var returnSalesInvoiceResp selling.ReturnSalesInvoiceResp
+		if err := res.Data.UnmarshalTo(&returnSalesInvoiceResp); err != nil {
+			logger.Logger.Error("ReturnSalesInvoice-UnmarshalTo", zap.Any("err", err))
+			return nil, errors.WithMessage(err)
+		}
+		return &returnSalesInvoiceResp, nil
+	}
+	return nil, errors.WithMessage(errors.New("退款Sales Invoice异常, data为空"))
+}
+
 func (s *erpSrv) GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetPaymentMethodListReq) (*resp.GetPaymentMethodListResp, error) {
 	company, err := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).GetCompanyInfoByUuid(getPaymentReq.CompanyUuid)
 	if err != nil {

@@ -50,6 +50,9 @@ func (m *MultiLanguageName) InitByLocaleResponseJson(jsonStr string) {
 
 // IsNameChanged 判断多语言名称是否修改
 func (m *MultiLanguageName) IsNameChanged(locale dto.LocaleResponse) bool {
+	if m == nil {
+		return locale != dto.LocaleResponse{}
+	}
 	names := m.GetNames()
 	namesJson := names.ToJson()
 	localeJson := locale.ToJson()
@@ -58,6 +61,9 @@ func (m *MultiLanguageName) IsNameChanged(locale dto.LocaleResponse) bool {
 
 // GetNames 获取多语言名称
 func (m *MultiLanguageName) GetNames() dto.LocaleResponse {
+	if m == nil {
+		return dto.LocaleResponse{}
+	}
 	return dto.LocaleResponse{
 		ZH:   m.ZhName,
 		TH:   m.ThName,
@@ -72,12 +78,18 @@ func (m *MultiLanguageName) GetNames() dto.LocaleResponse {
 }
 
 func (m *MultiLanguageName) ToJson() string {
+	if m == nil {
+		return "{}"
+	}
 	names := m.GetNames()
 	json, _ := json.Marshal(names)
 	return string(json)
 }
 
 func (m *MultiLanguageName) ToMap() map[string]string {
+	if m == nil {
+		return map[string]string{}
+	}
 	return map[string]string{
 		"zh":   m.ZhName,
 		"en":   m.EnName,
@@ -93,6 +105,9 @@ func (m *MultiLanguageName) ToMap() map[string]string {
 
 // GetNameByLang 获取指定语言名称
 func (m *MultiLanguageName) GetNameByLang(lang string) string {
+	if m == nil {
+		return ""
+	}
 	switch lang {
 	case "zh":
 		return m.ZhName

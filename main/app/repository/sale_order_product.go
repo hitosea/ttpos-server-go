@@ -32,14 +32,14 @@ type ISaleOrderProductRepo interface {
 
 type ISaleOrderProductQueryRepo interface {
 	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
-	GetSaleOrderProductsByUuids(uuids []uint64) ([]*model.SaleOrderProduct, error)                                                   // 根据Uuid列表获取销售订单商品
+	GetSaleOrderProductsByUuids(uuids []uint64) ([]*model.SaleOrderProduct, error)                                                                     // 根据Uuid列表获取销售订单商品
 	GetProductPackageDetail(saleBillUuid uint64, saleOrderUuid uint64, productPackageUuid uint64, opts ...DBOption) ([]*model.SaleOrderProduct, error) // 获取商品选购详情
-	GetSaleOrderProducts(opts ...DBOption) ([]*model.SaleOrderProduct, error)                                                        // 根据销售订单uuid获取销售订单商品
-	GetSaleOrderProductUuidsByProductBomUuids(saleOrderUuid uint64, productBomUuids []uint64) ([]uint64, error)                      // 通过规格商品uuid列表获取销售订单商品uuid列表
-	GetSaleOrderProductBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]*model.SaleOrderProduct, error)                    // 通过销售订单商品uuid列表获取销售订单商品
+	GetSaleOrderProducts(opts ...DBOption) ([]*model.SaleOrderProduct, error)                                                                          // 根据销售订单uuid获取销售订单商品
+	GetSaleOrderProductUuidsByProductBomUuids(saleOrderUuid uint64, productBomUuids []uint64) ([]uint64, error)                                        // 通过规格商品uuid列表获取销售订单商品uuid列表
+	GetSaleOrderProductBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]*model.SaleOrderProduct, error)                                      // 通过销售订单商品uuid列表获取销售订单商品
 
-	GetSaleOrderProductsByPackageUuid(packageUuid uint64) ([]*model.SaleOrderProduct, error)              // 根据套餐uuid获取套餐下所有子商品
-	CountByBatchTagInSaleBills(saleBillUuids []uint64, batchTagUuid uint64) (int64, error)              // 统计指定账单中使用某分批类型的商品数量
+	GetSaleOrderProductsByPackageUuid(packageUuid uint64) ([]*model.SaleOrderProduct, error) // 根据套餐uuid获取套餐下所有子商品
+	CountByBatchTagInSaleBills(saleBillUuids []uint64, batchTagUuid uint64) (int64, error)   // 统计指定账单中使用某分批类型的商品数量
 }
 
 type saleOrderProductRepo struct {

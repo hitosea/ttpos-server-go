@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
+	stockPb "ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -203,13 +204,21 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 			dbOption,
 		}
 		if reqs.IsOnlyDataManage == 1 {
-			uuidList := strings.Split(reqs.SaleBillUuids, ",")
-			uuids := []uint64{}
-			for _, uuid := range uuidList {
-				uuid, _ := strconv.ParseUint(uuid, 10, 64)
-				uuids = append(uuids, uint64(uuid))
+			if reqs.SaleBillUuids != "" {
+				uuidList := strings.Split(reqs.SaleBillUuids, ",")
+				uuids := []uint64{}
+				for _, uuid := range uuidList {
+					uuid, _ := strconv.ParseUint(uuid, 10, 64)
+					uuids = append(uuids, uint64(uuid))
+				}
+				opts = append(opts, repository.CommonRepo.WhereInUuids(uuids))
+			} else {
+				// 子查询模式：与 GetCashierOrderListWithPagination 保持一致
+				opts = append(opts, repository.CommonRepo.WhereInDataManageSubQuery(s.dbm.GetDB(ctx.GetDbId()), "uuid",
+					repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+					repository.CommonRepo.WhereBySoftDelete(),
+				))
 			}
-			opts = append(opts, repository.CommonRepo.WhereInUuids(uuids))
 		}
 		if reqs.IsOnlyDataManage == 0 && reqs.IsContainDataManage == 0 {
 			opts = append(opts,
@@ -1372,11 +1381,21 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, saleBill, db, returnType, isPartReturn)
-			if err != nil {
-				return errors.WithMessage(err)
+			if saleOrder.ErpSalesInvoiceName != "" {
+				// Sales Invoice 模式：生成 Credit Note
+				res, err := s.ReturnSalesInvoice(ctx, saleOrder, returnOrder, saleBill, db, returnType, isPartReturn)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				returnOrder.ErpInvoiceName = res.CreditNoteName
+			} else {
+				// POS Invoice 模式（旧模式）
+				res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, saleBill, db, returnType, isPartReturn)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				returnOrder.ErpInvoiceName = res.InvoiceName
 			}
-			returnOrder.ErpInvoiceName = res.InvoiceName
 		}
 		// 更新退货单erp发票名
 		if err := repository.NewReturnOrderRepo(db).UpdateReturnOrderRecordErpInvoiceName(returnOrder.Uuid, returnOrder.ErpInvoiceName); err != nil {
@@ -1980,6 +1999,13 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 			return errors.WithMessage(err)
 		}
 		giftPointsMap := make(map[uint64]float64) // sale_order_uuid -> gift_points
+		// 记录原始 Stock Entry 扣减状态（后续 ClearSettleInfo 会重置为 0）
+		stockDeductedMap := make(map[uint64]int)
+		for _, saleOrder := range saleBill.SaleOrders {
+			if !saleOrder.IsDelete() {
+				stockDeductedMap[saleOrder.Uuid] = saleOrder.ErpStockDeducted
+			}
+		}
 		// 更新销售订单
 		for _, saleOrder := range saleBill.SaleOrders {
 			isUseMember := saleOrder.ConsumerUuid != 0
@@ -1999,11 +2025,13 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 			giftPointsMap[saleOrder.Uuid] = saleOrder.GiftPoints // 清空之前记录的赠送积分
 			// 将结账才记录的值清空
 			saleOrder.ClearSettleInfo()
+			saleOrder.ErpStockDeducted = 0 // 反结账重置 Stock Entry 扣减状态
 			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
 				return errors.WithMessage(err)
 			}
 		}
 		ctx.Mark("orders_updated")
+
 		// 更新支付订单,状态为已退款
 		// for _, saleOrder := range saleBill.SaleOrders {
 		// 	for _, paymentOrder := range saleOrder.PaymentOrders {
@@ -2266,37 +2294,76 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			staff := ctx.GetStaff()
-			shiftLogRepo := repository.NewShiftLogRepo(db)
-			shiftLog, err := shiftLogRepo.GetShiftLog(
-				repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
-				repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
-			)
-			if err != nil {
-				return errors.WithMessage(err)
-			}
-			if shiftLog.IsHandedOver() {
-				return errors.New("当前班次已交班，无法保存发票")
-			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			for _, saleOrder := range saleBill.SaleOrders {
 				if saleOrder.IsDelete() {
 					continue
 				}
-				// 根据反结账次数生成 OrderNo：首次使用原始 OrderNo，反结账后加后缀 -1, -2...
 				orderNo := saleOrder.OrderNo
 				if reverseSettleCount > 0 {
 					orderNo = fmt.Sprintf("%s-%d", saleOrder.OrderNo, reverseSettleCount)
 				}
-				err := erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
-					ProductsInvoiceName: saleOrder.ErpProductsInvoiceName,
-					MaterialInvoiceName: saleOrder.ErpMaterialInvoiceName,
-					OpenPosEntryName:    shiftLog.ErpnextOpenPosEntryName, //异步模式必填
-					OrderNo:             orderNo,                          //异步模式必填
-				})
-				if err != nil {
-					return errors.WithMessage(err)
+
+				if saleOrder.ErpSalesInvoiceName != "" {
+					// Sales Invoice 模式：取消 SI + PE，联动反向 Stock Entry
+					var peNames []string
+					if saleOrder.ErpPaymentEntryNames != "" {
+						_ = json.Unmarshal([]byte(saleOrder.ErpPaymentEntryNames), &peNames)
+					}
+					_, err := erpSrv.CancelSalesInvoice(ctx, req.CancelSalesInvoiceReq{
+						SiteCode:          companySetting.ErpnextSiteCode,
+						OrderNo:           orderNo,
+						SaleOrderUuid:     fmt.Sprintf("%d", saleOrder.Uuid),
+						SalesInvoiceName:  saleOrder.ErpSalesInvoiceName,
+						PaymentEntryNames: peNames,
+						StockDeducted:     stockDeductedMap[saleOrder.Uuid] == 1,
+					})
+					if err != nil {
+						return errors.WithMessage(err)
+					}
+					// 加分布式锁，防止与0点Stock Entry扣减任务竞态
+					seLockKey := fmt.Sprintf("stock_entry_deduction_%d", company.Uuid)
+					sysLock := lock.NewSystemLock()
+					sysLock.LockUuidString(seLockKey)
+
+					// 已通过 Stock Entry 扣减库存的订单，创建反向 Stock Entry（Material Receipt）恢复库存
+					if stockDeductedMap[saleOrder.Uuid] == 1 {
+						deductionLogs, _ := repository.NewStockDeductionLogRepo(db).GetByOrderUuids([]uint64{saleOrder.Uuid})
+						if len(deductionLogs) > 0 {
+							receiptItems := make([]*stockPb.StockEntryItem, 0, len(deductionLogs))
+							for _, log := range deductionLogs {
+								receiptItems = append(receiptItems, &stockPb.StockEntryItem{
+									ItemCode: log.ErpCode,
+									Qty:      log.Qty,
+								})
+							}
+							_, seErr := erpSrv.SubmitStockEntry(ctx, companySetting, &stockPb.SubmitStockEntryReq{
+								CompanyAbbr:    companySetting.ErpnextCompanyAbbr,
+								Branch:         companySetting.ErpnextBranchName,
+								StockEntryType: "Material Receipt",
+								Items:          receiptItems,
+								Remarks:        fmt.Sprintf("TTPOS反结账库存恢复, order=%s, uuid=%d", orderNo, saleOrder.Uuid),
+							})
+							if seErr != nil {
+								logger.Logger.Error("反结账创建反向Stock Entry失败，保留扣减日志以便重试",
+									zap.Uint64("company_uuid", company.Uuid),
+									zap.Uint64("sale_order_uuid", saleOrder.Uuid),
+									zap.Error(seErr),
+								)
+								// 不阻塞反结账流程，但不删除deduction log，避免重新结账后二次扣减
+							} else {
+								// 反向SE成功，清理扣减日志
+								_ = repository.NewStockDeductionLogRepo(db).DeleteByOrderUuid(saleOrder.Uuid)
+							}
+						}
+					}
+					// 未扣减过库存的订单，直接清理可能存在的部分扣减日志
+					if stockDeductedMap[saleOrder.Uuid] != 1 {
+						_ = repository.NewStockDeductionLogRepo(db).DeleteByOrderUuid(saleOrder.Uuid)
+					}
+					sysLock.UnlockUuidString(seLockKey)
 				}
+					// NOTE: POS Invoice 反结账路径已废弃，发票名称不再持久化到 sale_order
 			}
 			ctx.Mark("erp_invoice_cancelled")
 		}

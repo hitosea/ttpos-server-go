@@ -33,11 +33,11 @@ type IMarketingActivityRepo interface {
 
 	SoftDeleteByHeadquarterExcludeUuids(headquarterUuid uint64, excludeUuids []uint64) error // 软删除总部活动（排除指定uuid）
 	FindHeadquarterByUuidsWithPrizes(uuids []uint64) ([]model.MarketingActivity, error)      // 根据uuid列表查询总部活动（含奖品）
-	UnscopedDeleteByUuid(uuid uint64) error                                                   // 根据uuid硬删除活动
-	CreateActivity(activity *model.MarketingActivity) error                                    // 创建活动
-	UnscopedDeleteByHeadquarter(headquarterUuid uint64) error                                  // 根据总部uuid硬删除活动
-	FindByHeadquarter(headquarterUuid uint64) ([]model.MarketingActivity, error)               // 根据总部uuid查询活动
-	FindAllHeadquarterWithPrizes() ([]model.MarketingActivity, error)                          // 查询所有总部活动（含奖品）
+	UnscopedDeleteByUuid(uuid uint64) error                                                  // 根据uuid硬删除活动
+	CreateActivity(activity *model.MarketingActivity) error                                  // 创建活动
+	UnscopedDeleteByHeadquarter(headquarterUuid uint64) error                                // 根据总部uuid硬删除活动
+	FindByHeadquarter(headquarterUuid uint64) ([]model.MarketingActivity, error)             // 根据总部uuid查询活动
+	FindAllHeadquarterWithPrizes() ([]model.MarketingActivity, error)                        // 查询所有总部活动（含奖品）
 
 	WithLanguage() DBOption
 	WithPrizes() DBOption

@@ -47,6 +47,8 @@ type Business struct {
 	EnableOrderSource string `json:"enable_order_source"` // 外卖功能开关 0-关闭 1-开启
 	EnableNationality string `json:"enable_nationality"`  // 国籍功能开关 0-关闭 1-开启
 
+	// 估值率设置
+	AllowZeroValuationRate string `json:"allow_zero_valuation_rate"` // 盘点允许估值率为0 0-关闭 1-开启
 }
 
 type ShopBusiness struct {
@@ -96,6 +98,11 @@ func (resp *Business) IsAllowTransferIn() bool {
 // 是否允许调出
 func (resp *Business) IsAllowTransferOut() bool {
 	return resp.AllowedTransferTypes == "out" || resp.AllowedTransferTypes == "in,out"
+}
+
+// IsAllowZeroValuationRate 是否允许盘点估值率为0
+func (resp *Business) IsAllowZeroValuationRate() bool {
+	return resp.AllowZeroValuationRate == "1"
 }
 
 type ZeroingMethodItem MethodItem

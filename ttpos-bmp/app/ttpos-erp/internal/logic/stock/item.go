@@ -1015,27 +1015,35 @@ func (s *sItem) GetItemDefaultWarehouses(ctx context.Context, itemCodes []string
 	result := make(map[string]string, len(itemCodes))
 	var pendingItemCodes []string
 
-	// ── 优先级 1：Item Defaults 的 default_warehouse ──
-	for _, itemCode := range itemCodes {
-		itemInfo, err := s.GetItem(ctx, &item.GetItemReq{
-			ItemCode: itemCode,
-		})
-		if err != nil {
-			g.Log().Warningf(ctx, "GetItemDefaultWarehouses-获取物品信息失败, itemCode: %s, err: %v", itemCode, err)
-			pendingItemCodes = append(pendingItemCodes, itemCode)
-			continue
-		}
-
-		found := false
-		for _, itemDefault := range itemInfo.ItemDefaults {
-			if itemDefault.Company == companyName && itemDefault.DefaultWarehouse != "" {
-				result[itemCode] = itemDefault.DefaultWarehouse
-				found = true
-				break
+	// ── 优先级 1：批量查询 Item Default 子表的 default_warehouse ──
+	itemDefaultResp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: "Item Default",
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{"parent", "default_warehouse"},
+		Filters: [][]string{
+			{"parent", "in", gstr.Join(itemCodes, ",")},
+			{"company", "=", companyName},
+			{"default_warehouse", "!=", ""},
+		},
+		Limit: consts.Limit999,
+	})
+	if err != nil {
+		g.Log().Warningf(ctx, "GetItemDefaultWarehouses-批量查询Item Default失败: %v", err)
+		pendingItemCodes = append(pendingItemCodes, itemCodes...)
+	} else {
+		foundSet := make(map[string]bool, len(itemCodes))
+		for _, row := range itemDefaultResp.GetJsons("data") {
+			parent := row.Get("parent").String()
+			warehouse := row.Get("default_warehouse").String()
+			if parent != "" && warehouse != "" {
+				result[parent] = warehouse
+				foundSet[parent] = true
 			}
 		}
-		if !found {
-			pendingItemCodes = append(pendingItemCodes, itemCode)
+		for _, itemCode := range itemCodes {
+			if !foundSet[itemCode] {
+				pendingItemCodes = append(pendingItemCodes, itemCode)
+			}
 		}
 	}
 
@@ -1044,24 +1052,14 @@ func (s *sItem) GetItemDefaultWarehouses(ctx context.Context, itemCodes []string
 		return result, nil
 	}
 
-	// ── 优先级 2：Bin 表中该物品库存最多的仓库 ──
-	// 查询公司下所有仓库名称（ERPNext 仓库名格式：WarehouseName - CompanyAbbr）
+	// ── 优先级 2：Bin 表中该物品库存最多的仓库（批量查询）──
 	companyWarehouses, err := s.getCompanyWarehouseNames(ctx, companyName)
 	if err != nil {
 		g.Log().Warningf(ctx, "GetItemDefaultWarehouses-查询公司仓库列表失败, company: %s, err: %v", companyName, err)
 	}
 
-	if len(companyWarehouses) > 0 {
-		var stillPending []string
-		for _, itemCode := range pendingItemCodes {
-			warehouseName := s.getMaxStockWarehouse(ctx, itemCode, companyWarehouses)
-			if warehouseName != "" {
-				result[itemCode] = warehouseName
-			} else {
-				stillPending = append(stillPending, itemCode)
-			}
-		}
-		pendingItemCodes = stillPending
+	if len(companyWarehouses) > 0 && len(pendingItemCodes) > 0 {
+		pendingItemCodes = s.batchResolveMaxStockWarehouses(ctx, pendingItemCodes, companyWarehouses, result)
 	}
 
 	if len(pendingItemCodes) == 0 {
@@ -1149,4 +1147,50 @@ func (s *sItem) getMaxStockWarehouse(ctx context.Context, itemCode string, wareh
 		}
 	}
 	return maxWarehouse
+}
+
+// batchResolveMaxStockWarehouses 批量查询 Bin 表，为每个物品找到库存最多的公司仓库
+// 返回仍未解析的物品编码列表，已解析的结果写入 result
+func (s *sItem) batchResolveMaxStockWarehouses(ctx context.Context, itemCodes []string, companyWarehouses []string, result map[string]string) []string {
+	// 批量查询 Bin 表：所有待处理物品在公司仓库中的库存
+	binResp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeBin,
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{"item_code", "warehouse", "actual_qty"},
+		Filters: [][]string{
+			{"item_code", "in", gstr.Join(itemCodes, ",")},
+			{"warehouse", "in", gstr.Join(companyWarehouses, ",")},
+			{"actual_qty", ">", "0"},
+		},
+		Limit: consts.Limit999,
+	})
+	if err != nil {
+		g.Log().Warningf(ctx, "batchResolveMaxStockWarehouses-批量查询Bin失败: %v", err)
+		return itemCodes
+	}
+
+	// 按物品分组，找每个物品库存最大的仓库
+	type binEntry struct {
+		warehouse string
+		qty       float64
+	}
+	maxByItem := make(map[string]binEntry, len(itemCodes))
+	for _, row := range binResp.GetJsons("data") {
+		ic := row.Get("item_code").String()
+		wh := row.Get("warehouse").String()
+		qty := row.Get("actual_qty").Float64()
+		if existing, ok := maxByItem[ic]; !ok || qty > existing.qty {
+			maxByItem[ic] = binEntry{warehouse: wh, qty: qty}
+		}
+	}
+
+	var stillPending []string
+	for _, itemCode := range itemCodes {
+		if entry, ok := maxByItem[itemCode]; ok {
+			result[itemCode] = entry.warehouse
+		} else {
+			stillPending = append(stillPending, itemCode)
+		}
+	}
+	return stillPending
 }

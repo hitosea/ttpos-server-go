@@ -174,7 +174,8 @@ type IOrderSrv interface {
 	OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo // 图片打印
 
 	// invoice
-	SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB, opts ...func(*SavePosInvoiceOption)) (*selling.SavePosInvoiceResp, error) // 保存发票到ERP
+	SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB, opts ...func(*SavePosInvoiceOption)) (*selling.SavePosInvoiceResp, error) // 保存POS发票到ERP
+	SaveSalesInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB) (*selling.SaveSalesInvoiceResp, error)                                  // 保存Sales Invoice到ERP
 
 	// cache
 	AsyncPreloadSaleBillAllInfoCache(ctx context.Context, saleBillUuid uint64) // 异步预加载销售账单所有信息缓存
@@ -4798,6 +4799,9 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			for _, subProduct := range subProducts {
 				productBom := subProduct.GetFlavorSaleOrderProductBom()
 				erpCode := productBom.ProductBom.ErpCode
+				if erpCode == "" {
+					erpCode = constant.PosInvoiceItemCodeSpareGoods // BY001 降级
+				}
 				packageName := language.JsonToLocaleResponse(product.Name) // 套餐名称
 				items = append(items, &selling.PosInvoiceItem{
 					ItemCode:    erpCode,
@@ -4811,6 +4815,9 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		}
 		productBom := product.GetFlavorSaleOrderProductBom()
 		erpCode := productBom.ProductBom.ErpCode
+		if erpCode == "" {
+			erpCode = constant.PosInvoiceItemCodeSpareGoods // BY001 降级
+		}
 		// 是否是赠菜
 		if product.IsGiftProduct() {
 			if product.IsPackageProduct() {
@@ -4876,6 +4883,9 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		sauceBoms := product.GetSauceSaleOrderProductBom()
 		for _, sauceBom := range sauceBoms {
 			erpCode := sauceBom.ProductBom.ProductSauce.ErpCode
+			if erpCode == "" {
+				erpCode = constant.PosInvoiceItemCodeSpareGoods // BY001 降级
+			}
 			items = append(items, &selling.PosInvoiceItem{
 				ItemCode:   erpCode,
 				Qty:        product.Num,
@@ -5075,10 +5085,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		Taxes:            taxes,         // 订单税费列表
 		Payments:         payments,      // 订单付款列表
 	}
-	if saleOrder.IsErpReverseSettle() {
-		param.AmendedProductsInvoiceName = saleOrder.ErpProductsInvoiceName
-		param.AmendedMaterialInvoiceName = saleOrder.ErpMaterialInvoiceName
-	}
+	// NOTE: SI 模式反结账由 CancelSalesInvoice 处理，POS Invoice amended 字段已废弃
 	if option.Remark != "" {
 		param.Remark = option.Remark
 	}
@@ -5382,7 +5389,7 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
 		PostingDatetime:  returnOrder.CreateTime, // 退款单时间
 		CompanyAbbr:      companySetting.ErpnextCompanyAbbr,
-		InvoiceName:      saleOrder.ErpProductsInvoiceName, // 发票名称
+		// InvoiceName: POS Invoice 名称已不再持久化，仅 SI 模式走 ReturnSalesInvoice
 		Items:            items,                            // 订单退款商品列表
 		Taxes:            taxes,                            // 订单退税费列表
 		Payments:         payments,                         // 订单退款列表

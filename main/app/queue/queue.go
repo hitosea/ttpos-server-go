@@ -19,9 +19,10 @@ import (
 const TAKEOUT = "takeout"
 
 const (
-	TopicItemChange               = "erp-item-change"
-	TopicDocChange                = "erp-doc-change"
-	TopicErpCancelInvoiceCallback = "erp-invoice-cancel" // ERP 取消发票成功回调
+	TopicItemChange                    = "erp-item-change"
+	TopicDocChange                     = "erp-doc-change"
+	TopicErpCancelInvoiceCallback      = "erp-invoice-cancel"              // ERP 取消发票成功回调
+	TopicErpSalesInvoiceCallback       = "erp-sales-invoice-callback"      // ERP SI 异步回调（BMP → Main）
 )
 
 const (
@@ -83,6 +84,12 @@ func Init() {
 	err = manager.Subscribe(config.Rocketmq.GroupName, TopicErpCancelInvoiceCallback, erpQueue.ErpCancelInvoiceCallbackHandler)
 	if err != nil {
 		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicErpCancelInvoiceCallback))
+	}
+
+	// 订阅 ERP Sales Invoice 异步回调消息（BMP → Main）
+	err = manager.Subscribe(config.Rocketmq.GroupName, TopicErpSalesInvoiceCallback, erpQueue.ErpSalesInvoiceCallbackHandler)
+	if err != nil {
+		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicErpSalesInvoiceCallback))
 	}
 
 }

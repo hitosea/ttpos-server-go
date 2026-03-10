@@ -83,11 +83,14 @@ type StockReconciliationCheckMaterialsResp struct {
 	IsDeleted                  bool               `json:"is_deleted"`                    // 是否已删除
 	UnitCount                  uint               `json:"unit_count"`                    // 单位数量
 	ExistsInWarehouse          bool               `json:"exists_in_warehouse"`           // 是否在仓库中
+	IsZeroValuationRate        bool               `json:"is_zero_valuation_rate"`        // 估值率是否为0
+	InternalCode               string             `json:"internal_code"`                 // 内部编码
 }
 
 type StockReconciliationCheckMaterialsListResp struct {
-	List              []StockReconciliationCheckMaterialsResp `json:"list"`               // 物品列表
-	WarehouseDisabled bool                                    `json:"warehouse_disabled"` // 仓库是否禁用 true-被禁用；false-正常
+	List                   []StockReconciliationCheckMaterialsResp `json:"list"`                      // 物品列表
+	WarehouseDisabled      bool                                    `json:"warehouse_disabled"`        // 仓库是否禁用 true-被禁用；false-正常
+	AllowZeroValuationRate bool                                    `json:"allow_zero_valuation_rate"` // 是否允许盘点估值率为0
 }
 
 // StockReconciliationTemplateResp 盘点单模板响应

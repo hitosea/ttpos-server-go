@@ -226,6 +226,81 @@ message GetModeOfPaymentResp {
   ModeOfPayment mode_of_payment = 1; // 支付方式信息
 }
 
+// ========== Sales Invoice (SI) 相关 ==========
+
+// SaveSalesInvoiceReq 保存 Sales Invoice 请求 (替代 POS Invoice)
+message SaveSalesInvoiceReq {
+  string order_no = 1;                              // TTPOS 订单号
+  string sale_order_uuid = 2;                       // TTPOS 订单 UUID（幂等键）
+  string sale_bill_uuid = 3;                        // TTPOS 账单 UUID
+  string pos_profile = 4;                           // POS Profile 名称
+  string company = 5;                               // 公司
+  string customer = 6;                              // 客户（默认客户或会员）
+  string currency = 7;                              // 货币 THB/CNY
+  string price_list_currency = 8;                   // 价格表货币
+  int64 posting_datetime = 9;                       // 支付完成时间戳
+  string branch = 10;                               // 分店
+  int32 update_stock = 11;                          // 0=不扣库存
+  repeated PosInvoiceItem items = 12;               // 商品明细（复用 PosInvoiceItem）
+  repeated PosInvoiceItem material_items = 13;      // 物品明细（价格为0）
+  repeated PosInvoiceTax taxes = 14;                // 税费
+  repeated PosInvoicePayment payments = 15;         // 支付方式列表
+  string remark = 16;                               // 备注
+  optional string order_source_uuid = 17;           // 订单来源UUID
+  optional string order_source_name = 18;           // 订单来源名称
+  optional string takeout_order_no = 19;            // 外卖订单号
+  optional string takeout_provider = 20;            // 外卖平台
+  double discount_amount = 21;                      // 额外折扣金额
+  string amended_from = 22;                         // 反结账后的原单据号
+  string company_uuid = 23;                         // TTPOS 商户UUID（用于异步回写 shop 数据库）
+  string order_type = 24;                            // 订单类型: sale_order/recharge/takeout
+}
+
+// SaveSalesInvoiceResp 保存 Sales Invoice 响应
+message SaveSalesInvoiceResp {
+  string sales_invoice_name = 1;                    // SI 单据名称
+  repeated string payment_entry_names = 2;          // PE 单据名称列表
+  string async_record_id = 3;                       // 异步记录ID
+}
+
+// CancelSalesInvoiceReq 取消 Sales Invoice 请求
+message CancelSalesInvoiceReq {
+  string order_no = 1;                              // TTPOS 订单号
+  string sale_order_uuid = 2;                       // 订单 UUID（幂等键）
+  string sales_invoice_name = 3;                    // SI 单据名称
+  repeated string payment_entry_names = 4;          // PE 单据名称列表
+  bool stock_deducted = 5;                          // 是否已通过 Stock Entry 扣库存
+  string remark = 6;
+}
+
+// CancelSalesInvoiceResp 取消 Sales Invoice 响应
+message CancelSalesInvoiceResp {
+  string async_record_id = 1;
+}
+
+// ReturnSalesInvoiceReq 退款 (Credit Note) 请求
+message ReturnSalesInvoiceReq {
+  string order_no = 1;
+  string sale_order_uuid = 2;
+  string sales_invoice_name = 3;                    // 原 SI 名称
+  int64 posting_datetime = 4;
+  string company = 5;
+  string customer = 6;
+  repeated PosInvoiceItem items = 7;                // 退款商品
+  repeated PosInvoiceItem material_items = 8;       // 退款物品
+  repeated PosInvoiceTax taxes = 9;
+  repeated PosInvoicePayment payments = 10;         // 原支付方式的退款金额
+  string refund_type = 11;                          // full_refund / partial_refund
+  string remark = 12;
+}
+
+// ReturnSalesInvoiceResp 退款 (Credit Note) 响应
+message ReturnSalesInvoiceResp {
+  string credit_note_name = 1;
+  repeated string payment_entry_names = 2;
+  string async_record_id = 3;
+}
+
 // SellingService 服务定义
 service SellingService {
   // 查询Pos Profile
@@ -246,6 +321,15 @@ service SellingService {
 
   // 取消 Pos Invoice
   rpc CancelPosInvoice (CancelPosInvoiceReq) returns (erp.ResponseInfo);
+
+  // 保存 Sales Invoice (替代 POS Invoice)
+  rpc SaveSalesInvoice (SaveSalesInvoiceReq) returns (erp.ResponseInfo);
+
+  // 取消 Sales Invoice
+  rpc CancelSalesInvoice (CancelSalesInvoiceReq) returns (erp.ResponseInfo);
+
+  // 退款 Sales Invoice (Credit Note)
+  rpc ReturnSalesInvoice (ReturnSalesInvoiceReq) returns (erp.ResponseInfo);
 
   //获取支付方式列表
   rpc GetModeOfPaymentList (GetModeOfPaymentListReq) returns (erp.ResponseInfo);

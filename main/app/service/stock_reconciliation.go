@@ -18,7 +18,9 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
@@ -151,6 +153,22 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 
 // GetStockReconciliationTemplate 获取盘点单模板
 func (s *stockReconciliationSrv) GetStockReconciliationTemplate(ctx context.Context) (resp.StockReconciliationTemplateResp, error) {
+	// 异步触发 Stock Entry 合并扣减（确保盘点选物品时 ERPNext 库存是最新的）
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsErpSalesInvoiceMode() {
+		utils.Go(func() {
+			companyUuid := ctx.GetCompanyUuid()
+			erpCtx := ctx.Copy()
+			erpCtx.SetDB(s.dbm.GetDB(companyUuid))
+			erpStockEntrySrv := NewErpStockEntrySrv(s.dbm)
+			if err := erpStockEntrySrv.TriggerStockEntryDeduction(erpCtx, companyUuid); err != nil {
+				logger.Logger.Error("盘点模板触发Stock Entry合并扣减失败",
+					zap.Uint64("company_uuid", companyUuid),
+					zap.Error(err))
+			}
+		})
+	}
+
 	// 调用盘点模板服务获取模板数据
 	templateResp, err := s.fetchReconciliationTemplate(ctx)
 	if err != nil {
@@ -693,6 +711,51 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 
 	companySetting := ctx.GetCompanySetting()
 
+	// 获取业务设置，检查盘点允许估值率为0的开关
+	settingSrv := setting.NewSrv(s.dbm, cache.Global)
+	businessSetting, bsErr := settingSrv.GetBusinessSetting(ctx)
+	if bsErr != nil {
+		logger.Logger.Error("获取业务设置失败", zap.Error(bsErr), zap.Uint64("company_uuid", ctx.GetCompanyUuid()))
+	}
+
+	// 如果关闭了"盘点允许估值率为0"，需要校验物品估值率
+	if !businessSetting.IsAllowZeroValuationRate() && stockReconciliation.Warehouse != nil {
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		binItems, binErr := erpSrv.GetMaterialStockNumByBin(ctx, stockReconciliation.Warehouse.ErpCode)
+		if binErr != nil {
+			logger.Logger.Error("查询Bin记录失败", zap.Error(binErr), zap.Uint64("company_uuid", ctx.GetCompanyUuid()))
+			return errors.WithMessage(errors.New(i18n.Translate(lang, "查询物品估值率失败")), binErr.Error())
+		}
+
+		// 构建估值率映射
+		binValuationMap := make(map[string]float64)
+		for _, bin := range binItems {
+			binValuationMap[bin.ItemCode] = bin.ValuationRate
+		}
+
+		// 检查盘点单中估值率为0的物品
+		var zeroValuationItems []string
+		for _, item := range stockReconciliation.StockReconciliationItems {
+			if item.DeleteTime > 0 || !item.Material.Status {
+				continue
+			}
+			rate, hasBin := binValuationMap[item.Material.Code]
+			if !hasBin || rate == 0 {
+				materialName := *language.JsonToLocaleResponse(item.MaterialName)
+				name := materialName.GetLocale(lang)
+				if item.Material.InternalCode != "" {
+					name = fmt.Sprintf("%s（%s）", name, item.Material.InternalCode)
+				}
+				zeroValuationItems = append(zeroValuationItems, name)
+			}
+		}
+
+		if len(zeroValuationItems) > 0 {
+			itemsStr := strings.Join(zeroValuationItems, "、")
+			return fmt.Errorf(i18n.Translate(lang, "物品%s估值率为0，无法提交。（请联系管理员进行处理）"), itemsStr)
+		}
+	}
+
 	// 根据时区获取过账日期和时间
 	now := utils.SetTimezone(companySetting.GetTimezone()).Now()
 
@@ -921,6 +984,30 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 			return errors.WithMessage(err, "保存批注失败")
 		}
 
+		// 生成盘点快照（SI 模式下记录未扣减订单），并构建待扣减量映射
+		// 快照需要在差异计算之前生成，以便用 PendingQty 修正 BookedQuantity
+		pendingQtyByCode := make(map[string]decimal.Decimal) // item_code → pending_qty
+		companySetting := ctx.GetCompanySetting()
+		if companySetting.IsErpSalesInvoiceMode() && stockReconciliation.Warehouse != nil {
+			erpStockEntrySrv := NewErpStockEntrySrv(s.dbm)
+			if err := erpStockEntrySrv.GenerateStocktakeSnapshot(tx, stockReconciliation.Uuid, stockReconciliation.Warehouse.ErpCode); err != nil {
+				logger.Logger.Error("生成盘点快照失败", zap.Error(err))
+				// 快照生成失败不阻塞盘点流程
+			} else {
+				// 读取刚写入的快照，构建 pendingQtyByCode
+				var snapshots []model.StocktakeSnapshot
+				if err := tx.Where("stock_reconciliation_uuid = ?", stockReconciliation.Uuid).
+					Where("delete_time = 0").
+					Find(&snapshots).Error; err != nil {
+					logger.Logger.Error("读取盘点快照失败", zap.Error(err))
+				} else {
+					for _, snap := range snapshots {
+						pendingQtyByCode[snap.ItemCode] = decimal.NewFromFloat(snap.PendingQty)
+					}
+				}
+			}
+		}
+
 		// 遍历所有物品
 		var warehouseLogs []*model.WarehouseInOutLog
 		for _, item := range stockReconciliation.StockReconciliationItems {
@@ -956,15 +1043,20 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 				}
 			}
 
-			// 有盈亏才记录日志
-			if !item.CountedQuantity.Equal(item.BookedQuantity) {
+			// 有盈亏才记录日志（SI 模式下用快照修正账面库存）
+			effectiveBooked := item.BookedQuantity
+			if pending, ok := pendingQtyByCode[material.Code]; ok && pending.IsPositive() {
+				// 预期库存 = 账面库存 - 待扣减量（未通过 Stock Entry 扣减的订单消耗）
+				effectiveBooked = effectiveBooked.Sub(pending)
+			}
+			if !item.CountedQuantity.Equal(effectiveBooked) {
 				scene := constant.WarehouseInOutLogSceneProfitIn        // 盘盈
 				logType := constant.WarehouseInOutLogLogTypeIn          // 入库
-				if item.CountedQuantity.LessThan(item.BookedQuantity) { // 盘亏出库
+				if item.CountedQuantity.LessThan(effectiveBooked) { // 盘亏出库
 					logType = constant.WarehouseInOutLogLogTypeOut
 					scene = constant.WarehouseInOutLogSceneLossOut
 				}
-				diff := item.CountedQuantity.Sub(item.BookedQuantity).Abs()
+				diff := item.CountedQuantity.Sub(effectiveBooked).Abs()
 				valuation := 0.0 // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 				warehouseLogs = append(warehouseLogs, &model.WarehouseInOutLog{
 					LogType:              logType,
@@ -1028,15 +1120,6 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 	if err != nil {
 		return disabledMaterials, err
 	}
-
-	// 修复任务:38268 v2.12.5-收银端-将成本卡中物品盘点为0后，可售设置自动变为0
-	// utils.Go(func() {
-	// 	// 计算所有关联成本卡的商品的库存
-	// 	err = s.productSrv.SyncProductStockByBomCard(ctx)
-	// 	if err != nil {
-	// 		logger.Logger.Error("审核通过盘点单-计算商品库存失败", zap.Error(err))
-	// 	}
-	// })
 
 	return disabledMaterials, nil
 }
@@ -1229,6 +1312,32 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 
 	db := ctx.GetDB()
 
+	// 获取业务设置，检查盘点允许估值率为0的开关
+	settingSrv := setting.NewSrv(s.dbm, cache.Global)
+	businessSetting, bsErr := settingSrv.GetBusinessSetting(ctx)
+	if bsErr != nil {
+		logger.Logger.Error("获取业务设置失败", zap.Error(bsErr), zap.Uint64("company_uuid", ctx.GetCompanyUuid()))
+	}
+	allowZeroValuationRate := businessSetting.IsAllowZeroValuationRate()
+
+	// 查询 Bin 记录用于判断估值率
+	binValuationMap := make(map[string]float64)
+	if checkReq.WarehouseUuid != 0 {
+		warehouseRepo := repository.NewWarehouseRepo(db)
+		warehouse, whErr := warehouseRepo.GetByUuid(checkReq.WarehouseUuid)
+		if whErr == nil && warehouse != nil && warehouse.ErpCode != "" {
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			binItems, binErr := erpSrv.GetMaterialStockNumByBin(ctx, warehouse.ErpCode)
+			if binErr != nil {
+				logger.Logger.Error("查询Bin记录失败", zap.Error(binErr), zap.Uint64("company_uuid", ctx.GetCompanyUuid()))
+			} else {
+				for _, bin := range binItems {
+					binValuationMap[bin.ItemCode] = bin.ValuationRate
+				}
+			}
+		}
+	}
+
 	var materialUuids []uint64
 
 	warehouseMaterialUUidMap, err := s.getWarehouseMaterialUuidMap(db, checkReq.WarehouseUuid)
@@ -1288,6 +1397,8 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 				IsDeleted:                  item.Material.DeleteTime > 0,
 				UnitCount:                  unitCount,
 				ExistsInWarehouse:          warehouseMaterialUUidMap[item.MaterialUuid],
+				IsZeroValuationRate:        s.isZeroValuationRate(binValuationMap, item.Material.Code),
+				InternalCode:               item.Material.InternalCode,
 			})
 		}
 	}
@@ -1336,14 +1447,23 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 				IsDeleted:                  material.DeleteTime > 0,
 				IsInventoryStatusException: s.getIsInventoryStatusException(bookedQuantityMap[material.Uuid], countedQuantity),
 				ExistsInWarehouse:          warehouseMaterialUUidMap[material.Uuid],
+				IsZeroValuationRate:        s.isZeroValuationRate(binValuationMap, material.Code),
+				InternalCode:               material.InternalCode,
 			})
 		}
 	}
 
 	return resp.StockReconciliationCheckMaterialsListResp{
-		List:              itemResp,
-		WarehouseDisabled: warehouseDisabled,
+		List:                   itemResp,
+		WarehouseDisabled:      warehouseDisabled,
+		AllowZeroValuationRate: allowZeroValuationRate,
 	}, nil
+}
+
+// isZeroValuationRate 判断物品估值率是否为0
+func (s *stockReconciliationSrv) isZeroValuationRate(binValuationMap map[string]float64, materialCode string) bool {
+	rate, hasBin := binValuationMap[materialCode]
+	return !hasBin || rate == 0
 }
 
 // extractName 从错误信息中提取物品名称

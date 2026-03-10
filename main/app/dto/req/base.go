@@ -209,6 +209,9 @@ type UpdateBusinessSetting struct {
 	// 外卖来源和国籍功能开关
 	EnableOrderSource string `json:"enable_order_source" binding:"omitempty,oneof=0 1"` // 外卖功能开关 0-关闭 1-开启
 	EnableNationality string `json:"enable_nationality" binding:"omitempty,oneof=0 1"`  // 国籍功能开关 0-关闭 1-开启
+
+	// 估值率设置
+	AllowZeroValuationRate string `json:"allow_zero_valuation_rate" binding:"omitempty,oneof=0 1"` // 盘点允许估值率为0 0-关闭 1-开启
 }
 
 type GetRemainingSmsQuotaReq struct {

@@ -84,7 +84,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterTransferOrderHandlers(shopGroup, dbm, cache)              // 调拨单
 			shop.RegisterExportRecordHandlers(shopGroup, dbm, cache)               // 导出记录
 			shop.RegisterDeskMapHandlers(shopGroup, dbm, cache)                    // 桌台地图
-			shop.RegisterDeskManageHandlers(shopGroup, dbm, cache)                  // 桌台管理
+			shop.RegisterDeskManageHandlers(shopGroup, dbm, cache)                 // 桌台管理
 			shop.RegisterNationalityRoutes(shopGroup, dbm, cache)                  // 国籍管理
 			shop.RegisterCountryRoutes(shopGroup, dbm, cache)                      // 国家管理
 			shop.RegisterOrderSourceRoutes(shopGroup, dbm, cache)                  // 外卖来源管理

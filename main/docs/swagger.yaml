@@ -4178,6 +4178,24 @@ definitions:
     - name
     - type
     type: object
+  req.DataManageOrderSubmitFilter:
+    properties:
+      bill_type:
+        description: 订单类型,-1=全部、0=餐单、1=外卖
+        type: integer
+      date_type:
+        description: 时间类型,-1=全部、0=今天、1=昨天、2=本周
+        type: integer
+      order_no:
+        description: 订单编号搜索
+        type: string
+      query_end_date:
+        description: 查询结束日期
+        type: string
+      query_start_date:
+        description: 查询开始日期
+        type: string
+    type: object
   req.DecryptQrCodeReq:
     properties:
       sign:
@@ -4684,6 +4702,26 @@ definitions:
         type: string
     required:
     - device_id
+    type: object
+  req.GetDataManageOrderSelectStatsReq:
+    properties:
+      deselected_uuids:
+        description: 取消勾选的UUID（select_all=true时使用）
+        items:
+          type: integer
+        type: array
+      filter:
+        allOf:
+        - $ref: '#/definitions/req.DataManageOrderSubmitFilter'
+        description: 筛选条件
+      select_all:
+        description: 是否全选当前筛选范围
+        type: boolean
+      selected_uuids:
+        description: 手动勾选的UUID（select_all=false时使用）
+        items:
+          type: integer
+        type: array
     type: object
   req.GetOrderCartProductBatchCookingListReq:
     properties:
@@ -8460,6 +8498,14 @@ definitions:
         description: 会员端销售订单UUID
         type: integer
     type: object
+  req.RestoreDataManageOrderReq:
+    properties:
+      sale_bill_uuid:
+        description: 销售单UUID
+        type: integer
+    required:
+    - sale_bill_uuid
+    type: object
   req.SaveBatchProductReq:
     properties:
       uuids:
@@ -8491,6 +8537,12 @@ definitions:
       order_display_mode:
         description: 点餐时展示模式 carousel/order/order_carousel，默认carousel
         type: string
+    type: object
+  req.SaveDataManageStatusReq:
+    properties:
+      is_enable_data_manage:
+        description: 是否启用数据管理
+        type: boolean
     type: object
   req.SaveKioskSettingReq:
     properties:
@@ -8570,6 +8622,14 @@ definitions:
         items:
           type: integer
         type: array
+      staff_uuids:
+        description: 员工UUID列表
+        items:
+          type: integer
+        type: array
+    type: object
+  req.SetDataManageStaffReq:
+    properties:
       staff_uuids:
         description: 员工UUID列表
         items:
@@ -8956,6 +9016,26 @@ definitions:
         type: integer
     required:
     - company_uuid
+    type: object
+  req.SubmitDataManageOrderReq:
+    properties:
+      deselected_uuids:
+        description: 取消勾选的UUID（select_all=true时使用）
+        items:
+          type: integer
+        type: array
+      filter:
+        allOf:
+        - $ref: '#/definitions/req.DataManageOrderSubmitFilter'
+        description: 筛选条件（与查询列表时相同的参数）
+      select_all:
+        description: 是否全选当前筛选范围
+        type: boolean
+      selected_uuids:
+        description: 手动勾选的UUID（select_all=false时使用）
+        items:
+          type: integer
+        type: array
     type: object
   req.SubmitShiftReq:
     properties:
@@ -9400,6 +9480,12 @@ definitions:
     type: object
   req.UpdateBusinessSetting:
     properties:
+      allow_zero_valuation_rate:
+        description: 估值率设置
+        enum:
+        - "0"
+        - "1"
+        type: string
       allowed_transfer_types:
         description: 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
         type: string
@@ -17835,6 +17921,9 @@ definitions:
     type: object
   resp.StockReconciliationCheckMaterialsListResp:
     properties:
+      allow_zero_valuation_rate:
+        description: 是否允许盘点估值率为0
+        type: boolean
       list:
         description: 物品列表
         items:
@@ -17849,11 +17938,17 @@ definitions:
       exists_in_warehouse:
         description: 是否在仓库中
         type: boolean
+      internal_code:
+        description: 内部编码
+        type: string
       is_deleted:
         description: 是否已删除
         type: boolean
       is_inventory_status_exception:
         description: 是否盈亏异常
+        type: boolean
+      is_zero_valuation_rate:
+        description: 估值率是否为0
         type: boolean
       locale_name:
         allOf:
@@ -20011,6 +20106,9 @@ definitions:
     type: object
   setting.Business:
     properties:
+      allow_zero_valuation_rate:
+        description: 估值率设置
+        type: string
       allowed_transfer_types:
         description: 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
         type: string
@@ -20323,6 +20421,93 @@ definitions:
       vice_unit_position:
         description: 副货币显示位置 0-金额前 1-金额后
         type: string
+    type: object
+  setting.DataManageOrderItem:
+    properties:
+      amount:
+        description: 订单金额
+        type: number
+      create_time:
+        description: 创建时间
+        type: integer
+      is_selected:
+        description: 是否已选中（用于可选订单列表）
+        type: boolean
+      order_no:
+        description: 订单编号
+        type: string
+      payment_amount:
+        description: 实付金额
+        type: number
+      payment_method:
+        description: 支付方式
+        type: string
+      sale_bill_uuid:
+        description: 销售单UUID
+        type: integer
+    type: object
+  setting.DataManageOrderListMeta:
+    properties:
+      order_count:
+        description: 已选订单数量（全量，不受搜索影响）
+        type: integer
+      page_no:
+        description: 当前页码
+        type: integer
+      page_size:
+        description: 每页大小
+        type: integer
+      paid_amount:
+        description: 实付金额合计（全量，不受搜索影响）
+        type: number
+      total:
+        description: 总数
+        type: integer
+    type: object
+  setting.DataManageOrderListResp:
+    properties:
+      list:
+        description: 订单列表
+        items:
+          $ref: '#/definitions/setting.DataManageOrderItem'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/setting.DataManageOrderListMeta'
+        description: Meta信息
+    type: object
+  setting.DataManageOrderSelectMeta:
+    properties:
+      page_no:
+        description: 当前页码
+        type: integer
+      page_size:
+        description: 每页大小
+        type: integer
+      total:
+        description: 总数
+        type: integer
+    type: object
+  setting.DataManageOrderSelectResp:
+    properties:
+      list:
+        description: 订单列表
+        items:
+          $ref: '#/definitions/setting.DataManageOrderItem'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/setting.DataManageOrderSelectMeta'
+        description: Meta信息
+    type: object
+  setting.DataManageOrderSelectStatsResp:
+    properties:
+      paid_amount:
+        description: 预览选中实付金额合计
+        type: number
+      selected_count:
+        description: 预览选中数量
+        type: integer
     type: object
   setting.DataManageStatistics:
     properties:
@@ -20663,6 +20848,9 @@ definitions:
     type: object
   setting.ShopBusiness:
     properties:
+      allow_zero_valuation_rate:
+        description: 估值率设置
+        type: string
       allowed_transfer_types:
         description: 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
         type: string
@@ -40081,6 +40269,197 @@ paths:
       summary: 获取数据管理
       tags:
       - 商家端.数据管理
+  /shop/setting/data_manage/order_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取数据管理中已选的订单列表，支持分页和搜索
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        required: true
+        type: integer
+      - description: 页面大小
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      - description: 订单编号搜索
+        in: query
+        name: order_no
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/setting.DataManageOrderListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取已选订单列表
+      tags:
+      - 商家端.数据管理
+  /shop/setting/data_manage/order_restore:
+    post:
+      consumes:
+      - application/json
+      description: 从数据管理中移除单条已选订单
+      parameters:
+      - description: 恢复订单
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.RestoreDataManageOrderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 恢复单条已选订单
+      tags:
+      - 商家端.数据管理
+  /shop/setting/data_manage/order_select:
+    get:
+      consumes:
+      - application/json
+      description: 获取可供选择的订单列表，支持筛选和分页，标记已选状态
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        required: true
+        type: integer
+      - description: 页面大小
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      - description: 订单编号搜索
+        in: query
+        name: order_no
+        type: string
+      - description: 时间类型,-1=全部、0=今天、1=昨天、2=本周
+        in: query
+        name: date_type
+        type: integer
+      - description: 查询开始日期
+        in: query
+        name: query_start_date
+        type: string
+      - description: 查询结束日期
+        in: query
+        name: query_end_date
+        type: string
+      - description: 订单类型,-1=全部、0=餐单、1=外卖
+        in: query
+        name: bill_type
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/setting.DataManageOrderSelectResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取可选订单列表
+      tags:
+      - 商家端.数据管理
+  /shop/setting/data_manage/order_select_stats:
+    post:
+      consumes:
+      - application/json
+      description: 预览提交后的选中数量和实付金额，不持久化
+      parameters:
+      - description: 统计预览参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.GetDataManageOrderSelectStatsReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/setting.DataManageOrderSelectStatsResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取可选订单统计预览
+      tags:
+      - 商家端.数据管理
+  /shop/setting/data_manage/order_submit:
+    post:
+      consumes:
+      - application/json
+      description: 提交当前筛选范围内的订单选择结果，与筛选范围外的已选订单合并
+      parameters:
+      - description: 提交订单选择
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SubmitDataManageOrderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 提交订单选择
+      tags:
+      - 商家端.数据管理
+  /shop/setting/data_manage/save_status:
+    post:
+      consumes:
+      - application/json
+      description: 仅保存数据管理开关状态，不影响操作人员和订单选择
+      parameters:
+      - description: 保存数据管理状态
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SaveDataManageStatusReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 保存数据管理开关状态
+      tags:
+      - 商家端.数据管理
   /shop/setting/data_manage/set:
     post:
       consumes:
@@ -40103,6 +40482,30 @@ paths:
       security:
       - JwtToken: []
       summary: 设置数据管理
+      tags:
+      - 商家端.数据管理
+  /shop/setting/data_manage/set_staff:
+    post:
+      consumes:
+      - application/json
+      description: 设置操作人员，立即生效
+      parameters:
+      - description: 设置操作人员
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SetDataManageStaffReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 设置数据管理操作人员
       tags:
       - 商家端.数据管理
   /shop/setting/free_reason:

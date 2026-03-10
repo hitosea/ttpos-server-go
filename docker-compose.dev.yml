@@ -103,6 +103,7 @@ services:
     build:
       dockerfile: main/Dockerfile-dev
     image: ttpos-server-go
+    pull_policy: build 
     volumes:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env

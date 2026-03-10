@@ -15,7 +15,6 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/i18n"
-	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
@@ -352,23 +351,6 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	paymentMethod, err := repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(req.PaymentMethodUuid)
 	if err != nil {
 		return nil, errors.WithMessage(errors.New("支付方式未开启"))
-	}
-
-	// 验证支付方式是否在开账时保存的列表中
-	staff := ctx.GetStaff()
-	if staff.DutyNo != "" {
-		cashBoxSrv := NewCashBoxSrv(s.dbm)
-		statisticsSrv := NewStatisticsSrv()
-		staffShiftSrv := NewStaffShiftSrv(cache.Global, s.dbm, cashBoxSrv, statisticsSrv)
-		isValid, err := staffShiftSrv.ValidatePaymentMethod(ctx, staff.DutyNo, paymentMethod.Uuid)
-		if err != nil {
-			return nil, errors.WithMessage(err)
-		}
-		if !isValid {
-			return nil, errors.New("请交班后再重新选择该支付方式")
-		}
-	} else {
-		return nil, errors.New("请交班后再重新选择该支付方式")
 	}
 
 	// 支付方式是否可用
@@ -963,14 +945,24 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
-			if err != nil {
-				return errors.WithMessage(err)
-			}
-			saleOrder.ErpProductsInvoiceName = res.ProductsInvoiceName
-			saleOrder.ErpMaterialInvoiceName = res.MaterialInvoiceName
-			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderErpInvoice(saleOrder.Uuid, saleOrder.ErpProductsInvoiceName, saleOrder.ErpMaterialInvoiceName); err != nil {
-				return errors.WithMessage(err)
+			if companySetting.IsErpSalesInvoiceMode() {
+				// Sales Invoice 模式: 异步创建 SI + PE（BMP consumer 成功后回写 shop 数据库）
+				_, err := s.SaveSalesInvoice(ctx, saleOrder, saleBill, db)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				// 更新 erp_sync_status=1（已入队待处理），SI/PE 名称由 BMP consumer 异步回写
+				if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderErpSyncStatus(saleOrder.Uuid, 1, "", ""); err != nil {
+					return errors.WithMessage(err)
+				}
+			} else {
+				// POS Invoice 模式（默认）
+				res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				// POS Invoice 结果不再持久化到 sale_order（已迁移到 SI 模式）
+				_ = res
 			}
 		}
 		return nil
@@ -1317,12 +1309,24 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
-			if err != nil {
-				return errors.WithMessage(err)
+			if companySetting.IsErpSalesInvoiceMode() {
+				// Sales Invoice 模式: 异步创建 SI + PE（BMP consumer 成功后回写 shop 数据库）
+				_, err := s.SaveSalesInvoice(ctx, saleOrder, saleBill, db)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				// 更新 erp_sync_status=1（已入队待处理），SI/PE 名称由 BMP consumer 异步回写
+				if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderErpSyncStatus(saleOrder.Uuid, 1, "", ""); err != nil {
+					return errors.WithMessage(err)
+				}
+			} else {
+				// POS Invoice 模式（默认）
+				res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				_ = res
 			}
-			saleOrder.ErpProductsInvoiceName = res.ProductsInvoiceName
-			saleOrder.ErpMaterialInvoiceName = res.MaterialInvoiceName
 		}
 
 		// 更新销售订单

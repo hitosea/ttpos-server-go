@@ -186,12 +186,14 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	if companySetting.IsHeadquarter() {
 		hqUuid = companySetting.CompanyUuid
 	}
-	// 查询总店指定仓库物品数量
 	hqDb := s.dbm.GetDB(hqUuid)
-	hqWarehouseItemRepo := repository.NewWarehouseItemRepo(hqDb)
-	warehouseItems, _ := hqWarehouseItemRepo.GetByWarehouseErpCode(req.WarehouseErpCode)
-	for _, warehouseItem := range warehouseItems {
-		availableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
+	// 兼容旧流程：有指定仓库时按仓库查询可采购数量
+	if req.WarehouseErpCode != "" {
+		hqWarehouseItemRepo := repository.NewWarehouseItemRepo(hqDb)
+		warehouseItems, _ := hqWarehouseItemRepo.GetByWarehouseErpCode(req.WarehouseErpCode)
+		for _, warehouseItem := range warehouseItems {
+			availableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
+		}
 	}
 
 	// 任务39419物品可见性,要求失效这个过滤功能
@@ -231,6 +233,59 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 
 	if err != nil {
 		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(err, "获取物品列表失败")
+	}
+
+	// 品牌采购新流程：无指定仓库时，按物品默认仓库查询可采购数量
+	if req.PurchaseType == 2 && req.WarehouseErpCode == "" && hqUuid != 0 && len(materials) > 0 {
+		itemCodes := make([]string, 0, len(materials))
+		itemCodeToUuid := make(map[string]uint64)
+		materialUuids := make([]uint64, 0, len(materials))
+		for _, material := range materials {
+			materialUuids = append(materialUuids, material.Uuid)
+			if material.Code != "" {
+				itemCodes = append(itemCodes, material.Code)
+				itemCodeToUuid[material.Code] = material.Uuid
+			}
+		}
+		hqCompanyAbbr := companySetting.ErpnextHeadquarterAbbr
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		itemWarehouses, erpErr := erpSrv.GetItemDefaultWarehouses(ctx, itemCodes, hqCompanyAbbr, false)
+		if erpErr == nil && len(itemWarehouses) > 0 {
+			warehouseErpCodes := make(map[string]bool)
+			for _, whErpCode := range itemWarehouses {
+				if whErpCode != "" {
+					warehouseErpCodes[whErpCode] = true
+				}
+			}
+			warehouseRepo := repository.NewWarehouseRepo(hqDb)
+			erpCodeToUuid := make(map[string]uint64)
+			for erpCode := range warehouseErpCodes {
+				wh, whErr := warehouseRepo.GetByErpCode(erpCode)
+				if whErr == nil && wh != nil {
+					erpCodeToUuid[erpCode] = wh.Uuid
+				}
+			}
+			materialWarehouseMap := make(map[uint64]uint64)
+			for itemCode, whErpCode := range itemWarehouses {
+				if materialUuid, ok := itemCodeToUuid[itemCode]; ok {
+					if warehouseUuid, ok := erpCodeToUuid[whErpCode]; ok {
+						materialWarehouseMap[materialUuid] = warehouseUuid
+					}
+				}
+			}
+			hqWarehouseItemRepo := repository.NewWarehouseItemRepo(hqDb)
+			stockByWarehouse, _ := hqWarehouseItemRepo.GetMaterialStockByWarehouse(materialUuids)
+			for _, stockResult := range stockByWarehouse {
+				if defaultWh, ok := materialWarehouseMap[stockResult.MaterialUuid]; ok && stockResult.WarehouseUuid == defaultWh {
+					availableQuantityMap[stockResult.MaterialUuid] = stockResult.Stock
+				}
+			}
+		} else if erpErr != nil {
+			logger.Logger.Warn("GetMaterialList-获取物品默认仓库失败，可采购数量将为0",
+				zap.Uint64("company_uuid", companySetting.CompanyUuid),
+				zap.Error(erpErr),
+			)
+		}
 	}
 
 	// 品牌采购：批量查询限购配置和禁止采购物品（避免 N+1 查询问题）
@@ -649,8 +704,8 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 			}
 			return material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
 		}(),
-		PurchaseUnitUuid:           material.PurchaseUnitUuid,
-		FromPurchaseUnitUuid:       fromPurchaseUnitUuid,
+		PurchaseUnitUuid:     material.PurchaseUnitUuid,
+		FromPurchaseUnitUuid: fromPurchaseUnitUuid,
 		CostUnitName: func() string {
 			if material.CostUnit == nil {
 				return ""

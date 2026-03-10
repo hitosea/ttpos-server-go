@@ -16,12 +16,12 @@ type IProductAttributeGroupRepo interface {
 	CreateProductAttributeGroup(productAttributeGroup model.ProductAttributeGroup) (uint64, error) // 创建产品属性组
 	CreateRecord(group *model.ProductAttributeGroup) error                                         // 仅创建属性组记录（不含多语言）
 	CreateBatch(groups []model.ProductAttributeGroup) error
-	GetMaxSort() (int, error)                                                                      // 获取最大排序值
+	GetMaxSort() (int, error) // 获取最大排序值
 	GetMaxSortWithScopes(scopes ...func(*gorm.DB) *gorm.DB) (int, error)
 	UpdateProductAttributeGroupData(data map[string]any, opts ...func(*gorm.DB) *gorm.DB) error
 	HardDeleteByHeadquarter() error
-	PluckHeadquarterUuids() ([]uint64, error) // 获取所有总部属性组UUID（不过滤delete_time）
-	DeleteProductAttributeGroup(id uint) error                                                     // 删除产品属性组
+	PluckHeadquarterUuids() ([]uint64, error)  // 获取所有总部属性组UUID（不过滤delete_time）
+	DeleteProductAttributeGroup(id uint) error // 删除产品属性组
 }
 
 // NewProductAttributeGroupRepo 创建新的产品属性组仓库

@@ -47,7 +47,7 @@ func (model *SaleBill) GetBuffetProductList() resp.BuffetProductList {
 		} else {
 			// 不存在，添加到列表
 			buffetProduct.Limit = buffetProduct.Limit * model.MealNum // 限制数量=单人限购数量*用餐人数
-			buffetProductMap[buffetProduct.Uuid] = len(list) // 记录该商品在list中的索引
+			buffetProductMap[buffetProduct.Uuid] = len(list)          // 记录该商品在list中的索引
 			list = append(list, buffetProduct)
 		}
 	}

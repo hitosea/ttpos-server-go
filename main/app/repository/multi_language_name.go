@@ -13,21 +13,21 @@ import (
 // IMultiLanguageNameRepo 定义多语言名称仓库接口
 type IMultiLanguageNameRepo interface {
 	IMultiLanguageNameQueryRepo
-	CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) (uint64, error)          // 创建多语言名称
-	CreateMultiLanguageNameDUPLICATE(multiLanguageName model.MultiLanguageName) (uint64, error) // 创建或更新多语言名称（ON DUPLICATE KEY UPDATE）
-	CreateMultiLanguageNameList(multiLanguageNames []model.MultiLanguageName) error             // 创建多语言名称列表
-	UpdateMultiLanguageName(id uint64, multiLanguageName model.MultiLanguageName) error         // 更新多语言名称
-	UpdateMultiLanguageNameData(data map[string]any, opts ...DBOption) error                    // 更新多语言名称数据
-	DeleteMultiLanguageName(id uint64) error                                                    // 删除多语言名称
-	DestroyMultiLanguageName(opts ...DBOption) error                                            // 销毁多语言名称
-	NotOverwriteMultiLanguageName(id uint64) error                                              // 不要覆盖多语言名称
+	CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) (uint64, error)                                                     // 创建多语言名称
+	CreateMultiLanguageNameDUPLICATE(multiLanguageName model.MultiLanguageName) (uint64, error)                                            // 创建或更新多语言名称（ON DUPLICATE KEY UPDATE）
+	CreateMultiLanguageNameList(multiLanguageNames []model.MultiLanguageName) error                                                        // 创建多语言名称列表
+	UpdateMultiLanguageName(id uint64, multiLanguageName model.MultiLanguageName) error                                                    // 更新多语言名称
+	UpdateMultiLanguageNameData(data map[string]any, opts ...DBOption) error                                                               // 更新多语言名称数据
+	DeleteMultiLanguageName(id uint64) error                                                                                               // 删除多语言名称
+	DestroyMultiLanguageName(opts ...DBOption) error                                                                                       // 销毁多语言名称
+	NotOverwriteMultiLanguageName(id uint64) error                                                                                         // 不要覆盖多语言名称
 	FindInBatches(batchSize int, fn func(batch []model.MultiLanguageName, batchRepo IMultiLanguageNameRepo) error, opts ...DBOption) error // 分批查询并处理
 }
 
 type IMultiLanguageNameQueryRepo interface {
 	GetMultiLanguageName(opts ...DBOption) (*model.MultiLanguageName, error)
-	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error)                                     // 获取多语言名称
-	GetMultiLanguageNameListByUuids(uuids []uint64) ([]*model.MultiLanguageName, error)                          // 根据UUID列表批量获取多语言名称
+	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error)                              // 获取多语言名称
+	GetMultiLanguageNameListByUuids(uuids []uint64) ([]*model.MultiLanguageName, error)                   // 根据UUID列表批量获取多语言名称
 	CountNameExistsByTable(tableName string, lang string, text string, excludeUuid uint64) (int64, error) // 按表名和语言查询多语言名称是否重复
 }
 

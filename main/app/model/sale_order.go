@@ -91,9 +91,12 @@ type SaleOrder struct {
 	Unit                         string  `gorm:"column:unit;type:varchar(255);default:0;comment:金额的单位,$-美元 ￥-人民币,用于显示订单金额价值" json:"unit"`
 
 	// erp相关
-	ErpProductsInvoiceName string  `gorm:"column:erp_products_invoice_name;type:varchar(255);comment:商品发票名称;NOT NULL" json:"erp_products_invoice_name"`
-	ErpMaterialInvoiceName string  `gorm:"column:erp_material_invoice_name;type:varchar(255);comment:原材料发票名称;NOT NULL" json:"erp_material_invoice_name"`
-	ErpDiscountAmount      float64 `gorm:"column:erp_discount_amount;type:decimal(12,2);default:0;comment:订单应收优惠金额，整单改价优惠掉的金额" json:"erp_discount_amount"`
+	ErpDiscountAmount    float64 `gorm:"column:erp_discount_amount;type:decimal(12,2);default:0;comment:订单应收优惠金额，整单改价优惠掉的金额" json:"erp_discount_amount"`
+	ErpSalesInvoiceName  string  `gorm:"column:erp_sales_invoice_name;type:varchar(255);default:'';comment:Sales Invoice名称" json:"erp_sales_invoice_name"`
+	ErpPaymentEntryNames string  `gorm:"column:erp_payment_entry_names;type:text;comment:Payment Entry名称(JSON)" json:"erp_payment_entry_names"`
+	ErpSyncStatus        int     `gorm:"column:erp_sync_status;type:tinyint(1);default:0;comment:ERP同步状态: 0=未同步 1=已入队 2=进行中 3=成功 4=失败" json:"erp_sync_status"`
+	ErpReverseCount      int     `gorm:"column:erp_reverse_count;type:int(11);default:0;comment:反结账次数" json:"erp_reverse_count"`
+	ErpStockDeducted     int     `gorm:"column:erp_stock_deducted;type:tinyint(1);default:0;comment:库存是否已通过StockEntry扣减" json:"erp_stock_deducted"`
 
 	// 关联对象
 	PaymentOrders                []*PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 支付订单，也叫付款单
@@ -1246,10 +1249,9 @@ func (model *SaleOrder) IsFreeSaleOrder() bool {
 	return model.IsFree == constant.SaleOrderIsFreeYes
 }
 
-// erp是否进行过反结账
+// IsErpReverseSettle erp是否需要反结账（已入队/进行中/成功 都需要取消）
 func (model *SaleOrder) IsErpReverseSettle() bool {
-	// 结账后saleOrder中就会记录下这两个发票名称
-	return model.ErpProductsInvoiceName != "" && model.ErpMaterialInvoiceName != ""
+	return model.ErpSyncStatus >= 1
 }
 
 // TableName 指定表名

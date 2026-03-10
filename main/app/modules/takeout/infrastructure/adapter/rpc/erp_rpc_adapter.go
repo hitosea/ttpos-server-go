@@ -49,6 +49,22 @@ func (a *ErpRpcAdapter) SavePosInvoice(
 	return resp, nil
 }
 
+// SaveSalesInvoice 保存 Sales Invoice 到 ERP（SI 模式替代 POS Invoice）
+func (a *ErpRpcAdapter) SaveSalesInvoice(
+	ctx appContext.Context,
+	req req.SaveSalesInvoiceReq,
+) (*selling.SaveSalesInvoiceResp, error) {
+	resp, err := erp.NewIErpSrv(a.dbm).SaveSalesInvoice(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 ERP SaveSalesInvoice 失败",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.String("order_no", req.OrderNo),
+			zap.Error(err))
+		return nil, errors.WithMessage(err, "保存 Sales Invoice 到 ERP 失败")
+	}
+	return resp, nil
+}
+
 // CancelPosInvoice 取消 POS Invoice
 // ctx 上下文（需包含 company、staff 等信息）
 // req 取消 POS Invoice 请求参数
@@ -71,5 +87,22 @@ func (a *ErpRpcAdapter) CancelPosInvoice(
 		return errors.WithMessage(err, "取消 POS Invoice 失败")
 	}
 
+	return nil
+}
+
+// CancelSalesInvoice 取消 Sales Invoice（SI 模式）
+func (a *ErpRpcAdapter) CancelSalesInvoice(
+	ctx appContext.Context,
+	req req.CancelSalesInvoiceReq,
+) error {
+	_, err := erp.NewIErpSrv(a.dbm).CancelSalesInvoice(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 ERP CancelSalesInvoice 失败",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.String("order_no", req.OrderNo),
+			zap.String("sales_invoice_name", req.SalesInvoiceName),
+			zap.Error(err))
+		return errors.WithMessage(err, "取消 Sales Invoice 失败")
+	}
 	return nil
 }

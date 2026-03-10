@@ -63,6 +63,11 @@ const (
 
 	// DocTypePrintFormat Print Format 文档类型
 	DocTypePrintFormat = "Print Format"
+
+	// DocTypeSalesInvoice Sales Invoice 文档类型
+	DocTypeSalesInvoice = "Sales Invoice"
+	// DocTypePaymentEntry Payment Entry 文档类型
+	DocTypePaymentEntry = "Payment Entry"
 )
 
 const (
@@ -91,6 +96,15 @@ const (
 
 const (
 	WarehouseTypeTransit = "Transit"
+)
+
+// 备用商品（外卖异常降级）
+const (
+	// SpareGoodsItemCode BY001 备用商品 Item Code
+	// 当外卖订单商品无法映射 ERP Item 时使用此备用商品落单
+	SpareGoodsItemCode = "BY001"
+	// SpareGoodsItemName BY001 备用商品名称
+	SpareGoodsItemName = "Spare goods"
 )
 
 // 税费模板文档类型
