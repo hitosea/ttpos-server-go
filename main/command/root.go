@@ -26,6 +26,7 @@ import (
 	"ttpos-server-go/pkg/gormcache"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/metrics"
 	"ttpos-server-go/pkg/otlp"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
@@ -246,6 +247,23 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 		// 添加记录特殊headers中间件
 		r.Use(otlp.RecordSpecialHeaders())
 	}
+	// Prometheus metrics
+	if config.Metrics.Enabled {
+		metrics.Init()
+		r.Use(metrics.Middleware())
+
+		// Expose metrics on separate port
+		metricsRouter := gin.New()
+		metricsRouter.GET("/metrics", metrics.Handler())
+
+		utils.Go(func() {
+			logger.Logger.Info("Metrics server started", zap.String("port", config.Metrics.Port))
+			if err := metricsRouter.Run(":" + config.Metrics.Port); err != nil {
+				logger.Logger.Error("Metrics server failed", zap.Error(err))
+			}
+		})
+	}
+
 	// 添加请求参数日志中间件
 	if config.Server.Mode == "debug" {
 		r.Use(gin.Logger(), middleware.Recovery(logger.Logger, config.Server.Mode))

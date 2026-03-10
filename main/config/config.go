@@ -28,6 +28,7 @@ var Nacos NacosConf
 var Takeout TakeoutConf
 var Rocketmq rocketmq.Config
 var Otlp *otlp.OtlpConfig
+var Metrics MetricsConf
 
 func Init() error {
 	// 加载 .env 文件
@@ -53,6 +54,7 @@ func Init() error {
 	nacosConf(opt)           // nacos配置
 	rocketmqConf(opt)        // rocketmq配置
 	takeoutConf(opt)         // 外卖配置
+	metricsConf(opt)         // Prometheus 监控配置
 	// 验证码
 	Captcha = CaptchaConf{CachePrefix: "captcha:"}
 	// 接口加密相关
@@ -269,6 +271,17 @@ func takeoutConf(opt copier.Option) {
 	copier.CopyWithOption(&Takeout, TakeoutConf{
 		TakeoutTtposSecret:    viper.GetString("TAKEOUT_TTPOS_SECRET"),
 		TakeoutLinemanStoreId: viper.GetUint64("TAKEOUT_LINEMAN_STORE_ID"),
+	}, opt)
+}
+
+func metricsConf(opt copier.Option) {
+	Metrics = MetricsConf{
+		Enabled: true,
+		Port:    "9090",
+	}
+	copier.CopyWithOption(&Metrics, MetricsConf{
+		Enabled: viper.GetBool("METRICS_ENABLED"),
+		Port:    viper.GetString("METRICS_PORT"),
 	}, opt)
 }
 
