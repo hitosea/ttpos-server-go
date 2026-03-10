@@ -590,6 +590,64 @@ func (h *OrderHandler) SendAuthCode(c *gin.Context) {
 	})
 }
 
+// GetMemberDineInOrderList 获取会员端堂食订单列表
+// @Summary 获取会员端堂食订单列表
+// @Description 获取会员端堂食订单列表，支持状态过滤（全部、待支付、进行中、已完成、已取消）
+// @Tags 会员端-堂食订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data query req.MemberDineInOrderListReq true "详情参数"
+// @Success 200 {object} resp.GetMemberDineInOrderListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/dine_in/list [get]
+func (h *OrderHandler) GetMemberDineInOrderList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.MemberDineInOrderListReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取会员端堂食订单列表
+	res, err := h.orderSrv.GetMemberDineInOrderList(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetMemberDineInOrderDetail 获取会员端堂食订单详情
+// @Summary 获取会员端堂食订单详情
+// @Description 获取会员端堂食订单详情，包含商品列表、金额信息、状态信息等
+// @Tags 会员端-堂食订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data query req.GetMemberDineInOrderDetailReq true "详情参数"
+// @Success 200 {object} resp.GetMemberDineInOrderDetailResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/dine_in/detail [get]
+func (h *OrderHandler) GetMemberDineInOrderDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetMemberDineInOrderDetailReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取会员端堂食订单详情
+	res, err := h.orderSrv.GetMemberDineInOrderDetail(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -629,6 +687,8 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/dine_in/pay", wrapper.PayDineInOrder)                         // 堂食订单提交支付
 		privateApi.GET("/order/dine_in/pay/info", wrapper.GetDineInOrderPayInfo)              // 堂食订单获取支付信息
 		privateApi.GET("/order/dine_in/pay/status", wrapper.GetDineInOrderPayStatus)          // 堂食订单获取支付状态
+		privateApi.GET("/order/dine_in/list", wrapper.GetMemberDineInOrderList)               // 获取堂食订单列表
+		privateApi.GET("/order/dine_in/detail", wrapper.GetMemberDineInOrderDetail)           // 获取堂食订单详情
 		privateApi.GET("/order/list", wrapper.GetMemberOrderList)                             // 获取会员端订单列表
 		privateApi.GET("/order/detail", wrapper.GetMemberOrderDetail)                         // 获取会员端订单详情
 		privateApi.GET("/order/payment/method/list", wrapper.GetMemberOrderPaymentMethodList) // 获取会员端订单支付方式列表

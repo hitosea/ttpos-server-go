@@ -171,3 +171,66 @@ type MemberOrderCoordinates struct {
 	Customer   OrderCoordinate `json:"customer"`    // 顾客
 	DriverInfo DriverInfoResp  `json:"driver_info"` // 骑手
 }
+
+// ==================== 会员端堂食订单 ====================
+
+// GetMemberDineInOrderListResp 会员端堂食订单列表响应
+type GetMemberDineInOrderListResp struct {
+	Meta dto.PageResponse       `json:"meta"`
+	List []MemberDineInOrder    `json:"list"` // 订单列表
+}
+
+// MemberDineInOrderStatusInfo 堂食订单状态信息
+type MemberDineInOrderStatusInfo struct {
+	Status       string `json:"status"`         // 订单状态：unpaid-待支付 inprogress-进行中(已支付,待接单/备餐中) completed-已完成(含部分退款/全部退款) cancelled-已取消(含已拒单)
+	StatusText   string `json:"status_text"`    // 状态文字（多语言）
+	H5Status     uint   `json:"h5_status"`      // H5订单状态：0-未下单 1-待接单 2-已接单 3-已拒单
+	H5StatusText string `json:"h5_status_text"` // H5状态文字（多语言）
+}
+
+// MemberDineInOrder 会员端堂食订单列表项
+type MemberDineInOrder struct {
+	SaleBillUuid  uint64                      `json:"sale_bill_uuid"`  // 销售账单UUID
+	CompanyName   string                      `json:"company_name"`    // 商家名称
+	SerialNo      string                      `json:"serial_no"`       // 取餐号
+	OrderNo       string                      `json:"order_no"`        // 订单编号
+	StatusInfo    MemberDineInOrderStatusInfo `json:"status_info"`     // 状态信息
+	DiningMethod  uint                        `json:"dining_method"`   // 用餐方式：0-堂食 1-打包
+	Num           float64                     `json:"num"`             // 商品数量
+	Amount        float64                     `json:"amount"`          // 订单金额（应付金额）
+	ProductAmount float64                     `json:"product_amount"`  // 商品金额
+	CreateTime    int64                       `json:"create_time"`     // 下单时间
+	ProductList   []MemberOrderProduct        `json:"product_list"`    // 商品列表（前3个）
+}
+
+// GetMemberDineInOrderDetailResp 会员端堂食订单详情响应
+type GetMemberDineInOrderDetailResp struct {
+	SaleBillUuid         uint64                      `json:"sale_bill_uuid"`          // 销售账单UUID
+	CompanyName          string                      `json:"company_name"`            // 商家名称
+	CompanyAddress       string                      `json:"company_address"`         // 商家地址
+	CompanyPhone         string                      `json:"company_phone"`           // 商家电话
+	SerialNo             string                      `json:"serial_no"`               // 取餐号
+	OrderNo              string                      `json:"order_no"`                // 订单编号
+	StatusInfo           MemberDineInOrderStatusInfo `json:"status_info"`             // 状态信息
+	DiningMethod         uint                        `json:"dining_method"`           // 用餐方式：0-堂食 1-打包
+	Remark               string                      `json:"remark"`                  // 订单备注
+	CreateTime           int64                       `json:"create_time"`             // 下单时间
+	PayTime              int64                       `json:"pay_time"`                // 支付时间
+	FinishTime           int64                       `json:"finish_time"`             // 完成时间
+	CancelTime           int64                       `json:"cancel_time"`             // 取消时间
+	RemainingPaymentTime int64                       `json:"remaining_payment_time"`  // 剩余支付时间（秒）
+	AmountInfo           MemberDineInOrderAmountInfo `json:"amount_info"`             // 金额信息
+	ProductList          MemberProductList           `json:"product_list"`            // 商品列表
+}
+
+// MemberDineInOrderAmountInfo 堂食订单金额信息
+type MemberDineInOrderAmountInfo struct {
+	ProductAmount     float64 `json:"product_amount"`      // 商品金额
+	DiscountAmount    float64 `json:"discount_amount"`     // 优惠金额
+	ServiceFee        float64 `json:"service_fee"`         // 服务费
+	TaxFee            float64 `json:"tax_fee"`             // 税费
+	PackageFee        float64 `json:"package_fee"`         // 打包费
+	Amount            float64 `json:"amount"`              // 应付金额
+	PaidAmount        float64 `json:"paid_amount"`         // 已付金额
+	PaymentMethodName string  `json:"payment_method_name"` // 支付方式名称
+}

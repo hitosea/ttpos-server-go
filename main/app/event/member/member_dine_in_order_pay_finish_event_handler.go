@@ -28,8 +28,12 @@ func PayFinishMemberDineInOrderEventHandler() {
 		// 生成 h5_order 记录，用于在收银机接单列表中显示
 		event.NewSystemBus().SubscribePayFinishMemberDineInOrderEvent(createH5OrderForMemberDineIn)
 
-		// 执行送厨和结账逻辑
-		// event.NewSystemBus().SubscribePayFinishMemberDineInOrderEvent(cookingAndFinishMemberDineInOrder)
+		// 支付完成后尝试自动接单（如果开启且符合条件）
+		// 自动接单会同时完成接单和送厨
+		event.NewSystemBus().SubscribePayFinishMemberDineInOrderEvent(autoAcceptMemberDineInOrder)
+
+		// 支付完成后将订单标记为已完成（仅当未自动接单时生效）
+		event.NewSystemBus().SubscribePayFinishMemberDineInOrderEvent(markMemberDineInOrderComplete)
 	})
 }
 
@@ -149,7 +153,180 @@ func createH5OrderForMemberDineIn(payload event.PayFinishMemberDineInOrderPayloa
 		zap.String("deskNo", saleBill.SerialNo))
 }
 
-// cookingAndFinishMemberDineInOrder 执行送厨和结账逻辑
+// autoAcceptMemberDineInOrder 自动接单会员端堂食订单
+// 如果开启了会员订单自动接单且订单金额在限额内，自动完成接单和送厨
+func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload) {
+	dbm := database.GetDBManager(config.DatabaseConf{})
+	db := dbm.GetDB(payload.CompanyUuid)
+
+	// 获取收银设置，检查是否开启会员订单自动接单
+	settingSrv := setting.NewSrv(dbm, cache.Global)
+	cashierSetting, err := settingSrv.GetCashierSetting(payload.Ctx, nil)
+	if err != nil {
+		logger.Logger.Error("autoAcceptMemberDineInOrder, GetCashierSetting failed",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+			zap.Error(err))
+		return
+	}
+
+	// 检查是否开启会员订单自动接单
+	if !cashierSetting.IsAutoMemberOrderBool() {
+		logger.Logger.Info("autoAcceptMemberDineInOrder, auto accept not enabled",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("saleBillUuid", payload.SaleBillUuid))
+		return
+	}
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(payload.SaleBillUuid)
+	if err != nil {
+		logger.Logger.Error("autoAcceptMemberDineInOrder, GetSaleBillAllInfo failed",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+			zap.Error(err))
+		return
+	}
+
+	// 检查订单金额是否在自动接单限额内
+	orderAmount := saleBill.Amount
+	limitAmount := cashierSetting.AutoMemberOrderLimitValue()
+	if orderAmount > limitAmount {
+		logger.Logger.Info("autoAcceptMemberDineInOrder, order amount exceeds limit",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+			zap.Float64("orderAmount", orderAmount),
+			zap.Float64("limitAmount", limitAmount))
+		return
+	}
+
+	// 获取 H5 订单 UUID（由 createH5OrderForMemberDineIn 创建）
+	h5OrderRepo := repository.NewH5OrderRepo(db)
+	h5Order, err := h5OrderRepo.GetH5Order(
+		h5OrderRepo.WhereSaleBillUuid(payload.SaleBillUuid),
+		h5OrderRepo.WhereOrderType(constant.H5OrderTypeMemberDineIn),
+	)
+	if err != nil {
+		logger.Logger.Error("autoAcceptMemberDineInOrder, GetH5OrderInfo failed",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+			zap.Error(err))
+		return
+	}
+
+	// 检查 H5 订单状态，只有待接单状态才能自动接单
+	if h5Order.Status != constant.H5OrderStatusOrder {
+		logger.Logger.Info("autoAcceptMemberDineInOrder, h5 order status is not pending",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("h5OrderUuid", h5Order.Uuid),
+			zap.Uint("status", h5Order.Status))
+		return
+	}
+
+	// 初始化订单服务
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	localeSrv := service.NewLocaleSrv()
+	mustPlanSrv := service.NewMustPlanSrv(dbm)
+	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
+	memberSrv := service.NewMemberSrv(dbm, cache.Global)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
+
+	// 设置上下文来源为会员端
+	payload.Ctx.SetSource(constant.SourceMember)
+
+	// 执行自动接单（同时完成接单和送厨）
+	result, err := orderSrv.AcceptH5Order(payload.Ctx, h5Order.Uuid, true)
+	if err != nil {
+		logger.Logger.Error("autoAcceptMemberDineInOrder, AcceptH5Order failed",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("h5OrderUuid", h5Order.Uuid),
+			zap.Error(err))
+		return
+	}
+	if result != nil {
+		logger.Logger.Warn("autoAcceptMemberDineInOrder, AcceptH5Order check failed",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("h5OrderUuid", h5Order.Uuid),
+			zap.Any("result", result))
+		return
+	}
+
+	logger.Logger.Info("autoAcceptMemberDineInOrder, auto accept success",
+		zap.Uint64("company_uuid", payload.CompanyUuid),
+		zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+		zap.Uint64("h5OrderUuid", h5Order.Uuid),
+		zap.Float64("orderAmount", orderAmount))
+}
+
+// markMemberDineInOrderComplete 支付完成后将订单标记为已完成
+// 会员端堂食订单支付完成后，直接将 SaleBill 和 SaleOrder 状态设置为已完成
+func markMemberDineInOrderComplete(payload event.PayFinishMemberDineInOrderPayload) {
+	dbm := database.GetDBManager(config.DatabaseConf{})
+	db := dbm.GetDB(payload.CompanyUuid)
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(payload.SaleBillUuid)
+	if err != nil {
+		logger.Logger.Error("markMemberDineInOrderComplete, GetSaleBillAllInfo failed",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+			zap.Error(err))
+		return
+	}
+
+	// 检查订单状态，避免重复处理
+	if saleBill.Status == constant.SaleBillStatusComplete {
+		logger.Logger.Info("markMemberDineInOrderComplete, order already completed",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("saleBillUuid", payload.SaleBillUuid))
+		return
+	}
+
+	now := time.Now().Unix()
+
+	// 更新 SaleBill 状态为已完成
+	saleBill.Status = constant.SaleBillStatusComplete
+	saleBill.FinishTime = now
+
+	// 更新 SaleOrder 状态为已完成
+	for _, saleOrder := range saleBill.SaleOrders {
+		saleOrder.Status = constant.SaleOrderStatusFinish
+		saleOrder.FinishTime = now
+	}
+
+	// 保存到数据库
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		saleBillRepo := repository.NewSaleBillRepo(tx)
+		saleOrderRepo := repository.NewSaleOrderRepo(tx)
+
+		// 更新 SaleBill
+		if err := saleBillRepo.UpdateSaleBillRecord(*saleBill); err != nil {
+			return err
+		}
+
+		// 更新 SaleOrder
+		for _, saleOrder := range saleBill.SaleOrders {
+			if err := saleOrderRepo.UpdateSaleOrderRecord(*saleOrder); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}); err != nil {
+		logger.Logger.Error("markMemberDineInOrderComplete, update order status failed",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+			zap.Error(err))
+		return
+	}
+
+	logger.Logger.Info("markMemberDineInOrderComplete, order marked as completed",
+		zap.Uint64("company_uuid", payload.CompanyUuid),
+		zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+		zap.Uint64("saleOrderUuid", payload.SaleOrderUuid))
+}
+
+// cookingAndFinishMemberDineInOrder 执行送厨和结账逻辑（备用，当前未使用）
 func cookingAndFinishMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload) {
 	dbm := database.GetDBManager(config.DatabaseConf{})
 	db := dbm.GetDB(payload.CompanyUuid)
