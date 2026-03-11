@@ -648,6 +648,35 @@ func (h *OrderHandler) GetMemberDineInOrderDetail(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// MockPayDineInOrderCallback 模拟堂食订单支付完成回调
+// @Summary 模拟堂食订单支付完成回调（仅测试用）
+// @Description 该接口仅在调试/测试模式下可用，用于模拟支付完成后的回调流程
+// @Tags 会员端-堂食订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MockPayDineInOrderCallbackReq true "请求参数"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/dine_in/pay/mock_callback [post]
+func (h *OrderHandler) MockPayDineInOrderCallback(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.MockPayDineInOrderCallbackReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 执行模拟支付回调
+	err := h.orderSrv.MockPayDineInOrderCallback(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, nil)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -695,5 +724,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)                                 // 取消订单
 		privateApi.POST("/order/send_auth_code", wrapper.SendAuthCode)                        // 发送认证验证码
 		privateApi.GET("/order/rider", wrapper.GetRiderInfo)                                  // 获取骑手信息，以及商家、会员坐标
+		privateApi.POST("/order/dine_in/pay/mock_callback", wrapper.MockPayDineInOrderCallback) // 模拟堂食订单支付回调（仅测试用）
 	}
 }

@@ -83,6 +83,9 @@ type IMemberOrderSrv interface {
 	// 会员端堂食订单管理
 	GetMemberDineInOrderList(ctx context.Context, req req.MemberDineInOrderListReq) (*resp.GetMemberDineInOrderListResp, error)          // 获取会员端堂食订单列表
 	GetMemberDineInOrderDetail(ctx context.Context, req req.GetMemberDineInOrderDetailReq) (*resp.GetMemberDineInOrderDetailResp, error) // 获取会员端堂食订单详情
+
+	// 测试用接口
+	MockPayDineInOrderCallback(ctx context.Context, req req.MockPayDineInOrderCallbackReq) error // 模拟堂食订单支付完成回调（仅用于测试）
 }
 
 func (s *orderSrv) CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64) error {
@@ -3267,4 +3270,72 @@ func (s *orderSrv) getMemberDineInOrderStatusInfo(saleBill *model.SaleBill, h5Or
 		Status:     status,
 		StatusText: statusText,
 	}
+}
+
+// MockPayDineInOrderCallback 模拟堂食订单支付完成回调（仅用于测试）
+// 该方法用于在支付服务尚未就绪时，手动触发支付完成的后续流程
+func (s *orderSrv) MockPayDineInOrderCallback(ctx context.Context, request req.MockPayDineInOrderCallbackReq) error {
+	// 仅在调试模式下允许使用
+	if config.Server.Mode != "debug" && config.Server.Mode != "test" {
+		return errors.New("该接口仅在调试/测试模式下可用")
+	}
+
+	db := ctx.GetDB()
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取订单信息失败")
+	}
+
+	// 验证订单来源
+	if saleBill.Source != constant.SaleBillSourceMember {
+		return errors.New("该订单不是会员端堂食订单")
+	}
+
+	// 验证订单状态（必须是待支付状态）
+	if saleBill.Status != constant.SaleBillStatusPending {
+		return errors.New("订单状态不是待支付，无法模拟支付回调")
+	}
+
+	// 获取第一个 SaleOrder
+	saleOrder := saleBill.GetFirstSaleOrder()
+	if saleOrder == nil {
+		return errors.New("未找到销售订单")
+	}
+
+	// 模拟更新支付相关字段
+	paymentAmount := saleBill.Amount
+
+	// 更新数据库
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		if err := tx.Model(&model.SaleBill{}).Where("uuid = ?", saleBill.Uuid).Updates(map[string]any{
+			"payment_amount": paymentAmount,
+		}).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err, "更新订单支付信息失败")
+	}
+
+	// 发布支付完成事件，触发后续流程（创建 h5_order、自动接单、标记完成等）
+	event.NewSystemBus().PublishPayFinishMemberDineInOrderEvent(event.PayFinishMemberDineInOrderPayload{
+		BasePayload: event.BasePayload{
+			Ctx:           ctx,
+			CompanyUuid:   ctx.GetCompanyUuid(),
+			Source:        constant.SourceMember,
+			SaleBillUuid:  saleBill.Uuid,
+			SaleOrderUuid: saleOrder.Uuid,
+			MemberUuid:    ctx.GetMemberUuid(),
+		},
+		PaymentOrderUuid: 0, // 模拟回调没有实际的支付单
+	})
+
+	logger.Logger.Info("MockPayDineInOrderCallback, 模拟支付回调成功",
+		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+		zap.Uint64("sale_bill_uuid", saleBill.Uuid),
+		zap.Uint64("sale_order_uuid", saleOrder.Uuid))
+
+	return nil
 }
