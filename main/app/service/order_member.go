@@ -416,7 +416,7 @@ func (s *orderSrv) PayDineInOrder(ctx context.Context, request req.PayDineInOrde
 
 	// 验证订单金额
 	if saleOrder.Amount < 1 {
-		return errors.New("订单金额小于1，无法支付")
+		return errors.NewWithCode(constant.CodeOrderAmountLessThan1, "订单金额小于1，无法支付")
 	}
 
 	// 验证支付方式
@@ -3129,8 +3129,8 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 			LocaleName:          product.GetLocaleName(),
 			LocaleAttributeName: product.GetAttributeName(),
 			Num:                 product.Num,
-			Price:               product.SalePrice,       // 折前单价
-			TotalPrice:          product.GetSalePrice(),  // 折前总价 = 单价 * 数量
+			Price:               product.SalePrice,      // 折前单价
+			TotalPrice:          product.GetSalePrice(), // 折前总价 = 单价 * 数量
 			Image: func() string {
 				if product.ImageFile == nil {
 					return ""
