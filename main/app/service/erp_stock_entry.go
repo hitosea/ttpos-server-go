@@ -537,6 +537,10 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 // 匹配模式：Item Code: <strong>WPR3685375438618625</strong>
 var stockEntryErrorItemCodeRegex = regexp.MustCompile(`Item Code: <strong>([^<]+)</strong>`)
 
+// stockEntryNegativeStockRegex 匹配 ERPNext NegativeStockError 中的 item_code
+// 匹配模式：<a href="...">Item TEST-INSUF-STOCK: Test Insufficient Stock</a> needed in
+var stockEntryNegativeStockRegex = regexp.MustCompile(`>Item ([^:<]+?)(?::[^<]*)?\s*</a>\s*needed in`)
+
 // stockEntryNotStockItemRegex 匹配 ERPNext "is not a stock Item" 错误中的 item_code
 // 匹配模式：SP3700735403493377_01 is not a stock Item
 var stockEntryNotStockItemRegex = regexp.MustCompile(`(\S+) is not a stock Item`)
@@ -558,16 +562,26 @@ func parseStockEntryErrorItemCodes(errMsg string) []string {
 	seen := make(map[string]bool)
 	var codes []string
 
-	// BMP 会包装 ERPNext 错误为 "...调用erp接口返回异常:ValidationError;..." 格式
-	// 提取 "ValidationError;" 后的原始 ERPNext 错误消息，避免中文前缀干扰正则匹配
-	if idx := strings.Index(errMsg, "ValidationError;"); idx >= 0 {
-		errMsg = errMsg[idx+len("ValidationError;"):]
+	// BMP 会包装 ERPNext 错误为 "...调用erp接口返回异常:{ErrorType};..." 格式
+	// 提取 "{ErrorType};" 后的原始 ERPNext 错误消息，避免中文前缀干扰正则匹配
+	// 常见 ErrorType: ValidationError, NegativeStockError 等
+	if idx := strings.Index(errMsg, "Error;"); idx >= 0 {
+		errMsg = errMsg[idx+len("Error;"):]
 	}
 
-	// 匹配库存不足: Item Code: <strong>XXX</strong>
+	// 匹配库存不足(格式1): Item Code: <strong>XXX</strong>
 	for _, m := range stockEntryErrorItemCodeRegex.FindAllStringSubmatch(errMsg, -1) {
 		code := m[1]
 		if !seen[code] {
+			seen[code] = true
+			codes = append(codes, code)
+		}
+	}
+
+	// 匹配库存不足(格式2/NegativeStockError): <a href="...">Item XXX: YYY</a> needed in
+	for _, m := range stockEntryNegativeStockRegex.FindAllStringSubmatch(errMsg, -1) {
+		code := strings.TrimSpace(m[1])
+		if code != "" && !seen[code] {
 			seen[code] = true
 			codes = append(codes, code)
 		}
