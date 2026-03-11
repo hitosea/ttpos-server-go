@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "Store Qty",
+  "fieldname": "custom_store_qty",
+  "fieldtype": "Float",
+  "insert_after": "custom_qty_available_for_purchase",
+  "in_list_view": 1,
+  "dt": "Purchase Order Item"
+}

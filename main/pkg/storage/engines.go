@@ -35,7 +35,7 @@ func NewGoogleEngine(config *GoogleConfig) (StorageEngine, error) {
 	}
 
 	// 设置凭证文件路径
-	g.credentialsPath = filepath.Join("../certificate", config.CredentialsFile)
+	g.credentialsPath = "/home/coder/workspaces/ttpos-server-go/docker/certificate/credentials.json" // filepath.Join("../certificate", config.CredentialsFile)
 
 	// 检查凭证文件是否存在
 	if _, err := os.Stat(g.credentialsPath); os.IsNotExist(err) {

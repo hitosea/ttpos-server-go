@@ -5,6 +5,8 @@ import (
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/item"
+	"ttpos-bmp/app/ttpos-erp/api/stock"
+	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
@@ -45,6 +47,10 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 
 	purchaseOrder := &erp.PurchaseOrder{}
 	j.GetJson("data").Scan(purchaseOrder)
+
+	// 补写 PO Item 自定义字段（ERPNext make_purchase_order 不会从 MR 携带自定义字段）
+	s.fillPurchaseOrderItemCustomFields(ctx, purchaseOrder, req)
+
 	//修改货币类型
 	purchaseOrder.Currency = purchaseOrder.PriceListCurrency
 	purchaseOrder.Supplier = req.Supplier
@@ -109,6 +115,105 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 		return nil, gerror.Wrapf(err, "提交采购订单失败")
 	}
 	return
+}
+
+// fillPurchaseOrderItemCustomFields 补写 PO Item 自定义字段
+// ERPNext 的 make_purchase_order（MR→PO）不会携带自定义字段，需在 PO 创建前手动设置
+func (s *sBuying) fillPurchaseOrderItemCustomFields(ctx context.Context, purchaseOrder *erp.PurchaseOrder, req *dto.CreatePurchaseFromMqReq) {
+	if len(purchaseOrder.Items) == 0 {
+		return
+	}
+
+	// 收集 PO 物品编码
+	itemCodes := make([]string, 0, len(purchaseOrder.Items))
+	for _, poItem := range purchaseOrder.Items {
+		if poItem.ItemCode != "" {
+			itemCodes = append(itemCodes, poItem.ItemCode)
+		}
+	}
+	if len(itemCodes) == 0 {
+		return
+	}
+
+	availableQtyMap := make(map[string]float64) // item_code -> 总店默认仓库库存
+	storeQtyMap := make(map[string]float64)     // item_code -> 门店所有仓库库存
+
+	// 查询总店物品默认仓库库存（custom_qty_available_for_purchase）
+	if req.SourceCompanyAbbr != "" {
+		itemWarehouses, err := service.Item().GetItemDefaultWarehouses(ctx, itemCodes, req.SourceCompanyAbbr, false)
+		if err != nil {
+			g.Log().Warningf(ctx, "fillPurchaseOrderItemCustomFields-查询总店物品默认仓库失败: %v", err)
+		} else {
+			// 按仓库分组，相同仓库的物品一次查询
+			warehouseItemCodes := make(map[string][]string)
+			for _, itemCode := range itemCodes {
+				whName, ok := itemWarehouses[itemCode]
+				if !ok || whName == "" {
+					continue
+				}
+				warehouseItemCodes[whName] = append(warehouseItemCodes[whName], itemCode)
+			}
+			for whName, codes := range warehouseItemCodes {
+				binResp, err := service.Stock().GetBin(ctx, &stock.GetBinReq{
+					Warehouse: whName,
+				})
+				if err != nil {
+					g.Log().Warningf(ctx, "fillPurchaseOrderItemCustomFields-查询仓库Bin失败: warehouse=%s, err=%v", whName, err)
+					continue
+				}
+				binMap := make(map[string]float64)
+				for _, bin := range binResp.Items {
+					binMap[bin.ItemCode] = bin.ActualQty
+				}
+				for _, itemCode := range codes {
+					if qty, ok := binMap[itemCode]; ok {
+						availableQtyMap[itemCode] = qty
+					}
+				}
+			}
+		}
+	}
+
+	// 查询门店所有仓库库存（custom_store_qty）
+	if req.CompanyAbbr != "" {
+		warehouseResp, err := service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
+			CompanyAbbr: req.CompanyAbbr,
+		})
+		if err != nil {
+			g.Log().Warningf(ctx, "fillPurchaseOrderItemCustomFields-查询门店仓库列表失败: %v", err)
+		} else if len(warehouseResp.WarehouseList) > 0 {
+			for _, wh := range warehouseResp.WarehouseList {
+				binResp, err := service.Stock().GetBin(ctx, &stock.GetBinReq{
+					Warehouse: wh.Name,
+				})
+				if err != nil {
+					continue
+				}
+				for _, bin := range binResp.Items {
+					storeQtyMap[bin.ItemCode] += bin.ActualQty
+				}
+			}
+		}
+	}
+
+	// 设置自定义字段到 PO Items（按 PO Item 的 UOM 换算）
+	// Bin 的 ActualQty 是 stock_uom，PO Item 的 qty 是 uom
+	// conversion_factor = stock_uom / uom，即 display_qty = stock_qty / conversion_factor
+	for _, poItem := range purchaseOrder.Items {
+		cf := poItem.ConversionFactor
+		if cf <= 0 {
+			cf = 1
+		}
+		if qty, ok := req.ItemLastPurchaseQty[poItem.ItemCode]; ok && qty > 0 {
+			poItem.CustomLastPurchaseQty = qty
+		}
+		if qty, ok := availableQtyMap[poItem.ItemCode]; ok {
+			poItem.CustomQtyAvailableForPurchase = qty / cf
+		}
+		if qty, ok := storeQtyMap[poItem.ItemCode]; ok {
+			poItem.CustomStoreQty = qty / cf
+		}
+	}
 }
 
 // CreateInnerSaleOrderFromPurchaseOrder 创建内部销售订单

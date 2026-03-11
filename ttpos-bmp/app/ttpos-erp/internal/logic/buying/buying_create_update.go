@@ -186,6 +186,11 @@ func (s *sBuying) buildCreatePurchaseOrderData(ctx context.Context, req *buying.
 			itemData.Warehouse = purchaseOrderData.SetWarehouse
 		}
 
+		// 自定义字段：上次采购数量（由TTPOS传入）
+		if item.CustomLastPurchaseQty > 0 {
+			itemData.CustomLastPurchaseQty = item.CustomLastPurchaseQty
+		}
+
 		items = append(items, itemData)
 	}
 	purchaseOrderData.Items = items

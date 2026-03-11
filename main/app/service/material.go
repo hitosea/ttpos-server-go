@@ -332,6 +332,21 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		}
 	}
 
+	// 品牌采购：查询上次完成的品牌采购基准单位数量
+	lastPurchaseBaseQtyMap := make(map[uint64]float64)
+	if req.PurchaseType == 2 && len(materials) > 0 {
+		matUuids := make([]uint64, 0, len(materials))
+		for _, material := range materials {
+			matUuids = append(matUuids, material.Uuid)
+		}
+		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(s.dbm.GetDB(dbId))
+		var lpErr error
+		lastPurchaseBaseQtyMap, lpErr = purchaseOrderItemRepo.GetLastCompletedBrandPurchaseBaseQty(matUuids)
+		if lpErr != nil {
+			logger.Logger.Warn("查询上次品牌采购数量失败", zap.Error(lpErr))
+		}
+	}
+
 	// 获取可见性过滤配置
 	var visibleCategoryUuidSet map[uint64]struct{}
 	var needVisibilityFilter bool
@@ -512,6 +527,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			AllowNegativeStock:         material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
 			AvailableQuantity:          decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
 			StoreQuantity:              stockNum,
+			LastPurchaseQuantity:       decimal.NewFromFloat(lastPurchaseBaseQtyMap[material.Uuid]).Round(3).InexactFloat64(),
 			QuotaConfig: func() material_resp.MaterialQuotaConfig {
 				if req.PurchaseType != 2 {
 					return material_resp.MaterialQuotaConfig{
@@ -580,6 +596,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				if unit.ConversionRate != 0 {
 					respMaterial.AvailableQuantity = decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 					respMaterial.StoreQuantity = decimal.NewFromFloat(stockNum).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+					respMaterial.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseBaseQtyMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 				}
 			}
 		}

@@ -1019,6 +1019,9 @@ definitions:
       internal_code:
         description: 内部编码
         type: string
+      last_purchase_quantity:
+        description: 上次采购数量（默认销售单位）
+        type: number
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -12632,6 +12635,64 @@ definitions:
           $ref: '#/definitions/resp.MemberCashierOrder'
         type: array
     type: object
+  resp.GetMemberDineInOrderDetailResp:
+    properties:
+      amount_info:
+        allOf:
+        - $ref: '#/definitions/resp.MemberDineInOrderAmountInfo'
+        description: 金额信息
+      cancel_time:
+        description: 取消时间
+        type: integer
+      company_name:
+        description: 商家名称
+        type: string
+      create_time:
+        description: 下单时间
+        type: integer
+      dining_method:
+        description: 用餐方式：0-堂食 1-打包
+        type: integer
+      order_no:
+        description: 订单编号
+        type: string
+      pay_time:
+        description: 支付时间
+        type: integer
+      product_list:
+        allOf:
+        - $ref: '#/definitions/resp.MemberDineInOrderProductList'
+        description: 商品列表
+      refund_amount:
+        description: 退款金额（用于显示"已退款 ¥xx"）
+        type: number
+      remaining_payment_time:
+        description: 剩余支付时间（秒）
+        type: integer
+      remark:
+        description: 订单备注
+        type: string
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      serial_no:
+        description: 取餐号
+        type: string
+      status_info:
+        allOf:
+        - $ref: '#/definitions/resp.MemberDineInOrderStatusInfo'
+        description: 状态信息
+    type: object
+  resp.GetMemberDineInOrderListResp:
+    properties:
+      list:
+        description: 订单列表
+        items:
+          $ref: '#/definitions/resp.MemberDineInOrder'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
   resp.GetMemberOrderDetailResp:
     properties:
       address_info:
@@ -13504,6 +13565,107 @@ definitions:
       status_group:
         description: 订单状态分组. "unaccept" 待接单, "accept" 备餐中, "undelivery" 待配送, "delivery"
           配送中, "completed" 已完成, "cancel" 已取消
+        type: string
+    type: object
+  resp.MemberDineInOrder:
+    properties:
+      amount:
+        description: 订单金额（应付金额）
+        type: number
+      company_name:
+        description: 商家名称
+        type: string
+      create_time:
+        description: 下单时间
+        type: integer
+      dining_method:
+        description: 用餐方式：0-堂食 1-打包
+        type: integer
+      num:
+        description: 商品数量
+        type: number
+      order_no:
+        description: 订单编号
+        type: string
+      product_amount:
+        description: 商品金额
+        type: number
+      product_list:
+        description: 商品列表（前3个）
+        items:
+          $ref: '#/definitions/resp.MemberOrderProduct'
+        type: array
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      serial_no:
+        description: 取餐号
+        type: string
+      status_info:
+        allOf:
+        - $ref: '#/definitions/resp.MemberDineInOrderStatusInfo'
+        description: 状态信息
+    type: object
+  resp.MemberDineInOrderAmountInfo:
+    properties:
+      amount:
+        description: 应付金额
+        type: number
+      discount_amount:
+        description: 优惠金额
+        type: number
+      payment_method_name:
+        description: 支付方式名称
+        type: string
+      service_fee:
+        description: 服务费
+        type: number
+      tax_fee:
+        description: 税费
+        type: number
+    type: object
+  resp.MemberDineInOrderProduct:
+    properties:
+      image:
+        description: 商品图片
+        type: string
+      locale_attribute_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      num:
+        description: 数量
+        type: number
+      price:
+        description: 单价（折前）
+        type: number
+      refund_amount:
+        description: 退款金额（0表示未退款）
+        type: number
+      total_price:
+        description: 总价（折前）= 单价 * 数量
+        type: number
+    type: object
+  resp.MemberDineInOrderProductList:
+    properties:
+      list:
+        description: 商品列表
+        items:
+          $ref: '#/definitions/resp.MemberDineInOrderProduct'
+        type: array
+    type: object
+  resp.MemberDineInOrderStatusInfo:
+    properties:
+      status:
+        description: 订单状态：unpaid-待支付 pending-待接单 preparing-备餐中 completed-已完成 partial_refund-部分退款
+          full_refund-全部退款 cancelled-已取消 rejected-已拒单
+        type: string
+      status_text:
+        description: 状态文字（多语言）
         type: string
     type: object
   resp.MemberDiscountResp:
@@ -16123,6 +16285,9 @@ definitions:
       internal_code:
         description: 内部编码
         type: string
+      last_purchase_quantity:
+        description: 上次采购数量（默认销售单位）
+        type: number
       locale_base_unit_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -16152,7 +16317,10 @@ definitions:
         description: 规格
         type: string
       store_quantity:
-        description: 门店数量
+        description: 当前实时门店库存
+        type: number
+      store_snapshot_quantity:
+        description: 申请时门店库存（默认销售单位）
         type: number
       unit_conversion_rate:
         description: 基准单位转换率
@@ -33737,6 +33905,31 @@ paths:
       summary: 创建会员端堂食订单
       tags:
       - 会员端-订单
+  /member/order/dine_in/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取会员端堂食订单详情，包含商品列表、金额信息、状态信息等
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.GetMemberDineInOrderDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取会员端堂食订单详情
+      tags:
+      - 会员端-堂食订单
   /member/order/dine_in/dining_method:
     post:
       consumes:
@@ -33791,6 +33984,42 @@ paths:
       summary: 获取堂食订单提交表单信息
       tags:
       - 会员端-订单
+  /member/order/dine_in/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取会员端堂食订单列表，支持状态过滤（全部、待支付、进行中、已完成、已取消）
+      parameters:
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1100
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: '状态: "all" 全部, "unpaid" 待支付, "inprogress" 进行中(已支付,待接单/备餐中), "completed"
+          已完成(含部分退款/全部退款), "cancelled" 已取消(含已拒单)'
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.GetMemberDineInOrderListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取会员端堂食订单列表
+      tags:
+      - 会员端-堂食订单
   /member/order/dine_in/pay:
     post:
       consumes:

@@ -55,12 +55,23 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 
 	//note 下面的交易时间是系统生成的默认是改不了的 transactionDate
 	if len(req.Purpose) == 0 || req.Purpose == erp.StockEntryTypePurchase {
+		// 构建物品上次采购数量映射（由TTPOS传入，需透传到PO自定义字段）
+		itemLastPurchaseQty := make(map[string]float64)
+		for _, item := range req.Items {
+			if item.CustomLastPurchaseQty > 0 {
+				itemLastPurchaseQty[item.ItemCode] = item.CustomLastPurchaseQty
+			}
+		}
+
 		// 创建并提交采购申请, 设置目标仓库为门店在途仓
 		purchaseOrder, err := service.Buying().CreatePurchaseFromMq(ctx, &dto.CreatePurchaseFromMqReq{
-			SourceName:      resp.MaterialRequestName,
-			Supplier:        req.Supplier,
-			RequiredBy:      requiredBy,
-			TargetWarehouse: req.TargetWarehouse,
+			SourceName:          resp.MaterialRequestName,
+			Supplier:            req.Supplier,
+			RequiredBy:          requiredBy,
+			TargetWarehouse:     req.TargetWarehouse,
+			CompanyAbbr:         req.CompanyAbbr,
+			SourceCompanyAbbr:   req.SourceCompanyAbbr,
+			ItemLastPurchaseQty: itemLastPurchaseQty,
 		})
 		if err != nil {
 			//需要回退之前创建的采购申请

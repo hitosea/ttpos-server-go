@@ -1015,15 +1015,17 @@ func (s *sItem) GetItemDefaultWarehouses(ctx context.Context, itemCodes []string
 	result := make(map[string]string, len(itemCodes))
 	var pendingItemCodes []string
 
-	// ── 优先级 1：批量查询 Item Default 子表的 default_warehouse ──
+	// ── 优先级 1：通过 Item 主文档 JOIN 子表查询 default_warehouse ──
+	// 注意：直接查询 Child DocType "Item Default" 会触发 Frappe 的 check_parent_permission 权限校验
+	// 改为查询 Item 主文档并通过子表过滤格式自动 JOIN，权限检查走 Item 主文档
 	itemDefaultResp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: "Item Default",
+		DocType: "Item",
 	}, &erp.RequestParams{
-		Fields: g.ArrayStr{"parent", "default_warehouse"},
+		Fields: g.ArrayStr{"name", "`tabItem Default`.default_warehouse"},
 		Filters: [][]string{
-			{"parent", "in", gstr.Join(itemCodes, ",")},
-			{"company", "=", companyName},
-			{"default_warehouse", "!=", ""},
+			{"name", "in", gstr.Join(itemCodes, ",")},
+			{"Item Default", "company", "=", companyName},
+			{"Item Default", "default_warehouse", "!=", ""},
 		},
 		Limit: consts.Limit999,
 	})
@@ -1033,11 +1035,11 @@ func (s *sItem) GetItemDefaultWarehouses(ctx context.Context, itemCodes []string
 	} else {
 		foundSet := make(map[string]bool, len(itemCodes))
 		for _, row := range itemDefaultResp.GetJsons("data") {
-			parent := row.Get("parent").String()
+			itemCode := row.Get("name").String()
 			warehouse := row.Get("default_warehouse").String()
-			if parent != "" && warehouse != "" {
-				result[parent] = warehouse
-				foundSet[parent] = true
+			if itemCode != "" && warehouse != "" {
+				result[itemCode] = warehouse
+				foundSet[itemCode] = true
 			}
 		}
 		for _, itemCode := range itemCodes {
