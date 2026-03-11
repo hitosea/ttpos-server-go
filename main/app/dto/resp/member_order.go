@@ -182,10 +182,8 @@ type GetMemberDineInOrderListResp struct {
 
 // MemberDineInOrderStatusInfo 堂食订单状态信息
 type MemberDineInOrderStatusInfo struct {
-	Status       string `json:"status"`         // 订单状态：unpaid-待支付 inprogress-进行中(已支付,待接单/备餐中) completed-已完成(含部分退款/全部退款) cancelled-已取消(含已拒单)
-	StatusText   string `json:"status_text"`    // 状态文字（多语言）
-	H5Status     uint   `json:"h5_status"`      // H5订单状态：0-未下单 1-待接单 2-已接单 3-已拒单
-	H5StatusText string `json:"h5_status_text"` // H5状态文字（多语言）
+	Status     string `json:"status"`      // 订单状态：unpaid-待支付 pending-待接单 preparing-备餐中 completed-已完成 partial_refund-部分退款 full_refund-全部退款 cancelled-已取消 rejected-已拒单
+	StatusText string `json:"status_text"` // 状态文字（多语言）
 }
 
 // MemberDineInOrder 会员端堂食订单列表项
