@@ -41,10 +41,12 @@ type TimeUtil interface {
 type Timezone string
 
 const (
-	ZH_TIMEZONE Timezone = "Asia/Shanghai"   // 中国时区 UTC+8
-	JP_TIMEZONE Timezone = "Asia/Tokyo"      // 日本时区 UTC+9
-	TH_TIMEZONE Timezone = "Asia/Bangkok"    // 泰国时区 UTC+7
-	TR_TIMEZONE Timezone = "Europe/Istanbul" // 土耳其时区 UTC+3
+	ZH_TIMEZONE Timezone = "Asia/Shanghai"    // 中国时区 UTC+8
+	JP_TIMEZONE Timezone = "Asia/Tokyo"       // 日本时区 UTC+9
+	TH_TIMEZONE Timezone = "Asia/Bangkok"     // 泰国时区 UTC+7
+	VN_TIMEZONE Timezone = "Asia/Ho_Chi_Minh" // 越南时区 UTC+7
+	MM_TIMEZONE Timezone = "Asia/Yangon"      // 缅甸时区 UTC+6:30
+	TR_TIMEZONE Timezone = "Europe/Istanbul"  // 土耳其时区 UTC+3
 )
 
 type DayType string

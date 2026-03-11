@@ -1537,6 +1537,8 @@ return [
     "东京" => "Tokyo",
     "北京，重庆，香港特别行政区，乌鲁木齐" => "Pekin, Chongqing, Hong Kong Özel İdari Bölgesi, Urumçi",
     "曼谷，河内，雅加达" => "Bangkok, Hanoi, Jakarta",
+    "胡志明市，河内" => "Ho Chi Minh Kenti, Hanoi",
+    "内比都，仰光" => "Naypyidaw, Yangon",
     "安卡拉" => "Ankara",
     "当前支付已完成，请选择其他方式支付" => "Mevcut ödeme tamamlandı, lütfen başka bir ödeme yöntemi seçin",
     "处理LianLian回调: shop_supplier_id不存在" => "LianLian geri çağırma işlemi: shop_supplier_id mevcut değil",

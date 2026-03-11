@@ -1663,6 +1663,8 @@ return [
     "东京" => "Tokio",
     "北京，重庆，香港特别行政区，乌鲁木齐" => "Peking, Chongqing, Sonderverwaltungszone Hongkong, Urumqi",
     "曼谷，河内，雅加达" => "Bangkok, Hanoi, Jakarta",
+    "胡志明市，河内" => "Ho-Chi-Minh-Stadt, Hanoi",
+    "内比都，仰光" => "Naypyidaw, Yangon",
     "安卡拉" => "Ankara",
     "当前支付已完成，请选择其他方式支付" => "Die aktuelle Zahlung wurde abgeschlossen. Bitte wählen Sie eine andere Zahlungsmethode.",
     "处理LianLian回调: shop_supplier_id不存在" => "LianLian-Callback wird verarbeitet: shop_supplier_id existiert nicht",
