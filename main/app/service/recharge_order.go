@@ -571,7 +571,13 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
 			order.PaymentTime = paymentTime
+			// 判断是否使用 Sales Invoice 模式：公司配置为 SI 模式且当前班次为新版
+			useSalesInvoice := false
 			if companySetting.IsErpSalesInvoiceMode() {
+				currentShift, _ := GetCurrentStaffShiftLog(tx, ctx.GetStaffUuid())
+				useSalesInvoice = currentShift == nil || currentShift.IsNewShiftVersion()
+			}
+			if useSalesInvoice {
 				// Sales Invoice 模式: 异步创建 SI + PE
 				_, err := s.SaveSalesInvoice(ctx, &order, tx)
 				if err != nil {
@@ -584,7 +590,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 					return errors.WithMessage(err)
 				}
 			} else {
-				// POS Invoice 模式（默认）
+				// POS Invoice 模式：旧班次（有ERP开关帐）继续走 POS Invoice
 				invoiceResp, err := s.SavePosInvoice(ctx, &order, tx)
 				if err != nil {
 					return errors.WithMessage(err)
