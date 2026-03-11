@@ -3107,30 +3107,40 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	// 获取生产单完成状态
 	isProductionFinished, _ := productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
 
-	// 获取商品列表
-	productList := make([]resp.MemberOrderProduct, 0)
+	// 获取商品列表（包含退款信息）
+	productList := make([]resp.MemberDineInOrderProduct, 0)
 	for _, product := range saleOrder.SaleOrderProducts {
 		if product.IsPackageSubProduct() {
 			continue // 跳过套餐子商品
 		}
-		productList = append(productList, resp.MemberOrderProduct{
+
+		// 计算商品退款金额
+		var productRefundAmount float64
+		for _, returnOrderProduct := range product.ReturnOrderProducts {
+			productRefundAmount += returnOrderProduct.ProductTotalAmount
+		}
+
+		productList = append(productList, resp.MemberDineInOrderProduct{
 			LocaleName:          product.GetLocaleName(),
 			LocaleAttributeName: product.GetAttributeName(),
 			Num:                 product.Num,
-			TotalPrice:          product.GetTotalPrice(),
-			OriginTotalPrice:    product.GetTotalPriceOrigin(),
+			Price:               product.SalePrice,       // 折前单价
+			TotalPrice:          product.GetSalePrice(),  // 折前总价 = 单价 * 数量
 			Image: func() string {
 				if product.ImageFile == nil {
 					return ""
 				}
 				return product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 			}(),
+			RefundAmount: productRefundAmount,
 		})
 	}
 
+	// 计算订单总退款金额
+	refundAmount := saleBill.GetTotalRefundAmount()
+
 	// 获取支付信息（通过 SaleOrder 关联的 PaymentOrders 获取）
 	var payTime int64
-	var paidAmount float64
 	var paymentMethodName string
 	paymentOrders, _ := paymentOrderRepo.GetPaymentOrderList(
 		paymentOrderRepo.WhereRelatedUuid(saleOrder.Uuid),
@@ -3142,7 +3152,6 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		// 获取第一个已支付的支付订单
 		paymentOrder := paymentOrders[0]
 		payTime = paymentOrder.CreateTime // PaymentOrder 使用 CreateTime 作为支付时间
-		paidAmount = paymentOrder.Amount
 		if paymentOrder.PaymentMethod != nil {
 			paymentMethodName = paymentOrder.PaymentMethod.GetName()
 		}
@@ -3161,11 +3170,6 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 
 	// 获取商家信息
 	company := ctx.GetCompany()
-	var companyAddress, companyPhone string
-	if company.CompanySetting != nil {
-		companyAddress = company.CompanySetting.Address
-		companyPhone = company.CompanySetting.LinkPhone
-	}
 
 	// 获取取消时间（从 SaleOrder 获取 DeleteTime 作为取消时间）
 	var cancelTime int64
@@ -3176,8 +3180,6 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	return &resp.GetMemberDineInOrderDetailResp{
 		SaleBillUuid:         saleBill.Uuid,
 		CompanyName:          company.Name,
-		CompanyAddress:       companyAddress,
-		CompanyPhone:         companyPhone,
 		SerialNo:             saleBill.SerialNo,
 		OrderNo:              saleBill.OrderNo,
 		StatusInfo:           s.getMemberDineInOrderStatusInfo(saleBill, h5Order, isProductionFinished, ctx.GetLanguage()),
@@ -3185,22 +3187,18 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		Remark:               saleBill.Remark,
 		CreateTime:           saleBill.CreateTime,
 		PayTime:              payTime,
-		FinishTime:           saleBill.FinishTime,
 		CancelTime:           cancelTime,
 		RemainingPaymentTime: remainingPaymentTime,
+		RefundAmount:         refundAmount,
 		AmountInfo: resp.MemberDineInOrderAmountInfo{
-			ProductAmount:     saleBill.ProductAmount,
 			DiscountAmount:    saleBill.CustomDiscountFee + saleBill.MemberDiscountFee, // 折扣金额 = 自定义折扣 + 会员折扣
 			ServiceFee:        saleBill.ServiceFee,
 			TaxFee:            saleBill.TaxFee,
-			PackageFee:        0, // SaleBill 没有 PackageFee 字段
 			Amount:            saleBill.Amount,
-			PaidAmount:        paidAmount,
 			PaymentMethodName: paymentMethodName,
 		},
-		ProductList: resp.MemberProductList{
-			List:          productList,
-			ProductAmount: saleBill.ProductAmount,
+		ProductList: resp.MemberDineInOrderProductList{
+			List: productList,
 		},
 	}, nil
 }

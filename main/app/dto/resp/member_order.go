@@ -203,32 +203,43 @@ type MemberDineInOrder struct {
 
 // GetMemberDineInOrderDetailResp 会员端堂食订单详情响应
 type GetMemberDineInOrderDetailResp struct {
-	SaleBillUuid         uint64                      `json:"sale_bill_uuid"`          // 销售账单UUID
-	CompanyName          string                      `json:"company_name"`            // 商家名称
-	CompanyAddress       string                      `json:"company_address"`         // 商家地址
-	CompanyPhone         string                      `json:"company_phone"`           // 商家电话
-	SerialNo             string                      `json:"serial_no"`               // 取餐号
-	OrderNo              string                      `json:"order_no"`                // 订单编号
-	StatusInfo           MemberDineInOrderStatusInfo `json:"status_info"`             // 状态信息
-	DiningMethod         uint                        `json:"dining_method"`           // 用餐方式：0-堂食 1-打包
-	Remark               string                      `json:"remark"`                  // 订单备注
-	CreateTime           int64                       `json:"create_time"`             // 下单时间
-	PayTime              int64                       `json:"pay_time"`                // 支付时间
-	FinishTime           int64                       `json:"finish_time"`             // 完成时间
-	CancelTime           int64                       `json:"cancel_time"`             // 取消时间
-	RemainingPaymentTime int64                       `json:"remaining_payment_time"`  // 剩余支付时间（秒）
-	AmountInfo           MemberDineInOrderAmountInfo `json:"amount_info"`             // 金额信息
-	ProductList          MemberProductList           `json:"product_list"`            // 商品列表
+	SaleBillUuid         uint64                         `json:"sale_bill_uuid"`          // 销售账单UUID
+	CompanyName          string                         `json:"company_name"`            // 商家名称
+	SerialNo             string                         `json:"serial_no"`               // 取餐号
+	OrderNo              string                         `json:"order_no"`                // 订单编号
+	StatusInfo           MemberDineInOrderStatusInfo    `json:"status_info"`             // 状态信息
+	DiningMethod         uint                           `json:"dining_method"`           // 用餐方式：0-堂食 1-打包
+	Remark               string                         `json:"remark"`                  // 订单备注
+	CreateTime           int64                          `json:"create_time"`             // 下单时间
+	PayTime              int64                          `json:"pay_time"`                // 支付时间
+	CancelTime           int64                          `json:"cancel_time"`             // 取消时间
+	RemainingPaymentTime int64                          `json:"remaining_payment_time"`  // 剩余支付时间（秒）
+	RefundAmount         float64                        `json:"refund_amount"`           // 退款金额（用于显示"已退款 ¥xx"）
+	AmountInfo           MemberDineInOrderAmountInfo    `json:"amount_info"`             // 金额信息
+	ProductList          MemberDineInOrderProductList   `json:"product_list"`            // 商品列表
+}
+
+// MemberDineInOrderProductList 堂食订单商品列表
+type MemberDineInOrderProductList struct {
+	List []MemberDineInOrderProduct `json:"list"` // 商品列表
+}
+
+// MemberDineInOrderProduct 堂食订单商品（包含退款信息）
+type MemberDineInOrderProduct struct {
+	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称
+	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
+	Num                 float64            `json:"num"`                   // 数量
+	Price               float64            `json:"price"`                 // 单价（折前）
+	TotalPrice          float64            `json:"total_price"`           // 总价（折前）= 单价 * 数量
+	Image               string             `json:"image"`                 // 商品图片
+	RefundAmount        float64            `json:"refund_amount"`         // 退款金额（0表示未退款）
 }
 
 // MemberDineInOrderAmountInfo 堂食订单金额信息
 type MemberDineInOrderAmountInfo struct {
-	ProductAmount     float64 `json:"product_amount"`      // 商品金额
 	DiscountAmount    float64 `json:"discount_amount"`     // 优惠金额
 	ServiceFee        float64 `json:"service_fee"`         // 服务费
 	TaxFee            float64 `json:"tax_fee"`             // 税费
-	PackageFee        float64 `json:"package_fee"`         // 打包费
 	Amount            float64 `json:"amount"`              // 应付金额
-	PaidAmount        float64 `json:"paid_amount"`         // 已付金额
 	PaymentMethodName string  `json:"payment_method_name"` // 支付方式名称
 }
