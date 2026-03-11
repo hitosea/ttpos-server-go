@@ -1,0 +1,15 @@
+run:
+  timeout: 5m
+
+linters:
+  disable:
+    - govet      # redundant — already run as separate CI step
+    - unused     # slow whole-program analysis, low PR-blocking value
+
+  enable:
+    - errcheck      # catch unchecked errors
+    - staticcheck   # comprehensive, high-value
+    - gosimple      # simplification hints
+    - ineffassign   # useless assignments
+    - gocritic      # catches real issues (unnecessary conversions, etc.)
+    - misspell      # typos in comments/strings, nearly zero cost

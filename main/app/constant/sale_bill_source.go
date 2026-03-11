@@ -36,10 +36,10 @@ func NormalizeClientVersion(version string) string {
 	if version == "" {
 		return ""
 	}
-	// 去除前缀 "v" 或 "V"
+	// 去除前后空格，再去除前缀 "v" 或 "V"
+	// Failed tests before fix: TestNormalizeClientVersion/v_with_space, TestNormalizeClientVersion/V_with_space
+	version = strings.TrimSpace(version)
 	version = strings.TrimPrefix(version, "v")
 	version = strings.TrimPrefix(version, "V")
-	// 去除前后空格
-	version = strings.TrimSpace(version)
 	return version
 }

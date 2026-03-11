@@ -1,0 +1,106 @@
+server:
+  address: ":14031"
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+  serverAgent: "Ttpos Takeout Server"
+  logPath: "/tmp/log/takeout"
+  logStdout: false
+  errorStack: true
+  errorLogEnabled: true
+  accessLogEnabled: false
+
+logger:
+  level: "all"
+  stdout: true
+  path: "/tmp/log/takeout"
+
+database:
+  default:
+    link: "mysql:test:test@tcp(mysql-test:3306)/takeout?charset=utf8mb4&parseTime=True&loc=Local&timeout=5s"
+    maxIdle: 10
+    maxOpen: 100
+    maxLifetime: "30s"
+    queryTimeout: "0"
+    execTimeout: "0"
+    tranTimeout: "0"
+    prepareTimeout: "0"
+
+grpc:
+  name: "ttpos-takeout"
+  address: ":14032"
+  logPath: "/tmp/log"
+  logStdout: true
+  errorLogEnabled: true
+  accessLogEnabled: false
+  errorStack: true
+
+nacos:
+  server:
+    addresses: ""
+    ip: ""
+    port: ""
+  config:
+    dataId: ""
+    group: ""
+
+app:
+  serviceUrl: "http://bmp-takeout:14031"
+  callbackSecret: "test-jwt-secret-for-integration-tests"
+  ttposEndpoint: "http://wiremock:8080"
+  ttpos-client:
+    dump: false
+  provider:
+    skootar:
+      endpoint: "http://wiremock:8080"
+      username: "test"
+      apiKey: "test-api-key"
+      channel: "test"
+    grab:
+      platform:
+        clientId: "test-client-id"
+        clientSecret: "test-client-secret"
+        secretKey: "test-secret-key"
+        environment: "staging"
+        timeout: "30s"
+      partner:
+        test-partner-client-id:
+          clientId: "test-partner-client-id"
+          clientSecret: "test-partner-client-secret"
+          scope: "food.partner_api"
+          environment: "staging"
+          timeout: "60s"
+    lineman:
+      platform:
+        partnerId: "test-partner"
+        clientId: "test-client-id"
+        clientSecret: "test-client-secret"
+        secretKey: "test-secret-key"
+        endpoint: "http://wiremock:8080"
+        environment: "staging"
+        timeout: "30s"
+      partner:
+        test-lineman-client-id:
+          clientId: "test-lineman-client-id"
+          clientSecret: "test-lineman-client-secret"
+          environment: "staging"
+          timeout: "60s"
+
+queue:
+  switch: false
+
+cache:
+  adapter: "memory"
+
+redis:
+  default:
+    address: "redis-test:6379"
+    pass: ""
+    db: 0
+    cluster: false
+
+otlp:
+  enabled: false
+  serviceName: "ttpos-takeout"
+  endpoint: ""
+  path: ""
+  token: ""

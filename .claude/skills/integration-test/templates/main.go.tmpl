@@ -1,0 +1,126 @@
+//go:build integration
+
+package {DIRECTORY}_test
+
+import (
+	"testing"
+
+	"ttpos-server-go/tests/fixture"
+)
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const (
+	// API paths
+	path{Domain}{Action} = "{API_PATH}"
+
+	// Error codes matching server-side constants
+	codeTokenInvalid = -102 // constant.CodeTokenInvalid
+	codeAccessDenied = -103 // constant.CodeAccessDenied
+)
+
+// ---------------------------------------------------------------------------
+// P0 — Critical Path
+// ---------------------------------------------------------------------------
+
+// Test_P0_{Terminal}_{Domain}_{Action}_HappyPath tests the complete {description}.
+// Route: {METHOD} {API_PATH}
+//
+// Prerequisites:
+//   - {LIST_AUTH_REQUIREMENTS}
+func Test_P0_{Terminal}_{Domain}_{Action}_HappyPath(t *testing.T) {
+	const testDeviceId = "test-device-001"
+
+	// 1. Create tenant database with full production schema
+	companyUUID := fixture.GenerateCompanyUUID(t)
+	db := fixture.NewTestTenantFull(t, companyUUID)
+
+	// 2. Seed company and settings
+	fixture.SeedCompany(t, db, fixture.WithCompanyUUID(mustParseInt64(companyUUID)))
+	fixture.SeedCompanySetting(t, db, fixture.WithCompanySettingCompanyUUID(mustParseInt64(companyUUID)))
+
+	// 3. Seed device
+	fixture.SeedDevice(t, db,
+		fixture.WithDeviceType("cashier"),
+		fixture.WithDeviceId(testDeviceId),
+	)
+
+	// 4. Seed staff
+	staff := fixture.SeedStaff(t, db,
+		fixture.WithStaffCompanyUUID(mustParseInt64(companyUUID)),
+		fixture.WithStaffIsSuper(1),
+		fixture.WithStaffDutyNo("shift-001"),
+	)
+
+	// 5. Generate token
+	token := fixture.GenerateStaffToken(t,
+		companyUUID,
+		mustParseString(staff.UUID),
+		staff.Username,
+		1,
+		testDeviceId,
+	)
+
+	// 6. Make request
+	client := fixture.NewHTTPClient().WithToken(token)
+	resp := client.{METHOD}(t, path{Domain}{Action}, nil)
+
+	// 7. Assert
+	resp.AssertOK(t).AssertSuccess(t)
+}
+
+// Test_P0_{Terminal}_{Domain}_{Action}_Unauthorized tests that requests
+// without a token are rejected with codeTokenInvalid.
+// Route: {METHOD} {API_PATH}
+func Test_P0_{Terminal}_{Domain}_{Action}_Unauthorized(t *testing.T) {
+	client := fixture.NewHTTPClient() // no token
+
+	resp := client.{METHOD}(t, path{Domain}{Action}, nil)
+
+	resp.AssertOK(t).AssertErrorCode(t, codeTokenInvalid)
+}
+
+// ---------------------------------------------------------------------------
+// P1 — Important Validation
+// ---------------------------------------------------------------------------
+
+// Test_P1_{Terminal}_{Domain}_{Action}_InvalidInput tests that malformed
+// request bodies are rejected.
+// Route: {METHOD} {API_PATH}
+func Test_P1_{Terminal}_{Domain}_{Action}_InvalidInput(t *testing.T) {
+	companyUUID := fixture.GenerateCompanyUUID(t)
+	db := fixture.NewTestTenant(t, companyUUID)
+
+	staff := fixture.SeedStaff(t, db,
+		fixture.WithStaffCompanyUUID(mustParseInt64(companyUUID)),
+	)
+	token := fixture.GenerateStaffToken(t, companyUUID, mustParseString(staff.UUID), staff.Username, 1)
+
+	client := fixture.NewHTTPClient().WithToken(token)
+	resp := client.Post(t, path{Domain}{Action}, map[string]any{
+		// deliberately invalid payload
+	})
+
+	resp.AssertOK(t)
+	// assert specific error code or message
+}
+
+// ---------------------------------------------------------------------------
+// P2 — Edge Cases
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+func mustParseInt64(s string) int64 {
+	var i int64
+	_, _ = fmt.Sscanf(s, "%d", &i)
+	return i
+}
+
+func mustParseString(i int64) string {
+	return fmt.Sprintf("%d", i)
+}

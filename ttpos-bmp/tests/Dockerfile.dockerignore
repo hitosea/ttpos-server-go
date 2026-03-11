@@ -1,0 +1,33 @@
+# Dockerfile.dockerignore for BMP test runner
+# Only affects the test runner Dockerfile build context.
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+.cursor
+
+# CI/CD and docs
+.github
+.scannerwork
+docs
+openspec
+tools
+
+# Admin (legacy PHP/Vue)
+admin
+
+# Coverage output
+coverage
+
+# Docker configs
+docker
+docker-compose*.yml
+
+# Other
+*.md
+*.log
+LICENSE

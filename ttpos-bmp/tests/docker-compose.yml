@@ -1,0 +1,237 @@
+# BMP Integration Test Docker Compose Configuration
+# ==================================================
+# Usage:
+#   Run tests:  docker compose -p bmp-test-<BUILD_ID> -f ttpos-bmp/tests/docker-compose.yml up --build --exit-code-from test-runner
+#   Clean up:   docker compose -p bmp-test-<BUILD_ID> -f ttpos-bmp/tests/docker-compose.yml down -v --remove-orphans
+
+services:
+  # MySQL for Testing (shared by erp, takeout, message, websocket)
+  mysql-test:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-testroot}
+      MYSQL_USER: ${DB_USERNAME:-test}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-test}
+      TZ: "Asia/Bangkok"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      # Shell script creates all 4 databases and applies migrations
+      - ./fixtures/schema/init-databases.sh:/docker-entrypoint-initdb.d/00-init-databases.sh:ro
+      # Mount migration directories so the init script can source them
+      - ../app/ttpos-erp/manifest/sql:/migrations/erp:ro
+      - ../app/ttpos-takeout/manifest/sql:/migrations/takeout:ro
+      - ../app/ttpos-message/manifest/sql:/migrations/message:ro
+      - ../app/ttpos-websocket/manifest/sql:/migrations/websocket:ro
+    healthcheck:
+      # Wait for message DB table to confirm all migrations ran
+      test: ["CMD", "mysql", "-h", "127.0.0.1", "-P", "3306", "-u", "root", "-ptestroot", "message", "-e", "SELECT 1 FROM message_template LIMIT 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    networks:
+      - bmp-test-network
+
+  # Redis (standalone — no cluster needed for tests)
+  redis-test:
+    image: redis:6.0-alpine
+    networks:
+      - bmp-test-network
+
+  # WireMock (mock external APIs: Grab, Lineman, Skootar, TTPOS main)
+  wiremock:
+    image: hub.hitosea.com/infra/wiremock:3.9.1
+    command: ["--port", "8080"]
+    networks:
+      - bmp-test-network
+
+  # ERP service (coverage instrumented)
+  bmp-erp:
+    build:
+      context: ../..
+      dockerfile: ttpos-bmp/Dockerfile.coverage
+      args:
+        - HTTP_PROXY=
+        - HTTPS_PROXY=
+        - http_proxy=
+        - https_proxy=
+        - GOPROXY=https://goproxy.cn,direct
+    volumes:
+      - ../../coverage/bmp:/coverage
+      - ./config/erp.yaml:/app/config/config.yaml:ro
+      - go-modules:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      - BMP_SERVICE=ttpos-erp
+      - GOCOVERDIR=/coverage
+      - GOMODCACHE=/go/pkg/mod
+      - GOCACHE=/root/.cache/go-build
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:14021/api.json"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - bmp-test-network
+
+  # Takeout service (coverage instrumented)
+  bmp-takeout:
+    build:
+      context: ../..
+      dockerfile: ttpos-bmp/Dockerfile.coverage
+      args:
+        - HTTP_PROXY=
+        - HTTPS_PROXY=
+        - http_proxy=
+        - https_proxy=
+        - GOPROXY=https://goproxy.cn,direct
+    volumes:
+      - ../../coverage/bmp:/coverage
+      - ./config/takeout.yaml:/app/config/config.yaml:ro
+      - go-modules:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      - BMP_SERVICE=ttpos-takeout
+      - GOCOVERDIR=/coverage
+      - GOMODCACHE=/go/pkg/mod
+      - GOCACHE=/root/.cache/go-build
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:14031/api.json"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - bmp-test-network
+
+  # Message service (coverage instrumented)
+  bmp-message:
+    build:
+      context: ../..
+      dockerfile: ttpos-bmp/Dockerfile.coverage
+      args:
+        - HTTP_PROXY=
+        - HTTPS_PROXY=
+        - http_proxy=
+        - https_proxy=
+        - GOPROXY=https://goproxy.cn,direct
+    volumes:
+      - ../../coverage/bmp:/coverage
+      - ./config/message.yaml:/app/config/config.yaml:ro
+      - go-modules:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      - BMP_SERVICE=ttpos-message
+      - GOCOVERDIR=/coverage
+      - GOMODCACHE=/go/pkg/mod
+      - GOCACHE=/root/.cache/go-build
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:14041/api.json"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - bmp-test-network
+
+  # WebSocket service (coverage instrumented)
+  bmp-websocket:
+    build:
+      context: ../..
+      dockerfile: ttpos-bmp/Dockerfile.coverage
+      args:
+        - HTTP_PROXY=
+        - HTTPS_PROXY=
+        - http_proxy=
+        - https_proxy=
+        - GOPROXY=https://goproxy.cn,direct
+    volumes:
+      - ../../coverage/bmp:/coverage
+      - ./config/websocket.yaml:/app/config/config.yaml:ro
+      - go-modules:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      - BMP_SERVICE=ttpos-websocket
+      - GOCOVERDIR=/coverage
+      - GOMODCACHE=/go/pkg/mod
+      - GOCACHE=/root/.cache/go-build
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:14051/api.json"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - bmp-test-network
+
+  # Test Runner
+  bmp-test-runner:
+    build:
+      context: ../..
+      dockerfile: ttpos-bmp/tests/Dockerfile
+      args:
+        - HTTP_PROXY=
+        - HTTPS_PROXY=
+        - http_proxy=
+        - https_proxy=
+        - GOPROXY=https://goproxy.cn,direct
+    volumes:
+      - go-modules:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      - ERP_URL=http://bmp-erp:14021
+      - TAKEOUT_URL=http://bmp-takeout:14031
+      - MESSAGE_URL=http://bmp-message:14041
+      - WEBSOCKET_URL=http://bmp-websocket:14051
+      - WIREMOCK_URL=http://wiremock:8080
+      - DB_HOST=mysql-test
+      - DB_PORT=3306
+      - DB_USERNAME=${DB_USERNAME:-test}
+      - DB_PASSWORD=${DB_PASSWORD:-test}
+      - WS_API_KEY=test-ws-api-key
+      - WS_HEALTH_TOKEN=test-health-token
+      - GOMODCACHE=/go/pkg/mod
+      - GOCACHE=/root/.cache/go-build
+    depends_on:
+      bmp-erp:
+        condition: service_healthy
+      bmp-takeout:
+        condition: service_healthy
+      bmp-message:
+        condition: service_healthy
+      bmp-websocket:
+        condition: service_healthy
+      wiremock:
+        condition: service_started
+    networks:
+      - bmp-test-network
+
+# Named volumes for Go caches (persist between test runs)
+volumes:
+  go-modules:
+  go-build-cache:
+
+networks:
+  bmp-test-network:
+    driver: bridge

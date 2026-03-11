@@ -1,0 +1,57 @@
+//go:build integration
+
+package {{.Package}}
+
+import (
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"ttpos-server-go/pkg/logger"
+)
+
+// ---------------------------------------------------------------------------
+// TestMain — shared setup for {{.Package}} tests
+// ---------------------------------------------------------------------------
+
+func TestMain(m *testing.M) {
+	logger.Logger = zap.NewNop()
+	os.Exit(m.Run())
+}
+
+// envOrDefault reads an environment variable with a fallback value.
+func envOrDefault(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+// ---------------------------------------------------------------------------
+// {{.ComponentName}}
+// ---------------------------------------------------------------------------
+
+func Test{{.ComponentName}}_{{.Action}}(t *testing.T) {
+	// ── Require service connection ──────────────────────────────────────
+	host := os.Getenv("{{.ServiceEnvVar}}")
+	if host == "" {
+		t.Skip("{{.ServiceEnvVar}} not set — skipping {{.ServiceName}} test")
+	}
+
+	// ── Setup connection ────────────────────────────────────────────────
+	// client := connect(host, envOrDefault("{{.PortEnvVar}}", "{{.DefaultPort}}"))
+	// require.NoError(t, client.Ping(ctx))
+
+	// ── Test cases ──────────────────────────────────────────────────────
+	t.Run("happy path", func(t *testing.T) {
+		// TODO: implement
+		_ = assert.Equal
+		_ = require.NoError
+	})
+
+	t.Run("error case", func(t *testing.T) {
+		// TODO: implement
+	})
+}

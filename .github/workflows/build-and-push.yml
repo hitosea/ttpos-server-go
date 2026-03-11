@@ -1,11 +1,16 @@
 name: Go Build & Docker Push
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build'
+        required: false
+        default: 'main'
 
   push:
     tags:
       - 'v*'
-  
+
 
 env:
   # Go编译配置
@@ -81,5 +86,62 @@ jobs:
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.program == 'main' &&  'go' || matrix.program }}:${{ github.ref_name }}-${{ steps.build.outputs.COMMIT_ID }}
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.program == 'main' &&  'go' || matrix.program }}:latest
         labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # BMP services
+  build-bmp:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - erp
+          - takeout
+          - message
+          - websocket
+          - shop
+          - manager
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ env.BRANCH }}
+        submodules: true
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        check-latest: true
+        cache-dependency-path: |
+              **/go.sum
+
+    - name: Install gf
+      run: go install github.com/gogf/gf/cmd/gf/v2@latest
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+
+    - name: Log into registry
+      uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and push BMP image
+      uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+      with:
+        context: ./
+        file: ttpos-bmp/Dockerfile
+        push: true
+        build-args: |
+          MODULE=${{ matrix.service }}
+        tags: |
+          ${{ env.REGISTRY }}/ttpos-bmp/ttpos-${{ matrix.service }}:${{ github.ref_name }}
+          ${{ env.REGISTRY }}/ttpos-bmp/ttpos-${{ matrix.service }}:latest
+        labels: |
+          org.opencontainers.image.source=${{ github.repositoryUrl }}
+          org.opencontainers.image.revision=${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
