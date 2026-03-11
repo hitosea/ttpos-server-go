@@ -85,11 +85,19 @@ func (s *DataManageSrv) GetDataManage(ctx context.Context) (*setting_resp.GetDat
 	}
 
 	// 获取订单数量
-	dataManages := dataManageRepo.List(
-		dataManageRepo.WhereByType(model.DataManageTypeOrder),
-	)
-	for _, dataManage := range dataManages {
-		orderUuids = append(orderUuids, dataManage.DataUuid)
+	var orderCount int
+	if utils.CompareVersion(ctx.GetVersion(), utils.VersionGTE, constant.ClientVersionV2200) {
+		// >= 2.20 仅统计数量，不返回 UUID 列表
+		count, _ := dataManageRepo.Count(dataManageRepo.WhereByType(model.DataManageTypeOrder))
+		orderCount = int(count)
+	} else {
+		dataManages := dataManageRepo.List(
+			dataManageRepo.WhereByType(model.DataManageTypeOrder),
+		)
+		for _, dataManage := range dataManages {
+			orderUuids = append(orderUuids, dataManage.DataUuid)
+		}
+		orderCount = len(orderUuids)
 	}
 
 	// 获取统计信息
@@ -110,7 +118,7 @@ func (s *DataManageSrv) GetDataManage(ctx context.Context) (*setting_resp.GetDat
 	return &setting_resp.GetDataManageResp{
 		IsEnableDataManage: setting.IsEnableDataManage,
 		StaffCount:         len(staffUuids),
-		OrderCount:         len(orderUuids),
+		OrderCount:         orderCount,
 		StaffUuids:         staffUuids,
 		OrderUuids:         orderUuids,
 		Statistics: setting_resp.DataManageStatistics{
