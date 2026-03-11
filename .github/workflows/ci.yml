@@ -14,7 +14,7 @@ jobs:
 
   quality-lint:
     name: Lint
-    runs-on: [self-hosted, ci]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,7 +39,7 @@ jobs:
 
   quality-unit-main:
     name: Main Unit Tests
-    runs-on: [self-hosted, ci]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
 
@@ -64,7 +64,7 @@ jobs:
 
   quality-unit-bmp:
     name: BMP Unit Tests
-    runs-on: [self-hosted, ci]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,7 +96,7 @@ jobs:
   int-main:
     name: Main Integration Tests
     needs: [quality-lint, quality-unit-main, quality-unit-bmp]
-    runs-on: [self-hosted, ci]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -127,7 +127,7 @@ jobs:
   int-bmp:
     name: BMP Integration Tests
     needs: [quality-lint, quality-unit-main, quality-unit-bmp]
-    runs-on: [self-hosted, ci]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -162,7 +162,7 @@ jobs:
   sonarqube:
     name: SonarQube Analysis
     needs: [int-main, int-bmp]
-    runs-on: [self-hosted, ci]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
         with:
