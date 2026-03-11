@@ -81,6 +81,7 @@ type IMemberOrderSrv interface {
 	CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64) error // 完成外送订单
 
 	// 会员端堂食订单管理
+	CheckDineInOrder(ctx context.Context, req req.CheckDineInOrderReq) (*resp.OrderCheckServiceRes, error)                               // 会员端堂食订单结算前检查
 	GetMemberDineInOrderList(ctx context.Context, req req.MemberDineInOrderListReq) (*resp.GetMemberDineInOrderListResp, error)          // 获取会员端堂食订单列表
 	GetMemberDineInOrderDetail(ctx context.Context, req req.GetMemberDineInOrderDetailReq) (*resp.GetMemberDineInOrderDetailResp, error) // 获取会员端堂食订单详情
 	CancelMemberDineInOrder(ctx context.Context, req req.CancelMemberDineInOrderReq) error                                               // 取消会员端堂食订单（仅未付款）
@@ -239,6 +240,72 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 		// 订单未取消，更新订单
 		return s.updateMemberOrder(ctx, req, memberSaleOrder)
 	}
+}
+
+// CheckDineInOrder 会员端堂食订单结算前检查
+// 参考收银机 OrderCheck，在会员端点击"去结算"时校验：
+// 消费税变动、服务费变动、库存、价格变动、规格、商品变动（被删除、下架）、限购等
+func (s *orderSrv) CheckDineInOrder(ctx context.Context, request req.CheckDineInOrderReq) (*resp.OrderCheckServiceRes, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "订单不存在")
+	}
+
+	// 验证订单类型
+	if !saleBill.IsInstantBill() {
+		return nil, errors.New("不是堂食订单")
+	}
+	// 验证订单状态
+	if saleBill.IsCanceled() {
+		return nil, errors.New("订单已取消")
+	}
+	if saleBill.IsFinish() {
+		return nil, errors.New("订单已完成")
+	}
+
+	ctx.Log().Debug("会员端堂食订单结算前检查")
+
+	// 获取所有商品，用于检查限购和商品变动
+	saleOrderProductAll := saleBill.GetSaleOrderProductAll()
+
+	// 对商品进行结账检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购
+	// ignoreMust=true: 会员端堂食订单不检查必点商品
+	checkServiceRes, errCheck := s.checkOrder(ctx, true, db, request.SaleBillUuid, 0, saleOrderProductAll, WithCheckTypeCheckout())
+	if errCheck != nil {
+		return nil, errors.WithMessage(errCheck, "订单检查失败")
+	}
+	if checkServiceRes != nil {
+		return checkServiceRes, nil
+	}
+
+	// 检查含税未含税是否改变、服务费类型是否改变、服务费是否改变、服务费比例是否改变
+	res, newSetting, err := s.checkSaleBillSettingChanged(ctx, saleBill)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if res != nil {
+		// 如果账单快照设置变化，更新销售订单的金额
+		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(request.SaleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		freshSaleBill := shopCartInfo.SaleBill
+		if err := s.CalcAndSaveSaleBill(ctx, db, freshSaleBill, model.WithLatestPrice(), model.WithSaleBillSetting(newSetting)); err != nil {
+			return nil, errors.WithMessage(err, "更新订单金额失败")
+		}
+		return res, nil
+	}
+
+	return nil, nil
 }
 
 // GetDineInOrderFormInfo 获取堂食订单提交表单信息
