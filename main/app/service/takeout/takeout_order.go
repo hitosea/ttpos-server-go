@@ -352,40 +352,33 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, companyUuid uint64, ta
 		MaterialSalesVolume[warehouseOutFormItem.MaterialUuid] = decimal.NewFromFloat(MaterialSalesVolume[warehouseOutFormItem.MaterialUuid]).Add(decimal.NewFromFloat(warehouseOutFormItem.Num)).Round(4).InexactFloat64()
 	}
 
-	// Step 3: 在事务中更新库存
-	err = repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		// 更新出库单明细状态（标记为已减库存）
-		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsReduceStockByTakeoutOrderUuid(takeoutOrderUuid); err != nil {
-			logger.Logger.Error("reduceTakeoutOrderStock, UpdateWarehouseOutFormItemRecordsReduceStock failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
-			return err
-		}
-
-		// 更新 BOM 库存
-		if err := repository.NewProductBomRepo(tx).UpdateProductBoms(ProductBomsList); err != nil {
-			logger.Logger.Error("reduceTakeoutOrderStock, UpdateProductBoms failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
-			return err
-		}
-
-		// 更新材料库存
-		for _, material := range Materials {
-			if err := base.NewMaterialRepo(tx).UpdateMaterialsStockNum(material.MaterialUuid, material.WarehouseUuid, -material.ReduceStockNum); err != nil {
-				logger.Logger.Error("reduceTakeoutOrderStock, UpdateMaterialsStockNum failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
-				return err
-			}
-		}
-
-		// 通过sale_order_uuid查询出库单明细中有效的出库材料,然后统计每个材料的销量
-		for materialUuid, saleNum := range MaterialSalesVolume {
-			if err := repository.NewMaterialRepo(tx).AddActualSaleNum(materialUuid, saleNum); err != nil {
-				logger.Logger.Error("HandleAddMaterialSalesVolume process, AddActualSaleNum failed", zap.Any("materialUuid", materialUuid), zap.Any("saleNum", saleNum), zap.Error(err))
-				continue
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
+	// Step 3: 更新库存（db 已是外层事务的 tx，无需再开嵌套事务）
+	// 更新出库单明细状态（标记为已减库存）
+	if err := repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsReduceStockByTakeoutOrderUuid(takeoutOrderUuid); err != nil {
+		logger.Logger.Error("reduceTakeoutOrderStock, UpdateWarehouseOutFormItemRecordsReduceStock failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
 		return err
+	}
+
+	// 更新 BOM 库存
+	if err := repository.NewProductBomRepo(db).UpdateProductBoms(ProductBomsList); err != nil {
+		logger.Logger.Error("reduceTakeoutOrderStock, UpdateProductBoms failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
+		return err
+	}
+
+	// 更新材料库存
+	for _, material := range Materials {
+		if err := base.NewMaterialRepo(db).UpdateMaterialsStockNum(material.MaterialUuid, material.WarehouseUuid, -material.ReduceStockNum); err != nil {
+			logger.Logger.Error("reduceTakeoutOrderStock, UpdateMaterialsStockNum failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
+			return err
+		}
+	}
+
+	// 通过sale_order_uuid查询出库单明细中有效的出库材料,然后统计每个材料的销量
+	for materialUuid, saleNum := range MaterialSalesVolume {
+		if err := repository.NewMaterialRepo(db).AddActualSaleNum(materialUuid, saleNum); err != nil {
+			logger.Logger.Error("HandleAddMaterialSalesVolume process, AddActualSaleNum failed", zap.Any("materialUuid", materialUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
+		}
 	}
 
 	return nil

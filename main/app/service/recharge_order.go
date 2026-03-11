@@ -607,6 +607,11 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		})
 	}
 
+	// 事务结束后重置 ctx 为非事务连接，并创建独立副本供协程使用
+	ctx.SetDB(db)
+	asyncCtx := ctx.Copy()
+	asyncCtx.SetDB(db)
+
 	// 打印充值单
 	utils.Go(func() {
 		order := rechargeOrderRepo.GetRechargeOrder(
@@ -616,7 +621,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
 			rechargeOrderRepo.WhereUuid(order.Uuid),
 		)
-		_, err := printer.NewPrinterRepo(ctx).PrintingRechargeOrder(order, 0)
+		_, err := printer.NewPrinterRepo(asyncCtx).PrintingRechargeOrder(order, 0)
 		if err != nil {
 			logger.Logger.Error("打印充值单失败", zap.Error(err))
 		}
@@ -632,17 +637,17 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			utils.Go(func() {
 				if member != nil {
 					smsReq := sms.MemberRechargeRequest{
-						Company:       ctx.GetCompany().Name,
+						Company:       asyncCtx.GetCompany().Name,
 						Recharge:      order.RechargeAmount,
 						BonusMoney:    order.GiftAmount,
 						BonusPoints:   order.GiftPoint,
 						Balance:       member.GetBalanceAll(),
 						PointsBalance: member.GetPoints(),
 					}
-					if err := s.smsSrv.SendMemberRechargeSMS(ctx, member.Phone, &smsReq); err != nil {
-						ctx.Log().Info("发送充值短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					if err := s.smsSrv.SendMemberRechargeSMS(asyncCtx, member.Phone, &smsReq); err != nil {
+						asyncCtx.Log().Info("发送充值短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
 					} else {
-						ctx.Log().Info("发送充值短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+						asyncCtx.Log().Info("发送充值短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
 					}
 				}
 			})
@@ -652,19 +657,19 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		// 发布"会员余额变动"事件
 		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 			BasePayload: event.BasePayload{ // 会员余额变动
-				Ctx:          ctx,
-				CompanyUuid:  ctx.GetCompanyUuid(),
-				Source:       ctx.GetSource(),
-				OperatorUuid: int64(ctx.GetStaffUuid()),
+				Ctx:          asyncCtx,
+				CompanyUuid:  asyncCtx.GetCompanyUuid(),
+				Source:       asyncCtx.GetSource(),
+				OperatorUuid: int64(asyncCtx.GetStaffUuid()),
 			},
 		})
 		// 发布"会员积分变动"事件
 		s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
 			BasePayload: event.BasePayload{ // 会员积分变动
-				Ctx:          ctx,
-				CompanyUuid:  ctx.GetCompanyUuid(),
-				Source:       ctx.GetSource(),
-				OperatorUuid: int64(ctx.GetStaffUuid()),
+				Ctx:          asyncCtx,
+				CompanyUuid:  asyncCtx.GetCompanyUuid(),
+				Source:       asyncCtx.GetSource(),
+				OperatorUuid: int64(asyncCtx.GetStaffUuid()),
 			},
 		})
 	})
@@ -1795,9 +1800,15 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		return errors.WithMessage(err)
 	}
 
+	// 事务结束后重置 ctx 为非事务连接，并创建独立副本供协程使用
+	ctx.SetDB(db)
+	asyncCtx := ctx.Copy()
+	asyncCtx.SetDB(db)
+
+	// 处理会员升级
 	if memberPointsChanged {
 		utils.Go(func() {
-			s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), order.MemberUuid)
+			s.memberSrv.HandleMemberUpgrade(asyncCtx.GetCompanyUuid(), order.MemberUuid)
 		})
 	}
 
@@ -1811,15 +1822,15 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			utils.Go(func() {
 				if member != nil && member.Phone != "" {
 					smsReq := sms.MemberRechargeRefundRequest{
-						Company:        ctx.GetCompany().Name,
+						Company:        asyncCtx.GetCompany().Name,
 						RechargeRefund: decimal.NewFromFloat(order.RechargeAmount).Add(decimal.NewFromFloat(order.GiftAmount)).Truncate(2).InexactFloat64(),
 						Balance:        member.GetBalanceAll(),
 						PointsBalance:  member.GetPoints(),
 					}
-					if err := s.smsSrv.SendMemberRechargeRefundSMS(ctx, member.Phone, &smsReq); err != nil {
-						ctx.Log().Info("发送充值反结账短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					if err := s.smsSrv.SendMemberRechargeRefundSMS(asyncCtx, member.Phone, &smsReq); err != nil {
+						asyncCtx.Log().Info("发送充值反结账短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
 					} else {
-						ctx.Log().Info("发送充值反结账短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+						asyncCtx.Log().Info("发送充值反结账短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
 					}
 				}
 			})
@@ -1830,7 +1841,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 	utils.Go(func() {
 		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
 			BasePayload: event.BasePayload{ // 统计
-				Ctx: ctx,
+				Ctx: asyncCtx,
 			},
 			MemberRechargeOrderUuid: order.Uuid,
 			OnlyDelete:              true,
@@ -1841,19 +1852,19 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		// 发布"会员余额变动"事件
 		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 			BasePayload: event.BasePayload{ // 会员余额变动
-				Ctx:          ctx,
-				CompanyUuid:  ctx.GetCompanyUuid(),
-				Source:       ctx.GetSource(),
-				OperatorUuid: int64(ctx.GetStaffUuid()),
+				Ctx:          asyncCtx,
+				CompanyUuid:  asyncCtx.GetCompanyUuid(),
+				Source:       asyncCtx.GetSource(),
+				OperatorUuid: int64(asyncCtx.GetStaffUuid()),
 			},
 		})
 		// 发布"会员积分变动"事件
 		s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
 			BasePayload: event.BasePayload{ // 会员积分变动
-				Ctx:          ctx,
-				CompanyUuid:  ctx.GetCompanyUuid(),
-				Source:       ctx.GetSource(),
-				OperatorUuid: int64(ctx.GetStaffUuid()),
+				Ctx:          asyncCtx,
+				CompanyUuid:  asyncCtx.GetCompanyUuid(),
+				Source:       asyncCtx.GetSource(),
+				OperatorUuid: int64(asyncCtx.GetStaffUuid()),
 			},
 		})
 	})

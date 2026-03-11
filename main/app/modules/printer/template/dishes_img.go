@@ -106,7 +106,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 	for _, product := range order.Products {
 		if product.BatchTagUuid > 0 {
 			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(t.base.Ctx.GetCompanyUuid(), product.BatchTagUuid)
-			if err == nil {
+			if err == nil && batchTag != nil {
 				batchTagText = batchTag.MultiLanguageName.GetNameByLang(t.base.Lang)
 				if product.ShowDelayTag {
 					postText := model.MultiLanguageName{
@@ -183,7 +183,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 	for _, product := range order.Products {
 		if product.BatchTagUuid > 0 {
 			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(t.base.Ctx.GetCompanyUuid(), product.BatchTagUuid)
-			if err == nil {
+			if err == nil && batchTag != nil {
 				batchTagText = batchTag.MultiLanguageName.GetNameByLang(t.base.Lang)
 				if product.ShowDelayTag {
 					postText := model.MultiLanguageName{
