@@ -1,0 +1,57 @@
+server:
+  address: ":14041"
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+  logPath: "/tmp/log/message"
+  logStdout: false
+  errorStack: true
+  errorLogEnabled: true
+  accessLogEnabled: false
+
+logger:
+  level: "all"
+  stdout: true
+  path: "/tmp/log/message"
+
+database:
+  default:
+    link: "mysql:test:test@tcp(mysql-test:3306)/message?charset=utf8mb4&parseTime=True&loc=Local&timeout=5s"
+    maxIdle: 10
+    maxOpen: 100
+    maxLifetime: "30s"
+
+grpc:
+  name: "ttpos-message"
+  address: ":14042"
+  logPath: "/tmp/log"
+  logStdout: true
+  errorLogEnabled: true
+  accessLogEnabled: false
+  errorStack: true
+
+nacos:
+  server:
+    addresses: ""
+    ip: ""
+    port: ""
+  config:
+    dataId: ""
+    group: ""
+
+queue:
+  switch: false
+
+mailgun:
+  domain: "test.mailgun.org"
+  apiKey: "test-api-key"
+  fromEmail: "test@test.mailgun.org"
+  fromName: "TTPOS Test"
+  apiBase: "http://wiremock:8080/v3"
+  timeout: 30
+
+otlp:
+  enabled: false
+  serviceName: "ttpos-message"
+  endpoint: ""
+  path: ""
+  token: ""

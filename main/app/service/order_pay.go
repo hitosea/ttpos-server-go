@@ -19,6 +19,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/metrics"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 
@@ -1198,6 +1199,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 			Name: paymentOrder.PaymentMethodName,
 		}
 		payMethods = append(payMethods, method)
+		metrics.PaymentsTotal.WithLabelValues(fmt.Sprintf("%d", paymentOrder.PaymentMethodCode), "success").Inc()
 	}
 	return &resp.OrderFinishResp{
 		SaleBillUuid:  request.SaleBillUuid,

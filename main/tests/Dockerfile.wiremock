@@ -1,0 +1,18 @@
+# Multi-stage build: compile proto descriptors, then extend WireMock image.
+# Proto files remain the single source of truth — descriptor is rebuilt each build.
+
+FROM namely/protoc-all:1.51_2 AS proto-builder
+COPY ttpos-bmp/app/ttpos-erp/manifest/protobuf /proto/erp
+COPY ttpos-bmp/app/ttpos-websocket/manifest/protobuf /proto/websocket
+RUN protoc \
+    --proto_path=/proto/erp \
+    --proto_path=/proto/websocket \
+    --proto_path=/opt/include \
+    --include_imports \
+    --descriptor_set_out=/services.dsc \
+    /proto/erp/erp.proto \
+    /proto/erp/selling/selling.proto \
+    /proto/websocket/websocket/websocket.proto
+
+FROM hub.hitosea.com/infra/wiremock:3.9.1
+COPY --from=proto-builder /services.dsc /home/wiremock/grpc/services.dsc

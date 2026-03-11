@@ -1,0 +1,68 @@
+server:
+  address: ":14021"
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+  logPath: "/tmp/log/erp"
+  logStdout: false
+  errorStack: true
+  errorLogEnabled: true
+  accessLogEnabled: false
+
+logger:
+  level: "all"
+  stdout: true
+  path: "/tmp/log/erp"
+
+database:
+  default:
+    link: "mysql:test:test@tcp(mysql-test:3306)/erp?charset=utf8mb4&parseTime=True&loc=Local&timeout=5s"
+    maxIdle: 10
+    maxOpen: 100
+    maxLifetime: "30s"
+
+redis:
+  default:
+    address: "redis-test:6379"
+    pass: ""
+    db: 0
+    cluster: false
+
+grpc:
+  name: "ttpos-erp"
+  address: ":14022"
+  logPath: "/tmp/log"
+  logStdout: true
+  errorLogEnabled: true
+  accessLogEnabled: false
+  errorStack: true
+
+nacos:
+  server:
+    addresses: ""
+    ip: ""
+    port: ""
+  config:
+    dataId: ""
+    group: ""
+
+app:
+  aesKey: "test-aes-key-for-integration-tests"
+  serviceUrl: "http://bmp-erp:14021"
+  erpnext:
+    serviceUrl: ""
+    dump: false
+    webhook:
+      secret: "test-webhook-secret"
+
+queue:
+  switch: false
+
+cache:
+  adapter: "memory"
+
+otlp:
+  enabled: false
+  serviceName: "ttpos-erp"
+  endpoint: ""
+  path: ""
+  token: ""

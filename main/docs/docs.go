@@ -21451,6 +21451,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/order/dine_in/pay/mock_callback": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "该接口仅在调试/测试模式下可用，用于模拟支付完成后的回调流程",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-堂食订单"
+                ],
+                "summary": "模拟堂食订单支付完成回调（仅测试用）",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MockPayDineInOrderCallbackReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/member/order/dine_in/pay/status": {
             "get": {
                 "security": [
@@ -47732,11 +47771,42 @@ const docTemplate = `{
         "req.GetDataManageOrderSelectStatsReq": {
             "type": "object",
             "properties": {
-                "filters": {
-                    "description": "筛选条件数组，聚合统计",
+                "bill_type": {
+                    "description": "订单类型,-1=全部、0=餐单、1=外卖",
+                    "type": "integer"
+                },
+                "date_type": {
+                    "description": "时间类型,-1=全部、0=今天、1=昨天、2=本周",
+                    "type": "integer"
+                },
+                "deselected_uuids": {
+                    "description": "取消/移除的UUID（select_all=true时排除，select_all=false时移除）",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
+                        "type": "integer"
+                    }
+                },
+                "order_no": {
+                    "description": "订单编号搜索",
+                    "type": "string"
+                },
+                "query_end_date": {
+                    "description": "查询结束日期",
+                    "type": "string"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期",
+                    "type": "string"
+                },
+                "select_all": {
+                    "description": "是否全选当前筛选范围",
+                    "type": "boolean"
+                },
+                "selected_uuids": {
+                    "description": "手动新增的UUID（select_all=false时使用）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
                     }
                 }
             }
@@ -48724,6 +48794,18 @@ const docTemplate = `{
                         "type": "integer"
                     }
                 },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.MockPayDineInOrderCallbackReq": {
+            "type": "object",
+            "required": [
+                "sale_bill_uuid"
+            ],
+            "properties": {
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
                     "type": "integer"
@@ -71182,16 +71264,16 @@ const docTemplate = `{
                     "description": "是否全选（所有筛选范围内的订单都已选中）",
                     "type": "boolean"
                 },
-                "new_count": {
-                    "description": "新增总数（尚未在 data_manage 中的订单数）",
-                    "type": "integer"
-                },
                 "paid_amount": {
                     "description": "预览选中实付金额合计",
                     "type": "number"
                 },
                 "selected_count": {
                     "description": "预览选中数量",
+                    "type": "integer"
+                },
+                "total_count": {
+                    "description": "筛选范围内订单总数",
                     "type": "integer"
                 }
             }

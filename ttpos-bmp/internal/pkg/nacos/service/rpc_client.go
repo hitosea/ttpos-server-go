@@ -13,6 +13,9 @@ type rpcClient struct {
 }
 
 func (r *rpcClient) Init(ctx context.Context) {
-	grpcx.Resolver.Register(nacos.New(GetNacosAddress(ctx)))
+	nacosAddr := GetNacosAddress(ctx)
+	if nacosAddr != "" && nacosAddr != ":" {
+		grpcx.Resolver.Register(nacos.New(nacosAddr))
+	}
 	r.Ctx = ctx
 }

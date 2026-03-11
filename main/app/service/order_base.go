@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/metrics"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
@@ -136,6 +137,8 @@ func (s *orderSrv) createInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	}); err != nil {
 		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
 	}
+
+	metrics.OrdersTotal.WithLabelValues(ctx.GetSource(), constant.OrderSourceInstant).Inc()
 
 	return resp.CreateInstantOrderResp{
 		SaleBillUuid:  billUuid,
@@ -358,6 +361,8 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}); err != nil {
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}
+
+	metrics.OrdersTotal.WithLabelValues(ctx.GetSource(), constant.OrderSourceDesk).Inc()
 
 	return resp.CreateDeskOrderResp{
 		SaleBillUuid:  saleBill.Uuid,

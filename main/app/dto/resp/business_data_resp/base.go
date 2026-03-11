@@ -314,6 +314,8 @@ type KitchenEfficiencyAnalysisItem struct {
 	Max                float64            `json:"max"`                  // 最长出品时长
 	Avg                float64            `json:"avg"`                  // 平均出品时长
 
+	// Bugfix: removed erroneous json tags — unexported fields are never serialized,
+	// and the tags leaked internal state ("exist":false, "index":0) into API responses.
 	exist bool // 是否存在
 	index int  // 排序
 }

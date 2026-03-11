@@ -213,3 +213,122 @@ db-import:
 	echo "⏳ 正在导入，请稍候..."; \
 	gunzip < $(FILE) | docker exec -i $$CONTAINER mysql -uroot -p$$DB_ROOT_PASSWORD; \
 	echo "✅ 数据库导入完成"
+
+# ===========================================
+# Integration Testing Commands
+# ===========================================
+
+# Build configuration for tests
+BUILD_ID ?= $(shell date +%s)
+IMAGE_TAG ?= latest
+COVERAGE_DIR := coverage
+ENV_FILE := main/tests/test.env
+
+.PHONY: test-main-local test-clean test-help
+
+test-help:
+	@echo "TTPOS Integration Test Commands"
+	@echo ""
+	@echo "  make test-main-local       Run Main integration tests"
+	@echo "  make test-bmp-local        Run BMP integration tests"
+	@echo ""
+	@echo "Coverage is collected and merged after tests complete."
+	@echo "Test containers and volumes are automatically cleaned up."
+	@echo ""
+	@echo "Options:"
+	@echo "  BUILD_ID=<id>           Unique identifier for test run (default: timestamp)"
+
+# Run Main integration tests
+test-main-local:
+	@echo "=== Running Main Integration Tests (Local Mode) ==="
+	@echo "=== Cleaning up any previous run ==="
+	docker compose --env-file $(ENV_FILE) -p test-$(BUILD_ID) -f main/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+	@echo "=== Starting containers ==="
+	@mkdir -p $(COVERAGE_DIR)
+	@chmod 777 $(COVERAGE_DIR)
+	docker compose --env-file $(ENV_FILE) -p test-$(BUILD_ID) -f main/tests/docker-compose.yml up --build --exit-code-from test-runner
+	@echo "=== Merging coverage data ==="
+	go tool covdata textfmt -i=$(COVERAGE_DIR) -o=$(COVERAGE_DIR)/total.out 2>/dev/null || echo "No coverage data to merge"
+	@if [ -f $(COVERAGE_DIR)/total.out ]; then bash main/tests/fix-coverage-paths.sh $(COVERAGE_DIR)/total.out; fi
+	@echo "Coverage report: $(COVERAGE_DIR)/total.out"
+	@echo "=== Cleaning up test containers and volumes ==="
+	docker compose --env-file $(ENV_FILE) -p test-$(BUILD_ID) -f main/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+
+
+# Clean up all test containers and volumes
+test-clean:
+	@echo "=== Cleaning up all test containers ==="
+	@docker compose --env-file $(ENV_FILE) -p test-$(BUILD_ID) -f main/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+	@docker ps -q --filter "name=test-*" | xargs -r docker rm -f 2>/dev/null || true
+	@echo "=== Cleaning up coverage directory ==="
+	@rm -rf $(COVERAGE_DIR)/*
+	@echo "Done."
+
+# ===========================================
+# BMP Integration Testing Commands
+# ===========================================
+
+BMP_ENV_FILE := ttpos-bmp/tests/test.env
+
+.PHONY: test-bmp-local test-bmp-clean
+
+# Run BMP integration tests
+test-bmp-local:
+	@echo "=== Running BMP Integration Tests (Local Mode) ==="
+	@echo "=== Cleaning up any previous run ==="
+	docker compose --env-file $(BMP_ENV_FILE) -p bmp-test-$(BUILD_ID) -f ttpos-bmp/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+	@echo "=== Starting containers ==="
+	@mkdir -p $(COVERAGE_DIR)/bmp
+	@chmod 777 $(COVERAGE_DIR)/bmp
+	docker compose --env-file $(BMP_ENV_FILE) -p bmp-test-$(BUILD_ID) -f ttpos-bmp/tests/docker-compose.yml up --build --exit-code-from bmp-test-runner
+	@echo "=== Merging BMP coverage data ==="
+	go tool covdata textfmt -i=$(COVERAGE_DIR)/bmp -o=$(COVERAGE_DIR)/bmp-total.out 2>/dev/null || echo "No BMP coverage data to merge"
+	@if [ -f $(COVERAGE_DIR)/bmp-total.out ]; then bash ttpos-bmp/tests/fix-coverage-paths.sh $(COVERAGE_DIR)/bmp-total.out; fi
+	@echo "BMP coverage report: $(COVERAGE_DIR)/bmp-total.out"
+	@echo "=== Cleaning up test containers and volumes ==="
+	docker compose --env-file $(BMP_ENV_FILE) -p bmp-test-$(BUILD_ID) -f ttpos-bmp/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+
+# Clean up BMP test containers and volumes
+test-bmp-clean:
+	@echo "=== Cleaning up BMP test containers ==="
+	docker compose --env-file $(BMP_ENV_FILE) -p bmp-test-$(BUILD_ID) -f ttpos-bmp/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+	@rm -rf $(COVERAGE_DIR)/bmp
+	@echo "Done."
+
+# ===========================================
+# Unit Testing Commands
+# ===========================================
+
+.PHONY: unit-test unit-test-coverage
+
+# Run unit tests
+unit-test:
+	@echo "=== Running Unit Tests ==="
+	cd main && go test -v -count=1 ./...
+
+# Run unit tests with coverage
+unit-test-coverage:
+	@echo "=== Running Unit Tests with Coverage ==="
+	@mkdir -p $(COVERAGE_DIR)
+	cd main && go test -coverprofile=../$(COVERAGE_DIR)/unit.out -covermode=atomic ./...
+
+# ===========================================
+# Code Quality Commands
+# ===========================================
+
+.PHONY: lint fmt vet sonar
+
+# Run linter
+lint:
+	@echo "=== Running Linter ==="
+	cd main && golangci-lint run ./...
+
+# Format code
+fmt:
+	@echo "=== Formatting Code ==="
+	cd main && go fmt ./...
+
+# Run go vet
+vet:
+	@echo "=== Running go vet ==="
+	cd main && go vet ./...

@@ -62,3 +62,5 @@ certificate
 .agents
 /ttpos-scripts/find-order-database.js
 /main/1.json
+coverage
+.scannerwork

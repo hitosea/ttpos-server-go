@@ -1,0 +1,132 @@
+# GitHub Labels for TTPOS Bug Tracking
+# Apply with: gh label create or use a tool like github-label-sync
+
+# ── Type ────────────────────────────────────────────────────────────────────
+- name: bug
+  color: "d73a4a"
+  description: Confirmed bug report
+
+# ── Severity ────────────────────────────────────────────────────────────────
+- name: "severity:critical"
+  color: "b60205"
+  description: System crash / data loss / security
+
+- name: "severity:major"
+  color: "e4e669"
+  description: Key feature broken, no workaround
+
+- name: "severity:minor"
+  color: "fbca04"
+  description: Feature degraded, workaround exists
+
+- name: "severity:trivial"
+  color: "c5def5"
+  description: Cosmetic / UX issue
+
+# ── Priority ─────────────────────────────────────────────────────────────────
+- name: "priority:P0"
+  color: "b60205"
+  description: Fix immediately — blocking production
+
+- name: "priority:P1"
+  color: "e4e669"
+  description: Fix this sprint
+
+- name: "priority:P2"
+  color: "0075ca"
+  description: Fix next sprint
+
+- name: "priority:P3"
+  color: "cfd3d7"
+  description: Backlog
+
+# ── Status (progress flow) ───────────────────────────────────────────────────
+- name: "status:open"
+  color: "d93f0b"
+  description: New, not yet triaged
+
+- name: "status:analyzing"
+  color: "e4e669"
+  description: Root cause investigation in progress
+
+- name: "status:fixing"
+  color: "0052cc"
+  description: Fix being implemented
+
+- name: "status:review"
+  color: "5319e7"
+  description: PR open, awaiting code review
+
+- name: "status:testing"
+  color: "006b75"
+  description: Fix deployed to staging, awaiting QA verification
+
+- name: "status:verified"
+  color: "0e8a16"
+  description: Fix confirmed by QA
+
+- name: "status:closed"
+  color: "cfd3d7"
+  description: Resolved and closed
+
+- name: "status:reopened"
+  color: "d93f0b"
+  description: Fix did not resolve the issue, needs another cycle
+
+# ── Root Cause Category ──────────────────────────────────────────────────────
+- name: "cause:logic-error"
+  color: "fef2c0"
+  description: Wrong business logic
+
+- name: "cause:missing-validation"
+  color: "fef2c0"
+  description: Input not validated at boundary
+
+- name: "cause:race-condition"
+  color: "fef2c0"
+  description: Concurrency / locking issue
+
+- name: "cause:missing-edge-case"
+  color: "fef2c0"
+  description: Unhandled scenario
+
+- name: "cause:data-migration"
+  color: "fef2c0"
+  description: Schema or seed data issue
+
+- name: "cause:config-error"
+  color: "fef2c0"
+  description: Wrong env/config value
+
+- name: "cause:dependency-change"
+  color: "fef2c0"
+  description: Upstream API or library change
+
+- name: "cause:performance"
+  color: "fef2c0"
+  description: Timeout / memory / deadlock
+
+- name: "cause:security"
+  color: "b60205"
+  description: Auth / permission bypass
+
+- name: "cause:integration"
+  color: "fef2c0"
+  description: Inter-service contract mismatch
+
+# ── Module ───────────────────────────────────────────────────────────────────
+- name: "module:main"
+  color: "c2e0c6"
+  description: Go Main service
+
+- name: "module:bmp"
+  color: "bfd4f2"
+  description: BMP microservices
+
+- name: "module:admin"
+  color: "d4c5f9"
+  description: Legacy PHP admin
+
+- name: "module:infra"
+  color: "e6e6e6"
+  description: Infrastructure / CI / deployment

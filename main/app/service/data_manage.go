@@ -85,11 +85,19 @@ func (s *DataManageSrv) GetDataManage(ctx context.Context) (*setting_resp.GetDat
 	}
 
 	// 获取订单数量
-	dataManages := dataManageRepo.List(
-		dataManageRepo.WhereByType(model.DataManageTypeOrder),
-	)
-	for _, dataManage := range dataManages {
-		orderUuids = append(orderUuids, dataManage.DataUuid)
+	var orderCount int
+	if utils.CompareVersion(ctx.GetVersion(), utils.VersionGTE, constant.ClientVersionV2200) {
+		// >= 2.20 仅统计数量，不返回 UUID 列表
+		count, _ := dataManageRepo.Count(dataManageRepo.WhereByType(model.DataManageTypeOrder))
+		orderCount = int(count)
+	} else {
+		dataManages := dataManageRepo.List(
+			dataManageRepo.WhereByType(model.DataManageTypeOrder),
+		)
+		for _, dataManage := range dataManages {
+			orderUuids = append(orderUuids, dataManage.DataUuid)
+		}
+		orderCount = len(orderUuids)
 	}
 
 	// 获取统计信息
@@ -110,7 +118,7 @@ func (s *DataManageSrv) GetDataManage(ctx context.Context) (*setting_resp.GetDat
 	return &setting_resp.GetDataManageResp{
 		IsEnableDataManage: setting.IsEnableDataManage,
 		StaffCount:         len(staffUuids),
-		OrderCount:         len(orderUuids),
+		OrderCount:         orderCount,
 		StaffUuids:         staffUuids,
 		OrderUuids:         orderUuids,
 		Statistics: setting_resp.DataManageStatistics{
@@ -338,10 +346,13 @@ func (s *DataManageSrv) GetOrderList(ctx context.Context, req shop_req.GetDataMa
 		commonRepo.WhereBySoftDelete(),
 	)
 	orderCount, _ := dataManageRepo.Count(dataManageRepo.WhereByType(model.DataManageTypeOrder))
-	totalPaidAmount := orderRepo.SumSaleBillPaymentAmount(
+	totalPaidAmount := decimal.NewFromFloat(orderRepo.SumSaleBillPaymentAmount(
 		dataManageSubQuery,
 		commonRepo.WhereByCooking(),
-	)
+	)).Sub(decimal.NewFromFloat(orderRepo.SumSaleBillRefundAmount(
+		dataManageSubQuery,
+		commonRepo.WhereByCooking(),
+	))).Round(2).InexactFloat64()
 
 	// 构建响应
 	list := make([]setting_resp.DataManageOrderItem, 0, len(lists))
@@ -447,40 +458,36 @@ func (s *DataManageSrv) SubmitOrder(ctx context.Context, req shop_req.SubmitData
 	toDeleteSet := make(map[uint64]struct{})
 
 	for _, f := range req.Filters {
-		filterOpt := s.buildOrderFilterOption(f.OrderNo, f.DateType, f.QueryStartDate, f.QueryEndDate, f.BillType, tz)
-		baseOpts := []repository.DBOption{
-			commonRepo.WhereBySoftDelete(),
-			commonRepo.WhereByCooking(),
-			commonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
-			func(db *gorm.DB) *gorm.DB { return db.Where("status = ?", 1) },
-			filterOpt,
-		}
-
 		if f.SelectAll {
-			// 全选模式：筛选范围内所有订单直接加入
-			allUuids := orderRepo.GetSaleBillUuids(baseOpts...)
-			for _, uid := range allUuids {
-				toAddSet[uid] = struct{}{}
+			// 案例1/2：全选模式，筛选范围全部 - DeselectedUuids 新增到数据管理
+			filterOpt := s.buildOrderFilterOption(f.OrderNo, f.DateType, f.QueryStartDate, f.QueryEndDate, f.BillType, tz)
+			allUuids := orderRepo.GetSaleBillUuids(
+				commonRepo.WhereBySoftDelete(),
+				commonRepo.WhereByCooking(),
+				commonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
+				func(db *gorm.DB) *gorm.DB { return db.Where("status = ?", 1) },
+				filterOpt,
+			)
+			deselectedSet := make(map[uint64]struct{}, len(f.DeselectedUuids))
+			for _, uid := range f.DeselectedUuids {
+				deselectedSet[uid] = struct{}{}
 			}
-		} else {
-			// 手动模式
-			if len(f.SelectedUuids) > 0 {
-				for _, uid := range f.SelectedUuids {
+			for _, uid := range allUuids {
+				if _, excluded := deselectedSet[uid]; !excluded {
 					toAddSet[uid] = struct{}{}
 				}
 			}
+		} else {
 			if len(f.DeselectedUuids) > 0 {
-				// 筛选范围 - DeselectedUuids = 新增，DeselectedUuids = 移除
-				allUuids := orderRepo.GetSaleBillUuids(baseOpts...)
-				deselectedSet := make(map[uint64]struct{}, len(f.DeselectedUuids))
+				// 案例3：从数据管理中移除 DeselectedUuids
 				for _, uid := range f.DeselectedUuids {
-					deselectedSet[uid] = struct{}{}
 					toDeleteSet[uid] = struct{}{}
 				}
-				for _, uid := range allUuids {
-					if _, excluded := deselectedSet[uid]; !excluded {
-						toAddSet[uid] = struct{}{}
-					}
+			}
+			if len(f.SelectedUuids) > 0 {
+				// 案例4：手动选中新增到数据管理
+				for _, uid := range f.SelectedUuids {
+					toAddSet[uid] = struct{}{}
 				}
 			}
 		}
@@ -574,127 +581,130 @@ func (s *DataManageSrv) SubmitOrder(ctx context.Context, req shop_req.SubmitData
 	})
 }
 
-// GetOrderSelectStats 获取可选订单统计预览（不持久化，仅预览提交后的统计）
-// 逻辑与 SubmitOrder 对齐：遍历 Filters，收集新增 UUID，聚合统计
+// GetOrderSelectStats 获取可选订单统计预览（不持久化）
+// 基于当前筛选范围内已管理的订单 + 当前操作的增量：
+//   - SelectAll=true：筛选范围全部 - DeselectedUuids
+//   - SelectAll=false + SelectedUuids：已管理(筛选范围内) ∪ SelectedUuids
+//   - SelectAll=false + DeselectedUuids：已管理(筛选范围内) - DeselectedUuids
+//   - 兜底：已管理(筛选范围内)
 func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.GetDataManageOrderSelectStatsReq) (*setting_resp.DataManageOrderSelectStatsResp, error) {
 	if err := s.checkPermission(ctx); err != nil {
 		return nil, err
 	}
 
-	if len(req.Filters) == 0 {
-		return &setting_resp.DataManageOrderSelectStatsResp{
-			SelectedCount: 0,
-			PaidAmount:    0,
-			NewCount:      0,
-			IsSelectAll:   false,
-		}, nil
-	}
-
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	orderRepo := repository.NewOrderRepo(db)
-	dataManageRepo := repository.NewDataManageRepo(db)
 	tz := ctx.GetCompanySetting().Timezone
 
-	// 收集所有 Filter 的选中 UUID（跨 Filter 去重），与 SubmitOrder 逻辑对齐
-	uuidSet := make(map[uint64]struct{})
-	excludeSet := make(map[uint64]struct{})
-	// 收集所有 Filter 范围内的总订单 UUID（用于判断是否全选）
-	allFilterUuidSet := make(map[uint64]struct{})
+	// 1. 构建当前筛选条件
+	filterOpt := s.buildOrderFilterOption(req.OrderNo, req.DateType, req.QueryStartDate, req.QueryEndDate, req.BillType, tz)
+	baseOpts := []repository.DBOption{
+		commonRepo.WhereBySoftDelete(),
+		commonRepo.WhereByCooking(),
+		commonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
+		func(db *gorm.DB) *gorm.DB { return db.Where("status = ?", 1) },
+		filterOpt,
+	}
 
-	for _, f := range req.Filters {
-		filterOpt := s.buildOrderFilterOption(f.OrderNo, f.DateType, f.QueryStartDate, f.QueryEndDate, f.BillType, tz)
-		baseOpts := []repository.DBOption{
-			commonRepo.WhereBySoftDelete(),
-			commonRepo.WhereByCooking(),
-			commonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
-			func(db *gorm.DB) *gorm.DB { return db.Where("status = ?", 1) },
-			filterOpt,
+	// 2. 查询当前筛选范围内的所有订单 UUID
+	filterUuids := orderRepo.GetSaleBillUuids(baseOpts...)
+	filterUuidSet := make(map[uint64]struct{}, len(filterUuids))
+	for _, uid := range filterUuids {
+		filterUuidSet[uid] = struct{}{}
+	}
+	totalCount := int64(len(filterUuidSet))
+
+	// 3. 查询当前筛选范围内已在数据管理中的订单（基线，分批查询避免 IN 子句过大）
+	dataManageRepo := repository.NewDataManageRepo(db)
+	existingSet := make(map[uint64]struct{})
+	const queryBatchSize = 1000
+	for i := 0; i < len(filterUuids); i += queryBatchSize {
+		end := min(i+queryBatchSize, len(filterUuids))
+		managed := dataManageRepo.GetDataUuids(
+			dataManageRepo.WhereByType(model.DataManageTypeOrder),
+			dataManageRepo.WhereInDataUuids(filterUuids[i:end]),
+		)
+		for _, uid := range managed {
+			existingSet[uid] = struct{}{}
 		}
+	}
 
-		// 获取当前 Filter 范围内的所有订单 UUID（用于判断全选）
-		allUuids := orderRepo.GetSaleBillUuids(baseOpts...)
-		for _, uid := range allUuids {
-			allFilterUuidSet[uid] = struct{}{}
+	// 4. 根据操作类型计算最终选中集合
+	finalSet := make(map[uint64]struct{})
+
+	if req.SelectAll {
+		// 案例1/2：全选筛选范围 - DeselectedUuids
+		deselectedSet := make(map[uint64]struct{}, len(req.DeselectedUuids))
+		for _, uid := range req.DeselectedUuids {
+			deselectedSet[uid] = struct{}{}
 		}
-
-		if f.SelectAll {
-			// 全选模式：筛选范围内所有订单直接计入
-			for _, uid := range allUuids {
-				uuidSet[uid] = struct{}{}
+		for _, uid := range filterUuids {
+			if _, excluded := deselectedSet[uid]; !excluded {
+				finalSet[uid] = struct{}{}
 			}
-		} else {
-			if len(f.SelectedUuids) > 0 {
-				for _, uid := range f.SelectedUuids {
-					uuidSet[uid] = struct{}{}
-				}
+		}
+	} else {
+		// 以筛选范围内已管理的订单为基线
+		for uid := range existingSet {
+			finalSet[uid] = struct{}{}
+		}
+		if len(req.DeselectedUuids) > 0 {
+			// 案例3：从已管理中移除
+			for _, uid := range req.DeselectedUuids {
+				delete(finalSet, uid)
 			}
-			if len(f.DeselectedUuids) > 0 {
-				// 筛选范围 - DeselectedUuids = 计入，DeselectedUuids = 排除
-				deselectedSet := make(map[uint64]struct{}, len(f.DeselectedUuids))
-				for _, uid := range f.DeselectedUuids {
-					deselectedSet[uid] = struct{}{}
-					excludeSet[uid] = struct{}{}
-				}
-				for _, uid := range allUuids {
-					if _, excluded := deselectedSet[uid]; !excluded {
-						uuidSet[uid] = struct{}{}
-					}
-				}
+		}
+		if len(req.SelectedUuids) > 0 {
+			// 案例4：手动新增
+			for _, uid := range req.SelectedUuids {
+				finalSet[uid] = struct{}{}
 			}
 		}
 	}
 
-	// 冲突处理：移除优先
-	for uid := range excludeSet {
-		delete(uuidSet, uid)
+	// 5. 判断是否全选
+	isSelectAll := totalCount > 0
+	if isSelectAll {
+		for uid := range filterUuidSet {
+			if _, ok := finalSet[uid]; !ok {
+				isSelectAll = false
+				break
+			}
+		}
 	}
 
-	// 判断是否全选：选中的 UUID 覆盖了所有筛选范围内的订单
-	isSelectAll := len(allFilterUuidSet) > 0 && len(uuidSet) >= len(allFilterUuidSet)
-
-	if len(uuidSet) == 0 {
+	// 6. 统计选中集合的数量和金额
+	if len(finalSet) == 0 {
 		return &setting_resp.DataManageOrderSelectStatsResp{
 			SelectedCount: 0,
 			PaidAmount:    0,
-			NewCount:      0,
+			TotalCount:    totalCount,
 			IsSelectAll:   isSelectAll,
 		}, nil
 	}
 
-	finalUuids := make([]uint64, 0, len(uuidSet))
-	for uid := range uuidSet {
+	finalUuids := make([]uint64, 0, len(finalSet))
+	for uid := range finalSet {
 		finalUuids = append(finalUuids, uid)
 	}
 
-	// 查询 finalUuids 中哪些已存在于 data_manage（用于计算新增总数）
-	existingCount := 0
-	const queryBatchSize = 1000
-	for i := 0; i < len(finalUuids); i += queryBatchSize {
-		end := min(i+queryBatchSize, len(finalUuids))
-		alreadyExist := dataManageRepo.GetDataUuids(
-			dataManageRepo.WhereByType(model.DataManageTypeOrder),
-			dataManageRepo.WhereInDataUuids(finalUuids[i:end]),
-		)
-		existingCount += len(alreadyExist)
-	}
-	newCount := int64(len(finalUuids) - existingCount)
-
-	// 分批查询统计，避免 IN 子句过大
-	var totalCount int64
-	var totalPaidAmount float64
+	var selectedCount int64
+	totalPaidAmountDec := decimal.NewFromFloat(0)
 	const statsBatchSize = 1000
 	for i := 0; i < len(finalUuids); i += statsBatchSize {
 		end := min(i+statsBatchSize, len(finalUuids))
 		count, paidAmount := orderRepo.CountAndSumSaleBill(commonRepo.WhereInUuids(finalUuids[i:end]))
-		totalCount += count
-		totalPaidAmount += paidAmount
+		refundAmount := orderRepo.SumSaleBillRefundAmount(commonRepo.WhereInUuids(finalUuids[i:end]))
+		selectedCount += count
+		totalPaidAmountDec = totalPaidAmountDec.Add(decimal.NewFromFloat(paidAmount).Sub(decimal.NewFromFloat(refundAmount)))
 	}
+	totalPaidAmount := totalPaidAmountDec.Round(2).InexactFloat64()
 
 	return &setting_resp.DataManageOrderSelectStatsResp{
-		SelectedCount: totalCount,
+		SelectedCount: selectedCount,
 		PaidAmount:    totalPaidAmount,
-		NewCount:      newCount,
+		TotalCount:    totalCount,
 		IsSelectAll:   isSelectAll,
 	}, nil
 }
