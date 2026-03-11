@@ -158,7 +158,8 @@ type PurchaseOrderItem struct {
 	ErpnextUom          string  `gorm:"column:erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext单位" json:"erpnext_uom"`
 	BaseErpnextUom      string  `gorm:"column:base_erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext基准单位" json:"base_erpnext_uom"`
 	DeliveredBySupplier int     `gorm:"column:delivered_by_supplier;type:int(10);not null;default:0;comment:是否由供应商配送，0-否，1-是" json:"delivered_by_supplier"`
-	SupplierErpCode     string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商ERP编码" json:"supplier_erp_code"`
+	SupplierErpCode       string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商ERP编码" json:"supplier_erp_code"`
+	StoreSnapshotQuantity float64 `gorm:"column:store_snapshot_quantity;type:decimal(14,4);not null;default:0;comment:申请时门店库存（默认销售单位）" json:"store_snapshot_quantity"`
 
 	// 关联关系
 	PurchaseOrder *PurchaseOrder          `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`

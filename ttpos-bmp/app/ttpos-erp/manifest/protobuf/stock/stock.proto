@@ -23,6 +23,9 @@ message MaterialRequestItem {
   double qty = 3;      // 物品数量，
   string warehouse = 4;      // 仓库名称，可选
   string uom = 5;      // 物品单位，
+  double custom_last_purchase_qty = 6;      // 上次采购数量（默认销售单位），可选，由TTPOS传入
+  double custom_qty_available_for_purchase = 7;      // 可采购数量（总店默认仓库库存），可选，由BMP填入
+  double custom_store_qty = 8;      // 门店库存（门店所有仓库库存），可选，由BMP填入
 }
 
 message SaveMaterialRequestReq {
@@ -36,6 +39,7 @@ message SaveMaterialRequestReq {
   string supplier = 8;      // 供应商名称, purpose 为 Purchases时 必填
   repeated MaterialRequestItem items = 9;      // 物品列表，
   string ref_no = 10;      // 来源单据号，可选，用于跟踪 ttpos 原始订单号
+  string source_company_abbr = 11;      // 来源公司缩写（总部公司），可选，用于查询总店物品默认仓库库存
 }
 
 message SaveMaterialRequestResp {

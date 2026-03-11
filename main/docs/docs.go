@@ -21179,6 +21179,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/order/dine_in/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员端堂食订单详情，包含商品列表、金额信息、状态信息等",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-堂食订单"
+                ],
+                "summary": "获取会员端堂食订单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.GetMemberDineInOrderDetailResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/member/order/dine_in/dining_method": {
             "post": {
                 "security": [
@@ -21257,6 +21297,60 @@ const docTemplate = `{
                         "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/resp.DineInOrderFormResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/dine_in/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员端堂食订单列表，支持状态过滤（全部、待支付、进行中、已完成、已取消）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-堂食订单"
+                ],
+                "summary": "获取会员端堂食订单列表",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态: \"all\" 全部, \"unpaid\" 待支付, \"inprogress\" 进行中(已支付,待接单/备餐中), \"completed\" 已完成(含部分退款/全部退款), \"cancelled\" 已取消(含已拒单)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.GetMemberDineInOrderListResp"
                         }
                     },
                     "400": {
@@ -42159,6 +42253,10 @@ const docTemplate = `{
                     "description": "内部编码",
                     "type": "string"
                 },
+                "last_purchase_quantity": {
+                    "description": "上次采购数量（默认销售单位）",
+                    "type": "number"
+                },
                 "locale_name": {
                     "description": "物品名称",
                     "allOf": [
@@ -58994,6 +59092,94 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.GetMemberDineInOrderDetailResp": {
+            "type": "object",
+            "properties": {
+                "amount_info": {
+                    "description": "金额信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.MemberDineInOrderAmountInfo"
+                        }
+                    ]
+                },
+                "cancel_time": {
+                    "description": "取消时间",
+                    "type": "integer"
+                },
+                "company_name": {
+                    "description": "商家名称",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "下单时间",
+                    "type": "integer"
+                },
+                "dining_method": {
+                    "description": "用餐方式：0-堂食 1-打包",
+                    "type": "integer"
+                },
+                "order_no": {
+                    "description": "订单编号",
+                    "type": "string"
+                },
+                "pay_time": {
+                    "description": "支付时间",
+                    "type": "integer"
+                },
+                "product_list": {
+                    "description": "商品列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.MemberDineInOrderProductList"
+                        }
+                    ]
+                },
+                "refund_amount": {
+                    "description": "退款金额（用于显示\"已退款 ¥xx\"）",
+                    "type": "number"
+                },
+                "remaining_payment_time": {
+                    "description": "剩余支付时间（秒）",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "订单备注",
+                    "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "serial_no": {
+                    "description": "取餐号",
+                    "type": "string"
+                },
+                "status_info": {
+                    "description": "状态信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.MemberDineInOrderStatusInfo"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.GetMemberDineInOrderListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberDineInOrder"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
         "resp.GetMemberOrderDetailResp": {
             "type": "object",
             "properties": {
@@ -60369,6 +60555,153 @@ const docTemplate = `{
                 },
                 "status_group": {
                     "description": "订单状态分组. \"unaccept\" 待接单, \"accept\" 备餐中, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.MemberDineInOrder": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "订单金额（应付金额）",
+                    "type": "number"
+                },
+                "company_name": {
+                    "description": "商家名称",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "下单时间",
+                    "type": "integer"
+                },
+                "dining_method": {
+                    "description": "用餐方式：0-堂食 1-打包",
+                    "type": "integer"
+                },
+                "num": {
+                    "description": "商品数量",
+                    "type": "number"
+                },
+                "order_no": {
+                    "description": "订单编号",
+                    "type": "string"
+                },
+                "product_amount": {
+                    "description": "商品金额",
+                    "type": "number"
+                },
+                "product_list": {
+                    "description": "商品列表（前3个）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberOrderProduct"
+                    }
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "serial_no": {
+                    "description": "取餐号",
+                    "type": "string"
+                },
+                "status_info": {
+                    "description": "状态信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.MemberDineInOrderStatusInfo"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.MemberDineInOrderAmountInfo": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "应付金额",
+                    "type": "number"
+                },
+                "discount_amount": {
+                    "description": "优惠金额",
+                    "type": "number"
+                },
+                "payment_method_name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "service_fee": {
+                    "description": "服务费",
+                    "type": "number"
+                },
+                "tax_fee": {
+                    "description": "税费",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.MemberDineInOrderProduct": {
+            "type": "object",
+            "properties": {
+                "image": {
+                    "description": "商品图片",
+                    "type": "string"
+                },
+                "locale_attribute_name": {
+                    "description": "商品属性",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "locale_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "num": {
+                    "description": "数量",
+                    "type": "number"
+                },
+                "price": {
+                    "description": "单价（折前）",
+                    "type": "number"
+                },
+                "refund_amount": {
+                    "description": "退款金额（0表示未退款）",
+                    "type": "number"
+                },
+                "total_price": {
+                    "description": "总价（折前）= 单价 * 数量",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.MemberDineInOrderProductList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberDineInOrderProduct"
+                    }
+                }
+            }
+        },
+        "resp.MemberDineInOrderStatusInfo": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "description": "订单状态：unpaid-待支付 pending-待接单 preparing-备餐中 completed-已完成 partial_refund-部分退款 full_refund-全部退款 cancelled-已取消 rejected-已拒单",
+                    "type": "string"
+                },
+                "status_text": {
+                    "description": "状态文字（多语言）",
                     "type": "string"
                 }
             }
@@ -64229,6 +64562,10 @@ const docTemplate = `{
                     "description": "内部编码",
                     "type": "string"
                 },
+                "last_purchase_quantity": {
+                    "description": "上次采购数量（默认销售单位）",
+                    "type": "number"
+                },
                 "locale_base_unit_name": {
                     "description": "基准单位名称",
                     "allOf": [
@@ -64278,7 +64615,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "store_quantity": {
-                    "description": "门店数量",
+                    "description": "当前实时门店库存",
+                    "type": "number"
+                },
+                "store_snapshot_quantity": {
+                    "description": "申请时门店库存（默认销售单位）",
                     "type": "number"
                 },
                 "unit_conversion_rate": {

@@ -1077,3 +1077,64 @@ func (h *purchaseOrderHelper) getMinDailyLimit(
 	}
 	return -1
 }
+
+// getLastPurchaseQtyByMaterialCode 查询上次品牌采购数量，转换为默认销售单位，返回 map[MaterialCode]qty
+func (h *purchaseOrderHelper) getLastPurchaseQtyByMaterialCode(
+	db *gorm.DB,
+	purchaseOrder *model.PurchaseOrder,
+) map[string]float64 {
+	result := make(map[string]float64)
+
+	// 收集物品UUID和Code映射
+	materialUuids := make([]uint64, 0, len(purchaseOrder.Items))
+	uuidToCode := make(map[uint64]string)
+	for _, item := range purchaseOrder.Items {
+		if item.MaterialCode != "" {
+			materialUuids = append(materialUuids, item.MaterialUuid)
+			uuidToCode[item.MaterialUuid] = item.MaterialCode
+		}
+	}
+	if len(materialUuids) == 0 {
+		return result
+	}
+
+	// 查询上次完成品牌采购的基准单位数量
+	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(db)
+	baseQtyMap, err := purchaseOrderItemRepo.GetLastCompletedBrandPurchaseBaseQty(materialUuids)
+	if err != nil {
+		logger.Logger.Warn("查询上次品牌采购数量失败", zap.Error(err))
+		return result
+	}
+
+	// 查询物品的默认销售单位转换率
+	materialRepo := repository.NewMaterialRepo(db)
+	materials, err := materialRepo.GetMaterialByUuids(materialUuids, materialRepo.WithNotBaseUnitList())
+	if err != nil {
+		logger.Logger.Warn("查询物品默认销售单位失败", zap.Error(err))
+		return result
+	}
+	conversionRateMap := make(map[uint64]float64)
+	for _, m := range materials {
+		if m.DefaultSalesUnitUuid > 0 {
+			for _, unit := range m.NotBaseUnitList {
+				if unit.Uuid == m.DefaultSalesUnitUuid && unit.ConversionRate != 0 {
+					conversionRateMap[m.Uuid] = unit.ConversionRate
+				}
+			}
+		}
+	}
+
+	// 转换为默认销售单位并按MaterialCode建立映射
+	for materialUuid, baseQty := range baseQtyMap {
+		code, ok := uuidToCode[materialUuid]
+		if !ok || baseQty == 0 {
+			continue
+		}
+		if rate, hasRate := conversionRateMap[materialUuid]; hasRate {
+			result[code] = decimal.NewFromFloat(baseQty).Div(decimal.NewFromFloat(rate)).Round(4).InexactFloat64()
+		} else {
+			result[code] = decimal.NewFromFloat(baseQty).Round(4).InexactFloat64()
+		}
+	}
+	return result
+}

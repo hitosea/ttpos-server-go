@@ -303,13 +303,14 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 
 	itemList := make([]g.MapStrAny, 0)
 	for _, item := range req.Items {
-		itemList = append(itemList, g.MapStrAny{
+		itemData := g.MapStrAny{
 			"item_code":     item.ItemCode,
 			"qty":           item.Qty,
 			"uom":           item.Uom,
 			"schedule_date": service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.RequiredBy)).Format("Y-m-d"),
 			"warehouse":     targetWarehouseName,
-		})
+		}
+		itemList = append(itemList, itemData)
 	}
 	data["items"] = itemList
 	resp, err := service.Document().Create(ctx, erp.DocTypeMaterialRequest, &data)

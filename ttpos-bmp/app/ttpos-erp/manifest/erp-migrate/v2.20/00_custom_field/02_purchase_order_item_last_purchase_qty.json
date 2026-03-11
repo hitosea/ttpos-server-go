@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "Last purchase Qty",
+  "fieldname": "custom_last_purchase_qty",
+  "fieldtype": "Float",
+  "insert_after": "custom_store_qty",
+  "in_list_view": 1,
+  "dt": "Purchase Order Item"
+}
