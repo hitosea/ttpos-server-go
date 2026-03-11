@@ -78,7 +78,7 @@ func GetServiceGrpcAddr(serviceName string) (string, error) {
 	// Check for environment variable override first (for testing)
 	// Environment variable format: GRPC_{SERVICE_NAME}_ADDR
 	// e.g., GRPC_ERP_ADDR, GRPC_TAKEOUT_ADDR, GRPC_MESSAGE_ADDR, GRPC_WEBSOCKET_ADDR
-	envVarName := fmt.Sprintf("GRPC_%s_ADDR", strings.ToUpper(strings.ReplaceAll(serviceName, "ttpos-", "")))
+	envVarName := fmt.Sprintf("GRPC_%s_ADDR", strings.ToUpper(strings.TrimPrefix(serviceName, "ttpos-")))
 	if envAddr := os.Getenv(envVarName); envAddr != "" {
 		logger.Logger.Debug("Using gRPC address from environment variable",
 			zap.String("service", serviceName),

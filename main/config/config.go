@@ -279,10 +279,14 @@ func metricsConf(opt copier.Option) {
 		Enabled: true,
 		Port:    "9090",
 	}
-	_ = copier.CopyWithOption(&Metrics, MetricsConf{
-		Enabled: viper.GetBool("METRICS_ENABLED"),
-		Port:    viper.GetString("METRICS_PORT"),
-	}, opt)
+	// Cannot use copier for bool fields: IgnoreEmpty treats false as empty,
+	// making it impossible to disable metrics via METRICS_ENABLED=false.
+	if viper.IsSet("METRICS_ENABLED") {
+		Metrics.Enabled = viper.GetBool("METRICS_ENABLED")
+	}
+	if port := viper.GetString("METRICS_PORT"); port != "" {
+		Metrics.Port = port
+	}
 }
 
 func smsConf(opt copier.Option) {

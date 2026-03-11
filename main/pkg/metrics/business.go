@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -46,13 +47,17 @@ var (
 	)
 )
 
+var initOnce sync.Once
+
 func Init() {
-	prometheus.MustRegister(
-		httpRequestsTotal,
-		httpRequestDuration,
-		OrdersTotal,
-		PaymentsTotal,
-	)
+	initOnce.Do(func() {
+		prometheus.MustRegister(
+			httpRequestsTotal,
+			httpRequestDuration,
+			OrdersTotal,
+			PaymentsTotal,
+		)
+	})
 }
 
 // Middleware returns a Gin middleware that records HTTP metrics.

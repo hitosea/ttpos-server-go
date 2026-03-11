@@ -41,7 +41,7 @@ services:
   # WireMock (mock external APIs: Grab, Lineman, Skootar, TTPOS main)
   wiremock:
     image: hub.hitosea.com/infra/wiremock:3.9.1
-    command: ["--port", "8080", "--https-port", "8443"]
+    command: ["--port", "8080"]
     networks:
       - bmp-test-network
 

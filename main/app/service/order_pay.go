@@ -1199,7 +1199,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 			Name: paymentOrder.PaymentMethodName,
 		}
 		payMethods = append(payMethods, method)
-		metrics.PaymentsTotal.WithLabelValues(paymentOrder.PaymentMethodName, "success").Inc()
+		metrics.PaymentsTotal.WithLabelValues(fmt.Sprintf("%d", paymentOrder.PaymentMethodCode), "success").Inc()
 	}
 	return &resp.OrderFinishResp{
 		SaleBillUuid:  request.SaleBillUuid,
