@@ -111,6 +111,7 @@ func (s *orderSrv) createInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			DeviceUuid:    ctx.GetDeviceUuid(),
 			Source:        constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
 			ClientVersion: constant.NormalizeClientVersion(ctx.GetVersion()),
+			ConsumerUuid:  s.getConsumerUuidForInstantOrder(ctx), // 会员端创建订单时关联会员UUID
 		})
 		if err != nil {
 			return errors.WithMessage(err)
@@ -164,6 +165,7 @@ func (s *orderSrv) CreateInstantOrderInCache(ctx context.Context, orderNo string
 		DeviceUuid:    ctx.GetDeviceUuid(),
 		Source:        constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
 		ClientVersion: constant.NormalizeClientVersion(ctx.GetVersion()),
+		ConsumerUuid:  s.getConsumerUuidForInstantOrder(ctx), // 会员端创建订单时关联会员UUID
 
 		// 设置默认值的必点方案、自动加购必点商品
 		ShowMustPlan:       constant.SaleBillShowMustPlanYes,
@@ -1504,4 +1506,13 @@ func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProdu
 	}
 
 	return &resp.ProductPackageDetailRes{List: productPackageDetailList}, nil
+}
+
+// getConsumerUuidForInstantOrder 获取堂食订单的消费者UUID
+// 仅在会员端请求时返回会员UUID，其他端返回0
+func (s *orderSrv) getConsumerUuidForInstantOrder(ctx context.Context) uint64 {
+	if ctx.GetSource() == jwt.SourceMember {
+		return ctx.GetMemberUuid()
+	}
+	return 0
 }
