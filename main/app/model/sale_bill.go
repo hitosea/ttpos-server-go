@@ -395,6 +395,10 @@ func (model *SaleBill) GetBuffetProductMap() map[uint64]bool {
 // 2. 未交班。
 // 3. 未退款 todo 在调用反结账接口时也检查
 func (model *SaleBill) IsCellReverseSettle(staffUuid uint64, cashierLoginTime int64) bool {
+	// 会员端堂食订单不允许反结账
+	if model.Source == constant.SaleBillSourceMember && model.BillType == constant.SaleBillTypeInstant {
+		return false
+	}
 	// 账单未完成，不能反结账
 	if model.Status != constant.SaleBillStatusComplete {
 		return false
