@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
@@ -31,6 +32,7 @@ type ISaleBillQueryRepo interface {
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)
 	GetSaleBillList(opts ...DBOption) ([]*model.SaleBill, error)
 	GetSaleBillListPage(pageNo, pageSize int, opts ...DBOption) ([]*model.SaleBill, int64, error)
+	WhereKeyword(keyword string, language string) DBOption
 	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
 	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error)                       // 获取销售订单的拆单序号。用于操作日志展示
@@ -442,4 +444,33 @@ func (r *saleBillRepo) UpdateNationality(saleBillUuid uint64, nationalityUuid ui
 		Select("nationality_uuid", "nationality_name").
 		Where("uuid = ?", saleBillUuid).
 		Updates(saleBill).Error
+}
+
+// WhereKeyword 根据订单号或商品名称搜索销售账单
+func (r *saleBillRepo) WhereKeyword(keyword string, language string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if keyword == "" {
+			return db
+		}
+
+		// 安全列名映射，防止 SQL 注入
+		columnName, ok := languageColumnMap[language]
+		if !ok {
+			columnName = "en_name"
+		}
+
+		// 获取表前缀
+		prefix := config.Database.TablePrefix
+
+		// 子查询：通过商品名称查找对应的 sale_bill uuid
+		// sale_order_product -> sale_order.sale_bill_uuid
+		subQuery := r.db.Table(prefix+"sale_order so").
+			Select("DISTINCT so.sale_bill_uuid").
+			Joins("INNER JOIN "+prefix+"sale_order_product sop ON sop.sale_order_uuid = so.uuid AND sop.delete_time = 0").
+			Joins("LEFT JOIN "+prefix+"multi_language_name mln ON sop.multi_language_name_uuid = mln.uuid").
+			Where("so.delete_time = ?", 0).
+			Where("mln."+columnName+" LIKE ?", "%"+keyword+"%")
+
+		return db.Where("(uuid IN (?) OR order_no LIKE ?)", subQuery, "%"+keyword+"%")
+	}
 }

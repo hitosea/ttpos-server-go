@@ -2952,6 +2952,11 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 	billStatuses, h5OrderStatuses, isPaid := constant.GetMemberDineInOrderStatusFilter(listReq.Status)
 	dbOptions := s.buildDineInOrderListQueryOptions(ctx, billStatuses)
 
+	if listReq.Keyword != "" {
+		// 关键字搜索（按菜名或订单号）
+		dbOptions = append(dbOptions, saleBillRepo.WhereKeyword(listReq.Keyword, ctx.GetLanguage()))
+	}
+	
 	// 分页查询
 	saleBills, total, err := saleBillRepo.GetSaleBillListPage(listReq.PageNo, listReq.PageSize, dbOptions...)
 	if err != nil {
