@@ -6749,9 +6749,9 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	}
 
 	companySetting := ctx.GetCompanySetting()
-	// 处理外送端,如果外送端未开启, 套餐商品或者小数计价,则不显示外送端
+	// 处理外送端,如果外送端未开启, 或者小数计价,则不显示外送端
 	isShowDelivery := uint(req.Show.IsShowDelivery)
-	if !companySetting.IsOpenRider() || req.Type == constant.ProductTypePackage || req.NumType == constant.ProductNumTypeDecimal {
+	if !companySetting.IsOpenRider() || req.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
 	}
 
@@ -6918,9 +6918,9 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 		}
 	}
 	companySetting := ctx.GetCompanySetting()
-	// 处理外送端,如果外送端未开启, 套餐商品或者小数计价,则不显示外送端
+	// 处理外送端,如果外送端未开启, 或者小数计价,则不显示外送端
 	isShowDelivery := uint(request.Show.IsShowDelivery)
-	if !companySetting.IsOpenRider() || request.Type == constant.ProductTypePackage || request.NumType == constant.ProductNumTypeDecimal {
+	if !companySetting.IsOpenRider() || request.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
 	}
 
