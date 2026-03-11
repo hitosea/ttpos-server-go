@@ -3002,6 +3002,9 @@ func (s *orderSrv) buildDineInOrderListQueryOptions(ctx context.Context, billSta
 				},
 			},
 			repository.WithPreload{
+				Query: "SaleOrders.ReturnOrders",
+			},
+			repository.WithPreload{
 				Query: "SaleOrders.SaleOrderProducts",
 				Args: []any{
 					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
@@ -3131,6 +3134,13 @@ func (s *orderSrv) buildMemberDineInOrderItem(ctx context.Context, saleBill mode
 	// 计算订单状态
 	statusInfo := s.getMemberDineInOrderStatusInfo(&saleBill, h5Order, isProductionFinished, ctx.GetLanguage())
 
+	// 计算应付金额：全部退款显示0，部分退款显示扣减后金额
+	refundAmount := saleBill.GetTotalRefundAmount()
+	amount := saleBill.Amount - refundAmount
+	if amount < 0 {
+		amount = 0
+	}
+
 	return resp.MemberDineInOrder{
 		SaleBillUuid:  saleBill.Uuid,
 		CompanyName:   ctx.GetCompany().Name,
@@ -3139,7 +3149,7 @@ func (s *orderSrv) buildMemberDineInOrderItem(ctx context.Context, saleBill mode
 		StatusInfo:    statusInfo,
 		DiningMethod:  saleBill.DiningMethod,
 		Num:           num,
-		Amount:        saleBill.Amount,
+		Amount:        amount,
 		ProductAmount: productAmount,
 		CreateTime:    saleBill.CreateTime,
 		ProductList:   productList,
@@ -3212,6 +3222,12 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	// 计算订单总退款金额
 	refundAmount := saleBill.GetTotalRefundAmount()
 
+	// 计算应付金额：全部退款显示0，部分退款显示扣减后金额
+	amount := saleBill.Amount - refundAmount
+	if amount < 0 {
+		amount = 0
+	}
+
 	// 获取支付信息（通过 SaleOrder 关联的 PaymentOrders 获取）
 	var payTime int64
 	var paymentMethodName string
@@ -3267,7 +3283,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 			DiscountAmount:    saleBill.CustomDiscountFee + saleBill.MemberDiscountFee, // 折扣金额 = 自定义折扣 + 会员折扣
 			ServiceFee:        saleBill.ServiceFee,
 			TaxFee:            saleBill.TaxFee,
-			Amount:            saleBill.Amount,
+			Amount:            amount,
 			PaymentMethodName: paymentMethodName,
 		},
 		ProductList: resp.MemberDineInOrderProductList{
