@@ -69,6 +69,10 @@
   color: "cfd3d7"
   description: Resolved and closed
 
+- name: "status:reopened"
+  color: "d93f0b"
+  description: Fix did not resolve the issue, needs another cycle
+
 # ── Root Cause Category ──────────────────────────────────────────────────────
 - name: "cause:logic-error"
   color: "fef2c0"
