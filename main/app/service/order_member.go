@@ -37,18 +37,18 @@ import (
 
 type IMemberOrderSrv interface {
 	// 会员端
-	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error) // 创建会员端外送订单
-	CreateMemberDineInOrder(ctx context.Context, req req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error)               // 创建会员端堂食订单
-	GetDineInOrderFormInfo(ctx context.Context, req req.GetDineInOrderFormInfoReq) (*resp.DineInOrderFormResp, error)                    // 获取堂食订单提交表单信息
-	SetDineInOrderDiningMethod(ctx context.Context, req req.SetDineInOrderDiningMethodReq) error                                         // 设置堂食订单用餐方式
-	PayDineInOrder(ctx context.Context, req req.PayDineInOrderReq) error                                                                 // 堂食订单提交支付
-	GetDineInOrderPayInfo(ctx context.Context, req req.GetDineInOrderPayInfoReq) (*resp.DineInOrderPaymentInfoResp, error)               // 获取堂食订单支付信息
-	GetDineInOrderPayStatus(ctx context.Context, req req.GetDineInOrderPayStatusReq) (*resp.DineInOrderPaymentStatusResp, error)         // 获取堂食订单支付状态
-	GetMemberOrderFormInfo(ctx context.Context, req req.GetMemberOrderFormInfoReq) (*resp.CreateMemberOrderResp, error)                  // 获取订单提交表单信息
-	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)             // 设置会员端订单地址
-	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                      // 会员端订单提交支付，状态变为待支付
-	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)    // 会员端订单获取支付信息
-	GetMemberOrderPayStatus(ctx context.Context, request member_req.GetMemberOrderPayStatusReq) (*resp.MemberOrderPaymentStatusResp, error) // 会员端订单获取支付状态
+	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)    // 创建会员端外送订单
+	CreateMemberDineInOrder(ctx context.Context, req req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error)                   // 创建会员端堂食订单
+	GetDineInOrderFormInfo(ctx context.Context, req req.GetDineInOrderFormInfoReq) (*resp.DineInOrderFormResp, error)                        // 获取堂食订单提交表单信息
+	SetDineInOrderDiningMethod(ctx context.Context, req req.SetDineInOrderDiningMethodReq) error                                             // 设置堂食订单用餐方式
+	PayDineInOrder(ctx context.Context, req req.PayDineInOrderReq) error                                                                     // 堂食订单提交支付
+	GetDineInOrderPayInfo(ctx context.Context, req req.GetDineInOrderPayInfoReq) (*resp.DineInOrderPaymentInfoResp, error)                   // 获取堂食订单支付信息
+	GetDineInOrderPayStatus(ctx context.Context, req req.GetDineInOrderPayStatusReq) (*resp.DineInOrderPaymentStatusResp, error)             // 获取堂食订单支付状态
+	GetMemberOrderFormInfo(ctx context.Context, req req.GetMemberOrderFormInfoReq) (*resp.CreateMemberOrderResp, error)                      // 获取订单提交表单信息
+	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                 // 设置会员端订单地址
+	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                          // 会员端订单提交支付，状态变为待支付
+	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)        // 会员端订单获取支付信息
+	GetMemberOrderPayStatus(ctx context.Context, request member_req.GetMemberOrderPayStatusReq) (*resp.MemberOrderPaymentStatusResp, error)  // 会员端订单获取支付状态
 	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                                // 查询收银机"外送"页面的订单列表
 	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                       // 查询会员端订单详情
 	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error) // 获取会员端订单支付方式列表
@@ -81,7 +81,7 @@ type IMemberOrderSrv interface {
 	CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64) error // 完成外送订单
 
 	// 会员端堂食订单管理
-	GetMemberDineInOrderList(ctx context.Context, req req.MemberDineInOrderListReq) (*resp.GetMemberDineInOrderListResp, error)       // 获取会员端堂食订单列表
+	GetMemberDineInOrderList(ctx context.Context, req req.MemberDineInOrderListReq) (*resp.GetMemberDineInOrderListResp, error)          // 获取会员端堂食订单列表
 	GetMemberDineInOrderDetail(ctx context.Context, req req.GetMemberDineInOrderDetailReq) (*resp.GetMemberDineInOrderDetailResp, error) // 获取会员端堂食订单详情
 }
 
@@ -299,11 +299,11 @@ func (s *orderSrv) GetDineInOrderFormInfo(ctx context.Context, request req.GetDi
 
 	// 构建金额信息
 	amountInfo := resp.DineInAmountInfo{
-		ProductAmount:  saleOrder.ProductAmount,    // 商品金额
-		TaxAmount:      saleOrder.TaxFee,           // 消费税
-		ServiceAmount:  saleOrder.ServiceFee,       // 服务费
+		ProductAmount:  saleOrder.ProductAmount,     // 商品金额
+		TaxAmount:      saleOrder.TaxFee,            // 消费税
+		ServiceAmount:  saleOrder.ServiceFee,        // 服务费
 		MemberDiscount: saleOrder.MemberDiscountFee, // 会员折扣
-		TotalAmount:    saleOrder.Amount,           // 应付金额（已包含税费和服务费）
+		TotalAmount:    saleOrder.Amount,            // 应付金额（已包含税费和服务费）
 	}
 
 	// 获取支付方式列表
@@ -2866,10 +2866,56 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 	db := s.dbm.GetDB(ctx.GetDbId())
 	saleBillRepo := repository.NewSaleBillRepo(db)
 	h5OrderRepo := repository.NewH5OrderRepo(db)
+	productionRepo := repository.NewProductionRepo(db)
 
 	// 构建查询条件
-	var dbOptions []repository.DBOption
-	dbOptions = append(dbOptions,
+	billStatuses, h5OrderStatuses, isPaid := constant.GetMemberDineInOrderStatusFilter(listReq.Status)
+	dbOptions := s.buildDineInOrderListQueryOptions(ctx, billStatuses)
+
+	// 分页查询
+	saleBills, total, err := saleBillRepo.GetSaleBillListPage(listReq.PageNo, listReq.PageSize, dbOptions...)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 构建响应
+	list := make([]resp.MemberDineInOrder, 0, len(saleBills))
+	for _, saleBill := range saleBills {
+		// 过滤支付状态
+		if isPaid != nil && *isPaid != saleBill.IsExistPaid() {
+			// 如果需要过滤支付状态时,过滤掉已经支付的或者未支付的. 使用场景: 仅查询“待支付”的订单时需要
+			continue
+		}
+
+		// 获取 H5 订单
+		h5Order := s.getH5OrderForMemberDineIn(h5OrderRepo, saleBill.Uuid)
+
+		// 获取生产单完成状态
+		isProductionFinished, _ := productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+
+		// H5 订单状态内存过滤（结合生产单完成状态）
+		if !s.filterDineInOrderByH5Status(h5Order, h5OrderStatuses, listReq.Status, isProductionFinished) {
+			continue
+		}
+
+		// 构建订单响应项
+		orderItem := s.buildMemberDineInOrderItem(ctx, *saleBill, h5Order, isProductionFinished)
+		list = append(list, orderItem)
+	}
+
+	return &resp.GetMemberDineInOrderListResp{
+		Meta: dto.PageResponse{
+			PageNo:   listReq.PageNo,
+			PageSize: listReq.PageSize,
+			Total:    total,
+		},
+		List: list,
+	}, nil
+}
+
+// buildDineInOrderListQueryOptions 构建会员端堂食订单列表查询条件
+func (s *orderSrv) buildDineInOrderListQueryOptions(ctx context.Context, billStatuses []uint) []repository.DBOption {
+	dbOptions := []repository.DBOption{
 		repository.CommonRepo.WhereBySoftDelete(),
 		repository.CommonRepo.WhereByMemberUuid(ctx.GetMemberUuid()),
 		repository.CommonRepo.WhereBySource(constant.SaleBillSourceMember),
@@ -2895,98 +2941,136 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 				Query: "SaleOrders.SaleOrderProducts.ImageFile",
 			},
 		),
-	)
+	}
 
 	// 状态过滤
-	billStatuses, _, isPaid := constant.GetMemberDineInOrderStatusFilter(listReq.Status)
 	if billStatuses != nil {
 		dbOptions = append(dbOptions, repository.CommonRepo.WhereByMultipleStatus(billStatuses))
 	}
 
-	// 分页查询
-	saleBills, total, err := saleBillRepo.GetSaleBillListPage(listReq.PageNo, listReq.PageSize, dbOptions...)
-	if err != nil {
-		return nil, errors.WithMessage(err)
+	return dbOptions
+}
+
+// getH5OrderForMemberDineIn 获取会员端堂食订单的 H5 订单
+func (s *orderSrv) getH5OrderForMemberDineIn(h5OrderRepo repository.IH5OrderRepo, saleBillUuid uint64) *model.H5Order {
+	h5Order, _ := h5OrderRepo.GetH5Order(
+		h5OrderRepo.WhereSaleBillUuid(saleBillUuid),
+		h5OrderRepo.WhereOrderType(constant.H5OrderTypeMemberDineIn),
+	)
+	return h5Order
+}
+
+// filterDineInOrderByH5Status H5 订单状态内存过滤（用于区分"进行中"和"已完成"）
+// 返回 true 表示订单应该包含在结果中，false 表示应该过滤掉
+// h5OrderStatuses: 允许的 H5 订单状态列表（"进行中"状态需要匹配）
+// requestStatus: 请求的状态过滤参数
+// isProductionFinished: 生产单是否全部完成
+func (s *orderSrv) filterDineInOrderByH5Status(h5Order *model.H5Order, h5OrderStatuses []uint, requestStatus string, isProductionFinished bool) bool {
+	// 获取 H5 订单状态
+	var h5Status uint
+	if h5Order != nil {
+		h5Status = h5Order.Status
 	}
 
-	// 构建响应
-	list := make([]resp.MemberDineInOrder, 0, len(saleBills))
-	for _, saleBill := range saleBills {
-		// 过滤支付状态
-		if isPaid != nil {
-			billIsPaid := saleBill.IsExistPaid()
-			if *isPaid != billIsPaid {
-				continue
+	// "进行中"状态查询：需要 H5 订单存在且状态匹配
+	if len(h5OrderStatuses) > 0 {
+		if h5Order == nil {
+			// 没有 H5 订单（未开启厨显），不符合"进行中"条件
+			return false
+		}
+		// 检查 H5 订单状态是否在允许的状态列表中
+		for _, allowedStatus := range h5OrderStatuses {
+			if h5Status == allowedStatus {
+				// 如果是已接单状态（备餐中），还需要检查生产单是否全部完成
+				// 如果生产单全部完成，说明已经出餐，不应该在"进行中"列表中
+				if h5Status == constant.H5OrderStatusAccepted && isProductionFinished {
+					return false // 生产单已完成，不在"进行中"
+				}
+				return true
 			}
 		}
+		return false
+	}
 
-		// 获取 H5 订单状态
-		var h5Status uint
-		h5Order, _ := h5OrderRepo.GetH5Order(
-			h5OrderRepo.WhereSaleBillUuid(saleBill.Uuid),
-			h5OrderRepo.WhereOrderType(constant.H5OrderTypeMemberDineIn),
-		)
+	// "已完成"状态查询：排除"进行中"的订单
+	if requestStatus == constant.MemberDineInOrderStatusCompleted {
 		if h5Order != nil {
-			h5Status = h5Order.Status
-		}
-
-		// 计算商品数量和金额
-		var num float64
-		var productAmount float64
-		productList := make([]resp.MemberOrderProduct, 0)
-
-		saleOrder := saleBill.GetFirstSaleOrder()
-		if saleOrder != nil {
-			for i, product := range saleOrder.SaleOrderProducts {
-				if product.IsPackageSubProduct() {
-					continue // 跳过套餐子商品
-				}
-				num += product.Num
-				productAmount += product.GetTotalPrice()
-
-				// 只返回前3个商品
-				if i < 3 {
-					productList = append(productList, resp.MemberOrderProduct{
-						LocaleName: product.GetLocaleName(),
-						Num:        product.Num,
-						TotalPrice: product.GetTotalPrice(),
-						Image: func() string {
-							if product.ImageFile == nil {
-								return ""
-							}
-							return product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
-						}(),
-					})
-				}
+			// 待接单状态：一定是进行中，排除
+			if h5Status == constant.H5OrderStatusOrder {
+				return false
+			}
+			// 已接单状态（备餐中）：需要检查生产单是否完成
+			if h5Status == constant.H5OrderStatusAccepted && !isProductionFinished {
+				return false // 生产单未完成，还在"备餐中"，排除
 			}
 		}
-
-		// 计算订单状态
-		statusInfo := s.getMemberDineInOrderStatusInfo(saleBill, h5Status, ctx.GetLanguage())
-
-		list = append(list, resp.MemberDineInOrder{
-			SaleBillUuid:  saleBill.Uuid,
-			CompanyName:   ctx.GetCompany().Name,
-			SerialNo:      saleBill.SerialNo,
-			OrderNo:       saleBill.OrderNo,
-			StatusInfo:    statusInfo,
-			DiningMethod:  saleBill.DiningMethod,
-			Num:           num,
-			Amount:        saleBill.Amount,
-			ProductAmount: productAmount,
-			CreateTime:    saleBill.CreateTime,
-			ProductList:   productList,
-		})
+		// H5 订单不存在或已拒单，属于"已完成"
 	}
 
-	return &resp.GetMemberDineInOrderListResp{
-		Meta: dto.PageResponse{
-			PageNo:   listReq.PageNo,
-			PageSize: listReq.PageSize,
-			Total:    total,
-		},
-		List: list,
-	}, nil
+	return true
+}
+
+// buildMemberDineInOrderProductList 构建会员端堂食订单商品列表
+// 返回：商品数量、商品金额、商品列表（最多3个）
+func (s *orderSrv) buildMemberDineInOrderProductList(ctx context.Context, saleBill model.SaleBill) (float64, float64, []resp.MemberOrderProduct) {
+	var num float64
+	var productAmount float64
+	productList := make([]resp.MemberOrderProduct, 0)
+	displayCount := 0
+
+	saleOrder := saleBill.GetFirstSaleOrder()
+	if saleOrder == nil {
+		return num, productAmount, productList
+	}
+
+	for _, product := range saleOrder.SaleOrderProducts {
+		if product.IsPackageSubProduct() {
+			continue // 跳过套餐子商品
+		}
+		num += product.Num
+		productAmount += product.GetTotalPrice()
+
+		// 只返回前3个商品
+		if displayCount < 3 {
+			productList = append(productList, resp.MemberOrderProduct{
+				LocaleName: product.GetLocaleName(),
+				Num:        product.Num,
+				TotalPrice: product.GetTotalPrice(),
+				Image: func() string {
+					if product.ImageFile == nil {
+						return ""
+					}
+					return product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+				}(),
+			})
+			displayCount++
+		}
+	}
+
+	return num, productAmount, productList
+}
+
+// buildMemberDineInOrderItem 构建单个会员端堂食订单响应项
+func (s *orderSrv) buildMemberDineInOrderItem(ctx context.Context, saleBill model.SaleBill, h5Order *model.H5Order, isProductionFinished bool) resp.MemberDineInOrder {
+	// 构建商品列表
+	num, productAmount, productList := s.buildMemberDineInOrderProductList(ctx, saleBill)
+
+	// 计算订单状态
+	statusInfo := s.getMemberDineInOrderStatusInfo(&saleBill, h5Order, isProductionFinished, ctx.GetLanguage())
+
+	return resp.MemberDineInOrder{
+		SaleBillUuid:  saleBill.Uuid,
+		CompanyName:   ctx.GetCompany().Name,
+		SerialNo:      saleBill.SerialNo,
+		OrderNo:       saleBill.OrderNo,
+		StatusInfo:    statusInfo,
+		DiningMethod:  saleBill.DiningMethod,
+		Num:           num,
+		Amount:        saleBill.Amount,
+		ProductAmount: productAmount,
+		CreateTime:    saleBill.CreateTime,
+		ProductList:   productList,
+	}
 }
 
 // GetMemberDineInOrderDetail 获取会员端堂食订单详情
@@ -2995,6 +3079,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	orderRepo := repository.NewOrderRepo(db)
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	paymentOrderRepo := repository.NewPaymentOrderRepo(db)
+	productionRepo := repository.NewProductionRepo(db)
 
 	// 获取销售账单完整信息
 	saleBill, err := orderRepo.GetSaleBillAllInfo(detailReq.SaleBillUuid)
@@ -3013,40 +3098,49 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		return nil, errors.New("订单类型错误")
 	}
 
-	// 获取 H5 订单状态
-	var h5Status uint
+	// 获取 H5 订单
 	h5Order, _ := h5OrderRepo.GetH5Order(
 		h5OrderRepo.WhereSaleBillUuid(saleBill.Uuid),
 		h5OrderRepo.WhereOrderType(constant.H5OrderTypeMemberDineIn),
 	)
-	if h5Order != nil {
-		h5Status = h5Order.Status
-	}
 
-	// 获取商品列表
-	productList := make([]resp.MemberOrderProduct, 0)
+	// 获取生产单完成状态
+	isProductionFinished, _ := productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+
+	// 获取商品列表（包含退款信息）
+	productList := make([]resp.MemberDineInOrderProduct, 0)
 	for _, product := range saleOrder.SaleOrderProducts {
 		if product.IsPackageSubProduct() {
 			continue // 跳过套餐子商品
 		}
-		productList = append(productList, resp.MemberOrderProduct{
+
+		// 计算商品退款金额
+		var productRefundAmount float64
+		for _, returnOrderProduct := range product.ReturnOrderProducts {
+			productRefundAmount += returnOrderProduct.ProductTotalAmount
+		}
+
+		productList = append(productList, resp.MemberDineInOrderProduct{
 			LocaleName:          product.GetLocaleName(),
 			LocaleAttributeName: product.GetAttributeName(),
 			Num:                 product.Num,
-			TotalPrice:          product.GetTotalPrice(),
-			OriginTotalPrice:    product.GetTotalPriceOrigin(),
+			Price:               product.SalePrice,       // 折前单价
+			TotalPrice:          product.GetSalePrice(),  // 折前总价 = 单价 * 数量
 			Image: func() string {
 				if product.ImageFile == nil {
 					return ""
 				}
 				return product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 			}(),
+			RefundAmount: productRefundAmount,
 		})
 	}
 
+	// 计算订单总退款金额
+	refundAmount := saleBill.GetTotalRefundAmount()
+
 	// 获取支付信息（通过 SaleOrder 关联的 PaymentOrders 获取）
 	var payTime int64
-	var paidAmount float64
 	var paymentMethodName string
 	paymentOrders, _ := paymentOrderRepo.GetPaymentOrderList(
 		paymentOrderRepo.WhereRelatedUuid(saleOrder.Uuid),
@@ -3058,7 +3152,6 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		// 获取第一个已支付的支付订单
 		paymentOrder := paymentOrders[0]
 		payTime = paymentOrder.CreateTime // PaymentOrder 使用 CreateTime 作为支付时间
-		paidAmount = paymentOrder.Amount
 		if paymentOrder.PaymentMethod != nil {
 			paymentMethodName = paymentOrder.PaymentMethod.GetName()
 		}
@@ -3077,11 +3170,6 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 
 	// 获取商家信息
 	company := ctx.GetCompany()
-	var companyAddress, companyPhone string
-	if company.CompanySetting != nil {
-		companyAddress = company.CompanySetting.Address
-		companyPhone = company.CompanySetting.LinkPhone
-	}
 
 	// 获取取消时间（从 SaleOrder 获取 DeleteTime 作为取消时间）
 	var cancelTime int64
@@ -3092,76 +3180,89 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	return &resp.GetMemberDineInOrderDetailResp{
 		SaleBillUuid:         saleBill.Uuid,
 		CompanyName:          company.Name,
-		CompanyAddress:       companyAddress,
-		CompanyPhone:         companyPhone,
 		SerialNo:             saleBill.SerialNo,
 		OrderNo:              saleBill.OrderNo,
-		StatusInfo:           s.getMemberDineInOrderStatusInfo(saleBill, h5Status, ctx.GetLanguage()),
+		StatusInfo:           s.getMemberDineInOrderStatusInfo(saleBill, h5Order, isProductionFinished, ctx.GetLanguage()),
 		DiningMethod:         saleBill.DiningMethod,
 		Remark:               saleBill.Remark,
 		CreateTime:           saleBill.CreateTime,
 		PayTime:              payTime,
-		FinishTime:           saleBill.FinishTime,
 		CancelTime:           cancelTime,
 		RemainingPaymentTime: remainingPaymentTime,
+		RefundAmount:         refundAmount,
 		AmountInfo: resp.MemberDineInOrderAmountInfo{
-			ProductAmount:     saleBill.ProductAmount,
 			DiscountAmount:    saleBill.CustomDiscountFee + saleBill.MemberDiscountFee, // 折扣金额 = 自定义折扣 + 会员折扣
 			ServiceFee:        saleBill.ServiceFee,
 			TaxFee:            saleBill.TaxFee,
-			PackageFee:        0, // SaleBill 没有 PackageFee 字段
 			Amount:            saleBill.Amount,
-			PaidAmount:        paidAmount,
 			PaymentMethodName: paymentMethodName,
 		},
-		ProductList: resp.MemberProductList{
-			List:          productList,
-			ProductAmount: saleBill.ProductAmount,
+		ProductList: resp.MemberDineInOrderProductList{
+			List: productList,
 		},
 	}, nil
 }
 
 // getMemberDineInOrderStatusInfo 获取堂食订单状态信息
-func (s *orderSrv) getMemberDineInOrderStatusInfo(saleBill *model.SaleBill, h5Status uint, language string) resp.MemberDineInOrderStatusInfo {
+// h5Order: H5订单，可为nil
+// isProductionFinished: 生产单是否全部完成
+func (s *orderSrv) getMemberDineInOrderStatusInfo(saleBill *model.SaleBill, h5Order *model.H5Order, isProductionFinished bool, language string) resp.MemberDineInOrderStatusInfo {
 	var status string
 	var statusText string
 
 	switch saleBill.Status {
 	case constant.SaleBillStatusCanceled:
-		status = constant.MemberDineInOrderStatusCancelled
-		statusText = i18n.Translate(language, "已取消")
-	case constant.SaleBillStatusComplete:
-		status = constant.MemberDineInOrderStatusCompleted
-		statusText = i18n.Translate(language, "已完成")
-	case constant.SaleBillStatusPending:
-		if saleBill.IsExistPaid() {
-			status = constant.MemberDineInOrderStatusInProgress
-			statusText = i18n.Translate(language, "进行中")
+		// 已取消：需要区分是主动取消还是被拒单
+		if h5Order != nil && h5Order.Status == constant.H5OrderStatusRejected {
+			status = constant.MemberDineInDetailStatusRejected
+			statusText = i18n.Translate(language, "已拒单")
 		} else {
-			status = constant.MemberDineInOrderStatusUnpaid
-			statusText = i18n.Translate(language, "待支付")
+			status = constant.MemberDineInDetailStatusCancelled
+			statusText = i18n.Translate(language, "已取消")
 		}
+	case constant.SaleBillStatusComplete:
+		// 已完成：需要区分 待接单、备餐中、已完成、部分退款、全部退款
+		refundAmount := saleBill.GetTotalRefundAmount()
+		if refundAmount > 0 {
+			// 有退款
+			if refundAmount >= saleBill.Amount {
+				status = constant.MemberDineInDetailStatusFullRefund
+				statusText = i18n.Translate(language, "全部退款")
+			} else {
+				status = constant.MemberDineInDetailStatusPartialRefund
+				statusText = i18n.Translate(language, "部分退款")
+			}
+		} else if h5Order != nil {
+			// 有 H5 订单，根据 H5 订单状态和生产单状态判断
+			switch h5Order.Status {
+			case constant.H5OrderStatusOrder:
+				status = constant.MemberDineInDetailStatusPending
+				statusText = i18n.Translate(language, "待接单")
+			case constant.H5OrderStatusAccepted:
+				// 已接单：根据生产单状态判断是备餐中还是已完成
+				if isProductionFinished {
+					status = constant.MemberDineInDetailStatusCompleted
+					statusText = i18n.Translate(language, "已完成")
+				} else {
+					status = constant.MemberDineInDetailStatusPreparing
+					statusText = i18n.Translate(language, "备餐中")
+				}
+			case constant.H5OrderStatusRejected:
+				status = constant.MemberDineInDetailStatusRejected
+				statusText = i18n.Translate(language, "已拒单")
+			default:
+				status = constant.MemberDineInDetailStatusCompleted
+				statusText = i18n.Translate(language, "已完成")
+			}
+		}
+	case constant.SaleBillStatusPending:
+		// 待处理状态
+		status = constant.MemberDineInDetailStatusUnpaid
+		statusText = i18n.Translate(language, "待支付")
 	}
 
 	return resp.MemberDineInOrderStatusInfo{
-		Status:       status,
-		StatusText:   statusText,
-		H5Status:     h5Status,
-		H5StatusText: s.getH5OrderStatusText(h5Status, language),
+		Status:     status,
+		StatusText: statusText,
 	}
 }
-
-// getH5OrderStatusText 获取 H5 订单状态文字
-func (s *orderSrv) getH5OrderStatusText(status uint, language string) string {
-	switch status {
-	case constant.H5OrderStatusOrder:
-		return i18n.Translate(language, "待接单")
-	case constant.H5OrderStatusAccepted:
-		return i18n.Translate(language, "已接单")
-	case constant.H5OrderStatusRejected:
-		return i18n.Translate(language, "已拒单")
-	default:
-		return ""
-	}
-}
-

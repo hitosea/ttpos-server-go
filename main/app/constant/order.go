@@ -219,13 +219,25 @@ const (
 	H5OrderTypeMemberDineIn = 1 // 会员端堂食订单
 )
 
-// 会员端堂食订单状态过滤
+// 会员端堂食订单状态过滤（用于列表查询参数）
 const (
 	MemberDineInOrderStatusAll        = "all"        // 全部
 	MemberDineInOrderStatusUnpaid     = "unpaid"     // 待支付
 	MemberDineInOrderStatusInProgress = "inprogress" // 进行中（已支付，待接单/备餐中）
 	MemberDineInOrderStatusCompleted  = "completed"  // 已完成（包括部分退款、全部退款）
 	MemberDineInOrderStatusCancelled  = "cancelled"  // 已取消（包括已取消和已拒单）
+)
+
+// 会员端堂食订单详细状态（用于返回给前端显示）
+const (
+	MemberDineInDetailStatusUnpaid        = "unpaid"         // 待支付
+	MemberDineInDetailStatusPending       = "pending"        // 待接单
+	MemberDineInDetailStatusPreparing     = "preparing"      // 备餐中
+	MemberDineInDetailStatusCompleted     = "completed"      // 已完成
+	MemberDineInDetailStatusPartialRefund = "partial_refund" // 部分退款
+	MemberDineInDetailStatusFullRefund    = "full_refund"    // 全部退款
+	MemberDineInDetailStatusCancelled     = "cancelled"      // 已取消
+	MemberDineInDetailStatusRejected      = "rejected"       // 已拒单
 )
 
 // GetMemberDineInOrderStatusFilter 根据状态过滤参数返回 SaleBill 状态列表和 H5 订单状态列表
@@ -244,8 +256,6 @@ func GetMemberDineInOrderStatusFilter(status string) (billStatuses []uint, h5Ord
 		// 进行中：已支付，待接单或备餐中（H5订单状态为待接单或已接单）
 		billStatuses = []uint{SaleBillStatusComplete} // 会员端堂食订单支付完成后标记订单为已经完成
 		h5OrderStatuses = []uint{H5OrderStatusOrder, H5OrderStatusAccepted}
-		isPaidTrue := true
-		isPaid = &isPaidTrue
 	case MemberDineInOrderStatusCompleted:
 		// 已完成：账单已结账（包括部分退款、全部退款，因为退款后账单状态仍为已完成）
 		billStatuses = []uint{SaleBillStatusComplete}
