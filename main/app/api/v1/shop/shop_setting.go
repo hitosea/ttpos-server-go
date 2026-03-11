@@ -1251,6 +1251,50 @@ func (h *SettingHandler) SaveStoreScanOrderSetting(c *gin.Context) {
 	helper.Success(c, "保存成功")
 }
 
+// GetTemplateStyleSetting 获取模板样式配置
+// @Summary 获取模板样式配置
+// @Description 获取模板样式配置，返回当前模板样式值（1/2/3）
+// @Tags 商家端.模板样式设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.TemplateStyleSettingResp}
+// @Router /shop/setting/template_style [get]
+func (h *SettingHandler) GetTemplateStyleSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	result, err := h.settingSrv.GetTemplateStyleSetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, result)
+}
+
+// SaveTemplateStyleSetting 保存模板样式配置
+// @Summary 保存模板样式配置
+// @Description 保存模板样式配置，模板值为 1/2/3
+// @Tags 商家端.模板样式设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaveTemplateStyleSettingReq true "保存模板样式配置"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/template_style [post]
+func (h *SettingHandler) SaveTemplateStyleSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var settingReq req.SaveTemplateStyleSettingReq
+	if err := c.ShouldBindJSON(&settingReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	err := h.settingSrv.SaveTemplateStyleSetting(ctx, settingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "保存成功")
+}
+
 // GetKitchenSetting 获取厨显设置
 // @Summary 获取厨显设置
 // @Description 获取厨显设置
@@ -1540,6 +1584,8 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/setting/kitchen", wrapper.SaveKitchenSetting)                    // 保存厨显设置
 		privateApi.GET("/setting/store_scan_order", wrapper.GetStoreScanOrderSetting)      // 获取门店点餐配置
 		privateApi.POST("/setting/store_scan_order", wrapper.SaveStoreScanOrderSetting)    // 保存门店点餐配置
+		privateApi.GET("/setting/template_style", wrapper.GetTemplateStyleSetting)         // 获取模板样式配置
+		privateApi.POST("/setting/template_style", wrapper.SaveTemplateStyleSetting)       // 保存模板样式配置
 
 		privateApi.GET("/setting/free_reason", wrapper.GetFreeReason)                     // 获取免单原因
 		privateApi.POST("/setting/free_reason/add", wrapper.AddFreeReason)                // 新增免单原因

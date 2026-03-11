@@ -87,6 +87,9 @@ func (s *h5Srv) GetBaseInfo(ctx context.Context, deskUuid uint64) (*resp.H5BaseI
 		return nil, errors.WithMessage(err)
 	}
 	copier.CopyWithOption(&kitchenSettingResp, kitchenSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
+
+	templateStyleSetting, _ := s.settingSrv.GetTemplateStyleSetting(ctx)
+
 	return &resp.H5BaseInfo{
 		IsOpenH5Order: companySetting.IsOpenH5Order,
 		Desk:          deskInfo,
@@ -114,7 +117,8 @@ func (s *h5Srv) GetBaseInfo(ctx context.Context, deskUuid uint64) (*resp.H5BaseI
 			GiftMethodList:            make([]setting.GiftMethodItem, 0),
 			FreeMethodList:            make([]setting.FreeMethodItem, 0),
 		},
-		Kitchen: kitchenSettingResp,
+		Kitchen:       kitchenSettingResp,
+		TemplateStyle: templateStyleSetting.TemplateStyle,
 	}, nil
 }
 

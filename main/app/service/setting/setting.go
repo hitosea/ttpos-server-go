@@ -94,6 +94,8 @@ type ISrv interface {
 	GetShopAppMinVersion() string                                                                                                         // 获取 shop_app 配置的最小版本号
 	GetStoreScanOrderSetting(ctx context.Context) (setting.StoreScanOrderSettingResp, error)                                              // 获取门店点餐配置
 	SaveStoreScanOrderSetting(ctx context.Context, settingReq req.SaveStoreScanOrderSettingReq) error                                     // 保存门店点餐配置
+	GetTemplateStyleSetting(ctx context.Context) (setting.TemplateStyleSettingResp, error)                                                // 获取模板样式配置
+	SaveTemplateStyleSetting(ctx context.Context, settingReq req.SaveTemplateStyleSettingReq) error                                       // 保存模板样式配置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -2647,5 +2649,33 @@ func (s *Srv) SaveStoreScanOrderSetting(ctx context.Context, settingReq req.Save
 		return errors.WithMessage(err, "保存设置失败")
 	}
 
+	return nil
+}
+
+// GetTemplateStyleSetting 获取模板样式配置
+func (s *Srv) GetTemplateStyleSetting(ctx context.Context) (setting.TemplateStyleSettingResp, error) {
+	templateStyleSetting := s.getSettingByKey(ctx, constant.SettingTemplateStyle)
+	// 默认值：1
+	if templateStyleSetting.Key == "" || templateStyleSetting.Values == "{}" {
+		return setting.TemplateStyleSettingResp{TemplateStyle: 1}, nil
+	}
+	var result setting.TemplateStyleSettingResp
+	if err := json.Unmarshal([]byte(templateStyleSetting.Values), &result); err != nil {
+		return setting.TemplateStyleSettingResp{TemplateStyle: 1}, nil
+	}
+	if result.TemplateStyle == 0 {
+		result.TemplateStyle = 1
+	}
+	return result, nil
+}
+
+// SaveTemplateStyleSetting 保存模板样式配置
+func (s *Srv) SaveTemplateStyleSetting(ctx context.Context, settingReq req.SaveTemplateStyleSettingReq) error {
+	data := setting.TemplateStyleSettingResp{
+		TemplateStyle: settingReq.TemplateStyle,
+	}
+	if err := s.UpdateSetting(ctx, constant.SettingTemplateStyle, data); err != nil {
+		return errors.WithMessage(err, "保存设置失败")
+	}
 	return nil
 }

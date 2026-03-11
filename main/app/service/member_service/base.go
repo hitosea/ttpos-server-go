@@ -131,6 +131,12 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		logger.Logger.Error("获取门店点餐设置失败", zap.Error(err))
 	}
 
+	// 获取模板样式设置
+	templateStyleSetting, err := settingSrv.GetTemplateStyleSetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取模板样式设置失败", zap.Error(err))
+	}
+
 	// 返回
 	member := ctx.GetMember()
 	return member_resp.MemberBaseInfoResp{
@@ -161,7 +167,8 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 			LinkPhone:    company.CompanySetting.LinkPhone, // 公司联系电话
 			OpeningHours: businessSetting.OpeningHours,     // 公司营业时间
 		},
-		Currency: currencySetting,
+		Currency:      currencySetting,
+		TemplateStyle: templateStyleSetting.TemplateStyle,
 	}, nil
 
 }

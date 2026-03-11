@@ -25,6 +25,7 @@ const (
 	SettingBatchColor      = "batch_color"       // 分批类型颜色设置
 	SettingDataManage      = "data_manage"       // 数据管理设置
 	SettingStoreScanOrder  = "store_scan_order"  // 门店点餐设置
+	SettingTemplateStyle   = "template_style"    // 模板样式设置
 )
 
 const (
@@ -101,6 +102,7 @@ var SettingDescribe = map[string]string{
 	SettingBatchColor:     "分批类型颜色设置",
 	SettingDataManage:     "数据管理设置",
 	SettingStoreScanOrder: "门店点餐设置",
+	SettingTemplateStyle:  "模板样式设置",
 }
 
 // GetSettingDescribe 获取配置项描述
