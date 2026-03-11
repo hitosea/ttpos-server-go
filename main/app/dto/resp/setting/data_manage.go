@@ -51,7 +51,7 @@ type DataManageOrderSelectMeta struct {
 type DataManageOrderSelectStatsResp struct {
 	SelectedCount int64   `json:"selected_count"` // 预览选中数量
 	PaidAmount    float64 `json:"paid_amount"`    // 预览选中实付金额合计
-	NewCount      int64   `json:"new_count"`      // 新增总数（尚未在 data_manage 中的订单数）
+	TotalCount    int64   `json:"total_count"`    // 筛选范围内订单总数
 	IsSelectAll   bool    `json:"is_select_all"`  // 是否全选（所有筛选范围内的订单都已选中）
 }
 

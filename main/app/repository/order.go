@@ -76,7 +76,8 @@ type IOrderQueryRepo interface {
 	GetSaleOrderUuids(opts ...DBOption) []uint64
 	GetSaleBillList(opts ...DBOption) []model.SaleBill   // 获取销售账单列表
 	GetSaleBillUuids(opts ...DBOption) []uint64          // 获取销售账单UUID列表
-	SumSaleBillPaymentAmount(opts ...DBOption) float64   // 统计销售账单实付金额合计
+	SumSaleBillPaymentAmount(opts ...DBOption) float64     // 统计销售账单实付金额合计
+	SumSaleBillRefundAmount(opts ...DBOption) float64      // 统计销售账单退款金额合计
 	CountAndSumSaleBill(opts ...DBOption) (int64, float64) // 统计销售账单数量和实付金额合计
 }
 
@@ -2616,6 +2617,26 @@ func (r *orderRepo) SumSaleBillPaymentAmount(opts ...DBOption) float64 {
 		db = opt(db)
 	}
 	db.Select("COALESCE(SUM(payment_amount), 0) as total").Scan(&result)
+	return result.Total
+}
+
+// SumSaleBillRefundAmount 统计销售账单退款金额合计（通过 sale_order -> return_order 关联查询）
+func (r *orderRepo) SumSaleBillRefundAmount(opts ...DBOption) float64 {
+	// 构建匹配的 sale_bill uuid 子查询
+	saleBillDB := r.db.Model(&model.SaleBill{}).Session(&gorm.Session{}).Select("uuid")
+	for _, opt := range opts {
+		saleBillDB = opt(saleBillDB)
+	}
+	// 通过 sale_order 关联查询 return_order 的退款金额
+	saleOrderDB := r.db.Model(&model.SaleOrder{}).
+		Where("sale_bill_uuid IN (?)", saleBillDB).
+		Where("delete_time = 0").
+		Select("uuid")
+	var result struct{ Total float64 }
+	r.db.Model(&model.ReturnOrder{}).
+		Where("related_order_uuid IN (?)", saleOrderDB).
+		Select("COALESCE(SUM(refund_amount), 0) as total").
+		Scan(&result)
 	return result.Total
 }
 
