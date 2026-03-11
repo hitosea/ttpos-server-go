@@ -36,6 +36,7 @@ type TimeUtil interface {
 	FormatDateTimeToUnix(timeStr string) (int64, error)                                               // 将日期时间字符串转换为时间戳（支持 YYYY-MM-DD HH:mm:ss 和 YYYY-MM-DD 格式）
 	FormatDateTimeToTime(timeStr string) (time.Time, error)                                           // 将日期时间字符串转换为time.Time对象（支持 YYYY-MM-DD HH:mm:ss 和 YYYY-MM-DD 格式）
 	OpeningHoursStartEndUnix(openingHours string, opts ...func(o *OpeningHoursOption)) (int64, int64) // 营业时间开始和结束时间戳
+	IsWithinOpeningHours(openingHours string) bool                                                    // 判断当前时间是否在营业时间内
 }
 
 type Timezone string
@@ -467,6 +468,57 @@ func (t Timezone) OpeningHoursStartEndUnix(openingHours string, opts ...func(o *
 	}
 
 	return startTime.Unix(), endTime.Unix()
+}
+
+// IsWithinOpeningHours 判断当前时间是否在营业时间内
+// openingHours 格式为 "HH:MM-HH:MM"，如 "09:00-22:00" 或跨天 "18:00-02:00"
+// 空字符串视为全天营业，返回 true
+func (t Timezone) IsWithinOpeningHours(openingHours string) bool {
+	// 空字符串或全天营业
+	if openingHours == "" || openingHours == "00:00-23:59" {
+		return true
+	}
+
+	// 解析营业时间格式 HH:MM-HH:MM
+	timeRanges := strings.Split(openingHours, "-")
+	if len(timeRanges) != 2 {
+		return true // 格式错误视为全天营业
+	}
+
+	startTimeStr := strings.TrimSpace(timeRanges[0])
+	endTimeStr := strings.TrimSpace(timeRanges[1])
+
+	// 解析开始时间
+	startHour, startMin := 0, 0
+	startTimeParts := strings.Split(startTimeStr, ":")
+	if len(startTimeParts) >= 1 {
+		startHour, _ = strconv.Atoi(startTimeParts[0])
+	}
+	if len(startTimeParts) >= 2 {
+		startMin, _ = strconv.Atoi(startTimeParts[1])
+	}
+
+	// 解析结束时间
+	endHour, endMin := 0, 0
+	endTimeParts := strings.Split(endTimeStr, ":")
+	if len(endTimeParts) >= 1 {
+		endHour, _ = strconv.Atoi(endTimeParts[0])
+	}
+	if len(endTimeParts) >= 2 {
+		endMin, _ = strconv.Atoi(endTimeParts[1])
+	}
+
+	now := t.Now()
+	nowMinutes := now.Hour()*60 + now.Minute()
+	startMinutes := startHour*60 + startMin
+	endMinutes := endHour*60 + endMin
+
+	if endMinutes > startMinutes {
+		// 非跨天：如 09:00-22:00
+		return nowMinutes >= startMinutes && nowMinutes < endMinutes
+	}
+	// 跨天：如 18:00-02:00，当前时间在 [18:00, 24:00) 或 [00:00, 02:00) 内
+	return nowMinutes >= startMinutes || nowMinutes < endMinutes
 }
 
 // IsTimeInRange 判断给定时间是否在指定时间范围内

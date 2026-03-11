@@ -2731,6 +2731,16 @@ func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.Crea
 		return nil, errors.WithMessage(err)
 	}
 
+	// 检查是否在营业时间内
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取门店业务设置失败")
+	}
+	companySetting := ctx.GetCompanySetting()
+	if !utils.SetTimezone(companySetting.Timezone).IsWithinOpeningHours(businessSetting.OpeningHours) {
+		return nil, errors.New(i18n.Translate(ctx.GetLanguage(), "店铺休息中"))
+	}
+
 	if request.SaleBillUuid == 0 {
 		// 新建订单
 		return s.createDineInOrder(ctx, request)
