@@ -590,6 +590,42 @@ func (h *OrderHandler) SendAuthCode(c *gin.Context) {
 	})
 }
 
+// CheckDineInOrder 会员端堂食订单结算前检查
+// @Summary 会员端堂食订单结算前检查
+// @Description 在会员端点击"去结算"时调用，校验消费税变动、服务费变动、库存、价格变动、规格、商品变动（被删除、下架）、限购等
+// @Tags 会员端-堂食订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data query req.CheckDineInOrderReq true "详情参数"
+// @Success 200 {object} nil "检查通过"
+// @Failure 400 {object} resp.OrderCheckRes "检查不通过，返回具体变动信息"
+// @Router /member/order/dine_in/check [get]
+func (h *OrderHandler) CheckDineInOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.CheckDineInOrderReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("会员端堂食订单结算前检查", zap.Any("params", params))
+
+	// 执行结算前检查
+	checkRes, err := h.orderSrv.CheckDineInOrder(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if checkRes != nil {
+		ctx.Log().Debug("堂食订单结算前检查不通过", zap.Any("res", checkRes))
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(checkRes.Code))
+		return
+	}
+	// 检查通过
+	helper.Success(c, gin.H{})
+}
+
 // GetMemberDineInOrderList 获取会员端堂食订单列表
 // @Summary 获取会员端堂食订单列表
 // @Description 获取会员端堂食订单列表，支持状态过滤（全部、待支付、进行中、已完成、已取消）
@@ -704,26 +740,27 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 需要认证
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
-		privateApi.POST("/order/create", wrapper.CreateOrder)                                 // 创建外送订单
-		privateApi.POST("/order/dine_in/create", wrapper.CreateDineInOrder)                   // 创建堂食订单
-		privateApi.GET("/order/form/info", wrapper.GetMemberOrderFormInfo)                    // 获取外送订单提交表单信息
-		privateApi.GET("/order/dine_in/form_info", wrapper.GetDineInOrderFormInfo)            // 获取堂食订单提交表单信息
-		privateApi.POST("/order/dine_in/dining_method", wrapper.SetDineInOrderDiningMethod)   // 设置堂食订单用餐方式
-		privateApi.POST("/order/address", wrapper.SetOrderAddress)                            // 设置订单地址
-		privateApi.POST("/order/pay", wrapper.PayOrder)                                       // 外送订单提交支付
-		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)                               // 外送订单获取支付信息
-		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                           // 外送订单获取支付状态
-		privateApi.POST("/order/dine_in/pay", wrapper.PayDineInOrder)                         // 堂食订单提交支付
-		privateApi.GET("/order/dine_in/pay/info", wrapper.GetDineInOrderPayInfo)              // 堂食订单获取支付信息
-		privateApi.GET("/order/dine_in/pay/status", wrapper.GetDineInOrderPayStatus)          // 堂食订单获取支付状态
-		privateApi.GET("/order/dine_in/list", wrapper.GetMemberDineInOrderList)               // 获取堂食订单列表
-		privateApi.GET("/order/dine_in/detail", wrapper.GetMemberDineInOrderDetail)           // 获取堂食订单详情
-		privateApi.GET("/order/list", wrapper.GetMemberOrderList)                             // 获取会员端订单列表
-		privateApi.GET("/order/detail", wrapper.GetMemberOrderDetail)                         // 获取会员端订单详情
-		privateApi.GET("/order/payment/method/list", wrapper.GetMemberOrderPaymentMethodList) // 获取会员端订单支付方式列表
-		privateApi.POST("/order/cancel", wrapper.CancelOrder)                                 // 取消订单
-		privateApi.POST("/order/send_auth_code", wrapper.SendAuthCode)                        // 发送认证验证码
-		privateApi.GET("/order/rider", wrapper.GetRiderInfo)                                  // 获取骑手信息，以及商家、会员坐标
+		privateApi.POST("/order/create", wrapper.CreateOrder)                                   // 创建外送订单
+		privateApi.POST("/order/dine_in/create", wrapper.CreateDineInOrder)                     // 创建堂食订单
+		privateApi.GET("/order/form/info", wrapper.GetMemberOrderFormInfo)                      // 获取外送订单提交表单信息
+		privateApi.GET("/order/dine_in/check", wrapper.CheckDineInOrder)                        // 堂食订单结算前检查
+		privateApi.GET("/order/dine_in/form_info", wrapper.GetDineInOrderFormInfo)              // 获取堂食订单提交表单信息
+		privateApi.POST("/order/dine_in/dining_method", wrapper.SetDineInOrderDiningMethod)     // 设置堂食订单用餐方式
+		privateApi.POST("/order/address", wrapper.SetOrderAddress)                              // 设置订单地址
+		privateApi.POST("/order/pay", wrapper.PayOrder)                                         // 外送订单提交支付
+		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)                                 // 外送订单获取支付信息
+		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                             // 外送订单获取支付状态
+		privateApi.POST("/order/dine_in/pay", wrapper.PayDineInOrder)                           // 堂食订单提交支付
+		privateApi.GET("/order/dine_in/pay/info", wrapper.GetDineInOrderPayInfo)                // 堂食订单获取支付信息
+		privateApi.GET("/order/dine_in/pay/status", wrapper.GetDineInOrderPayStatus)            // 堂食订单获取支付状态
+		privateApi.GET("/order/dine_in/list", wrapper.GetMemberDineInOrderList)                 // 获取堂食订单列表
+		privateApi.GET("/order/dine_in/detail", wrapper.GetMemberDineInOrderDetail)             // 获取堂食订单详情
+		privateApi.GET("/order/list", wrapper.GetMemberOrderList)                               // 获取会员端订单列表
+		privateApi.GET("/order/detail", wrapper.GetMemberOrderDetail)                           // 获取会员端订单详情
+		privateApi.GET("/order/payment/method/list", wrapper.GetMemberOrderPaymentMethodList)   // 获取会员端订单支付方式列表
+		privateApi.POST("/order/cancel", wrapper.CancelOrder)                                   // 取消订单
+		privateApi.POST("/order/send_auth_code", wrapper.SendAuthCode)                          // 发送认证验证码
+		privateApi.GET("/order/rider", wrapper.GetRiderInfo)                                    // 获取骑手信息，以及商家、会员坐标
 		privateApi.POST("/order/dine_in/pay/mock_callback", wrapper.MockPayDineInOrderCallback) // 模拟堂食订单支付回调（仅测试用）
 	}
 }
