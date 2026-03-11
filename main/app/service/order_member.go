@@ -371,11 +371,10 @@ func (s *orderSrv) SetDineInOrderDiningMethod(ctx context.Context, request req.S
 		return errors.New("订单已完成")
 	}
 
-	// 更新用餐方式
-	saleBill.DiningMethod = request.DiningMethod
-
-	// 保存更新
-	if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
+	// 更新用餐方式（使用 Select 确保零值也能更新）
+	if err := db.Model(&model.SaleBill{}).Where("uuid = ?", request.SaleBillUuid).Select("dining_method").Updates(map[string]any{
+		"dining_method": request.DiningMethod,
+	}).Error; err != nil {
 		return errors.WithMessage(err, "更新订单失败")
 	}
 
@@ -2917,7 +2916,10 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 func (s *orderSrv) buildDineInOrderListQueryOptions(ctx context.Context, billStatuses []uint) []repository.DBOption {
 	dbOptions := []repository.DBOption{
 		repository.CommonRepo.WhereBySoftDelete(),
-		repository.CommonRepo.WhereByMemberUuid(ctx.GetMemberUuid()),
+		// 使用 consumer_uuid 字段过滤当前会员的订单（sale_bill 表使用 consumer_uuid 而非 member_uuid）
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("consumer_uuid = ?", ctx.GetMemberUuid())
+		},
 		repository.CommonRepo.WhereBySource(constant.SaleBillSourceMember),
 		repository.CommonRepo.WhereByBillType(constant.SaleBillTypeInstant), // 堂食订单 BillType = 1
 		repository.CommonRepo.SortWithCreateTime("desc"),
