@@ -677,6 +677,34 @@ func (h *OrderHandler) MockPayDineInOrderCallback(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// CancelDineInOrder 取消会员端堂食订单
+// @Summary 取消会员端堂食订单
+// @Description 取消未付款的会员端堂食订单。仅支持未付款状态的订单取消。
+// @Tags 会员端-堂食订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.CancelMemberDineInOrderReq true "请求参数"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/dine_in/cancel [post]
+func (h *OrderHandler) CancelDineInOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.CancelMemberDineInOrderReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 取消堂食订单
+	err := h.orderSrv.CancelMemberDineInOrder(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -718,6 +746,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/dine_in/pay/status", wrapper.GetDineInOrderPayStatus)          // 堂食订单获取支付状态
 		privateApi.GET("/order/dine_in/list", wrapper.GetMemberDineInOrderList)               // 获取堂食订单列表
 		privateApi.GET("/order/dine_in/detail", wrapper.GetMemberDineInOrderDetail)           // 获取堂食订单详情
+		privateApi.POST("/order/dine_in/cancel", wrapper.CancelDineInOrder)                   // 取消堂食订单
 		privateApi.GET("/order/list", wrapper.GetMemberOrderList)                             // 获取会员端订单列表
 		privateApi.GET("/order/detail", wrapper.GetMemberOrderDetail)                         // 获取会员端订单详情
 		privateApi.GET("/order/payment/method/list", wrapper.GetMemberOrderPaymentMethodList) // 获取会员端订单支付方式列表

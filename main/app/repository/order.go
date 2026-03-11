@@ -37,6 +37,7 @@ type IOrderRepo interface {
 	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)      // 创建销售订单自助餐加钟
 	UpdateSaleOrderBuffetDelayProductRecord(model model.SaleOrderBuffetDelayProduct) error                                     // 更新销售订单自助餐加钟
 	CancelOrder(ctx context.Context, saleBillUuid uint64, deskUuid uint64, reason string) error                                // 取消订单
+	CancelOrderWithoutTx(saleBillUuid uint64) error                                                                            // 取消订单（无事务，仅更新状态）
 	CancelDeskOrder(ctx context.Context, deskUuid uint64, reason string) error                                                 // 取消桌台订单
 	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                               // 删除订单
 	HideOrder(saleBillUuid uint64) error                                                                                       // 隐藏订单
@@ -1377,6 +1378,23 @@ func (r *orderRepo) CancelOrder(ctx context.Context, saleBillUuid uint64, deskUu
 	})
 	if err != nil {
 		return fmt.Errorf("CancelOrder: %v", err)
+	}
+	return nil
+}
+
+// CancelOrderWithoutTx 取消订单（无事务，仅更新 SaleBill 和 SaleOrder 状态为已取消）
+func (r *orderRepo) CancelOrderWithoutTx(saleBillUuid uint64) error {
+	if err := r.db.Model(&model.SaleOrder{}).
+		Where("sale_bill_uuid = ?", saleBillUuid).
+		Where("status = ?", constant.SaleOrderStatusPending).
+		Update("status", constant.SaleOrderStatusCanceled).Error; err != nil {
+		return fmt.Errorf("CancelOrderWithoutTx: update sale_order: %v", err)
+	}
+	if err := r.db.Model(&model.SaleBill{}).
+		Where("uuid = ?", saleBillUuid).
+		Where("status = ?", constant.SaleBillStatusPending).
+		Update("status", constant.SaleBillStatusCanceled).Error; err != nil {
+		return fmt.Errorf("CancelOrderWithoutTx: update sale_bill: %v", err)
 	}
 	return nil
 }

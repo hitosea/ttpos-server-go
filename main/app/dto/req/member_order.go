@@ -136,3 +136,8 @@ type GetMemberDineInOrderDetailReq struct {
 type MockPayDineInOrderCallbackReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
 }
+
+// CancelMemberDineInOrderReq 取消会员端堂食订单
+type CancelMemberDineInOrderReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+}

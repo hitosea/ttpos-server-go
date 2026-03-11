@@ -83,6 +83,7 @@ type IMemberOrderSrv interface {
 	// 会员端堂食订单管理
 	GetMemberDineInOrderList(ctx context.Context, req req.MemberDineInOrderListReq) (*resp.GetMemberDineInOrderListResp, error)          // 获取会员端堂食订单列表
 	GetMemberDineInOrderDetail(ctx context.Context, req req.GetMemberDineInOrderDetailReq) (*resp.GetMemberDineInOrderDetailResp, error) // 获取会员端堂食订单详情
+	CancelMemberDineInOrder(ctx context.Context, req req.CancelMemberDineInOrderReq) error                                               // 取消会员端堂食订单（仅未付款）
 
 	// 测试用接口
 	MockPayDineInOrderCallback(ctx context.Context, req req.MockPayDineInOrderCallbackReq) error // 模拟堂食订单支付完成回调（仅用于测试）
@@ -3206,6 +3207,74 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 			List: productList,
 		},
 	}, nil
+}
+
+// CancelMemberDineInOrder 取消会员端堂食订单（仅未付款订单可取消）
+func (s *orderSrv) CancelMemberDineInOrder(ctx context.Context, cancelReq req.CancelMemberDineInOrderReq) error {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(cancelReq.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(cancelReq.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	// 获取DB
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取销售账单完整信息
+	orderRepo := repository.NewOrderRepo(db)
+	billInfo, err := orderRepo.GetSaleBillAllInfo(cancelReq.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 验证是否是会员端堂食订单
+	if billInfo.Source != constant.SaleBillSourceMember || billInfo.BillType != constant.SaleBillTypeInstant {
+		return errors.New("订单类型错误")
+	}
+
+	// 验证订单归属
+	saleOrder := billInfo.GetFirstSaleOrder()
+	if saleOrder == nil || saleOrder.ConsumerUuid != ctx.GetMemberUuid() {
+		return errors.New("无权操作此订单")
+	}
+
+	// 验证订单是未付款状态
+	if billInfo.Status != constant.SaleBillStatusPending {
+		return errors.New("订单状态不可取消")
+	}
+	if billInfo.IsExistPaid() {
+		return errors.New("订单已支付，不可取消")
+	}
+
+	// 取消订单（SaleBill.Status 0→2, SaleOrder.Status 0→2）
+	// 未付款的堂食订单没有扣库存也没有送厨，无需退库存和删除送厨单
+	err = repository.NewOrderRepo(db).CancelOrderWithoutTx(cancelReq.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 异步: 发布整单取消事件
+	utils.Go(func() {
+		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: billInfo.Uuid,
+				OperatorUuid: 0,
+				MemberUuid:   ctx.GetMemberUuid(),
+			},
+		})
+	})
+
+	ctx.Log().Info("会员端堂食订单取消成功",
+		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+		zap.Uint64("sale_bill_uuid", cancelReq.SaleBillUuid),
+		zap.Uint64("member_uuid", ctx.GetMemberUuid()),
+	)
+
+	return nil
 }
 
 // getMemberDineInOrderStatusInfo 获取堂食订单状态信息
