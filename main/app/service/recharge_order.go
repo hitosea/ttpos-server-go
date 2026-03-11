@@ -607,6 +607,9 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		})
 	}
 
+	// 设置事务上下文
+	ctx.SetDB(db)
+
 	// 打印充值单
 	utils.Go(func() {
 		order := rechargeOrderRepo.GetRechargeOrder(
@@ -1795,6 +1798,10 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		return errors.WithMessage(err)
 	}
 
+	// 设置事务上下文
+	ctx.SetDB(db)
+
+	// 处理会员升级
 	if memberPointsChanged {
 		utils.Go(func() {
 			s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), order.MemberUuid)
