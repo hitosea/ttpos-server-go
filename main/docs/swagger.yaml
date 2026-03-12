@@ -1726,6 +1726,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/member_resp.MemberResp'
         description: 会员端配置信息
+      template_style:
+        description: 模板样式：1/2/3
+        type: integer
       user:
         allOf:
         - $ref: '#/definitions/member_resp.UserResp'
@@ -3936,6 +3939,14 @@ definitions:
         type: integer
     required:
     - call_type
+    type: object
+  req.CancelMemberDineInOrderReq:
+    properties:
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+    required:
+    - sale_bill_uuid
     type: object
   req.CancelSoldOutReq:
     properties:
@@ -8649,6 +8660,18 @@ definitions:
         description: 启用状态：0-关闭，1-开启
         type: integer
     type: object
+  req.SaveTemplateStyleSettingReq:
+    properties:
+      template_style:
+        description: 模板样式：1/2/3
+        enum:
+        - 1
+        - 2
+        - 3
+        type: integer
+    required:
+    - template_style
+    type: object
   req.SendMemberRechargeSMS:
     properties:
       balance:
@@ -12992,6 +13015,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.KitchenResp'
         description: 厨显设置
+      template_style:
+        description: 模板样式：1/2/3
+        type: integer
     type: object
   resp.H5CartSendProduct:
     properties:
@@ -14159,6 +14185,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.Menu'
         description: 菜单设置
+      template_style:
+        description: 模板样式：1/2/3
+        type: integer
     type: object
   resp.NationalityCreateResp:
     properties:
@@ -21416,6 +21445,12 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Server'
         description: 平板服务器连接
+    type: object
+  setting.TemplateStyleSettingResp:
+    properties:
+      template_style:
+        description: 模板样式：1/2/3
+        type: integer
     type: object
   setting.TimeZoneItem:
     properties:
@@ -33910,6 +33945,60 @@ paths:
       summary: 获取会员端订单详情
       tags:
       - 会员端-订单
+  /member/order/dine_in/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 取消未付款的会员端堂食订单。仅支持未付款状态的订单取消。
+      parameters:
+      - description: 请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CancelMemberDineInOrderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 取消会员端堂食订单
+      tags:
+      - 会员端-堂食订单
+  /member/order/dine_in/check:
+    get:
+      consumes:
+      - application/json
+      description: 在会员端点击"去结算"时调用，校验消费税变动、服务费变动、库存、价格变动、规格、商品变动（被删除、下架）、限购等
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      - description: 销售订单UUID
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 检查通过
+        "400":
+          description: 检查不通过，返回具体变动信息
+          schema:
+            $ref: '#/definitions/resp.OrderCheckRes'
+      security:
+      - JwtToken: []
+      summary: 会员端堂食订单结算前检查
+      tags:
+      - 会员端-堂食订单
   /member/order/dine_in/create:
     post:
       consumes:
@@ -34021,6 +34110,10 @@ paths:
       - application/json
       description: 获取会员端堂食订单列表，支持状态过滤（全部、待支付、进行中、已完成、已取消）
       parameters:
+      - description: 搜索关键字（按菜名或订单号搜索）
+        in: query
+        name: keyword
+        type: string
       - description: 页码
         in: query
         minimum: 1
@@ -41910,6 +42003,51 @@ paths:
       summary: 获取同步任务列表
       tags:
       - 商家端.业务设置
+  /shop/setting/template_style:
+    get:
+      consumes:
+      - application/json
+      description: 获取模板样式配置，返回当前模板样式值（1/2/3）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/setting.TemplateStyleSettingResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取模板样式配置
+      tags:
+      - 商家端.模板样式设置
+    post:
+      consumes:
+      - application/json
+      description: 保存模板样式配置，模板值为 1/2/3
+      parameters:
+      - description: 保存模板样式配置
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SaveTemplateStyleSettingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 保存模板样式配置
+      tags:
+      - 商家端.模板样式设置
   /shop/setting/upload_logo:
     post:
       consumes:

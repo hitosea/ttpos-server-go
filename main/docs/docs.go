@@ -21137,6 +21137,92 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/order/dine_in/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "取消未付款的会员端堂食订单。仅支持未付款状态的订单取消。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-堂食订单"
+                ],
+                "summary": "取消会员端堂食订单",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CancelMemberDineInOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/dine_in/check": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "在会员端点击\"去结算\"时调用，校验消费税变动、服务费变动、库存、价格变动、规格、商品变动（被删除、下架）、限购等",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-堂食订单"
+                ],
+                "summary": "会员端堂食订单结算前检查",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单UUID",
+                        "name": "sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "检查通过"
+                    },
+                    "400": {
+                        "description": "检查不通过，返回具体变动信息",
+                        "schema": {
+                            "$ref": "#/definitions/resp.OrderCheckRes"
+                        }
+                    }
+                }
+            }
+        },
         "/member/order/dine_in/create": {
             "post": {
                 "security": [
@@ -21324,6 +21410,12 @@ const docTemplate = `{
                 ],
                 "summary": "获取会员端堂食订单列表",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "搜索关键字（按菜名或订单号搜索）",
+                        "name": "keyword",
+                        "in": "query"
+                    },
                     {
                         "minimum": 1,
                         "type": "integer",
@@ -34285,6 +34377,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/setting/template_style": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取模板样式配置，返回当前模板样式值（1/2/3）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.模板样式设置"
+                ],
+                "summary": "获取模板样式配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.TemplateStyleSettingResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "保存模板样式配置，模板值为 1/2/3",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.模板样式设置"
+                ],
+                "summary": "保存模板样式配置",
+                "parameters": [
+                    {
+                        "description": "保存模板样式配置",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SaveTemplateStyleSettingReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/upload_logo": {
             "post": {
                 "security": [
@@ -43347,6 +43516,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "template_style": {
+                    "description": "模板样式：1/2/3",
+                    "type": "integer"
+                },
                 "user": {
                     "description": "会员信息",
                     "allOf": [
@@ -46636,6 +46809,18 @@ const docTemplate = `{
                         1,
                         2
                     ]
+                }
+            }
+        },
+        "req.CancelMemberDineInOrderReq": {
+            "type": "object",
+            "required": [
+                "sale_bill_uuid"
+            ],
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -53384,6 +53569,23 @@ const docTemplate = `{
                 }
             }
         },
+        "req.SaveTemplateStyleSettingReq": {
+            "type": "object",
+            "required": [
+                "template_style"
+            ],
+            "properties": {
+                "template_style": {
+                    "description": "模板样式：1/2/3",
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2,
+                        3
+                    ]
+                }
+            }
+        },
         "req.SendMemberRechargeSMS": {
             "type": "object",
             "properties": {
@@ -59682,6 +59884,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.KitchenResp"
                         }
                     ]
+                },
+                "template_style": {
+                    "description": "模板样式：1/2/3",
+                    "type": "integer"
                 }
             }
         },
@@ -61481,6 +61687,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.Menu"
                         }
                     ]
+                },
+                "template_style": {
+                    "description": "模板样式：1/2/3",
+                    "type": "integer"
                 }
             }
         },
@@ -72055,6 +72265,15 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.Server"
                         }
                     ]
+                }
+            }
+        },
+        "setting.TemplateStyleSettingResp": {
+            "type": "object",
+            "properties": {
+                "template_style": {
+                    "description": "模板样式：1/2/3",
+                    "type": "integer"
                 }
             }
         },
