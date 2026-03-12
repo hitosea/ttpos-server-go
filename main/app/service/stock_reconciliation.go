@@ -1050,8 +1050,8 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 				effectiveBooked = effectiveBooked.Sub(pending)
 			}
 			if !item.CountedQuantity.Equal(effectiveBooked) {
-				scene := constant.WarehouseInOutLogSceneProfitIn        // 盘盈
-				logType := constant.WarehouseInOutLogLogTypeIn          // 入库
+				scene := constant.WarehouseInOutLogSceneProfitIn    // 盘盈
+				logType := constant.WarehouseInOutLogLogTypeIn      // 入库
 				if item.CountedQuantity.LessThan(effectiveBooked) { // 盘亏出库
 					logType = constant.WarehouseInOutLogLogTypeOut
 					scene = constant.WarehouseInOutLogSceneLossOut

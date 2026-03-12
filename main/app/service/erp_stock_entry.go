@@ -416,13 +416,22 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 		excludedSet[code] = true
 	}
 
+	// 收集需要查询的 item codes（排除已知 bad items）
+	pendingCodes := make([]string, 0, len(mergeMap))
+	for code := range mergeMap {
+		if !excludedSet[code] {
+			pendingCodes = append(pendingCodes, code)
+		}
+	}
+
 	// 通过 ERPNext API 批量查询 item 状态，一次性排除所有 disabled / 非 stock item
 	logger.Logger.Info("Stock Entry重试耗尽，开始批量查询ERPNext物品状态",
 		zap.Uint64("company_uuid", companyUuid),
 		zap.Int("retry_exhausted", maxRetry),
 		zap.Int("known_excluded", len(excludedSet)),
+		zap.Int("pending_codes", len(pendingCodes)),
 	)
-	itemStatusMap, fetchErr := s.fetchItemStatusMap(ctx, companySetting)
+	itemStatusMap, fetchErr := s.fetchItemStatusMap(ctx, companySetting, pendingCodes)
 	if fetchErr != nil {
 		logger.Logger.Warn("查询ERPNext物品状态失败，使用已知排除集合",
 			zap.Uint64("company_uuid", companyUuid),
@@ -430,8 +439,17 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 		)
 	} else {
 		for code := range mergeMap {
+			if excludedSet[code] {
+				continue // 已排除的跳过，避免重复检查
+			}
 			info, exists := itemStatusMap[code]
-			if !exists || info.Disabled || !info.IsStockItem {
+			if !exists {
+				excludedSet[code] = true
+				logger.Logger.Warn("Stock Entry排除ERPNext中不存在的item",
+					zap.Uint64("company_uuid", companyUuid),
+					zap.String("item_code", code),
+				)
+			} else if info.Disabled || !info.IsStockItem {
 				excludedSet[code] = true
 			}
 		}
@@ -753,36 +771,52 @@ func (s *erpStockEntrySrv) markTakeoutOrdersDeducted(db *gorm.DB, orderUuids []u
 	return nil
 }
 
-// fetchItemStatusMap 从 ERPNext 批量查询所有物品状态（含禁用），返回 map[item_code]*ItemInfo
+// fetchItemStatusMap 从 ERPNext 批量查询指定物品状态（含禁用），返回 map[item_code]*ItemInfo
 // 用于重试耗尽后一次性识别所有 disabled / 非 stock item
-func (s *erpStockEntrySrv) fetchItemStatusMap(ctx cc.Context, companySetting model.CompanySetting) (map[string]*item.ItemInfo, error) {
-	client, conn, err := erp.NewErpItemClient()
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	// ItemGroup=0(Others) 不过滤分组，ContainDisabled=true 包含禁用物品
-	result, err := client.GetItemList(erp.WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.GetItemListReq{
-		ContainDisabled: true,
-		Branch:          companySetting.ErpnextBranchName,
-		CompanyAbbr:     companySetting.ErpnextCompanyAbbr,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if result.GetCode() != "0" {
-		return nil, fmt.Errorf("查询ERPNext物品列表失败: %s", result.GetMessage())
+// itemCodes: 需要查询的物品编码列表，分批查询避免 URL 过长（每批最多 200 个）
+func (s *erpStockEntrySrv) fetchItemStatusMap(ctx cc.Context, companySetting model.CompanySetting, itemCodes []string) (map[string]*item.ItemInfo, error) {
+	if len(itemCodes) == 0 {
+		return make(map[string]*item.ItemInfo), nil
 	}
 
-	resp := &item.GetItemListResp{}
-	if err := result.Data.UnmarshalTo(resp); err != nil {
-		return nil, err
-	}
+	const batchSize = 200
+	statusMap := make(map[string]*item.ItemInfo, len(itemCodes))
 
-	statusMap := make(map[string]*item.ItemInfo, len(resp.ItemList))
-	for _, info := range resp.ItemList {
-		statusMap[info.ItemCode] = info
+	for i := 0; i < len(itemCodes); i += batchSize {
+		end := i + batchSize
+		if end > len(itemCodes) {
+			end = len(itemCodes)
+		}
+		batch := itemCodes[i:end]
+
+		client, conn, err := erp.NewErpItemClient()
+		if err != nil {
+			return nil, err
+		}
+
+		// 使用逗号分隔的 item_code 触发 BMP 侧 in 过滤
+		// 不按 Branch/CompanyAbbr 过滤：item_code 全局唯一，此处只需检查物品是否 disabled/非 stock，
+		// 按 Branch 或 CompanyAbbr 过滤会导致总部共享物品（custom_branch/custom_company 为总部）被漏掉
+		result, err := client.GetItemList(erp.WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.GetItemListReq{
+			ContainDisabled: true,
+			ItemCode:        strings.Join(batch, ","),
+		})
+		conn.Close()
+		if err != nil {
+			return nil, err
+		}
+		if result.GetCode() != "0" {
+			return nil, fmt.Errorf("查询ERPNext物品列表失败: %s", result.GetMessage())
+		}
+
+		resp := &item.GetItemListResp{}
+		if err := result.Data.UnmarshalTo(resp); err != nil {
+			return nil, err
+		}
+
+		for _, info := range resp.ItemList {
+			statusMap[info.ItemCode] = info
+		}
 	}
 	return statusMap, nil
 }

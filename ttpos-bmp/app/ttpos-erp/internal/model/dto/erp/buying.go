@@ -197,8 +197,8 @@ type PurchaseOrderItem struct {
 
 	// 自定义字段
 	CustomQtyAvailableForPurchase float64 `json:"custom_qty_available_for_purchase,omitempty"` // 可采购数量（总店默认仓库库存）
-	CustomStoreQty         float64 `json:"custom_store_qty,omitempty"`          // 门店库存（门店所有仓库库存）
-	CustomLastPurchaseQty  float64 `json:"custom_last_purchase_qty,omitempty"`  // 上次采购数量（默认销售单位，由TTPOS传入）
+	CustomStoreQty                float64 `json:"custom_store_qty,omitempty"`                  // 门店库存（门店所有仓库库存）
+	CustomLastPurchaseQty         float64 `json:"custom_last_purchase_qty,omitempty"`          // 上次采购数量（默认销售单位，由TTPOS传入）
 
 	// 父级关联
 	Parent      string `json:"parent,omitempty"`      // 父级

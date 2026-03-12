@@ -94,9 +94,13 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 		}
 	}
 
-	// 按物品编码过滤
+	// 按物品编码过滤（支持逗号分隔的批量查询，使用 in 操作符）
 	if len(req.ItemCode) > 0 {
-		filters = append(filters, g.ArrayStr{"item_code", "=", req.ItemCode})
+		if gstr.Contains(req.ItemCode, ",") {
+			filters = append(filters, g.ArrayStr{"item_code", "in", req.ItemCode})
+		} else {
+			filters = append(filters, g.ArrayStr{"item_code", "=", req.ItemCode})
+		}
 	}
 
 	// 按物品编码前缀过滤
@@ -209,6 +213,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			ItemGroupName:       itemGroupCodeName,
 			VariantOf:           itemInfo.VariantOf,
 			NotForSale:          itemInfo.CustomNotForSale,
+			IsStockItem:         itemInfo.IsStockItem == 1,
 			AllowNegativeStock:  proto.Bool(itemInfo.AllowNegativeStock == 1),
 			DeliveredBySupplier: itemInfo.DeliveredBySupplier == 1,
 			SupplierItems:       convertSupplierItems(itemInfo.SupplierItems),
@@ -803,11 +808,12 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 		filters.Set("item_code", req.ItemCode)
 	}
 
-	// 执行库存报表查询
+	// 执行库存报表查询（设置大 page_length 避免分页截断）
 	resp, err := service.Report().Run(ctx, &erp.ReportParams{
 		ReportName:           erp.DocTypeStockProjectedQty,
 		Filters:              filters.String(),
 		IgnorePreparedReport: true,
+		PageLength:           99999,
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询库存报表失败")
