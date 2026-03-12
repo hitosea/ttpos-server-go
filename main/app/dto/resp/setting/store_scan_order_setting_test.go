@@ -174,3 +174,41 @@ func TestStoreScanOrderSettingResp_IsStoreResting_CrossDay(t *testing.T) {
 		}
 	})
 }
+
+func TestStoreScanOrderSettingResp_IsStoreResting_Boundary(t *testing.T) {
+	const tz = "Asia/Shanghai"
+	enabled := StoreScanOrderSettingResp{IsEnabled: 1}
+
+	t.Run("非跨天_恰好在开始时间_应不休息", func(t *testing.T) {
+		// 固定为 UTC 2025-06-15 01:00:00 → 上海 09:00
+		mockNow(t, time.Date(2025, 6, 15, 1, 0, 0, 0, time.UTC))
+
+		// 营业时间 09:00-22:00，上海 09:00 恰好等于 startMinutes，在 [09:00, 22:00) 内（>= 判定）
+		got := enabled.IsStoreResting(tz, "09:00-22:00")
+		if got {
+			t.Error("IsStoreResting() = true, want false (now == start should be within range)")
+		}
+	})
+
+	t.Run("非跨天_恰好在结束时间_应休息中", func(t *testing.T) {
+		// 固定为 UTC 2025-06-15 14:00:00 → 上海 22:00
+		mockNow(t, time.Date(2025, 6, 15, 14, 0, 0, 0, time.UTC))
+
+		// 营业时间 09:00-22:00，上海 22:00 恰好等于 endMinutes，不在 [09:00, 22:00) 内（< 判定）
+		got := enabled.IsStoreResting(tz, "09:00-22:00")
+		if !got {
+			t.Error("IsStoreResting() = false, want true (now == end should be outside range)")
+		}
+	})
+
+	t.Run("跨天_恰好在开始时间_应不休息", func(t *testing.T) {
+		// 固定为 UTC 2025-06-15 10:00:00 → 上海 18:00
+		mockNow(t, time.Date(2025, 6, 15, 10, 0, 0, 0, time.UTC))
+
+		// 营业时间 18:00-02:00（跨天），上海 18:00 恰好等于 startMinutes，在 [18:00, 02:00) 内（>= 判定）
+		got := enabled.IsStoreResting(tz, "18:00-02:00")
+		if got {
+			t.Error("IsStoreResting() = true, want false (now == start should be within cross-day range)")
+		}
+	})
+}
