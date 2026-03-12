@@ -7,8 +7,8 @@ import (
 
 // ProductListReq 商品列表查询
 type ProductListReq struct {
-	dto.PageReq               // 分页参数
-	OrderType   int           `form:"order_type" json:"order_type"` // 订单类型：0-外送（默认），1-堂食（到店自取）
+	dto.PageReq     // 分页参数
+	OrderType   int `form:"order_type" json:"order_type"` // 订单类型：0-外送（默认），1-堂食（到店自取）
 	// 以下字段不参与json序列化,内部方法使用
 	RecommendProductPackageUuids []uint64 `json:"-"` // 推荐商品uuid列表
 	IsMember                     bool     `json:"-"` // 是否是会员端查询商品列表

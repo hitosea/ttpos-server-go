@@ -946,7 +946,13 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			// 判断是否使用 Sales Invoice 模式：公司配置为 SI 模式且当前班次为新版
+			useSalesInvoice := false
 			if companySetting.IsErpSalesInvoiceMode() {
+				currentShift, _ := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
+				useSalesInvoice = currentShift == nil || currentShift.IsNewShiftVersion()
+			}
+			if useSalesInvoice {
 				// Sales Invoice 模式: 异步创建 SI + PE（BMP consumer 成功后回写 shop 数据库）
 				_, err := s.SaveSalesInvoice(ctx, saleOrder, saleBill, db)
 				if err != nil {
@@ -957,12 +963,11 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 					return errors.WithMessage(err)
 				}
 			} else {
-				// POS Invoice 模式（默认）
+				// POS Invoice 模式：旧班次（有ERP开关帐）继续走 POS Invoice
 				res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
 				if err != nil {
 					return errors.WithMessage(err)
 				}
-				// POS Invoice 结果不再持久化到 sale_order（已迁移到 SI 模式）
 				_ = res
 			}
 		}
@@ -1311,7 +1316,13 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			// 判断是否使用 Sales Invoice 模式：公司配置为 SI 模式且当前班次为新版
+			useSalesInvoice := false
 			if companySetting.IsErpSalesInvoiceMode() {
+				currentShift, _ := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
+				useSalesInvoice = currentShift == nil || currentShift.IsNewShiftVersion()
+			}
+			if useSalesInvoice {
 				// Sales Invoice 模式: 异步创建 SI + PE（BMP consumer 成功后回写 shop 数据库）
 				_, err := s.SaveSalesInvoice(ctx, saleOrder, saleBill, db)
 				if err != nil {
@@ -1322,7 +1333,7 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 					return errors.WithMessage(err)
 				}
 			} else {
-				// POS Invoice 模式（默认）
+				// POS Invoice 模式：旧班次（有ERP开关帐）继续走 POS Invoice
 				res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
 				if err != nil {
 					return errors.WithMessage(err)

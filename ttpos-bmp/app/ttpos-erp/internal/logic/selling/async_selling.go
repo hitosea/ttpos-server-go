@@ -249,7 +249,7 @@ func (*sAsyncSelling) SaveSalesInvoice(ctx context.Context, req *selling.SaveSal
 		SiteCode:        siteCode,
 		ReqMessage:      reqMsg,
 		ReqBody:         req.String(),
-		CreatedAt:        int(gtime.Now().Timestamp()),
+		CreatedAt:       int(gtime.Now().Timestamp()),
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "保存SI失败，插入记录失败")
@@ -339,4 +339,3 @@ func (*sAsyncSelling) GetLatestReceiveSalesInvoice(ctx context.Context, saleOrde
 	}
 	return record, nil
 }
-

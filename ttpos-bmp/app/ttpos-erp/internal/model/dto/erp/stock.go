@@ -164,27 +164,27 @@ type UOM struct {
 
 // StockReconciliation 库存盘点单据
 type StockReconciliation struct {
-	Name                 string                    `json:"name,omitempty"`                   // 单据编号
-	Owner                string                    `json:"owner,omitempty"`                  // 所有者
-	Creation             string                    `json:"creation,omitempty"`               // 创建时间
-	Modified             string                    `json:"modified,omitempty"`               // 修改时间
-	ModifiedBy           string                    `json:"modified_by,omitempty"`            // 修改人
-	DocStatus            int                       `json:"docstatus,omitempty"`              // 单据状态
-	Idx                  int                       `json:"idx,omitempty"`                    // 索引
-	NamingSeries         string                    `json:"naming_series,omitempty"`          // 编号系列
-	Company              string                    `json:"company,omitempty"`                // 公司
-	Purpose              string                    `json:"purpose,omitempty"`                // 用途
-	PostingDate          string                    `json:"posting_date,omitempty"`           // 过账日期
-	PostingTime          string                    `json:"posting_time,omitempty"`           // 过账时间
-	SetPostingTime       int                       `json:"set_posting_time,omitempty"`       // 设置过账时间
-	SetWarehouse         string                    `json:"set_warehouse,omitempty"`          // 设置仓库
-	ScanMode             int                       `json:"scan_mode,omitempty"`              // 扫描模式
-	ExpenseAccount       string                    `json:"expense_account,omitempty"`        // 费用科目
-	DifferenceAmount     float64                   `json:"difference_amount,omitempty"`      // 差异金额
-	CostCenter           string                    `json:"cost_center,omitempty"`            // 成本中心
-	DocType              string                    `json:"doctype,omitempty"`                // 文档类型
-	Items                []StockReconciliationItem `json:"items,omitempty"`                  // 明细项目
-	CustomInventoryType  string                    `json:"custom_inventory_type,omitempty"`  // 盘点类型：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items
+	Name                string                    `json:"name,omitempty"`                  // 单据编号
+	Owner               string                    `json:"owner,omitempty"`                 // 所有者
+	Creation            string                    `json:"creation,omitempty"`              // 创建时间
+	Modified            string                    `json:"modified,omitempty"`              // 修改时间
+	ModifiedBy          string                    `json:"modified_by,omitempty"`           // 修改人
+	DocStatus           int                       `json:"docstatus,omitempty"`             // 单据状态
+	Idx                 int                       `json:"idx,omitempty"`                   // 索引
+	NamingSeries        string                    `json:"naming_series,omitempty"`         // 编号系列
+	Company             string                    `json:"company,omitempty"`               // 公司
+	Purpose             string                    `json:"purpose,omitempty"`               // 用途
+	PostingDate         string                    `json:"posting_date,omitempty"`          // 过账日期
+	PostingTime         string                    `json:"posting_time,omitempty"`          // 过账时间
+	SetPostingTime      int                       `json:"set_posting_time,omitempty"`      // 设置过账时间
+	SetWarehouse        string                    `json:"set_warehouse,omitempty"`         // 设置仓库
+	ScanMode            int                       `json:"scan_mode,omitempty"`             // 扫描模式
+	ExpenseAccount      string                    `json:"expense_account,omitempty"`       // 费用科目
+	DifferenceAmount    float64                   `json:"difference_amount,omitempty"`     // 差异金额
+	CostCenter          string                    `json:"cost_center,omitempty"`           // 成本中心
+	DocType             string                    `json:"doctype,omitempty"`               // 文档类型
+	Items               []StockReconciliationItem `json:"items,omitempty"`                 // 明细项目
+	CustomInventoryType string                    `json:"custom_inventory_type,omitempty"` // 盘点类型：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items
 }
 
 // StockReconciliationItem 库存盘点明细

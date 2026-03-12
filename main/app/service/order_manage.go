@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	stockPb "ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -16,7 +17,6 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
-	stockPb "ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -2329,44 +2329,39 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 					sysLock := lock.NewSystemLock()
 					sysLock.LockUuidString(seLockKey)
 
-					// 已通过 Stock Entry 扣减库存的订单，创建反向 Stock Entry（Material Receipt）恢复库存
-					if stockDeductedMap[saleOrder.Uuid] == 1 {
-						deductionLogs, _ := repository.NewStockDeductionLogRepo(db).GetByOrderUuids([]uint64{saleOrder.Uuid})
-						if len(deductionLogs) > 0 {
-							receiptItems := make([]*stockPb.StockEntryItem, 0, len(deductionLogs))
-							for _, log := range deductionLogs {
-								receiptItems = append(receiptItems, &stockPb.StockEntryItem{
-									ItemCode: log.ErpCode,
-									Qty:      log.Qty,
-								})
-							}
-							_, seErr := erpSrv.SubmitStockEntry(ctx, companySetting, &stockPb.SubmitStockEntryReq{
-								CompanyAbbr:    companySetting.ErpnextCompanyAbbr,
-								Branch:         companySetting.ErpnextBranchName,
-								StockEntryType: "Material Receipt",
-								Items:          receiptItems,
-								Remarks:        fmt.Sprintf("TTPOS反结账库存恢复, order=%s, uuid=%d", orderNo, saleOrder.Uuid),
+					// 查询扣减日志，无论 erp_stock_deducted 状态如何
+					// 修复: erp_stock_deducted=0 但有部分扣减日志时，也需创建 Material Receipt 恢复 ERPNext 库存
+					deductionLogs, _ := repository.NewStockDeductionLogRepo(db).GetByOrderUuids([]uint64{saleOrder.Uuid})
+					if len(deductionLogs) > 0 {
+						receiptItems := make([]*stockPb.StockEntryItem, 0, len(deductionLogs))
+						for _, log := range deductionLogs {
+							receiptItems = append(receiptItems, &stockPb.StockEntryItem{
+								ItemCode: log.ErpCode,
+								Qty:      log.Qty,
 							})
-							if seErr != nil {
-								logger.Logger.Error("反结账创建反向Stock Entry失败，保留扣减日志以便重试",
-									zap.Uint64("company_uuid", company.Uuid),
-									zap.Uint64("sale_order_uuid", saleOrder.Uuid),
-									zap.Error(seErr),
-								)
-								// 不阻塞反结账流程，但不删除deduction log，避免重新结账后二次扣减
-							} else {
-								// 反向SE成功，清理扣减日志
-								_ = repository.NewStockDeductionLogRepo(db).DeleteByOrderUuid(saleOrder.Uuid)
-							}
 						}
-					}
-					// 未扣减过库存的订单，直接清理可能存在的部分扣减日志
-					if stockDeductedMap[saleOrder.Uuid] != 1 {
-						_ = repository.NewStockDeductionLogRepo(db).DeleteByOrderUuid(saleOrder.Uuid)
+						_, seErr := erpSrv.SubmitStockEntry(ctx, companySetting, &stockPb.SubmitStockEntryReq{
+							CompanyAbbr:    companySetting.ErpnextCompanyAbbr,
+							Branch:         companySetting.ErpnextBranchName,
+							StockEntryType: "Material Receipt",
+							Items:          receiptItems,
+							Remarks:        fmt.Sprintf("TTPOS反结账库存恢复, order=%s, uuid=%d", orderNo, saleOrder.Uuid),
+						})
+						if seErr != nil {
+							logger.Logger.Error("反结账创建反向Stock Entry失败，保留扣减日志以便重试",
+								zap.Uint64("company_uuid", company.Uuid),
+								zap.Uint64("sale_order_uuid", saleOrder.Uuid),
+								zap.Error(seErr),
+							)
+							// 不阻塞反结账流程，但不删除deduction log，避免重新结账后二次扣减
+						} else {
+							// 反向SE成功，清理扣减日志
+							_ = repository.NewStockDeductionLogRepo(db).DeleteByOrderUuid(saleOrder.Uuid)
+						}
 					}
 					sysLock.UnlockUuidString(seLockKey)
 				}
-					// NOTE: POS Invoice 反结账路径已废弃，发票名称不再持久化到 sale_order
+				// NOTE: POS Invoice 反结账路径已废弃，发票名称不再持久化到 sale_order
 			}
 			ctx.Mark("erp_invoice_cancelled")
 		}

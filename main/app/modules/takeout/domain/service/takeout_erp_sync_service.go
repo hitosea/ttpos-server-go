@@ -19,10 +19,13 @@ import (
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
+
 	appContext "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
+
+	"gorm.io/gorm"
 )
 
 // ITakeoutErpSyncService ERP 同步领域服务接口
@@ -86,9 +89,17 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 		return nil // 如果订单已同步到 ERP，则不重复同步
 	}
 
-	// POS Invoice 模式需要班次和 OpenPosEntry；SI 模式不依赖班次
+	// 判断是否使用 Sales Invoice 模式：公司配置为 SI 模式且关联班次为新版
+	useSalesInvoice := false
 	var erpOpenPosEntryName string
-	if !companySetting.IsErpSalesInvoiceMode() {
+	if companySetting.IsErpSalesInvoiceMode() {
+		shiftLog, _ := repository.NewShiftLogRepo(db).GetShiftLog(func(q *gorm.DB) *gorm.DB {
+			return q.Where("uuid = ?", takeoutOrder.StaffShiftLogUuid)
+		})
+		useSalesInvoice = shiftLog.Uuid == 0 || shiftLog.IsNewShiftVersion()
+	}
+	if !useSalesInvoice {
+		// POS Invoice 模式需要班次和 OpenPosEntry
 		if !takeoutOrder.IsExistShiftLog() {
 			return nil
 		}
@@ -129,7 +140,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 
 	erpAdapter := rpc.NewErpRpcAdapter(database.GetDBManager(config.Database))
 
-	if companySetting.IsErpSalesInvoiceMode() {
+	if useSalesInvoice {
 		// Sales Invoice 模式
 		saveSalesInvoiceReq := buildSalesInvoiceRequest(takeoutOrder, &companySetting, &existPayment, ctx.GetCompanyUuid())
 		saveSalesInvoiceResp, err := erpAdapter.SaveSalesInvoice(erpCtx, saveSalesInvoiceReq)
@@ -146,7 +157,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 		} else {
 			if err := takeoutOrderRepo.UpdateByMap(takeoutOrder.Uuid, map[string]interface{}{
 				"erp_pos_invoice_resp": string(respJson),
-				"erp_sync_status":     1, // 已入队待处理，SI/PE 名称由 BMP consumer 异步回写
+				"erp_sync_status":      1, // 已入队待处理，SI/PE 名称由 BMP consumer 异步回写
 			}); err != nil {
 				logger.Logger.Error("保存 ERP 响应数据到订单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
 			}

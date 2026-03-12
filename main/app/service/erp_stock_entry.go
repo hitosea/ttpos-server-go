@@ -3,6 +3,8 @@ package service
 import (
 	"fmt"
 	"regexp"
+	"strings"
+	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -75,6 +77,9 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 	companySetting := ctx.GetCompanySetting()
 	if companySetting.ErpnextSiteCode == "" {
 		return nil // 未开启 ERP
+	}
+	if !companySetting.IsErpSalesInvoiceMode() {
+		return nil // POS Invoice 模式由 ERPNext 自动扣减库存，无需独立 Stock Entry
 	}
 
 	// === 堂食订单：查询 uuid 列表（轻量，无 Preload） ===
@@ -177,6 +182,7 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 		func(db *gorm.DB) *gorm.DB {
 			return db.Where("erp_stock_deducted = ?", 0).
 				Where("erp_pos_invoice_resp != ''").
+				Where("erp_sync_status = ?", 3). // 仅 SI 回调成功的订单（排除 POS Invoice 和未完成的 SI）
 				Where("order_state = ?", vo.TakeoutOrderStateCompleted).
 				Where("delete_time = 0")
 		},
@@ -293,16 +299,13 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 			zap.Int("order_count", len(orders)+len(takeoutOrders)),
 		)
 
-		// 写入所有扣减日志
-		if err := s.writeDeductionLogs(db, companyUuid, allDetails, resp.StockEntryName); err != nil {
-			return fmt.Errorf("Stock Entry扣减成功但写入日志失败: %w", err)
-		}
-
-		// 所有待扣减项都成功，更新 deductedSet 后标记完成的订单
+		// 所有待扣减项都成功，更新 deductedSet 后在事务中写入日志并标记订单
 		for _, d := range allDetails {
 			deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
 		}
-		s.markFullyDeductedOrders(db, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
+		if err := s.commitDeductionResult(db, companyUuid, allDetails, resp.StockEntryName, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap); err != nil {
+			return fmt.Errorf("Stock Entry扣减成功但提交结果失败: %w", err)
+		}
 		return nil
 	}
 
@@ -353,7 +356,9 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 					deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
 				}
 			}
-			s.markFullyDeductedOrders(db, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
+			if err := s.commitDeductionResult(db, companyUuid, nil, "", allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap); err != nil {
+				return fmt.Errorf("Stock Entry所有item被排除后标记订单失败: %w", err)
+			}
 			return nil
 		}
 
@@ -388,9 +393,6 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 				successDetails = append(successDetails, d)
 			}
 		}
-		if err := s.writeDeductionLogs(db, companyUuid, successDetails, retryResp.StockEntryName); err != nil {
-			return fmt.Errorf("Stock Entry排除后扣减成功但写入日志失败: %w", err)
-		}
 
 		for _, d := range successDetails {
 			deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
@@ -402,29 +404,160 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 			}
 		}
 
-		s.markFullyDeductedOrders(db, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
-
+		if err := s.commitDeductionResult(db, companyUuid, successDetails, retryResp.StockEntryName, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap); err != nil {
+			return fmt.Errorf("Stock Entry排除后扣减成功但提交结果失败: %w", err)
+		}
 		return nil
 	}
 
-	// 重试耗尽：将最后一批错误 item 也加入排除集合
+	// 重试耗尽：将最后一批错误 item 加入排除集合
 	lastCodes := parseStockEntryErrorItemCodes(lastErr.Error())
 	for _, code := range lastCodes {
 		excludedSet[code] = true
 	}
+
+	// 收集需要查询的 item codes（排除已知 bad items）
+	pendingCodes := make([]string, 0, len(mergeMap))
+	for code := range mergeMap {
+		if !excludedSet[code] {
+			pendingCodes = append(pendingCodes, code)
+		}
+	}
+
+	// 通过 ERPNext API 批量查询 item 状态，一次性排除所有 disabled / 非 stock item
+	logger.Logger.Info("Stock Entry重试耗尽，开始批量查询ERPNext物品状态",
+		zap.Uint64("company_uuid", companyUuid),
+		zap.Int("retry_exhausted", maxRetry),
+		zap.Int("known_excluded", len(excludedSet)),
+		zap.Int("pending_codes", len(pendingCodes)),
+	)
+	itemStatusMap, fetchErr := s.fetchItemStatusMap(ctx, companySetting, pendingCodes)
+	if fetchErr != nil {
+		logger.Logger.Warn("查询ERPNext物品状态失败，使用已知排除集合",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Error(fetchErr),
+		)
+	} else {
+		for code := range mergeMap {
+			if excludedSet[code] {
+				continue // 已排除的跳过，避免重复检查
+			}
+			info, exists := itemStatusMap[code]
+			if !exists {
+				excludedSet[code] = true
+				logger.Logger.Warn("Stock Entry排除ERPNext中不存在的item",
+					zap.Uint64("company_uuid", companyUuid),
+					zap.String("item_code", code),
+				)
+			} else if info.Disabled || !info.IsStockItem {
+				excludedSet[code] = true
+			}
+		}
+		logger.Logger.Info("ERPNext物品状态查询完成",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Int("total_excluded", len(excludedSet)),
+		)
+	}
+
+	// 查询实际库存，排除库存不足的 item
+	itemStockMap, stockErr := s.fetchItemStockMap(ctx, companySetting)
+	if stockErr != nil {
+		logger.Logger.Warn("查询ERPNext物品库存失败，跳过库存不足检查",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Error(stockErr),
+		)
+	} else {
+		for code, mi := range mergeMap {
+			if excludedSet[code] {
+				continue // 已排除的跳过
+			}
+			actualQty, exists := itemStockMap[code]
+			if !exists || actualQty < mi.Qty {
+				excludedSet[code] = true
+				logger.Logger.Warn("Stock Entry排除库存不足item",
+					zap.Uint64("company_uuid", companyUuid),
+					zap.String("item_code", code),
+					zap.Float64("required_qty", mi.Qty),
+					zap.Float64("actual_qty", actualQty),
+				)
+			}
+		}
+	}
+
+	// 将排除的 item 视为已处理
 	for _, d := range allDetails {
 		if excludedSet[d.ErpCode] {
 			deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
 		}
 	}
-	s.markFullyDeductedOrders(db, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
 
-	return fmt.Errorf("Stock Entry重试%d次后仍失败: %w (排除=%v)", maxRetry, lastErr, excludedSet)
+	// 构建最终提交列表
+	finalItems := make([]*stock.StockEntryItem, 0)
+	for _, mi := range mergeMap {
+		if excludedSet[mi.ItemCode] {
+			continue
+		}
+		finalItems = append(finalItems, &stock.StockEntryItem{
+			ItemCode: mi.ItemCode,
+			ItemName: mi.ItemName,
+			Qty:      mi.Qty,
+		})
+	}
+
+	if len(finalItems) == 0 {
+		logger.Logger.Warn("Stock Entry批量排除后无剩余item，跳过本次扣减",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Int("excluded_count", len(excludedSet)),
+		)
+		if err := s.commitDeductionResult(db, companyUuid, nil, "", allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap); err != nil {
+			return fmt.Errorf("Stock Entry批量排除后标记订单失败: %w", err)
+		}
+		return nil
+	}
+
+	// 最终提交
+	finalReq := &stock.SubmitStockEntryReq{
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		Branch:      companySetting.ErpnextBranchName,
+		Items:       finalItems,
+		Remarks:     fmt.Sprintf("TTPOS合并扣减(批量排除%d项), sale_orders=%d, takeout_orders=%d, items=%d", len(excludedSet), len(orders), len(takeoutOrders), len(finalItems)),
+	}
+	finalResp, finalErr := erpSrv.SubmitStockEntry(ctx, companySetting, finalReq)
+	if finalErr != nil {
+		// 最终提交失败，尝试标记已排除的物品（尽力而为）
+		_ = s.commitDeductionResult(db, companyUuid, nil, "", allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
+		return fmt.Errorf("Stock Entry批量排除后最终提交仍失败: %w (排除=%d)", finalErr, len(excludedSet))
+	}
+
+	// 最终提交成功，写入扣减日志并标记订单
+	logger.Logger.Info("Stock Entry批量排除后最终提交成功",
+		zap.Uint64("company_uuid", companyUuid),
+		zap.String("stock_entry_name", finalResp.StockEntryName),
+		zap.Int("excluded_count", len(excludedSet)),
+		zap.Int("success_count", len(finalItems)),
+	)
+	var successDetails []orderItemDetail
+	for _, d := range allDetails {
+		if !excludedSet[d.ErpCode] {
+			successDetails = append(successDetails, d)
+		}
+	}
+	for _, d := range successDetails {
+		deductedSet[fmt.Sprintf("%d:%s", d.OrderUuid, d.ErpCode)] = true
+	}
+	if err := s.commitDeductionResult(db, companyUuid, successDetails, finalResp.StockEntryName, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap); err != nil {
+		return fmt.Errorf("Stock Entry最终提交成功但提交结果失败: %w", err)
+	}
+	return nil
 }
 
 // stockEntryErrorItemCodeRegex 匹配 ERPNext 库存不足错误中的 item_code
 // 匹配模式：Item Code: <strong>WPR3685375438618625</strong>
 var stockEntryErrorItemCodeRegex = regexp.MustCompile(`Item Code: <strong>([^<]+)</strong>`)
+
+// stockEntryNegativeStockRegex 匹配 ERPNext NegativeStockError 中的 item_code
+// 匹配模式：<a href="...">Item TEST-INSUF-STOCK: Test Insufficient Stock</a> needed in
+var stockEntryNegativeStockRegex = regexp.MustCompile(`>Item ([^:<]+?)(?::[^<]*)?\s*</a>\s*needed in`)
 
 // stockEntryNotStockItemRegex 匹配 ERPNext "is not a stock Item" 错误中的 item_code
 // 匹配模式：SP3700735403493377_01 is not a stock Item
@@ -434,15 +567,39 @@ var stockEntryNotStockItemRegex = regexp.MustCompile(`(\S+) is not a stock Item`
 // 匹配模式：Item WPR3685375438618625 is disabled
 var stockEntryDisabledItemRegex = regexp.MustCompile(`Item (\S+) is disabled`)
 
+// stockEntryNotActiveItemRegex 匹配 ERPNext "Item is not active" 错误中的 item_code
+// 匹配模式：Item 奶油-正常 is not active or end of life has been reached
+var stockEntryNotActiveItemRegex = regexp.MustCompile(`Item (\S+) is not active`)
+
+// stockEntryValuationRateRegex 匹配 ERPNext "Valuation Rate required" 错误中的 item_code
+// 匹配模式：Valuation Rate for the Item <a href="...">TEST-LOW-STOCK</a>
+var stockEntryValuationRateRegex = regexp.MustCompile(`Valuation Rate for the Item.*?>([^<]+)</a>`)
+
 // parseStockEntryErrorItemCodes 从 ERPNext 错误信息中提取有问题的 item_code 列表
 func parseStockEntryErrorItemCodes(errMsg string) []string {
 	seen := make(map[string]bool)
 	var codes []string
 
-	// 匹配库存不足: Item Code: <strong>XXX</strong>
+	// BMP 会包装 ERPNext 错误为 "...调用erp接口返回异常:{ErrorType};..." 格式
+	// 提取 "{ErrorType};" 后的原始 ERPNext 错误消息，避免中文前缀干扰正则匹配
+	// 常见 ErrorType: ValidationError, NegativeStockError 等
+	if idx := strings.Index(errMsg, "Error;"); idx >= 0 {
+		errMsg = errMsg[idx+len("Error;"):]
+	}
+
+	// 匹配库存不足(格式1): Item Code: <strong>XXX</strong>
 	for _, m := range stockEntryErrorItemCodeRegex.FindAllStringSubmatch(errMsg, -1) {
 		code := m[1]
 		if !seen[code] {
+			seen[code] = true
+			codes = append(codes, code)
+		}
+	}
+
+	// 匹配库存不足(格式2/NegativeStockError): <a href="...">Item XXX: YYY</a> needed in
+	for _, m := range stockEntryNegativeStockRegex.FindAllStringSubmatch(errMsg, -1) {
+		code := strings.TrimSpace(m[1])
+		if code != "" && !seen[code] {
 			seen[code] = true
 			codes = append(codes, code)
 		}
@@ -459,6 +616,24 @@ func parseStockEntryErrorItemCodes(errMsg string) []string {
 
 	// 匹配禁用物品: Item XXX is disabled
 	for _, m := range stockEntryDisabledItemRegex.FindAllStringSubmatch(errMsg, -1) {
+		code := m[1]
+		if !seen[code] {
+			seen[code] = true
+			codes = append(codes, code)
+		}
+	}
+
+	// 匹配不活跃/已过期物品: Item XXX is not active or end of life has been reached
+	for _, m := range stockEntryNotActiveItemRegex.FindAllStringSubmatch(errMsg, -1) {
+		code := m[1]
+		if !seen[code] {
+			seen[code] = true
+			codes = append(codes, code)
+		}
+	}
+
+	// 匹配估值价格缺失: Valuation Rate for the Item <a href="...">XXX</a>
+	for _, m := range stockEntryValuationRateRegex.FindAllStringSubmatch(errMsg, -1) {
 		code := m[1]
 		if !seen[code] {
 			seen[code] = true
@@ -497,8 +672,29 @@ func (s *erpStockEntrySrv) writeDeductionLogs(db *gorm.DB, companyUuid uint64, d
 	return nil
 }
 
+// commitDeductionResult 在事务中写入扣减日志并标记订单完成，保证原子性
+func (s *erpStockEntrySrv) commitDeductionResult(
+	db *gorm.DB,
+	companyUuid uint64,
+	details []orderItemDetail,
+	stockEntryName string,
+	allOrderUuids []uint64,
+	orderRequiredItems map[uint64]map[string]bool,
+	deductedSet map[string]bool,
+	orderTypeMap map[uint64]string,
+) error {
+	return repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		if len(details) > 0 && stockEntryName != "" {
+			if err := s.writeDeductionLogs(tx, companyUuid, details, stockEntryName); err != nil {
+				return err
+			}
+		}
+		return s.markFullyDeductedOrders(tx, allOrderUuids, orderRequiredItems, deductedSet, orderTypeMap)
+	})
+}
+
 // markFullyDeductedOrders 检查并标记所有 item 都已扣减完成的订单
-func (s *erpStockEntrySrv) markFullyDeductedOrders(db *gorm.DB, orderUuids []uint64, orderRequiredItems map[uint64]map[string]bool, deductedSet map[string]bool, orderTypeMap map[uint64]string) {
+func (s *erpStockEntrySrv) markFullyDeductedOrders(db *gorm.DB, orderUuids []uint64, orderRequiredItems map[uint64]map[string]bool, deductedSet map[string]bool, orderTypeMap map[uint64]string) error {
 	var saleOrderDeducted []uint64
 	var takeoutOrderDeducted []uint64
 
@@ -527,31 +723,134 @@ func (s *erpStockEntrySrv) markFullyDeductedOrders(db *gorm.DB, orderUuids []uin
 	}
 
 	if len(saleOrderDeducted) > 0 {
-		s.markOrdersDeducted(db, saleOrderDeducted)
+		if err := s.markOrdersDeducted(db, saleOrderDeducted); err != nil {
+			return err
+		}
 	}
 	if len(takeoutOrderDeducted) > 0 {
-		s.markTakeoutOrdersDeducted(db, takeoutOrderDeducted)
+		if err := s.markTakeoutOrdersDeducted(db, takeoutOrderDeducted); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // markOrdersDeducted 批量更新堂食订单 erp_stock_deducted=1
-func (s *erpStockEntrySrv) markOrdersDeducted(db *gorm.DB, orderUuids []uint64) {
+func (s *erpStockEntrySrv) markOrdersDeducted(db *gorm.DB, orderUuids []uint64) error {
 	if len(orderUuids) == 0 {
-		return
+		return nil
 	}
-	db.Model(&model.SaleOrder{}).
+	result := db.Model(&model.SaleOrder{}).
 		Where("uuid IN ?", orderUuids).
 		Update("erp_stock_deducted", 1)
+	if result.Error != nil {
+		logger.Logger.Error("标记堂食订单扣减完成失败",
+			zap.Any("order_uuids", orderUuids),
+			zap.Error(result.Error),
+		)
+		return result.Error
+	}
+	return nil
 }
 
 // markTakeoutOrdersDeducted 批量更新外卖订单 erp_stock_deducted=1
-func (s *erpStockEntrySrv) markTakeoutOrdersDeducted(db *gorm.DB, orderUuids []uint64) {
+func (s *erpStockEntrySrv) markTakeoutOrdersDeducted(db *gorm.DB, orderUuids []uint64) error {
 	if len(orderUuids) == 0 {
-		return
+		return nil
 	}
-	db.Model(&takeoutModel.TakeoutOrder{}).
+	result := db.Model(&takeoutModel.TakeoutOrder{}).
 		Where("uuid IN ?", orderUuids).
 		Update("erp_stock_deducted", 1)
+	if result.Error != nil {
+		logger.Logger.Error("标记外卖订单扣减完成失败",
+			zap.Any("order_uuids", orderUuids),
+			zap.Error(result.Error),
+		)
+		return result.Error
+	}
+	return nil
+}
+
+// fetchItemStatusMap 从 ERPNext 批量查询指定物品状态（含禁用），返回 map[item_code]*ItemInfo
+// 用于重试耗尽后一次性识别所有 disabled / 非 stock item
+// itemCodes: 需要查询的物品编码列表，分批查询避免 URL 过长（每批最多 200 个）
+func (s *erpStockEntrySrv) fetchItemStatusMap(ctx cc.Context, companySetting model.CompanySetting, itemCodes []string) (map[string]*item.ItemInfo, error) {
+	if len(itemCodes) == 0 {
+		return make(map[string]*item.ItemInfo), nil
+	}
+
+	const batchSize = 200
+	statusMap := make(map[string]*item.ItemInfo, len(itemCodes))
+
+	for i := 0; i < len(itemCodes); i += batchSize {
+		end := i + batchSize
+		if end > len(itemCodes) {
+			end = len(itemCodes)
+		}
+		batch := itemCodes[i:end]
+
+		client, conn, err := erp.NewErpItemClient()
+		if err != nil {
+			return nil, err
+		}
+
+		// 使用逗号分隔的 item_code 触发 BMP 侧 in 过滤
+		// 不按 Branch/CompanyAbbr 过滤：item_code 全局唯一，此处只需检查物品是否 disabled/非 stock，
+		// 按 Branch 或 CompanyAbbr 过滤会导致总部共享物品（custom_branch/custom_company 为总部）被漏掉
+		result, err := client.GetItemList(erp.WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.GetItemListReq{
+			ContainDisabled: true,
+			ItemCode:        strings.Join(batch, ","),
+		})
+		conn.Close()
+		if err != nil {
+			return nil, err
+		}
+		if result.GetCode() != "0" {
+			return nil, fmt.Errorf("查询ERPNext物品列表失败: %s", result.GetMessage())
+		}
+
+		resp := &item.GetItemListResp{}
+		if err := result.Data.UnmarshalTo(resp); err != nil {
+			return nil, err
+		}
+
+		for _, info := range resp.ItemList {
+			statusMap[info.ItemCode] = info
+		}
+	}
+	return statusMap, nil
+}
+
+// fetchItemStockMap 从 ERPNext 查询物品实际库存数量，返回 map[item_code]actualQty
+// 用于重试耗尽后排除库存不足的 item
+func (s *erpStockEntrySrv) fetchItemStockMap(ctx cc.Context, companySetting model.CompanySetting) (map[string]float64, error) {
+	client, conn, err := erp.NewErpItemClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	result, err := client.GetItemStock(erp.WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.GetItemStockReq{
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		Branch:      companySetting.ErpnextBranchName,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, fmt.Errorf("查询ERPNext物品库存失败: %s", result.GetMessage())
+	}
+
+	resp := &item.GetItemStockResp{}
+	if err := result.Data.UnmarshalTo(resp); err != nil {
+		return nil, err
+	}
+
+	stockMap := make(map[string]float64, len(resp.ItemStockList))
+	for _, s := range resp.ItemStockList {
+		stockMap[s.ItemCode] = s.ActualQty
+	}
+	return stockMap, nil
 }
 
 // GenerateStocktakeSnapshot 生成盘点快照
@@ -618,6 +917,7 @@ func (s *erpStockEntrySrv) GenerateStocktakeSnapshot(db *gorm.DB, stockReconcili
 		func(db *gorm.DB) *gorm.DB {
 			return db.Where("erp_stock_deducted = ?", 0).
 				Where("erp_pos_invoice_resp != ''").
+				Where("erp_sync_status = ?", 3). // 仅 SI 回调成功的订单（排除 POS Invoice 和未完成的 SI）
 				Where("order_state = ?", vo.TakeoutOrderStateCompleted).
 				Where("delete_time = 0")
 		},
