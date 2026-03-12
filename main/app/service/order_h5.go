@@ -307,14 +307,14 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	if isAutoOrder {
 		h5Order.IsAutoAccept = 1
 	}
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill, "repository.NewOrderRepo(db).GetSaleBillAllInfo")
+	}
 
 	{
 		ignoreMust := true // 接单，送厨忽略必点方案
-		// 获取销售账单信息
-		saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
-		if errSaleBill != nil {
-			return nil, errors.WithMessage(errSaleBill, "repository.NewOrderRepo(db).GetSaleBillAllInfo")
-		}
+
 		ctx.Log().Debug("获取销售账单信息")
 
 		// 获取本次接单的商品列表
@@ -363,6 +363,13 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	}); err != nil {
 		return nil, errors.WithMessage(err, "接单失败")
 	}
+
+	// 会员堂食订单接单成功后，同步到 ERP（有接单场景）
+	// 异步推送，失败不影响接单结果；通过 ErpSyncStatus 幂等控制避免重复推送
+	utils.Go(func() {
+		s.SyncMemberOrderToErp(ctx, saleBill, db)
+	})
+
 	return nil, nil
 }
 func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error {

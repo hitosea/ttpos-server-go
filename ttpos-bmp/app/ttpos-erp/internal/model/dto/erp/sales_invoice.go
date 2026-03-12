@@ -2,31 +2,34 @@ package erp
 
 // SalesInvoice ERPNext Sales Invoice API 结构
 type SalesInvoice struct {
-	PosProfile             string              `json:"pos_profile,omitempty"`
-	Company                string              `json:"company"`
-	Customer               string              `json:"customer"`
-	IsPos                  int                 `json:"is_pos"`
-	UpdateStock            int                 `json:"update_stock"` // 0=不扣库存
-	PostingDate            string              `json:"posting_date"`
-	PostingTime            string              `json:"posting_time,omitempty"`
-	SetPostingTime         int                 `json:"set_posting_time,omitempty"`
-	Currency               string              `json:"currency"`
-	PriceListCurrency      string              `json:"price_list_currency,omitempty"`
-	SellingPriceList       string              `json:"selling_price_list,omitempty"`
-	Branch                 string              `json:"branch,omitempty"`
-	Items                  []SalesInvoiceItem  `json:"items"`
-	Taxes                  []SalesInvoiceTax   `json:"taxes,omitempty"`
-	Payments               []SalesInvoicePaymentDetail `json:"payments,omitempty"`
-	AdditionalDiscountPercentage float64       `json:"additional_discount_percentage,omitempty"`
-	DiscountAmount         float64             `json:"discount_amount,omitempty"`
-	Docstatus              int                 `json:"docstatus,omitempty"`
+	PosProfile                   string                      `json:"pos_profile,omitempty"`
+	Company                      string                      `json:"company"`
+	Customer                     string                      `json:"customer"`
+	IsPos                        int                         `json:"is_pos"`
+	UpdateStock                  int                         `json:"update_stock"` // 0=不扣库存
+	PostingDate                  string                      `json:"posting_date"`
+	PostingTime                  string                      `json:"posting_time,omitempty"`
+	SetPostingTime               int                         `json:"set_posting_time,omitempty"`
+	Currency                     string                      `json:"currency"`
+	PriceListCurrency            string                      `json:"price_list_currency,omitempty"`
+	SellingPriceList             string                      `json:"selling_price_list,omitempty"`
+	Branch                       string                      `json:"branch,omitempty"`
+	Items                        []SalesInvoiceItem          `json:"items"`
+	Taxes                        []SalesInvoiceTax           `json:"taxes,omitempty"`
+	Payments                     []SalesInvoicePaymentDetail `json:"payments,omitempty"`
+	AdditionalDiscountPercentage float64                     `json:"additional_discount_percentage,omitempty"`
+	DiscountAmount               float64                     `json:"discount_amount,omitempty"`
+	Docstatus                    int                         `json:"docstatus,omitempty"`
 	// Customer's Purchase Order（在 ERPNext 中显示为订单号）
 	PoNo string `json:"po_no,omitempty"`
 	// 自定义字段
-	TtposSaleOrderUuid string `json:"custom_ttpos_sale_order_uuid,omitempty"`
-	TtposOrderNo       string `json:"custom_ttpos_order_no,omitempty"`
-	TtposTakeoutOrderNo string `json:"custom_ttpos_takeout_order_no,omitempty"`
+	TtposSaleOrderUuid   string `json:"custom_ttpos_sale_order_uuid,omitempty"`
+	TtposOrderNo         string `json:"custom_ttpos_order_no,omitempty"`
+	TtposTakeoutOrderNo  string `json:"custom_ttpos_takeout_order_no,omitempty"`
 	TtposTakeoutProvider string `json:"custom_ttpos_takeout_provider,omitempty"`
+	// 订单来源
+	TtposOrderSourceUuid string `json:"custom_ttpos_order_source_uuid,omitempty"`
+	TtposOrderSourceName string `json:"custom_ttpos_order_source_name,omitempty"`
 	// 反结账
 	AmendedFrom string `json:"amended_from,omitempty"`
 }
@@ -45,12 +48,12 @@ type SalesInvoiceItem struct {
 
 // SalesInvoiceTax Sales Invoice 税费
 type SalesInvoiceTax struct {
-	ChargeType            string  `json:"charge_type"`
-	AccountHead           string  `json:"account_head,omitempty"`
-	Description           string  `json:"description"`
-	Rate                  float64 `json:"rate,omitempty"`
-	TaxAmount             float64 `json:"tax_amount"`
-	IncludedInPrintRate   int     `json:"included_in_print_rate,omitempty"`
+	ChargeType          string  `json:"charge_type"`
+	AccountHead         string  `json:"account_head,omitempty"`
+	Description         string  `json:"description"`
+	Rate                float64 `json:"rate,omitempty"`
+	TaxAmount           float64 `json:"tax_amount"`
+	IncludedInPrintRate int     `json:"included_in_print_rate,omitempty"`
 }
 
 // SalesInvoicePaymentDetail Sales Invoice 支付信息（is_pos=1 时用）

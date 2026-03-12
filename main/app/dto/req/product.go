@@ -292,7 +292,7 @@ type ProductImportListItemReq struct {
 	ProductRatingTaxType  string             `json:"product_rating_tax_type"`  // 堂食税类
 	ProductTakeoutTaxType string             `json:"product_takeout_tax_type"` // 外带税类
 	DeductStockType       int                `json:"deduct_stock_type"`        // 库存计算方式, 2-付款减库存 1-下单减库存
-	Shows                 string             `json:"shows"`                    // 显示：123456
+	Shows                 string             `json:"shows"`                    // 显示：1234567
 	IsEnableGrade         int                `json:"is_enable_grade"`          // 是否开启会员折扣(1开启 0关闭)
 	OpenOverallDiscount   int                `json:"open_overall_discount"`    // 整单折扣(1开启 0关闭)
 	Row                   int                `json:"row"`                      // excel表的行编号
@@ -332,7 +332,7 @@ type ProductImportItemReq struct {
 	ProductRatingTaxType  string             `json:"product_rating_tax_type"`  // 堂食税类
 	ProductTakeoutTaxType string             `json:"product_takeout_tax_type"` // 外带税类
 	DeductStockType       int                `json:"deduct_stock_type"`        // 库存计算方式, 2-付款减库存 1-下单减库存
-	Shows                 string             `json:"shows"`                    // 显示：123456
+	Shows                 string             `json:"shows"`                    // 显示：1234567
 	IsEnableGrade         int                `json:"is_enable_grade"`          // 是否开启会员折扣(1开启 0关闭)
 	OpenOverallDiscount   int                `json:"open_overall_discount"`    // 整单折扣(1开启 0关闭)
 	Row                   int                `json:"row"`                      // excel表的行编号

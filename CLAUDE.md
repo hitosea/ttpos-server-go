@@ -47,7 +47,6 @@ TTPOS 是一个现代化的餐饮收银系统后端，支持多终端（pos/shop
 
 ### Main 模块 (main/)
 ```bash
-make run                            # 启动主服务（在项目根目录执行，必须使用此方式）
 cd main && go test ./...            # 运行所有测试
 cd main && go test ./app/service    # 运行指定包测试
 cd main && go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out  # 测试覆盖率

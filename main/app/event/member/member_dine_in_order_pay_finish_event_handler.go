@@ -324,6 +324,18 @@ func markMemberDineInOrderComplete(payload event.PayFinishMemberDineInOrderPaylo
 		zap.Uint64("company_uuid", payload.CompanyUuid),
 		zap.Uint64("saleBillUuid", payload.SaleBillUuid),
 		zap.Uint64("saleOrderUuid", payload.SaleOrderUuid))
+
+	// 会员堂食订单结账完成后，同步到 ERP（无接单场景）
+	// 有接单场景由 AcceptH5Order 触发，此处通过 ErpSyncStatus 幂等控制避免重复推送
+	// 直接复用上方已加载的 saleBill，避免重复 GetSaleBillAllInfo 查询
+	utils.Go(func() {
+		settingSrv := setting.NewSrv(dbm, cache.Global)
+		orderSrv := service.NewOrderSrv(dbm, service.NewLocaleSrv(), settingSrv,
+			service.NewMustPlanSrv(dbm), service.NewPaymentMethodSrv(dbm, settingSrv),
+			service.NewMemberSrv(dbm, cache.Global), service.NewCashBoxSrv(dbm),
+			service.WithSmsSrv(dbm))
+		orderSrv.SyncMemberOrderToErp(payload.Ctx, saleBill, db)
+	})
 }
 
 // cookingAndFinishMemberDineInOrder 执行送厨和结账逻辑（备用，当前未使用）
