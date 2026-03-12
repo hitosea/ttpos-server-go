@@ -5050,23 +5050,27 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		products.DineTaxUuid = taxUuid
 		products.TakeoutTaxUuid = takeoutTaxUuid
 		products.NumType = utils.IfInt(item.NumType == 2, 2, 1)
-		// 处理数量计算方法
-		// 按小数计价，不在助手、平板、扫码端显示
-		if item.NumType == 2 && (products.IsShowTablet || products.IsShowAssistant || products.IsShowH5 || products.IsShowDelivery) {
-			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "按小数计价只能显示到收银机和厨显"))
-		}
-		// 未配置外送渠道，无法选择在外送显示
-		if companySetting.DeliveryStatus != 1 && products.IsShowDelivery {
-			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置外送渠道，无法选择在外送显示"))
-		}
-		// 处理商品名称
-		products.LocaleName = item.LocaleName
+		// 解析显示端（必须在校验之前，确保 IsShowXxx 字段已赋值）
 		products.IsShowCashier = strings.Contains(item.Shows, "1")
 		products.IsShowTablet = strings.Contains(item.Shows, "2")
 		products.IsShowKitchen = strings.Contains(item.Shows, "3")
 		products.IsShowAssistant = strings.Contains(item.Shows, "4")
 		products.IsShowH5 = strings.Contains(item.Shows, "5")
 		products.IsShowDelivery = strings.Contains(item.Shows, "6")
+		products.IsShowKiosk = strings.Contains(item.Shows, "7")
+		// 按小数计价，不在助手、平板、扫码端、自助点餐机显示
+		if item.NumType == 2 && (products.IsShowTablet || products.IsShowAssistant || products.IsShowH5 || products.IsShowDelivery || products.IsShowKiosk) {
+			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "按小数计价只能显示到收银机和厨显"))
+		}
+		// 未开启扫码点餐到店自取且未配置外送渠道，无法选择在外送显示
+		if companySetting.DeliveryStatus != 1 && companySetting.IsOpenMemberInstant != 1 && products.IsShowDelivery {
+			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置外送渠道，无法选择在外送显示"))
+		}
+		// 未开启自助点餐机，无法选择在自助点餐机显示
+		if !companySetting.IsOpenKiosk() && products.IsShowKiosk {
+			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未开启自助点餐机，无法选择在自助点餐机显示"))
+		}
+		// 处理商品名称
 		// 验证是否已经存在
 		products.LocaleNameIsExist = dto.LocaleResponse{}
 		// 验证条形码存在性检查
@@ -5184,6 +5188,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 					IsShowAssistant: item.IsShowAssistant,
 					IsShowH5:        item.IsShowH5,
 					IsShowDelivery:  item.IsShowDelivery,
+					IsShowKiosk:     item.IsShowKiosk,
 				},
 				Discount: req.ProductShopAddDiscountReq{
 					IsEnableMemberDiscount:  item.IsEnableGrade,
