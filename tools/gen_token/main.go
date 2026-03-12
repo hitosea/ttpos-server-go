@@ -48,6 +48,7 @@ func main() {
 	secret := flag.String("secret", "", "JWT secret (default: read from JWT_SECRET env or use dev secret)")
 	expire := flag.Int("expire", 86400*90, "Token expire seconds (default: 90 days)")
 	dbDSN := flag.String("db", "", "MySQL DSN for auto device lookup (default: dev env)")
+	memberUuid := flag.Uint64("member", 0, "Member UUID (for member source)")
 	deskUuid := flag.Uint64("desk-uuid", 0, "Desk UUID (for h5 source, auto-detect if empty)")
 	assistantCashierDevice := flag.String("assistant-device", "", "Assistant's bound cashier device_id (auto-detect from DB)")
 	flag.Parse()
@@ -87,6 +88,7 @@ func main() {
 		Source:      *source,
 		CompanyUuid: *companyUuid,
 		StaffUuid:   *staffUuid,
+		MemberUuid:  *memberUuid,
 		DeviceId:    *deviceId,
 		DeviceUuid:  *deviceUuid,
 		RegisteredClaims: jwt.RegisteredClaims{

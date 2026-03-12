@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/pkg/language"
 
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -538,6 +539,14 @@ func (s *orderSrv) SaveSalesInvoice(ctx context.Context, saleOrder *model.SaleOr
 	}
 
 	erpSrv := erp.NewIErpSrv(s.dbm)
+
+	// 订单来源：仅非店内订单（OrderSourceUuid>0）时传递
+	var orderSourceUuid, orderSourceName string
+	if saleBill.OrderSourceUuid > 0 {
+		orderSourceUuid = fmt.Sprintf("%d", saleBill.OrderSourceUuid)
+		orderSourceName = saleBill.GetLocaleOrderSourceName().EN
+	}
+
 	param := req.SaveSalesInvoiceReq{
 		SiteCode:          companySetting.ErpnextSiteCode,
 		OrderNo:           orderNo,
@@ -557,6 +566,8 @@ func (s *orderSrv) SaveSalesInvoice(ctx context.Context, saleOrder *model.SaleOr
 		Payments:          payments,
 		CompanyUuid:       fmt.Sprintf("%d", ctx.GetCompanyUuid()),
 		OrderType:         "sale_order",
+		OrderSourceUuid:   orderSourceUuid,
+		OrderSourceName:   orderSourceName,
 	}
 	// 反结账后重新结账时，设置 AmendedFrom
 	if saleOrder.ErpSalesInvoiceName != "" {
@@ -573,4 +584,68 @@ func (s *orderSrv) SaveSalesInvoice(ctx context.Context, saleOrder *model.SaleOr
 	saleOrder.ErpSyncStatus = 1
 
 	return response, nil
+}
+
+// SyncMemberOrderToErp 会员订单同步到 ERP
+// 复用 InstantOrderPaymentFinish 中相同的 ERP 推送逻辑（SaveSalesInvoice / SavePosInvoice）
+// 触发时机：
+//   - 有接单：接单成功后调用（AcceptH5Order / AcceptMemberSaleOrder）
+//   - 无接单：结账完成后调用（markMemberDineInOrderComplete）
+func (s *orderSrv) SyncMemberOrderToErp(ctx context.Context, saleBill *model.SaleBill, db *gorm.DB) {
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+
+	// 检查 ERP 是否启用
+	if !company.IsOpenErpPhase3() || companySetting.ErpnextSiteCode == "" {
+		return
+	}
+
+	saleOrder := saleBill.GetFirstSaleOrder()
+	if saleOrder == nil {
+		ctx.Log().Error("SyncMemberOrderToErp, SaleOrder not found",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("saleBillUuid", saleBill.Uuid))
+		return
+	}
+
+	// 已经推送过则跳过（幂等）
+	if saleOrder.ErpSyncStatus > 0 {
+		return
+	}
+
+	// 判断是否使用 Sales Invoice 模式：公司配置为 SI 模式且当前班次为新版
+	// 无班次（staffUuid=0）时默认走新方案，跳过无意义的班次查询
+	useSalesInvoice := false
+	if companySetting.IsErpSalesInvoiceMode() {
+		staffUuid := ctx.GetStaffUuid()
+		if staffUuid != 0 {
+			currentShift, _ := GetCurrentStaffShiftLog(db, staffUuid)
+			useSalesInvoice = currentShift == nil || currentShift.IsNewShiftVersion()
+		} else {
+			useSalesInvoice = true
+		}
+	}
+
+	// 根据模式选择 SI 或 PI 推送
+	var syncErr error
+	if useSalesInvoice {
+		_, syncErr = s.SaveSalesInvoice(ctx, saleOrder, saleBill, db)
+	} else {
+		_, syncErr = s.SavePosInvoice(ctx, saleOrder, saleBill, db)
+	}
+	if syncErr != nil {
+		ctx.Log().Error("SyncMemberOrderToErp, save invoice failed",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("saleBillUuid", saleBill.Uuid),
+			zap.Bool("useSalesInvoice", useSalesInvoice),
+			zap.Error(syncErr))
+		return
+	}
+
+	if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderErpSyncStatus(saleOrder.Uuid, 1, "", ""); err != nil {
+		ctx.Log().Error("SyncMemberOrderToErp, UpdateSaleOrderErpSyncStatus failed",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("saleOrderUuid", saleOrder.Uuid),
+			zap.Error(err))
+	}
 }

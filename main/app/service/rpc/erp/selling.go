@@ -375,6 +375,8 @@ func (s *erpSrv) SaveSalesInvoice(ctx pkgCtx.Context, saveSalesInvoiceReq req.Sa
 		TakeoutProvider:   saveSalesInvoiceReq.TakeoutProvider,
 		CompanyUuid:       saveSalesInvoiceReq.CompanyUuid,
 		OrderType:         saveSalesInvoiceReq.OrderType,
+		OrderSourceUuid:   toOptionalString(saveSalesInvoiceReq.OrderSourceUuid),
+		OrderSourceName:   toOptionalString(saveSalesInvoiceReq.OrderSourceName),
 	}
 	res, err := client.SaveSalesInvoice(WithSiteCode(ctx.GetContext(), saveSalesInvoiceReq.SiteCode), params)
 	if err != nil {
@@ -664,4 +666,13 @@ func (s *erpSrv) SaveModeOfPayment(ctx pkgCtx.Context, saveModeOfPaymentReq req.
 		return &saveModeOfPaymentResp, nil
 	}
 	return nil, errors.WithMessage(errors.New("保存支付方式异常, data为空"))
+}
+
+// toOptionalString 将空字符串转为 nil，非空字符串转为指针
+// 用于 proto optional string 字段，区分"未设置"和"空值"
+func toOptionalString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

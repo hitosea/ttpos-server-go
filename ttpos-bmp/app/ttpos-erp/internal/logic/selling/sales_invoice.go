@@ -232,6 +232,12 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 		PoNo:               req.OrderNo,
 	}
 
+	if req.OrderSourceUuid != nil && *req.OrderSourceUuid != "" {
+		si.TtposOrderSourceUuid = *req.OrderSourceUuid
+	}
+	if req.OrderSourceName != nil && *req.OrderSourceName != "" {
+		si.TtposOrderSourceName = *req.OrderSourceName
+	}
 	if req.TakeoutOrderNo != nil {
 		si.TtposTakeoutOrderNo = *req.TakeoutOrderNo
 	}
@@ -298,21 +304,21 @@ func (s *sSelling) buildCreditNote(ctx context.Context, req *selling.ReturnSales
 func (s *sSelling) createPaymentEntry(ctx context.Context, req *selling.SaveSalesInvoiceReq, siName string, payment *selling.PosInvoicePayment, postingDate string) (string, error) {
 	companyAbbr := req.Company // ERPNext account naming: "Account - company"
 	pe := &erp.PaymentEntry{
-		PaymentType:            "Receive",
-		PartyType:              "Customer",
-		Party:                  req.Customer,
-		Company:                req.Company,
-		ModeOfPayment:          payment.ModeOfPayment,
-		PaidAmount:             payment.Amount,
-		ReceivedAmount:         payment.Amount,
-		PaidFrom:               "Debtors - " + companyAbbr,
-		PaidTo:                 "Cash - " + companyAbbr,
+		PaymentType:             "Receive",
+		PartyType:               "Customer",
+		Party:                   req.Customer,
+		Company:                 req.Company,
+		ModeOfPayment:           payment.ModeOfPayment,
+		PaidAmount:              payment.Amount,
+		ReceivedAmount:          payment.Amount,
+		PaidFrom:                "Debtors - " + companyAbbr,
+		PaidTo:                  "Cash - " + companyAbbr,
 		PaidFromAccountCurrency: req.Currency,
 		PaidToAccountCurrency:   req.Currency,
-		SourceExchangeRate:     1.0,
-		TargetExchangeRate:     1.0,
-		PostingDate:            postingDate,
-		Docstatus:              0,
+		SourceExchangeRate:      1.0,
+		TargetExchangeRate:      1.0,
+		PostingDate:             postingDate,
+		Docstatus:               0,
 		References: []erp.PaymentReference{
 			{
 				ReferenceDoctype: erp.DocTypeSalesInvoice,
@@ -369,21 +375,21 @@ func (s *sSelling) createPaymentEntry(ctx context.Context, req *selling.SaveSale
 func (s *sSelling) createRefundPaymentEntry(ctx context.Context, req *selling.ReturnSalesInvoiceReq, cnName string, payment *selling.PosInvoicePayment, postingDate string) (string, error) {
 	companyAbbr := req.Company
 	pe := &erp.PaymentEntry{
-		PaymentType:            "Pay",
-		PartyType:              "Customer",
-		Party:                  req.Customer,
-		Company:                req.Company,
-		ModeOfPayment:          payment.ModeOfPayment,
-		PaidAmount:             payment.Amount,
-		ReceivedAmount:         payment.Amount,
-		PaidFrom:               "Cash - " + companyAbbr,
-		PaidTo:                 "Debtors - " + companyAbbr,
+		PaymentType:             "Pay",
+		PartyType:               "Customer",
+		Party:                   req.Customer,
+		Company:                 req.Company,
+		ModeOfPayment:           payment.ModeOfPayment,
+		PaidAmount:              payment.Amount,
+		ReceivedAmount:          payment.Amount,
+		PaidFrom:                "Cash - " + companyAbbr,
+		PaidTo:                  "Debtors - " + companyAbbr,
 		PaidFromAccountCurrency: DefaultAccountCurrency,
 		PaidToAccountCurrency:   DefaultAccountCurrency,
-		SourceExchangeRate:     1.0,
-		TargetExchangeRate:     1.0,
-		PostingDate:            postingDate,
-		Docstatus:              0,
+		SourceExchangeRate:      1.0,
+		TargetExchangeRate:      1.0,
+		PostingDate:             postingDate,
+		Docstatus:               0,
 		References: []erp.PaymentReference{
 			{
 				ReferenceDoctype: erp.DocTypeSalesInvoice,

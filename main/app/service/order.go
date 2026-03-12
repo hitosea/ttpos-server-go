@@ -176,6 +176,7 @@ type IOrderSrv interface {
 	// invoice
 	SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB, opts ...func(*SavePosInvoiceOption)) (*selling.SavePosInvoiceResp, error) // 保存POS发票到ERP
 	SaveSalesInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB) (*selling.SaveSalesInvoiceResp, error)                                  // 保存Sales Invoice到ERP
+	SyncMemberOrderToErp(ctx context.Context, saleBill *model.SaleBill, db *gorm.DB)                                                                                                 // 会员订单同步到ERP
 
 	// cache
 	AsyncPreloadSaleBillAllInfoCache(ctx context.Context, saleBillUuid uint64) // 异步预加载销售账单所有信息缓存
@@ -5390,9 +5391,9 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 		PostingDatetime:  returnOrder.CreateTime, // 退款单时间
 		CompanyAbbr:      companySetting.ErpnextCompanyAbbr,
 		// InvoiceName: POS Invoice 名称已不再持久化，仅 SI 模式走 ReturnSalesInvoice
-		Items:            items,                            // 订单退款商品列表
-		Taxes:            taxes,                            // 订单退税费列表
-		Payments:         payments,                         // 订单退款列表
+		Items:    items,    // 订单退款商品列表
+		Taxes:    taxes,    // 订单退税费列表
+		Payments: payments, // 订单退款列表
 	}
 	response, err := erpSrv.ReturnPosInvoice(ctx, param)
 	if err != nil {

@@ -2063,6 +2063,12 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		return errors.WithMessage(err, "更新外送订单失败")
 	}
 
+	// 会员外送订单接单成功后，同步到 ERP（有接单场景）
+	// 异步推送，失败不影响接单结果；通过 ErpSyncStatus 幂等控制避免重复推送
+	utils.Go(func() {
+		s.SyncMemberOrderToErp(ctx, memberSaleOrder.SaleBill, db)
+	})
+
 	// 添加骑手接单超时自动取消订单的延时队列任务
 	if Queue.MemberOrderCancelQueue != nil {
 		utils.Go(func() {
@@ -3001,7 +3007,7 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 		// 关键字搜索（按菜名或订单号）
 		dbOptions = append(dbOptions, saleBillRepo.WhereKeyword(listReq.Keyword, ctx.GetLanguage()))
 	}
-	
+
 	// 分页查询
 	saleBills, total, err := saleBillRepo.GetSaleBillListPage(listReq.PageNo, listReq.PageSize, dbOptions...)
 	if err != nil {
@@ -3519,13 +3525,54 @@ func (s *orderSrv) MockPayDineInOrderCallback(ctx context.Context, request req.M
 	// 模拟更新支付相关字段
 	paymentAmount := saleBill.Amount
 
-	// 更新数据库
+	// 查找默认支付方式：优先使用 Cash（code=40），如果没有则使用第一个有 erpnext_payment 的支付方式
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
+	var mockPaymentMethod *model.PaymentMethod
+	for _, pm := range paymentMethods {
+		if pm.Code == 40 { // Cash
+			mockPaymentMethod = pm
+			break
+		}
+	}
+	if mockPaymentMethod == nil {
+		for _, pm := range paymentMethods {
+			if pm.ErpnextPayment != "" {
+				mockPaymentMethod = pm
+				break
+			}
+		}
+	}
+	if mockPaymentMethod == nil {
+		return errors.New("未找到可用的支付方式")
+	}
+
+	// 更新数据库：创建 PaymentOrder + 更新 SaleBill
+	var paymentOrderUuid uint64
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 更新账单支付金额
 		if err := tx.Model(&model.SaleBill{}).Where("uuid = ?", saleBill.Uuid).Updates(map[string]any{
 			"payment_amount": paymentAmount,
 		}).Error; err != nil {
 			return err
 		}
+		// 创建 PaymentOrder（模拟真实支付回调的行为）
+		paymentOrder, err := repository.NewPaymentOrderRepo(tx).Create(model.PaymentOrder{
+			PaymentMethodName: mockPaymentMethod.PaymentName,
+			PaymentMethodUuid: mockPaymentMethod.Uuid,
+			PaymentFeePercent: 0,
+			RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
+			RelatedUuid:       saleOrder.Uuid,
+			CurrencyUnit:      "THB",
+			PaymentAmount:     paymentAmount,
+			Amount:            paymentAmount,
+			TransactionNumber: fmt.Sprintf("MOCK-%d", saleOrder.Uuid),
+			Status:            constant.PaymentOrderStatusPaid,
+		})
+		if err != nil {
+			return err
+		}
+		paymentOrderUuid = paymentOrder.Uuid
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err, "更新订单支付信息失败")
@@ -3541,7 +3588,7 @@ func (s *orderSrv) MockPayDineInOrderCallback(ctx context.Context, request req.M
 			SaleOrderUuid: saleOrder.Uuid,
 			MemberUuid:    ctx.GetMemberUuid(),
 		},
-		PaymentOrderUuid: 0, // 模拟回调没有实际的支付单
+		PaymentOrderUuid: paymentOrderUuid,
 	})
 
 	logger.Logger.Info("MockPayDineInOrderCallback, 模拟支付回调成功",
