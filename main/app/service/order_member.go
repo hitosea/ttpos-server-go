@@ -2815,9 +2815,28 @@ func (s *orderSrv) updateDineInOrder(ctx context.Context, request req.CreateMemb
 		return nil, err
 	}
 
+	// 套餐修改 → 整体替换（删除旧套餐 + 新增新套餐）
+	for key, product := range updateProducts {
+		if product.ProductType == constant.ProductTypePackage {
+			addProducts[key] = product
+			deleteProducts[key] = updateOlderProducts[key]
+			delete(updateProducts, key)
+			delete(updateOlderProducts, key)
+		}
+	}
+
 	// 执行删除
 	for _, saleOrderProduct := range deleteProducts {
 		saleOrderProduct.DeleteProduct()
+		// 套餐主商品删除时，一并删除其子商品
+		if saleOrderProduct.ProductType == constant.ProductTypePackage && len(targetSaleBill.SaleOrders) > 0 {
+			for index := range targetSaleBill.SaleOrders[0].SaleOrderProducts {
+				subProduct := targetSaleBill.SaleOrders[0].SaleOrderProducts[index]
+				if subProduct.PackageUuid == saleOrderProduct.Uuid && subProduct.DeleteTime == 0 {
+					subProduct.DeleteProduct()
+				}
+			}
+		}
 	}
 
 	// 执行修改
@@ -2863,7 +2882,7 @@ func (s *orderSrv) diffDineInProducts(ctx context.Context, db *gorm.DB, products
 		commitProductMap[key] = product
 	}
 
-	// 构建已有商品映射（过滤已软删除的商品）
+	// 构建已有商品映射（过滤已软删除的商品和套餐子商品）
 	olderProductMap := make(map[string]*model.SaleOrderProduct)
 	if len(saleBill.SaleOrders) > 0 {
 		for index := range saleBill.SaleOrders[0].SaleOrderProducts {
@@ -2872,7 +2891,15 @@ func (s *orderSrv) diffDineInProducts(ctx context.Context, db *gorm.DB, products
 			if product.DeleteTime != 0 {
 				continue
 			}
+			// 跳过套餐子商品（子商品由套餐主商品统一管理）
+			if product.ProductType == constant.ProductTypePackageSubProduct {
+				continue
+			}
 			key := product.ProductKey()
+			// 套餐主商品加 pkg: 前缀，与请求侧的 ProductKey 格式对齐
+			if product.ProductType == constant.ProductTypePackage {
+				key = "pkg:" + key
+			}
 			olderProductMap[key] = product
 		}
 	}
@@ -2917,6 +2944,24 @@ func (s *orderSrv) addDineInProducts(ctx context.Context, saleBillUuid, saleOrde
 			Num:                             product.Num,
 			SauceProductBomUuidList:         product.SauceUuidList,
 			ProductPackageAttributeUuidList: product.AttributeUuidList,
+			ProductType:                     product.ProductType,
+		}
+		// 套餐商品：转换子商品并标记为套餐
+		if product.ProductType == constant.ProductTypePackage {
+			subProductParams := make([]req.ProductParams, 0, len(product.Products))
+			for _, sub := range product.Products {
+				subParam := req.ProductParams{
+					FlavorProductBomUuid:            sub.EditProductReq.FlavorUuid,
+					Num:                             sub.Num,
+					UnitNum:                         sub.UnitNum,
+					ProductPackageAttributeUuidList: sub.EditProductReq.AttributeUuidList,
+					ProductPackageGroupUuid:         sub.ProductPackageGroupUuid,
+					Operation:                       "add",
+					AddPrice:                        sub.AddPrice,
+				}
+				subProductParams = append(subProductParams, subParam)
+			}
+			param.SetIsPackageProduct(subProductParams)
 		}
 		productParams = append(productParams, param)
 	}
