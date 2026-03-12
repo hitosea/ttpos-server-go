@@ -390,6 +390,9 @@ INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uu
 INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (1724220611, 1724220611, '规格/属性', 'cashier_table_spec_attr', '', 1704880828, 17, '', '', 0, 0, 1, 0, '', 0, 1754474438, 1754474438);
 INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (1724220612, 1724220612, '规格/属性', 'spec_attr', '', 1724320508, 2, '', '', 0, 0, 1, 0, '', 0, 1754474438, 1754474438);
 INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (1724220613, 1724220613, '整单备注', 'order_remark', '', 1724320508, 1, '', '', 0, 0, 1, 0, '', 0, 1761133410, 1761133410);
+INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (2860200000000000, 2860200000000000, '手机点餐', 'mobile_order_setting', '', 2859064102912000, 5, '', '', 1, 1, 1, 0, '', 0, 1741744970, 1741744970);
+INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (2860200000001000, 2860200000001000, '二维码', 'mobile_order_qrcode', '', 2860200000000000, 1, '', '', 0, 0, 1, 0, '', 0, 1741744970, 1741744970);
+INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (2860200000002000, 2860200000002000, '菜单样式', 'mobile_order_menu_style', '', 2860200000000000, 2, '', '', 0, 0, 1, 0, '', 0, 1741744970, 1741744970);
 COMMIT;
 
 BEGIN;
@@ -1061,6 +1064,12 @@ INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `crea
 INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1167, 1167, 2, 1704885081, 1761133410, 1761133410, 0);
 INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1168, 1168, 2, 1704886020, 1761133410, 1761133410, 0);
 INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1169, 1169, 2, 1724220613, 1761133410, 1761133410, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1170, 1170, 1, 2860200000000000, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1171, 1171, 1, 2860200000001000, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1172, 1172, 1, 2860200000002000, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1173, 1173, 2, 2860200000000000, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1174, 1174, 2, 2860200000001000, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1175, 1175, 2, 2860200000002000, 1741744970, 1741744970, 0);
 COMMIT;
 
 -- ----------------------------
