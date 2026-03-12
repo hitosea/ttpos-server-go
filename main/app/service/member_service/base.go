@@ -156,7 +156,7 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 			DefaultLanguage:      h5Setting.DefaultLanguage,
 			IsOpenRider:          company.CompanySetting.IsOpenRider() && storeScanOrderSetting.EnableDelivery == 1,
 			IsOpenStoreScanOrder: company.CompanySetting.IsOpenMemberInstant == 1 && storeScanOrderSetting.EnableSelfPickup == 1,
-			IsStoreResting:       storeScanOrderSetting.IsEnabled == 1 && !utils.SetTimezone(company.CompanySetting.Timezone).IsWithinOpeningHours(businessSetting.OpeningHours),
+			IsStoreResting:       storeScanOrderSetting.IsStoreResting(company.CompanySetting.Timezone, businessSetting.OpeningHours),
 			AreaCode:             areaCodes,
 		},
 		Company: member_resp.CompanyResp{
