@@ -62,6 +62,20 @@ const (
 	DayTypeLastMonth DayType = "last_month"
 )
 
+// nowFunc 是获取当前时间的函数，默认为 time.Now。
+// 测试中可通过 SetNowFunc 替换为固定时间，测试结束后必须调用 ResetNowFunc 恢复。
+var nowFunc = time.Now
+
+// SetNowFunc 替换获取当前时间的函数（仅用于测试）。
+func SetNowFunc(fn func() time.Time) {
+	nowFunc = fn
+}
+
+// ResetNowFunc 恢复为默认的 time.Now（测试结束后必须调用）。
+func ResetNowFunc() {
+	nowFunc = time.Now
+}
+
 func SetTimezone(timezone string) TimeUtil {
 	return Timezone(timezone)
 }
@@ -69,9 +83,9 @@ func SetTimezone(timezone string) TimeUtil {
 func (t Timezone) Now() time.Time {
 	loc, err := time.LoadLocation(string(t))
 	if err != nil {
-		return time.Now()
+		return nowFunc()
 	}
-	return time.Now().In(loc)
+	return nowFunc().In(loc)
 }
 
 func (t Timezone) NowUnix() int64 {

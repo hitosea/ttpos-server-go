@@ -783,3 +783,67 @@ func WithPaymentOrderRelatedUUID(relatedUUID int64) func(*PaymentOrderOptions) {
 		o.RelatedUUID = relatedUUID
 	}
 }
+
+// MemberOptions contains options for seeding a member.
+type MemberOptions struct {
+	UUID      int64
+	Nickname  string
+	Phone     string
+	IsVisitor int
+}
+
+// SeedMember creates a member record in the tenant database.
+func SeedMember(tb testing.TB, db *sql.DB, opts ...func(*MemberOptions)) MemberOptions {
+	tb.Helper()
+
+	opt := MemberOptions{
+		UUID:      generateSnowflakeID(),
+		Nickname:  "Test Member",
+		Phone:     "0800000000",
+		IsVisitor: 0,
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_member (uuid, nickname, phone, is_visitor, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.Nickname, opt.Phone, opt.IsVisitor, now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed member: %v", err)
+	}
+
+	return opt
+}
+
+// WithMemberUUID sets the UUID for the member.
+func WithMemberUUID(uuid int64) func(*MemberOptions) {
+	return func(o *MemberOptions) {
+		o.UUID = uuid
+	}
+}
+
+// SettingOptions contains options for seeding a setting record.
+type SettingOptions struct {
+	Key    string
+	Values string
+}
+
+// SeedSetting creates a setting record in the tenant database (ttpos_setting).
+func SeedSetting(tb testing.TB, db *sql.DB, key string, values string) {
+	tb.Helper()
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_setting (` + "`key`" + `, ` + "`describe`" + `, ` + "`values`" + `, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, 0)
+	`, key, key, values, now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed setting %s: %v", key, err)
+	}
+}
