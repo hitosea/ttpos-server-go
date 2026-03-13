@@ -2579,6 +2579,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `enable_kiosk` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用自助点餐机：0-否；1-是',
     `enable_grab_delivery` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用Grab外卖：0-否；1-是',
     `enable_lineman_delivery` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用LINE MAN外卖：0-否；1-是',
+    `brand_purchase_auto_approve` INT(3) NOT NULL DEFAULT 0 COMMENT '品牌采购自动审批: 0-关闭 1-开启',
     `is_open_kitchen_kds` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
     `is_open_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
     `is_open_h5_order` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',

@@ -111,7 +111,8 @@ type CompanySetting struct {
 	EnableDataManagement      int    `gorm:"column:enable_data_management;type:int(11);default:0;comment:是否开启数据管理: 0-否 1-是;NOT NULL" json:"enable_data_management"`
 	EnableKiosk               int    `gorm:"column:enable_kiosk;type:int(11);default:0;comment:是否开启自助点餐机: 0-否 1-是;NOT NULL" json:"enable_kiosk"`
 	EnableGrabDelivery        int    `gorm:"column:enable_grab_delivery;type:int(11);default:0;comment:是否启用Grab外卖: 0-否 1-是;NOT NULL" json:"enable_grab_delivery"`
-	EnableLinemanDelivery     int    `gorm:"column:enable_lineman_delivery;type:int(11);default:0;comment:是否启用LINE MAN外卖: 0-否 1-是;NOT NULL" json:"enable_lineman_delivery"`
+	EnableLinemanDelivery        int `gorm:"column:enable_lineman_delivery;type:int(11);default:0;comment:是否启用LINE MAN外卖: 0-否 1-是;NOT NULL" json:"enable_lineman_delivery"`
+	BrandPurchaseAutoApprove     int `gorm:"column:brand_purchase_auto_approve;type:int(11);default:0;comment:品牌采购自动审批: 0-关闭 1-开启;NOT NULL" json:"brand_purchase_auto_approve"`
 }
 
 // 连锁子店
