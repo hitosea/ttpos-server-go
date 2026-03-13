@@ -18,11 +18,11 @@ class AddMobileOrderAccess extends Migrator
         // 手机点餐权限（在餐厅设置下，排在打印设置后面）
         $mobileOrderAccess = [
             // 手机点餐（二维码、菜单样式）
-            ['uuid' => 2860200000000000, 'name' => '手机点餐', 'path' => 'mobile_order_setting', 'api_path' => '', 'parent_uuid' => 2859064102912000, 'sort' => 5, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => time(), 'update_time' => time()],
+            ['uuid' => 1724220614, 'name' => '手机点餐', 'path' => 'mobile_order_setting', 'api_path' => '', 'parent_uuid' => 2859064102912000, 'sort' => 5, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => time(), 'update_time' => time()],
             // 二维码
-            ['uuid' => 2860200000001000, 'name' => '二维码', 'path' => 'mobile_order_qrcode', 'api_path' => '', 'parent_uuid' => 2860200000000000, 'sort' => 1, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => time(), 'update_time' => time()],
+            ['uuid' => 1724220615, 'name' => '二维码', 'path' => 'mobile_order_qrcode', 'api_path' => '', 'parent_uuid' => 1724220614, 'sort' => 1, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => time(), 'update_time' => time()],
             // 菜单样式
-            ['uuid' => 2860200000002000, 'name' => '菜单样式', 'path' => 'mobile_order_menu_style', 'api_path' => '', 'parent_uuid' => 2860200000000000, 'sort' => 2, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => time(), 'update_time' => time()],
+            ['uuid' => 1724220616, 'name' => '菜单样式', 'path' => 'mobile_order_menu_style', 'api_path' => '', 'parent_uuid' => 1724220614, 'sort' => 2, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => time(), 'update_time' => time()],
         ];
         $this->updateOrInsertData('access', 'uuid', $mobileOrderAccess);
 
