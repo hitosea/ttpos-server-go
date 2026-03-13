@@ -49,6 +49,7 @@ type IBusinessSrv interface {
 	CountExport(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataExport, error)                                                        // 统计导出
 	RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error)                                             // 统计商品排行
 	CountShiftRefundAmount(ctx context.Context, req req.BusinessDataCountReq) *business_data_resp.BusinessDataShiftRefundAmount                                           // 统计班次退款金额
+	CountShiftPeakHour(ctx context.Context, req req.BusinessDataCountReq) *business_data_resp.BusinessDataShiftPeakHour                                                   // 统计班次高峰期
 	CountHome(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataHome, error)                                                            // 统计首页
 	CountKitchenEfficiencyAnalysis(ctx context.Context, req req.KitchenEfficiencyAnalysisReq) (*business_data_resp.BusinessDataKitchenEfficiencyAnalysis, error)          // 统计后厨效率分析
 	CountKitchenEfficiencyAnalysisAvg(ctx context.Context, req req.KitchenEfficiencyAnalysisAvgReq) (*business_data_resp.BusinessDataKitchenEfficiencyAnalysisAvg, error) // 统计后厨效率分析平均时长
@@ -1257,6 +1258,26 @@ func (s *businessSrv) CountShiftRefundAmount(ctx context.Context, req req.Busine
 
 	return &business_data_resp.BusinessDataShiftRefundAmount{
 		RefundAmount: refundAmount,
+	}
+}
+
+// CountShiftPeakHour 统计班次高峰期
+func (s *businessSrv) CountShiftPeakHour(ctx context.Context, req req.BusinessDataCountReq) *business_data_resp.BusinessDataShiftPeakHour {
+	timezone := ctx.GetCompanySetting().Timezone
+	peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
+		timezone,
+		uint(req.QueryStartTime),
+		uint(req.QueryEndTime),
+		req.StaffUuid,
+		req.ExcludeDataManage,
+	)
+	if err != nil {
+		logger.Logger.Error("获取班次高峰期数据失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid))
+		peakHours = make([]business_data_resp.PeakHour, 0)
+	}
+
+	return &business_data_resp.BusinessDataShiftPeakHour{
+		PeakHourList: peakHours,
 	}
 }
 

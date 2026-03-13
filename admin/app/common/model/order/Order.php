@@ -650,6 +650,7 @@ class Order extends BaseModelOrder
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
             'Content-Type: application/json; charset=utf-8',
+            'Client-Version: 199.99.99',
         ]);
         if (!$res) {
             $this->error = '请求失败';
@@ -786,6 +787,7 @@ class Order extends BaseModelOrder
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
             'Content-Type: application/json; charset=utf-8',
+            'Client-Version: 199.99.99',
         ]);
         if (!$res) {
             $this->error = '请求失败';

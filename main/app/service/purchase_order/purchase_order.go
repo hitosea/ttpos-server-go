@@ -51,7 +51,11 @@ type IPurchaseOrderSrv interface {
 	UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error                                           // 更新收货单
 	CancelPurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderCancelReq) error                                           // 取消收货单
 	GetReceiptPendingItems(ctx context.Context, req req.ReceiptPendingItemsReq) (resp.ReceiptPendingItemsResp, error)                      // v2.16.0+ 获取待收货物品
-	GetPurchaseReceiptNewList(ctx context.Context, req req.PurchaseReceiptNewListReq) (resp.PurchaseReceiptNewListResp, error)             // 新收货单列表（按采购单维度）
+	GetPurchaseReceiptNewList(ctx context.Context, req req.PurchaseReceiptNewListReq) (resp.PurchaseReceiptNewListResp, error) // 新收货单列表（按采购单维度）
+
+	// 品牌采购自动审批设置
+	GetBrandPurchaseAutoApprove(ctx context.Context) (int, error)                 // 获取品牌采购自动审批开关
+	SetBrandPurchaseAutoApprove(ctx context.Context, value int) error             // 设置品牌采购自动审批开关
 }
 
 // purchaseOrderSrv 采购申请服务实现
@@ -1352,7 +1356,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 
 		// 调用ERP接口
 		if ctx.GetCompany().IsOpenErp() && purchaseOrder.Status == constant.PurchaseOrderStatusApproved {
-			return s.handleErpApproval(ctx, tx, &companySetting, purchaseOrder)
+			return s.handleErpApproval(ctx, tx, &companySetting, purchaseOrder, false)
 		}
 
 		return nil
@@ -1401,7 +1405,10 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 		return errors.New("获取总部数据库失败")
 	}
 
-	return headquarterDb.Transaction(func(hqTx *gorm.DB) error {
+	var hqPurchaseOrderUuid uint64
+	var shouldAutoApprove bool
+
+	err := headquarterDb.Transaction(func(hqTx *gorm.DB) error {
 		// 整单复制到总部
 		subUuid := purchaseOrder.Uuid
 		headquarterPurchaseOrder := model.PurchaseOrder{}
@@ -1494,16 +1501,144 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 			return errors.WithMessage(errors.New("创建总部采购申请明细失败"), err.Error())
 		}
 
+		hqPurchaseOrderUuid = headquarterPurchaseOrder.Uuid
+		// 在事务内查询总部设置，避免事务外额外 DB 查询
+		hqSetting := repository.NewCompanySettingRepo(hqTx).Get()
+		shouldAutoApprove = hqSetting.BrandPurchaseAutoApprove == 1
 		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// 总部采购单创建成功后，检查自动审批开关，异步执行总部自动审批
+	if shouldAutoApprove && ctx.GetCompany().IsOpenErp() {
+		headquarterUuid := companySetting.HeadquarterUuid
+		companyUuid := ctx.GetCompanyUuid()
+		lang := ctx.GetLanguage()
+		utils.Go(func() {
+			s.autoApproveHeadquarter(headquarterUuid, companyUuid, hqPurchaseOrderUuid, lang)
+		})
+	}
+
+	return nil
+}
+
+// autoApproveHeadquarter 后台任务：总部自动审批品牌采购单
+// 最多重试3次，使用指数退避（2s, 4s, 8s）
+func (s *purchaseOrderSrv) autoApproveHeadquarter(
+	headquarterUuid uint64,
+	companyUuid uint64,
+	hqPurchaseOrderUuid uint64,
+	lang string,
+) {
+	const maxRetries = 3
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			// 指数退避: 2s, 4s, 8s
+			backoff := time.Duration(1<<uint(attempt)) * time.Second
+			time.Sleep(backoff)
+		}
+
+		err := s.doAutoApproveHeadquarter(headquarterUuid, companyUuid, hqPurchaseOrderUuid, lang)
+		if err == nil {
+			logger.Logger.Info("品牌采购自动审批成功",
+				zap.Uint64("company_uuid", companyUuid),
+				zap.Uint64("headquarter_uuid", headquarterUuid),
+				zap.Uint64("hq_purchase_order_uuid", hqPurchaseOrderUuid),
+				zap.Int("attempt", attempt+1),
+			)
+			return
+		}
+
+		logger.Logger.Error("品牌采购自动审批失败",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("headquarter_uuid", headquarterUuid),
+			zap.Uint64("hq_purchase_order_uuid", hqPurchaseOrderUuid),
+			zap.Int("attempt", attempt+1),
+			zap.Int("max_retries", maxRetries),
+			zap.Error(err),
+		)
+	}
+
+	logger.Logger.Error("品牌采购自动审批最终失败，已达最大重试次数",
+		zap.Uint64("company_uuid", companyUuid),
+		zap.Uint64("headquarter_uuid", headquarterUuid),
+		zap.Uint64("hq_purchase_order_uuid", hqPurchaseOrderUuid),
+		zap.Int("max_retries", maxRetries),
+	)
+}
+
+// doAutoApproveHeadquarter 执行总部自动审批（单次尝试）
+func (s *purchaseOrderSrv) doAutoApproveHeadquarter(
+	headquarterUuid uint64,
+	companyUuid uint64,
+	hqPurchaseOrderUuid uint64,
+	lang string,
+) error {
+	headquarterDb := s.dbm.GetDB(headquarterUuid)
+	if headquarterDb == nil {
+		return errors.New("获取总部数据库失败")
+	}
+
+	return headquarterDb.Transaction(func(hqTx *gorm.DB) error {
+		// 加载总部采购单（含明细）
+		hqPORepo := repository.NewPurchaseOrderRepo(hqTx)
+		hqPO, err := hqPORepo.GetByUuid(hqPurchaseOrderUuid, hqPORepo.WithItems())
+		if err != nil {
+			return errors.WithMessage(errors.New("查询总部采购申请失败"), err.Error())
+		}
+
+		// 仅审批待审核状态的采购单
+		if hqPO.Status != constant.PurchaseOrderStatusPending {
+			logger.Logger.Info("品牌采购自动审批跳过：采购单状态非待审核",
+				zap.Uint64("company_uuid", companyUuid),
+				zap.Uint64("hq_purchase_order_uuid", hqPurchaseOrderUuid),
+				zap.Int("status", hqPO.Status),
+			)
+			return nil
+		}
+
+		// 更新总部采购单状态为已通过
+		hqPO.Status = constant.PurchaseOrderStatusApproved
+		hqPO.HeadquarterStatus = constant.HeadquarterStatusApproved
+		hqPO.PassTime = time.Now().Unix()
+		err = hqPORepo.Update(hqPO)
+		if err != nil {
+			return errors.WithMessage(errors.New("更新总部采购申请状态失败"), err.Error())
+		}
+
+		// 构造简易 context 用于 ERP 调用和操作日志
+		ctx := context.NewContext(
+			context.WithCompanyUuid(headquarterUuid),
+			context.WithLanguage(lang),
+			context.WithStaff(model.Staff{RealName: "系统自动审批"}),
+		)
+
+		// 记录自动审批操作日志
+		_ = s.helper.createPurchaseOrderLog(hqTx, hqPO.Uuid, ctx, "approve", "自动审批通过",
+			constant.PurchaseOrderStatusPending, constant.PurchaseOrderStatusApproved, "品牌采购自动审批", "{}")
+
+		// 调用 ERP 审核流程
+		hqCompanySetting := repository.NewCompanySettingRepo(hqTx).Get()
+		err = s.handleErpApproval(ctx, hqTx, &hqCompanySetting, hqPO, true)
+		if err != nil {
+			return err
+		}
+
+		// syncToSubShop: 后台任务不在子店事务内，可安全使用新连接同步
+		return s.syncToSubShop(hqPO)
 	})
 }
 
 // handleErpApproval 处理ERP审核
+// autoApprove: 品牌采购自动审批标记，true 时 ERP 侧 SO 自动提交并生成 DN
 func (s *purchaseOrderSrv) handleErpApproval(
 	ctx context.Context,
 	tx *gorm.DB,
 	companySetting *model.CompanySetting,
 	purchaseOrder *model.PurchaseOrder,
+	autoApprove bool,
 ) error {
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 
@@ -1512,7 +1647,7 @@ func (s *purchaseOrderSrv) handleErpApproval(
 
 	if purchaseOrder.IsHeadquarterPurchase() {
 		// 内部采购
-		erpOrderNo, erpSaleOrderNo, err = s.handleInternalPurchaseErp(ctx, tx, purchaseOrder)
+		erpOrderNo, erpSaleOrderNo, err = s.handleInternalPurchaseErp(ctx, tx, purchaseOrder, autoApprove)
 		if err != nil {
 			return err
 		}
@@ -1533,7 +1668,8 @@ func (s *purchaseOrderSrv) handleErpApproval(
 	}
 
 	// 同步状态到子商户采购申请
-	if purchaseOrder.IsHeadquarterPurchase() {
+	// 自动审批路径下跳过，由 doAutoApproveHeadquarter 在 ERP 完成后统一调用 syncToSubShop
+	if purchaseOrder.IsHeadquarterPurchase() && !autoApprove {
 		return s.syncToSubShop(purchaseOrder)
 	}
 
@@ -1541,10 +1677,12 @@ func (s *purchaseOrderSrv) handleErpApproval(
 }
 
 // handleInternalPurchaseErp 处理内部采购ERP
+// autoApprove: 品牌采购自动审批标记
 func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 	ctx context.Context,
 	tx *gorm.DB,
 	purchaseOrder *model.PurchaseOrder,
+	autoApprove bool,
 ) (string, string, error) {
 	// 构建物料请求项
 	stockItems := make([]*stock.MaterialRequestItem, 0, len(purchaseOrder.Items))
@@ -1614,6 +1752,7 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 		TargetWarehouse: purchaseOrder.DefaultWarehouseErpCode,
 		Items:           stockItems,
 		RefNo:           purchaseOrder.OrderNo, // 来源单据号，用于跟踪ttpos原始订单号
+		AutoApprove:     autoApprove,
 	})
 	if err != nil {
 		return "", "", s.helper.handleErpError(ctx, err, purchaseOrder)
@@ -2374,4 +2513,43 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptNewList(
 			Total:    total,
 		},
 	}, nil
+}
+
+// GetBrandPurchaseAutoApprove 获取品牌采购自动审批开关
+func (s *purchaseOrderSrv) GetBrandPurchaseAutoApprove(ctx context.Context) (int, error) {
+	companySetting := ctx.GetCompanySetting()
+	if !companySetting.IsHeadquarter() {
+		return 0, errors.New("仅总部可操作")
+	}
+	return companySetting.BrandPurchaseAutoApprove, nil
+}
+
+// SetBrandPurchaseAutoApprove 设置品牌采购自动审批开关
+func (s *purchaseOrderSrv) SetBrandPurchaseAutoApprove(ctx context.Context, value int) error {
+	companySetting := ctx.GetCompanySetting()
+	if !companySetting.IsHeadquarter() {
+		return errors.New("仅总部可操作")
+	}
+	if value != 0 && value != 1 {
+		return errors.New("参数值无效")
+	}
+	companyUuid := ctx.GetCompanyUuid()
+	db := ctx.GetDB()
+
+	// 更新商户库
+	if err := db.Model(&model.CompanySetting{}).
+		Where("company_uuid = ?", companyUuid).
+		Update("brand_purchase_auto_approve", value).Error; err != nil {
+		return errors.WithMessage(errors.New("保存商户设置失败"), err.Error())
+	}
+
+	// 同步更新saas主库
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	if err := saasDB.Model(&model.CompanySetting{}).
+		Where("company_uuid = ?", companyUuid).
+		Update("brand_purchase_auto_approve", value).Error; err != nil {
+		return errors.WithMessage(errors.New("保存saas设置失败"), err.Error())
+	}
+
+	return nil
 }

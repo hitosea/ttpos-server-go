@@ -361,6 +361,32 @@ func (h *statisticsHandler) CountShiftRefundAmount(c *gin.Context) {
 	helper.Success(c, refundAmount)
 }
 
+// CountShiftPeakHour 统计班次高峰期数据
+// @Summary 统计班次高峰期数据
+// @Description 统计班次高峰期数据
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataShiftPeakHour} "统计数据"
+// @Router /shop/statistics/shift_peak_hour [get]
+func (h *statisticsHandler) CountShiftPeakHour(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
+	peakHourData := h.businessSrv.CountShiftPeakHour(ctx, countReq)
+
+	helper.Success(c, peakHourData)
+}
+
 // CountHome 统计首页
 // @Summary 统计首页
 // @Description 统计首页
@@ -940,17 +966,15 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/statistics/business", wrapper.CountBusiness)                                             // 统计营业数据，移动管理端首页-店内概况
 		privateApi.GET("/statistics/payment_method", wrapper.CountPaymentMethod)                                  // 统计支付方式
 		privateApi.GET("/statistics/product_category", wrapper.CountProductCategory)                              // 统计商品分类
 		privateApi.GET("/statistics/product", wrapper.CountProduct)                                               // 统计商品
-		privateApi.GET("/statistics/area", wrapper.CountArea)                                                     // 统计区域，移动管理端首页-区域数据
-		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)                                      // 统计商品排行，移动管理端首页-销量、销售额排行
 		privateApi.GET("/statistics/product_sales", wrapper.CountProductSales)                                    // 统计商品销售
 		privateApi.GET("/statistics/product_sales/export", wrapper.ExportProductSales)                            // 导出商品销售统计
 		privateApi.GET("/statistics/7days", wrapper.Count7Days)                                                   // 统计7天
 		privateApi.GET("/statistics/export", wrapper.CountExport)                                                 // 统计导出
 		privateApi.GET("/statistics/shift_refund_amount", wrapper.CountShiftRefundAmount)                         // 统计班次退款金额
+		privateApi.GET("/statistics/shift_peak_hour", wrapper.CountShiftPeakHour)                                 // 统计班次高峰期
 		privateApi.GET("/statistics/home", wrapper.CountHome)                                                     // 统计首页
 		privateApi.GET("/statistics/kitchen/efficiency_analysis", wrapper.CountKitchenEfficiencyAnalysis)         // 统计后厨效率分析
 		privateApi.GET("/statistics/kitchen/efficiency_analysis/avg", wrapper.CountKitchenEfficiencyAnalysisAvg)  // 统计后厨效率分析平均时长
@@ -971,5 +995,13 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/company/payment_methods", wrapper.GetCompanyPaymentMethods)                   // 获取门店支付方式列表（汇总去重）
 		privateApi.GET("/statistics/company/business/summary", wrapper.CountCompanyBusinessSummary)               // 获取门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
 		privateApi.GET("/statistics/company/business/summary/export", wrapper.ExportCompanyBusinessSummary)       // 导出门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
+	}
+
+	// 需要认证 + 版本检查
+	versionApi := router.Group("", middleware.MinVersionCheck(settingSrv, middleware.TypeStatistics), middleware.Auth(authSrv, dbm))
+	{
+		versionApi.GET("/statistics/business", wrapper.CountBusiness)        // 统计营业数据，移动管理端首页-店内概况
+		versionApi.GET("/statistics/area", wrapper.CountArea)                // 统计区域，移动管理端首页-区域数据
+		versionApi.GET("/statistics/product_rank", wrapper.CountProductRank) // 统计商品排行，移动管理端首页-销量、销售额排行
 	}
 }

@@ -209,11 +209,13 @@ func (s *sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req
 	j.GetJson("data").Scan(&salesOrder)
 
 	//20251226 任务 38171 ERP-品采销售订单审批需求，在品采流程中，把销售订单状态变为草稿，结合工作审批流。
-	// 提交订单
-	// _, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, salesOrder.Name, erp.DocstatusSubmitted)
-	// if err != nil {
-	// 	return nil, gerror.Wrapf(err, "提交内部销售订单失败")
-	// }
+	//20260312 任务 40323 品牌采购自动审批：开关开启时，SO 自动提交
+	if req.AutoApprove {
+		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, salesOrder.Name, erp.DocstatusSubmitted)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "提交内部销售订单失败")
+		}
+	}
 	return salesOrder, nil
 }
 

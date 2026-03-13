@@ -2941,6 +2941,7 @@ func (s *statisticsSrv) CountBusinessTimePeriod(ctx context.Context, req req.Bus
 		}
 		endTime, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
 		if err == nil {
+			endTime--
 			req.QueryEndTime = endTime
 		}
 	}

@@ -36,6 +36,7 @@ message SaveMaterialRequestReq {
   string supplier = 8;      // 供应商名称, purpose 为 Purchases时 必填
   repeated MaterialRequestItem items = 9;      // 物品列表，
   string ref_no = 10;      // 来源单据号，可选，用于跟踪 ttpos 原始订单号
+  bool auto_approve = 11;   // 品牌采购自动审批标记，开启时 SO 自动提交并生成 DN
 }
 
 message SaveMaterialRequestResp {
