@@ -201,6 +201,10 @@
         let self = this;
         self.loading = true;
         let params = self.searchForm;
+        if (params.date && params.date[0] && params.date[1]) {
+          params.date[0] = `${params.date[0]}:00`
+          params.date[1] = `${params.date[1]}:59`
+        }
         StoreApi.storeSurvey(params, true)
           .then((data) => {
             self.detail = data.data.detail;

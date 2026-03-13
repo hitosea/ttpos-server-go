@@ -55,6 +55,7 @@ class UserShiftSnapshot extends BaseModel
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
             'Content-Type: application/json',
+            'Client-Version: 199.99.99',
         ]);
         if (!$res) {
             $this->error = '请求失败';
