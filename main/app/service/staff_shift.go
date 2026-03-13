@@ -1083,7 +1083,7 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 		ctx.GetStaffUuid(),
 		excludeDataManage,
 	)
-	peakHourList := make([]model.StaffShiftSnapshotPeakHour, 0, len(businessData.PeakHourList))
+	peakHourList := make([]model.StaffShiftSnapshotPeakHour, 0, len(peakHours))
 	if err == nil {
 		// 高峰期列表
 		for _, v := range peakHours {
