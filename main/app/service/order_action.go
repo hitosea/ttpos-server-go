@@ -857,11 +857,12 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 
 	// 录入订单商品数据
 	saleOrderProducts, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
-		IsH5Product: request.IsH5Product,
-		Setting:     *saleBill.SaleBillSetting,
-		SaleBill:    saleBill,
-		SaleOrder:   saleOrder,
-		Products:    request.Products,
+		IsH5Product:    request.IsH5Product,
+		IsMemberDineIn: request.IsMemberDineIn,
+		Setting:        *saleBill.SaleBillSetting,
+		SaleBill:       saleBill,
+		SaleOrder:      saleOrder,
+		Products:       request.Products,
 	}, options...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "构建商品失败")
@@ -906,11 +907,12 @@ func (s *orderSrv) actionAddSimple(ctx context.Context, request req.ProductAddRe
 	}
 	// 录入订单商品数据
 	saleOrderProducts, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
-		IsH5Product: request.IsH5Product,
-		Setting:     *saleBill.SaleBillSetting,
-		SaleBill:    saleBill,
-		SaleOrder:   saleOrder,
-		Products:    request.Products,
+		IsH5Product:    request.IsH5Product,
+		IsMemberDineIn: request.IsMemberDineIn,
+		Setting:        *saleBill.SaleBillSetting,
+		SaleBill:       saleBill,
+		SaleOrder:      saleOrder,
+		Products:       request.Products,
 	}, options...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "构建商品失败")

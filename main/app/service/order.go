@@ -2079,11 +2079,12 @@ func GetSauceInfo(ctx context.Context, db *gorm.DB, sauceProductBomUuidList []ui
 }
 
 type CreateSaleOrderProductParams struct {
-	IsH5Product bool                  // 是否是H5商品
-	Products    []req.ProductParams   // 要加购的商品列表
-	Setting     model.SaleBillSetting // 销售账单设置
-	SaleBill    *model.SaleBill       // 销售账单
-	SaleOrder   *model.SaleOrder      // 销售订单
+	IsH5Product    bool                  // 是否是H5商品
+	IsMemberDineIn bool                  // 是否是会员端堂食下单
+	Products       []req.ProductParams   // 要加购的商品列表
+	Setting        model.SaleBillSetting // 销售账单设置
+	SaleBill       *model.SaleBill       // 销售账单
+	SaleOrder      *model.SaleOrder      // 销售订单
 }
 
 type InnerParams struct {
@@ -2258,7 +2259,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		attributes := sortProductAttributes(ctx, productAttributes)
 
 		isAcceptOrder := constant.OrderProductIsAcceptOrderAccepted // 已接单
-		if params.IsH5Product {
+		if params.IsH5Product || params.IsMemberDineIn {
 			isAcceptOrder = constant.OrderProductIsAcceptOrderUnAccept // 未接单
 		}
 		deviceSn := ctx.GetDeviceSn()
@@ -2866,7 +2867,7 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 	}
 
 	isAcceptOrder := constant.OrderProductIsAcceptOrderAccepted // 已接单
-	if params.IsH5Product {
+	if params.IsH5Product || params.IsMemberDineIn {
 		isAcceptOrder = constant.OrderProductIsAcceptOrderUnAccept // 未接单
 	}
 	deviceSn := ctx.GetDeviceSn()

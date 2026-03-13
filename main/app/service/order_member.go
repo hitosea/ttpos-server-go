@@ -2973,10 +2973,11 @@ func (s *orderSrv) addDineInProducts(ctx context.Context, saleBillUuid, saleOrde
 	}
 
 	params := req.ProductAddReq{
-		SaleBillUuid:  saleBillUuid,
-		SaleOrderUuid: saleOrderUuid,
-		Products:      productParams,
-		IsMemberAdd:   false, // 堂食订单不应用外送折扣率
+		SaleBillUuid:   saleBillUuid,
+		SaleOrderUuid:  saleOrderUuid,
+		Products:       productParams,
+		IsMemberAdd:    false, // 堂食订单不应用外送折扣率
+		IsMemberDineIn: true,  // 会员堂食下单，商品标记为未接单
 	}
 	return s.ActionAdd(ctx, params, targetSaleBill)
 }
