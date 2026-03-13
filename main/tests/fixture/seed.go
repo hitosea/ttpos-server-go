@@ -847,3 +847,349 @@ func SeedSetting(tb testing.TB, db *sql.DB, key string, values string) {
 		tb.Fatalf("failed to seed setting %s: %v", key, err)
 	}
 }
+
+// ProductFlavorOptions contains options for seeding a product flavor.
+type ProductFlavorOptions struct {
+	UUID        int64
+	Name        string
+	ProductUUID int64 // set via product_package.product_uuid relation (not stored in flavor table directly)
+}
+
+// SeedProductFlavor creates a product_flavor record in the tenant database.
+func SeedProductFlavor(tb testing.TB, db *sql.DB, opts ...func(*ProductFlavorOptions)) ProductFlavorOptions {
+	tb.Helper()
+
+	opt := ProductFlavorOptions{
+		UUID: generateSnowflakeID(),
+		Name: `{"zh_name":"默认规格","en_name":"Default"}`,
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_product_flavor (uuid, name, multi_language_name_uuid, create_time, update_time, delete_time)
+		VALUES (?, ?, 0, ?, ?, 0)
+	`, opt.UUID, opt.Name, now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed product_flavor: %v", err)
+	}
+
+	return opt
+}
+
+// WithProductFlavorUUID sets a custom UUID for the product flavor.
+func WithProductFlavorUUID(uuid int64) func(*ProductFlavorOptions) {
+	return func(o *ProductFlavorOptions) {
+		o.UUID = uuid
+	}
+}
+
+// ProductBomOptions contains options for seeding a product BOM.
+type ProductBomOptions struct {
+	UUID               int64
+	ProductFlavorUUID  int64
+	ProductPackageUUID int64
+	Price              float64
+	Status             int
+}
+
+// SeedProductBom creates a product_bom record in the tenant database.
+// Links a product_flavor to a price and status (上架/下架).
+func SeedProductBom(tb testing.TB, db *sql.DB, opts ...func(*ProductBomOptions)) ProductBomOptions {
+	tb.Helper()
+
+	opt := ProductBomOptions{
+		UUID:               generateSnowflakeID(),
+		ProductFlavorUUID:  0,
+		ProductPackageUUID: 0,
+		Price:              10.00,
+		Status:             1, // 上架
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_product_bom (uuid, product_flavor_uuid, product_package_uuid, price, status, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.ProductFlavorUUID, opt.ProductPackageUUID, opt.Price, opt.Status, now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed product_bom: %v", err)
+	}
+
+	return opt
+}
+
+// WithProductBomFlavorUUID sets the product_flavor_uuid for the product BOM.
+func WithProductBomFlavorUUID(uuid int64) func(*ProductBomOptions) {
+	return func(o *ProductBomOptions) {
+		o.ProductFlavorUUID = uuid
+	}
+}
+
+// WithProductBomPrice sets the price for the product BOM.
+func WithProductBomPrice(price float64) func(*ProductBomOptions) {
+	return func(o *ProductBomOptions) {
+		o.Price = price
+	}
+}
+
+// WithProductBomPackageUUID sets the product_package_uuid for the product BOM.
+func WithProductBomPackageUUID(uuid int64) func(*ProductBomOptions) {
+	return func(o *ProductBomOptions) {
+		o.ProductPackageUUID = uuid
+	}
+}
+
+// ProductPackageOptions contains options for seeding a product package.
+type ProductPackageOptions struct {
+	UUID        int64
+	Name        string
+	Status      int
+	ProductType int // 0=普通商品, 1=套餐
+}
+
+// SeedProductPackage creates a product_package record.
+func SeedProductPackage(tb testing.TB, db *sql.DB, opts ...func(*ProductPackageOptions)) ProductPackageOptions {
+	tb.Helper()
+
+	opt := ProductPackageOptions{
+		UUID:        generateSnowflakeID(),
+		Name:        `{"zh_name":"测试商品包","en_name":"Test Package"}`,
+		Status:      1,
+		ProductType: 0,
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_product_package (uuid, name, multi_language_name_uuid, status, product_type, create_time, update_time, delete_time)
+		VALUES (?, ?, 0, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.Name, opt.Status, opt.ProductType, now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed product_package: %v", err)
+	}
+
+	return opt
+}
+
+// WithProductPackageUUID sets the UUID for the product package.
+func WithProductPackageUUID(uuid int64) func(*ProductPackageOptions) {
+	return func(o *ProductPackageOptions) {
+		o.UUID = uuid
+	}
+}
+
+// WithProductPackageProductType sets the product_type for the product package (0=普通, 1=套餐).
+func WithProductPackageProductType(productType int) func(*ProductPackageOptions) {
+	return func(o *ProductPackageOptions) {
+		o.ProductType = productType
+	}
+}
+
+// ProductPackageGroupOptions contains options for seeding a product package group.
+type ProductPackageGroupOptions struct {
+	UUID               int64
+	Name               string
+	ProductPackageUUID int64 // 套餐 product_package 的 UUID
+	GroupType          int   // 0=固定, 1=可选
+	OptionalMinCount   int
+	OptionalCount      int
+	Sort               int
+}
+
+// SeedProductPackageGroup creates a product_package_group record in the tenant database.
+func SeedProductPackageGroup(tb testing.TB, db *sql.DB, opts ...func(*ProductPackageGroupOptions)) ProductPackageGroupOptions {
+	tb.Helper()
+
+	opt := ProductPackageGroupOptions{
+		UUID:               generateSnowflakeID(),
+		Name:               `{"zh_name":"默认分组","en_name":"Default Group"}`,
+		ProductPackageUUID: 0,
+		GroupType:          0,
+		OptionalMinCount:   0,
+		OptionalCount:      0,
+		Sort:               0,
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_product_package_group (uuid, name, multi_language_name_uuid, product_package_uuid, group_type, optional_min_count, optional_count, sort, create_time, update_time, delete_time)
+		VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.Name, opt.ProductPackageUUID, opt.GroupType, opt.OptionalMinCount, opt.OptionalCount, opt.Sort, now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed product_package_group: %v", err)
+	}
+
+	return opt
+}
+
+// WithProductPackageGroupProductPackageUUID sets the parent product_package_uuid.
+func WithProductPackageGroupProductPackageUUID(uuid int64) func(*ProductPackageGroupOptions) {
+	return func(o *ProductPackageGroupOptions) {
+		o.ProductPackageUUID = uuid
+	}
+}
+
+// ProductPackageGroupItemOptions contains options for seeding a product package group item.
+type ProductPackageGroupItemOptions struct {
+	UUID                    int64
+	ProductPackageGroupUUID int64   // 所属分组的 UUID
+	RelatedUUID             int64   // 关联的子商品 product_package UUID
+	ProductBomUUID          int64   // 子商品的 product_bom UUID
+	Num                     float64 // 数量
+	Sort                    int
+	AddPrice                float64 // 加价金额
+	IsRequired              int     // 0=不必选, 1=必选
+	IsDefault               int     // 0=不默认, 1=默认选中
+}
+
+// SeedProductPackageGroupItem creates a product_package_group_item record.
+func SeedProductPackageGroupItem(tb testing.TB, db *sql.DB, opts ...func(*ProductPackageGroupItemOptions)) ProductPackageGroupItemOptions {
+	tb.Helper()
+
+	opt := ProductPackageGroupItemOptions{
+		UUID:                    generateSnowflakeID(),
+		ProductPackageGroupUUID: 0,
+		RelatedUUID:             0,
+		ProductBomUUID:          0,
+		Num:                     1,
+		Sort:                    0,
+		AddPrice:                0,
+		IsRequired:              0,
+		IsDefault:               0,
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_product_package_group_item (uuid, product_package_group_uuid, related_uuid, product_bom_uuid, num, sort, add_price, is_required, is_default, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.ProductPackageGroupUUID, opt.RelatedUUID, opt.ProductBomUUID, opt.Num, opt.Sort, opt.AddPrice, opt.IsRequired, opt.IsDefault, now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed product_package_group_item: %v", err)
+	}
+
+	return opt
+}
+
+// PackageSubItem represents a sub-product inside a package for the convenience seed function.
+type PackageSubItem struct {
+	Name  string
+	Price float64
+}
+
+// SeedPackageProductResult holds the result of SeedPackageProductWithSubItems.
+type SeedPackageProductResult struct {
+	PackageBomUUID int64 // The parent package's product_bom UUID (used as flavor_uuid in API)
+	GroupUUID      int64 // The package group UUID (used as product_package_group_uuid in API)
+	SubBomUUIDs    []int64 // Each sub-product's product_bom UUID (used as flavor_uuid in API)
+}
+
+// SeedPackageProductWithSubItems creates a complete package product (套餐) with sub-items.
+// It creates:
+//   - A parent product_package (product_type=1) + product_flavor + product_bom
+//   - A product_package_group linked to the parent
+//   - For each sub-item: product_package + product_flavor + product_bom + product_package_group_item
+//
+// Returns the parent BOM UUID, group UUID, and sub-item BOM UUIDs.
+func SeedPackageProductWithSubItems(tb testing.TB, db *sql.DB, packageName string, packagePrice float64, subItems []PackageSubItem) SeedPackageProductResult {
+	tb.Helper()
+
+	// 1. Create parent product_package (product_type=1 = 套餐)
+	parentPkg := SeedProductPackage(tb, db, func(o *ProductPackageOptions) {
+		o.Name = fmt.Sprintf(`{"zh_name":"%s","en_name":"%s"}`, packageName, packageName)
+		o.ProductType = 1
+	})
+
+	// 2. Create parent product_flavor + product_bom
+	parentFlavor := SeedProductFlavor(tb, db)
+	parentBom := SeedProductBom(tb, db,
+		WithProductBomFlavorUUID(parentFlavor.UUID),
+		WithProductBomPackageUUID(parentPkg.UUID),
+		WithProductBomPrice(packagePrice),
+	)
+
+	// 3. Create a package group
+	group := SeedProductPackageGroup(tb, db, func(o *ProductPackageGroupOptions) {
+		o.ProductPackageUUID = parentPkg.UUID
+	})
+
+	// 4. Create sub-items
+	subBomUUIDs := make([]int64, 0, len(subItems))
+	for _, sub := range subItems {
+		// Each sub-item is its own product_package + product_flavor + product_bom chain
+		subPkg := SeedProductPackage(tb, db, func(o *ProductPackageOptions) {
+			o.Name = fmt.Sprintf(`{"zh_name":"%s","en_name":"%s"}`, sub.Name, sub.Name)
+			o.ProductType = 0
+		})
+		subFlavor := SeedProductFlavor(tb, db)
+		subBom := SeedProductBom(tb, db,
+			WithProductBomFlavorUUID(subFlavor.UUID),
+			WithProductBomPackageUUID(subPkg.UUID),
+			WithProductBomPrice(sub.Price),
+		)
+
+		// Link sub-item to the group
+		SeedProductPackageGroupItem(tb, db, func(o *ProductPackageGroupItemOptions) {
+			o.ProductPackageGroupUUID = group.UUID
+			o.RelatedUUID = subPkg.UUID
+			o.ProductBomUUID = subBom.UUID
+		})
+
+		subBomUUIDs = append(subBomUUIDs, subBom.UUID)
+	}
+
+	return SeedPackageProductResult{
+		PackageBomUUID: parentBom.UUID,
+		GroupUUID:      group.UUID,
+		SubBomUUIDs:    subBomUUIDs,
+	}
+}
+
+// SeedProductWithFlavor is a convenience function that creates a complete product
+// with package, flavor, and bom all linked together. Returns the product_bom UUID
+// which is what the API expects as flavor_uuid in order requests.
+//
+// Data chain: product_package ← product_bom → product_flavor
+// The product_bom.uuid is used as "flavor_uuid" in API requests.
+func SeedProductWithFlavor(tb testing.TB, db *sql.DB, productName string, price float64) int64 {
+	tb.Helper()
+
+	// 1. Create product_package (the "product" entity in the system)
+	pkg := SeedProductPackage(tb, db, func(o *ProductPackageOptions) {
+		o.Name = fmt.Sprintf(`{"zh_name":"%s","en_name":"%s"}`, productName, productName)
+	})
+
+	// 2. Create product_flavor (spec/variant)
+	flavor := SeedProductFlavor(tb, db)
+
+	// 3. Create product_bom linking flavor and package
+	bom := SeedProductBom(tb, db,
+		WithProductBomFlavorUUID(flavor.UUID),
+		WithProductBomPackageUUID(pkg.UUID),
+		WithProductBomPrice(price),
+	)
+
+	return bom.UUID
+}
