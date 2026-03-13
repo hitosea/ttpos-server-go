@@ -364,6 +364,41 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		return nil, errors.WithMessage(err, "接单失败")
 	}
 
+	// 先付后食：接单后发布结账事件，触发打印、叫号屏、统计等后续流程
+	if saleOrder := saleBill.GetFirstSaleOrder(); saleOrder != nil && len(saleOrder.PaymentOrders) > 0 {
+		payTypes := make([]event.PayType, 0, len(saleOrder.PaymentOrders))
+		totalPay := 0.0
+		for _, po := range saleOrder.PaymentOrders {
+			payTypes = append(payTypes, event.PayType{
+				Name:     po.PaymentMethodName,
+				Price:    po.Amount,
+				FeeMoney: po.PaymentCommissionFee,
+			})
+			totalPay += po.Amount
+		}
+		// 实付金额 = 所有付款单金额之和 - 找零
+		actualPrice := totalPay - saleOrder.ChangeAmount
+
+		utils.Go(func() {
+			s.bus.PublishCheckoutSaleOrderEvent(event.CheckoutSaleOrderPayload{
+				BasePayload: event.BasePayload{
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  saleBillUuid,
+					SaleOrderUuid: saleOrder.Uuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				SaleBill:    saleBill,
+				OrderPrice:  saleOrder.GetOriginAmountValue(),
+				PayPrice:    saleOrder.PaymentAmount,
+				ActualPrice: actualPrice,
+				ChangeDue:   saleOrder.ChangeAmount,
+				PayType:     payTypes,
+			})
+		})
+	}
+
 	// 会员堂食订单接单成功后，同步到 ERP（有接单场景）
 	// 异步推送，失败不影响接单结果；通过 ErpSyncStatus 幂等控制避免重复推送
 	utils.Go(func() {
