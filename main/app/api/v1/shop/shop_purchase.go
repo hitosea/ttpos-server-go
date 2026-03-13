@@ -789,7 +789,7 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.MinVersionCheck(settingSrv, middleware.TypePurchaseOrder, constant.ClientVersionV2150), middleware.Auth(authSrv, dbm))
+	privateApi := router.Group("", middleware.MinVersionCheck(settingSrv, middleware.TypePurchaseOrder), middleware.Auth(authSrv, dbm))
 	{
 		// 采购订单管理
 		privateApi.GET("/purchase/order/list", wrapper.GetPurchaseOrderList)
