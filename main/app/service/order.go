@@ -90,6 +90,9 @@ type IOrderSrv interface {
 	CheckAuthorization(ctx context.Context, operationType string) (bool, error)                                                                  // 检查授权（折扣操作）
 	VerifyPassword(ctx context.Context, req req.VerifyPasswordForSensitiveOperationReq) (bool, error)                                            // 密码验证（根据operation_type选择折扣操作或退款操作）
 
+	// quotation
+	OrderProductQuotation(ctx context.Context, request req.OrderProductQuotationReq) (*resp.OrderProductQuotationResp, error) // 订单商品报价(只计算价格,不写数据库)
+
 	// product
 	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)                  // 删除订单商品
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                    // 修改订单商品备注
@@ -2028,7 +2031,8 @@ func GetAttributeInfo(ctx context.Context, db *gorm.DB, productPackageAttributeU
 }
 
 // 获取加料信息。用于加购商品时作为订单商品数据的数据来源
-func GetSauceInfo(ctx context.Context, db *gorm.DB, sauceProductBomUuidList []uint64, productNum float64, productBomStockNum func(productBomUuid uint64) float64) (map[uint64]*model.ProductBom, error) {
+func GetSauceInfo(ctx context.Context, db *gorm.DB, sauceProductBomUuidList []uint64, productNum float64, productBomStockNum func(productBomUuid uint64) float64, skipValidation ...bool) (map[uint64]*model.ProductBom, error) {
+	skip := len(skipValidation) > 0 && skipValidation[0]
 	// 获取加料信息
 	sauceProductBoms := make(map[uint64]*model.ProductBom)
 	if len(sauceProductBomUuidList) > 0 {
@@ -2036,7 +2040,7 @@ func GetSauceInfo(ctx context.Context, db *gorm.DB, sauceProductBomUuidList []ui
 		if errSauceProductBomList != nil {
 			return nil, errors.WithMessage(errSauceProductBomList)
 		}
-		if len(sauceProductBomList) != len(sauceProductBomUuidList) {
+		if !skip && len(sauceProductBomList) != len(sauceProductBomUuidList) {
 			sauceUuidMap := make(map[uint64]struct{})
 			for _, uuid := range sauceProductBomUuidList {
 				sauceUuidMap[uuid] = struct{}{}
@@ -2060,16 +2064,18 @@ func GetSauceInfo(ctx context.Context, db *gorm.DB, sauceProductBomUuidList []ui
 		}
 		for i, bom := range sauceProductBomList {
 			sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
-			sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-			if bom.GetStockNum(productBomStockNum) < productNum {
-				return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
-			}
-			// 检查加料材料库存是否充足
-			if len(bom.ProductSauce.SauceMaterials) > 0 {
-				for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
-					materialStockNum := sauceMaterial.Material.GetStockNum()
-					if materialStockNum < sauceMaterial.GetDecreaseNum(productNum) {
-						return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
+			if !skip {
+				sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				if bom.GetStockNum(productBomStockNum) < productNum {
+					return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+				}
+				// 检查加料材料库存是否充足
+				if len(bom.ProductSauce.SauceMaterials) > 0 {
+					for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
+						materialStockNum := sauceMaterial.Material.GetStockNum()
+						if materialStockNum < sauceMaterial.GetDecreaseNum(productNum) {
+							return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
+						}
 					}
 				}
 			}
@@ -2143,12 +2149,14 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		productPackage := productBom.ProductPackage
 		productName := productPackage.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
 
-		if productBom.IsDelete() {
-			return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品规格已经删除")))
-		}
-		// 商品已经下架
-		if productBom.IsProductPackageDown() {
-			return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品已经下架")))
+		if !option.skipValidation {
+			if productBom.IsDelete() {
+				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品规格已经删除")))
+			}
+			// 商品已经下架
+			if productBom.IsProductPackageDown() {
+				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品已经下架")))
+			}
 		}
 
 		// 获取某商品规格信息
@@ -2157,18 +2165,20 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			return nil, errors.WithMessage(errFlavorProductBom)
 		}
 		ctx.Mark("nsp_get_flavor")
-		if flavorProductBom.GetStockNum(productBomStockNum) < float64(product.Num) {
-			return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
-		}
-		// 如果商品规格关联了材料，检查材料库存是否充足 (旧商家,不是使用成本卡的计算方式)
-		if len(flavorProductBom.FlavorMaterials) > 0 {
-			for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
-				if flavorMaterial.IsDelete() {
-					continue
-				}
-				materialStockNum := flavorMaterial.Material.GetStockNum()
-				if materialStockNum < flavorMaterial.GetDecreaseNum(product.Num) {
-					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+		if !option.skipValidation {
+			if flavorProductBom.GetStockNum(productBomStockNum) < float64(product.Num) {
+				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+			}
+			// 如果商品规格关联了材料，检查材料库存是否充足 (旧商家,不是使用成本卡的计算方式)
+			if len(flavorProductBom.FlavorMaterials) > 0 {
+				for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
+					if flavorMaterial.IsDelete() {
+						continue
+					}
+					materialStockNum := flavorMaterial.Material.GetStockNum()
+					if materialStockNum < flavorMaterial.GetDecreaseNum(product.Num) {
+						return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+					}
 				}
 			}
 		}
@@ -2180,7 +2190,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			if errSauceProductBomList != nil {
 				return nil, errors.WithMessage(errSauceProductBomList)
 			}
-			if len(sauceProductBomList) != len(product.SauceProductBomUuidList) {
+			if !option.skipValidation && len(sauceProductBomList) != len(product.SauceProductBomUuidList) {
 				sauceUuidMap := make(map[uint64]struct{})
 				for _, uuid := range product.SauceProductBomUuidList {
 					sauceUuidMap[uuid] = struct{}{}
@@ -2204,16 +2214,18 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			}
 			for i, bom := range sauceProductBomList {
 				sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
-				sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-				if bom.GetStockNum(productBomStockNum) < product.Num {
-					return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
-				}
-				// 检查加料材料库存是否充足
-				if len(bom.ProductSauce.SauceMaterials) > 0 {
-					for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
-						materialStockNum := sauceMaterial.Material.GetStockNum()
-						if materialStockNum < sauceMaterial.GetDecreaseNum(product.Num) {
-							return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
+				if !option.skipValidation {
+					sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+					if bom.GetStockNum(productBomStockNum) < product.Num {
+						return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+					}
+					// 检查加料材料库存是否充足
+					if len(bom.ProductSauce.SauceMaterials) > 0 {
+						for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
+							materialStockNum := sauceMaterial.Material.GetStockNum()
+							if materialStockNum < sauceMaterial.GetDecreaseNum(product.Num) {
+								return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
+							}
 						}
 					}
 				}
@@ -2403,7 +2415,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		}
 
 		// 设置必点信息
-		if !option.IsMemberAdd { // 会员端加购不设置必点信息
+		if !option.IsMemberAdd && !option.skipValidation { // 会员端加购不设置必点信息; 报价模式跳过必点方案
 			// 先判断商户是否有生效的必点方案
 			hasActiveMustPlan, err := repository.NewProductMustPlanRepo(db).HasActiveProductMustPlan(ctx)
 			if err != nil {
@@ -2497,7 +2509,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 
 		// 暂时废弃，product.Price 一直都会是nil
 		// 判断前端传入的商品价格是否与后台设置的最新价格一致，如果不一致则加购失败，并返回最新的价格
-		if product.Price != nil && *product.Price != saleOrderProduct.ProductPrice {
+		if !option.skipValidation && product.Price != nil && *product.Price != saleOrderProduct.ProductPrice {
 			return nil, errors.WithMessage(errors.ErrProductPriceChanged)
 		}
 
@@ -2507,13 +2519,13 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, saleOrderProduct)
 			saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
 			// 商品数量不能超过999个
-			if saleOrderProduct.Num > constant.ProductNumMax {
+			if !option.skipValidation && saleOrderProduct.Num > constant.ProductNumMax {
 				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品数量不能超过999个")))
 			}
 			// 如果该商品是套餐，则新建套餐子商品
 			if saleOrderProduct.ProductType == constant.ProductTypePackage {
 				innerParams.IsTabletAddAndCooking = true
-				subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid, saleOrderProduct.DeductStockType, product.Num, product.RemarkUuids)
+				subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid, saleOrderProduct.DeductStockType, product.Num, product.RemarkUuids, option.skipValidation)
 				if err != nil {
 					return nil, errors.WithMessage(err)
 				}
@@ -2541,15 +2553,17 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					orderProduct.Num += saleOrderProduct.Num
 					orderProduct.SetUpdate()
 					saleOrderProducts = append(saleOrderProducts, orderProduct)
-					if saleOrderProduct.Num > constant.ProductNumMax {
-						return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品数量不能超过999个")))
-					}
-					appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
-					productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
-					// 检查商品是否超过限购
-					status, message := orderProduct.CheckCookingProduct(ctx.GetLanguage(), productBomStockNum)
-					if status != constant.CodeSuccess {
-						return nil, errors.WithMessage(errors.New(message))
+					if !option.skipValidation {
+						if saleOrderProduct.Num > constant.ProductNumMax {
+							return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品数量不能超过999个")))
+						}
+						appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
+						productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
+						// 检查商品是否超过限购
+						status, message := orderProduct.CheckCookingProduct(ctx.GetLanguage(), productBomStockNum)
+						if status != constant.CodeSuccess {
+							return nil, errors.WithMessage(errors.New(message))
+						}
 					}
 					// 如果该商品是套餐，则修改套餐子商品的数量
 					if orderProduct.ProductType == constant.ProductTypePackage {
@@ -2597,7 +2611,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
 				// 如果该商品是套餐，则新建套餐子商品
 				if saleOrderProduct.ProductType == constant.ProductTypePackage {
-					subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid, saleOrderProduct.DeductStockType, product.Num, product.RemarkUuids)
+					subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid, saleOrderProduct.DeductStockType, product.Num, product.RemarkUuids, option.skipValidation)
 					if err != nil {
 						return nil, errors.WithMessage(err)
 					}
@@ -2612,7 +2626,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					saleOrderProduct.AddPrice = totalAddPrice.InexactFloat64()
 				}
 				// 商品数量不能超过999个
-				if saleOrderProduct.Num > constant.ProductNumMax {
+				if !option.skipValidation && saleOrderProduct.Num > constant.ProductNumMax {
 					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品数量不能超过999个")))
 				}
 			}
@@ -2744,10 +2758,11 @@ func (s *orderSrv) validateSauceSelection(ctx context.Context, productPackage *m
 
 // 新建套餐子商品
 func (s *orderSrv) newPackageSubProducts(ctx context.Context, subProducts []req.ProductParams, innerParams InnerParams,
-	params CreateSaleOrderProductParams, packageUuid uint64, deductStockType uint, packageNum float64, remarkUuids []uint64) ([]*model.SaleOrderProduct, error) {
+	params CreateSaleOrderProductParams, packageUuid uint64, deductStockType uint, packageNum float64, remarkUuids []uint64, skipValidation ...bool) ([]*model.SaleOrderProduct, error) {
+	skip := len(skipValidation) > 0 && skipValidation[0]
 	subSaleOrderProducts := make([]*model.SaleOrderProduct, 0)
 	for _, subProduct := range subProducts {
-		subSaleOrderProduct, err := s.newSaleOrderProductForPackageSubProduct(ctx, subProduct, innerParams, params, packageUuid, deductStockType, packageNum, remarkUuids)
+		subSaleOrderProduct, err := s.newSaleOrderProductForPackageSubProduct(ctx, subProduct, innerParams, params, packageUuid, deductStockType, packageNum, remarkUuids, skip)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -2756,7 +2771,8 @@ func (s *orderSrv) newPackageSubProducts(ctx context.Context, subProducts []req.
 	return subSaleOrderProducts, nil
 }
 
-func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, product req.ProductParams, innerParams InnerParams, params CreateSaleOrderProductParams, packageUuid uint64, deductStockType uint, packageNum float64, remarkUuids []uint64) (*model.SaleOrderProduct, error) {
+func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, product req.ProductParams, innerParams InnerParams, params CreateSaleOrderProductParams, packageUuid uint64, deductStockType uint, packageNum float64, remarkUuids []uint64, skipValidation ...bool) (*model.SaleOrderProduct, error) {
+	skip := len(skipValidation) > 0 && skipValidation[0]
 	db := ctx.GetDB()
 	// 获取商品包信息
 	productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(ctx.GetCompanyUuid(), product.FlavorProductBomUuid)
@@ -2766,12 +2782,14 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 	productPackage := productBom.ProductPackage
 	productName := productPackage.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
 
-	if productBom.IsDelete() {
-		return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品规格已经删除")))
-	}
-	// 商品已经下架
-	if productBom.IsProductPackageDown() {
-		return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品已经下架")))
+	if !skip {
+		if productBom.IsDelete() {
+			return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品规格已经删除")))
+		}
+		// 商品已经下架
+		if productBom.IsProductPackageDown() {
+			return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品已经下架")))
+		}
 	}
 
 	// 获取某商品规格信息
@@ -2784,24 +2802,26 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 	productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
 
-	if flavorProductBom.GetStockNum(productBomStockNum) < float64(product.Num) {
-		return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
-	}
-	// 如果商品规格关联了材料，检查材料库存是否充足
-	if len(flavorProductBom.FlavorMaterials) > 0 {
-		for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
-			if flavorMaterial.IsDelete() {
-				continue
-			}
-			materialStockNum := flavorMaterial.Material.GetStockNum()
-			if materialStockNum < flavorMaterial.GetDecreaseNum(product.Num) {
-				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+	if !skip {
+		if flavorProductBom.GetStockNum(productBomStockNum) < float64(product.Num) {
+			return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+		}
+		// 如果商品规格关联了材料，检查材料库存是否充足
+		if len(flavorProductBom.FlavorMaterials) > 0 {
+			for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
+				if flavorMaterial.IsDelete() {
+					continue
+				}
+				materialStockNum := flavorMaterial.Material.GetStockNum()
+				if materialStockNum < flavorMaterial.GetDecreaseNum(product.Num) {
+					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+				}
 			}
 		}
 	}
 
 	// 获取加料信息（使用之前已创建的库存服务实例）
-	sauceProductBoms, errSauceProductBoms := GetSauceInfo(ctx, db, product.SauceProductBomUuidList, product.Num, productBomStockNum)
+	sauceProductBoms, errSauceProductBoms := GetSauceInfo(ctx, db, product.SauceProductBomUuidList, product.Num, productBomStockNum, skip)
 	if errSauceProductBoms != nil {
 		return nil, errors.WithMessage(errSauceProductBoms)
 	}

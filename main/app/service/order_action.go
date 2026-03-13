@@ -812,9 +812,10 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 }
 
 type ActionAddOption struct {
-	IsTableAdd  bool // 是否是平板端加购
-	IsMemberAdd bool // 是否是会员端加购
-	skipLimit   bool // 是否跳过加购时的限购检查。使用场景是加购并送厨时，因为送厨会在坚持一次限购，所有加购时不检查
+	IsTableAdd     bool // 是否是平板端加购
+	IsMemberAdd    bool // 是否是会员端加购
+	skipLimit      bool // 是否跳过加购时的限购检查。使用场景是加购并送厨时，因为送厨会在坚持一次限购，所有加购时不检查
+	skipValidation bool // 是否跳过所有业务校验（库存、上下架、限购等）。用于报价接口
 }
 
 func WithIsMemberAdd() func(option *ActionAddOption) {
@@ -832,6 +833,12 @@ func WithIsTableAdd() func(option *ActionAddOption) {
 func WithSkipLimit() func(option *ActionAddOption) {
 	return func(option *ActionAddOption) {
 		option.skipLimit = true
+	}
+}
+
+func WithSkipValidation() func(option *ActionAddOption) {
+	return func(option *ActionAddOption) {
+		option.skipValidation = true
 	}
 }
 

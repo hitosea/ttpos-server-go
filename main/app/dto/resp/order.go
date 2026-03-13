@@ -271,3 +271,56 @@ type DeskBuffetCustomerType struct {
 type GetPaymentAmountResp struct {
 	PaymentAmount float64 `json:"payment_amount"` // 支付金额
 }
+
+// OrderProductQuotationResp 订单商品报价响应
+type OrderProductQuotationResp struct {
+	Products  []QuotationProduct `json:"products"`   // 商品明细列表
+	OrderCalc QuotationOrderCalc `json:"order_calc"` // 订单级金额
+	BillCalc  QuotationBillCalc  `json:"bill_calc"`  // 账单级金额
+}
+
+// QuotationProduct 报价商品明细
+type QuotationProduct struct {
+	ProductPackageUuid uint64             `json:"product_package_uuid"` // 商品包UUID
+	LocaleName         dto.LocaleResponse `json:"locale_name"`          // 商品名称(多语言)
+	Num                float64            `json:"num"`                  // 数量
+	FlavorPrice        float64            `json:"flavor_price"`         // 规格原价
+	SaucePrice         float64            `json:"sauce_price"`          // 加料价格
+	AddPrice           float64            `json:"add_price"`            // 加价金额（套餐子商品加价）
+	ProductPrice       float64            `json:"product_price"`        // 原始单价（规格原价+加料价+加价）
+	SalePrice          float64            `json:"sale_price"`           // 销售价（折前单价）
+	SalePriceNoTax     float64            `json:"sale_price_no_tax"`    // 销售价（不含税）
+	Price              float64            `json:"price"`                // 最终单价（折后）
+	MemberDiscountFee  float64            `json:"member_discount_fee"`  // 会员折扣金额
+	CustomDiscountFee  float64            `json:"custom_discount_fee"`  // 自定义折扣金额
+	DiscountFee        float64            `json:"discount_fee"`         // 折扣金额合计
+	TaxFee             float64            `json:"tax_fee"`              // 商品税费
+	ServiceFee         float64            `json:"service_fee"`          // 服务费
+	ServiceTaxFee      float64            `json:"service_tax_fee"`      // 服务费税费
+	TotalPrice         float64            `json:"total_price"`          // 应收金额（折后）
+	OriginTotalPrice   float64            `json:"origin_total_price"`   // 应收金额（折前）
+}
+
+// QuotationOrderCalc 报价订单级金额
+type QuotationOrderCalc struct {
+	ProductOriginalAmount float64 `json:"product_original_amount"` // 商品原始金额
+	ProductAmount         float64 `json:"product_amount"`          // 商品金额（折后）
+	ServiceFee            float64 `json:"service_fee"`             // 服务费
+	TaxFee                float64 `json:"tax_fee"`                 // 税费
+	CustomDiscountFee     float64 `json:"custom_discount_fee"`     // 自定义折扣
+	MemberDiscountFee     float64 `json:"member_discount_fee"`     // 会员折扣
+	Amount                float64 `json:"amount"`                  // 应付金额
+	OriginAmount          float64 `json:"origin_amount"`           // 原始应付金额
+}
+
+// QuotationBillCalc 报价账单级金额
+type QuotationBillCalc struct {
+	Amount                float64 `json:"amount"`                  // 账单总金额
+	OriginAmount          float64 `json:"origin_amount"`           // 账单原始金额
+	ProductAmount         float64 `json:"product_amount"`          // 商品金额
+	ProductOriginalAmount float64 `json:"product_original_amount"` // 商品原始金额
+	ServiceFee            float64 `json:"service_fee"`             // 服务费
+	TaxFee                float64 `json:"tax_fee"`                 // 税费
+	DiscountFee           float64 `json:"discount_fee"`            // 折扣金额
+	MemberDiscountFee     float64 `json:"member_discount_fee"`     // 会员折扣金额
+}
