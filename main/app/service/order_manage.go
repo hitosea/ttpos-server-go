@@ -2359,6 +2359,15 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 							_ = repository.NewStockDeductionLogRepo(db).DeleteByOrderUuid(saleOrder.Uuid)
 						}
 					}
+
+					// 反结账完成后，清除 SI/PE 名称和同步状态，防止扣减任务误匹配
+					saleOrder.ErpSalesInvoiceName = ""
+					saleOrder.ErpPaymentEntryNames = ""
+					saleOrder.ErpSyncStatus = 0
+					if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
+						return errors.WithMessage(err)
+					}
+
 					sysLock.UnlockUuidString(seLockKey)
 				}
 				// NOTE: POS Invoice 反结账路径已废弃，发票名称不再持久化到 sale_order

@@ -546,18 +546,18 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 							},
 							PaymentOrderUuid: paymentOrderUuid,
 						})
-					// case constant.SaleBillSourceKiosk:
-					// 	// Kiosk 订单支付成功，发布事件触发送厨
-					// 	event.NewSystemBus().PublishPayFinishKioskOrderEvent(event.PayFinishKioskOrderPayload{
-					// 		BasePayload: event.BasePayload{
-					// 			Ctx:           p.ctx,
-					// 			CompanyUuid:   p.ctx.GetCompanyUuid(),
-					// 			Source:        constant.SourceKiosk,
-					// 			SaleBillUuid:  saleBill.Uuid,
-					// 			SaleOrderUuid: order.RelatedUuid,
-					// 		},
-					// 		PaymentOrderUuid: paymentOrderUuid,
-					// 	})
+						// case constant.SaleBillSourceKiosk:
+						// 	// Kiosk 订单支付成功，发布事件触发送厨
+						// 	event.NewSystemBus().PublishPayFinishKioskOrderEvent(event.PayFinishKioskOrderPayload{
+						// 		BasePayload: event.BasePayload{
+						// 			Ctx:           p.ctx,
+						// 			CompanyUuid:   p.ctx.GetCompanyUuid(),
+						// 			Source:        constant.SourceKiosk,
+						// 			SaleBillUuid:  saleBill.Uuid,
+						// 			SaleOrderUuid: order.RelatedUuid,
+						// 		},
+						// 		PaymentOrderUuid: paymentOrderUuid,
+						// 	})
 					}
 				}
 			}
@@ -768,6 +768,8 @@ func (p *PaymentRepo) postRequest(url string, jsonData string, headers map[strin
 	// 解析响应
 	var responseMap map[string]interface{}
 	if err := json.Unmarshal(body, &responseMap); err != nil {
+		logger.Logger.Error("postRequest-json.Unmarshal", zap.Error(err))
+		logger.Logger.Error("postRequest-json.Unmarshal", zap.String("body", string(body)))
 		return nil, errors.New("解析响应失败")
 	}
 	// 检查返回结果
