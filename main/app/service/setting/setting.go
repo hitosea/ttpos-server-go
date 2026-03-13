@@ -91,7 +91,7 @@ type ISrv interface {
 	GetMenuQrcode(ctx context.Context) (string, error)                                                                                    // 获取电子菜单二维码
 	GetPaymentMethodList(ctx context.Context, opts ...bool) setting.PaymentMethodListResp                                                 // 获取支付方式列表
 	GetDataManageSetting(ctx context.Context) model.DataManageSetting                                                                     // 获取数据管理设置
-	GetShopAppMinVersion() string                                                                                                         // 获取 shop_app 配置的最小版本号
+	GetShopAppMinVersion(module string) string                                                                                            // 获取指定模块的最小版本号
 	GetStoreScanOrderSetting(ctx context.Context) (setting.StoreScanOrderSettingResp, error)                                              // 获取门店点餐配置
 	SaveStoreScanOrderSetting(ctx context.Context, settingReq req.SaveStoreScanOrderSettingReq) error                                     // 保存门店点餐配置
 	GetTemplateStyleSetting(ctx context.Context) (setting.TemplateStyleSettingResp, error)                                                // 获取模板样式配置
@@ -120,31 +120,62 @@ func NewSrvImpl(dbm *database.DBManager, cache cache.Cache) *Srv {
 
 // shopAppSetting shop_app 配置结构
 type shopAppSetting struct {
-	MinVersion string `json:"min_version"`
+	MinVersion json.RawMessage `json:"min_version"`
 }
 
-// defaultShopAppMinVersion 默认最小版本号
-const defaultShopAppMinVersion = "2.15.0"
+// 版本检查模块名称常量，与 middleware.VersionCheckType 值一致
+const (
+	ModulePurchaseOrder = "purchase_order"
+	ModuleTransferOrder = "transfer_order"
+	ModuleStatistics    = "statistics"
+)
 
-// GetShopAppMinVersion 获取 shop_app 配置的最小版本号
-func (s *Srv) GetShopAppMinVersion() string {
+// defaultModuleMinVersions 各模块默认最小版本号
+var defaultModuleMinVersions = map[string]string{
+	ModulePurchaseOrder: constant.ClientVersionV2160,
+	ModuleTransferOrder: constant.ClientVersionV2090,
+	ModuleStatistics:    constant.ClientVersionV2196,
+}
+
+// GetShopAppMinVersion 获取指定模块的最小版本号
+func (s *Srv) GetShopAppMinVersion(module string) string {
+	defaultVersion := defaultModuleMinVersions[module]
+
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	if saasDB == nil {
-		return defaultShopAppMinVersion
+		return defaultVersion
 	}
 	settingRepo := repository.NewSettingRepo(saasDB)
 	setting := settingRepo.GetByKeyNotDeleted(model.SettingKeyShopApp)
 	if setting.Values == "" {
-		return defaultShopAppMinVersion
+		return defaultVersion
 	}
 	var config shopAppSetting
 	if err := json.Unmarshal([]byte(setting.Values), &config); err != nil {
-		return defaultShopAppMinVersion
+		return defaultVersion
 	}
-	if config.MinVersion == "" {
-		return defaultShopAppMinVersion
+	if config.MinVersion == nil {
+		return defaultVersion
 	}
-	return config.MinVersion
+
+	// 尝试解析为 map（新格式：{"purchase_order": "2.16.0", "transfer_order": "2.9.0"}）
+	var moduleVersions map[string]string
+	if err := json.Unmarshal(config.MinVersion, &moduleVersions); err == nil {
+		if v, ok := moduleVersions[module]; ok && v != "" {
+			return v
+		}
+		return defaultVersion
+	}
+
+	// 兼容旧格式（string "2.16.0"），视为采购模块的版本
+	var legacyVersion string
+	if err := json.Unmarshal(config.MinVersion, &legacyVersion); err == nil && legacyVersion != "" {
+		if module == ModulePurchaseOrder {
+			return legacyVersion
+		}
+	}
+
+	return defaultVersion
 }
 
 // 从缓存读取，没有则生成缓存
