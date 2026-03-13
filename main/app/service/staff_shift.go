@@ -1076,14 +1076,23 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 
 	time := utils.SetTimezone(ctx.GetCompany().CompanySetting.Timezone)
 
-	// 高峰期列表
+	peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
+		ctx.GetCompany().CompanySetting.Timezone,
+		uint(log.ShiftStartTime),
+		uint(log.ShiftEndTime),
+		ctx.GetStaffUuid(),
+		excludeDataManage,
+	)
 	peakHourList := make([]model.StaffShiftSnapshotPeakHour, 0, len(businessData.PeakHourList))
-	for _, v := range businessData.PeakHourList {
-		peakHourList = append(peakHourList, model.StaffShiftSnapshotPeakHour{
-			TimePeriod: v.TimePeriod,
-			Num:        v.OrderNum,
-			Amount:     v.Amount,
-		})
+	if err == nil {
+		// 高峰期列表
+		for _, v := range peakHours {
+			peakHourList = append(peakHourList, model.StaffShiftSnapshotPeakHour{
+				TimePeriod: v.TimePeriod,
+				Num:        v.OrderNum,
+				Amount:     v.Amount,
+			})
+		}
 	}
 
 	// 税率列表
