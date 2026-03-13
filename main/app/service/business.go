@@ -1272,6 +1272,7 @@ func (s *businessSrv) CountShiftPeakHour(ctx context.Context, req req.BusinessDa
 		req.ExcludeDataManage,
 	)
 	if err != nil {
+		logger.Logger.Error("获取班次高峰期数据失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid))
 		peakHours = make([]business_data_resp.PeakHour, 0)
 	}
 

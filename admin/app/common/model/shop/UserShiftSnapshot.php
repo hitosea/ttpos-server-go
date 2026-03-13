@@ -32,25 +32,25 @@ class UserShiftSnapshot extends BaseModel
             if (isset($content['order']) && isset($content['order']['peak_hour_list'])) {
                 if (empty($content['order']['peak_hour_list'])) {
                     // 请求营业数据
-                    $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/shift_peak_hour', [
-                        'staff_uuid' => $content['shift_user_id'],
-                        'query_start_time' => strtotime($content['shift_start_time']),
-                        'query_end_time' => strtotime($content['shift_end_time']),
-                    ], [
-                        'Authorization: Bearer ' . request()->header('token'),
-                        'Accept-Language: ' . request()->header('language'),
-                        'Content-Type: application/json',
-                    ]);
-                    if (!$res) {
-                        $this->error = '请求失败';
-                        return false;
+                    try {
+                        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/shift_peak_hour', [
+                            'staff_uuid' => $content['shift_user_id'],
+                            'query_start_time' => strtotime($content['shift_start_time']),
+                            'query_end_time' => strtotime($content['shift_end_time']),
+                        ], [
+                            'Authorization: Bearer ' . request()->header('token'),
+                            'Accept-Language: ' . request()->header('language'),
+                            'Content-Type: application/json',
+                        ]);
+                        if ($res) {
+                            $res = json_decode($res, true);
+                            if (($res['code'] ?? -1) == 0 && !empty($res['data']['peak_hour_list'])) {
+                                $content['order']['peak_hour_list'] = $res['data']['peak_hour_list'];
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        // 高峰期数据获取失败不阻断主流程，保持空数组
                     }
-                    $res = json_decode($res, true);
-                    if (($res['code'] ?? -1) != 0) {
-                        $this->error = $res['message'] ?? '请求失败';
-                        return false;
-                    }
-                    $content['order']['peak_hour_list'] = $res['data']['peak_hour_list'];
                 }
             }
             //
