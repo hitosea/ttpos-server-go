@@ -228,6 +228,7 @@ type SaveMaterialRequestReq struct {
 	Items             []*MaterialRequestItem `protobuf:"bytes,9,rep,name=items,proto3" json:"items,omitempty" dc:"物品列表，"`                                                                              // 物品列表，
 	RefNo             string                 `protobuf:"bytes,10,opt,name=ref_no,json=refNo,proto3" json:"ref_no,omitempty" dc:"来源单据号，可选，用于跟踪 ttpos 原始订单号"`                                            // 来源单据号，可选，用于跟踪 ttpos 原始订单号
 	SourceCompanyAbbr string                 `protobuf:"bytes,11,opt,name=source_company_abbr,json=sourceCompanyAbbr,proto3" json:"source_company_abbr,omitempty" dc:"来源公司缩写（总部公司），可选，用于查询总店物品默认仓库库存"` // 来源公司缩写（总部公司），可选，用于查询总店物品默认仓库库存
+	AutoApprove       bool                   `protobuf:"varint,12,opt,name=auto_approve,json=autoApprove,proto3" json:"auto_approve,omitempty" dc:"品牌采购自动审批标记，开启时 SO 自动提交并生成 DN"`                      // 品牌采购自动审批标记，开启时 SO 自动提交并生成 DN
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -337,6 +338,13 @@ func (x *SaveMaterialRequestReq) GetSourceCompanyAbbr() string {
 		return x.SourceCompanyAbbr
 	}
 	return ""
+}
+
+func (x *SaveMaterialRequestReq) GetAutoApprove() bool {
+	if x != nil {
+		return x.AutoApprove
+	}
+	return false
 }
 
 type SaveMaterialRequestResp struct {
@@ -1972,7 +1980,7 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\x03uom\x18\x05 \x01(\tR\x03uom\x127\n" +
 	"\x18custom_last_purchase_qty\x18\x06 \x01(\x01R\x15customLastPurchaseQty\x12H\n" +
 	"!custom_qty_available_for_purchase\x18\a \x01(\x01R\x1dcustomQtyAvailableForPurchase\x12(\n" +
-	"\x10custom_store_qty\x18\b \x01(\x01R\x0ecustomStoreQty\"\xa4\x03\n" +
+	"\x10custom_store_qty\x18\b \x01(\x01R\x0ecustomStoreQty\"\xc7\x03\n" +
 	"\x16SaveMaterialRequestReq\x12)\n" +
 	"\x10transaction_date\x18\x01 \x01(\x03R\x0ftransactionDate\x12!\n" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x16\n" +
@@ -1986,7 +1994,8 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\x05items\x18\t \x03(\v2\x1a.stock.MaterialRequestItemR\x05items\x12\x15\n" +
 	"\x06ref_no\x18\n" +
 	" \x01(\tR\x05refNo\x12.\n" +
-	"\x13source_company_abbr\x18\v \x01(\tR\x11sourceCompanyAbbr\"\x95\x01\n" +
+	"\x13source_company_abbr\x18\v \x01(\tR\x11sourceCompanyAbbr\x12!\n" +
+	"\fauto_approve\x18\f \x01(\bR\vautoApprove\"\x95\x01\n" +
 	"\x17SaveMaterialRequestResp\x122\n" +
 	"\x15material_request_name\x18\x01 \x01(\tR\x13materialRequestName\x12%\n" +
 	"\x0epurchase_order\x18\x02 \x01(\tR\rpurchaseOrder\x12\x1f\n" +

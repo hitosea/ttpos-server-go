@@ -208,6 +208,11 @@ type StatisticsSaleData struct {
 	MinTakeoutOrderAmount           sql.NullFloat64 `gorm:"column:min_takeout_order_amount;comment:最小外送订单金额"`
 	MaxTakeoutOrderAmount           sql.NullFloat64 `gorm:"column:max_takeout_order_amount;comment:最大外送订单金额"`
 	AvgTakeoutOrderAmount           sql.NullFloat64 `gorm:"column:avg_takeout_order_amount;comment:平均外送订单金额"`
+	TotalScanOrderAmount            sql.NullFloat64 `gorm:"column:total_scan_order_amount;comment:总扫码订单金额"`
+	TotalScanOrderNum               sql.NullInt64   `gorm:"column:total_scan_order_num;comment:总扫码订单数量"`
+	MinScanOrderAmount              sql.NullFloat64 `gorm:"column:min_scan_order_amount;comment:最小扫码订单金额"`
+	MaxScanOrderAmount              sql.NullFloat64 `gorm:"column:max_scan_order_amount;comment:最大扫码订单金额"`
+	AvgScanOrderAmount              sql.NullFloat64 `gorm:"column:avg_scan_order_amount;comment:平均扫码订单金额"`
 }
 
 // StatisticsSaleDaysData 销售天数统计数据

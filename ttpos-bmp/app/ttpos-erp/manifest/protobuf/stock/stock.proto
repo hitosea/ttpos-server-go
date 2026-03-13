@@ -40,6 +40,7 @@ message SaveMaterialRequestReq {
   repeated MaterialRequestItem items = 9;      // 物品列表，
   string ref_no = 10;      // 来源单据号，可选，用于跟踪 ttpos 原始订单号
   string source_company_abbr = 11;      // 来源公司缩写（总部公司），可选，用于查询总店物品默认仓库库存
+  bool auto_approve = 12;   // 品牌采购自动审批标记，开启时 SO 自动提交并生成 DN
 }
 
 message SaveMaterialRequestResp {

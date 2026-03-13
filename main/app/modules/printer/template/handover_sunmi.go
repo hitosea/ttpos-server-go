@@ -518,6 +518,27 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 			printer.PrintInColumns(t.base.Translate("平均订单金额"), t.base.GetPriceAndUnit(businessData.AllTakeawayAvgOrderPrice))
 			printer.LineFeed(1)
 		}
+		// 点餐-扫码
+		if businessData.AllScanOrderNum > 0 {
+			printer.SetAlignment(pkg.AlignCenter)
+			printer.SetPrintModes(true, false, false)
+			printer.AppendText(t.base.Translate("点餐方式-扫码"))
+			printer.SetPrintModes(false, false, false)
+			printer.LineFeed(2)
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.PrintInColumns(t.base.Translate("订单数"), fmt.Sprintf("%.0f", float64(businessData.AllScanOrderNum)))
+			printer.LineFeed(1)
+			if t.base.Lang == "my" {
+				printer.SetLineSpacing(50)
+			}
+			printer.PrintInColumns(t.base.Translate("最小/大订单金额"), fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.AllScanMinOrderPrice), t.base.GetPriceAndUnit(businessData.AllScanMaxOrderPrice)))
+			if t.base.Lang == "my" {
+				printer.SetLineSpacing(lineSpacing)
+			}
+			printer.LineFeed(1)
+			printer.PrintInColumns(t.base.Translate("平均订单金额"), t.base.GetPriceAndUnit(businessData.AllScanAvgOrderPrice))
+			printer.LineFeed(1)
+		}
 		// 支付方式
 		printer.AppendText("------------------------------------------------")
 		printer.LineFeed(2)

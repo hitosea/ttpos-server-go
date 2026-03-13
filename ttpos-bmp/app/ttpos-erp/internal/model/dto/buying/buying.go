@@ -22,6 +22,7 @@ type CreateInnerSaleOrderFromPurchaseOrderReq struct {
 	SellingPriceList string `json:"selling_price_list,omitempty" description:"销售价格表"`
 	TaxesAndCharges  string `json:"taxes_and_charges,omitempty" description:"销售税费模板名称"`
 	TaxCategory      string `json:"tax_category,omitempty" description:"税类别"`
+	AutoApprove      bool   `json:"auto_approve,omitempty" description:"品牌采购自动审批标记"`
 }
 
 type AddSupplerTransactCompanyReq struct {

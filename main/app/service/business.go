@@ -197,6 +197,11 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			AllTakeawayMinOrderPrice: saleData.MinInstantOrderTakeawayAmount,
 			AllTakeawayMaxOrderPrice: saleData.MaxInstantOrderTakeawayAmount,
 			AllTakeawayAvgOrderPrice: saleData.AvgInstantOrderTakeawayAmount,
+			// 扫码点餐
+			AllScanOrderNum:      int(saleData.TotalScanOrderNum),
+			AllScanMinOrderPrice: saleData.MinScanOrderAmount,
+			AllScanMaxOrderPrice: saleData.MaxScanOrderAmount,
+			AllScanAvgOrderPrice: saleData.AvgScanOrderAmount,
 			// 未结账数据
 			UnclosedTotalOrderNum: int(unpaidOrderData.TotalOrderNum),
 			UnclosedTotalPrice:    unpaidOrderData.TotalAmount,
@@ -491,6 +496,10 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		AllTakeawayMinOrderPrice:   saleData.MinInstantOrderTakeawayAmount,
 		AllTakeawayMaxOrderPrice:   saleData.MaxInstantOrderTakeawayAmount,
 		AllTakeawayAvgOrderPrice:   saleData.AvgInstantOrderTakeawayAmount,
+		AllScanOrderNum:            int(saleData.TotalScanOrderNum),
+		AllScanMinOrderPrice:       saleData.MinScanOrderAmount,
+		AllScanMaxOrderPrice:       saleData.MaxScanOrderAmount,
+		AllScanAvgOrderPrice:       saleData.AvgScanOrderAmount,
 		UnclosedTotalPrice:         unpaidOrderData.TotalAmount,
 		PaymentMethodIncomes:       paymentMethodIncomes,
 		AbnormalData: func() business_data_resp.AbnormalData {
@@ -1231,6 +1240,10 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 			MinTakeoutOrderAmount:      export.MinTakeoutOrderAmount,
 			MaxTakeoutOrderAmount:      export.MaxTakeoutOrderAmount,
 			AvgTakeoutOrderAmount:      export.AvgTakeoutOrderAmount,
+			TotalScanOrderNum:          export.TotalScanOrderNum,
+			MinScanOrderAmount:         export.MinScanOrderAmount,
+			MaxScanOrderAmount:         export.MaxScanOrderAmount,
+			AvgScanOrderAmount:         export.AvgScanOrderAmount,
 			TotalGrabOrderNum:          export.TotalGrabOrderNum,
 			MinGrabOrderAmount:         export.MinGrabOrderAmount,
 			MaxGrabOrderAmount:         export.MaxGrabOrderAmount,

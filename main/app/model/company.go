@@ -111,9 +111,10 @@ type CompanySetting struct {
 	EnableDataManagement      int    `gorm:"column:enable_data_management;type:int(11);default:0;comment:是否开启数据管理: 0-否 1-是;NOT NULL" json:"enable_data_management"`
 	EnableKiosk               int    `gorm:"column:enable_kiosk;type:int(11);default:0;comment:是否开启自助点餐机: 0-否 1-是;NOT NULL" json:"enable_kiosk"`
 	EnableGrabDelivery        int    `gorm:"column:enable_grab_delivery;type:int(11);default:0;comment:是否启用Grab外卖: 0-否 1-是;NOT NULL" json:"enable_grab_delivery"`
-	EnableLinemanDelivery     int    `gorm:"column:enable_lineman_delivery;type:int(11);default:0;comment:是否启用LINE MAN外卖: 0-否 1-是;NOT NULL" json:"enable_lineman_delivery"`
-	IsOpenMemberInstant       int    `gorm:"column:is_open_member_instant;type:int(10);default:0;comment:是否开启会员端即时点餐功能（扫码点餐到店自取）: 0不开启, 1开启;NOT NULL" json:"is_open_member_instant"`
-	ErpInvoiceMode            int    `gorm:"column:erp_invoice_mode;type:int(11);default:1;comment:ERP发票模式: 0=POS Invoice 1=Sales Invoice;NOT NULL" json:"erp_invoice_mode"`
+	EnableLinemanDelivery        int `gorm:"column:enable_lineman_delivery;type:int(11);default:0;comment:是否启用LINE MAN外卖: 0-否 1-是;NOT NULL" json:"enable_lineman_delivery"`
+	IsOpenMemberInstant          int `gorm:"column:is_open_member_instant;type:int(10);default:0;comment:是否开启会员端即时点餐功能（扫码点餐到店自取）: 0不开启, 1开启;NOT NULL" json:"is_open_member_instant"`
+	ErpInvoiceMode               int `gorm:"column:erp_invoice_mode;type:int(11);default:1;comment:ERP发票模式: 0=POS Invoice 1=Sales Invoice;NOT NULL" json:"erp_invoice_mode"`
+	BrandPurchaseAutoApprove     int `gorm:"column:brand_purchase_auto_approve;type:int(11);default:0;comment:品牌采购自动审批: 0-关闭 1-开启;NOT NULL" json:"brand_purchase_auto_approve"`
 }
 
 // IsErpSalesInvoiceMode 是否使用 Sales Invoice 模式（替代 POS Invoice）

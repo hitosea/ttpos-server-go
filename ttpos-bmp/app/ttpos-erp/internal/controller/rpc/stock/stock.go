@@ -88,6 +88,7 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 		saleOrders, err := service.Buying().CreateSplitSaleOrdersFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
 			SourceName:   purchaseOrder.Name,
 			DeliveryDate: requiredBy,
+			AutoApprove:  req.AutoApprove,
 		})
 		if err != nil {
 			g.Log().Warningf(ctx, "创建内部销售订单失败，回退之前创建的材料申请:%s\n %v", resp.MaterialRequestName, err)
@@ -109,6 +110,30 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 			soNames = append(soNames, so.Name)
 		}
 		resp.SalesOrder = strings.Join(soNames, ",")
+
+		// 20260312 任务 40323 品牌采购自动审批：开关开启时，自动创建 DN 单
+		if req.AutoApprove {
+			for _, so := range saleOrders {
+				_, err = service.Buying().CreateDeliveryNoteFromInnerSaleOrder(ctx, &dto.CreateDeliveryNoteFromInnerSaleOrderReq{
+					SourceName:      so.Name,
+					SourceWarehouse: req.SourceWarehouse,
+				})
+				if err != nil {
+					g.Log().Warningf(ctx, "自动审批创建发货单失败，回退之前创建的内部销售订单及材料申请:%s, %s\n %v", so.Name, resp.MaterialRequestName, err)
+					// 回退所有已创建的 SO
+					for _, rollbackSo := range saleOrders {
+						if rollbackSo.Docstatus == 1 {
+							service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, rollbackSo.Name, erp.DocstatusCancelled)
+						} else {
+							service.Document().Delete(ctx, &erp.ErpReq{DocType: erp.DocTypeSaleOrder, Name: rollbackSo.Name})
+						}
+					}
+					service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, purchaseOrder.Name, erp.DocstatusCancelled)
+					service.Document().ChangeDocStatus(ctx, erp.DocTypeMaterialRequest, resp.MaterialRequestName, erp.DocstatusCancelled)
+					return rpc.ApiError(err.Error()), nil
+				}
+			}
+		}
 	}
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("保存物品申请单成功", resp), nil

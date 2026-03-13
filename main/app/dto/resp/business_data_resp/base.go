@@ -108,6 +108,11 @@ type BusinessDataAll struct {
 	AllTakeoutMinOrderPrice float64 `json:"all_takeout_min_order_price"` // 总外送最小订单金额
 	AllTakeoutMaxOrderPrice float64 `json:"all_takeout_max_order_price"` // 总外送最大订单金额
 	AllTakeoutAvgOrderPrice float64 `json:"all_takeout_avg_order_price"` // 总外送平均订单金额
+	// 扫码点餐
+	AllScanOrderNum      int     `json:"all_scan_order_num"`       // 点餐方式-扫码订单数
+	AllScanMinOrderPrice float64 `json:"all_scan_min_order_price"` // 点餐方式-扫码最小订单金额
+	AllScanMaxOrderPrice float64 `json:"all_scan_max_order_price"` // 点餐方式-扫码最大订单金额
+	AllScanAvgOrderPrice float64 `json:"all_scan_avg_order_price"` // 点餐方式-扫码平均订单金额
 	// 外卖数据
 	AllTakeawayOrderNum      int     `json:"all_takeaway_order_num"`       // 点餐方式-外卖订单数
 	AllTakeawayMinOrderPrice float64 `json:"all_takeaway_min_order_price"` // 点餐方式-外卖最小订单金额
@@ -252,6 +257,10 @@ type BusinessDataExportItem struct {
 	MinTakeoutOrderAmount      float64                     `json:"min_takeout_order_amount"`      // 外送点餐-最小订单金额
 	MaxTakeoutOrderAmount      float64                     `json:"max_takeout_order_amount"`      // 外送点餐-最大订单金额
 	AvgTakeoutOrderAmount      float64                     `json:"avg_takeout_order_amount"`      // 外送点餐-平均订单金额
+	TotalScanOrderNum          int64                       `json:"total_scan_order_num"`          // 扫码点餐-订单数
+	MinScanOrderAmount         float64                     `json:"min_scan_order_amount"`         // 扫码点餐-最小订单金额
+	MaxScanOrderAmount         float64                     `json:"max_scan_order_amount"`         // 扫码点餐-最大订单金额
+	AvgScanOrderAmount         float64                     `json:"avg_scan_order_amount"`         // 扫码点餐-平均订单金额
 	TotalGrabOrderNum          int64                       `json:"total_grab_order_num"`          // Grab订单数
 	MinGrabOrderAmount         float64                     `json:"min_grab_order_amount"`         // Grab最小订单金额
 	MaxGrabOrderAmount         float64                     `json:"max_grab_order_amount"`         // Grab最大订单金额
