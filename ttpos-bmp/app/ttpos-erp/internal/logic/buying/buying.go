@@ -316,7 +316,8 @@ func (s *sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req
 
 	//20251226 任务 38171 ERP-品采销售订单审批需求，在品采流程中，把销售订单状态变为草稿，结合工作审批流。
 	//20260305 任务 40167 如果全部物品都是直送(dropship)，SO 直接提交，跳过审批流。
-	if allDropShip {
+	//20260312 任务 40323 品牌采购自动审批：开关开启时，SO 自动提交
+	if allDropShip || req.AutoApprove {
 		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, salesOrder.Name, erp.DocstatusSubmitted)
 		if err != nil {
 			return nil, gerror.Wrapf(err, "提交内部销售订单失败")

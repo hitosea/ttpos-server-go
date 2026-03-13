@@ -719,6 +719,50 @@ func (h *PurchaseHandler) DeleteLimitScheme(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// GetBrandPurchaseAutoApprove 获取品牌采购自动审批开关
+// @Summary 获取品牌采购自动审批开关
+// @Description 获取品牌采购自动审批开关状态（仅总部可用）
+// @Tags 商家端.采购管理
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=object{brand_purchase_auto_approve=int}}
+// @Router /shop/purchase/setting/brand_purchase_auto_approve [get]
+func (h *PurchaseHandler) GetBrandPurchaseAutoApprove(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	value, err := h.purchaseOrderSrv.GetBrandPurchaseAutoApprove(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{"brand_purchase_auto_approve": value})
+}
+
+// SetBrandPurchaseAutoApprove 设置品牌采购自动审批开关
+// @Summary 设置品牌采购自动审批开关
+// @Description 设置品牌采购自动审批开关状态（仅总部可用）
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body object{brand_purchase_auto_approve=int} true "开关状态 0-关闭 1-开启"
+// @Success 200 {object} dto.Response
+// @Router /shop/purchase/setting/brand_purchase_auto_approve [post]
+func (h *PurchaseHandler) SetBrandPurchaseAutoApprove(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var params struct {
+		BrandPurchaseAutoApprove int `json:"brand_purchase_auto_approve"`
+	}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	if err := h.purchaseOrderSrv.SetBrandPurchaseAutoApprove(ctx, params.BrandPurchaseAutoApprove); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -769,6 +813,10 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		// 收货单附件管理
 		privateApi.POST("/file/upload_document", wrapper.UploadDocument)
 		privateApi.DELETE("/purchase/receipt/file", wrapper.DeleteReceiptFile)
+
+		// 品牌采购参数设置
+		privateApi.GET("/purchase/setting/brand_purchase_auto_approve", wrapper.GetBrandPurchaseAutoApprove)
+		privateApi.POST("/purchase/setting/brand_purchase_auto_approve", wrapper.SetBrandPurchaseAutoApprove)
 
 		// 限购方案管理
 		privateApi.GET("/purchase/limit/scheme/list", wrapper.GetLimitSchemeList)

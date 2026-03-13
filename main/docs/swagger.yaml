@@ -40462,6 +40462,55 @@ paths:
       summary: 更新收货记录
       tags:
       - 商家端.采购管理
+  /shop/purchase/setting/brand_purchase_auto_approve:
+    get:
+      description: 获取品牌采购自动审批开关状态（仅总部可用）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  properties:
+                    brand_purchase_auto_approve:
+                      type: integer
+                  type: object
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取品牌采购自动审批开关
+      tags:
+      - 商家端.采购管理
+    post:
+      consumes:
+      - application/json
+      description: 设置品牌采购自动审批开关状态（仅总部可用）
+      parameters:
+      - description: 开关状态 0-关闭 1-开启
+        in: body
+        name: data
+        required: true
+        schema:
+          properties:
+            brand_purchase_auto_approve:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 设置品牌采购自动审批开关
+      tags:
+      - 商家端.采购管理
   /shop/recharge_order/cancel:
     post:
       consumes:
