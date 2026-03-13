@@ -2315,11 +2315,16 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		}
 
 		saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
-			DeviceId:               deviceSn,
-			Name:                   productPackage.Name,
-			OpenMemberDiscount:     productPackage.OpenDiscount,
-			TaxRate:                productPackage.TaxRate(innerParams.DiningMethod),
-			DeductStockType:        productPackage.DeductStockType,
+			DeviceId:           deviceSn,
+			Name:               productPackage.Name,
+			OpenMemberDiscount: productPackage.OpenDiscount,
+			TaxRate:            productPackage.TaxRate(innerParams.DiningMethod),
+			DeductStockType: func() uint {
+				if params.IsMemberDineIn {
+					return constant.ProductPackageDeductStockTypeCooking // 如果是会员端堂食订单的商品,强制设置所有商品都是送厨减库存. 即在订单接单时减库存.
+				}
+				return productPackage.DeductStockType
+			}(),
 			MultiLanguageNameUuid:  productPackage.MultiLanguageNameUuid,
 			ImageFileUuid:          productPackage.ImageFileUuid,
 			ProductPackageUuid:     productPackage.Uuid,
