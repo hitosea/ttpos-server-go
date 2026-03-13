@@ -2764,7 +2764,7 @@ func (s *orderSrv) createDineInOrder(ctx context.Context, request req.CreateMemb
 	}
 
 	// 获取销售账单信息
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	db := s.dbm.GetDBWithContext(ctx)
 	targetSaleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(instantOrder.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "订单不存在")
@@ -2784,14 +2784,16 @@ func (s *orderSrv) createDineInOrder(ctx context.Context, request req.CreateMemb
 // updateDineInOrder 更新堂食订单（内部方法）
 // 实现增量更新：识别新增、修改、删除的商品
 func (s *orderSrv) updateDineInOrder(ctx context.Context, request req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error) {
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	db := s.dbm.GetDBWithContext(ctx)
 	saleBillUuid := request.SaleBillUuid
 	saleOrderUuid := request.SaleOrderUuid
 
 	// 获取销售账单信息
 	targetSaleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "订单不存在")
+		// 订单不存在,则新建新订单
+		// 新建订单
+		return s.createDineInOrder(ctx, request)
 	}
 
 	// 检查订单类型：只能更新堂食订单
