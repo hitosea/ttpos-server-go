@@ -2678,17 +2678,14 @@ func (s *purchaseOrderSrv) SetBrandPurchaseAutoApprove(ctx context.Context, valu
 	db := ctx.GetDB()
 
 	// 更新商户库
-	if err := db.Model(&model.CompanySetting{}).
-		Where("company_uuid = ?", companyUuid).
-		Update("brand_purchase_auto_approve", value).Error; err != nil {
+	data := map[string]any{"brand_purchase_auto_approve": value}
+	if err := repository.NewCompanySettingRepo(db).UpdateByCompanyUuid(companyUuid, data); err != nil {
 		return errors.WithMessage(errors.New("保存商户设置失败"), err.Error())
 	}
 
 	// 同步更新saas主库
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
-	if err := saasDB.Model(&model.CompanySetting{}).
-		Where("company_uuid = ?", companyUuid).
-		Update("brand_purchase_auto_approve", value).Error; err != nil {
+	if err := repository.NewCompanySettingRepo(saasDB).UpdateByCompanyUuid(companyUuid, data); err != nil {
 		return errors.WithMessage(errors.New("保存saas设置失败"), err.Error())
 	}
 
