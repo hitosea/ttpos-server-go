@@ -160,7 +160,7 @@ class Controller extends BaseController
                 is_open_member, is_open_tablet, is_open_coupon, is_open_marketing, languages,
                 is_open_h5 as is_open_scan, is_open_assistant, is_open_kitchen_kds, is_open_buffet, table_limit, printer_limit, timezone, delivery_status,
                 enable_grab_delivery, enable_lineman_delivery,
-                enable_kiosk
+                enable_kiosk, is_open_member_instant as is_open_store_scan_order
             ')->find(),
         ];
         // 设置时区
