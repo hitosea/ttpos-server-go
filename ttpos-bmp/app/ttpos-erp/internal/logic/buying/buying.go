@@ -236,6 +236,13 @@ func (*sBuying) CreateDeliveryNoteFromInnerSaleOrder(ctx context.Context, req *d
 	deliveryNote := &erp.DeliveryNote{}
 	j.GetJson("data").Scan(&deliveryNote)
 
+	// 当SO中所有物品都是直采类型(delivered_by_supplier=1)时，
+	// ERPNext的make_delivery_note不会生成DN明细项，此时跳过DN创建
+	if len(deliveryNote.Items) == 0 {
+		g.Log().Infof(ctx, "SO %s 的DN明细为空（可能所有物品均为直采类型），跳过DN创建", req.SourceName)
+		return nil, nil
+	}
+
 	deliveryNote.SetWarehouse = req.SourceWarehouse
 	deliveryNote.SetTargetWarehouse = req.TargetWarehouse
 	deliveryNote.Docstatus = gconv.Int(erp.DocstatusSubmitted)
