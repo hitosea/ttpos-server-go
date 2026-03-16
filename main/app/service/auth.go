@@ -1526,6 +1526,13 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		hasDataPermission = true
 	}
 
+	// 从时段表推导营业状态
+	businessStatus := constant.BusinessStatusNormal
+	periodRepo := repository.NewBusinessStatusPeriodRepo(s.dbm.GetDB(company.Uuid))
+	if openPeriod, _ := periodRepo.GetOpenPeriod(); openPeriod != nil {
+		businessStatus = constant.BusinessStatusTest
+	}
+
 	return resp.ShopBase{
 		Username:      staff.Username,
 		RealName:      staff.RealName,
@@ -1571,6 +1578,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			LanguageList:    storeSetting.Language,
 			Language:        companySetting.GetLanguages(),
 			CompanyName:     storeSetting.Company,
+			BusinessStatus:  businessStatus,
 		},
 		IsTtposSite:       companySetting.IsTtposSite(),
 		IsHeadquarter:     companySetting.IsHeadquarter(),

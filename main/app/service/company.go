@@ -3,6 +3,7 @@ package service
 import (
 	"sort"
 	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -22,6 +23,7 @@ type ICompanySrv interface {
 	GetCompanyListWithStoreCode(ctx context.Context) (resp.SaasCompanyListWithStoreCodeResp, error) // 获取本店可看到的所有店列表（包含店铺编码）
 	GetCompanyInfo(ctx context.Context, companyUuid uint64) (*resp.CompanyStoreResp, error)         // 获取门店信息
 	UpdateCompanyInfo(ctx context.Context, updateReq req.UpdateCompanySettingReq) error             // 修改门店信息
+	UpdateBusinessStatus(ctx context.Context, updateReq req.UpdateBusinessStatusReq) error          // 修改营业状态
 }
 
 type companySrv struct {
@@ -277,22 +279,31 @@ func (s *companySrv) GetCompanyInfo(ctx context.Context, companyUuid uint64) (*r
 		return nil, errors.WithMessage(errors.New("获取门店设置失败"), err.Error())
 	}
 
+	// 从时段表推导营业状态
+	periodRepo := repository.NewBusinessStatusPeriodRepo(shopDB)
+	openPeriod, _ := periodRepo.GetOpenPeriod()
+	businessStatus := constant.BusinessStatusNormal
+	if openPeriod != nil {
+		businessStatus = constant.BusinessStatusTest
+	}
+
 	// 构建响应
 	return &resp.CompanyStoreResp{
-		Uuid:         companyUuid,
-		IPWhiteList:  storeSetting.IPWhiteList,
-		Name:         storeSetting.Name,
-		LogoUrl:      storeSetting.LogoURL,
-		Address:      storeSetting.Address,
-		Coordinates:  storeSetting.Coordinates,
-		CompanyName:  storeSetting.Company,
-		Phone:        storeSetting.Phone,
-		TaxNumber:    storeSetting.TaxNumber,
-		LanguageList: storeSetting.Language,
-		TimeZone:     storeSetting.TimeZone,
-		Language:     companySetting.GetLanguages(),
-		StoreCode:    storeSetting.StoreCode,
-		Status:       targetCompany.Status,
+		Uuid:           companyUuid,
+		IPWhiteList:    storeSetting.IPWhiteList,
+		Name:           storeSetting.Name,
+		LogoUrl:        storeSetting.LogoURL,
+		Address:        storeSetting.Address,
+		Coordinates:    storeSetting.Coordinates,
+		CompanyName:    storeSetting.Company,
+		Phone:          storeSetting.Phone,
+		TaxNumber:      storeSetting.TaxNumber,
+		LanguageList:   storeSetting.Language,
+		TimeZone:       storeSetting.TimeZone,
+		Language:       companySetting.GetLanguages(),
+		StoreCode:      storeSetting.StoreCode,
+		Status:         targetCompany.Status,
+		BusinessStatus: businessStatus,
 	}, nil
 }
 
@@ -346,6 +357,57 @@ func (s *companySrv) UpdateCompanyInfo(ctx context.Context, updateReq req.Update
 	})
 	if err != nil {
 		return errors.WithMessage(errors.New("修改门店信息失败"), err.Error())
+	}
+
+	return nil
+}
+
+// UpdateBusinessStatus 修改营业状态
+// 通过 ttpos_business_status_period 表管理状态，不修改 company_setting
+func (s *companySrv) UpdateBusinessStatus(ctx context.Context, updateReq req.UpdateBusinessStatusReq) error {
+	if updateReq.BusinessStatus != constant.BusinessStatusTest && updateReq.BusinessStatus != constant.BusinessStatusNormal {
+		return errors.New("无效的营业状态值")
+	}
+
+	companyUuid := updateReq.Uuid
+
+	shopDB := s.dbm.GetDB(companyUuid)
+	if shopDB == nil {
+		return errors.New("获取门店数据库连接失败")
+	}
+
+	periodRepo := repository.NewBusinessStatusPeriodRepo(shopDB)
+	openPeriod, err := periodRepo.GetOpenPeriod()
+	if err != nil {
+		return errors.WithMessage(errors.New("查询营业状态失败"), err.Error())
+	}
+
+	// 推导当前状态
+	currentStatus := constant.BusinessStatusNormal
+	if openPeriod != nil {
+		currentStatus = constant.BusinessStatusTest
+	}
+
+	// 状态未变，无需操作
+	if currentStatus == updateReq.BusinessStatus {
+		return nil
+	}
+
+	now := time.Now().Unix()
+
+	if updateReq.BusinessStatus == constant.BusinessStatusTest {
+		// 切换到测试营业：创建新的测试时段
+		period := &model.BusinessStatusPeriod{
+			StartTime: now,
+		}
+		if err := periodRepo.Create(period); err != nil {
+			return errors.WithMessage(errors.New("创建测试营业时段失败"), err.Error())
+		}
+	} else {
+		// 切换到正常营业：关闭当前测试时段
+		if err := periodRepo.CloseOpenPeriod(now); err != nil {
+			return errors.WithMessage(errors.New("关闭测试营业时段失败"), err.Error())
+		}
 	}
 
 	return nil

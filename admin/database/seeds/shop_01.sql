@@ -2625,6 +2625,19 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '集团设置表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_business_status_period` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '记录UUID',
+    `start_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '测试营业开始时间(时间戳)',
+    `end_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '测试营业结束时间(时间戳), 0=进行中',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_end_time` (`end_time`),
+    KEY `idx_time_range` (`start_time`, `end_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '测试营业时段记录表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_customer_call` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '客户呼叫记录ID',

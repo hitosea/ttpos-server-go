@@ -360,4 +360,5 @@ type ShopProfile struct {
 	DefaultLanguage string                 `json:"default_language"` // 默认语言
 	LanguageList    []dto.LanguageItem     `json:"language_list"`    // 语言列表，当前勾选了的语言列表
 	Language        []string               `json:"language"`         // 云平台限制商家的可用语言列表
+	BusinessStatus  int                    `json:"business_status"`  // 营业状态: 1-测试营业 2-正常营业
 }

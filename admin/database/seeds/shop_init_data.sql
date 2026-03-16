@@ -1117,4 +1117,11 @@ INSERT INTO `ttpos_nationality` (`uuid`, `multi_language_name_uuid`, `sort`, `st
 (8267304538112208, 8267304538112012, 8, 1, @nowTime, @nowTime, 0);
 COMMIT;
 
+-- ----------------------------
+-- Records of ttpos_business_status_period (新商户默认为测试营业)
+-- ----------------------------
+BEGIN;
+INSERT INTO `ttpos_business_status_period` (`id`, `uuid`, `start_time`, `end_time`, `create_time`, `update_time`, `delete_time`) VALUES (1, 8267304538113000, @nowTime, 0, @nowTime, @nowTime, 0);
+COMMIT;
+
 SET FOREIGN_KEY_CHECKS = 1;
