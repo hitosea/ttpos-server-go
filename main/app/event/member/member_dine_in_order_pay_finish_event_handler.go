@@ -129,9 +129,10 @@ func createH5OrderForMemberDineIn(payload event.PayFinishMemberDineInOrderPayloa
 			}
 		}
 
-		// 更新 sale_order_product 的 h5_order_uuid
+		// 更新 sale_order_product 的 h5_order_uuid 和 is_accept_order
 		for _, product := range saleOrderProducts {
 			product.H5OrderUuid = h5OrderUuid
+			product.IsAcceptOrder = constant.OrderProductIsAcceptOrderUnAccept
 			if err := saleOrderProductRepo.UpdateSaleOrderProductRecord(*product); err != nil {
 				return err
 			}

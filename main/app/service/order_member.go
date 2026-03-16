@@ -2979,7 +2979,7 @@ func (s *orderSrv) addDineInProducts(ctx context.Context, saleBillUuid, saleOrde
 		SaleOrderUuid:  saleOrderUuid,
 		Products:       productParams,
 		IsMemberAdd:    false, // 堂食订单不应用外送折扣率
-		// IsMemberDineIn: true,  // 会员堂食下单，商品标记为未接单
+		IsMemberDineIn: true,  // 会员堂食下单. 标记商品都是结账减库存
 	}
 	return s.ActionAdd(ctx, params, targetSaleBill)
 }
