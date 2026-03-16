@@ -106,6 +106,12 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime
 	// 获取开始日期和结束日期的时间戳（0点0分0秒）
 	startDate := time.Date(startTimeObj.Year(), startTimeObj.Month(), startTimeObj.Day(), 0, 0, 0, 0, startTimeObj.Location()).Unix()
 	endDate := time.Date(endTimeObj.Year(), endTimeObj.Month(), endTimeObj.Day(), 0, 0, 0, 0, endTimeObj.Location()).Unix()
+	// 排除测试营业时段：用 (date + hour * 3600) 作为记录时间点判断
+	excludeTestBusinessPeakSQL := "NOT EXISTS (SELECT 1 FROM ttpos_business_status_period bsp " +
+		"WHERE bsp.delete_time = 0 " +
+		"AND (date + hour * 3600) >= bsp.start_time " +
+		"AND (bsp.end_time = 0 OR (date + hour * 3600) <= bsp.end_time))"
+
 	// 定义一个临时结构体来接收查询结果
 	type PeakTimeResult struct {
 		SumNum int    `gorm:"column:sum_num"`
@@ -114,6 +120,7 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime
 	var peakTimeResult PeakTimeResult
 	if err := r.db.Model(&model.SaleOrderPeakTime{}).
 		Where("(date + hour * 60 * 60) between ? and ?", startDate+startHour*3600, endDate+endHour*3600).
+		Where(excludeTestBusinessPeakSQL).
 		// Where("cashier_uuid = ?", cashierUuid).
 		Group("CONCAT(date,hour)").
 		Select("sum(num) as sum_num, group_concat(id) as ids").
@@ -134,6 +141,7 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime
 	// 使用子查询实现复杂的SQL查询
 	subQuery := r.db.Model(&model.SaleOrderPeakTime{}).
 		Where("(date + hour * 60 * 60) between ? and ?", startDate+startHour*3600, endDate+endHour*3600).
+		Where(excludeTestBusinessPeakSQL).
 		Group("CONCAT(date,hour)").
 		Select("sum(num) as sum_num, group_concat(id) as ids")
 	if err := r.db.Table("(?) as t", subQuery).

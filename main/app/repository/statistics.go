@@ -190,6 +190,7 @@ func (r *StatisticsRepo) CountSale(opts ...DBOption) model.StatisticsSaleData {
 	}
 
 	subQuery := db.Model(&model.StatisticsSale{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select(countSaleSubQuerySelect).
 		Group("sale_bill_uuid")
 
@@ -254,6 +255,7 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 	}
 
 	subQuery := db.Model(&model.StatisticsSale{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select(countSaleSubQuerySelect).
 		Group("sale_bill_uuid")
 
@@ -632,6 +634,7 @@ func (r *StatisticsRepo) CountPayment(opts ...DBOption) []model.StatisticsPaymen
 	paymentMethodTable := prefix + "payment_method pm"
 
 	db.Table(statisticsPaymentTable).
+		Where(ExcludeTestBusinessSQL("sp")).
 		Select(countPaymentSelect).
 		Joins("LEFT JOIN " + paymentMethodTable + " ON sp.payment_method_uuid = pm.uuid").
 		Group("sp.payment_method_uuid").
@@ -672,6 +675,7 @@ func (r *StatisticsRepo) CountPaymentDays(timezone string, opts ...DBOption) []m
 	paymentMethodTable := prefix + "payment_method pm"
 
 	db.Table(statisticsPaymentTable).
+		Where(ExcludeTestBusinessSQL("sp")).
 		Select(
 			"pm.id",
 			"pm.sort",
@@ -798,6 +802,7 @@ func (r *StatisticsRepo) CountTax(opts ...DBOption) []model.StatisticsTaxData {
 	}
 
 	db.Model(&model.StatisticsProduct{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select(
 			"tax_rate",
 			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
@@ -817,6 +822,7 @@ func (r *StatisticsRepo) CountBuffetTax(opts ...DBOption) []model.StatisticsTaxD
 	}
 
 	db.Model(&model.StatisticsCustomerType{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select(
 			"tax_rate",
 			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
@@ -836,6 +842,7 @@ func (r *StatisticsRepo) CountBuffetDelayTax(opts ...DBOption) []model.Statistic
 	}
 
 	db.Model(&model.StatisticsDelay{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select(
 			"tax_rate",
 			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
@@ -868,10 +875,11 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 	productParentCategoryTable := prefix + "product_category as ppc"
 
 	// 统计订单数量
-	dbOrder.Table(statisticsProductTable).Select("COUNT(DISTINCT sale_bill_uuid) AS order_num").Pluck("order_num", &orderNum)
+	dbOrder.Table(statisticsProductTable).Where(ExcludeTestBusinessSQL("sp")).Select("COUNT(DISTINCT sale_bill_uuid) AS order_num").Pluck("order_num", &orderNum)
 
 	if categoryType != 2 {
 		db.Table(statisticsProductTable).
+			Where(ExcludeTestBusinessSQL("sp")).
 			Select(
 				"IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid) AS category_parent_uuid",
 				"IF(pc.parent_uuid = 0, JSON_UNQUOTE(JSON_EXTRACT(pc.NAME, '$."+language+"')), JSON_UNQUOTE(JSON_EXTRACT(ppc.NAME, '$."+language+"'))) AS category_parent_name",
@@ -892,6 +900,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 			Find(&result)
 	} else {
 		db.Table(statisticsProductTable).
+			Where(ExcludeTestBusinessSQL("sp")).
 			Select(
 				"pc.parent_uuid AS category_parent_uuid",
 				"JSON_UNQUOTE(JSON_EXTRACT(ppc.NAME, '$."+language+"')) AS category_parent_name",
@@ -938,6 +947,7 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 	productParentCategoryTable := prefix + "product_category as ppc"
 
 	err := db.Table(statisticsProductTable).
+		Where(ExcludeTestBusinessSQL("sp")).
 		Select(
 			"sp.product_bom_uuid AS product_bom_uuid",
 			"CASE WHEN pp.name IS NOT NULL AND pp.name != '' THEN JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) ELSE '' END AS product_name",
@@ -993,6 +1003,7 @@ func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData 
 	deskTable := prefix + "desk as d"
 	deskRegionTable := prefix + "desk_region as dr"
 	db.Table(statisticsSaleTable).
+		Where(ExcludeTestBusinessSQL("ss")).
 		Select(countAreaSelect, "dr.uuid AS area_id").
 		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
 		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
@@ -1037,6 +1048,7 @@ func (r *StatisticsRepo) CountAreaDays(timezone string, opts ...DBOption) []mode
 	deskTable := prefix + "desk as d"
 	deskRegionTable := prefix + "desk_region as dr"
 	db.Table(statisticsSaleTable).
+		Where(ExcludeTestBusinessSQL("ss")).
 		Select(
 			"dr.uuid AS area_id",
 			"dr.name AS area_name",
@@ -1183,6 +1195,7 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 	// 保持原有逻辑完全不变，应用所有 opts 条件
 	var statisticsData []model.StatisticsProductData
 	statisticsQuery := db.Table(statisticsProductTable).
+		Where(ExcludeTestBusinessSQL("sp")).
 		Select(
 			"sp.product_package_uuid AS product_package_uuid",
 			"SUM(sp.product_num) AS sale_num",
@@ -1343,6 +1356,7 @@ func (r *StatisticsRepo) Count7Days(opts ...DBOption) []struct {
 	// 返回每个订单的完成时间和支付金额
 	// 不在这里进行日期分组，避免使用数据库时区
 	db.Model(&model.StatisticsSale{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select(
 			"complete_time",
 			"sale_order_uuid",
@@ -1361,7 +1375,7 @@ func (r *StatisticsRepo) CountMemberNum(opts ...DBOption) int64 {
 		db = opt(db)
 	}
 
-	db.Model(&model.Member{}).Count(&result)
+	db.Model(&model.Member{}).Where(ExcludeTestBusinessSQL("")).Count(&result)
 
 	return result
 }
@@ -1381,6 +1395,7 @@ func (r *StatisticsRepo) CountMemberNumDays(timezone string, opts ...DBOption) [
 	}
 
 	db.Model(&model.Member{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select("create_time").
 		Find(&rawData)
 
@@ -1487,6 +1502,7 @@ func (r *StatisticsRepo) CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpa
 	}
 
 	db.Model(&model.SaleBill{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select("COUNT(uuid) AS total_order_num", "SUM(amount) AS total_amount").
 		Where("status = ?", constant.SaleBillStatusPending).
 		Where("production_time > 0").
@@ -1542,6 +1558,7 @@ func (r *StatisticsRepo) CountMember(opts ...DBOption) model.StatisticsMemberDat
 	}
 
 	db.Model(&model.StatisticsMember{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select(countMemberSelect).
 		Find(&result)
 
@@ -1568,6 +1585,7 @@ func (r *StatisticsRepo) CountMemberDays(timezone string, opts ...DBOption) []mo
 	for _, opt := range opts {
 		db = opt(db)
 	}
+	db = db.Where(ExcludeTestBusinessSQL(""))
 
 	db.Model(&model.StatisticsMember{}).
 		Select(
@@ -1701,6 +1719,7 @@ func (r *StatisticsRepo) CountMemberPayment(opts ...DBOption) []model.Statistics
 	paymentMethodTable := prefix + "payment_method pm"
 
 	db.Table(statisticsMemberPaymentTable).
+		Where(ExcludeTestBusinessSQL("smp")).
 		Select(countMemberPaymentSelect).
 		Joins("LEFT JOIN " + paymentMethodTable + " ON smp.payment_method_uuid = pm.uuid").
 		Group("smp.payment_method_uuid").
@@ -1737,6 +1756,7 @@ func (r *StatisticsRepo) CountMemberPaymentDays(timezone string, opts ...DBOptio
 	paymentMethodTable := prefix + "payment_method pm"
 
 	db.Table(statisticsMemberPaymentTable).
+		Where(ExcludeTestBusinessSQL("smp")).
 		Select(
 			"pm.id",
 			"pm.sort",
@@ -1910,6 +1930,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 
 	// 构建店内商品销售查询（子查询）
 	storeQuery := db2.Table(statisticsProductTable).
+		Where(ExcludeTestBusinessSQL("sp")).
 		Select(
 			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+req.Language+"')) AS product_name",
 			"JSON_UNQUOTE(JSON_EXTRACT(pc.name, '$."+req.Language+"')) AS category_name",
@@ -1999,7 +2020,8 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 		Joins("LEFT JOIN "+productParentCategoryTable+" ON pc.parent_uuid = ppc.uuid").
 		Where("to_order.delete_time = ?", constant.NotDeleted).
 		Where("to_item.delete_time = ?", constant.NotDeleted).
-		Where("to_order.order_state IN " + validStatesStr)
+		Where("to_order.order_state IN " + validStatesStr).
+		Where(ExcludeTestBusinessSQL("to_order"))
 
 	// 时间范围筛选（已完成订单用完成时间，其他用接单时间）
 	if req.StartTime > 0 && req.EndTime > 0 {
@@ -2128,6 +2150,7 @@ func (r *StatisticsRepo) CountFreePayment(opts ...DBOption) model.StatisticsFree
 	}
 
 	db.Model(&model.StatisticsSale{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select(
 			"COUNT(sale_order_uuid) AS total_order_num",
 			"SUM(free_amount) AS total_free_amount",
@@ -2147,6 +2170,7 @@ func (r *StatisticsRepo) CountFreePaymentDays(opts ...DBOption) []model.Statisti
 	}
 
 	db.Model(&model.StatisticsSale{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select(
 			"COUNT(sale_order_uuid) AS total_order_num",
 			"SUM(free_amount) AS total_free_amount",
@@ -2168,6 +2192,7 @@ func (r *StatisticsRepo) CountCancelOrder(opts ...DBOption) model.StatisticsCanc
 	}
 
 	db.Model(&model.SaleBill{}).
+		Where(ExcludeTestBusinessSQL("")).
 		Select("COUNT(uuid) AS total_cancel_order_num", "SUM(origin_amount) AS total_cancel_order_amount").
 		Where("status = ?", constant.SaleOrderStatusCanceled).
 		Where("production_time > 0").
@@ -2185,6 +2210,7 @@ type CountBusinessTimePeriodReq struct {
 	PageNo, PageSize             int   // 页码, 每页大小
 	IsDesk, IsInstant, IsTakeout bool  // 是否是桌台订单, 是否是点餐订单, 是否是配送订单
 	IsDelivery                   bool  // 是否包含外卖订单
+	ExcludeDataManage            bool  // 是否排除数据管理订单
 }
 
 // CountBusinessTimePeriod 统计营业时段
@@ -2209,6 +2235,8 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 	for _, opt := range opts {
 		baseQuery = opt(baseQuery)
 	}
+	// 排除测试营业时段内的订单
+	baseQuery = baseQuery.Where(ExcludeTestBusinessSQL("sb"))
 
 	if req.IsDesk || req.IsInstant || req.IsTakeout {
 		var billTypeList []uint
@@ -2268,8 +2296,7 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 	storeOrderArgs := []any{constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
 
 	// 应用过滤选项（数据管理订单过滤）
-	if len(opts) > 0 {
-		// 直接添加过滤子查询条件
+	if req.ExcludeDataManage {
 		storeOrderQuery += " AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)"
 	}
 
@@ -2293,6 +2320,9 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 		storeOrderQuery += " AND (sb.bill_type != ? OR (sb.bill_type = ? AND mso.status IS NOT NULL AND mso.status = ?))"
 		storeOrderArgs = append(storeOrderArgs, constant.SaleBillTypeTakeout, constant.SaleBillTypeTakeout, 7)
 	}
+
+	// 排除测试营业时段内的订单
+	storeOrderQuery += ` AND ` + ExcludeTestBusinessSQL("sb")
 
 	storeOrderQuery += `
 		GROUP BY period_start_time, sb.uuid
@@ -2325,6 +2355,7 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 				OR
 				(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
 			)
+			AND ` + ExcludeTestBusinessSQL("") + `
 		`, completedState, req.PeriodSeconds, req.PeriodSeconds, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr, completedState, completedState)
 		// 参数：delete_time, 完成时间开始, 完成时间结束, 接单时间开始, 接单时间结束
 		takeoutOrderArgs = []any{constant.NotDeleted, req.StartTime, req.EndTime, req.StartTime, req.EndTime}
@@ -2422,7 +2453,7 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 			`, timeFieldName, req.PeriodSeconds, req.PeriodSeconds, timeFieldName, timeFieldName)
 			countArgs := []any{constant.NotDeleted, constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
 
-			if len(opts) > 0 {
+			if req.ExcludeDataManage {
 				countQuery += " AND uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)"
 			}
 
@@ -2439,6 +2470,9 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 			countQuery += " AND bill_type IN (?)"
 			countArgs = append(countArgs, billTypeList)
 
+			// 排除测试营业时段内的订单
+			countQuery += ` AND ` + ExcludeTestBusinessSQL("")
+
 			// 使用动态时间：已完成订单用 completed_time，其他用 accepted_time
 			takeoutCompletedState := valueobject.TakeoutOrderStateCompleted
 			countQuery += fmt.Sprintf(`
@@ -2448,6 +2482,7 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 					OR
 					(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
 				)
+				AND `+ExcludeTestBusinessSQL("")+`
 				) AS all_periods
 			`, takeoutCompletedState, takeoutValidStatesStr, takeoutCompletedState, takeoutCompletedState)
 			// 参数：period_seconds*2, delete_time, 完成时间开始, 完成时间结束, 接单时间开始, 接单时间结束
@@ -2464,6 +2499,7 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 						OR
 						(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
 					)
+					AND `+ExcludeTestBusinessSQL("")+`
 				) AS all_periods
 			`, takeoutCompletedState, takeoutValidStatesStr, takeoutCompletedState, takeoutCompletedState)
 			// 参数：period_seconds*2, delete_time, 完成时间开始, 完成时间结束, 接单时间开始, 接单时间结束
@@ -2561,6 +2597,9 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 	if req.ExcludeDataManage {
 		rawQuery += ` AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)`
 	}
+
+	// 排除测试营业时段内的订单
+	rawQuery += ` AND ` + ExcludeTestBusinessSQL("sb")
 
 	rawQuery += `
 		GROUP BY sb.uuid, sb.finish_time
@@ -2875,6 +2914,9 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	if req.ExcludeDataManage {
 		baseQuery += ` AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)`
 	}
+
+	// 排除测试营业时段内的订单
+	baseQuery += ` AND ` + ExcludeTestBusinessSQL("sb")
 
 	// 订单类型筛选
 	if req.IsDesk || req.IsInstant || req.IsTakeout {
@@ -3193,6 +3235,9 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 	if excludeDataManage {
 		subQuery = subQuery.Where(statisticsSaleTable + ".sale_bill_uuid NOT IN (SELECT data_uuid FROM " + prefix + "data_manage WHERE type = 0 AND delete_time = 0)")
 	}
+
+	// 排除测试营业时段内的订单
+	subQuery = subQuery.Where(ExcludeTestBusinessSQL("sb"))
 
 	subQuery = subQuery.Group(statisticsSaleTable + ".sale_bill_uuid")
 
@@ -3513,6 +3558,9 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 		rawQuery += ` AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)`
 	}
 
+	// 排除测试营业时段内的订单
+	rawQuery += ` AND ` + ExcludeTestBusinessSQL("sb")
+
 	rawQuery += `
 		GROUP BY sb.uuid, sb.finish_time
 	`
@@ -3547,6 +3595,9 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 		orderCountQuery += ` AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)`
 	}
 
+	// 排除测试营业时段内的订单
+	orderCountQuery += ` AND ` + ExcludeTestBusinessSQL("sb")
+
 	// 移除 GROUP BY FROM_UNIXTIME，返回原始数据，在应用层进行时区转换和分组
 
 	r.db.Raw(orderCountQuery,
@@ -3573,6 +3624,7 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 			AND accepted_time > 0
 			AND accepted_time >= ?
 			AND accepted_time <= ?
+			AND ` + ExcludeTestBusinessSQL("") + `
 		`
 	r.db.Raw(takeoutRefundQuery,
 		constant.NotDeleted,
@@ -3603,6 +3655,7 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 				OR
 				(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
 			)
+			AND ` + ExcludeTestBusinessSQL("") + `
 	`, completedState, validStatesStr, completedState, completedState)
 	// 移除 GROUP BY FROM_UNIXTIME，返回原始数据，在应用层进行时区转换和分组
 	// 参数：delete_time, 完成时间开始, 完成时间结束, 接单时间开始, 接单时间结束

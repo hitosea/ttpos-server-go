@@ -182,7 +182,7 @@ func (r *kitchenEfficiencyAnalysisRepo) CalculateKitchenEfficiencyAnalysis(start
 			) AS t1
 	*/
 
-	// 查询数据（带分页）
+	// 查询数据（排除测试营业时段的生产订单）
 	dataQuery := `
 				SELECT t1.product_package_uuid,  t1.min , t1.max, t1.total ,t1.count, IF(t1.count = 0,0, t1.total /t1.count) AS avg   FROM (
 			SELECT
@@ -199,6 +199,7 @@ func (r *kitchenEfficiencyAnalysisRepo) CalculateKitchenEfficiencyAnalysis(start
 				AND delete_time = 0
 				AND STATUS = 2
 				AND all_duration > 0
+				AND ` + ExcludeTestBusinessSQL("") + `
 			GROUP BY
 				product_package_uuid
 			) AS t1
