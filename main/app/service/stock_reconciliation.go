@@ -990,7 +990,7 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 		companySetting := ctx.GetCompanySetting()
 		if companySetting.IsErpSalesInvoiceMode() && stockReconciliation.Warehouse != nil {
 			erpStockEntrySrv := NewErpStockEntrySrv(s.dbm)
-			if err := erpStockEntrySrv.GenerateStocktakeSnapshot(tx, stockReconciliation.Uuid, stockReconciliation.Warehouse.ErpCode); err != nil {
+			if err := erpStockEntrySrv.GenerateStocktakeSnapshot(ctx, tx, stockReconciliation.Uuid, stockReconciliation.Warehouse.ErpCode); err != nil {
 				logger.Logger.Error("生成盘点快照失败", zap.Error(err))
 				// 快照生成失败不阻塞盘点流程
 			} else {

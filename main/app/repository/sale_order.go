@@ -23,6 +23,7 @@ type ISaleOrderRepo interface {
 	UpdateSaleOrderErpSalesInvoice(saleOrderUuid uint64, salesInvoiceName string, paymentEntryNames string) error
 	UpdateSaleOrderErpSyncStatus(saleOrderUuid uint64, syncStatus int, salesInvoiceName string, paymentEntryNames string) error
 	UpdateSaleOrderActivity(saleOrderUuid uint64, fullReductionActivityUuid uint64, fullReductionActivityMessage string, activityAmount float64, autoPointsExchange uint) error // 更新销售订单的满减活动信息
+	BatchMarkErpStockDeducted(orderUuids []uint64) error                                                                                                                      // 批量标记订单ERP库存已扣减
 }
 
 // ISaleOrderQueryRepo 销售账单查询
@@ -198,4 +199,14 @@ func (r *saleOrderRepo) UpdateSaleOrderActivity(saleOrderUuid uint64, fullReduct
 		"activity_amount":                 activityAmount,
 		"auto_points_exchange":            autoPointsExchange,
 	}).Error
+}
+
+// BatchMarkErpStockDeducted 批量标记订单ERP库存已扣减
+func (r *saleOrderRepo) BatchMarkErpStockDeducted(orderUuids []uint64) error {
+	if len(orderUuids) == 0 {
+		return nil
+	}
+	return r.db.Model(&model.SaleOrder{}).
+		Where("uuid IN ?", orderUuids).
+		Update("erp_stock_deducted", 1).Error
 }
