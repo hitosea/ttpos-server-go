@@ -2022,5 +2022,6 @@
     "安全库存设置": "Güvenli Stok Ayarı",
     "点餐设置": "Sipariş Ayarları",
     "扫码接单": "QR koduyla sipariş al",
-    "是否显示非自助餐商品": "Self-servis olmayan ürünleri gösterilsin mi"
+    "是否显示非自助餐商品": "Self-servis olmayan ürünleri gösterilsin mi",
+    "当前门店营业状态为：“测试营业”，门店订单数据不计入汇总统计，仅用于内部测试。若确认正式营业请到“商家档案”板块进行开启。": "Mağazanın mevcut çalışma durumu: \"Testte açık\". Mağaza sipariş verileri toplu istatistiklere dahil edilmez, yalnızca dahili testler için kullanılır. Resmi olarak açık olduğunu doğrulamak için lütfen \"İşletme Profili\" bölümünden açın."
 }
