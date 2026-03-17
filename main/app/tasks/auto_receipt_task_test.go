@@ -964,5 +964,43 @@ func TestCalculatePendingItems_UomMismatch(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// groupRulesByShop
+// ---------------------------------------------------------------------------
+
+func TestGroupRulesByShop(t *testing.T) {
+	t.Parallel()
+	ruleShops := []repository.RuleShopJoinResult{
+		{RuleUuid: 1, WarehouseErpCode: "WH-001", DelayDays: 0, ShopCompanyUuid: 100, HeadquarterUuid: 999},
+		{RuleUuid: 2, WarehouseErpCode: "WH-002", DelayDays: 1, ShopCompanyUuid: 100, HeadquarterUuid: 999},
+		{RuleUuid: 1, WarehouseErpCode: "WH-001", DelayDays: 0, ShopCompanyUuid: 200, HeadquarterUuid: 999},
+	}
+
+	result := groupRulesByShop(ruleShops)
+
+	if len(result) != 2 {
+		t.Fatalf("expected 2 shops, got %d", len(result))
+	}
+	if len(result[100]) != 2 {
+		t.Errorf("shop 100 should have 2 rules, got %d", len(result[100]))
+	}
+	if len(result[200]) != 1 {
+		t.Errorf("shop 200 should have 1 rule, got %d", len(result[200]))
+	}
+	// 验证字段映射正确
+	rule := result[100][0]
+	if rule.RuleUuid != 1 || rule.WarehouseErpCode != "WH-001" || rule.DelayDays != 0 || rule.HeadquarterUuid != 999 {
+		t.Errorf("rule field mapping incorrect: %+v", rule)
+	}
+}
+
+func TestGroupRulesByShop_Empty(t *testing.T) {
+	t.Parallel()
+	result := groupRulesByShop(nil)
+	if len(result) != 0 {
+		t.Errorf("empty input should return empty map, got %d", len(result))
+	}
+}
+
 // Verify unused import suppression
 var _ repository.IAutoReceiptLogRepo = (*mockLogRepo)(nil)

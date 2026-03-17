@@ -78,15 +78,7 @@ func (t *AutoReceiptTask) Execute() {
 	}
 
 	// 按门店分组规则
-	shopRulesMap := make(map[uint64][]shopRuleInfo)
-	for _, rs := range ruleShops {
-		shopRulesMap[rs.ShopCompanyUuid] = append(shopRulesMap[rs.ShopCompanyUuid], shopRuleInfo{
-			RuleUuid:         rs.RuleUuid,
-			WarehouseErpCode: rs.WarehouseErpCode,
-			DelayDays:        rs.DelayDays,
-			HeadquarterUuid:  rs.HeadquarterUuid,
-		})
-	}
+	shopRulesMap := groupRulesByShop(ruleShops)
 
 	settingSrv := setting.NewSrvImpl(t.dbm, t.cache)
 
@@ -297,6 +289,20 @@ func (t *AutoReceiptTask) executeAutoReceipt(
 		zap.Uint64("company_uuid", shopUuid),
 		zap.String("dn_name", dn.Name),
 		zap.Uint64("receipt_uuid", result.Uuid))
+}
+
+// groupRulesByShop 按门店UUID分组规则（从 JOIN 结果转换为门店 → 规则列表映射）
+func groupRulesByShop(ruleShops []repository.RuleShopJoinResult) map[uint64][]shopRuleInfo {
+	shopRulesMap := make(map[uint64][]shopRuleInfo)
+	for _, rs := range ruleShops {
+		shopRulesMap[rs.ShopCompanyUuid] = append(shopRulesMap[rs.ShopCompanyUuid], shopRuleInfo{
+			RuleUuid:         rs.RuleUuid,
+			WarehouseErpCode: rs.WarehouseErpCode,
+			DelayDays:        rs.DelayDays,
+			HeadquarterUuid:  rs.HeadquarterUuid,
+		})
+	}
+	return shopRulesMap
 }
 
 // shouldAutoReceipt 判断 DN 是否达到自动收货条件
