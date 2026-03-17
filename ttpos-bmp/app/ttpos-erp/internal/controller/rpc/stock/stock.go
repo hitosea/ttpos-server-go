@@ -114,9 +114,14 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 		// 20260312 任务 40323 品牌采购自动审批：开关开启时，自动创建 DN 单
 		if req.AutoApprove {
 			for _, so := range saleOrders {
+				// 使用 SO 创建时设置的仓库；如果 SO 未返回则回退到请求级别仓库
+				sourceWarehouse := so.SetWarehouse
+				if sourceWarehouse == "" {
+					sourceWarehouse = req.SourceWarehouse
+				}
 				_, err = service.Buying().CreateDeliveryNoteFromInnerSaleOrder(ctx, &dto.CreateDeliveryNoteFromInnerSaleOrderReq{
 					SourceName:      so.Name,
-					SourceWarehouse: req.SourceWarehouse,
+					SourceWarehouse: sourceWarehouse,
 				})
 				if err != nil {
 					g.Log().Warningf(ctx, "自动审批创建发货单失败，回退之前创建的内部销售订单及材料申请:%s, %s\n %v", so.Name, resp.MaterialRequestName, err)

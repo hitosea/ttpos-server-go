@@ -218,6 +218,7 @@ type PurchaseReceiptOrderInfo struct {
 	SupplierName        string             `json:"supplier_name"`         // 供应商名称
 	LocaleWarehouseName dto.LocaleResponse `json:"locale_warehouse_name"` // 来源仓库名称（多语言）
 	IsFromDeliveryNote  bool               `json:"is_from_delivery_note"` // 是否来自DN单据
+	IsAutoReceipt       bool               `json:"is_auto_receipt"`       // 是否自动收货
 }
 
 // PurchaseReceiptItemInfo 收货明细信息
@@ -281,7 +282,8 @@ type ReceiptListOrderInfo struct {
 	Status      int    `json:"status"`       // 状态
 	ErpOrderNo  string `json:"erp_order_no"` // ERP收货单号
 	CreateTime  int64  `json:"create_time"`  // 创建时间
-	IsConfirmed bool   `json:"is_confirmed"` // 是否已确认
+	IsConfirmed   bool   `json:"is_confirmed"`    // 是否已确认
+	IsAutoReceipt bool   `json:"is_auto_receipt"` // 是否自动收货
 }
 
 // ReceiptPendingItemsResp 待收货物品响应 (v2.16.0+)

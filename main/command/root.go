@@ -393,6 +393,11 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 		tasks.NewErpStockEntryTask(dbm, cache).Execute()
 	})
 
+	// 每小时执行自动收货任务（时区前置过滤，仅处理到达本地午夜的门店）
+	_, _ = c.AddFunc("0 0 * * * *", func() {
+		tasks.NewAutoReceiptTask(dbm, cache).Execute()
+	})
+
 	// 启动定时器
 	c.Start()
 }

@@ -22831,6 +22831,363 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/auto_receipt/log/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据日志UUID查询对应门店的收货单详情，跨门店库查询",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.自动收货配置"
+                ],
+                "summary": "获取自动收货记录详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "记录UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.PurchaseReceiptOrderDetailResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/auto_receipt/log/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "分页查询自动收货执行日志，支持按门店和收货时间范围筛选。前端传入日期时间字符串，后端根据总店时区解析为时间戳",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.自动收货配置"
+                ],
+                "summary": "获取自动收货记录列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "门店UUID",
+                        "name": "shop_company_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "收货时间范围-开始（格式: 2006-01-02 15:04:05）",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "收货时间范围-结束（格式: 2006-01-02 15:04:05）",
+                        "name": "end_time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.AutoReceiptLogListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/auto_receipt/rule/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建自动收货规则，关联门店列表。同一门店在同一仓库内仅允许配置一次",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.自动收货配置"
+                ],
+                "summary": "创建自动收货规则",
+                "parameters": [
+                    {
+                        "description": "创建自动收货规则请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CreateAutoReceiptRuleReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/auto_receipt/rule/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "批量删除自动收货规则，级联软删除关联的门店记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.自动收货配置"
+                ],
+                "summary": "删除自动收货规则",
+                "parameters": [
+                    {
+                        "description": "删除自动收货规则请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeleteAutoReceiptRuleReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/auto_receipt/rule/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取当前总部下所有自动收货规则，返回规则及关联门店",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.自动收货配置"
+                ],
+                "summary": "获取自动收货规则列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.AutoReceiptRuleListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/auto_receipt/rule/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "全量更新自动收货规则，包括名称、仓库、延迟天数、状态和门店列表。门店列表为全量替换语义，自动 diff 增删",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.自动收货配置"
+                ],
+                "summary": "更新自动收货规则",
+                "parameters": [
+                    {
+                        "description": "更新自动收货规则请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateAutoReceiptRuleReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/auto_receipt/shop_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取当前总部下所有子门店，已在同仓库其他规则中配置的门店标记为 disabled",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.自动收货配置"
+                ],
+                "summary": "获取可选门店列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "仓库ERP编码",
+                        "name": "warehouse_erp_code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.AutoReceiptShopListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/auto_receipt/warehouse/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取当前总部下所有有ERP编码的仓库，用于创建/编辑规则时选择仓库",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.自动收货配置"
+                ],
+                "summary": "获取发货仓库列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.AutoReceiptWarehouseListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/base": {
             "get": {
                 "security": [
@@ -47236,6 +47593,45 @@ const docTemplate = `{
                 }
             }
         },
+        "req.CreateAutoReceiptRuleReq": {
+            "type": "object",
+            "required": [
+                "locale_name",
+                "shop_uuids",
+                "warehouse_erp_code"
+            ],
+            "properties": {
+                "delay_days": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "locale_name": {
+                    "description": "规则名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "shop_uuids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "warehouse_erp_code": {
+                    "type": "string"
+                }
+            }
+        },
         "req.CreateMemberDineInOrderReq": {
             "type": "object",
             "properties": {
@@ -47395,6 +47791,21 @@ const docTemplate = `{
                 "sign": {
                     "description": "活动二维码sign",
                     "type": "string"
+                }
+            }
+        },
+        "req.DeleteAutoReceiptRuleReq": {
+            "type": "object",
+            "required": [
+                "uuids"
+            ],
+            "properties": {
+                "uuids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -54996,6 +55407,50 @@ const docTemplate = `{
                 }
             }
         },
+        "req.UpdateAutoReceiptRuleReq": {
+            "type": "object",
+            "required": [
+                "locale_name",
+                "shop_uuids",
+                "uuid",
+                "warehouse_erp_code"
+            ],
+            "properties": {
+                "delay_days": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "locale_name": {
+                    "description": "规则名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "shop_uuids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "uuid": {
+                    "type": "integer"
+                },
+                "warehouse_erp_code": {
+                    "description": "发货仓库ERP编码",
+                    "type": "string"
+                }
+            }
+        },
         "req.UpdateBindInfoReq": {
             "type": "object",
             "required": [
@@ -56465,6 +56920,177 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.Attribute"
+                    }
+                }
+            }
+        },
+        "resp.AutoReceiptLogItem": {
+            "type": "object",
+            "properties": {
+                "receipt_erp_order_no": {
+                    "type": "string"
+                },
+                "receipt_order_no": {
+                    "type": "string"
+                },
+                "receipt_order_uuid": {
+                    "type": "integer"
+                },
+                "receipt_time": {
+                    "type": "integer"
+                },
+                "shop_company_uuid": {
+                    "type": "integer"
+                },
+                "shop_name": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.AutoReceiptLogListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.AutoReceiptLogItem"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.AutoReceiptRuleGroup": {
+            "type": "object",
+            "properties": {
+                "delay_days": {
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "$ref": "#/definitions/dto.LocaleResponse"
+                },
+                "shop_count": {
+                    "type": "integer"
+                },
+                "shops": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.AutoReceiptRuleShop"
+                    }
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "uuid": {
+                    "type": "integer"
+                },
+                "warehouse_erp_code": {
+                    "type": "string"
+                },
+                "warehouse_locale_name": {
+                    "$ref": "#/definitions/dto.LocaleResponse"
+                }
+            }
+        },
+        "resp.AutoReceiptRuleListResp": {
+            "type": "object",
+            "properties": {
+                "configured_count": {
+                    "type": "integer"
+                },
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.AutoReceiptRuleGroup"
+                    }
+                },
+                "unconfigured_count": {
+                    "type": "integer"
+                },
+                "unconfigured_shops": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.UnconfiguredShopItem"
+                    }
+                }
+            }
+        },
+        "resp.AutoReceiptRuleShop": {
+            "type": "object",
+            "properties": {
+                "shop_code": {
+                    "type": "string"
+                },
+                "shop_name": {
+                    "type": "string"
+                },
+                "shop_uuid": {
+                    "type": "integer"
+                },
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.AutoReceiptShopItem": {
+            "type": "object",
+            "properties": {
+                "disabled": {
+                    "type": "boolean"
+                },
+                "disabled_reason": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "store_code": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.AutoReceiptShopListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.AutoReceiptShopItem"
+                    }
+                }
+            }
+        },
+        "resp.AutoReceiptWarehouseItem": {
+            "type": "object",
+            "properties": {
+                "erp_code": {
+                    "type": "string"
+                },
+                "locale_name": {
+                    "$ref": "#/definitions/dto.LocaleResponse"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "resp.AutoReceiptWarehouseListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.AutoReceiptWarehouseItem"
                     }
                 }
             }
@@ -65516,6 +66142,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/resp.ReceiptFileInfo"
                     }
                 },
+                "is_auto_receipt": {
+                    "description": "是否自动收货",
+                    "type": "boolean"
+                },
                 "is_from_delivery_note": {
                     "description": "是否来自DN单据",
                     "type": "boolean"
@@ -65591,6 +66221,10 @@ const docTemplate = `{
                 "expect_arrival_time": {
                     "description": "期望到货日期",
                     "type": "integer"
+                },
+                "is_auto_receipt": {
+                    "description": "是否自动收货",
+                    "type": "boolean"
                 },
                 "is_from_delivery_note": {
                     "description": "是否来自DN单据",
@@ -66002,6 +66636,10 @@ const docTemplate = `{
                 "erp_order_no": {
                     "description": "ERP收货单号",
                     "type": "string"
+                },
+                "is_auto_receipt": {
+                    "description": "是否自动收货",
+                    "type": "boolean"
                 },
                 "is_confirmed": {
                     "description": "是否已确认",
@@ -69692,6 +70330,17 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.TransferOrderWarehouseItem"
                     }
+                }
+            }
+        },
+        "resp.UnconfiguredShopItem": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "integer"
                 }
             }
         },

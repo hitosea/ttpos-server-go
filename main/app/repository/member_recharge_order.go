@@ -10,23 +10,23 @@ import (
 
 type IMemberRechargeOrderRepo interface {
 	IMemberRechargeOrderQueryRepo
-	WithMember() DBOption                                                              // 预加载充值会员
-	WithStaff() DBOption                                                               // 预加载收银员
-	WithPaymentOrders() DBOption                                                       // 预加载支付订单
-	WithPaymentOrderPaymentMethod() DBOption                                           // 预加载支付订单.支付方式
-	WithPaymentOrderReturnOrderAmount() DBOption                                       // 预加载支付订单.退款金额
-	WithRechargeOrderOperationLogs() DBOption                                          // 预加载操作日志
-	WithReturnOrders() DBOption                                                        // 关联退货单
-	WithReturnOrderAmount() DBOption                                                   // 关联退货单.退款金额
-	WhereUuid(uuid uint64) DBOption                                                    // Uuid条件
-	WhereStatus(status int) DBOption                                                   // 状态条件
-	WhereOrderNoLike(keyword string) DBOption                                          // 订单编号模糊搜索
-	WhereCreateTimeBetween(start, end int64) DBOption                                  // 创建时间范围
-	WhereTimeBetween(params TimeQueryParams) DBOption                                  // 多个时间范围
-	Create(rechargeOrder model.MemberRechargeOrder) (model.MemberRechargeOrder, error) // 创建充值订单
-	CreateOldRecord(rechargeOrder model.MemberRechargeOrder) error                     // 创建充值订单,仅用于迁移数据
-	Update(uuid uint64, vars map[string]any) error                                     // 更新充值订单
-	UpdateErpProductsInvoiceName(uuid uint64, erpProductsInvoiceName string) error     // 更新充值订单的商品发票名称
+	WithMember() DBOption                                                                           // 预加载充值会员
+	WithStaff() DBOption                                                                            // 预加载收银员
+	WithPaymentOrders() DBOption                                                                    // 预加载支付订单
+	WithPaymentOrderPaymentMethod() DBOption                                                        // 预加载支付订单.支付方式
+	WithPaymentOrderReturnOrderAmount() DBOption                                                    // 预加载支付订单.退款金额
+	WithRechargeOrderOperationLogs() DBOption                                                       // 预加载操作日志
+	WithReturnOrders() DBOption                                                                     // 关联退货单
+	WithReturnOrderAmount() DBOption                                                                // 关联退货单.退款金额
+	WhereUuid(uuid uint64) DBOption                                                                 // Uuid条件
+	WhereStatus(status int) DBOption                                                                // 状态条件
+	WhereOrderNoLike(keyword string) DBOption                                                       // 订单编号模糊搜索
+	WhereCreateTimeBetween(start, end int64) DBOption                                               // 创建时间范围
+	WhereTimeBetween(params TimeQueryParams) DBOption                                               // 多个时间范围
+	Create(rechargeOrder model.MemberRechargeOrder) (model.MemberRechargeOrder, error)              // 创建充值订单
+	CreateOldRecord(rechargeOrder model.MemberRechargeOrder) error                                  // 创建充值订单,仅用于迁移数据
+	Update(uuid uint64, vars map[string]any) error                                                  // 更新充值订单
+	UpdateErpProductsInvoiceName(uuid uint64, erpProductsInvoiceName string) error                  // 更新充值订单的商品发票名称
 	UpdateErpSalesInvoiceInfo(uuid uint64, salesInvoiceName string, paymentEntryNames string) error // 更新充值订单的 SI 名称和 PE 名称
 }
 

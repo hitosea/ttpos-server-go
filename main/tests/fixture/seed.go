@@ -282,14 +282,16 @@ func WithCompanyIsEnableErp(v int) func(*CompanyOptions) {
 
 // CompanySettingOptions contains options for seeding company settings.
 type CompanySettingOptions struct {
-	UUID                  int64
-	CompanyUUID           int64
-	ErpnextSiteCode       string
-	ErpnextPosProfileName string
-	ErpnextAdminEmail     string
-	ErpnextCompanyAbbr    string
-	ErpnextBranchName     string
-	EnableDataManagement  int
+	UUID                     int64
+	CompanyUUID              int64
+	ErpnextSiteCode          string
+	ErpnextPosProfileName    string
+	ErpnextAdminEmail        string
+	ErpnextCompanyAbbr       string
+	ErpnextHeadquarterAbbr   string
+	ErpnextBranchName        string
+	HeadquarterUuid          int64
+	EnableDataManagement     int
 }
 
 // SeedCompanySetting creates a company_setting record in the tenant database.
@@ -308,9 +310,9 @@ func SeedCompanySetting(tb testing.TB, db *sql.DB, opts ...func(*CompanySettingO
 
 	now := time.Now().Unix()
 	_, err := db.Exec(`
-		INSERT INTO ttpos_company_setting (uuid, company_uuid, erpnext_site_code, erpnext_pos_profile_name, erpnext_admin_email, erpnext_company_abbr, erpnext_branch_name, enable_data_management, create_time, update_time, delete_time)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-	`, opt.UUID, opt.CompanyUUID, opt.ErpnextSiteCode, opt.ErpnextPosProfileName, opt.ErpnextAdminEmail, opt.ErpnextCompanyAbbr, opt.ErpnextBranchName, opt.EnableDataManagement, now, now)
+		INSERT INTO ttpos_company_setting (uuid, company_uuid, erpnext_site_code, erpnext_pos_profile_name, erpnext_admin_email, erpnext_company_abbr, erpnext_headquarter_abbr, headquarter_uuid, erpnext_branch_name, enable_data_management, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.CompanyUUID, opt.ErpnextSiteCode, opt.ErpnextPosProfileName, opt.ErpnextAdminEmail, opt.ErpnextCompanyAbbr, opt.ErpnextHeadquarterAbbr, opt.HeadquarterUuid, opt.ErpnextBranchName, opt.EnableDataManagement, now, now)
 
 	if err != nil {
 		tb.Fatalf("failed to seed company_setting: %v", err)
@@ -335,6 +337,24 @@ func WithCompanySettingErpConfig(siteCode, posProfileName, adminEmail, companyAb
 		o.ErpnextAdminEmail = adminEmail
 		o.ErpnextCompanyAbbr = companyAbbr
 		o.ErpnextBranchName = branchName
+	}
+}
+
+// WithCompanySettingHeadquarterConfig configures the company as a chain headquarter.
+// Sets ErpnextSiteCode, ErpnextCompanyAbbr and ErpnextHeadquarterAbbr so that
+// IsHeadquarter() returns true (site_code != "" && company_abbr == headquarter_abbr).
+func WithCompanySettingHeadquarterConfig(siteCode, companyAbbr string) func(*CompanySettingOptions) {
+	return func(o *CompanySettingOptions) {
+		o.ErpnextSiteCode = siteCode
+		o.ErpnextCompanyAbbr = companyAbbr
+		o.ErpnextHeadquarterAbbr = companyAbbr // same as company_abbr = headquarter
+	}
+}
+
+// WithCompanySettingHeadquarterUuid sets the headquarter_uuid for the company setting.
+func WithCompanySettingHeadquarterUuid(uuid int64) func(*CompanySettingOptions) {
+	return func(o *CompanySettingOptions) {
+		o.HeadquarterUuid = uuid
 	}
 }
 

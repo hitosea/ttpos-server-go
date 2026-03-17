@@ -343,6 +343,13 @@ func (*sBuying) CreateDeliveryNoteFromInnerSaleOrder(ctx context.Context, req *d
 	deliveryNote := &erp.DeliveryNote{}
 	j.GetJson("data").Scan(&deliveryNote)
 
+	// 当SO中所有物品都是直采类型(delivered_by_supplier=1)时，
+	// ERPNext的make_delivery_note不会生成DN明细项，此时跳过DN创建
+	if len(deliveryNote.Items) == 0 {
+		g.Log().Infof(ctx, "SO %s 的DN明细为空（可能所有物品均为直采类型），跳过DN创建", req.SourceName)
+		return nil, nil
+	}
+
 	deliveryNote.SetWarehouse = req.SourceWarehouse
 	deliveryNote.SetTargetWarehouse = req.TargetWarehouse
 	deliveryNote.Docstatus = gconv.Int(erp.DocstatusSubmitted)
@@ -988,7 +995,7 @@ func (s *sBuying) CreateSplitSaleOrdersFromPurchaseOrder(ctx context.Context, re
 	var createdOrders []*erp.SaleOrder
 
 	for warehouse, items := range warehouseGroups {
-		so, err := s.createSingleSaleOrder(ctx, soTemplate, items, warehouse, sellingPriceList, taxTemplateName, taxes, req.TaxCategory, false)
+		so, err := s.createSingleSaleOrder(ctx, soTemplate, items, warehouse, sellingPriceList, taxTemplateName, taxes, req.TaxCategory, req.AutoApprove)
 		if err != nil {
 			return createdOrders, gerror.Wrapf(err, "创建仓库 %s 的销售订单失败", warehouse)
 		}
@@ -1052,6 +1059,8 @@ func (s *sBuying) createSingleSaleOrder(
 
 	resultSO := &erp.SaleOrder{}
 	resp.GetJson("data").Scan(&resultSO)
+	// ERPNext 响应不回传 set_warehouse，手动保留创建时设置的仓库
+	resultSO.SetWarehouse = setWarehouse
 
 	if autoSubmit {
 		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, resultSO.Name, erp.DocstatusSubmitted)
