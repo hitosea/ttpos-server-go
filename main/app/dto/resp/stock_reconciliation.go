@@ -15,7 +15,7 @@ type StockReconciliationInfo struct {
 	Uuid                uint64             `json:"uuid"`                  // 盘点单UUID
 	OrderNo             string             `json:"order_no"`              // 单据编号
 	ErpCode             string             `json:"erp_code"`              // ERP盘点单号
-	Type                int                `json:"type"`                  // 盘点类型 1-指定物品盘点 2-全部物品盘点
+	Type                int                `json:"type"`                  // 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点
 	WarehouseUuid       uint64             `json:"warehouse_uuid"`        // 仓库UUID
 	WarehouseLocaleName dto.LocaleResponse `json:"warehouse_locale_name"` // 仓库多语言名称
 	Status              int                `json:"status"`                // 状态 0-已保存 1-已提交 2-已审核 3-已驳回
@@ -29,7 +29,7 @@ type StockReconciliationDetailResp struct {
 	Uuid          uint64                               `json:"uuid"`            // 盘点单UUID
 	OrderNo       string                               `json:"order_no"`        // 单据编号
 	ErpCode       string                               `json:"erp_code"`        // ERP盘点单号
-	Type          int                                  `json:"type"`            // 盘点类型 1-指定物品盘点 2-全部物品盘点
+	Type          int                                  `json:"type"`            // 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点
 	WarehouseUuid uint64                               `json:"warehouse_uuid"`  // 仓库UUID
 	WarehouseName dto.LocaleResponse                   `json:"warehouse_name"`  // 仓库名称
 	Purpose       int                                  `json:"purpose"`         // 盘点目的 1-库存盘点 2-期初盘点
@@ -102,9 +102,10 @@ type StockReconciliationTemplateResp struct {
 
 // StockReconciliationTemplateData 盘点单模板数据
 type StockReconciliationTemplateData struct {
-	Daily   []string `json:"daily"`   // 日盘物品编号列表
-	Weekly  []string `json:"weekly"`  // 周盘物品编号列表
-	Monthly []string `json:"monthly"` // 月盘物品编号列表
+	Daily    []string `json:"daily"`    // 日盘物品编号列表
+	Weekly   []string `json:"weekly"`   // 周盘物品编号列表
+	Monthly  []string `json:"monthly"`  // 月盘物品编号列表
+	Property []string `json:"property"` // 固定资产盘点物品编号列表
 }
 
 // StockReconciliationAnnotationListResp 盘点单批注列表响应

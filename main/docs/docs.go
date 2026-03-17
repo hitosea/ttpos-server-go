@@ -14188,6 +14188,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/order/product_quotation": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "计算商品的价格明细（不校验库存、不写数据库），用于在下单前展示报价信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "订单商品报价",
+                "parameters": [
+                    {
+                        "description": "报价参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderProductQuotationReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "报价结果",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderProductQuotationResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/cashier/order/query_staff": {
             "get": {
                 "security": [
@@ -41183,6 +41237,22 @@ const docTemplate = `{
                     "description": "收银方式 - 店内 (不包含外送和外卖)",
                     "type": "integer"
                 },
+                "all_scan_avg_order_price": {
+                    "description": "点餐方式-扫码平均订单金额",
+                    "type": "number"
+                },
+                "all_scan_max_order_price": {
+                    "description": "点餐方式-扫码最大订单金额",
+                    "type": "number"
+                },
+                "all_scan_min_order_price": {
+                    "description": "点餐方式-扫码最小订单金额",
+                    "type": "number"
+                },
+                "all_scan_order_num": {
+                    "description": "扫码点餐",
+                    "type": "integer"
+                },
                 "all_table_avg_order_price": {
                     "description": "总桌数平均订单金额",
                     "type": "number"
@@ -41576,6 +41646,10 @@ const docTemplate = `{
                     "description": "平均订单金额",
                     "type": "number"
                 },
+                "avg_scan_order_amount": {
+                    "description": "扫码点餐-平均订单金额",
+                    "type": "number"
+                },
                 "avg_takeout_order_amount": {
                     "description": "外送点餐-平均订单金额",
                     "type": "number"
@@ -41604,6 +41678,10 @@ const docTemplate = `{
                     "description": "最大订单金额",
                     "type": "number"
                 },
+                "max_scan_order_amount": {
+                    "description": "扫码点餐-最大订单金额",
+                    "type": "number"
+                },
                 "max_takeout_order_amount": {
                     "description": "外送点餐-最大订单金额",
                     "type": "number"
@@ -41626,6 +41704,10 @@ const docTemplate = `{
                 },
                 "min_order_amount": {
                     "description": "最小订单金额",
+                    "type": "number"
+                },
+                "min_scan_order_amount": {
+                    "description": "扫码点餐-最小订单金额",
                     "type": "number"
                 },
                 "min_takeout_order_amount": {
@@ -41722,6 +41804,10 @@ const docTemplate = `{
                 "total_sale_amount": {
                     "description": "总销售额",
                     "type": "number"
+                },
+                "total_scan_order_num": {
+                    "description": "扫码点餐-订单数",
+                    "type": "integer"
                 },
                 "total_service_fee": {
                     "description": "服务费",
@@ -44898,6 +44984,10 @@ const docTemplate = `{
                 },
                 "is_show_h5": {
                     "description": "是否显示在h5 1-显示 2-不显示",
+                    "type": "boolean"
+                },
+                "is_show_kiosk": {
+                    "description": "是否显示在自助点餐机",
                     "type": "boolean"
                 },
                 "is_show_kitchen": {
@@ -49730,6 +49820,17 @@ const docTemplate = `{
                     "description": "商品价格单价。",
                     "type": "number"
                 },
+                "product_type": {
+                    "description": "商品类型 0-商品 1-套餐",
+                    "type": "integer"
+                },
+                "products": {
+                    "description": "套餐子商品列表（套餐时必填）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductRequest"
+                    }
+                },
                 "sauce_uuid": {
                     "description": "小料ID列表",
                     "type": "array",
@@ -49776,6 +49877,32 @@ const docTemplate = `{
                 "order_product_uuid": {
                     "description": "订单商品UUID",
                     "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.OrderProductQuotationReq": {
+            "type": "object",
+            "required": [
+                "products",
+                "sale_bill_uuid",
+                "sale_order_uuid"
+            ],
+            "properties": {
+                "products": {
+                    "description": "商品信息列表",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/req.ProductParams"
+                    }
                 },
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
@@ -50956,7 +51083,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "shows": {
-                    "description": "显示：123456",
+                    "description": "显示：1234567",
                     "type": "string"
                 },
                 "sku_name": {
@@ -51037,7 +51164,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "shows": {
-                    "description": "显示：123456",
+                    "description": "显示：1234567",
                     "type": "string"
                 },
                 "sku_name": {
@@ -54258,7 +54385,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "type": {
-                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘",
+                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点",
                     "type": "integer"
                 },
                 "uuid": {
@@ -57217,6 +57344,10 @@ const docTemplate = `{
                     "description": "是否开启外送",
                     "type": "boolean"
                 },
+                "is_open_store_scan_order": {
+                    "description": "是否开启会员端堂食订单(扫码点餐到店自取)",
+                    "type": "boolean"
+                },
                 "is_show_inventory": {
                     "description": "是否显示移动管理端进销存功能",
                     "type": "boolean"
@@ -59494,6 +59625,14 @@ const docTemplate = `{
                 "pay_time": {
                     "description": "支付时间",
                     "type": "integer"
+                },
+                "payment_methods": {
+                    "description": "支付方式列表（待支付时返回）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PaymentMethodList"
+                        }
+                    ]
                 },
                 "product_list": {
                     "description": "商品列表",
@@ -62649,6 +62788,34 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.OrderProductQuotationResp": {
+            "type": "object",
+            "properties": {
+                "bill_calc": {
+                    "description": "账单级金额",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.QuotationBillCalc"
+                        }
+                    ]
+                },
+                "order_calc": {
+                    "description": "订单级金额",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.QuotationOrderCalc"
+                        }
+                    ]
+                },
+                "products": {
+                    "description": "商品明细列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.QuotationProduct"
+                    }
+                }
+            }
+        },
         "resp.OrderRemark": {
             "type": "object",
             "properties": {
@@ -65581,6 +65748,161 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.QuotationBillCalc": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "账单总金额",
+                    "type": "number"
+                },
+                "discount_fee": {
+                    "description": "折扣金额",
+                    "type": "number"
+                },
+                "member_discount_fee": {
+                    "description": "会员折扣金额",
+                    "type": "number"
+                },
+                "origin_amount": {
+                    "description": "账单原始金额",
+                    "type": "number"
+                },
+                "product_amount": {
+                    "description": "商品金额",
+                    "type": "number"
+                },
+                "product_original_amount": {
+                    "description": "商品原始金额",
+                    "type": "number"
+                },
+                "service_fee": {
+                    "description": "服务费",
+                    "type": "number"
+                },
+                "tax_fee": {
+                    "description": "税费",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.QuotationOrderCalc": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "应付金额",
+                    "type": "number"
+                },
+                "custom_discount_fee": {
+                    "description": "自定义折扣",
+                    "type": "number"
+                },
+                "member_discount_fee": {
+                    "description": "会员折扣",
+                    "type": "number"
+                },
+                "origin_amount": {
+                    "description": "原始应付金额",
+                    "type": "number"
+                },
+                "product_amount": {
+                    "description": "商品金额（折后）",
+                    "type": "number"
+                },
+                "product_original_amount": {
+                    "description": "商品原始金额",
+                    "type": "number"
+                },
+                "service_fee": {
+                    "description": "服务费",
+                    "type": "number"
+                },
+                "tax_fee": {
+                    "description": "税费",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.QuotationProduct": {
+            "type": "object",
+            "properties": {
+                "add_price": {
+                    "description": "加价金额（套餐子商品加价）",
+                    "type": "number"
+                },
+                "custom_discount_fee": {
+                    "description": "自定义折扣金额",
+                    "type": "number"
+                },
+                "discount_fee": {
+                    "description": "折扣金额合计",
+                    "type": "number"
+                },
+                "flavor_price": {
+                    "description": "规格原价",
+                    "type": "number"
+                },
+                "locale_name": {
+                    "description": "商品名称(多语言)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "member_discount_fee": {
+                    "description": "会员折扣金额",
+                    "type": "number"
+                },
+                "num": {
+                    "description": "数量",
+                    "type": "number"
+                },
+                "origin_total_price": {
+                    "description": "应收金额（折前）",
+                    "type": "number"
+                },
+                "price": {
+                    "description": "最终单价（折后）",
+                    "type": "number"
+                },
+                "product_package_uuid": {
+                    "description": "商品包UUID",
+                    "type": "integer"
+                },
+                "product_price": {
+                    "description": "原始单价（规格原价+加料价+加价）",
+                    "type": "number"
+                },
+                "sale_price": {
+                    "description": "销售价（折前单价）",
+                    "type": "number"
+                },
+                "sale_price_no_tax": {
+                    "description": "销售价（不含税）",
+                    "type": "number"
+                },
+                "sauce_price": {
+                    "description": "加料价格",
+                    "type": "number"
+                },
+                "service_fee": {
+                    "description": "服务费",
+                    "type": "number"
+                },
+                "service_tax_fee": {
+                    "description": "服务费税费",
+                    "type": "number"
+                },
+                "tax_fee": {
+                    "description": "商品税费",
+                    "type": "number"
+                },
+                "total_price": {
+                    "description": "应收金额（折后）",
+                    "type": "number"
+                }
+            }
+        },
         "resp.ReceiptFileInfo": {
             "type": "object",
             "properties": {
@@ -67922,7 +68244,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "type": {
-                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点",
+                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点",
                     "type": "integer"
                 },
                 "update_time": {
@@ -67975,7 +68297,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "type": {
-                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点",
+                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点",
                     "type": "integer"
                 },
                 "uuid": {
@@ -68120,6 +68442,13 @@ const docTemplate = `{
                 },
                 "monthly": {
                     "description": "月盘物品编号列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "property": {
+                    "description": "固定资产盘点物品编号列表",
                     "type": "array",
                     "items": {
                         "type": "string"

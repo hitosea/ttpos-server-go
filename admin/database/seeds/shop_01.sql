@@ -3522,7 +3522,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation` (
   `uuid` bigint NOT NULL DEFAULT 0 COMMENT '盘点单ID',
   `order_no` varchar(255) NOT NULL DEFAULT '' COMMENT '单据编号',
   `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP盘点单号',
-  `type` int(10) NOT NULL DEFAULT 1 COMMENT '盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘',
+  `type` int(10) NOT NULL DEFAULT 1 COMMENT '盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点',
   `warehouse_uuid` bigint NOT NULL DEFAULT 0 COMMENT '仓库ID',
   `purpose` int(10) NOT NULL DEFAULT 1 COMMENT '盘点目的 1-库存盘点 2-期初盘点',
   `status` int(10) NOT NULL DEFAULT 0 COMMENT '状态 0-已保存 1-已提交 2-已审核 3-已驳回',
