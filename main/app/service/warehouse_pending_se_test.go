@@ -354,6 +354,108 @@ func TestGetPendingStockEntryConsumption_SkipsNonPendingOrders(t *testing.T) {
 	assert.Empty(t, result, "No pending orders should be found when all orders are excluded by scope conditions")
 }
 
+// ─── collectSaleOrderConsumption edge cases ───
+
+// TestGetPendingStockEntryConsumption_SaleOrderSkipInvalidMaterial 验证堂食中无效物料被跳过
+// 覆盖 collectSaleOrderConsumption 的 continue 分支 (materialCode=="" || WarehouseUuid==0)
+func TestGetPendingStockEntryConsumption_SaleOrderSkipInvalidMaterial(t *testing.T) {
+	t.Parallel()
+	db := setupPendingSETestDB(t)
+
+	// 待扣减堂食订单
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_sale_order (uuid, status, erp_stock_deducted, erp_sales_invoice_name, delete_time) VALUES (?, ?, ?, ?, ?)",
+		1001, constant.SaleOrderStatusFinish, 0, "ACC-SINV-001", 0,
+	).Error)
+
+	// 物料 5001 有 Code，但 WarehouseUuid=0 → 应跳过
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_material (uuid, code, delete_time) VALUES (?, ?, ?)", 5001, "ITEM-VALID", 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_sale_order_material (uuid, sale_order_uuid, material_uuid, warehouse_uuid, num, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		6001, 1001, 5001, 0, 10.0, 0,
+	).Error)
+
+	// 物料 5002 无关联 Material（material_uuid 不存在）→ materialCode="" → 应跳过
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_sale_order_material (uuid, sale_order_uuid, material_uuid, warehouse_uuid, num, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		6002, 1001, 99999, 100, 5.0, 0,
+	).Error)
+
+	// 物料 5003 有效 → 应包含
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_material (uuid, code, delete_time) VALUES (?, ?, ?)", 5003, "ITEM-OK", 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_sale_order_material (uuid, sale_order_uuid, material_uuid, warehouse_uuid, num, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		6003, 1001, 5003, 200, 3.0, 0,
+	).Error)
+
+	srv := &warehouseSrv{}
+	result, err := srv.getPendingStockEntryConsumption(newTestCtx(), db)
+	require.NoError(t, err)
+
+	// 只有 ITEM-OK 在仓库 200 应该出现
+	assert.Empty(t, result[0], "WarehouseUuid=0 materials should be skipped")
+	assert.InDelta(t, 3.0, result[200]["ITEM-OK"], 0.001)
+	_, hasInvalid := result[100][""]
+	assert.False(t, hasInvalid, "Materials with nil Material record should be skipped")
+}
+
+// ─── collectTakeoutOrderConsumption edge cases ───
+
+// TestGetPendingStockEntryConsumption_TakeoutOnlyWarehouse 验证外卖订单创建新仓库的 map 条目
+// 目的：覆盖 collectTakeoutOrderConsumption 中 result[m.WarehouseUuid] == nil 的 map 初始化分支
+func TestGetPendingStockEntryConsumption_TakeoutOnlyWarehouse(t *testing.T) {
+	t.Parallel()
+	db := setupPendingSETestDB(t)
+
+	// 外卖订单的物料归属仓库 300 (堂食中没有出现过此仓库)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, order_state, erp_sync_status, erp_stock_deducted, erp_pos_invoice_resp, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		2001, value_object.TakeoutOrderStateCompleted, constant.ErpSyncStatusSuccess, 0, `{"name":"SI-001"}`, 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order_material (uuid, takeout_order_uuid, erp_code, warehouse_uuid, num, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		7001, 2001, "ITEM-X", 300, 5.5, 0,
+	).Error)
+
+	srv := &warehouseSrv{}
+	result, err := srv.getPendingStockEntryConsumption(newTestCtx(), db)
+	require.NoError(t, err)
+
+	// 仓库 300 应该被新建 map 并包含 ITEM-X
+	assert.InDelta(t, 5.5, result[300]["ITEM-X"], 0.001, "Takeout-only warehouse should have map entry initialized")
+}
+
+// TestGetPendingStockEntryConsumption_SkipEmptyErpCode 验证 ErpCode 为空或 WarehouseUuid=0 的物料被跳过
+func TestGetPendingStockEntryConsumption_SkipEmptyErpCode(t *testing.T) {
+	t.Parallel()
+	db := setupPendingSETestDB(t)
+
+	// 外卖订单
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, order_state, erp_sync_status, erp_stock_deducted, erp_pos_invoice_resp, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		2001, value_object.TakeoutOrderStateCompleted, constant.ErpSyncStatusSuccess, 0, `{"name":"SI-001"}`, 0,
+	).Error)
+	// 物料 ErpCode 为空 → 应跳过
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order_material (uuid, takeout_order_uuid, erp_code, warehouse_uuid, num, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		7001, 2001, "", 100, 10.0, 0,
+	).Error)
+	// 物料 WarehouseUuid=0 → 应跳过
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order_material (uuid, takeout_order_uuid, erp_code, warehouse_uuid, num, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		7002, 2001, "ITEM-Y", 0, 10.0, 0,
+	).Error)
+
+	srv := &warehouseSrv{}
+	result, err := srv.getPendingStockEntryConsumption(newTestCtx(), db)
+	require.NoError(t, err)
+	assert.Empty(t, result, "Materials with empty ErpCode or WarehouseUuid=0 should be skipped")
+}
+
 // ─── buildSIModeOpts tests ───
 
 func TestBuildSIModeOpts_NotSIMode(t *testing.T) {
