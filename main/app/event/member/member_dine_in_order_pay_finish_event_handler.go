@@ -371,6 +371,14 @@ func markMemberDineInOrderComplete(payload event.PayFinishMemberDineInOrderPaylo
 	// 完成销售账单（参考收银机 FinishSaleBill 流程）
 	if saleBill.CanFinishSaleBill() {
 		saleBill.SetFinishSaleBill("", 0, "") // 会员端无收银员信息
+		// 内存中将sale_order_product改为已接单,让会员端堂食订单的价格计算正确
+		for _, saleOrder := range saleBill.SaleOrders {
+			for index := range saleOrder.SaleOrderProducts {
+				product := saleOrder.SaleOrderProducts[index]
+				product.IsAcceptOrder = constant.OrderProductIsAcceptOrderAccepted
+			}
+		}
+		saleBill.CalcAll()
 	}
 
 	// 保存到数据库

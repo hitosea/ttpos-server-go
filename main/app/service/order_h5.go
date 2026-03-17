@@ -341,6 +341,14 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 			return checkServiceRes, nil
 		}
 	}
+
+	// 会员端堂食订单：接单后标记账单完成并重新计算价格
+	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
+		staff := ctx.GetStaff()
+		saleBill.SetFinishSaleBill(staff.DutyNo, staff.Uuid, staff.GetUserName())
+		saleBill.CalcAll()
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 更新h5订单
 		if err := repository.NewH5OrderRepo(db).UpdateH5OrderRecord(*h5Order); err != nil {
@@ -353,12 +361,13 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 				return errors.WithMessage(err, "更新h5订单商品失败")
 			}
 		}
-		// 更新销售订单商品.将该h5订单的商品变为已接单
-		// for _, saleOrderProduct := range h5Order.SaleOrderProducts {
-		// 	if err := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*saleOrderProduct); err != nil {
-		// 		return errors.WithMessage(err, "将已下单的h5订单商品变为已接单单的h5订单商品失败")
-		// 	}
-		// }
+
+		// 会员端堂食订单：保存账单完成状态和重新计算的价格
+		if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
+			if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
+				return errors.WithMessage(err, "更新账单失败")
+			}
+		}
 
 		return nil
 	}); err != nil {
