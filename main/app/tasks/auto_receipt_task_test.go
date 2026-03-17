@@ -1,14 +1,21 @@
 package tasks
 
 import (
+	"errors"
 	"os"
 	"testing"
 	"time"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/purchase_order"
+	"ttpos-server-go/app/service/rpc/erp"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/logger"
 
-	"ttpos-bmp/app/ttpos-erp/api/delivery_note"
 	"go.uber.org/zap"
+	"ttpos-bmp/app/ttpos-erp/api/delivery_note"
 )
 
 func TestMain(m *testing.M) {
@@ -174,11 +181,11 @@ func TestBuildArrivedQtyMap(t *testing.T) {
 		key  string
 		want float64
 	}{
-		{"MAT-A:KG", 13},  // 10 + 3
-		{"MAT-B:PC", 5},   // 来自多单位
-		{"MAT-B:BOX", 2},  // 来自多单位
-		{"MAT-A:PC", 0},   // 不存在
-		{"MAT-C:KG", 0},   // 不存在
+		{"MAT-A:KG", 13}, // 10 + 3
+		{"MAT-B:PC", 5},  // 来自多单位
+		{"MAT-B:BOX", 2}, // 来自多单位
+		{"MAT-A:PC", 0},  // 不存在
+		{"MAT-C:KG", 0},  // 不存在
 	}
 	for _, tt := range tests {
 		t.Run(tt.key, func(t *testing.T) {
@@ -294,13 +301,13 @@ func TestCalculatePendingItems(t *testing.T) {
 	}
 	orderItems := []model.PurchaseOrderItem{
 		{
-			BaseModel:  model.BaseModel{Uuid: 1001},
+			BaseModel:    model.BaseModel{Uuid: 1001},
 			MaterialCode: "MAT-A",
 			ErpnextUom:   "KG",
-			UnitUuid:      100,
+			UnitUuid:     100,
 		},
 		{
-			BaseModel:  model.BaseModel{Uuid: 1002},
+			BaseModel:    model.BaseModel{Uuid: 1002},
 			MaterialCode: "MAT-B",
 			Units: []model.PurchaseOrderItemUnit{
 				{ErpnextUom: "PC", UnitUuid: 201},
@@ -308,8 +315,8 @@ func TestCalculatePendingItems(t *testing.T) {
 		},
 	}
 	arrivedQtyMap := map[string]float64{
-		"MAT-A:KG": 3,   // 已收3，待收7
-		"MAT-B:PC": 5,   // 已收5，待收0
+		"MAT-A:KG": 3, // 已收3，待收7
+		"MAT-B:PC": 5, // 已收5，待收0
 	}
 
 	items := calculatePendingItems(dn, orderItems, arrivedQtyMap)
@@ -347,7 +354,7 @@ func TestCalculatePendingItems_AllFullyReceived(t *testing.T) {
 			BaseModel:    model.BaseModel{Uuid: 1001},
 			MaterialCode: "MAT-A",
 			ErpnextUom:   "KG",
-			UnitUuid:      100,
+			UnitUuid:     100,
 		},
 	}
 	arrivedQtyMap := map[string]float64{
@@ -373,7 +380,7 @@ func TestCalculatePendingItems_OverReceived(t *testing.T) {
 			BaseModel:    model.BaseModel{Uuid: 1001},
 			MaterialCode: "MAT-A",
 			ErpnextUom:   "KG",
-			UnitUuid:      100,
+			UnitUuid:     100,
 		},
 	}
 	arrivedQtyMap := map[string]float64{
@@ -425,3 +432,537 @@ func TestCalculatePendingItems_MultiUnit(t *testing.T) {
 		t.Errorf("pending qty = %v, want 10", items[0].UnitList[0].Num)
 	}
 }
+
+// ===========================================================================
+// Mock types for processOrder and executeAutoReceipt tests
+// ===========================================================================
+
+// mockErpSrv 仅实现 GetDeliveryNoteList，其他方法通过嵌入接口（调用则 panic）
+type mockErpSrv struct {
+	erp.IErpSrv
+	getDNListFn func(ctx context.Context, req *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error)
+}
+
+func (m *mockErpSrv) GetDeliveryNoteList(ctx context.Context, req *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error) {
+	return m.getDNListFn(ctx, req)
+}
+
+// mockPurchaseOrderSrv 仅实现 CreatePurchaseReceiptOrder
+type mockPurchaseOrderSrv struct {
+	purchase_order.IPurchaseOrderSrv
+	createReceiptFn func(ctx context.Context, req req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error)
+}
+
+func (m *mockPurchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, r req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error) {
+	return m.createReceiptFn(ctx, r)
+}
+
+// mockLogRepo 实现 IAutoReceiptLogRepo
+type mockLogRepo struct {
+	createFn func(log model.AutoReceiptLog) (model.AutoReceiptLog, error)
+}
+
+func (m *mockLogRepo) Create(log model.AutoReceiptLog) (model.AutoReceiptLog, error) {
+	if m.createFn != nil {
+		return m.createFn(log)
+	}
+	return log, nil
+}
+
+func (m *mockLogRepo) GetByUuid(uuid uint64, headquarterUuid uint64) (model.AutoReceiptLog, error) {
+	return model.AutoReceiptLog{}, nil
+}
+
+func (m *mockLogRepo) GetList(headquarterUuid uint64, shopCompanyUuid uint64, startTime int64, endTime int64, pageNo int, pageSize int) ([]model.AutoReceiptLog, int64, error) {
+	return nil, 0, nil
+}
+
+// newTestContext 创建测试用 context
+func newTestContext(companyUuid uint64, headquarterAbbr string) context.Context {
+	companySetting := model.CompanySetting{
+		ErpnextHeadquarterAbbr: headquarterAbbr,
+	}
+	company := model.Company{
+		CompanySetting: &companySetting,
+	}
+	return context.NewContext(
+		context.WithCompanyUuid(companyUuid),
+		context.WithCompany(company),
+		context.WithCompanySetting(companySetting),
+	)
+}
+
+// ---------------------------------------------------------------------------
+// processOrder
+// ---------------------------------------------------------------------------
+
+func TestProcessOrder_GetDNListError(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	order := &model.PurchaseOrder{ErpSaleOrderNo: "SO-001"}
+	rules := []shopRuleInfo{{RuleUuid: 1, WarehouseErpCode: "WH-001"}}
+	loc := time.FixedZone("UTC+8", 8*3600)
+
+	erpMock := &mockErpSrv{
+		getDNListFn: func(_ context.Context, _ *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error) {
+			return nil, errors.New("rpc error")
+		},
+	}
+
+	// Should not panic — just log and return
+	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+}
+
+func TestProcessOrder_EmptyDNList(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	order := &model.PurchaseOrder{ErpSaleOrderNo: "SO-001"}
+	rules := []shopRuleInfo{{RuleUuid: 1, WarehouseErpCode: "WH-001"}}
+	loc := time.FixedZone("UTC+8", 8*3600)
+
+	erpMock := &mockErpSrv{
+		getDNListFn: func(_ context.Context, _ *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error) {
+			return &delivery_note.GetDeliveryNoteListResp{DeliveryNoteList: nil}, nil
+		},
+	}
+
+	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+}
+
+func TestProcessOrder_NilDNListResp(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	order := &model.PurchaseOrder{ErpSaleOrderNo: "SO-001"}
+	rules := []shopRuleInfo{{RuleUuid: 1, WarehouseErpCode: "WH-001"}}
+	loc := time.FixedZone("UTC+8", 8*3600)
+
+	erpMock := &mockErpSrv{
+		getDNListFn: func(_ context.Context, _ *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error) {
+			return nil, nil
+		},
+	}
+
+	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+}
+
+func TestProcessOrder_DNStatusFilter(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	order := &model.PurchaseOrder{
+		BaseModel:      model.BaseModel{Uuid: 2001},
+		ErpSaleOrderNo: "SO-001",
+	}
+	rules := []shopRuleInfo{{RuleUuid: 1, WarehouseErpCode: "WH-001", DelayDays: 0}}
+	loc := time.FixedZone("UTC+8", 8*3600)
+
+	erpMock := &mockErpSrv{
+		getDNListFn: func(_ context.Context, _ *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error) {
+			return &delivery_note.GetDeliveryNoteListResp{
+				DeliveryNoteList: []*delivery_note.DeliveryNote{
+					{Name: "DN-DRAFT", Status: "Draft", Docstatus: 0, SetWarehouse: "WH-001"},
+					{Name: "DN-CANCELLED", Status: "Cancelled", Docstatus: 2, SetWarehouse: "WH-001"},
+				},
+			}, nil
+		},
+	}
+
+	// None of the DNs should be processed (wrong status) — no purchaseOrderSrv call
+	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+}
+
+func TestProcessOrder_NoMatchingWarehouse(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	farPast := time.Now().AddDate(0, 0, -10).Format("2006-01-02")
+	order := &model.PurchaseOrder{
+		BaseModel:      model.BaseModel{Uuid: 2001},
+		ErpSaleOrderNo: "SO-001",
+	}
+	rules := []shopRuleInfo{{RuleUuid: 1, WarehouseErpCode: "WH-001", DelayDays: 0}}
+	loc := time.FixedZone("UTC+8", 8*3600)
+
+	erpMock := &mockErpSrv{
+		getDNListFn: func(_ context.Context, _ *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error) {
+			return &delivery_note.GetDeliveryNoteListResp{
+				DeliveryNoteList: []*delivery_note.DeliveryNote{
+					{Name: "DN-001", Status: "To Bill", Docstatus: 1, SetWarehouse: "WH-999", PostingDate: farPast},
+				},
+			}, nil
+		},
+	}
+
+	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+}
+
+func TestProcessOrder_NotYetDue(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	tomorrow := time.Now().AddDate(0, 0, 1).Format("2006-01-02")
+	order := &model.PurchaseOrder{
+		BaseModel:      model.BaseModel{Uuid: 2001},
+		ErpSaleOrderNo: "SO-001",
+	}
+	rules := []shopRuleInfo{{RuleUuid: 1, WarehouseErpCode: "WH-001", DelayDays: 0}}
+	loc := time.FixedZone("UTC+8", 8*3600)
+
+	erpMock := &mockErpSrv{
+		getDNListFn: func(_ context.Context, _ *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error) {
+			return &delivery_note.GetDeliveryNoteListResp{
+				DeliveryNoteList: []*delivery_note.DeliveryNote{
+					{Name: "DN-001", Status: "To Bill", Docstatus: 1, SetWarehouse: "WH-001", PostingDate: tomorrow},
+				},
+			}, nil
+		},
+	}
+
+	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+}
+
+func TestProcessOrder_AllItemsFullyReceived(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	farPast := time.Now().AddDate(0, 0, -10).Format("2006-01-02")
+	order := &model.PurchaseOrder{
+		BaseModel:      model.BaseModel{Uuid: 2001},
+		ErpSaleOrderNo: "SO-001",
+		Items: []model.PurchaseOrderItem{
+			{BaseModel: model.BaseModel{Uuid: 3001}, MaterialCode: "MAT-A", ErpnextUom: "KG", UnitUuid: 100},
+		},
+	}
+	rules := []shopRuleInfo{{RuleUuid: 1, WarehouseErpCode: "WH-001", DelayDays: 0}}
+	loc := time.FixedZone("UTC+8", 8*3600)
+
+	erpMock := &mockErpSrv{
+		getDNListFn: func(_ context.Context, _ *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error) {
+			return &delivery_note.GetDeliveryNoteListResp{
+				DeliveryNoteList: []*delivery_note.DeliveryNote{
+					{
+						Name: "DN-001", Status: "To Bill", Docstatus: 1, SetWarehouse: "WH-001", PostingDate: farPast,
+						Items: []*delivery_note.DeliveryNoteItem{
+							{ItemCode: "MAT-A", Qty: 10, Uom: "KG"},
+						},
+					},
+				},
+			}, nil
+		},
+	}
+
+	// Already fully received
+	confirmedReceipts := []model.PurchaseReceiptOrder{
+		{
+			DeliveryNoteNo: "DN-001",
+			Items: []model.PurchaseReceiptOrderItem{
+				{MaterialCode: "MAT-A", ErpnextUom: "KG", Num: 10},
+			},
+		},
+	}
+
+	// purchaseOrderSrv should NOT be called
+	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, confirmedReceipts)
+}
+
+func TestProcessOrder_HappyPath_CallsExecuteAutoReceipt(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	farPast := time.Now().AddDate(0, 0, -10).Format("2006-01-02")
+	order := &model.PurchaseOrder{
+		BaseModel:      model.BaseModel{Uuid: 2001},
+		ErpSaleOrderNo: "SO-001",
+		Items: []model.PurchaseOrderItem{
+			{BaseModel: model.BaseModel{Uuid: 3001}, MaterialCode: "MAT-A", ErpnextUom: "KG", UnitUuid: 100},
+		},
+	}
+	rules := []shopRuleInfo{{RuleUuid: 1, WarehouseErpCode: "WH-001", DelayDays: 0, HeadquarterUuid: 999}}
+	loc := time.FixedZone("UTC+8", 8*3600)
+
+	erpMock := &mockErpSrv{
+		getDNListFn: func(_ context.Context, _ *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error) {
+			return &delivery_note.GetDeliveryNoteListResp{
+				DeliveryNoteList: []*delivery_note.DeliveryNote{
+					{
+						Name: "DN-001", Status: "To Bill", Docstatus: 1, SetWarehouse: "WH-001", PostingDate: farPast,
+						Items: []*delivery_note.DeliveryNoteItem{
+							{ItemCode: "MAT-A", Qty: 10, Uom: "KG"},
+						},
+					},
+				},
+			}, nil
+		},
+	}
+
+	var receiptCreated bool
+	poMock := &mockPurchaseOrderSrv{
+		createReceiptFn: func(_ context.Context, r req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error) {
+			receiptCreated = true
+			if r.PurchaseOrderUuid != 2001 {
+				t.Errorf("PurchaseOrderUuid = %d, want 2001", r.PurchaseOrderUuid)
+			}
+			if !r.IsAutoReceipt {
+				t.Error("IsAutoReceipt should be true")
+			}
+			if r.DeliveryNoteNo != "DN-001" {
+				t.Errorf("DeliveryNoteNo = %s, want DN-001", r.DeliveryNoteNo)
+			}
+			if len(r.Items) != 1 {
+				t.Fatalf("expected 1 item, got %d", len(r.Items))
+			}
+			if r.Items[0].UnitList[0].Num != 10 {
+				t.Errorf("pending qty = %v, want 10", r.Items[0].UnitList[0].Num)
+			}
+			return resp.PurchaseReceiptOrderCreateResp{Uuid: 5001, OrderNo: "RO-001"}, nil
+		},
+	}
+
+	var logCreated bool
+	logMock := &mockLogRepo{
+		createFn: func(log model.AutoReceiptLog) (model.AutoReceiptLog, error) {
+			logCreated = true
+			if log.HeadquarterCompanyUuid != 999 {
+				t.Errorf("HeadquarterCompanyUuid = %d, want 999", log.HeadquarterCompanyUuid)
+			}
+			if log.ReceiptOrderUuid != 5001 {
+				t.Errorf("ReceiptOrderUuid = %d, want 5001", log.ReceiptOrderUuid)
+			}
+			if log.ReceiptOrderNo != "RO-001" {
+				t.Errorf("ReceiptOrderNo = %s, want RO-001", log.ReceiptOrderNo)
+			}
+			if log.ReceiptErpOrderNo != "DN-001" {
+				t.Errorf("ReceiptErpOrderNo = %s, want DN-001", log.ReceiptErpOrderNo)
+			}
+			return log, nil
+		},
+	}
+
+	// No confirmed receipts → all 10 KG pending
+	task.processOrder(ctx, order, rules, loc, 100, erpMock, poMock, logMock, nil)
+
+	if !receiptCreated {
+		t.Error("CreatePurchaseReceiptOrder was not called")
+	}
+	if !logCreated {
+		t.Error("logRepo.Create was not called")
+	}
+}
+
+func TestProcessOrder_MultipleDNs_MixedFiltering(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	farPast := time.Now().AddDate(0, 0, -10).Format("2006-01-02")
+	tomorrow := time.Now().AddDate(0, 0, 1).Format("2006-01-02")
+	order := &model.PurchaseOrder{
+		BaseModel:      model.BaseModel{Uuid: 2001},
+		ErpSaleOrderNo: "SO-001",
+		Items: []model.PurchaseOrderItem{
+			{BaseModel: model.BaseModel{Uuid: 3001}, MaterialCode: "MAT-A", ErpnextUom: "KG", UnitUuid: 100},
+		},
+	}
+	rules := []shopRuleInfo{
+		{RuleUuid: 1, WarehouseErpCode: "WH-001", DelayDays: 0, HeadquarterUuid: 999},
+		{RuleUuid: 2, WarehouseErpCode: "WH-002", DelayDays: 0, HeadquarterUuid: 999},
+	}
+	loc := time.FixedZone("UTC+8", 8*3600)
+
+	erpMock := &mockErpSrv{
+		getDNListFn: func(_ context.Context, _ *delivery_note.GetDeliveryNoteListReq) (*delivery_note.GetDeliveryNoteListResp, error) {
+			return &delivery_note.GetDeliveryNoteListResp{
+				DeliveryNoteList: []*delivery_note.DeliveryNote{
+					// DN1: wrong status → skip
+					{Name: "DN-DRAFT", Status: "Draft", Docstatus: 0, SetWarehouse: "WH-001"},
+					// DN2: no matching warehouse → skip
+					{Name: "DN-NOMATCH", Status: "To Bill", Docstatus: 1, SetWarehouse: "WH-999", PostingDate: farPast},
+					// DN3: not yet due → skip
+					{Name: "DN-FUTURE", Status: "To Bill", Docstatus: 1, SetWarehouse: "WH-001", PostingDate: tomorrow},
+					// DN4: valid, should be processed
+					{
+						Name: "DN-GOOD", Status: "To Bill", Docstatus: 1, SetWarehouse: "WH-002", PostingDate: farPast,
+						Items: []*delivery_note.DeliveryNoteItem{
+							{ItemCode: "MAT-A", Qty: 5, Uom: "KG"},
+						},
+					},
+				},
+			}, nil
+		},
+	}
+
+	var createdCount int
+	poMock := &mockPurchaseOrderSrv{
+		createReceiptFn: func(_ context.Context, r req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error) {
+			createdCount++
+			if r.DeliveryNoteNo != "DN-GOOD" {
+				t.Errorf("expected DN-GOOD, got %s", r.DeliveryNoteNo)
+			}
+			return resp.PurchaseReceiptOrderCreateResp{Uuid: 5001, OrderNo: "RO-001"}, nil
+		},
+	}
+	logMock := &mockLogRepo{}
+
+	task.processOrder(ctx, order, rules, loc, 100, erpMock, poMock, logMock, nil)
+
+	if createdCount != 1 {
+		t.Errorf("expected exactly 1 receipt created, got %d", createdCount)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// executeAutoReceipt
+// ---------------------------------------------------------------------------
+
+func TestExecuteAutoReceipt_Success(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	loc := time.FixedZone("UTC+8", 8*3600)
+	dn := &delivery_note.DeliveryNote{Name: "DN-001"}
+	order := &model.PurchaseOrder{BaseModel: model.BaseModel{Uuid: 2001}}
+	pendingItems := []req.PurchaseReceiptItemCreateReq{
+		{PurchaseOrderItemUuid: 3001, UnitList: []req.PurchaseReceiptItemMaterialUnitReq{{Uuid: 100, Num: 7}}},
+	}
+	rule := &shopRuleInfo{RuleUuid: 1, HeadquarterUuid: 999}
+
+	var receiptCalled, logCalled bool
+	poMock := &mockPurchaseOrderSrv{
+		createReceiptFn: func(_ context.Context, r req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error) {
+			receiptCalled = true
+			if r.ReceiptType != 2 {
+				t.Errorf("ReceiptType = %d, want 2", r.ReceiptType)
+			}
+			if !r.IsConfirm {
+				t.Error("IsConfirm should be true")
+			}
+			return resp.PurchaseReceiptOrderCreateResp{Uuid: 5001, OrderNo: "RO-001"}, nil
+		},
+	}
+	logMock := &mockLogRepo{
+		createFn: func(log model.AutoReceiptLog) (model.AutoReceiptLog, error) {
+			logCalled = true
+			if log.ShopCompanyUuid != 100 {
+				t.Errorf("ShopCompanyUuid = %d, want 100", log.ShopCompanyUuid)
+			}
+			return log, nil
+		},
+	}
+
+	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, poMock, logMock)
+
+	if !receiptCalled {
+		t.Error("CreatePurchaseReceiptOrder was not called")
+	}
+	if !logCalled {
+		t.Error("logRepo.Create was not called")
+	}
+}
+
+func TestExecuteAutoReceipt_CreateReceiptFails(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	loc := time.FixedZone("UTC+8", 8*3600)
+	dn := &delivery_note.DeliveryNote{Name: "DN-001"}
+	order := &model.PurchaseOrder{BaseModel: model.BaseModel{Uuid: 2001}}
+	pendingItems := []req.PurchaseReceiptItemCreateReq{
+		{PurchaseOrderItemUuid: 3001, UnitList: []req.PurchaseReceiptItemMaterialUnitReq{{Uuid: 100, Num: 7}}},
+	}
+	rule := &shopRuleInfo{RuleUuid: 1, HeadquarterUuid: 999}
+
+	poMock := &mockPurchaseOrderSrv{
+		createReceiptFn: func(_ context.Context, _ req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error) {
+			return resp.PurchaseReceiptOrderCreateResp{}, errors.New("create failed")
+		},
+	}
+
+	var logCalled bool
+	logMock := &mockLogRepo{
+		createFn: func(log model.AutoReceiptLog) (model.AutoReceiptLog, error) {
+			logCalled = true
+			return log, nil
+		},
+	}
+
+	// Should return early without calling logRepo.Create
+	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, poMock, logMock)
+
+	if logCalled {
+		t.Error("logRepo.Create should NOT be called when receipt creation fails")
+	}
+}
+
+func TestExecuteAutoReceipt_LogCreateFails(t *testing.T) {
+	t.Parallel()
+	task := &AutoReceiptTask{}
+	ctx := newTestContext(100, "HQ")
+	loc := time.FixedZone("UTC+8", 8*3600)
+	dn := &delivery_note.DeliveryNote{Name: "DN-001"}
+	order := &model.PurchaseOrder{BaseModel: model.BaseModel{Uuid: 2001}}
+	pendingItems := []req.PurchaseReceiptItemCreateReq{
+		{PurchaseOrderItemUuid: 3001, UnitList: []req.PurchaseReceiptItemMaterialUnitReq{{Uuid: 100, Num: 7}}},
+	}
+	rule := &shopRuleInfo{RuleUuid: 1, HeadquarterUuid: 999}
+
+	poMock := &mockPurchaseOrderSrv{
+		createReceiptFn: func(_ context.Context, _ req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error) {
+			return resp.PurchaseReceiptOrderCreateResp{Uuid: 5001, OrderNo: "RO-001"}, nil
+		},
+	}
+	logMock := &mockLogRepo{
+		createFn: func(log model.AutoReceiptLog) (model.AutoReceiptLog, error) {
+			return log, errors.New("log create failed")
+		},
+	}
+
+	// Should not panic — just log the error
+	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, poMock, logMock)
+}
+
+// ---------------------------------------------------------------------------
+// NewAutoReceiptTask
+// ---------------------------------------------------------------------------
+
+func TestNewAutoReceiptTask(t *testing.T) {
+	t.Parallel()
+	task := NewAutoReceiptTask(nil, nil)
+	if task == nil {
+		t.Fatal("NewAutoReceiptTask returned nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// calculatePendingItems — UOM mismatch branch
+// ---------------------------------------------------------------------------
+
+func TestCalculatePendingItems_UomMismatch(t *testing.T) {
+	t.Parallel()
+	dn := &delivery_note.DeliveryNote{
+		Name: "DN-001",
+		Items: []*delivery_note.DeliveryNoteItem{
+			{ItemCode: "MAT-A", Qty: 10, Uom: "LITER"}, // UOM 不匹配任何单位
+		},
+	}
+	orderItems := []model.PurchaseOrderItem{
+		{
+			BaseModel:    model.BaseModel{Uuid: 1001},
+			MaterialCode: "MAT-A",
+			ErpnextUom:   "KG",
+			UnitUuid:     100,
+			Units: []model.PurchaseOrderItemUnit{
+				{ErpnextUom: "PC", UnitUuid: 201},
+			},
+		},
+	}
+
+	items := calculatePendingItems(dn, orderItems, map[string]float64{})
+	if len(items) != 0 {
+		t.Errorf("UOM不匹配应跳过, expected 0 items, got %d", len(items))
+	}
+}
+
+// Verify unused import suppression
+var _ repository.IAutoReceiptLogRepo = (*mockLogRepo)(nil)

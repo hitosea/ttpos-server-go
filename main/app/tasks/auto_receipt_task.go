@@ -161,12 +161,28 @@ func (t *AutoReceiptTask) processShop(shopUuid uint64, rules []shopRuleInfo, set
 	}
 
 	// 6. 处理每个采购订单
+	receiptRepo := repository.NewPurchaseReceiptOrderRepo(shopDB)
 	for i := range orders {
 		order := &orders[i]
 		if order.ErpSaleOrderNo == "" {
 			continue
 		}
-		t.processOrder(ctx, order, rules, loc, shopUuid, erpSrv, purchaseOrderSrv, logRepo, shopDB)
+
+		// 获取已确认收货单（status=1）的明细，用于计算已收数量
+		confirmedReceipts, err := receiptRepo.GetList(
+			receiptRepo.WherePurchaseOrderUuid(order.Uuid),
+			receiptRepo.WhereStatusIn([]int{constant.ReceiptOrderStatusReceived}),
+			receiptRepo.WithItems(),
+		)
+		if err != nil {
+			logger.Logger.Error("自动收货任务: 查询已收货记录失败",
+				zap.Uint64("company_uuid", shopUuid),
+				zap.Uint64("purchase_order_uuid", order.Uuid),
+				zap.Error(err))
+			continue
+		}
+
+		t.processOrder(ctx, order, rules, loc, shopUuid, erpSrv, purchaseOrderSrv, logRepo, confirmedReceipts)
 	}
 }
 
@@ -180,7 +196,7 @@ func (t *AutoReceiptTask) processOrder(
 	erpSrv erp.IErpSrv,
 	purchaseOrderSrv purchase_order.IPurchaseOrderSrv,
 	logRepo repository.IAutoReceiptLogRepo,
-	shopDB *gorm.DB,
+	confirmedReceipts []model.PurchaseReceiptOrder,
 ) {
 	// 获取 DN 列表
 	dnListResp, err := erpSrv.GetDeliveryNoteList(ctx, &delivery_note.GetDeliveryNoteListReq{
@@ -196,21 +212,6 @@ func (t *AutoReceiptTask) processOrder(
 		return
 	}
 	if dnListResp == nil || len(dnListResp.DeliveryNoteList) == 0 {
-		return
-	}
-
-	// 获取已确认收货单（status=1）的明细，用于计算已收数量
-	receiptRepo := repository.NewPurchaseReceiptOrderRepo(shopDB)
-	confirmedReceipts, err := receiptRepo.GetList(
-		receiptRepo.WherePurchaseOrderUuid(order.Uuid),
-		receiptRepo.WhereStatusIn([]int{constant.ReceiptOrderStatusReceived}),
-		receiptRepo.WithItems(),
-	)
-	if err != nil {
-		logger.Logger.Error("自动收货任务: 查询已收货记录失败",
-			zap.Uint64("company_uuid", shopUuid),
-			zap.Uint64("purchase_order_uuid", order.Uuid),
-			zap.Error(err))
 		return
 	}
 
