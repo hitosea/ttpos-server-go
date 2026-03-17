@@ -75,8 +75,8 @@ type IOrderQueryRepo interface {
 	GetSaleBillBatchCookingMode(saleBillUuid uint64) (string, error)                                                                           // 获取销售账单当前的分批送厨模式
 	UpdateSaleBillOrderRemark(saleBillUuid uint64, orderRemark string) error                                                                   // 更新销售账单整单备注
 	GetSaleOrderUuids(opts ...DBOption) []uint64
-	GetSaleBillList(opts ...DBOption) []model.SaleBill   // 获取销售账单列表
-	GetSaleBillUuids(opts ...DBOption) []uint64          // 获取销售账单UUID列表
+	GetSaleBillList(opts ...DBOption) []model.SaleBill     // 获取销售账单列表
+	GetSaleBillUuids(opts ...DBOption) []uint64            // 获取销售账单UUID列表
 	SumSaleBillPaymentAmount(opts ...DBOption) float64     // 统计销售账单实付金额合计
 	SumSaleBillRefundAmount(opts ...DBOption) float64      // 统计销售账单退款金额合计
 	CountAndSumSaleBill(opts ...DBOption) (int64, float64) // 统计销售账单数量和实付金额合计

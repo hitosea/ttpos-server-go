@@ -40,15 +40,15 @@ func (s *erpSrv) SaveMaterialRequest(ctx cc.Context, companySetting model.Compan
 		logger.Logger.Error("SaveMaterialRequest-SaveMaterialRequest", zap.Any("err", err))
 		return &stock.SaveMaterialRequestResp{}, errors.New("调用erp接口失败-1001-" + result.GetMessage())
 	}
-	if result.Data != nil {
-		var resp stock.SaveMaterialRequestResp
-		if err := result.Data.UnmarshalTo(&resp); err != nil {
-			logger.Logger.Error("SaveMaterialRequest-UnmarshalTo", zap.Any("err", err))
-			return &stock.SaveMaterialRequestResp{}, err
-		}
-		return &resp, nil
+	if result.Data == nil {
+		return &stock.SaveMaterialRequestResp{}, nil
 	}
-	return &stock.SaveMaterialRequestResp{}, nil
+	var resp stock.SaveMaterialRequestResp
+	if err := result.Data.UnmarshalTo(&resp); err != nil {
+		logger.Logger.Error("SaveMaterialRequest-UnmarshalTo", zap.Any("err", err))
+		return &stock.SaveMaterialRequestResp{}, err
+	}
+	return &resp, nil
 }
 
 // GetMaterialRequestList 获取物品申请单列表

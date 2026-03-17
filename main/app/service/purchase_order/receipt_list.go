@@ -344,12 +344,13 @@ func (s *purchaseOrderSrv) buildReceiptOrderInfo(ctx context.Context, receipt mo
 	}
 
 	return resp.ReceiptListOrderInfo{
-		Uuid:        receipt.Uuid,
-		DisplayNo:   displayNo,
-		Status:      receipt.Status,
-		ErpOrderNo:  receipt.ErpOrderNo,
-		CreateTime:  int64(receipt.CreateTime),
-		IsConfirmed: isConfirmed,
+		Uuid:          receipt.Uuid,
+		DisplayNo:     displayNo,
+		Status:        receipt.Status,
+		ErpOrderNo:    receipt.ErpOrderNo,
+		CreateTime:    int64(receipt.CreateTime),
+		IsConfirmed:   isConfirmed,
+		IsAutoReceipt: receipt.IsAutoReceipt == 1,
 	}
 }
 

@@ -14,8 +14,8 @@ type GetDataManageResp struct {
 
 // DataManageOrderListResp 已选订单列表响应
 type DataManageOrderListResp struct {
-	List []DataManageOrderItem     `json:"list"` // 订单列表
-	Meta DataManageOrderListMeta   `json:"meta"` // Meta信息
+	List []DataManageOrderItem   `json:"list"` // 订单列表
+	Meta DataManageOrderListMeta `json:"meta"` // Meta信息
 }
 
 // DataManageOrderListMeta 已选订单列表Meta信息
@@ -27,19 +27,19 @@ type DataManageOrderListMeta struct {
 
 // DataManageOrderItem 数据管理订单项
 type DataManageOrderItem struct {
-	SaleBillUuid  uint64  `json:"sale_bill_uuid"`  // 销售单UUID
-	OrderNo       string  `json:"order_no"`        // 订单编号
-	CreateTime    int64   `json:"create_time"`     // 创建时间
-	Amount        float64 `json:"amount"`          // 订单金额
-	PaymentAmount float64 `json:"payment_amount"`  // 实付金额
-	PaymentMethod string  `json:"payment_method"`  // 支付方式
-	IsSelected    bool    `json:"is_selected"`     // 是否已选中（用于可选订单列表）
+	SaleBillUuid  uint64  `json:"sale_bill_uuid"` // 销售单UUID
+	OrderNo       string  `json:"order_no"`       // 订单编号
+	CreateTime    int64   `json:"create_time"`    // 创建时间
+	Amount        float64 `json:"amount"`         // 订单金额
+	PaymentAmount float64 `json:"payment_amount"` // 实付金额
+	PaymentMethod string  `json:"payment_method"` // 支付方式
+	IsSelected    bool    `json:"is_selected"`    // 是否已选中（用于可选订单列表）
 }
 
 // DataManageOrderSelectResp 可选订单列表响应
 type DataManageOrderSelectResp struct {
-	List []DataManageOrderItem       `json:"list"` // 订单列表
-	Meta DataManageOrderSelectMeta   `json:"meta"` // Meta信息
+	List []DataManageOrderItem     `json:"list"` // 订单列表
+	Meta DataManageOrderSelectMeta `json:"meta"` // Meta信息
 }
 
 // DataManageOrderSelectMeta 可选订单列表Meta信息

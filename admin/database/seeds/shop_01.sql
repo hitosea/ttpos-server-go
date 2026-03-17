@@ -1239,6 +1239,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order` (
     `target_warehouse_name` TEXT COMMENT '目标仓库名称',
     `delivery_note_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP Delivery Note号',
     `is_from_delivery_note` INT(10) NOT NULL DEFAULT 0 COMMENT '是否来自DN单:0-否 1-是',
+    `is_auto_receipt` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否自动收货:0-否 1-是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
