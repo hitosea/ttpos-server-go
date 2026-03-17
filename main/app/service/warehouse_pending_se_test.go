@@ -491,4 +491,55 @@ func TestBuildSIModeOpts_SIMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, consumption, "Should return non-nil consumption map")
 	assert.Len(t, opts, 2, "Should return 2 extra DB options for SI mode")
+
+	// Invoke the returned opts to cover closure bodies (L1028, L1031)
+	if len(opts) == 2 {
+		mockDB := db.Table("ttpos_sale_order")
+		result1 := opts[0](mockDB)
+		assert.NotNil(t, result1, "First opt should return a valid *gorm.DB")
+		result2 := opts[1](mockDB)
+		assert.NotNil(t, result2, "Second opt should return a valid *gorm.DB")
+	}
+}
+
+// TestOffsetDeductedConsumption_SkipsCodeWithoutDeduction 验证 offsetDeductedConsumption
+// 在遇到没有扣减记录的物品编码时跳过（deducted <= 0 → continue）
+func TestOffsetDeductedConsumption_SkipsCodeWithoutDeduction(t *testing.T) {
+	t.Parallel()
+	db := setupPendingSETestDB(t)
+
+	// 堂食订单含两种物料
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_sale_order (uuid, status, erp_stock_deducted, erp_sales_invoice_name, delete_time) VALUES (?, ?, ?, ?, ?)",
+		1001, constant.SaleOrderStatusFinish, 0, "ACC-SINV-001", 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_material (uuid, code, delete_time) VALUES (?, ?, ?)", 5001, "HAS-DEDUCTION", 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_material (uuid, code, delete_time) VALUES (?, ?, ?)", 5002, "NO-DEDUCTION", 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_sale_order_material (uuid, sale_order_uuid, material_uuid, warehouse_uuid, num, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		6001, 1001, 5001, 100, 10.0, 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_sale_order_material (uuid, sale_order_uuid, material_uuid, warehouse_uuid, num, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		6002, 1001, 5002, 100, 8.0, 0,
+	).Error)
+
+	// 只有 HAS-DEDUCTION 有扣减记录，NO-DEDUCTION 没有 → 触发 continue 分支
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_stock_deduction_log (uuid, sale_order_uuid, erp_code, qty, stock_entry_name, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		8001, 1001, "HAS-DEDUCTION", 3.0, "SE-001", 0,
+	).Error)
+
+	srv := &warehouseSrv{}
+	result, err := srv.getPendingStockEntryConsumption(newTestCtx(), db)
+	require.NoError(t, err)
+
+	// NO-DEDUCTION 应保持原值 8.0（deducted=0 → continue，不扣减）
+	assert.InDelta(t, 8.0, result[100]["NO-DEDUCTION"], 0.001, "Code without deduction should remain unchanged")
+	// HAS-DEDUCTION: 10.0 - 3.0 = 7.0
+	assert.InDelta(t, 7.0, result[100]["HAS-DEDUCTION"], 0.001, "Code with deduction should be reduced")
 }

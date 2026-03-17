@@ -47,7 +47,9 @@ func setupTakeoutOrderTestDB(t *testing.T) *gorm.DB {
 			takeout_order_uuid TEXT DEFAULT '',
 			platform TEXT DEFAULT '',
 			platform_order_id TEXT DEFAULT '',
-			order_time INTEGER DEFAULT 0
+			order_time INTEGER DEFAULT 0,
+			staff_shift_log_uuid INTEGER DEFAULT 0,
+			accepted_by INTEGER DEFAULT 0
 		)
 	`).Error
 	require.NoError(t, err, "Failed to create takeout_order table")
@@ -270,4 +272,104 @@ func TestWhereOrderState_NegativeSkips(t *testing.T) {
 	orders, err := repo.FindAll(repo.WhereOrderState(-1))
 	require.NoError(t, err)
 	assert.Len(t, orders, 6, "Negative state should not filter anything")
+}
+
+// ─── GetList tests ───
+
+func TestGetList_BasicPagination(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	// GetList does Preload("TakeoutOrderItems"), need the table
+	require.NoError(t, db.Exec(`
+		CREATE TABLE ttpos_takeout_order_item (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			takeout_order_uuid INTEGER DEFAULT 0,
+			delete_time INTEGER DEFAULT 0
+		)
+	`).Error)
+	seedTakeoutOrders(t, db)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, total, err := repo.GetList()
+	require.NoError(t, err)
+	assert.Equal(t, int64(6), total, "Should count 6 non-deleted orders")
+	assert.Len(t, orders, 6)
+}
+
+// ─── BatchUpdateStaffShiftLogUuid tests ───
+
+func TestBatchUpdateStaffShiftLogUuid(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	// Insert orders with staff_shift_log_uuid=0
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, staff_shift_log_uuid, accepted_by, delete_time) VALUES (?, ?, ?, ?)",
+		5001, 0, 0, 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, staff_shift_log_uuid, accepted_by, delete_time) VALUES (?, ?, ?, ?)",
+		5002, 0, 0, 0,
+	).Error)
+	// Already assigned
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, staff_shift_log_uuid, accepted_by, delete_time) VALUES (?, ?, ?, ?)",
+		5003, 999, 0, 0,
+	).Error)
+
+	repo := NewTakeoutOrderRepo(db)
+	affected, err := repo.BatchUpdateStaffShiftLogUuid(100, 200)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), affected, "Should update only orders with staff_shift_log_uuid=0")
+}
+
+// ─── GetPendingShiftLogOrders tests ───
+
+func TestGetPendingShiftLogOrders(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, staff_shift_log_uuid, delete_time) VALUES (?, ?, ?)",
+		6001, 0, 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, staff_shift_log_uuid, delete_time) VALUES (?, ?, ?)",
+		6002, 100, 0,
+	).Error)
+
+	repo := NewTakeoutOrderRepo(db)
+	orders, err := repo.GetPendingShiftLogOrders()
+	require.NoError(t, err)
+	assert.Len(t, orders, 1, "Should return only orders with staff_shift_log_uuid=0")
+	assert.Equal(t, uint64(6001), orders[0].Uuid)
+}
+
+// ─── BatchAssignShiftLog tests ───
+
+func TestBatchAssignShiftLog(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, staff_shift_log_uuid, delete_time) VALUES (?, ?, ?)",
+		7001, 0, 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, staff_shift_log_uuid, delete_time) VALUES (?, ?, ?)",
+		7002, 0, 0,
+	).Error)
+
+	repo := NewTakeoutOrderRepo(db)
+	affected, err := repo.BatchAssignShiftLog(300, 400, []uint64{7001, 7002})
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), affected)
+}
+
+func TestBatchAssignShiftLog_EmptyUuids(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	repo := NewTakeoutOrderRepo(db)
+
+	affected, err := repo.BatchAssignShiftLog(300, 400, []uint64{})
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), affected)
 }
