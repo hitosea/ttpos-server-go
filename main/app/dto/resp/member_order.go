@@ -189,6 +189,7 @@ type MemberDineInOrderStatusInfo struct {
 // MemberDineInOrder 会员端堂食订单列表项
 type MemberDineInOrder struct {
 	SaleBillUuid  uint64                      `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64                      `json:"sale_order_uuid"` // 销售订单UUID
 	CompanyName   string                      `json:"company_name"`    // 商家名称
 	SerialNo      string                      `json:"serial_no"`       // 取餐号
 	OrderNo       string                      `json:"order_no"`        // 订单编号
@@ -204,6 +205,7 @@ type MemberDineInOrder struct {
 // GetMemberDineInOrderDetailResp 会员端堂食订单详情响应
 type GetMemberDineInOrderDetailResp struct {
 	SaleBillUuid         uint64                         `json:"sale_bill_uuid"`          // 销售账单UUID
+	SaleOrderUuid        uint64                         `json:"sale_order_uuid"`         // 销售订单UUID
 	CompanyName          string                         `json:"company_name"`            // 商家名称
 	SerialNo             string                         `json:"serial_no"`               // 取餐号
 	OrderNo              string                         `json:"order_no"`                // 订单编号

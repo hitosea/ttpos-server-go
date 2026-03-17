@@ -3210,8 +3210,14 @@ func (s *orderSrv) buildMemberDineInOrderItem(ctx context.Context, saleBill mode
 		amount = 0
 	}
 
+	saleOrderUuid := uint64(0)
+	if saleOrder := saleBill.GetFirstSaleOrder(); saleOrder != nil {
+		saleOrderUuid = saleOrder.Uuid
+	}
+
 	return resp.MemberDineInOrder{
 		SaleBillUuid:  saleBill.Uuid,
+		SaleOrderUuid: saleOrderUuid,
 		CompanyName:   ctx.GetCompany().Name,
 		SerialNo:      saleBill.SerialNo,
 		OrderNo:       saleBill.OrderNo,
@@ -3367,6 +3373,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 
 	return &resp.GetMemberDineInOrderDetailResp{
 		SaleBillUuid:         saleBill.Uuid,
+		SaleOrderUuid:        saleOrder.Uuid,
 		CompanyName:          company.Name,
 		SerialNo:             saleBill.SerialNo,
 		OrderNo:              saleBill.OrderNo,
