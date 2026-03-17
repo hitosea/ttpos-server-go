@@ -3335,6 +3335,36 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		cancelTime = saleOrder.DeleteTime
 	}
 
+	// 待支付状态下获取支付方式列表（用于发起支付）
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+	paymentMethodList := resp.PaymentMethodList{List: make([]resp.PaymentMethodItem, 0)}
+	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() {
+		paymentMethods, _ := repository.NewPaymentMethodRepo(db).GetLianLianPayPaymentMethodList()
+		for _, paymentMethod := range paymentMethods {
+			paymentMethodList.List = append(paymentMethodList.List, resp.PaymentMethodItem{
+				Source:        paymentMethod.Source,
+				SourceText:    constant.PaymentMethodSourceTextMap[paymentMethod.Source],
+				Uuid:          paymentMethod.Uuid,
+				PaymentName:   paymentMethod.GetPaymentName(),
+				PaymentMethod: paymentMethod.GetName(),
+				FeePercent:    paymentMethod.FeePercent,
+				Logo: func() string {
+					if paymentMethod.IsWechatPay() {
+						return baseUrl + "/image/pay/wechat_pay.png"
+					}
+					if paymentMethod.IsAliPay() {
+						return baseUrl + "/image/pay/alipay.png"
+					}
+					if paymentMethod.IsQrPromptPay() {
+						return baseUrl + "/image/pay/qr_prompt_pay.png"
+					}
+					return ""
+				}(),
+				Code: paymentMethod.Code,
+			})
+		}
+	}
+
 	return &resp.GetMemberDineInOrderDetailResp{
 		SaleBillUuid:         saleBill.Uuid,
 		CompanyName:          company.Name,
@@ -3358,6 +3388,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		ProductList: resp.MemberDineInOrderProductList{
 			List: productList,
 		},
+		PaymentMethods: paymentMethodList,
 	}, nil
 }
 
