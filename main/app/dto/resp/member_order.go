@@ -199,6 +199,7 @@ type MemberDineInOrder struct {
 	Amount        float64                     `json:"amount"`          // 订单金额（应付金额）
 	ProductAmount float64                     `json:"product_amount"`  // 商品金额
 	CreateTime    int64                       `json:"create_time"`     // 下单时间
+	SubmitPayTime int64                       `json:"submit_pay_time"` // 提交支付时间
 	ProductList   []MemberOrderProduct        `json:"product_list"`    // 商品列表（前3个）
 }
 
@@ -213,6 +214,7 @@ type GetMemberDineInOrderDetailResp struct {
 	DiningMethod         uint                           `json:"dining_method"`           // 用餐方式：0-堂食 1-打包
 	Remark               string                         `json:"remark"`                  // 订单备注
 	CreateTime           int64                          `json:"create_time"`             // 下单时间
+	SubmitPayTime        int64                          `json:"submit_pay_time"`         // 提交支付时间
 	PayTime              int64                          `json:"pay_time"`                // 支付时间
 	CancelTime           int64                          `json:"cancel_time"`             // 取消时间
 	RemainingPaymentTime int64                          `json:"remaining_payment_time"`  // 剩余支付时间（秒）

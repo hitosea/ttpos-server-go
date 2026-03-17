@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `hide_bill_time` INT(10) NOT NULL DEFAULT 0 COMMENT '隐藏账单(挂单)时间(时间戳)',
     `lock_time` INT(10) NOT NULL DEFAULT 0 COMMENT '锁单时间',
     `production_time` INT(10) NOT NULL DEFAULT 0 COMMENT '首次送厨时间(时间戳)',
+    `submit_pay_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '提交支付时间（时间戳）',
     `finish_time` INT(10) NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳),结账时间',
     `is_kitchen_confirm` INT(10) NOT NULL DEFAULT 0 COMMENT '厨显是否确认退菜，确认后不在厨显端显示已经整单取消的菜品,0:未确认,1:已确认',
     `reverse_settle_count` INT(10) NOT NULL DEFAULT 0 COMMENT '反结账次数',

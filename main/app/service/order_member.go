@@ -492,13 +492,17 @@ func (s *orderSrv) PayDineInOrder(ctx context.Context, request req.PayDineInOrde
 		return errors.New("请选择支付方式")
 	}
 
-	// 更新订单备注
+	// 记录提交支付时间（仅首次提交时记录）
+	if saleBill.SubmitPayTime == 0 {
+		saleBill.SubmitPayTime = time.Now().Unix()
+	}
+
+	// 更新订单备注和提交支付时间
 	if request.Remark != "" {
 		saleBill.Remark = request.Remark
-		// 保存更新
-		if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
-			return errors.WithMessage(err, "更新订单失败")
-		}
+	}
+	if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
+		return errors.WithMessage(err, "更新订单失败")
 	}
 
 	return nil
@@ -3062,6 +3066,10 @@ func (s *orderSrv) buildDineInOrderListQueryOptions(ctx context.Context, billSta
 		},
 		repository.CommonRepo.WhereBySource(constant.SaleBillSourceMember),
 		repository.CommonRepo.WhereByBillType(constant.SaleBillTypeInstant), // 堂食订单 BillType = 1
+		// 只显示已提交支付的订单（调用过 /member/order/dine_in/pay 接口）
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("submit_pay_time > 0")
+		},
 		repository.CommonRepo.SortWithCreateTime("desc"),
 		repository.CommonRepo.Preload(
 			repository.WithPreload{
@@ -3227,6 +3235,7 @@ func (s *orderSrv) buildMemberDineInOrderItem(ctx context.Context, saleBill mode
 		Amount:        amount,
 		ProductAmount: productAmount,
 		CreateTime:    saleBill.CreateTime,
+		SubmitPayTime: saleBill.SubmitPayTime,
 		ProductList:   productList,
 	}
 }
@@ -3381,6 +3390,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		DiningMethod:         saleBill.DiningMethod,
 		Remark:               saleBill.Remark,
 		CreateTime:           saleBill.CreateTime,
+		SubmitPayTime:        saleBill.SubmitPayTime,
 		PayTime:              payTime,
 		CancelTime:           cancelTime,
 		RemainingPaymentTime: remainingPaymentTime,
