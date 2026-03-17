@@ -15,6 +15,8 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
+const errMsgCompanyAbbrRequired = "公司简称不能为空"
+
 // Controller 库存服务控制器
 type Controller struct {
 	stock.UnimplementedStockServiceServer
@@ -51,7 +53,7 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 func validateSaveMaterialReq(req *stock.SaveMaterialRequestReq) string {
 	switch {
 	case len(req.CompanyAbbr) == 0:
-		return "公司简称不能为空"
+		return errMsgCompanyAbbrRequired
 	case len(req.Branch) == 0:
 		return "分公司不能为空"
 	case len(req.Items) == 0:
@@ -186,7 +188,7 @@ func cancelDoc(ctx context.Context, docType, name string) {
 
 func (*Controller) GetMaterialRequestList(ctx context.Context, req *stock.GetMaterialRequestListReq) (*api.ResponseInfo, error) {
 	if len(req.CompanyAbbr) == 0 {
-		return rpc.ApiError("公司简称不能为空"), nil
+		return rpc.ApiError(errMsgCompanyAbbrRequired), nil
 	}
 
 	// 调用服务层获取数据
@@ -205,7 +207,7 @@ func (*Controller) GetMaterialRequestList(ctx context.Context, req *stock.GetMat
 func (*Controller) GetStockLedger(ctx context.Context, req *stock.GetStockLedgerReq) (*api.ResponseInfo, error) {
 	// 参数验证
 	if len(req.CompanyAbbr) == 0 {
-		return rpc.ApiError("公司简称不能为空"), nil
+		return rpc.ApiError(errMsgCompanyAbbrRequired), nil
 	}
 	if len(req.FromDate) == 0 {
 		return rpc.ApiError("开始日期不能为空"), nil
@@ -230,7 +232,7 @@ func (*Controller) GetStockLedger(ctx context.Context, req *stock.GetStockLedger
 func (*Controller) SaveStockReconciliation(ctx context.Context, req *stock.SaveStockReconciliationReq) (*api.ResponseInfo, error) {
 	// 参数验证
 	if len(req.CompanyAbbr) == 0 {
-		return rpc.ApiError("公司简称不能为空"), nil
+		return rpc.ApiError(errMsgCompanyAbbrRequired), nil
 	}
 	if len(req.PostingDate) == 0 {
 		return rpc.ApiError("过账日期不能为空"), nil
@@ -262,7 +264,7 @@ func (*Controller) SaveStockReconciliation(ctx context.Context, req *stock.SaveS
 func (*Controller) GetStockReconciliationList(ctx context.Context, req *stock.GetStockReconciliationListReq) (*api.ResponseInfo, error) {
 	// 参数验证
 	if len(req.CompanyAbbr) == 0 {
-		return rpc.ApiError("公司简称不能为空"), nil
+		return rpc.ApiError(errMsgCompanyAbbrRequired), nil
 	}
 
 	// 调用服务层获取数据
@@ -340,7 +342,7 @@ func (c *Controller) GetBin(ctx context.Context, req *stock.GetBinReq) (*api.Res
 func (*Controller) SubmitStockEntry(ctx context.Context, req *stock.SubmitStockEntryReq) (*api.ResponseInfo, error) {
 	// 参数验证
 	if len(req.CompanyAbbr) == 0 {
-		return rpc.ApiError("公司简称不能为空"), nil
+		return rpc.ApiError(errMsgCompanyAbbrRequired), nil
 	}
 	if len(req.Items) == 0 {
 		return rpc.ApiError("变动明细不能为空"), nil
