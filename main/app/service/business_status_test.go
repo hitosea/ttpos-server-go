@@ -298,3 +298,207 @@ func TestUpdateBusinessStatus_InvalidValues(t *testing.T) {
 		}
 	}
 }
+
+// TestUpdateBusinessStatus_IdempotentTest 已在测试营业状态下再次设为测试营业
+func TestUpdateBusinessStatus_IdempotentTest(t *testing.T) {
+	dbm := setupBusinessStatusTestDB(t)
+	db := dbm.GetDB(constant.MockDB)
+	srv := NewCompanySrv(dbm, &mockBusinessStatusSettingSrv{})
+	ctx := createBusinessStatusTestContext(t, dbm)
+
+	// 先切换到测试营业
+	err := srv.UpdateBusinessStatus(ctx, req.UpdateBusinessStatusReq{
+		Uuid:           constant.MockDB,
+		BusinessStatus: constant.BusinessStatusTest,
+	})
+	if err != nil {
+		t.Fatalf("switch to Test failed: %v", err)
+	}
+
+	// 记录当前时段数
+	var countBefore int64
+	db.Model(&model.BusinessStatusPeriod{}).Where("delete_time = 0").Count(&countBefore)
+
+	// 再次设为测试营业（幂等）
+	err = srv.UpdateBusinessStatus(ctx, req.UpdateBusinessStatusReq{
+		Uuid:           constant.MockDB,
+		BusinessStatus: constant.BusinessStatusTest,
+	})
+	if err != nil {
+		t.Fatalf("idempotent Test→Test should not error: %v", err)
+	}
+
+	// 时段数不应增加
+	var countAfter int64
+	db.Model(&model.BusinessStatusPeriod{}).Where("delete_time = 0").Count(&countAfter)
+	if countAfter != countBefore {
+		t.Errorf("idempotent call should not create new period: before=%d, after=%d", countBefore, countAfter)
+	}
+}
+
+// TestUpdateBusinessStatus_VerifyTimestamps 验证时段的时间戳正确性
+func TestUpdateBusinessStatus_VerifyTimestamps(t *testing.T) {
+	dbm := setupBusinessStatusTestDB(t)
+	db := dbm.GetDB(constant.MockDB)
+	srv := NewCompanySrv(dbm, &mockBusinessStatusSettingSrv{})
+	ctx := createBusinessStatusTestContext(t, dbm)
+
+	beforeSwitch := time.Now().Unix()
+
+	// 切换到测试营业
+	err := srv.UpdateBusinessStatus(ctx, req.UpdateBusinessStatusReq{
+		Uuid:           constant.MockDB,
+		BusinessStatus: constant.BusinessStatusTest,
+	})
+	if err != nil {
+		t.Fatalf("switch to Test failed: %v", err)
+	}
+
+	afterSwitch := time.Now().Unix()
+
+	// 验证 start_time 在合理范围内
+	var period model.BusinessStatusPeriod
+	db.Where("end_time = 0 AND delete_time = 0").First(&period)
+	if period.StartTime < beforeSwitch || period.StartTime > afterSwitch {
+		t.Errorf("start_time %d not in expected range [%d, %d]", period.StartTime, beforeSwitch, afterSwitch)
+	}
+	if period.EndTime != 0 {
+		t.Errorf("expected end_time=0 for open period, got %d", period.EndTime)
+	}
+
+	beforeClose := time.Now().Unix()
+
+	// 切换到正常营业
+	err = srv.UpdateBusinessStatus(ctx, req.UpdateBusinessStatusReq{
+		Uuid:           constant.MockDB,
+		BusinessStatus: constant.BusinessStatusNormal,
+	})
+	if err != nil {
+		t.Fatalf("switch to Normal failed: %v", err)
+	}
+
+	afterClose := time.Now().Unix()
+
+	// 验证 end_time 在合理范围内
+	db.Where("uuid = ?", period.Uuid).First(&period)
+	if period.EndTime < beforeClose || period.EndTime > afterClose {
+		t.Errorf("end_time %d not in expected range [%d, %d]", period.EndTime, beforeClose, afterClose)
+	}
+}
+
+// TestUpdateBusinessStatus_MultipleClosedPeriods 有多条已关闭时段时正常工作
+func TestUpdateBusinessStatus_MultipleClosedPeriods(t *testing.T) {
+	dbm := setupBusinessStatusTestDB(t)
+	db := dbm.GetDB(constant.MockDB)
+	srv := NewCompanySrv(dbm, &mockBusinessStatusSettingSrv{})
+	ctx := createBusinessStatusTestContext(t, dbm)
+
+	// 插入多条已关闭的历史时段
+	db.Exec(`INSERT INTO ttpos_business_status_period (uuid, start_time, end_time, create_time, update_time, delete_time)
+		VALUES (1001, 1000, 2000, 1000, 2000, 0)`)
+	db.Exec(`INSERT INTO ttpos_business_status_period (uuid, start_time, end_time, create_time, update_time, delete_time)
+		VALUES (1002, 3000, 4000, 3000, 4000, 0)`)
+	db.Exec(`INSERT INTO ttpos_business_status_period (uuid, start_time, end_time, create_time, update_time, delete_time)
+		VALUES (1003, 5000, 6000, 5000, 6000, 0)`)
+
+	// 当前应为正常营业（所有时段都已关闭）
+	if getCurrentBusinessStatus(db) != constant.BusinessStatusNormal {
+		t.Fatal("expected Normal status with all periods closed")
+	}
+
+	// 切换到测试营业
+	err := srv.UpdateBusinessStatus(ctx, req.UpdateBusinessStatusReq{
+		Uuid:           constant.MockDB,
+		BusinessStatus: constant.BusinessStatusTest,
+	})
+	if err != nil {
+		t.Fatalf("switch to Test failed: %v", err)
+	}
+
+	// 验证总共 4 条时段（3 已关闭 + 1 未关闭）
+	var total int64
+	db.Model(&model.BusinessStatusPeriod{}).Where("delete_time = 0").Count(&total)
+	if total != 4 {
+		t.Errorf("expected 4 total periods, got %d", total)
+	}
+
+	var openCount int64
+	db.Model(&model.BusinessStatusPeriod{}).Where("end_time = 0 AND delete_time = 0").Count(&openCount)
+	if openCount != 1 {
+		t.Errorf("expected 1 open period, got %d", openCount)
+	}
+}
+
+// TestUpdateBusinessStatus_SwitchToNormalNoOpenPeriod 正常营业时切到正常营业无影响
+func TestUpdateBusinessStatus_SwitchToNormalNoOpenPeriod(t *testing.T) {
+	dbm := setupBusinessStatusTestDB(t)
+	db := dbm.GetDB(constant.MockDB)
+	srv := NewCompanySrv(dbm, &mockBusinessStatusSettingSrv{})
+	ctx := createBusinessStatusTestContext(t, dbm)
+
+	// 插入已关闭的时段
+	db.Exec(`INSERT INTO ttpos_business_status_period (uuid, start_time, end_time, create_time, update_time, delete_time)
+		VALUES (1001, 1000, 2000, 1000, 2000, 0)`)
+
+	// 已经是正常营业，再次设为正常营业
+	err := srv.UpdateBusinessStatus(ctx, req.UpdateBusinessStatusReq{
+		Uuid:           constant.MockDB,
+		BusinessStatus: constant.BusinessStatusNormal,
+	})
+	if err != nil {
+		t.Fatalf("should not error: %v", err)
+	}
+
+	// 已关闭的时段不应被修改
+	var period model.BusinessStatusPeriod
+	db.Where("uuid = 1001").First(&period)
+	if period.EndTime != 2000 {
+		t.Errorf("closed period should remain unchanged, got end_time %d", period.EndTime)
+	}
+}
+
+// TestUpdateBusinessStatus_SequentialSwitches 快速连续切换
+func TestUpdateBusinessStatus_SequentialSwitches(t *testing.T) {
+	dbm := setupBusinessStatusTestDB(t)
+	db := dbm.GetDB(constant.MockDB)
+	srv := NewCompanySrv(dbm, &mockBusinessStatusSettingSrv{})
+	ctx := createBusinessStatusTestContext(t, dbm)
+
+	// 执行 5 次来回切换
+	for i := 0; i < 5; i++ {
+		err := srv.UpdateBusinessStatus(ctx, req.UpdateBusinessStatusReq{
+			Uuid:           constant.MockDB,
+			BusinessStatus: constant.BusinessStatusTest,
+		})
+		if err != nil {
+			t.Fatalf("iteration %d: switch to Test failed: %v", i, err)
+		}
+		if getCurrentBusinessStatus(db) != constant.BusinessStatusTest {
+			t.Fatalf("iteration %d: expected Test after switch", i)
+		}
+
+		err = srv.UpdateBusinessStatus(ctx, req.UpdateBusinessStatusReq{
+			Uuid:           constant.MockDB,
+			BusinessStatus: constant.BusinessStatusNormal,
+		})
+		if err != nil {
+			t.Fatalf("iteration %d: switch to Normal failed: %v", i, err)
+		}
+		if getCurrentBusinessStatus(db) != constant.BusinessStatusNormal {
+			t.Fatalf("iteration %d: expected Normal after switch", i)
+		}
+	}
+
+	// 应有 5 条已关闭时段、0 条未关闭时段
+	var closedCount int64
+	db.Model(&model.BusinessStatusPeriod{}).Where("end_time > 0 AND delete_time = 0").Count(&closedCount)
+	if closedCount != 5 {
+		t.Errorf("expected 5 closed periods, got %d", closedCount)
+	}
+
+	var openCount int64
+	db.Model(&model.BusinessStatusPeriod{}).Where("end_time = 0 AND delete_time = 0").Count(&openCount)
+	if openCount != 0 {
+		t.Errorf("expected 0 open periods, got %d", openCount)
+	}
+}
