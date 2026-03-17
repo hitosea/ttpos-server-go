@@ -579,3 +579,22 @@ func TestBuildSIModeOpts_DBError(t *testing.T) {
 	assert.Nil(t, consumption)
 	assert.Nil(t, opts)
 }
+
+// TestQueryDeductedByCode_DBError 验证查询失败时优雅降级返回空 map
+func TestQueryDeductedByCode_DBError(t *testing.T) {
+	t.Parallel()
+	// DB without stock_deduction_log table → query will fail
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+		SkipDefaultTransaction:                   true,
+		NamingStrategy: schema.NamingStrategy{
+			TablePrefix:   "ttpos_",
+			SingularTable: true,
+		},
+	})
+	require.NoError(t, err)
+
+	srv := &warehouseSrv{}
+	result := srv.queryDeductedByCode(newTestCtx(), db, []uint64{1001, 1002})
+	assert.Empty(t, result, "DB error should return empty map (graceful fallback)")
+}
