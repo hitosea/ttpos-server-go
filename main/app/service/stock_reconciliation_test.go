@@ -1168,6 +1168,167 @@ func TestApproveStockReconciliationInERP_EmptyErpCode(t *testing.T) {
 	assert.NoError(t, err, "Should return nil when ErpCode is empty")
 }
 
+// ─── ApproveStockReconciliation tests ───
+
+// setupApproveTestDB extends setupLoadValidateTestDB with tables needed for
+// the full approve flow (warehouse_item, warehouse_in_out_log).
+func setupApproveTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	db := setupLoadValidateTestDB(t)
+	for _, ddl := range []string{
+		`CREATE TABLE ttpos_warehouse_item (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			create_time INTEGER DEFAULT 0,
+			update_time INTEGER DEFAULT 0,
+			delete_time INTEGER DEFAULT 0,
+			warehouse_uuid INTEGER DEFAULT 0,
+			material_uuid INTEGER DEFAULT 0,
+			material_code TEXT DEFAULT '',
+			stock REAL DEFAULT 0,
+			reserved_stock REAL DEFAULT 0,
+			valuation REAL DEFAULT 0
+		)`,
+		`CREATE TABLE ttpos_warehouse_in_out_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			create_time INTEGER DEFAULT 0,
+			update_time INTEGER DEFAULT 0,
+			delete_time INTEGER DEFAULT 0,
+			log_type INTEGER DEFAULT 0,
+			scene INTEGER DEFAULT 0,
+			warehouse_uuid INTEGER DEFAULT 0,
+			material_uuid INTEGER DEFAULT 0,
+			material_name TEXT DEFAULT '',
+			material_base_unit_uuid INTEGER DEFAULT 0,
+			material_base_unit_name TEXT DEFAULT '',
+			num REAL DEFAULT 0,
+			price REAL DEFAULT 0,
+			amount REAL DEFAULT 0,
+			supplier_uuid INTEGER DEFAULT 0,
+			supplier_erp_code TEXT DEFAULT '',
+			supplier_name TEXT DEFAULT '',
+			order_no TEXT DEFAULT '',
+			other_org_uuid INTEGER DEFAULT 0,
+			other_org_type INTEGER DEFAULT 0,
+			other_org_name TEXT DEFAULT '',
+			opening_hours TEXT DEFAULT ''
+		)`,
+	} {
+		require.NoError(t, db.Exec(ddl).Error)
+	}
+	return db
+}
+
+func TestApproveStockReconciliation_NotFound(t *testing.T) {
+	t.Parallel()
+	db := setupApproveTestDB(t)
+	srv := newSrvWithLock()
+	ctx := newTestContext("2.10.0", "zh")
+	ctx.SetDB(db)
+
+	resp, err := srv.ApproveStockReconciliation(ctx, req.StockReconciliationApproveReq{Uuid: 99999})
+	assert.Nil(t, resp)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "盘点单不存在")
+}
+
+func TestApproveStockReconciliation_DisabledMaterial(t *testing.T) {
+	t.Parallel()
+	db := setupApproveTestDB(t)
+	srv := newSrvWithLock()
+	ctx := newTestContext("2.10.0", "zh")
+	ctx.SetDB(db)
+
+	// Active warehouse
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_warehouse (uuid, status, delete_time) VALUES (?, ?, ?)", 100, 1, 0,
+	).Error)
+	// Multi-language name
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_multi_language_name (uuid, zh_name, en_name) VALUES (?, ?, ?)", 5001, "测试物品", "TestItem",
+	).Error)
+	// Disabled material (status=0)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_material (uuid, code, status, multi_language_name_uuid, unit_uuid, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		3001, "MAT-001", 0, 5001, 0, 0,
+	).Error)
+	// Submitted stock reconciliation
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_stock_reconciliation (uuid, status, warehouse_uuid, delete_time) VALUES (?, ?, ?, ?)",
+		1001, constant.StockReconciliationStatusSubmitted, 100, 0,
+	).Error)
+	// Reconciliation item referencing the disabled material
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_stock_reconciliation_item (uuid, stock_reconciliation_uuid, material_uuid, material_name, counted_quantity, booked_quantity, delete_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		2001, 1001, 3001, "测试物品", 10.0, 8.0, 0,
+	).Error)
+
+	resp, err := srv.ApproveStockReconciliation(ctx, req.StockReconciliationApproveReq{Uuid: 1001})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "请修改物品状态")
+	assert.NotEmpty(t, resp, "Should return disabled material names")
+}
+
+func TestApproveStockReconciliation_Success_NoErp(t *testing.T) {
+	t.Parallel()
+	db := setupApproveTestDB(t)
+	srv := newSrvWithLock()
+	ctx := newTestContext("2.10.0", "zh")
+	ctx.SetDB(db)
+	ctx.SetCompany(model.Company{IsEnableErp: 0}) // skip ERP call
+
+	// Active warehouse
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_warehouse (uuid, status, delete_time) VALUES (?, ?, ?)", 100, 1, 0,
+	).Error)
+	// Multi-language name + unit
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_multi_language_name (uuid, zh_name) VALUES (?, ?)", 5001, "物品A",
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_material_unit (uuid, material_uuid, name, is_default) VALUES (?, ?, ?, ?)", 6001, 3001, "kg", 1,
+	).Error)
+	// Active material (status=1)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_material (uuid, code, status, multi_language_name_uuid, unit_uuid, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		3001, "MAT-001", 1, 5001, 6001, 0,
+	).Error)
+	// Submitted stock reconciliation (no erp_code → approveStockReconciliationInERP skips)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_stock_reconciliation (uuid, status, warehouse_uuid, order_no, erp_code, delete_time) VALUES (?, ?, ?, ?, ?, ?)",
+		1001, constant.StockReconciliationStatusSubmitted, 100, "SR-001", "", 0,
+	).Error)
+	// Reconciliation item
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_stock_reconciliation_item (uuid, stock_reconciliation_uuid, material_uuid, material_name, counted_quantity, booked_quantity, delete_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		2001, 1001, 3001, "物品A", 15.0, 10.0, 0,
+	).Error)
+
+	resp, err := srv.ApproveStockReconciliation(ctx, req.StockReconciliationApproveReq{
+		Uuid:       1001,
+		Annotation: "审核通过",
+	})
+	require.NoError(t, err)
+	assert.Nil(t, resp, "Should return nil on success")
+
+	// Verify status updated to approved
+	var status int
+	db.Table("ttpos_stock_reconciliation").Where("uuid = 1001").Select("status").Scan(&status)
+	assert.Equal(t, constant.StockReconciliationStatusApproved, status)
+
+	// Verify annotation created
+	var annotation model.StockReconciliationAnnotation
+	db.Table("ttpos_stock_reconciliation_annotation").Where("stock_reconciliation_uuid = 1001").First(&annotation)
+	assert.Equal(t, "审核通过", annotation.Content)
+	assert.Equal(t, constant.StockReconciliationAnnotationTypeApprove, annotation.AnnotationType)
+
+	// Verify warehouse item created (material was not in warehouse before)
+	var warehouseItem model.WarehouseItem
+	db.Table("ttpos_warehouse_item").Where("warehouse_uuid = 100 AND material_uuid = 3001").First(&warehouseItem)
+	assert.Equal(t, 15.0, warehouseItem.Stock, "Stock should be set to counted quantity")
+}
+
 // ─── RejectStockReconciliation tests ───
 
 func newSrvWithLock() *stockReconciliationSrv {
