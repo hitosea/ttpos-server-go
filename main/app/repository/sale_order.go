@@ -35,6 +35,8 @@ type ISaleOrderQueryRepo interface {
 	GetSaleOrderList(opts ...DBOption) ([]model.SaleOrder, error)                   // 查询销售订单列表
 	CountSaleOrders(opts ...DBOption) (int64, error)                                // 统计销售订单数量
 	SumPaymentAmount(opts ...DBOption) (float64, error)                             // 统计支付金额总和
+	WherePendingStockEntry() DBOption                                               // 待 Stock Entry 扣减的已完成订单 scope
+	WhereSettledWithInvoice() DBOption                                              // 已创建 Sales Invoice 的已完成订单 scope
 }
 
 type saleOrderRepo struct {
@@ -168,6 +170,25 @@ func (r *saleOrderRepo) GetSaleOrderList(opts ...DBOption) ([]model.SaleOrder, e
 	}
 	err := db.Find(&saleOrders).Error
 	return saleOrders, err
+}
+
+// WherePendingStockEntry 查询待 Stock Entry 扣减的已完成堂食订单
+// 条件：erp_stock_deducted=0、已创建 Sales Invoice、已结账、未删除
+func (r *saleOrderRepo) WherePendingStockEntry() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erp_stock_deducted = ?", 0).
+			Where("erp_sales_invoice_name != ''").
+			Where("status = ?", constant.SaleOrderStatusFinish).
+			Where("delete_time = 0")
+	}
+}
+
+// WhereSettledWithInvoice 查询已创建 Sales Invoice 的已完成订单（不区分 erp_stock_deducted 状态）
+// 用于 SI 模式下排除已同步 ERPNext 的订单
+func (r *saleOrderRepo) WhereSettledWithInvoice() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status = ? AND erp_sales_invoice_name != '' AND delete_time = 0", constant.SaleOrderStatusFinish)
+	}
 }
 
 // CountSaleOrders 统计销售订单数量
