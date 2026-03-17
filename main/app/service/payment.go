@@ -533,8 +533,7 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 				)
 				if err == nil {
 					// 根据订单来源分发不同的事件
-					switch saleBill.Source {
-					case constant.SaleBillSourceMember:
+					if saleBill.Source == constant.SaleBillSourceMember {
 						// 会员端堂食订单支付成功，发布事件
 						event.NewSystemBus().PublishPayFinishMemberDineInOrderEvent(event.PayFinishMemberDineInOrderPayload{
 							BasePayload: event.BasePayload{
