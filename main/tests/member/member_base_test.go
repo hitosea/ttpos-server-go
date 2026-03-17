@@ -196,7 +196,8 @@ func Test_Member_BaseInfo_IsStoreResting_Enabled_WithinHours(t *testing.T) {
 	}
 }
 
-// Test_Member_BaseInfo_IsStoreResting_NoSetting 验证未设置门店点餐配置时 is_store_resting=true
+// Test_Member_BaseInfo_IsStoreResting_NoSetting 验证未设置门店点餐配置时 is_store_resting=false
+// 未配置 store_scan_order 时默认 IsEnabled=1（启用），且无营业时间视为全天营业，因此不休息
 // Route: GET /api/v1/member/base
 func Test_Member_BaseInfo_IsStoreResting_NoSetting(t *testing.T) {
 	// 1. 创建租户数据库
@@ -211,7 +212,7 @@ func Test_Member_BaseInfo_IsStoreResting_NoSetting(t *testing.T) {
 	// 3. 创建会员
 	member := fixture.SeedMember(t, db)
 
-	// 4. 不写入 store_scan_order 设置（默认 is_enabled=0）
+	// 4. 不写入 store_scan_order 设置（默认 IsEnabled=1，启用状态）
 
 	// 5. 生成会员 token
 	token := fixture.GenerateMemberToken(t, companyUUID, fmt.Sprintf("%d", member.UUID))
@@ -223,7 +224,7 @@ func Test_Member_BaseInfo_IsStoreResting_NoSetting(t *testing.T) {
 	// 7. 断言成功
 	resp.AssertOK(t).AssertSuccess(t)
 
-	// 8. 验证 is_store_resting = true（未配置 = 未启用 = 休息中）
+	// 8. 验证 is_store_resting = false（默认启用 + 无营业时间=全天营业 → 不休息）
 	apiResp := resp.ParseAPIResponse(t)
 	var result struct {
 		Member struct {
@@ -233,8 +234,8 @@ func Test_Member_BaseInfo_IsStoreResting_NoSetting(t *testing.T) {
 	if err := json.Unmarshal(apiResp.Data, &result); err != nil {
 		t.Fatalf("failed to unmarshal response data: %v", err)
 	}
-	if !result.Member.IsStoreResting {
-		t.Errorf("expected is_store_resting=true when no store_scan_order setting exists, got false")
+	if result.Member.IsStoreResting {
+		t.Errorf("expected is_store_resting=false when no store_scan_order setting exists (default enabled + no opening_hours = all day), got true")
 	}
 }
 

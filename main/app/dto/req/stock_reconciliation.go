@@ -37,7 +37,7 @@ type StockReconciliationSaveReq struct {
 	SubmitAfterSave bool                          `json:"submit_after_save"` // 是否在保存后提交
 	WarehouseUuid   uint64                        `json:"warehouse_uuid"`    // 仓库UUID
 	Purpose         int                           `json:"purpose"`           // 盘点目的 1-库存盘点 2-期初盘点
-	Type            int                           `json:"type"`              // 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘
+	Type            int                           `json:"type"`              // 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点
 	Items           []*StockReconciliationItemReq `json:"items"`             // 盘点单物品明细
 
 	isResubmit bool // 是否重新提交（内部使用，不暴露到接口文档）
