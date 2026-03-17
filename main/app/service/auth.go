@@ -673,6 +673,12 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
 	}
+	// 从时段表推导营业状态
+	businessStatus := constant.BusinessStatusNormal
+	periodRepo := repository.NewBusinessStatusPeriodRepo(s.dbm.GetDB(company.Uuid))
+	if openPeriod, _ := periodRepo.GetOpenPeriod(); openPeriod != nil {
+		businessStatus = constant.BusinessStatusTest
+	}
 	return resp.CashierBase{
 		Username:     staff.Username,
 		CashierUuid:  staff.Uuid,
@@ -699,6 +705,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 			IsOpenDataManagement:  companySetting.IsOpenDataManagement(),
 			IsOpenGrabDelivery:    companySetting.IsOpenGrabDelivery(),
 			IsOpenLINEMANDelivery: companySetting.IsOpenLINEMANDelivery(),
+			BusinessStatus:        businessStatus,
 		},
 		CloudBasic: cloudBasicSetting,
 		Printer:    printerSetting,

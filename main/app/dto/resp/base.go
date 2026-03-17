@@ -153,6 +153,7 @@ type Company struct {
 	IsOpenGrabDelivery    bool   `json:"is_open_grab_delivery"`    // 是否开启Grab外卖功能
 	IsOpenLINEMANDelivery bool   `json:"is_open_lineman_delivery"` // 是否开启LINE MAN外卖功能
 	StoreCode             string `json:"store_code"`               // 店铺编码，shop端用于显示
+	BusinessStatus        int    `json:"business_status"`          // 营业状态: 1-测试营业 2-正常营业
 }
 
 type Permission struct {

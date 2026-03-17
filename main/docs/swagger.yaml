@@ -11165,6 +11165,9 @@ definitions:
     type: object
   resp.Company:
     properties:
+      business_status:
+        description: '营业状态: 1-测试营业 2-正常营业'
+        type: integer
       expire_time:
         description: 店铺到期时间，0表示没有过期时间
         type: integer
