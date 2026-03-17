@@ -1,12 +1,14 @@
 package service
 
 import (
+	stderrors "errors"
 	"strings"
 	"testing"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -776,4 +778,140 @@ func TestProcessStockReconciliationItems_SkipsDeletedItems(t *testing.T) {
 	var logCount int64
 	db.Table("ttpos_warehouse_in_out_log").Count(&logCount)
 	assert.Equal(t, int64(0), logCount)
+}
+
+// ─── helper: create test context ───
+
+func newTestContext(version, lang string) context.Context {
+	ctx := context.NewContext(
+		context.WithLanguage(lang),
+	)
+	ctx.SetVersion(version)
+	return ctx
+}
+
+// ─── handleErpApproveError tests ───
+
+func TestHandleErpApproveError_DisabledWarehouse_V2100(t *testing.T) {
+	t.Parallel()
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.10.0", "zh")
+	sr := &model.StockReconciliation{}
+
+	err := srv.handleErpApproveError(ctx, sr, stderrors.New("Disabled Warehouse WH-001"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "仓库状态已关闭")
+}
+
+func TestHandleErpApproveError_DisabledWarehouse_OldVersion(t *testing.T) {
+	t.Parallel()
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.9.0", "zh")
+	sr := &model.StockReconciliation{}
+
+	// Old version should NOT trigger the Disabled Warehouse branch
+	err := srv.handleErpApproveError(ctx, sr, stderrors.New("Disabled Warehouse WH-001"))
+	require.Error(t, err)
+	// Falls through to extractName which returns "" → generic error
+	assert.Contains(t, err.Error(), errMsgApproveReconcilation)
+}
+
+func TestHandleErpApproveError_ItemDisabled_WithMatch(t *testing.T) {
+	t.Parallel()
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.10.0", "zh")
+	sr := &model.StockReconciliation{
+		StockReconciliationItems: []*model.StockReconciliationItem{
+			{
+				Material: &model.Material{
+					Code: "MAT-001",
+					MultiLanguageName: model.MultiLanguageName{
+						ZhName: "鸡翅",
+					},
+				},
+			},
+		},
+	}
+
+	err := srv.handleErpApproveError(ctx, sr, stderrors.New("Item MAT-001 is disabled"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "鸡翅")
+}
+
+func TestHandleErpApproveError_ItemDisabled_NoMatch(t *testing.T) {
+	t.Parallel()
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.10.0", "zh")
+	sr := &model.StockReconciliation{
+		StockReconciliationItems: []*model.StockReconciliationItem{
+			{
+				Material: &model.Material{
+					Code:              "OTHER",
+					MultiLanguageName: model.MultiLanguageName{},
+				},
+			},
+		},
+	}
+
+	err := srv.handleErpApproveError(ctx, sr, stderrors.New("Item MAT-999 is disabled"))
+	require.Error(t, err)
+	// itemName stays as "MAT-999" since no match in sr items
+	assert.Contains(t, err.Error(), "MAT-999")
+}
+
+func TestHandleErpApproveError_GenericError(t *testing.T) {
+	t.Parallel()
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.10.0", "zh")
+	sr := &model.StockReconciliation{}
+
+	err := srv.handleErpApproveError(ctx, sr, stderrors.New("some random ERP error"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), errMsgApproveReconcilation)
+}
+
+func TestHandleErpApproveError_ItemDisabled_OldVersion(t *testing.T) {
+	t.Parallel()
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.9.0", "zh")
+	sr := &model.StockReconciliation{
+		StockReconciliationItems: []*model.StockReconciliationItem{
+			{
+				Material: &model.Material{
+					Code:              "MAT-001",
+					MultiLanguageName: model.MultiLanguageName{ZhName: "鸡翅"},
+				},
+			},
+		},
+	}
+
+	err := srv.handleErpApproveError(ctx, sr, stderrors.New("Item MAT-001 is disabled"))
+	require.Error(t, err)
+	// Old version uses i18n.Translate which may return format string in test env
+	assert.Contains(t, err.Error(), "状态已关闭")
+}
+
+// ─── approveStockReconciliationInERP tests ───
+
+func TestApproveStockReconciliationInERP_NoErp(t *testing.T) {
+	t.Parallel()
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.10.0", "zh")
+	// Company with IsEnableErp=0 → IsOpenErp() returns false
+	ctx.SetCompany(model.Company{IsEnableErp: 0})
+	sr := &model.StockReconciliation{ErpCode: "SR-ERP-001"}
+
+	err := srv.approveStockReconciliationInERP(ctx, sr)
+	assert.NoError(t, err, "Should return nil when ERP is not enabled")
+}
+
+func TestApproveStockReconciliationInERP_EmptyErpCode(t *testing.T) {
+	t.Parallel()
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.10.0", "zh")
+	ctx.SetCompany(model.Company{IsEnableErp: 1})
+	sr := &model.StockReconciliation{ErpCode: ""} // empty erp code
+
+	err := srv.approveStockReconciliationInERP(ctx, sr)
+	assert.NoError(t, err, "Should return nil when ErpCode is empty")
 }
