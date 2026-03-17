@@ -31,6 +31,13 @@ type shopRuleInfo struct {
 	HeadquarterUuid  uint64
 }
 
+// orderProcessDeps 订单处理依赖项（减少函数参数数量）
+type orderProcessDeps struct {
+	erpSrv           erp.IErpSrv
+	purchaseOrderSrv purchase_order.IPurchaseOrderSrv
+	logRepo          repository.IAutoReceiptLogRepo
+}
+
 // AutoReceiptTask 品采自动收货定时任务
 // 每小时执行一次，检查门店是否到达本地午夜，满足条件则自动收货
 type AutoReceiptTask struct {
@@ -142,9 +149,11 @@ func (t *AutoReceiptTask) processShop(shopUuid uint64, rules []shopRuleInfo, set
 	)
 	ctx.SetDB(shopDB)
 
-	erpSrv := erp.NewIErpSrv(t.dbm)
-	purchaseOrderSrv := purchase_order.NewPurchaseOrderSrvImpl(t.dbm, settingSrv)
-	logRepo := repository.NewAutoReceiptLogRepo(saasDB)
+	deps := orderProcessDeps{
+		erpSrv:           erp.NewIErpSrv(t.dbm),
+		purchaseOrderSrv: purchase_order.NewPurchaseOrderSrvImpl(t.dbm, settingSrv),
+		logRepo:          repository.NewAutoReceiptLogRepo(saasDB),
+	}
 
 	// 5. 解析时区 Location（一次解析，传递给后续方法）
 	loc, err := time.LoadLocation(timezone)
@@ -174,7 +183,7 @@ func (t *AutoReceiptTask) processShop(shopUuid uint64, rules []shopRuleInfo, set
 			continue
 		}
 
-		t.processOrder(ctx, order, rules, loc, shopUuid, erpSrv, purchaseOrderSrv, logRepo, confirmedReceipts)
+		t.processOrder(ctx, order, rules, loc, shopUuid, deps, confirmedReceipts)
 	}
 }
 
@@ -185,13 +194,11 @@ func (t *AutoReceiptTask) processOrder(
 	rules []shopRuleInfo,
 	loc *time.Location,
 	shopUuid uint64,
-	erpSrv erp.IErpSrv,
-	purchaseOrderSrv purchase_order.IPurchaseOrderSrv,
-	logRepo repository.IAutoReceiptLogRepo,
+	deps orderProcessDeps,
 	confirmedReceipts []model.PurchaseReceiptOrder,
 ) {
 	// 获取 DN 列表
-	dnListResp, err := erpSrv.GetDeliveryNoteList(ctx, &delivery_note.GetDeliveryNoteListReq{
+	dnListResp, err := deps.erpSrv.GetDeliveryNoteList(ctx, &delivery_note.GetDeliveryNoteListReq{
 		CompanyAbbr:  ctx.GetCompany().CompanySetting.ErpnextHeadquarterAbbr,
 		SoNo:         order.ErpSaleOrderNo,
 		IncludeItems: true,
@@ -233,7 +240,7 @@ func (t *AutoReceiptTask) processOrder(
 		}
 
 		// 满足所有条件，执行自动收货
-		t.executeAutoReceipt(ctx, order, dn, pendingItems, matchedRule, shopUuid, loc, purchaseOrderSrv, logRepo)
+		t.executeAutoReceipt(ctx, order, dn, pendingItems, matchedRule, shopUuid, loc, deps)
 	}
 }
 
@@ -246,21 +253,20 @@ func (t *AutoReceiptTask) executeAutoReceipt(
 	rule *shopRuleInfo,
 	shopUuid uint64,
 	loc *time.Location,
-	purchaseOrderSrv purchase_order.IPurchaseOrderSrv,
-	logRepo repository.IAutoReceiptLogRepo,
+	deps orderProcessDeps,
 ) {
 	now := time.Now()
 	receiptReq := req.PurchaseReceiptCreateReq{
 		PurchaseOrderUuid: order.Uuid,
 		ReceiveTime:       now.Unix(),
-		ReceiptType:       2, // 内部收货（品采）
+		ReceiptType:       constant.ReceiptTypeInternal,
 		Items:             pendingItems,
 		IsConfirm:         true,
 		DeliveryNoteNo:    dn.Name,
 		IsAutoReceipt:     true,
 	}
 
-	result, err := purchaseOrderSrv.CreatePurchaseReceiptOrder(ctx, receiptReq)
+	result, err := deps.purchaseOrderSrv.CreatePurchaseReceiptOrder(ctx, receiptReq)
 	if err != nil {
 		logger.Logger.Error("自动收货任务: 创建收货单失败",
 			zap.Uint64("company_uuid", shopUuid),
@@ -271,7 +277,7 @@ func (t *AutoReceiptTask) executeAutoReceipt(
 
 	// 记录日志（使用门店时区的当天0点）
 	receiptTime, _ := utils.Timezone(loc.String()).TodayStartEndUnix()
-	_, err = logRepo.Create(model.AutoReceiptLog{
+	_, err = deps.logRepo.Create(model.AutoReceiptLog{
 		HeadquarterCompanyUuid: rule.HeadquarterUuid,
 		RuleUuid:               rule.RuleUuid,
 		ShopCompanyUuid:        shopUuid,

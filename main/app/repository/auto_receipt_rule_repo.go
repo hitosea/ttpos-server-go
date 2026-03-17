@@ -13,7 +13,6 @@ type IAutoReceiptRuleRepo interface {
 	SoftDelete(uuids []uint64, headquarterUuid uint64) error
 	GetByUuid(uuid uint64, headquarterUuid uint64) (model.AutoReceiptRule, error)
 	GetListByHeadquarter(headquarterUuid uint64, warehouseErpCode string) ([]model.AutoReceiptRule, error)
-	GetAllEnabled() ([]model.AutoReceiptRule, error)
 }
 
 func NewAutoReceiptRuleRepo(db *gorm.DB) IAutoReceiptRuleRepo {
@@ -57,12 +56,5 @@ func (r *autoReceiptRuleRepo) GetListByHeadquarter(headquarterUuid uint64, wareh
 		db = db.Where("warehouse_erp_code = ?", warehouseErpCode)
 	}
 	err := db.Order("create_time desc").Find(&rules).Error
-	return rules, errors.WithMessage(err)
-}
-
-// GetAllEnabled 获取所有启用的规则（定时任务用）
-func (r *autoReceiptRuleRepo) GetAllEnabled() ([]model.AutoReceiptRule, error) {
-	var rules []model.AutoReceiptRule
-	err := r.db.Where("status = 1 AND delete_time = 0").Find(&rules).Error
 	return rules, errors.WithMessage(err)
 }

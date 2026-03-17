@@ -7,7 +7,6 @@ import (
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/purchase_order"
 	"ttpos-server-go/app/service/setting"
-	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -256,19 +255,13 @@ func RegisterAutoReceiptHandlers(router gin.IRouter, dbm *database.DBManager, ca
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.POST("/auto_receipt/rule/create", wrapper.CreateAutoReceiptRule)   // 创建自动收货规则
-		privateApi.POST("/auto_receipt/rule/update", wrapper.UpdateAutoReceiptRule)   // 更新自动收货规则
-		privateApi.DELETE("/auto_receipt/rule/delete", wrapper.DeleteAutoReceiptRule) // 删除自动收货规则
-		privateApi.GET("/auto_receipt/rule/list", wrapper.GetAutoReceiptRuleList)     // 规则列表
+		privateApi.POST("/auto_receipt/rule/create", wrapper.CreateAutoReceiptRule)         // 创建自动收货规则
+		privateApi.POST("/auto_receipt/rule/update", wrapper.UpdateAutoReceiptRule)         // 更新自动收货规则
+		privateApi.DELETE("/auto_receipt/rule/delete", wrapper.DeleteAutoReceiptRule)       // 删除自动收货规则
+		privateApi.GET("/auto_receipt/rule/list", wrapper.GetAutoReceiptRuleList)           // 规则列表
 		privateApi.GET("/auto_receipt/shop_list", wrapper.GetAutoReceiptShopList)           // 可选门店列表
 		privateApi.GET("/auto_receipt/warehouse/list", wrapper.GetAutoReceiptWarehouseList) // 发货仓库列表
-		privateApi.GET("/auto_receipt/log/list", wrapper.GetAutoReceiptLogList)       // 自动收货记录
-		privateApi.GET("/auto_receipt/log/detail", wrapper.GetAutoReceiptLogDetail)   // 收货单详情
-
-		// TODO: 临时调试接口，上线前删除
-		privateApi.POST("/auto_receipt/trigger", func(c *gin.Context) {
-			tasks.NewAutoReceiptTask(dbm, cache).Execute()
-			helper.Success(c, gin.H{})
-		})
+		privateApi.GET("/auto_receipt/log/list", wrapper.GetAutoReceiptLogList)             // 自动收货记录
+		privateApi.GET("/auto_receipt/log/detail", wrapper.GetAutoReceiptLogDetail)         // 收货单详情
 	}
 }

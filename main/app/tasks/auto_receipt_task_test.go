@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
@@ -511,7 +512,7 @@ func TestProcessOrder_GetDNListError(t *testing.T) {
 	}
 
 	// Should not panic — just log and return
-	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+	task.processOrder(ctx, order, rules, loc, 100, orderProcessDeps{erpSrv: erpMock}, nil)
 }
 
 func TestProcessOrder_EmptyDNList(t *testing.T) {
@@ -528,7 +529,7 @@ func TestProcessOrder_EmptyDNList(t *testing.T) {
 		},
 	}
 
-	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+	task.processOrder(ctx, order, rules, loc, 100, orderProcessDeps{erpSrv: erpMock}, nil)
 }
 
 func TestProcessOrder_NilDNListResp(t *testing.T) {
@@ -545,7 +546,7 @@ func TestProcessOrder_NilDNListResp(t *testing.T) {
 		},
 	}
 
-	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+	task.processOrder(ctx, order, rules, loc, 100, orderProcessDeps{erpSrv: erpMock}, nil)
 }
 
 func TestProcessOrder_DNStatusFilter(t *testing.T) {
@@ -571,7 +572,7 @@ func TestProcessOrder_DNStatusFilter(t *testing.T) {
 	}
 
 	// None of the DNs should be processed (wrong status) — no purchaseOrderSrv call
-	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+	task.processOrder(ctx, order, rules, loc, 100, orderProcessDeps{erpSrv: erpMock}, nil)
 }
 
 func TestProcessOrder_NoMatchingWarehouse(t *testing.T) {
@@ -596,7 +597,7 @@ func TestProcessOrder_NoMatchingWarehouse(t *testing.T) {
 		},
 	}
 
-	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+	task.processOrder(ctx, order, rules, loc, 100, orderProcessDeps{erpSrv: erpMock}, nil)
 }
 
 func TestProcessOrder_NotYetDue(t *testing.T) {
@@ -621,7 +622,7 @@ func TestProcessOrder_NotYetDue(t *testing.T) {
 		},
 	}
 
-	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, nil)
+	task.processOrder(ctx, order, rules, loc, 100, orderProcessDeps{erpSrv: erpMock}, nil)
 }
 
 func TestProcessOrder_AllItemsFullyReceived(t *testing.T) {
@@ -665,7 +666,7 @@ func TestProcessOrder_AllItemsFullyReceived(t *testing.T) {
 	}
 
 	// purchaseOrderSrv should NOT be called
-	task.processOrder(ctx, order, rules, loc, 100, erpMock, nil, nil, confirmedReceipts)
+	task.processOrder(ctx, order, rules, loc, 100, orderProcessDeps{erpSrv: erpMock}, confirmedReceipts)
 }
 
 func TestProcessOrder_HappyPath_CallsExecuteAutoReceipt(t *testing.T) {
@@ -742,7 +743,7 @@ func TestProcessOrder_HappyPath_CallsExecuteAutoReceipt(t *testing.T) {
 	}
 
 	// No confirmed receipts → all 10 KG pending
-	task.processOrder(ctx, order, rules, loc, 100, erpMock, poMock, logMock, nil)
+	task.processOrder(ctx, order, rules, loc, 100, orderProcessDeps{erpSrv: erpMock, purchaseOrderSrv: poMock, logRepo: logMock}, nil)
 
 	if !receiptCreated {
 		t.Error("CreatePurchaseReceiptOrder was not called")
@@ -805,7 +806,7 @@ func TestProcessOrder_MultipleDNs_MixedFiltering(t *testing.T) {
 	}
 	logMock := &mockLogRepo{}
 
-	task.processOrder(ctx, order, rules, loc, 100, erpMock, poMock, logMock, nil)
+	task.processOrder(ctx, order, rules, loc, 100, orderProcessDeps{erpSrv: erpMock, purchaseOrderSrv: poMock, logRepo: logMock}, nil)
 
 	if createdCount != 1 {
 		t.Errorf("expected exactly 1 receipt created, got %d", createdCount)
@@ -832,8 +833,8 @@ func TestExecuteAutoReceipt_Success(t *testing.T) {
 	poMock := &mockPurchaseOrderSrv{
 		createReceiptFn: func(_ context.Context, r req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error) {
 			receiptCalled = true
-			if r.ReceiptType != 2 {
-				t.Errorf("ReceiptType = %d, want 2", r.ReceiptType)
+			if r.ReceiptType != constant.ReceiptTypeInternal {
+				t.Errorf("ReceiptType = %d, want %d", r.ReceiptType, constant.ReceiptTypeInternal)
 			}
 			if !r.IsConfirm {
 				t.Error("IsConfirm should be true")
@@ -851,7 +852,7 @@ func TestExecuteAutoReceipt_Success(t *testing.T) {
 		},
 	}
 
-	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, poMock, logMock)
+	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
 
 	if !receiptCalled {
 		t.Error("CreatePurchaseReceiptOrder was not called")
@@ -888,7 +889,7 @@ func TestExecuteAutoReceipt_CreateReceiptFails(t *testing.T) {
 	}
 
 	// Should return early without calling logRepo.Create
-	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, poMock, logMock)
+	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
 
 	if logCalled {
 		t.Error("logRepo.Create should NOT be called when receipt creation fails")
@@ -919,7 +920,7 @@ func TestExecuteAutoReceipt_LogCreateFails(t *testing.T) {
 	}
 
 	// Should not panic — just log the error
-	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, poMock, logMock)
+	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
 }
 
 // ---------------------------------------------------------------------------

@@ -13,7 +13,6 @@ type IAutoReceiptRuleShopRepo interface {
 	SoftDeleteByRuleUuids(ruleUuids []uint64, headquarterUuid uint64) error
 	GetByUuids(uuids []uint64, headquarterUuid uint64) ([]model.AutoReceiptRuleShop, error)
 	GetByRuleUuids(ruleUuids []uint64) ([]model.AutoReceiptRuleShop, error)
-	CountByRuleUuid(ruleUuid uint64) (int64, error)
 	GetConfiguredShopUuids(headquarterUuid uint64, warehouseErpCode string, excludeRuleUuid uint64) ([]uint64, error)
 	GetAllEnabledWithRules() ([]RuleShopJoinResult, error)
 }
@@ -89,14 +88,6 @@ func (r *autoReceiptRuleShopRepo) GetByRuleUuids(ruleUuids []uint64) ([]model.Au
 	}
 	err := r.db.Where("rule_uuid IN ? AND delete_time = 0", ruleUuids).Find(&shops).Error
 	return shops, errors.WithMessage(err)
-}
-
-func (r *autoReceiptRuleShopRepo) CountByRuleUuid(ruleUuid uint64) (int64, error) {
-	var count int64
-	err := r.db.Model(&model.AutoReceiptRuleShop{}).
-		Where("rule_uuid = ? AND delete_time = 0", ruleUuid).
-		Count(&count).Error
-	return count, errors.WithMessage(err)
 }
 
 // GetConfiguredShopUuids 查询同仓库下已配置的门店UUID列表（同一门店在同一仓库内只允许配置一次）

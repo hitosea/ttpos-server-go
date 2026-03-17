@@ -4,10 +4,10 @@ import "ttpos-server-go/app/dto"
 
 // AutoReceiptRuleListResp 规则列表响应
 type AutoReceiptRuleListResp struct {
-	List               []AutoReceiptRuleGroup `json:"list"`
-	ConfiguredCount    int                    `json:"configured_count"`
-	UnconfiguredCount  int                    `json:"unconfigured_count"`
-	UnconfiguredShops  []UnconfiguredShopItem `json:"unconfigured_shops"`
+	List              []AutoReceiptRuleGroup `json:"list"`
+	ConfiguredCount   int                    `json:"configured_count"`
+	UnconfiguredCount int                    `json:"unconfigured_count"`
+	UnconfiguredShops []UnconfiguredShopItem `json:"unconfigured_shops"`
 }
 
 // UnconfiguredShopItem 未配置规则的门店
@@ -43,12 +43,11 @@ type AutoReceiptShopListResp struct {
 
 // AutoReceiptShopItem 可选门店项
 type AutoReceiptShopItem struct {
-	Uuid           uint64 `json:"uuid"`
-	Name           string `json:"name"`
-	StoreCode      string `json:"store_code"`
-	Status         int    `json:"status"`
-	Disabled       bool   `json:"disabled"`
-	DisabledReason string `json:"disabled_reason"`
+	Uuid      uint64 `json:"uuid"`
+	Name      string `json:"name"`
+	StoreCode string `json:"store_code"`
+	Status    int    `json:"status"`
+	Disabled  bool   `json:"disabled"`
 }
 
 func (s AutoReceiptShopItem) GetStoreCode() string { return s.StoreCode }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	stderrors "errors"
 	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -10,11 +11,11 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
-	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
@@ -87,7 +88,8 @@ func (s *autoReceiptSrv) CreateRule(ctx context.Context, r req.CreateAutoReceipt
 		}
 		for _, shopUuid := range r.ShopUuids {
 			if configuredMap[shopUuid] {
-				return errors.New(fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "门店 %d 已在该仓库的其他规则中配置"), shopUuid))
+				msg := fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "门店 %d 已在该仓库的其他规则中配置"), shopUuid)
+				return errors.New(msg)
 			}
 		}
 
@@ -131,7 +133,7 @@ func (s *autoReceiptSrv) UpdateRule(ctx context.Context, r req.UpdateAutoReceipt
 		ruleRepo := repository.NewAutoReceiptRuleRepo(tx)
 		_, err := ruleRepo.GetByUuid(r.Uuid, headquarterUuid)
 		if err != nil {
-			if err == gorm.ErrRecordNotFound {
+			if stderrors.Is(err, gorm.ErrRecordNotFound) {
 				return errors.New("规则不存在")
 			}
 			return errors.WithMessage(err, "查询规则失败")
@@ -194,7 +196,8 @@ func (s *autoReceiptSrv) UpdateRule(ctx context.Context, r req.UpdateAutoReceipt
 			}
 			for _, shopUuid := range toAdd {
 				if configuredMap[shopUuid] {
-					return errors.New(fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "门店 %d 已在该仓库的其他规则中配置"), shopUuid))
+					msg := fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "门店 %d 已在该仓库的其他规则中配置"), shopUuid)
+					return errors.New(msg)
 				}
 			}
 		}
@@ -503,7 +506,7 @@ func (s *autoReceiptSrv) GetLogDetail(ctx context.Context, r req.AutoReceiptLogD
 	logRepo := repository.NewAutoReceiptLogRepo(db)
 	log, err := logRepo.GetByUuid(r.Uuid, headquarterUuid)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, 0, errors.New("记录不存在")
 		}
 		return nil, 0, errors.WithMessage(err, "查询自动收货记录失败")
