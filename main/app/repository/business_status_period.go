@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -9,6 +10,7 @@ import (
 
 type IBusinessStatusPeriodRepo interface {
 	GetOpenPeriod() (*model.BusinessStatusPeriod, error)
+	GetBusinessStatus() int
 	Create(period *model.BusinessStatusPeriod) error
 	CloseOpenPeriod(endTime int64) error
 }
@@ -35,6 +37,15 @@ func (r *businessStatusPeriodRepo) GetOpenPeriod() (*model.BusinessStatusPeriod,
 		return nil, errors.WithMessage(err)
 	}
 	return &period, nil
+}
+
+// GetBusinessStatus 获取当前营业状态，查询失败时默认返回正常营业
+func (r *businessStatusPeriodRepo) GetBusinessStatus() int {
+	openPeriod, _ := r.GetOpenPeriod()
+	if openPeriod != nil {
+		return constant.BusinessStatusTest
+	}
+	return constant.BusinessStatusNormal
 }
 
 // Create 创建时段记录

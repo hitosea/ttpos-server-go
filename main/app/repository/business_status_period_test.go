@@ -3,6 +3,7 @@ package repository
 import (
 	"testing"
 
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/utils"
 
@@ -206,5 +207,43 @@ func TestCloseOpenPeriod_OnlyClosesOpen(t *testing.T) {
 	db.Where("uuid = 1002").First(&second)
 	if second.EndTime != 4000 {
 		t.Errorf("open period should be closed with end_time 4000, got %d", second.EndTime)
+	}
+}
+
+// ─── GetBusinessStatus ──────────────────────────────────────────────
+
+func TestGetBusinessStatus_Normal(t *testing.T) {
+	db := setupPeriodTestDB(t)
+	repo := NewBusinessStatusPeriodRepo(db)
+
+	status := repo.GetBusinessStatus()
+	if status != constant.BusinessStatusNormal {
+		t.Errorf("expected Normal(%d), got %d", constant.BusinessStatusNormal, status)
+	}
+}
+
+func TestGetBusinessStatus_Test(t *testing.T) {
+	db := setupPeriodTestDB(t)
+	repo := NewBusinessStatusPeriodRepo(db)
+
+	db.Exec(`INSERT INTO ttpos_business_status_period (uuid, start_time, end_time, create_time, update_time, delete_time)
+		VALUES (1001, 1000, 0, 1000, 1000, 0)`)
+
+	status := repo.GetBusinessStatus()
+	if status != constant.BusinessStatusTest {
+		t.Errorf("expected Test(%d), got %d", constant.BusinessStatusTest, status)
+	}
+}
+
+func TestGetBusinessStatus_AllClosed(t *testing.T) {
+	db := setupPeriodTestDB(t)
+	repo := NewBusinessStatusPeriodRepo(db)
+
+	db.Exec(`INSERT INTO ttpos_business_status_period (uuid, start_time, end_time, create_time, update_time, delete_time)
+		VALUES (1001, 1000, 2000, 1000, 2000, 0)`)
+
+	status := repo.GetBusinessStatus()
+	if status != constant.BusinessStatusNormal {
+		t.Errorf("expected Normal(%d) when all periods closed, got %d", constant.BusinessStatusNormal, status)
 	}
 }

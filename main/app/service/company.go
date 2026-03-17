@@ -281,11 +281,7 @@ func (s *companySrv) GetCompanyInfo(ctx context.Context, companyUuid uint64) (*r
 
 	// 从时段表推导营业状态
 	periodRepo := repository.NewBusinessStatusPeriodRepo(shopDB)
-	openPeriod, _ := periodRepo.GetOpenPeriod()
-	businessStatus := constant.BusinessStatusNormal
-	if openPeriod != nil {
-		businessStatus = constant.BusinessStatusTest
-	}
+	businessStatus := periodRepo.GetBusinessStatus()
 
 	// 构建响应
 	return &resp.CompanyStoreResp{

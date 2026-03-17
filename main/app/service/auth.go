@@ -674,11 +674,8 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 		return cashierBase, errors.WithMessage(err)
 	}
 	// 从时段表推导营业状态
-	businessStatus := constant.BusinessStatusNormal
 	periodRepo := repository.NewBusinessStatusPeriodRepo(s.dbm.GetDB(company.Uuid))
-	if openPeriod, _ := periodRepo.GetOpenPeriod(); openPeriod != nil {
-		businessStatus = constant.BusinessStatusTest
-	}
+	businessStatus := periodRepo.GetBusinessStatus()
 	return resp.CashierBase{
 		Username:     staff.Username,
 		CashierUuid:  staff.Uuid,
@@ -1534,11 +1531,8 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 	}
 
 	// 从时段表推导营业状态
-	businessStatus := constant.BusinessStatusNormal
 	periodRepo := repository.NewBusinessStatusPeriodRepo(s.dbm.GetDB(company.Uuid))
-	if openPeriod, _ := periodRepo.GetOpenPeriod(); openPeriod != nil {
-		businessStatus = constant.BusinessStatusTest
-	}
+	businessStatus := periodRepo.GetBusinessStatus()
 
 	return resp.ShopBase{
 		Username:      staff.Username,

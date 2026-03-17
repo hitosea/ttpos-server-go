@@ -368,6 +368,36 @@ func TestExcludeTestBusinessSQL_DifferentAliases(t *testing.T) {
 	}
 }
 
+// ─── ExcludeTestBusinessByFieldSQL (pure function) ──────────────────
+
+func TestExcludeTestBusinessByFieldSQL_CustomExpr(t *testing.T) {
+	sql := ExcludeTestBusinessByFieldSQL("(date + hour * 3600)")
+	if !strings.Contains(sql, "NOT EXISTS") {
+		t.Error("expected NOT EXISTS clause")
+	}
+	if !strings.Contains(sql, "(date + hour * 3600) >= bsp.start_time") {
+		t.Error("expected custom field expression in start_time comparison")
+	}
+	if !strings.Contains(sql, "(date + hour * 3600) <= bsp.end_time") {
+		t.Error("expected custom field expression in end_time comparison")
+	}
+	if !strings.Contains(sql, "bsp.delete_time = 0") {
+		t.Error("expected soft-delete filter")
+	}
+}
+
+func TestExcludeTestBusinessByFieldSQL_SimpleField(t *testing.T) {
+	sql := ExcludeTestBusinessByFieldSQL("t.create_time")
+	if !strings.Contains(sql, "t.create_time >= bsp.start_time") {
+		t.Error("expected t.create_time in start comparison")
+	}
+	// 应与 ExcludeTestBusinessSQL("t") 输出一致
+	sqlFromAlias := ExcludeTestBusinessSQL("t")
+	if sql != sqlFromAlias {
+		t.Errorf("ExcludeTestBusinessByFieldSQL('t.create_time') should match ExcludeTestBusinessSQL('t')\ngot:  %s\nwant: %s", sql, sqlFromAlias)
+	}
+}
+
 // ─── ExcludeTestBusinessByRelatedOrderSQL (pure function) ───────────
 
 func TestExcludeTestBusinessByRelatedOrderSQL(t *testing.T) {

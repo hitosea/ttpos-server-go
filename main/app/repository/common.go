@@ -777,16 +777,25 @@ func (r *commonRepo) WhereNotInDataManageSubQuery(db2 *gorm.DB, field string, op
 // 可直接拼接到 raw SQL 或传入 db.Where()。
 func ExcludeTestBusinessSQL(tableAlias string) string {
 	if tableAlias != "" {
-		field := tableAlias + ".create_time"
-		return "NOT EXISTS (SELECT 1 FROM ttpos_business_status_period bsp " +
-			"WHERE bsp.delete_time = 0 " +
-			"AND " + field + " >= bsp.start_time " +
-			"AND (bsp.end_time = 0 OR " + field + " <= bsp.end_time))"
+		return excludeTestBusinessByFieldSQL(tableAlias + ".create_time")
 	}
 	return "NOT EXISTS (SELECT 1 FROM " +
 		"(SELECT start_time, end_time FROM ttpos_business_status_period WHERE delete_time = 0) bsp " +
 		"WHERE create_time >= bsp.start_time " +
 		"AND (bsp.end_time = 0 OR create_time <= bsp.end_time))"
+}
+
+// ExcludeTestBusinessByFieldSQL 返回基于自定义时间表达式排除测试营业时段的 NOT EXISTS SQL。
+// fieldExpr 为时间表达式，如 "create_time"、"t.create_time"、"(date + hour * 3600)" 等。
+func ExcludeTestBusinessByFieldSQL(fieldExpr string) string {
+	return excludeTestBusinessByFieldSQL(fieldExpr)
+}
+
+func excludeTestBusinessByFieldSQL(fieldExpr string) string {
+	return "NOT EXISTS (SELECT 1 FROM ttpos_business_status_period bsp " +
+		"WHERE bsp.delete_time = 0 " +
+		"AND " + fieldExpr + " >= bsp.start_time " +
+		"AND (bsp.end_time = 0 OR " + fieldExpr + " <= bsp.end_time))"
 }
 
 // WhereExcludeTestBusinessPeriod 排除创建时间落在测试营业时段内的记录

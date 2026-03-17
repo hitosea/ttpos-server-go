@@ -107,10 +107,7 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime
 	startDate := time.Date(startTimeObj.Year(), startTimeObj.Month(), startTimeObj.Day(), 0, 0, 0, 0, startTimeObj.Location()).Unix()
 	endDate := time.Date(endTimeObj.Year(), endTimeObj.Month(), endTimeObj.Day(), 0, 0, 0, 0, endTimeObj.Location()).Unix()
 	// 排除测试营业时段：用 (date + hour * 3600) 作为记录时间点判断
-	excludeTestBusinessPeakSQL := "NOT EXISTS (SELECT 1 FROM ttpos_business_status_period bsp " +
-		"WHERE bsp.delete_time = 0 " +
-		"AND (date + hour * 3600) >= bsp.start_time " +
-		"AND (bsp.end_time = 0 OR (date + hour * 3600) <= bsp.end_time))"
+	excludeTestBusinessPeakSQL := ExcludeTestBusinessByFieldSQL("(date + hour * 3600)")
 
 	// 定义一个临时结构体来接收查询结果
 	type PeakTimeResult struct {
