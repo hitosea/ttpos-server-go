@@ -543,3 +543,39 @@ func TestOffsetDeductedConsumption_SkipsCodeWithoutDeduction(t *testing.T) {
 	// HAS-DEDUCTION: 10.0 - 3.0 = 7.0
 	assert.InDelta(t, 7.0, result[100]["HAS-DEDUCTION"], 0.001, "Code with deduction should be reduced")
 }
+
+// TestQueryDeductedByCode_EmptyOrderUuids 验证空 orderUuids 直接返回空 map
+func TestQueryDeductedByCode_EmptyOrderUuids(t *testing.T) {
+	t.Parallel()
+	db := setupPendingSETestDB(t)
+	srv := &warehouseSrv{}
+
+	result := srv.queryDeductedByCode(newTestCtx(), db, []uint64{})
+	assert.Empty(t, result, "Empty orderUuids should return empty map immediately")
+}
+
+// TestBuildSIModeOpts_DBError 验证 getPendingStockEntryConsumption 出错时正确透传
+func TestBuildSIModeOpts_DBError(t *testing.T) {
+	t.Parallel()
+	// 创建一个没有 sale_order 表的 DB，触发 collectSaleOrderConsumption 查询失败
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+		SkipDefaultTransaction:                   true,
+		NamingStrategy: schema.NamingStrategy{
+			TablePrefix:   "ttpos_",
+			SingularTable: true,
+		},
+	})
+	require.NoError(t, err)
+
+	srv := &warehouseSrv{}
+	ctx := context.NewContext(
+		context.WithCompanyUuid(99999),
+		context.WithCompanySetting(model.CompanySetting{ErpInvoiceMode: 1}),
+	)
+
+	consumption, opts, resultErr := srv.buildSIModeOpts(ctx, db)
+	assert.Error(t, resultErr, "Should return error when DB query fails")
+	assert.Nil(t, consumption)
+	assert.Nil(t, opts)
+}
