@@ -217,6 +217,7 @@ type GetMemberDineInOrderDetailResp struct {
 	RefundAmount         float64                        `json:"refund_amount"`           // 退款金额（用于显示"已退款 ¥xx"）
 	AmountInfo           MemberDineInOrderAmountInfo    `json:"amount_info"`             // 金额信息
 	ProductList          MemberDineInOrderProductList   `json:"product_list"`            // 商品列表
+	PaymentMethods       PaymentMethodList              `json:"payment_methods"`         // 支付方式列表（待支付时返回）
 }
 
 // MemberDineInOrderProductList 堂食订单商品列表

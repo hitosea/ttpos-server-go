@@ -2271,7 +2271,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		attributes := sortProductAttributes(ctx, productAttributes)
 
 		isAcceptOrder := constant.OrderProductIsAcceptOrderAccepted // 已接单
-		if params.IsH5Product || params.IsMemberDineIn {
+		if params.IsH5Product {
 			isAcceptOrder = constant.OrderProductIsAcceptOrderUnAccept // 未接单
 		}
 		deviceSn := ctx.GetDeviceSn()
@@ -2892,7 +2892,7 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 	}
 
 	isAcceptOrder := constant.OrderProductIsAcceptOrderAccepted // 已接单
-	if params.IsH5Product || params.IsMemberDineIn {
+	if params.IsH5Product {
 		isAcceptOrder = constant.OrderProductIsAcceptOrderUnAccept // 未接单
 	}
 	deviceSn := ctx.GetDeviceSn()
