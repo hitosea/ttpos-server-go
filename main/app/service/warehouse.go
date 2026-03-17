@@ -966,8 +966,7 @@ func (s *warehouseSrv) SyncWarehouseItemStock(ctx context.Context) error {
 	}
 
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	warehouseRepo := repository.NewWarehouseRepo(db)
-	warehouses, err := warehouseRepo.Get(repository.ExcludeHeadquarter)
+	warehouses, err := repository.NewWarehouseRepo(db).Get(repository.ExcludeHeadquarter)
 	if err != nil {
 		return errors.WithMessage(err, "查询仓库列表失败")
 	}
@@ -980,153 +979,192 @@ func (s *warehouseSrv) SyncWarehouseItemStock(ctx context.Context) error {
 		materialMap[material.Code] = material
 	}
 
-	// SI 模式下，获取已完成但未提交 Stock Entry 的订单消耗量
-	// 这些消耗已发生但 ERPNext 账面尚未扣减，需要从本地库存中减去
-	companySetting := ctx.GetCompanySetting()
-	var pendingSEConsumption map[uint64]map[string]float64
-	if companySetting.IsErpSalesInvoiceMode() {
-		pendingSEConsumption, err = s.getPendingStockEntryConsumption(ctx, db)
-		if err != nil {
-			return errors.WithMessage(err, "获取待 Stock Entry 扣减消耗量失败")
-		}
-	}
-
-	// SI 模式下，预构建排除已同步订单的查询条件（循环外构建一次，避免每仓库重复构建子查询）
-	var consumptionExtraOpts []repository.DBOption
-	if companySetting.IsErpSalesInvoiceMode() {
-		saleOrderRepo := repository.NewSaleOrderRepo(db)
-		takeoutRepo := persistence.NewTakeoutOrderRepo(db)
-		// 堂食：排除已创建 Sales Invoice 的订单
-		// 注意：故意不加 erp_stock_deducted=0——已扣减的订单消耗已反映在 ERPNext actual_qty 中
-		settledSubquery := db.Table("ttpos_sale_order").Select("uuid").Scopes(saleOrderRepo.WhereSettledWithInvoice())
-		// 外卖：排除已同步 ERPNext 的已完成订单
-		completedSubquery := db.Table("ttpos_takeout_order").Select("uuid").Where("delete_time = 0").Scopes(takeoutRepo.WhereCompletedWithInvoice())
-		consumptionExtraOpts = []repository.DBOption{
-			func(db *gorm.DB) *gorm.DB {
-				return db.Where("sale_order_uuid = 0 OR sale_order_uuid NOT IN (?)", settledSubquery)
-			},
-			func(db *gorm.DB) *gorm.DB {
-				return db.Where("takeout_order_uuid = 0 OR takeout_order_uuid NOT IN (?)", completedSubquery)
-			},
-		}
+	// SI 模式下，获取待扣减消耗和排除条件
+	pendingSEConsumption, consumptionExtraOpts, err := s.buildSIModeOpts(ctx, db)
+	if err != nil {
+		return err
 	}
 
 	var insertingWarehouseItems []model.WarehouseItem
 	for _, warehouse := range warehouses {
-		stockBinList, err := erp.NewIErpSrv(s.dbm).GetMaterialStockNumByBin(ctx, warehouse.ErpCode)
+		newItems, err := s.syncWarehouseStock(ctx, db, warehouse, materialMap, pendingSEConsumption, consumptionExtraOpts)
 		if err != nil {
-			return errors.WithMessage(err, "获取仓库物品库存数量失败")
+			return err
 		}
-		// 仓库内物品
-		warehouseItemRepo := repository.NewWarehouseItemRepo(db)
-		warehouseItems, _ := warehouseItemRepo.GetByWarehouseUuid(warehouse.Uuid, warehouseItemRepo.WhereMaterialCodeNotEmpty())
-		warehouseItemMap := make(map[string]model.WarehouseItem)
-		for _, warehouseItem := range warehouseItems {
-			warehouseItemMap[warehouseItem.MaterialCode] = warehouseItem
-		}
-
-		materialConsumption, err := s.materialSrv.GetWarehouseItemConsumption(ctx, warehouse.Uuid, consumptionExtraOpts...)
-		if err != nil {
-			return errors.WithMessage(err, "获取仓库物品消耗量失败")
-		}
-		materialConsumptionMap := make(map[string]float64)
-		for _, consumption := range materialConsumption.List {
-			materialConsumptionMap[consumption.MaterialCode] = consumption.Consumption
-		}
-
-		// 当前仓库的待 SE 扣减量（nil map 读取返回 0，无需判空）
-		pendingSEMap := pendingSEConsumption[warehouse.Uuid]
-
-		for _, stock := range stockBinList {
-			material, ok := materialMap[stock.ItemCode]
-			if !ok {
-				continue
-			}
-			// 仓库物品库存的计算，可能为负数
-			// = ERPNext 账面库存 - 当班消耗 - 待 Stock Entry 扣减的消耗
-			stockNum := stock.ActualQty - materialConsumptionMap[stock.ItemCode] - pendingSEMap[stock.ItemCode]
-
-			// 添加或修改仓库物品库存
-			if warehouseItem, ok := warehouseItemMap[stock.ItemCode]; ok {
-				if err := warehouseItemRepo.UpdateStockByUuid(warehouseItem.Uuid, stockNum); err != nil {
-					return errors.WithMessage(err, "更新仓库物品库存失败")
-				}
-			} else {
-				insertingWarehouseItems = append(insertingWarehouseItems, model.WarehouseItem{
-					WarehouseUuid: warehouse.Uuid,
-					MaterialUuid:  material.Uuid,
-					MaterialCode:  material.Code,
-					Stock:         stockNum,
-					Valuation:     1.0, // 默认
-				})
-			}
-		}
+		insertingWarehouseItems = append(insertingWarehouseItems, newItems...)
 	}
 
 	if len(insertingWarehouseItems) > 0 {
-		allItemsRepo := repository.NewWarehouseItemRepo(db)
-		if err = allItemsRepo.CreateBatchValues(insertingWarehouseItems); err != nil {
+		if err = repository.NewWarehouseItemRepo(db).CreateBatchValues(insertingWarehouseItems); err != nil {
 			return errors.WithMessage(err, "创建仓库物品库存失败")
 		}
 	}
 
-	return err
+	return nil
+}
+
+// buildSIModeOpts 构建 SI 模式下的待扣减消耗和查询排除条件
+// 非 SI 模式返回 nil，调用方无需区分
+func (s *warehouseSrv) buildSIModeOpts(ctx context.Context, db *gorm.DB) (map[uint64]map[string]float64, []repository.DBOption, error) {
+	companySetting := ctx.GetCompanySetting()
+	if !companySetting.IsErpSalesInvoiceMode() {
+		return nil, nil, nil
+	}
+
+	pendingSEConsumption, err := s.getPendingStockEntryConsumption(ctx, db)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "获取待 Stock Entry 扣减消耗量失败")
+	}
+
+	saleOrderRepo := repository.NewSaleOrderRepo(db)
+	takeoutRepo := persistence.NewTakeoutOrderRepo(db)
+	// 堂食：排除已创建 Sales Invoice 的订单
+	// 注意：故意不加 erp_stock_deducted=0——已扣减的订单消耗已反映在 ERPNext actual_qty 中
+	settledSubquery := db.Table("ttpos_sale_order").Select("uuid").Scopes(saleOrderRepo.WhereSettledWithInvoice())
+	// 外卖：排除已同步 ERPNext 的已完成订单
+	completedSubquery := db.Table("ttpos_takeout_order").Select("uuid").Where("delete_time = 0").Scopes(takeoutRepo.WhereCompletedWithInvoice())
+	extraOpts := []repository.DBOption{
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("sale_order_uuid = 0 OR sale_order_uuid NOT IN (?)", settledSubquery)
+		},
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("takeout_order_uuid = 0 OR takeout_order_uuid NOT IN (?)", completedSubquery)
+		},
+	}
+
+	return pendingSEConsumption, extraOpts, nil
+}
+
+// syncWarehouseStock 同步单个仓库的物品库存，返回需要新建的仓库物品
+func (s *warehouseSrv) syncWarehouseStock(
+	ctx context.Context, db *gorm.DB, warehouse model.Warehouse,
+	materialMap map[string]model.Material,
+	pendingSEConsumption map[uint64]map[string]float64,
+	consumptionExtraOpts []repository.DBOption,
+) ([]model.WarehouseItem, error) {
+	stockBinList, err := erp.NewIErpSrv(s.dbm).GetMaterialStockNumByBin(ctx, warehouse.ErpCode)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取仓库物品库存数量失败")
+	}
+
+	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+	warehouseItems, _ := warehouseItemRepo.GetByWarehouseUuid(warehouse.Uuid, warehouseItemRepo.WhereMaterialCodeNotEmpty())
+	warehouseItemMap := make(map[string]model.WarehouseItem)
+	for _, warehouseItem := range warehouseItems {
+		warehouseItemMap[warehouseItem.MaterialCode] = warehouseItem
+	}
+
+	materialConsumption, err := s.materialSrv.GetWarehouseItemConsumption(ctx, warehouse.Uuid, consumptionExtraOpts...)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取仓库物品消耗量失败")
+	}
+	materialConsumptionMap := make(map[string]float64)
+	for _, consumption := range materialConsumption.List {
+		materialConsumptionMap[consumption.MaterialCode] = consumption.Consumption
+	}
+
+	// 当前仓库的待 SE 扣减量（nil map 读取返回 0，无需判空）
+	pendingSEMap := pendingSEConsumption[warehouse.Uuid]
+
+	var newItems []model.WarehouseItem
+	for _, stock := range stockBinList {
+		material, ok := materialMap[stock.ItemCode]
+		if !ok {
+			continue
+		}
+		// 仓库物品库存的计算，可能为负数
+		// = ERPNext 账面库存 - 当班消耗 - 待 Stock Entry 扣减的消耗
+		stockNum := stock.ActualQty - materialConsumptionMap[stock.ItemCode] - pendingSEMap[stock.ItemCode]
+
+		if warehouseItem, ok := warehouseItemMap[stock.ItemCode]; ok {
+			if err := warehouseItemRepo.UpdateStockByUuid(warehouseItem.Uuid, stockNum); err != nil {
+				return nil, errors.WithMessage(err, "更新仓库物品库存失败")
+			}
+		} else {
+			newItems = append(newItems, model.WarehouseItem{
+				WarehouseUuid: warehouse.Uuid,
+				MaterialUuid:  material.Uuid,
+				MaterialCode:  material.Code,
+				Stock:         stockNum,
+				Valuation:     1.0,
+			})
+		}
+	}
+
+	return newItems, nil
 }
 
 // getPendingStockEntryConsumption 获取待 Stock Entry 扣减的消耗量
 // 查询 erp_stock_deducted=0 的已完成订单（堂食+外卖），汇总其原料消耗
-// GetWarehouseItemConsumption 在 SI 模式下已排除已结账订单，因此这里无需再排除未交班班次
 // 返回 map[warehouseUuid]map[materialCode]pendingQty
 func (s *warehouseSrv) getPendingStockEntryConsumption(ctx context.Context, db *gorm.DB) (map[uint64]map[string]float64, error) {
-	companyUuid := ctx.GetCompanyUuid()
 	result := make(map[uint64]map[string]float64)
-
 	orderUuidSet := make(map[uint64]bool)
 
-	// === 堂食订单 ===
+	if err := s.collectSaleOrderConsumption(db, result, orderUuidSet); err != nil {
+		return nil, err
+	}
+	if err := s.collectTakeoutOrderConsumption(db, result, orderUuidSet); err != nil {
+		return nil, err
+	}
+
+	if len(result) == 0 {
+		return result, nil
+	}
+
+	s.offsetDeductedConsumption(ctx, db, result, orderUuidSet)
+	return result, nil
+}
+
+// collectSaleOrderConsumption 收集待扣减堂食订单的物料消耗
+func (s *warehouseSrv) collectSaleOrderConsumption(db *gorm.DB, result map[uint64]map[string]float64, orderUuidSet map[uint64]bool) error {
 	saleOrderRepo := repository.NewSaleOrderRepo(db)
 	orders, err := saleOrderRepo.GetSaleOrderList(
 		saleOrderRepo.WherePendingStockEntry(),
 		func(db *gorm.DB) *gorm.DB { return db.Select("uuid") },
 	)
 	if err != nil {
-		return nil, errors.WithMessage(err, "查询待扣减堂食订单失败")
+		return errors.WithMessage(err, "查询待扣减堂食订单失败")
 	}
 
 	var saleOrderUuids []uint64
 	for _, order := range orders {
 		saleOrderUuids = append(saleOrderUuids, order.Uuid)
 	}
-
-	if len(saleOrderUuids) > 0 {
-		materials, err := repository.NewSaleOrderMaterialRepo(db).GetBySaleOrderUuids(saleOrderUuids)
-		if err != nil {
-			return nil, errors.WithMessage(err, "查询堂食订单原料失败")
-		}
-		for _, m := range materials {
-			materialCode := ""
-			if m.Material != nil {
-				materialCode = m.Material.Code
-			}
-			if materialCode == "" || m.WarehouseUuid == 0 {
-				continue
-			}
-			if result[m.WarehouseUuid] == nil {
-				result[m.WarehouseUuid] = make(map[string]float64)
-			}
-			result[m.WarehouseUuid][materialCode] += m.Num
-			orderUuidSet[m.SaleOrderUuid] = true
-		}
+	if len(saleOrderUuids) == 0 {
+		return nil
 	}
 
-	// === 外卖订单 ===
+	materials, err := repository.NewSaleOrderMaterialRepo(db).GetBySaleOrderUuids(saleOrderUuids)
+	if err != nil {
+		return errors.WithMessage(err, "查询堂食订单原料失败")
+	}
+	for _, m := range materials {
+		materialCode := ""
+		if m.Material != nil {
+			materialCode = m.Material.Code
+		}
+		if materialCode == "" || m.WarehouseUuid == 0 {
+			continue
+		}
+		if result[m.WarehouseUuid] == nil {
+			result[m.WarehouseUuid] = make(map[string]float64)
+		}
+		result[m.WarehouseUuid][materialCode] += m.Num
+		orderUuidSet[m.SaleOrderUuid] = true
+	}
+	return nil
+}
+
+// collectTakeoutOrderConsumption 收集待扣减外卖订单的物料消耗
+func (s *warehouseSrv) collectTakeoutOrderConsumption(db *gorm.DB, result map[uint64]map[string]float64, orderUuidSet map[uint64]bool) error {
 	takeoutRepo := persistence.NewTakeoutOrderRepo(db)
 	takeoutOrders, err := takeoutRepo.FindAll(
 		takeoutRepo.WherePendingStockEntry(),
 		takeoutRepo.WithTakeoutOrderMaterials(),
 	)
 	if err != nil {
-		return nil, errors.WithMessage(err, "查询待扣减外卖订单失败")
+		return errors.WithMessage(err, "查询待扣减外卖订单失败")
 	}
 	for _, to := range takeoutOrders {
 		for _, m := range to.TakeoutOrderMaterials {
@@ -1140,65 +1178,63 @@ func (s *warehouseSrv) getPendingStockEntryConsumption(ctx context.Context, db *
 			orderUuidSet[to.Uuid] = true
 		}
 	}
+	return nil
+}
 
-	if len(result) == 0 {
-		return result, nil
-	}
-
-	// === 扣除已通过 Stock Entry 部分扣减的数量 ===
-	// stock_deduction_log 记录了已提交到 ERPNext 的扣减量，ERPNext 账面已反映这些扣减
-	// 如果不扣除，会导致双重扣减
+// offsetDeductedConsumption 扣除 stock_deduction_log 中已提交到 ERPNext 的扣减量
+// 按仓库比例分配已扣减量（stock_deduction_log 不含仓库信息）
+func (s *warehouseSrv) offsetDeductedConsumption(ctx context.Context, db *gorm.DB, result map[uint64]map[string]float64, orderUuidSet map[uint64]bool) {
 	allOrderUuids := make([]uint64, 0, len(orderUuidSet))
 	for uuid := range orderUuidSet {
 		allOrderUuids = append(allOrderUuids, uuid)
 	}
 
-	deductedByCode := make(map[string]float64) // erpCode → 已扣减总量
-	if len(allOrderUuids) > 0 {
-		logs, err := repository.NewStockDeductionLogRepo(db).GetByOrderUuids(allOrderUuids)
-		if err != nil {
-			logger.Logger.Warn("getPendingStockEntryConsumption: 查询已扣减日志失败，跳过扣除已提交量",
-				zap.Uint64("company_uuid", companyUuid), zap.Error(err))
-		} else {
-			for _, log := range logs {
-				deductedByCode[log.ErpCode] += log.Qty
-			}
+	deductedByCode := s.queryDeductedByCode(ctx, db, allOrderUuids)
+	if len(deductedByCode) == 0 {
+		return
+	}
+
+	// 按 erpCode 汇总所有仓库的待扣减总量
+	totalPendingByCode := make(map[string]float64)
+	for _, byCode := range result {
+		for code, qty := range byCode {
+			totalPendingByCode[code] += qty
 		}
 	}
 
-	if len(deductedByCode) > 0 {
-		// 按 erpCode 汇总所有仓库的待扣减总量（用于按比例分配已扣减量）
-		totalPendingByCode := make(map[string]float64)
-		for _, byCode := range result {
-			for code, qty := range byCode {
-				totalPendingByCode[code] += qty
+	// 按仓库比例扣除已提交的扣减量
+	for _, byCode := range result {
+		for code, qty := range byCode {
+			deducted := deductedByCode[code]
+			total := totalPendingByCode[code]
+			if deducted <= 0 || total <= 0 {
+				continue
 			}
-		}
-
-		// 按仓库比例扣除已提交的扣减量
-		// 注意：stock_deduction_log 不含仓库信息，按占比分配是近似处理
-		// 实际场景中同一 erp_code 通常只在一个仓库，比例分配等同于精确扣除
-		for _, byCode := range result {
-			for code, qty := range byCode {
-				deducted := deductedByCode[code]
-				if deducted <= 0 {
-					continue
-				}
-				total := totalPendingByCode[code]
-				if total <= 0 {
-					continue
-				}
-				// 按该仓库在总待扣减量中的占比，分配已扣减量
-				reduction := deducted * (qty / total)
-				byCode[code] -= reduction
-				if byCode[code] <= 0 {
-					delete(byCode, code)
-				}
+			reduction := deducted * (qty / total)
+			byCode[code] -= reduction
+			if byCode[code] <= 0 {
+				delete(byCode, code)
 			}
 		}
 	}
+}
 
-	return result, nil
+// queryDeductedByCode 查询 stock_deduction_log 中已扣减量（按 erpCode 汇总）
+func (s *warehouseSrv) queryDeductedByCode(ctx context.Context, db *gorm.DB, orderUuids []uint64) map[string]float64 {
+	deductedByCode := make(map[string]float64)
+	if len(orderUuids) == 0 {
+		return deductedByCode
+	}
+	logs, err := repository.NewStockDeductionLogRepo(db).GetByOrderUuids(orderUuids)
+	if err != nil {
+		logger.Logger.Warn("getPendingStockEntryConsumption: 查询已扣减日志失败，跳过扣除已提交量",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Error(err))
+		return deductedByCode
+	}
+	for _, log := range logs {
+		deductedByCode[log.ErpCode] += log.Qty
+	}
+	return deductedByCode
 }
 
 // CheckCodeExists 检查仓库编码是否存在

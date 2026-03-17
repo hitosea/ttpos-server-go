@@ -14,6 +14,11 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+const (
+	condDeleteTime = "delete_time = ?"
+	condOrderState = "order_state = ?"
+)
+
 // ITakeoutOrderRepo 外卖订单仓储接口
 type ITakeoutOrderRepo interface {
 	Create(order *model.TakeoutOrder) error
@@ -98,7 +103,7 @@ func (r *TakeoutOrderRepoImpl) UpdateByMap(uuid uint64, data map[string]interfac
 // GetByUuid 根据UUID获取外卖订单
 func (r *TakeoutOrderRepoImpl) GetByUuid(uuid uint64, options ...DBOption) (*model.TakeoutOrder, error) {
 	var order model.TakeoutOrder
-	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
+	db := r.db.Model(&model.TakeoutOrder{}).Where(condDeleteTime, 0)
 
 	for _, option := range options {
 		db = option(db)
@@ -119,7 +124,7 @@ func (r *TakeoutOrderRepoImpl) GetByUuid(uuid uint64, options ...DBOption) (*mod
 // GetByTakeoutOrderUuid 根据 TakeoutOrderUuid 字符串获取外卖订单
 func (r *TakeoutOrderRepoImpl) GetByTakeoutOrderUuid(takeoutOrderUuid string, options ...DBOption) (*model.TakeoutOrder, error) {
 	var order model.TakeoutOrder
-	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
+	db := r.db.Model(&model.TakeoutOrder{}).Where(condDeleteTime, 0)
 
 	for _, option := range options {
 		db = option(db)
@@ -140,7 +145,7 @@ func (r *TakeoutOrderRepoImpl) GetByTakeoutOrderUuid(takeoutOrderUuid string, op
 // GetByPlatformOrderId 根据平台订单ID获取外卖订单
 func (r *TakeoutOrderRepoImpl) GetByPlatformOrderId(platform, platformOrderId string, options ...DBOption) (*model.TakeoutOrder, error) {
 	var order model.TakeoutOrder
-	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
+	db := r.db.Model(&model.TakeoutOrder{}).Where(condDeleteTime, 0)
 
 	for _, option := range options {
 		db = option(db)
@@ -163,7 +168,7 @@ func (r *TakeoutOrderRepoImpl) GetList(options ...DBOption) ([]*model.TakeoutOrd
 	var orders []*model.TakeoutOrder
 	var total int64
 
-	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
+	db := r.db.Model(&model.TakeoutOrder{}).Where(condDeleteTime, 0)
 
 	// 应用选项构建查询条件
 	countDB := db
@@ -195,7 +200,7 @@ func (r *TakeoutOrderRepoImpl) GetList(options ...DBOption) ([]*model.TakeoutOrd
 // 适用于只需要订单数据或自定义 Preload 的场景
 func (r *TakeoutOrderRepoImpl) FindAll(options ...DBOption) ([]*model.TakeoutOrder, error) {
 	var orders []*model.TakeoutOrder
-	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
+	db := r.db.Model(&model.TakeoutOrder{}).Where(condDeleteTime, 0)
 	for _, option := range options {
 		db = option(db)
 	}
@@ -212,7 +217,7 @@ func (r *TakeoutOrderRepoImpl) WherePendingStockEntry() DBOption {
 		return db.Where("erp_stock_deducted = ?", 0).
 			Where("erp_pos_invoice_resp != ''").
 			Where("erp_sync_status = ?", constant.ErpSyncStatusSuccess).
-			Where("order_state = ?", value_object.TakeoutOrderStateCompleted)
+			Where(condOrderState, value_object.TakeoutOrderStateCompleted)
 	}
 }
 
@@ -222,14 +227,14 @@ func (r *TakeoutOrderRepoImpl) WhereCompletedWithInvoice() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("erp_pos_invoice_resp != ''").
 			Where("erp_sync_status = ?", constant.ErpSyncStatusSuccess).
-			Where("order_state = ?", value_object.TakeoutOrderStateCompleted)
+			Where(condOrderState, value_object.TakeoutOrderStateCompleted)
 	}
 }
 
 // GetCount 获取外卖订单数量
 func (r *TakeoutOrderRepoImpl) GetCount(options ...DBOption) (int64, error) {
 	var count int64
-	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
+	db := r.db.Model(&model.TakeoutOrder{}).Where(condDeleteTime, 0)
 
 	for _, option := range options {
 		db = option(db)
@@ -268,7 +273,7 @@ func (r *TakeoutOrderRepoImpl) SetStaffShiftLogUuid(order *model.TakeoutOrder) e
 func (r *TakeoutOrderRepoImpl) BatchUpdateStaffShiftLogUuid(shiftLogUuid, staffUuid uint64) (int64, error) {
 	result := r.db.Model(&model.TakeoutOrder{}).
 		Where("staff_shift_log_uuid = ?", 0).
-		Where("delete_time = ?", 0).
+		Where(condDeleteTime, 0).
 		Updates(map[string]interface{}{
 			"staff_shift_log_uuid": shiftLogUuid,
 			"accepted_by":          staffUuid,
@@ -286,7 +291,7 @@ func (r *TakeoutOrderRepoImpl) GetPendingShiftLogOrders() ([]*model.TakeoutOrder
 	var orders []*model.TakeoutOrder
 	err := r.db.Model(&model.TakeoutOrder{}).
 		Where("staff_shift_log_uuid = ?", 0).
-		Where("delete_time = ?", 0).
+		Where(condDeleteTime, 0).
 		Find(&orders).Error
 
 	if err != nil {
@@ -305,7 +310,7 @@ func (r *TakeoutOrderRepoImpl) BatchAssignShiftLog(shiftLogUuid, staffUuid uint6
 	result := r.db.Model(&model.TakeoutOrder{}).
 		Where("uuid IN ?", orderUuids).
 		Where("staff_shift_log_uuid = ?", 0).
-		Where("delete_time = ?", 0).
+		Where(condDeleteTime, 0).
 		Updates(map[string]interface{}{
 			"staff_shift_log_uuid": shiftLogUuid,
 			"accepted_by":          staffUuid,
@@ -359,7 +364,7 @@ func (r *TakeoutOrderRepoImpl) WherePlatform(platform string) DBOption {
 func (r *TakeoutOrderRepoImpl) WhereOrderState(orderState int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if orderState >= 0 {
-			return db.Where("order_state = ?", orderState)
+			return db.Where(condOrderState, orderState)
 		}
 		return db
 	}
@@ -490,7 +495,7 @@ func (r *TakeoutOrderRepoImpl) WithPreload(options ...DBOption) DBOption {
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("TakeoutOrderItems", func(db *gorm.DB) *gorm.DB {
-			return db.Where("delete_time = ?", 0)
+			return db.Where(condDeleteTime, 0)
 		})
 	}
 }
@@ -499,7 +504,7 @@ func (r *TakeoutOrderRepoImpl) WithTakeoutOrderItems() DBOption {
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderItemModifiers() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("TakeoutOrderItems.TakeoutOrderItemModifiers", func(db *gorm.DB) *gorm.DB {
-			return db.Where("delete_time = ?", 0)
+			return db.Where(condDeleteTime, 0)
 		})
 	}
 }
@@ -528,7 +533,7 @@ func (r *TakeoutOrderRepoImpl) WithTakeoutOrderMaterials() DBOption {
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderReceiver() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("TakeoutOrderReceiver", func(db *gorm.DB) *gorm.DB {
-			return db.Where("delete_time = ?", 0)
+			return db.Where(condDeleteTime, 0)
 		})
 	}
 }
@@ -537,7 +542,7 @@ func (r *TakeoutOrderRepoImpl) WithTakeoutOrderReceiver() DBOption {
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderCampaigns() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("TakeoutOrderCampaigns", func(db *gorm.DB) *gorm.DB {
-			return db.Where("delete_time = ?", 0)
+			return db.Where(condDeleteTime, 0)
 		})
 	}
 }
@@ -546,7 +551,7 @@ func (r *TakeoutOrderRepoImpl) WithTakeoutOrderCampaigns() DBOption {
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderPromos() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("TakeoutOrderPromos", func(db *gorm.DB) *gorm.DB {
-			return db.Where("delete_time = ?", 0)
+			return db.Where(condDeleteTime, 0)
 		})
 	}
 }
@@ -595,7 +600,7 @@ func (r *TakeoutOrderRepoImpl) GetShiftLogByOrderUuid(orderUuid uint64) (*appMod
 	var order model.TakeoutOrder
 	err := r.db.Model(&model.TakeoutOrder{}).
 		Where("uuid = ?", orderUuid).
-		Where("delete_time = ?", 0).
+		Where(condDeleteTime, 0).
 		Select("staff_shift_log_uuid").
 		First(&order).Error
 
