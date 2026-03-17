@@ -3332,10 +3332,10 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 
 	// 计算剩余支付时间
 	var remainingPaymentTime int64
-	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() {
+	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() && saleBill.SubmitPayTime > 0 {
 		// 假设支付超时时间为15分钟
 		paymentTimeout := int64(15 * 60)
-		remaining := paymentTimeout - (time.Now().Unix() - saleBill.CreateTime)
+		remaining := paymentTimeout - (time.Now().Unix() - saleBill.SubmitPayTime)
 		if remaining > 0 {
 			remainingPaymentTime = remaining
 		}
