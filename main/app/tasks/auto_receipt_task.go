@@ -38,6 +38,16 @@ type orderProcessDeps struct {
 	logRepo          repository.IAutoReceiptLogRepo
 }
 
+// autoReceiptInput 自动收货执行参数
+type autoReceiptInput struct {
+	order        *model.PurchaseOrder
+	dn           *delivery_note.DeliveryNote
+	pendingItems []req.PurchaseReceiptItemCreateReq
+	rule         *shopRuleInfo
+	shopUuid     uint64
+	loc          *time.Location
+}
+
 // AutoReceiptTask 品采自动收货定时任务
 // 每小时执行一次，检查门店是否到达本地午夜，满足条件则自动收货
 type AutoReceiptTask struct {
@@ -240,60 +250,54 @@ func (t *AutoReceiptTask) processOrder(
 		}
 
 		// 满足所有条件，执行自动收货
-		t.executeAutoReceipt(ctx, order, dn, pendingItems, matchedRule, shopUuid, loc, deps)
+		t.executeAutoReceipt(ctx, autoReceiptInput{
+			order: order, dn: dn, pendingItems: pendingItems,
+			rule: matchedRule, shopUuid: shopUuid, loc: loc,
+		}, deps)
 	}
 }
 
 // executeAutoReceipt 执行自动收货
-func (t *AutoReceiptTask) executeAutoReceipt(
-	ctx context.Context,
-	order *model.PurchaseOrder,
-	dn *delivery_note.DeliveryNote,
-	pendingItems []req.PurchaseReceiptItemCreateReq,
-	rule *shopRuleInfo,
-	shopUuid uint64,
-	loc *time.Location,
-	deps orderProcessDeps,
-) {
+func (t *AutoReceiptTask) executeAutoReceipt(ctx context.Context, in autoReceiptInput, deps orderProcessDeps) {
 	now := time.Now()
 	receiptReq := req.PurchaseReceiptCreateReq{
-		PurchaseOrderUuid: order.Uuid,
+		PurchaseOrderUuid: in.order.Uuid,
 		ReceiveTime:       now.Unix(),
 		ReceiptType:       constant.ReceiptTypeInternal,
-		Items:             pendingItems,
+		Items:             in.pendingItems,
 		IsConfirm:         true,
-		DeliveryNoteNo:    dn.Name,
+		DeliveryNoteNo:    in.dn.Name,
 		IsAutoReceipt:     true,
 	}
 
 	result, err := deps.purchaseOrderSrv.CreatePurchaseReceiptOrder(ctx, receiptReq)
 	if err != nil {
 		logger.Logger.Error("自动收货任务: 创建收货单失败",
-			zap.Uint64("company_uuid", shopUuid),
-			zap.String("dn_name", dn.Name),
+			zap.Uint64("company_uuid", in.shopUuid),
+			zap.String("dn_name", in.dn.Name),
 			zap.Error(err))
 		return
 	}
 
 	// 记录日志（使用门店时区的当天0点）
-	receiptTime, _ := utils.Timezone(loc.String()).TodayStartEndUnix()
+	receiptTime, _ := utils.Timezone(in.loc.String()).TodayStartEndUnix()
 	_, err = deps.logRepo.Create(model.AutoReceiptLog{
-		HeadquarterCompanyUuid: rule.HeadquarterUuid,
-		RuleUuid:               rule.RuleUuid,
-		ShopCompanyUuid:        shopUuid,
+		HeadquarterCompanyUuid: in.rule.HeadquarterUuid,
+		RuleUuid:               in.rule.RuleUuid,
+		ShopCompanyUuid:        in.shopUuid,
 		ReceiptOrderUuid:       result.Uuid,
 		ReceiptOrderNo:         result.OrderNo,
-		ReceiptErpOrderNo:      dn.Name,
+		ReceiptErpOrderNo:      in.dn.Name,
 		ReceiptTime:            receiptTime,
 	})
 	if err != nil {
 		logger.Logger.Error("自动收货任务: 记录日志失败",
-			zap.Uint64("company_uuid", shopUuid), zap.Error(err))
+			zap.Uint64("company_uuid", in.shopUuid), zap.Error(err))
 	}
 
 	logger.Logger.Info("自动收货任务: 成功创建收货单",
-		zap.Uint64("company_uuid", shopUuid),
-		zap.String("dn_name", dn.Name),
+		zap.Uint64("company_uuid", in.shopUuid),
+		zap.String("dn_name", in.dn.Name),
 		zap.Uint64("receipt_uuid", result.Uuid))
 }
 

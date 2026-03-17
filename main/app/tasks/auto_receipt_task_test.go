@@ -852,7 +852,10 @@ func TestExecuteAutoReceipt_Success(t *testing.T) {
 		},
 	}
 
-	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
+	task.executeAutoReceipt(ctx, autoReceiptInput{
+		order: order, dn: dn, pendingItems: pendingItems,
+		rule: rule, shopUuid: 100, loc: loc,
+	}, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
 
 	if !receiptCalled {
 		t.Error("CreatePurchaseReceiptOrder was not called")
@@ -889,7 +892,10 @@ func TestExecuteAutoReceipt_CreateReceiptFails(t *testing.T) {
 	}
 
 	// Should return early without calling logRepo.Create
-	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
+	task.executeAutoReceipt(ctx, autoReceiptInput{
+		order: order, dn: dn, pendingItems: pendingItems,
+		rule: rule, shopUuid: 100, loc: loc,
+	}, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
 
 	if logCalled {
 		t.Error("logRepo.Create should NOT be called when receipt creation fails")
@@ -920,7 +926,10 @@ func TestExecuteAutoReceipt_LogCreateFails(t *testing.T) {
 	}
 
 	// Should not panic — just log the error
-	task.executeAutoReceipt(ctx, order, dn, pendingItems, rule, 100, loc, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
+	task.executeAutoReceipt(ctx, autoReceiptInput{
+		order: order, dn: dn, pendingItems: pendingItems,
+		rule: rule, shopUuid: 100, loc: loc,
+	}, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
 }
 
 // ---------------------------------------------------------------------------
