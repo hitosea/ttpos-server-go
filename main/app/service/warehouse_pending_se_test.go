@@ -3,6 +3,7 @@ package service
 import (
 	"testing"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
@@ -351,4 +352,41 @@ func TestGetPendingStockEntryConsumption_SkipsNonPendingOrders(t *testing.T) {
 	result, err := srv.getPendingStockEntryConsumption(newTestCtx(), db)
 	require.NoError(t, err)
 	assert.Empty(t, result, "No pending orders should be found when all orders are excluded by scope conditions")
+}
+
+// ─── buildSIModeOpts tests ───
+
+func TestBuildSIModeOpts_NotSIMode(t *testing.T) {
+	t.Parallel()
+	db := setupPendingSETestDB(t)
+	srv := &warehouseSrv{}
+
+	// CompanySetting with ErpInvoiceMode=0 → not SI mode → early return nil
+	ctx := context.NewContext(
+		context.WithCompanyUuid(99999),
+		context.WithCompanySetting(model.CompanySetting{ErpInvoiceMode: 0}),
+	)
+
+	consumption, opts, err := srv.buildSIModeOpts(ctx, db)
+	require.NoError(t, err)
+	assert.Nil(t, consumption, "Should return nil when not SI mode")
+	assert.Nil(t, opts, "Should return nil opts when not SI mode")
+}
+
+func TestBuildSIModeOpts_SIMode(t *testing.T) {
+	t.Parallel()
+	db := setupPendingSETestDB(t)
+	srv := &warehouseSrv{}
+
+	// CompanySetting with ErpInvoiceMode=1 → SI mode
+	ctx := context.NewContext(
+		context.WithCompanyUuid(99999),
+		context.WithCompanySetting(model.CompanySetting{ErpInvoiceMode: 1}),
+	)
+
+	// With empty DB, should still return empty consumption + 2 extra opts
+	consumption, opts, err := srv.buildSIModeOpts(ctx, db)
+	require.NoError(t, err)
+	assert.NotNil(t, consumption, "Should return non-nil consumption map")
+	assert.Len(t, opts, 2, "Should return 2 extra DB options for SI mode")
 }
