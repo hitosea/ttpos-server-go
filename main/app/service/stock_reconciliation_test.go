@@ -790,6 +790,40 @@ func newTestContext(version, lang string) context.Context {
 	return ctx
 }
 
+// ─── getIsInventoryStatusException tests ───
+
+func TestGetIsInventoryStatusException(t *testing.T) {
+	t.Parallel()
+	srv := &stockReconciliationSrv{}
+
+	tests := []struct {
+		name     string
+		booked   float64
+		counted  float64
+		expected bool
+	}{
+		{"both zero → no exception", 0, 0, false},
+		{"booked zero counted nonzero → exception", 0, 5, true},
+		{"equal → no exception", 100, 100, false},
+		{"within 30% → no exception", 100, 125, false},
+		{"exactly 30% → no exception", 100, 130, false},
+		{"over 30% → exception", 100, 131, true},
+		{"loss within 30% → no exception", 100, 75, false},
+		{"loss over 30% → exception", 100, 60, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := srv.getIsInventoryStatusException(
+				decimal.NewFromFloat(tt.booked),
+				decimal.NewFromFloat(tt.counted),
+			)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 // ─── handleErpApproveError tests ───
 
 func TestHandleErpApproveError_DisabledWarehouse_V2100(t *testing.T) {
@@ -914,4 +948,183 @@ func TestApproveStockReconciliationInERP_EmptyErpCode(t *testing.T) {
 
 	err := srv.approveStockReconciliationInERP(ctx, sr)
 	assert.NoError(t, err, "Should return nil when ErpCode is empty")
+}
+
+// ─── loadAndValidateStockReconciliation tests ───
+
+func setupLoadAndValidateTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+		SkipDefaultTransaction:                   true,
+		NamingStrategy: schema.NamingStrategy{
+			TablePrefix:   "ttpos_",
+			SingularTable: true,
+		},
+	})
+	require.NoError(t, err)
+
+	for _, ddl := range []string{
+		`CREATE TABLE ttpos_stock_reconciliation (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			create_time INTEGER DEFAULT 0,
+			update_time INTEGER DEFAULT 0,
+			delete_time INTEGER DEFAULT 0,
+			order_no TEXT DEFAULT '',
+			erp_code TEXT DEFAULT '',
+			type INTEGER DEFAULT 1,
+			warehouse_uuid INTEGER DEFAULT 0,
+			purpose INTEGER DEFAULT 1,
+			status INTEGER DEFAULT 0,
+			submit_time INTEGER DEFAULT 0,
+			submitter_staff_uuid INTEGER DEFAULT 0
+		)`,
+		`CREATE TABLE ttpos_stock_reconciliation_item (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			create_time INTEGER DEFAULT 0,
+			update_time INTEGER DEFAULT 0,
+			delete_time INTEGER DEFAULT 0,
+			stock_reconciliation_uuid INTEGER DEFAULT 0,
+			material_uuid INTEGER DEFAULT 0,
+			material_name TEXT DEFAULT '',
+			material_code TEXT DEFAULT '',
+			counted_quantity REAL DEFAULT 0,
+			booked_quantity REAL DEFAULT 0
+		)`,
+		`CREATE TABLE ttpos_warehouse (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			create_time INTEGER DEFAULT 0,
+			update_time INTEGER DEFAULT 0,
+			delete_time INTEGER DEFAULT 0,
+			name TEXT DEFAULT '',
+			multi_language_name_uuid INTEGER DEFAULT 0,
+			type TEXT DEFAULT '',
+			code TEXT DEFAULT '',
+			status INTEGER DEFAULT 0,
+			contact TEXT DEFAULT '',
+			phone TEXT DEFAULT '',
+			address TEXT DEFAULT '',
+			is_default INTEGER DEFAULT 0,
+			erp_code TEXT DEFAULT '',
+			headquarter_uuid INTEGER DEFAULT 0
+		)`,
+		`CREATE TABLE ttpos_material (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			create_time INTEGER DEFAULT 0,
+			update_time INTEGER DEFAULT 0,
+			delete_time INTEGER DEFAULT 0,
+			code TEXT DEFAULT '',
+			name TEXT DEFAULT '',
+			multi_language_name_uuid INTEGER DEFAULT 0,
+			status INTEGER DEFAULT 1,
+			barcode_value TEXT DEFAULT '',
+			category_uuid INTEGER DEFAULT 0
+		)`,
+		`CREATE TABLE ttpos_multi_language_name (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			create_time INTEGER DEFAULT 0,
+			update_time INTEGER DEFAULT 0,
+			delete_time INTEGER DEFAULT 0,
+			zh_name TEXT DEFAULT '',
+			en_name TEXT DEFAULT '',
+			th_name TEXT DEFAULT '',
+			ms_name TEXT DEFAULT '',
+			km_name TEXT DEFAULT ''
+		)`,
+		`CREATE TABLE ttpos_material_unit (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			create_time INTEGER DEFAULT 0,
+			update_time INTEGER DEFAULT 0,
+			delete_time INTEGER DEFAULT 0,
+			material_uuid INTEGER DEFAULT 0,
+			multi_language_name_uuid INTEGER DEFAULT 0,
+			is_base INTEGER DEFAULT 0
+		)`,
+	} {
+		require.NoError(t, db.Exec(ddl).Error)
+	}
+	return db
+}
+
+func TestLoadAndValidateStockReconciliation_NotFound(t *testing.T) {
+	t.Parallel()
+	db := setupLoadAndValidateTestDB(t)
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.10.0", "zh")
+
+	sr, err := srv.loadAndValidateStockReconciliation(ctx, db, 99999)
+	assert.Nil(t, sr)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "盘点单不存在")
+}
+
+func TestLoadAndValidateStockReconciliation_WrongStatus(t *testing.T) {
+	t.Parallel()
+	db := setupLoadAndValidateTestDB(t)
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.10.0", "zh")
+
+	// Insert record with status=0 (saved, not submitted)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_stock_reconciliation (uuid, status, warehouse_uuid, delete_time) VALUES (?, ?, ?, ?)",
+		9001, constant.StockReconciliationStatusSaved, 100, 0,
+	).Error)
+
+	sr, err := srv.loadAndValidateStockReconciliation(ctx, db, 9001)
+	assert.Nil(t, sr)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "当前状态不允许审核")
+}
+
+func TestLoadAndValidateStockReconciliation_WarehouseDisabled(t *testing.T) {
+	t.Parallel()
+	db := setupLoadAndValidateTestDB(t)
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.10.0", "zh")
+
+	// Insert warehouse with status=0 (disabled)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_warehouse (uuid, status, type, delete_time) VALUES (?, ?, ?, ?)",
+		100, 0, "normal", 0,
+	).Error)
+	// Insert stock reconciliation with status=submitted
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_stock_reconciliation (uuid, status, warehouse_uuid, delete_time) VALUES (?, ?, ?, ?)",
+		9001, constant.StockReconciliationStatusSubmitted, 100, 0,
+	).Error)
+
+	sr, err := srv.loadAndValidateStockReconciliation(ctx, db, 9001)
+	assert.Nil(t, sr)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "仓库状态已关闭")
+}
+
+func TestLoadAndValidateStockReconciliation_Success(t *testing.T) {
+	t.Parallel()
+	db := setupLoadAndValidateTestDB(t)
+	srv := &stockReconciliationSrv{}
+	ctx := newTestContext("2.10.0", "zh")
+
+	// Insert warehouse with status=1 (enabled)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_warehouse (uuid, status, type, delete_time) VALUES (?, ?, ?, ?)",
+		100, 1, "normal", 0,
+	).Error)
+	// Insert stock reconciliation with status=submitted
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_stock_reconciliation (uuid, status, warehouse_uuid, delete_time) VALUES (?, ?, ?, ?)",
+		9001, constant.StockReconciliationStatusSubmitted, 100, 0,
+	).Error)
+
+	sr, err := srv.loadAndValidateStockReconciliation(ctx, db, 9001)
+	require.NoError(t, err)
+	require.NotNil(t, sr)
+	assert.Equal(t, uint64(9001), sr.Uuid)
+	assert.Equal(t, constant.StockReconciliationStatusSubmitted, sr.Status)
 }
