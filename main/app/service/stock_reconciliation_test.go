@@ -5,10 +5,12 @@ import (
 	"strings"
 	"testing"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -1047,6 +1049,16 @@ func setupLoadValidateTestDB(t *testing.T) *gorm.DB {
 			conversion_rate REAL DEFAULT 0,
 			is_default INTEGER DEFAULT 0
 		)`,
+		`CREATE TABLE ttpos_stock_reconciliation_annotation (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			create_time INTEGER DEFAULT 0,
+			update_time INTEGER DEFAULT 0,
+			delete_time INTEGER DEFAULT 0,
+			stock_reconciliation_uuid INTEGER DEFAULT 0,
+			annotation_type INTEGER DEFAULT 0,
+			content TEXT DEFAULT ''
+		)`,
 	} {
 		require.NoError(t, db.Exec(ddl).Error)
 	}
@@ -1154,5 +1166,83 @@ func TestApproveStockReconciliationInERP_EmptyErpCode(t *testing.T) {
 
 	err := srv.approveStockReconciliationInERP(ctx, sr)
 	assert.NoError(t, err, "Should return nil when ErpCode is empty")
+}
+
+// ─── RejectStockReconciliation tests ───
+
+func newSrvWithLock() *stockReconciliationSrv {
+	return &stockReconciliationSrv{
+		lock: lock.InitLocalLock(),
+	}
+}
+
+func TestRejectStockReconciliation_NotFound(t *testing.T) {
+	t.Parallel()
+	db := setupLoadValidateTestDB(t)
+	srv := newSrvWithLock()
+
+	ctx := newTestContext("2.10.0", "zh")
+	ctx.SetDB(db)
+
+	err := srv.RejectStockReconciliation(ctx, req.StockReconciliationRejectReq{
+		Uuid:       99999,
+		Annotation: "不合格",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "盘点单不存在")
+}
+
+func TestRejectStockReconciliation_WrongStatus(t *testing.T) {
+	t.Parallel()
+	db := setupLoadValidateTestDB(t)
+	srv := newSrvWithLock()
+
+	// Insert record with status=saved (not submitted)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_stock_reconciliation (uuid, status, delete_time) VALUES (?, ?, ?)",
+		9001, constant.StockReconciliationStatusSaved, 0,
+	).Error)
+
+	ctx := newTestContext("2.10.0", "zh")
+	ctx.SetDB(db)
+
+	err := srv.RejectStockReconciliation(ctx, req.StockReconciliationRejectReq{
+		Uuid:       9001,
+		Annotation: "不合格",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "盘点单状态不允许驳回")
+}
+
+func TestRejectStockReconciliation_Success(t *testing.T) {
+	t.Parallel()
+	db := setupLoadValidateTestDB(t)
+	srv := newSrvWithLock()
+
+	// Insert a submitted stock reconciliation
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_stock_reconciliation (uuid, status, delete_time) VALUES (?, ?, ?)",
+		9001, constant.StockReconciliationStatusSubmitted, 0,
+	).Error)
+
+	ctx := newTestContext("2.10.0", "zh")
+	ctx.SetDB(db)
+
+	err := srv.RejectStockReconciliation(ctx, req.StockReconciliationRejectReq{
+		Uuid:       9001,
+		Annotation: "数量有误，请重新核对",
+	})
+	require.NoError(t, err)
+
+	// Verify status updated to rejected
+	var status int
+	db.Table("ttpos_stock_reconciliation").Where("uuid = 9001").Select("status").Scan(&status)
+	assert.Equal(t, constant.StockReconciliationStatusRejected, status)
+
+	// Verify annotation created
+	var annotation model.StockReconciliationAnnotation
+	db.Table("ttpos_stock_reconciliation_annotation").Where("stock_reconciliation_uuid = 9001").First(&annotation)
+	assert.Equal(t, "数量有误，请重新核对", annotation.Content)
+	assert.Equal(t, constant.StockReconciliationAnnotationTypeReject, annotation.AnnotationType)
 }
 
