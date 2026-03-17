@@ -347,22 +347,25 @@ func buildArrivedQtyMap(confirmedReceipts []model.PurchaseReceiptOrder, dnName s
 	return qtyMap
 }
 
+// materialUomKey 生成 "material_code:erpnext_uom" 格式的映射键
+func materialUomKey(materialCode, uom string) string {
+	return fmt.Sprintf("%s:%s", materialCode, uom)
+}
+
 // addItemArrivedQty 将单个收货明细的数量累加到映射中
 func addItemArrivedQty(qtyMap map[string]float64, item model.PurchaseReceiptOrderItem) {
 	if len(item.Units) > 0 {
 		// 多单位: 按各单位的 ErpnextUom 分别统计
 		for _, unit := range item.Units {
 			if unit.ErpnextUom != "" {
-				key := fmt.Sprintf("%s:%s", item.MaterialCode, unit.ErpnextUom)
-				qtyMap[key] += unit.Num
+				qtyMap[materialUomKey(item.MaterialCode, unit.ErpnextUom)] += unit.Num
 			}
 		}
 		return
 	}
 	// 单单位: 使用明细自身的 ErpnextUom
 	if item.MaterialCode != "" && item.ErpnextUom != "" {
-		key := fmt.Sprintf("%s:%s", item.MaterialCode, item.ErpnextUom)
-		qtyMap[key] += item.Num
+		qtyMap[materialUomKey(item.MaterialCode, item.ErpnextUom)] += item.Num
 	}
 }
 
@@ -389,7 +392,7 @@ func calculatePendingItems(dn *delivery_note.DeliveryNote, orderItems []model.Pu
 		}
 
 		// 计算待收数量
-		key := fmt.Sprintf("%s:%s", dnItem.ItemCode, dnItem.Uom)
+		key := materialUomKey(dnItem.ItemCode, dnItem.Uom)
 		arrived := arrivedQtyMap[key]
 		pendingQty := dnItem.Qty - arrived
 		if pendingQty <= 0 {

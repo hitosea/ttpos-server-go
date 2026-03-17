@@ -48,26 +48,21 @@ func (r *autoReceiptRuleShopRepo) BatchCreate(shops []model.AutoReceiptRuleShop)
 }
 
 func (r *autoReceiptRuleShopRepo) SoftDeleteByUuids(uuids []uint64, headquarterUuid uint64) error {
-	// 通过 JOIN 规则主表确保租户隔离
-	err := r.db.Exec(
-		`UPDATE ttpos_auto_receipt_rule_shop s
-		 JOIN ttpos_auto_receipt_rule r ON r.uuid = s.rule_uuid
-		 SET s.delete_time = UNIX_TIMESTAMP()
-		 WHERE s.uuid IN ? AND s.delete_time = 0
-		 AND r.headquarter_company_uuid = ? AND r.delete_time = 0`,
-		uuids, headquarterUuid).Error
-	return errors.WithMessage(err)
+	return r.softDeleteByColumn("s.uuid", uuids, headquarterUuid)
 }
 
 func (r *autoReceiptRuleShopRepo) SoftDeleteByRuleUuids(ruleUuids []uint64, headquarterUuid uint64) error {
-	// 通过 JOIN 规则主表确保租户隔离
-	err := r.db.Exec(
-		`UPDATE ttpos_auto_receipt_rule_shop s
+	return r.softDeleteByColumn("s.rule_uuid", ruleUuids, headquarterUuid)
+}
+
+// softDeleteByColumn 通过 JOIN 规则主表确保租户隔离的软删除
+func (r *autoReceiptRuleShopRepo) softDeleteByColumn(column string, ids []uint64, headquarterUuid uint64) error {
+	sql := `UPDATE ttpos_auto_receipt_rule_shop s
 		 JOIN ttpos_auto_receipt_rule r ON r.uuid = s.rule_uuid
 		 SET s.delete_time = UNIX_TIMESTAMP()
-		 WHERE s.rule_uuid IN ? AND s.delete_time = 0
-		 AND r.headquarter_company_uuid = ? AND r.delete_time = 0`,
-		ruleUuids, headquarterUuid).Error
+		 WHERE ` + column + ` IN ? AND s.delete_time = 0
+		 AND r.headquarter_company_uuid = ? AND r.delete_time = 0`
+	err := r.db.Exec(sql, ids, headquarterUuid).Error
 	return errors.WithMessage(err)
 }
 
