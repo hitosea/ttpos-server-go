@@ -174,39 +174,35 @@ func createH5OrderForMemberDineIn(payload event.PayFinishMemberDineInOrderPayloa
 }
 
 // autoAcceptMemberDineInOrder 自动接单会员端堂食订单
-// 如果开启了会员订单自动接单且订单金额在限额内，自动完成接单和送厨
+// 使用接单设置（AcceptOrderSetting）判断是否开启自动接单及金额限额
 func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload, saleBill *model.SaleBill) {
 	dbm := database.GetDBManager(config.DatabaseConf{})
 	db := dbm.GetDB(payload.CompanyUuid)
 
-	// 获取收银设置，检查是否开启会员订单自动接单
+	// 获取接单设置
 	settingSrv := setting.NewSrv(dbm, cache.Global)
-	cashierSetting, err := settingSrv.GetCashierSetting(payload.Ctx, nil)
+	acceptOrderSetting, err := settingSrv.GetAcceptOrderSetting(payload.Ctx)
 	if err != nil {
-		logger.Logger.Error("autoAcceptMemberDineInOrder, GetCashierSetting failed",
+		logger.Logger.Error("autoAcceptMemberDineInOrder, GetAcceptOrderSetting failed",
 			zap.Uint64("company_uuid", payload.CompanyUuid),
 			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
 			zap.Error(err))
 		return
 	}
 
-	// 检查是否开启会员订单自动接单
-	if !cashierSetting.IsAutoMemberOrderBool() {
-		logger.Logger.Info("autoAcceptMemberDineInOrder, auto accept not enabled",
-			zap.Uint64("company_uuid", payload.CompanyUuid),
-			zap.Uint64("saleBillUuid", payload.SaleBillUuid))
+	// 获取未接单商品的总金额
+	saleOrder := saleBill.GetFirstSaleOrder()
+	if saleOrder == nil {
 		return
 	}
+	totalPrice := saleBill.GetUnAcceptH5OrderProductTotalPrice(saleOrder.SaleOrderProducts)
 
-	// 检查订单金额是否在自动接单限额内
-	orderAmount := saleBill.Amount
-	limitAmount := cashierSetting.AutoMemberOrderLimitValue()
-	if orderAmount > limitAmount {
-		logger.Logger.Info("autoAcceptMemberDineInOrder, order amount exceeds limit",
+	// 判断是否可以自动接单（是否开启 + 金额是否在限额内）
+	if !acceptOrderSetting.CanAutoOrder(totalPrice) {
+		logger.Logger.Info("autoAcceptMemberDineInOrder, auto accept not allowed",
 			zap.Uint64("company_uuid", payload.CompanyUuid),
 			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
-			zap.Float64("orderAmount", orderAmount),
-			zap.Float64("limitAmount", limitAmount))
+			zap.Float64("totalPrice", totalPrice))
 		return
 	}
 
@@ -244,6 +240,19 @@ func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload
 	// 设置上下文来源为会员端
 	payload.Ctx.SetSource(constant.SourceMember)
 
+	// 确保上下文中有 CompanySetting（支付回调路由无 JWT 中间件，ctx 中可能缺失）
+	if payload.Ctx.GetCompanySetting().Uuid == 0 {
+		companySetting, err := settingSrv.GetCompanySetting(payload.Ctx)
+		if err != nil {
+			logger.Logger.Error("autoAcceptMemberDineInOrder, GetCompanySetting failed",
+				zap.Uint64("company_uuid", payload.CompanyUuid),
+				zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+				zap.Error(err))
+			return
+		}
+		payload.Ctx.SetCompanySetting(companySetting)
+	}
+
 	// 执行自动接单（同时完成接单和送厨）
 	result, err := orderSrv.AcceptH5Order(payload.Ctx, h5Order.Uuid, true)
 	if err != nil {
@@ -265,7 +274,7 @@ func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload
 		zap.Uint64("company_uuid", payload.CompanyUuid),
 		zap.Uint64("saleBillUuid", payload.SaleBillUuid),
 		zap.Uint64("h5OrderUuid", h5Order.Uuid),
-		zap.Float64("orderAmount", orderAmount))
+		zap.Float64("totalPrice", totalPrice))
 }
 
 // markMemberDineInOrderComplete 支付完成后将订单标记为已完成
