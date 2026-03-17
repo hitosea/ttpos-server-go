@@ -394,7 +394,8 @@ func Test_Member_DineIn_Create_PackageEmptySub_Fail(t *testing.T) {
 	}
 }
 
-// Test_Member_DineIn_Create_IsAcceptOrder 验证普通商品堂食订单创建后 is_accept_order=0
+// Test_Member_DineIn_Create_IsAcceptOrder 验证普通商品堂食订单创建后 is_accept_order=1（已接单）
+// 业务逻辑：堂食订单非 H5 商品，创建时默认标记为已接单（is_accept_order=1）
 // Route: POST /api/v1/member/order/dine_in/create
 func Test_Member_DineIn_Create_IsAcceptOrder(t *testing.T) {
 	// 1. 创建租户数据库
@@ -450,7 +451,7 @@ func Test_Member_DineIn_Create_IsAcceptOrder(t *testing.T) {
 		t.Fatalf("failed to unmarshal response data: %v", err)
 	}
 
-	// 9. 查询 sale_order_product 表，验证 is_accept_order=0
+	// 9. 查询 sale_order_product 表，验证 is_accept_order=1（堂食订单默认已接单）
 	rows, err := db.Query(
 		"SELECT is_accept_order FROM ttpos_sale_order_product WHERE sale_bill_uuid = ? AND delete_time = 0",
 		result.SaleBillUuid,
@@ -467,17 +468,18 @@ func Test_Member_DineIn_Create_IsAcceptOrder(t *testing.T) {
 			t.Fatalf("failed to scan is_accept_order: %v", err)
 		}
 		count++
-		if isAcceptOrder != 0 {
-			t.Errorf("sale_order_product[%d]: expected is_accept_order=0, got %d", count, isAcceptOrder)
+		if isAcceptOrder != 1 {
+			t.Errorf("sale_order_product[%d]: expected is_accept_order=1, got %d", count, isAcceptOrder)
 		}
 	}
 	if count == 0 {
 		t.Fatal("no sale_order_product records found")
 	}
-	t.Logf("verified %d sale_order_product records all have is_accept_order=0", count)
+	t.Logf("verified %d sale_order_product records all have is_accept_order=1", count)
 }
 
-// Test_Member_DineIn_Create_Package_IsAcceptOrder 验证套餐商品堂食订单创建后 is_accept_order=0（含子商品）
+// Test_Member_DineIn_Create_Package_IsAcceptOrder 验证套餐商品堂食订单创建后 is_accept_order=1（含子商品，已接单）
+// 业务逻辑：堂食订单非 H5 商品，创建时默认标记为已接单（is_accept_order=1）
 // Route: POST /api/v1/member/order/dine_in/create
 func Test_Member_DineIn_Create_Package_IsAcceptOrder(t *testing.T) {
 	// 1. 创建租户数据库
@@ -545,7 +547,7 @@ func Test_Member_DineIn_Create_Package_IsAcceptOrder(t *testing.T) {
 		t.Fatalf("failed to unmarshal response data: %v", err)
 	}
 
-	// 9. 查询 sale_order_product 表，验证所有商品（主商品 + 子商品）的 is_accept_order=0
+	// 9. 查询 sale_order_product 表，验证所有商品（主商品 + 子商品）的 is_accept_order=1（堂食默认已接单）
 	rows, err := db.Query(
 		"SELECT product_type, is_accept_order FROM ttpos_sale_order_product WHERE sale_bill_uuid = ? AND delete_time = 0",
 		result.SaleBillUuid,
@@ -562,15 +564,15 @@ func Test_Member_DineIn_Create_Package_IsAcceptOrder(t *testing.T) {
 			t.Fatalf("failed to scan row: %v", err)
 		}
 		count++
-		if isAcceptOrder != 0 {
-			t.Errorf("sale_order_product[%d] (product_type=%d): expected is_accept_order=0, got %d", count, productType, isAcceptOrder)
+		if isAcceptOrder != 1 {
+			t.Errorf("sale_order_product[%d] (product_type=%d): expected is_accept_order=1, got %d", count, productType, isAcceptOrder)
 		}
 	}
 	// 套餐应有3条记录：1个主商品(product_type=1) + 2个子商品(product_type=2)
 	if count < 3 {
 		t.Errorf("expected at least 3 sale_order_product records (1 package + 2 sub-products), got %d", count)
 	}
-	t.Logf("verified %d sale_order_product records all have is_accept_order=0", count)
+	t.Logf("verified %d sale_order_product records all have is_accept_order=1", count)
 }
 
 // Test_Member_DineIn_Create_Unauthorized 验证未登录时创建堂食订单被拒绝
