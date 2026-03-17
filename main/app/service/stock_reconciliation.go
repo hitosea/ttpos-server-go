@@ -984,30 +984,6 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 			return errors.WithMessage(err, "保存批注失败")
 		}
 
-		// 生成盘点快照（SI 模式下记录未扣减订单），并构建待扣减量映射
-		// 快照需要在差异计算之前生成，以便用 PendingQty 修正 BookedQuantity
-		pendingQtyByCode := make(map[string]decimal.Decimal) // item_code → pending_qty
-		companySetting := ctx.GetCompanySetting()
-		if companySetting.IsErpSalesInvoiceMode() && stockReconciliation.Warehouse != nil {
-			erpStockEntrySrv := NewErpStockEntrySrv(s.dbm)
-			if err := erpStockEntrySrv.GenerateStocktakeSnapshot(ctx, tx, stockReconciliation.Uuid, stockReconciliation.Warehouse.ErpCode); err != nil {
-				logger.Logger.Error("生成盘点快照失败", zap.Error(err))
-				// 快照生成失败不阻塞盘点流程
-			} else {
-				// 读取刚写入的快照，构建 pendingQtyByCode
-				var snapshots []model.StocktakeSnapshot
-				if err := tx.Where("stock_reconciliation_uuid = ?", stockReconciliation.Uuid).
-					Where("delete_time = 0").
-					Find(&snapshots).Error; err != nil {
-					logger.Logger.Error("读取盘点快照失败", zap.Error(err))
-				} else {
-					for _, snap := range snapshots {
-						pendingQtyByCode[snap.ItemCode] = decimal.NewFromFloat(snap.PendingQty)
-					}
-				}
-			}
-		}
-
 		// 遍历所有物品
 		var warehouseLogs []*model.WarehouseInOutLog
 		for _, item := range stockReconciliation.StockReconciliationItems {
@@ -1044,19 +1020,14 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 			}
 
 			// 有盈亏才记录日志（SI 模式下用快照修正账面库存）
-			effectiveBooked := item.BookedQuantity
-			if pending, ok := pendingQtyByCode[material.Code]; ok && pending.IsPositive() {
-				// 预期库存 = 账面库存 - 待扣减量（未通过 Stock Entry 扣减的订单消耗）
-				effectiveBooked = effectiveBooked.Sub(pending)
-			}
-			if !item.CountedQuantity.Equal(effectiveBooked) {
-				scene := constant.WarehouseInOutLogSceneProfitIn    // 盘盈
-				logType := constant.WarehouseInOutLogLogTypeIn      // 入库
-				if item.CountedQuantity.LessThan(effectiveBooked) { // 盘亏出库
+			if !item.CountedQuantity.Equal(item.BookedQuantity) {
+				scene := constant.WarehouseInOutLogSceneProfitIn        // 盘盈
+				logType := constant.WarehouseInOutLogLogTypeIn          // 入库
+				if item.CountedQuantity.LessThan(item.BookedQuantity) { // 盘亏出库
 					logType = constant.WarehouseInOutLogLogTypeOut
 					scene = constant.WarehouseInOutLogSceneLossOut
 				}
-				diff := item.CountedQuantity.Sub(effectiveBooked).Abs()
+				diff := item.CountedQuantity.Sub(item.BookedQuantity).Abs()
 				valuation := 0.0 // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 				warehouseLogs = append(warehouseLogs, &model.WarehouseInOutLog{
 					LogType:              logType,
