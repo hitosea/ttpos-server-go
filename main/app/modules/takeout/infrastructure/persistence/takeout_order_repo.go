@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	appModel "ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/domain/model"
@@ -32,7 +33,12 @@ type ITakeoutOrderRepo interface {
 	GetShiftLogByOrderUuid(orderUuid uint64) (*appModel.StaffShiftLog, error)               // 根据订单UUID获取班次信息
 	DeleteRelatedData(orderUuid uint64) error                                               // 删除订单关联数据（商品、修饰符、收货人、活动、促销、物料）
 
+	// 查询方法
+	FindAll(options ...DBOption) ([]*model.TakeoutOrder, error) // 轻量查询，无 COUNT、无默认预加载
+
 	// 选项方法
+	WherePendingStockEntry() DBOption                          // 待 Stock Entry 扣减的已完成外卖订单 scope
+	WhereCompletedWithInvoice() DBOption                       // 已同步 ERPNext 的已完成订单 scope（不区分 erp_stock_deducted）
 	WithPreload(options ...DBOption) DBOption
 	WithTakeoutOrderItems() DBOption
 	WithTakeoutOrderItemModifiers() DBOption
@@ -183,6 +189,41 @@ func (r *TakeoutOrderRepoImpl) GetList(options ...DBOption) ([]*model.TakeoutOrd
 	}
 
 	return orders, total, nil
+}
+
+// FindAll 轻量查询外卖订单列表（无 COUNT、无默认 Preload TakeoutOrderItems）
+// 适用于只需要订单数据或自定义 Preload 的场景
+func (r *TakeoutOrderRepoImpl) FindAll(options ...DBOption) ([]*model.TakeoutOrder, error) {
+	var orders []*model.TakeoutOrder
+	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
+	for _, option := range options {
+		db = option(db)
+	}
+	if err := db.Find(&orders).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return orders, nil
+}
+
+// WherePendingStockEntry 查询待 Stock Entry 扣减的已完成外卖订单
+// 条件：erp_stock_deducted=0、SI 回调成功(erp_sync_status=3)、已完成、未删除
+func (r *TakeoutOrderRepoImpl) WherePendingStockEntry() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erp_stock_deducted = ?", 0).
+			Where("erp_pos_invoice_resp != ''").
+			Where("erp_sync_status = ?", constant.ErpSyncStatusSuccess).
+			Where("order_state = ?", value_object.TakeoutOrderStateCompleted)
+	}
+}
+
+// WhereCompletedWithInvoice 查询已同步 ERPNext 的已完成订单（不区分 erp_stock_deducted 状态）
+// 用于 SI 模式下排除已同步 ERPNext 的订单
+func (r *TakeoutOrderRepoImpl) WhereCompletedWithInvoice() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erp_pos_invoice_resp != ''").
+			Where("erp_sync_status = ?", constant.ErpSyncStatusSuccess).
+			Where("order_state = ?", value_object.TakeoutOrderStateCompleted)
+	}
 }
 
 // GetCount 获取外卖订单数量

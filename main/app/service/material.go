@@ -93,7 +93,7 @@ type IMaterialSrv interface {
 	SyncMaterial(ctx context.Context, syncHeadquarterData bool) error         // 同步物品
 	SyncProductBomCard(ctx context.Context, syncHeadquarterData bool) error   // 同步成本卡
 
-	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
+	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64, extraOpts ...repository.DBOption) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
 
 	CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error // 检查物品安全库存
 
@@ -3998,7 +3998,9 @@ func (s *materialSrv) disableProductBomCard(ctx context.Context, db *gorm.DB, pr
 }
 
 // GetWarehouseItemConsumption 获取仓库物品消耗量
-func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) {
+// SI 模式下，排除已结账订单的消耗（这部分由 getPendingStockEntryConsumption 通过 sale_order_material 处理）
+// 仅保留未结账订单的当班消耗（如已下单但未结账的桌台）
+func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64, extraOpts ...repository.DBOption) (material_resp.MaterialConsumptionListResp, error) {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	// 查询当前未交班的班次列表
 	staffShiftLogList, err := repository.NewShiftLogRepo(db).GetShiftLogList(
@@ -4011,8 +4013,9 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 	for _, staffShiftLog := range staffShiftLogList {
 		staffShiftLogUuids = append(staffShiftLogUuids, staffShiftLog.Uuid)
 	}
+
 	// 查询这些班次中指定仓库下的物品消耗量（只查需要的字段，减少 I/O）
-	itemLogs, err := repository.NewWarehouseFormRepo(db).GetWarehouseOutFormItem(
+	queryOpts := []repository.DBOption{
 		func(db *gorm.DB) *gorm.DB {
 			return db.Select("material_uuid, num")
 		},
@@ -4025,7 +4028,13 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 		func(db *gorm.DB) *gorm.DB {
 			return db.Where("revoke_time = 0 AND material_uuid != 0") // 未撤销且物品uuid不为0, 获取有效的物品出库记录
 		},
-	)
+	}
+
+	// 追加调用者传入的额外查询条件（如 SI 模式排除已同步订单的 scope）
+	// 由调用者预构建并传入，避免每次调用重复构建相同子查询
+	queryOpts = append(queryOpts, extraOpts...)
+
+	itemLogs, err := repository.NewWarehouseFormRepo(db).GetWarehouseOutFormItem(queryOpts...)
 	if err != nil {
 		return material_resp.MaterialConsumptionListResp{}, errors.WithMessage(err, "获取仓库物品消耗量失败")
 	}
