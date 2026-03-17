@@ -373,3 +373,222 @@ func TestBatchAssignShiftLog_EmptyUuids(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), affected)
 }
+
+// ─── WhereUuid tests ───
+
+func TestWhereUuid(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	seedTakeoutOrders(t, db)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, err := repo.FindAll(repo.WhereUuid(2001))
+	require.NoError(t, err)
+	require.Len(t, orders, 1)
+	assert.Equal(t, uint64(2001), orders[0].Uuid)
+}
+
+// ─── WherePlatform tests ───
+
+func TestWherePlatform_NonEmpty(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, platform, delete_time) VALUES (?, ?, ?)",
+		8001, "meituan", 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, platform, delete_time) VALUES (?, ?, ?)",
+		8002, "eleme", 0,
+	).Error)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, err := repo.FindAll(repo.WherePlatform("meituan"))
+	require.NoError(t, err)
+	assert.Len(t, orders, 1)
+	assert.Equal(t, uint64(8001), orders[0].Uuid)
+}
+
+func TestWherePlatform_Empty(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, platform, delete_time) VALUES (?, ?, ?)",
+		8001, "meituan", 0,
+	).Error)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, err := repo.FindAll(repo.WherePlatform(""))
+	require.NoError(t, err)
+	assert.Len(t, orders, 1, "Empty platform should not filter")
+}
+
+// ─── WhereOrderStateIn tests ───
+
+func TestWhereOrderStateIn(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	seedTakeoutOrders(t, db)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, err := repo.FindAll(repo.WhereOrderStateIn([]int{
+		int(value_object.TakeoutOrderStateCompleted),
+		int(value_object.TakeoutOrderStateAccepted),
+	}))
+	require.NoError(t, err)
+	assert.Len(t, orders, 6, "Should return completed + accepted orders")
+}
+
+func TestWhereOrderStateIn_Empty(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	seedTakeoutOrders(t, db)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, err := repo.FindAll(repo.WhereOrderStateIn([]int{}))
+	require.NoError(t, err)
+	assert.Len(t, orders, 6, "Empty states should not filter")
+}
+
+// ─── WhereTimeRange tests ───
+
+func TestWhereTimeRange_BothBounds(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, order_time, delete_time) VALUES (?, ?, ?)",
+		9001, 1000, 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, order_time, delete_time) VALUES (?, ?, ?)",
+		9002, 2000, 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, order_time, delete_time) VALUES (?, ?, ?)",
+		9003, 3000, 0,
+	).Error)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, err := repo.FindAll(repo.WhereTimeRange(1500, 2500))
+	require.NoError(t, err)
+	require.Len(t, orders, 1)
+	assert.Equal(t, uint64(9002), orders[0].Uuid)
+}
+
+func TestWhereTimeRange_StartOnly(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, order_time, delete_time) VALUES (?, ?, ?)",
+		9001, 1000, 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, order_time, delete_time) VALUES (?, ?, ?)",
+		9002, 2000, 0,
+	).Error)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, err := repo.FindAll(repo.WhereTimeRange(1500, 0))
+	require.NoError(t, err)
+	require.Len(t, orders, 1)
+	assert.Equal(t, uint64(9002), orders[0].Uuid)
+}
+
+func TestWhereTimeRange_EndOnly(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, order_time, delete_time) VALUES (?, ?, ?)",
+		9001, 1000, 0,
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, order_time, delete_time) VALUES (?, ?, ?)",
+		9002, 2000, 0,
+	).Error)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, err := repo.FindAll(repo.WhereTimeRange(0, 1500))
+	require.NoError(t, err)
+	require.Len(t, orders, 1)
+	assert.Equal(t, uint64(9001), orders[0].Uuid)
+}
+
+func TestWhereTimeRange_NoBounds(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, order_time, delete_time) VALUES (?, ?, ?)",
+		9001, 1000, 0,
+	).Error)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, err := repo.FindAll(repo.WhereTimeRange(0, 0))
+	require.NoError(t, err)
+	assert.Len(t, orders, 1, "No bounds should not filter")
+}
+
+// ─── Delete tests ───
+
+func TestDelete_SoftDelete(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, delete_time) VALUES (?, ?)",
+		10001, 0,
+	).Error)
+	repo := NewTakeoutOrderRepo(db)
+
+	err := repo.Delete(10001)
+	require.NoError(t, err)
+
+	// Verify soft-deleted
+	var deleteTime int
+	db.Raw("SELECT delete_time FROM ttpos_takeout_order WHERE uuid = ?", 10001).Scan(&deleteTime)
+	assert.Greater(t, deleteTime, 0, "delete_time should be set")
+}
+
+// ─── GetErpOpenPosEntryNameByOrderUuid tests ───
+
+func TestGetErpOpenPosEntryNameByOrderUuid(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(`
+		CREATE TABLE ttpos_staff_shift_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			erpnext_open_pos_entry_name TEXT DEFAULT '',
+			delete_time INTEGER DEFAULT 0
+		)
+	`).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_staff_shift_log (uuid, erpnext_open_pos_entry_name) VALUES (?, ?)",
+		100, "POS-ENTRY-001",
+	).Error)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, staff_shift_log_uuid, delete_time) VALUES (?, ?, ?)",
+		11001, 100, 0,
+	).Error)
+	repo := NewTakeoutOrderRepo(db)
+
+	name, err := repo.GetErpOpenPosEntryNameByOrderUuid(11001)
+	require.NoError(t, err)
+	assert.Equal(t, "POS-ENTRY-001", name)
+}
+
+func TestGetErpOpenPosEntryNameByOrderUuid_NotFound(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(`
+		CREATE TABLE ttpos_staff_shift_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			erpnext_open_pos_entry_name TEXT DEFAULT '',
+			delete_time INTEGER DEFAULT 0
+		)
+	`).Error)
+	repo := NewTakeoutOrderRepo(db)
+
+	name, err := repo.GetErpOpenPosEntryNameByOrderUuid(99999)
+	require.NoError(t, err)
+	assert.Empty(t, name)
+}
