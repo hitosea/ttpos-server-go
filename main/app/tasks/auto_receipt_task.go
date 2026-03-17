@@ -341,22 +341,29 @@ func buildArrivedQtyMap(confirmedReceipts []model.PurchaseReceiptOrder, dnName s
 			continue
 		}
 		for _, item := range receipt.Items {
-			if len(item.Units) > 0 {
-				// 多单位: 按各单位的 ErpnextUom 分别统计
-				for _, unit := range item.Units {
-					if unit.ErpnextUom != "" {
-						key := fmt.Sprintf("%s:%s", item.MaterialCode, unit.ErpnextUom)
-						qtyMap[key] += unit.Num
-					}
-				}
-			} else if item.MaterialCode != "" && item.ErpnextUom != "" {
-				// 单单位: 使用明细自身的 ErpnextUom
-				key := fmt.Sprintf("%s:%s", item.MaterialCode, item.ErpnextUom)
-				qtyMap[key] += item.Num
-			}
+			addItemArrivedQty(qtyMap, item)
 		}
 	}
 	return qtyMap
+}
+
+// addItemArrivedQty 将单个收货明细的数量累加到映射中
+func addItemArrivedQty(qtyMap map[string]float64, item model.PurchaseReceiptOrderItem) {
+	if len(item.Units) > 0 {
+		// 多单位: 按各单位的 ErpnextUom 分别统计
+		for _, unit := range item.Units {
+			if unit.ErpnextUom != "" {
+				key := fmt.Sprintf("%s:%s", item.MaterialCode, unit.ErpnextUom)
+				qtyMap[key] += unit.Num
+			}
+		}
+		return
+	}
+	// 单单位: 使用明细自身的 ErpnextUom
+	if item.MaterialCode != "" && item.ErpnextUom != "" {
+		key := fmt.Sprintf("%s:%s", item.MaterialCode, item.ErpnextUom)
+		qtyMap[key] += item.Num
+	}
 }
 
 // calculatePendingItems 计算待收物品（DN数量 - 已收数量 > 0）

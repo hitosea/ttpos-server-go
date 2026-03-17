@@ -78,19 +78,12 @@ func (s *autoReceiptSrv) CreateRule(ctx context.Context, r req.CreateAutoReceipt
 		shopRepo := repository.NewAutoReceiptRuleShopRepo(tx)
 
 		// 校验门店是否已在同仓库其他规则中配置
-		configuredUuids, err := shopRepo.GetConfiguredShopUuids(headquarterUuid, r.WarehouseErpCode, 0)
+		configuredMap, err := s.getConfiguredShopMap(shopRepo, headquarterUuid, r.WarehouseErpCode, 0)
 		if err != nil {
-			return errors.WithMessage(err, "查询已配置门店失败")
+			return err
 		}
-		configuredMap := make(map[uint64]bool, len(configuredUuids))
-		for _, uid := range configuredUuids {
-			configuredMap[uid] = true
-		}
-		for _, shopUuid := range r.ShopUuids {
-			if configuredMap[shopUuid] {
-				msg := fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "门店 %d 已在该仓库的其他规则中配置"), shopUuid)
-				return errors.New(msg)
-			}
+		if err := s.checkShopsNotConfigured(ctx, configuredMap, r.ShopUuids); err != nil {
+			return err
 		}
 
 		ruleRepo := repository.NewAutoReceiptRuleRepo(tx)
@@ -131,12 +124,8 @@ func (s *autoReceiptSrv) UpdateRule(ctx context.Context, r req.UpdateAutoReceipt
 
 	err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		ruleRepo := repository.NewAutoReceiptRuleRepo(tx)
-		_, err := ruleRepo.GetByUuid(r.Uuid, headquarterUuid)
-		if err != nil {
-			if stderrors.Is(err, gorm.ErrRecordNotFound) {
-				return errors.New("规则不存在")
-			}
-			return errors.WithMessage(err, "查询规则失败")
+		if err := s.verifyRuleExists(ruleRepo, r.Uuid, headquarterUuid); err != nil {
+			return err
 		}
 
 		// 全量更新规则主表字段
@@ -151,79 +140,7 @@ func (s *autoReceiptSrv) UpdateRule(ctx context.Context, r req.UpdateAutoReceipt
 		}
 
 		shopRepo := repository.NewAutoReceiptRuleShopRepo(tx)
-
-		// 获取当前门店列表
-		currentShops, err := shopRepo.GetByRuleUuids([]uint64{r.Uuid})
-		if err != nil {
-			return errors.WithMessage(err, "查询当前门店失败")
-		}
-		currentMap := make(map[uint64]uint64, len(currentShops)) // shopCompanyUuid → subTableUuid
-		for _, shop := range currentShops {
-			currentMap[shop.ShopCompanyUuid] = shop.Uuid
-		}
-
-		// 计算 diff
-		newSet := make(map[uint64]bool, len(r.ShopUuids))
-		for _, uid := range r.ShopUuids {
-			newSet[uid] = true
-		}
-
-		// 需要删除的门店（在 current 不在 new）
-		var toDeleteUuids []uint64
-		for shopUuid, subUuid := range currentMap {
-			if !newSet[shopUuid] {
-				toDeleteUuids = append(toDeleteUuids, subUuid)
-			}
-		}
-
-		// 需要新增的门店（在 new 不在 current）
-		var toAdd []uint64
-		for _, shopUuid := range r.ShopUuids {
-			if _, exists := currentMap[shopUuid]; !exists {
-				toAdd = append(toAdd, shopUuid)
-			}
-		}
-
-		// 校验新增门店是否已在其他规则中配置（排除当前规则自身）
-		if len(toAdd) > 0 {
-			configuredUuids, err := shopRepo.GetConfiguredShopUuids(headquarterUuid, r.WarehouseErpCode, r.Uuid)
-			if err != nil {
-				return errors.WithMessage(err, "查询已配置门店失败")
-			}
-			configuredMap := make(map[uint64]bool, len(configuredUuids))
-			for _, uid := range configuredUuids {
-				configuredMap[uid] = true
-			}
-			for _, shopUuid := range toAdd {
-				if configuredMap[shopUuid] {
-					msg := fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "门店 %d 已在该仓库的其他规则中配置"), shopUuid)
-					return errors.New(msg)
-				}
-			}
-		}
-
-		// 执行删除
-		if len(toDeleteUuids) > 0 {
-			if err := shopRepo.SoftDeleteByUuids(toDeleteUuids, headquarterUuid); err != nil {
-				return errors.WithMessage(err, "删除门店失败")
-			}
-		}
-
-		// 执行新增
-		if len(toAdd) > 0 {
-			shops := make([]model.AutoReceiptRuleShop, 0, len(toAdd))
-			for _, shopUuid := range toAdd {
-				shops = append(shops, model.AutoReceiptRuleShop{
-					RuleUuid:        r.Uuid,
-					ShopCompanyUuid: shopUuid,
-				})
-			}
-			if err := shopRepo.BatchCreate(shops); err != nil {
-				return errors.WithMessage(err, "新增门店失败")
-			}
-		}
-
-		return nil
+		return s.syncRuleShops(ctx, shopRepo, r.Uuid, headquarterUuid, r.WarehouseErpCode, r.ShopUuids)
 	})
 
 	if err != nil {
@@ -295,10 +212,7 @@ func (s *autoReceiptSrv) GetRuleList(ctx context.Context, r req.AutoReceiptRuleL
 	}
 
 	if len(rules) == 0 {
-		unconfigured := make([]resp.UnconfiguredShopItem, 0, len(allShops))
-		for _, shop := range allShops {
-			unconfigured = append(unconfigured, resp.UnconfiguredShopItem{Uuid: shop.Uuid, Name: shop.Name})
-		}
+		unconfigured := buildUnconfiguredList(allShops, nil)
 		return resp.AutoReceiptRuleListResp{
 			List:              make([]resp.AutoReceiptRuleGroup, 0),
 			UnconfiguredCount: len(allShops),
@@ -321,57 +235,15 @@ func (s *autoReceiptSrv) GetRuleList(ctx context.Context, r req.AutoReceiptRuleL
 		return resp.AutoReceiptRuleListResp{}, errors.WithMessage(err, "查询规则门店失败")
 	}
 
-	// 查门店名称
-	shopCompanyUuids := make([]uint64, 0, len(ruleShops))
-	for _, shop := range ruleShops {
-		shopCompanyUuids = append(shopCompanyUuids, shop.ShopCompanyUuid)
-	}
-	shopNameMap := s.getCompanyNameMap(db, shopCompanyUuids)
-
-	// 查门店编码
-	shopCodeMap := s.getShopStoreCodeMap(ctx, shopCompanyUuids)
-
-	// 按规则UUID分组门店
-	ruleShopMap := make(map[uint64][]resp.AutoReceiptRuleShop)
-	for _, shop := range ruleShops {
-		ruleShopMap[shop.RuleUuid] = append(ruleShopMap[shop.RuleUuid], resp.AutoReceiptRuleShop{
-			Uuid:     shop.Uuid,
-			ShopUuid: shop.ShopCompanyUuid,
-			ShopCode: shopCodeMap[shop.ShopCompanyUuid],
-			ShopName: shopNameMap[shop.ShopCompanyUuid],
-		})
-	}
+	// 查门店名称和编码
+	ruleShopMap := s.buildRuleShopMap(ctx, db, ruleShops)
 
 	// 组装响应
-	list := make([]resp.AutoReceiptRuleGroup, 0, len(rules))
-	for _, rule := range rules {
-		shops := ruleShopMap[rule.Uuid]
-		if shops == nil {
-			shops = make([]resp.AutoReceiptRuleShop, 0)
-		}
-		list = append(list, resp.AutoReceiptRuleGroup{
-			Uuid:                rule.Uuid,
-			LocaleName:          *language.JsonToLocaleResponse(rule.Name),
-			WarehouseErpCode:    rule.WarehouseErpCode,
-			WarehouseLocaleName: warehouseNameMap[rule.WarehouseErpCode],
-			DelayDays:           rule.DelayDays,
-			Status:              rule.Status,
-			ShopCount:           len(shops),
-			Shops:               shops,
-		})
-	}
+	list := buildRuleGroupList(rules, ruleShopMap, warehouseNameMap)
 
-	// 汇总统计：已配置门店（去重）和未配置门店
-	configuredSet := make(map[uint64]bool, len(ruleShops))
-	for _, shop := range ruleShops {
-		configuredSet[shop.ShopCompanyUuid] = true
-	}
-	unconfigured := make([]resp.UnconfiguredShopItem, 0)
-	for _, shop := range allShops {
-		if !configuredSet[shop.Uuid] {
-			unconfigured = append(unconfigured, resp.UnconfiguredShopItem{Uuid: shop.Uuid, Name: shop.Name})
-		}
-	}
+	// 汇总统计
+	configuredSet := buildConfiguredSet(ruleShops)
+	unconfigured := buildUnconfiguredList(allShops, configuredSet)
 
 	return resp.AutoReceiptRuleListResp{
 		List:              list,
@@ -398,13 +270,9 @@ func (s *autoReceiptSrv) GetShopList(ctx context.Context, r req.AutoReceiptShopL
 
 	// 获取同仓库下已配置的门店
 	shopRepo := repository.NewAutoReceiptRuleShopRepo(db)
-	configuredUuids, err := shopRepo.GetConfiguredShopUuids(headquarterUuid, r.WarehouseErpCode, 0)
+	configuredMap, err := s.getConfiguredShopMap(shopRepo, headquarterUuid, r.WarehouseErpCode, 0)
 	if err != nil {
-		return resp.AutoReceiptShopListResp{}, errors.WithMessage(err, "查询已配置门店失败")
-	}
-	configuredMap := make(map[uint64]bool, len(configuredUuids))
-	for _, uid := range configuredUuids {
-		configuredMap[uid] = true
+		return resp.AutoReceiptShopListResp{}, err
 	}
 
 	// 获取门店编码
@@ -553,6 +421,147 @@ func (s *autoReceiptSrv) GetWarehouseList(ctx context.Context) (resp.AutoReceipt
 	return resp.AutoReceiptWarehouseListResp{List: list}, nil
 }
 
+// buildRuleShopMap 按规则UUID分组门店并填充名称/编码
+func (s *autoReceiptSrv) buildRuleShopMap(ctx context.Context, db *gorm.DB, ruleShops []model.AutoReceiptRuleShop) map[uint64][]resp.AutoReceiptRuleShop {
+	shopCompanyUuids := make([]uint64, 0, len(ruleShops))
+	for _, shop := range ruleShops {
+		shopCompanyUuids = append(shopCompanyUuids, shop.ShopCompanyUuid)
+	}
+	shopNameMap := s.getCompanyNameMap(db, shopCompanyUuids)
+	shopCodeMap := s.getShopStoreCodeMap(ctx, shopCompanyUuids)
+
+	ruleShopMap := make(map[uint64][]resp.AutoReceiptRuleShop)
+	for _, shop := range ruleShops {
+		ruleShopMap[shop.RuleUuid] = append(ruleShopMap[shop.RuleUuid], resp.AutoReceiptRuleShop{
+			Uuid:     shop.Uuid,
+			ShopUuid: shop.ShopCompanyUuid,
+			ShopCode: shopCodeMap[shop.ShopCompanyUuid],
+			ShopName: shopNameMap[shop.ShopCompanyUuid],
+		})
+	}
+	return ruleShopMap
+}
+
+// buildRuleGroupList 构建规则列表响应
+func buildRuleGroupList(rules []model.AutoReceiptRule, ruleShopMap map[uint64][]resp.AutoReceiptRuleShop, warehouseNameMap map[string]dto.LocaleResponse) []resp.AutoReceiptRuleGroup {
+	list := make([]resp.AutoReceiptRuleGroup, 0, len(rules))
+	for _, rule := range rules {
+		shops := ruleShopMap[rule.Uuid]
+		if shops == nil {
+			shops = make([]resp.AutoReceiptRuleShop, 0)
+		}
+		list = append(list, resp.AutoReceiptRuleGroup{
+			Uuid:                rule.Uuid,
+			LocaleName:          *language.JsonToLocaleResponse(rule.Name),
+			WarehouseErpCode:    rule.WarehouseErpCode,
+			WarehouseLocaleName: warehouseNameMap[rule.WarehouseErpCode],
+			DelayDays:           rule.DelayDays,
+			Status:              rule.Status,
+			ShopCount:           len(shops),
+			Shops:               shops,
+		})
+	}
+	return list
+}
+
+// buildConfiguredSet 从规则门店列表构建已配置门店集合
+func buildConfiguredSet(ruleShops []model.AutoReceiptRuleShop) map[uint64]bool {
+	configuredSet := make(map[uint64]bool, len(ruleShops))
+	for _, shop := range ruleShops {
+		configuredSet[shop.ShopCompanyUuid] = true
+	}
+	return configuredSet
+}
+
+// buildUnconfiguredList 计算未配置规则的门店列表
+func buildUnconfiguredList(allShops []model.Company, configuredSet map[uint64]bool) []resp.UnconfiguredShopItem {
+	unconfigured := make([]resp.UnconfiguredShopItem, 0)
+	for _, shop := range allShops {
+		if !configuredSet[shop.Uuid] {
+			unconfigured = append(unconfigured, resp.UnconfiguredShopItem{Uuid: shop.Uuid, Name: shop.Name})
+		}
+	}
+	return unconfigured
+}
+
+// verifyRuleExists 验证规则是否存在
+func (s *autoReceiptSrv) verifyRuleExists(ruleRepo repository.IAutoReceiptRuleRepo, uuid uint64, headquarterUuid uint64) error {
+	_, err := ruleRepo.GetByUuid(uuid, headquarterUuid)
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("规则不存在")
+		}
+		return errors.WithMessage(err, "查询规则失败")
+	}
+	return nil
+}
+
+// syncRuleShops 全量同步规则门店（diff 增删）
+func (s *autoReceiptSrv) syncRuleShops(ctx context.Context, shopRepo repository.IAutoReceiptRuleShopRepo, ruleUuid uint64, headquarterUuid uint64, warehouseErpCode string, newShopUuids []uint64) error {
+	currentShops, err := shopRepo.GetByRuleUuids([]uint64{ruleUuid})
+	if err != nil {
+		return errors.WithMessage(err, "查询当前门店失败")
+	}
+
+	toDelete, toAdd := s.diffShops(currentShops, newShopUuids)
+
+	// 校验新增门店是否已在其他规则中配置
+	if len(toAdd) > 0 {
+		configuredMap, err := s.getConfiguredShopMap(shopRepo, headquarterUuid, warehouseErpCode, ruleUuid)
+		if err != nil {
+			return err
+		}
+		if err := s.checkShopsNotConfigured(ctx, configuredMap, toAdd); err != nil {
+			return err
+		}
+	}
+
+	// 执行删除
+	if len(toDelete) > 0 {
+		if err := shopRepo.SoftDeleteByUuids(toDelete, headquarterUuid); err != nil {
+			return errors.WithMessage(err, "删除门店失败")
+		}
+	}
+
+	// 执行新增
+	if len(toAdd) > 0 {
+		shops := make([]model.AutoReceiptRuleShop, 0, len(toAdd))
+		for _, shopUuid := range toAdd {
+			shops = append(shops, model.AutoReceiptRuleShop{
+				RuleUuid:        ruleUuid,
+				ShopCompanyUuid: shopUuid,
+			})
+		}
+		if err := shopRepo.BatchCreate(shops); err != nil {
+			return errors.WithMessage(err, "新增门店失败")
+		}
+	}
+	return nil
+}
+
+// diffShops 计算门店变更（返回需删除的子表UUID列表和需新增的门店UUID列表）
+func (s *autoReceiptSrv) diffShops(currentShops []model.AutoReceiptRuleShop, newShopUuids []uint64) (toDeleteUuids []uint64, toAddUuids []uint64) {
+	currentMap := make(map[uint64]uint64, len(currentShops))
+	for _, shop := range currentShops {
+		currentMap[shop.ShopCompanyUuid] = shop.Uuid
+	}
+	newSet := make(map[uint64]bool, len(newShopUuids))
+	for _, uid := range newShopUuids {
+		newSet[uid] = true
+	}
+	for shopUuid, subUuid := range currentMap {
+		if !newSet[shopUuid] {
+			toDeleteUuids = append(toDeleteUuids, subUuid)
+		}
+	}
+	for _, shopUuid := range newShopUuids {
+		if _, exists := currentMap[shopUuid]; !exists {
+			toAddUuids = append(toAddUuids, shopUuid)
+		}
+	}
+	return
+}
+
 // getCompanyNameMap 批量获取公司名称映射
 func (s *autoReceiptSrv) getCompanyNameMap(db *gorm.DB, companyUuids []uint64) map[uint64]string {
 	nameMap := make(map[uint64]string)
@@ -584,6 +593,30 @@ func (s *autoReceiptSrv) getWarehouseNameMap(shopDB *gorm.DB) map[string]dto.Loc
 		nameMap[w.ErpCode] = *language.JsonToLocaleResponse(w.Name)
 	}
 	return nameMap
+}
+
+// getConfiguredShopMap 查询同仓库下已配置的门店UUID集合
+func (s *autoReceiptSrv) getConfiguredShopMap(shopRepo repository.IAutoReceiptRuleShopRepo, headquarterUuid uint64, warehouseErpCode string, excludeRuleUuid uint64) (map[uint64]bool, error) {
+	configuredUuids, err := shopRepo.GetConfiguredShopUuids(headquarterUuid, warehouseErpCode, excludeRuleUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询已配置门店失败")
+	}
+	configuredMap := make(map[uint64]bool, len(configuredUuids))
+	for _, uid := range configuredUuids {
+		configuredMap[uid] = true
+	}
+	return configuredMap, nil
+}
+
+// checkShopsNotConfigured 校验门店是否已在同仓库其他规则中配置
+func (s *autoReceiptSrv) checkShopsNotConfigured(ctx context.Context, configuredMap map[uint64]bool, shopUuids []uint64) error {
+	for _, shopUuid := range shopUuids {
+		if configuredMap[shopUuid] {
+			msg := fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "门店 %d 已在该仓库的其他规则中配置"), shopUuid)
+			return errors.New(msg)
+		}
+	}
+	return nil
 }
 
 // getShopStoreCodeMap 批量获取门店编码映射

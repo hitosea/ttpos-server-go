@@ -26,6 +26,11 @@ type RuleShopJoinResult struct {
 	HeadquarterUuid  uint64 `gorm:"column:headquarter_company_uuid"`
 }
 
+const (
+	ruleShopTable      = "ttpos_auto_receipt_rule_shop AS s"
+	ruleShopJoinClause = "JOIN ttpos_auto_receipt_rule AS r ON r.uuid = s.rule_uuid"
+)
+
 func NewAutoReceiptRuleShopRepo(db *gorm.DB) IAutoReceiptRuleShopRepo {
 	return &autoReceiptRuleShopRepo{db: db}
 }
@@ -72,9 +77,9 @@ func (r *autoReceiptRuleShopRepo) GetByUuids(uuids []uint64, headquarterUuid uin
 		return shops, nil
 	}
 	// 通过 JOIN 规则主表确保租户隔离
-	err := r.db.Table("ttpos_auto_receipt_rule_shop AS s").
+	err := r.db.Table(ruleShopTable).
 		Select("s.*").
-		Joins("JOIN ttpos_auto_receipt_rule AS r ON r.uuid = s.rule_uuid").
+		Joins(ruleShopJoinClause).
 		Where("s.uuid IN ? AND s.delete_time = 0 AND r.headquarter_company_uuid = ? AND r.delete_time = 0",
 			uuids, headquarterUuid).
 		Find(&shops).Error
@@ -95,8 +100,8 @@ func (r *autoReceiptRuleShopRepo) GetConfiguredShopUuids(headquarterUuid uint64,
 	var shopUuids []uint64
 	db := r.db.Model(&model.AutoReceiptRuleShop{}).
 		Select("s.shop_company_uuid").
-		Table("ttpos_auto_receipt_rule_shop AS s").
-		Joins("JOIN ttpos_auto_receipt_rule AS r ON r.uuid = s.rule_uuid").
+		Table(ruleShopTable).
+		Joins(ruleShopJoinClause).
 		Where("r.headquarter_company_uuid = ? AND r.warehouse_erp_code = ? AND r.delete_time = 0 AND s.delete_time = 0",
 			headquarterUuid, warehouseErpCode)
 	if excludeRuleUuid > 0 {
@@ -109,9 +114,9 @@ func (r *autoReceiptRuleShopRepo) GetConfiguredShopUuids(headquarterUuid uint64,
 // GetAllEnabledWithRules 获取所有启用规则的门店（JOIN查询，定时任务用）
 func (r *autoReceiptRuleShopRepo) GetAllEnabledWithRules() ([]RuleShopJoinResult, error) {
 	var results []RuleShopJoinResult
-	err := r.db.Table("ttpos_auto_receipt_rule_shop AS s").
+	err := r.db.Table(ruleShopTable).
 		Select("s.rule_uuid, r.warehouse_erp_code, r.delay_days, r.headquarter_company_uuid, s.shop_company_uuid").
-		Joins("JOIN ttpos_auto_receipt_rule AS r ON r.uuid = s.rule_uuid").
+		Joins(ruleShopJoinClause).
 		Where("r.status = 1 AND r.delete_time = 0 AND s.delete_time = 0").
 		Find(&results).Error
 	return results, errors.WithMessage(err)
