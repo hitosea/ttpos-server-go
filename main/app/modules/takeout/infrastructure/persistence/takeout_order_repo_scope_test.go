@@ -43,7 +43,11 @@ func setupTakeoutOrderTestDB(t *testing.T) *gorm.DB {
 			order_state INTEGER DEFAULT 0,
 			erp_sync_status INTEGER DEFAULT 0,
 			erp_stock_deducted INTEGER DEFAULT 0,
-			erp_pos_invoice_resp TEXT DEFAULT ''
+			erp_pos_invoice_resp TEXT DEFAULT '',
+			takeout_order_uuid TEXT DEFAULT '',
+			platform TEXT DEFAULT '',
+			platform_order_id TEXT DEFAULT '',
+			order_time INTEGER DEFAULT 0
 		)
 	`).Error
 	require.NoError(t, err, "Failed to create takeout_order table")
@@ -139,4 +143,131 @@ func extractTakeoutUuids(orders []*model.TakeoutOrder) []uint64 {
 		uuids = append(uuids, o.Uuid)
 	}
 	return uuids
+}
+
+// ─── GetByUuid tests ───
+
+func TestGetByUuid_Found(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	seedTakeoutOrders(t, db)
+	repo := NewTakeoutOrderRepo(db)
+
+	order, err := repo.GetByUuid(2001)
+	require.NoError(t, err)
+	require.NotNil(t, order)
+	assert.Equal(t, uint64(2001), order.Uuid)
+}
+
+func TestGetByUuid_NotFound(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	repo := NewTakeoutOrderRepo(db)
+
+	order, err := repo.GetByUuid(99999)
+	require.NoError(t, err)
+	assert.Nil(t, order, "Non-existent UUID should return nil without error")
+}
+
+// ─── GetByTakeoutOrderUuid tests ───
+
+func TestGetByTakeoutOrderUuid_Found(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, takeout_order_uuid, delete_time) VALUES (?, ?, ?)",
+		3001, "TO-ABC-123", 0,
+	).Error)
+	repo := NewTakeoutOrderRepo(db)
+
+	order, err := repo.GetByTakeoutOrderUuid("TO-ABC-123")
+	require.NoError(t, err)
+	require.NotNil(t, order)
+	assert.Equal(t, uint64(3001), order.Uuid)
+}
+
+func TestGetByTakeoutOrderUuid_NotFound(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	repo := NewTakeoutOrderRepo(db)
+
+	order, err := repo.GetByTakeoutOrderUuid("NONEXISTENT")
+	require.NoError(t, err)
+	assert.Nil(t, order)
+}
+
+// ─── GetByPlatformOrderId tests ───
+
+func TestGetByPlatformOrderId_Found(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	require.NoError(t, db.Exec(
+		"INSERT INTO ttpos_takeout_order (uuid, platform, platform_order_id, delete_time) VALUES (?, ?, ?, ?)",
+		4001, "meituan", "MT-ORDER-001", 0,
+	).Error)
+	repo := NewTakeoutOrderRepo(db)
+
+	order, err := repo.GetByPlatformOrderId("meituan", "MT-ORDER-001")
+	require.NoError(t, err)
+	require.NotNil(t, order)
+	assert.Equal(t, uint64(4001), order.Uuid)
+}
+
+func TestGetByPlatformOrderId_NotFound(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	repo := NewTakeoutOrderRepo(db)
+
+	order, err := repo.GetByPlatformOrderId("eleme", "NONEXISTENT")
+	require.NoError(t, err)
+	assert.Nil(t, order)
+}
+
+// ─── GetCount tests ───
+
+func TestGetCount_WithOrders(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	seedTakeoutOrders(t, db)
+	repo := NewTakeoutOrderRepo(db)
+
+	count, err := repo.GetCount()
+	require.NoError(t, err)
+	assert.Equal(t, int64(6), count, "Should count 6 non-deleted orders")
+}
+
+func TestGetCount_WithScope(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	seedTakeoutOrders(t, db)
+	repo := NewTakeoutOrderRepo(db)
+
+	count, err := repo.GetCount(repo.WhereOrderState(value_object.TakeoutOrderStateCompleted))
+	require.NoError(t, err)
+	assert.Equal(t, int64(5), count, "Should count only completed orders")
+}
+
+// ─── WhereOrderState tests ───
+
+func TestWhereOrderState_Filters(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	seedTakeoutOrders(t, db)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, err := repo.FindAll(repo.WhereOrderState(value_object.TakeoutOrderStateAccepted))
+	require.NoError(t, err)
+	uuids := extractTakeoutUuids(orders)
+	assert.ElementsMatch(t, []uint64{2006}, uuids, "Should return only accepted orders")
+}
+
+func TestWhereOrderState_NegativeSkips(t *testing.T) {
+	t.Parallel()
+	db := setupTakeoutOrderTestDB(t)
+	seedTakeoutOrders(t, db)
+	repo := NewTakeoutOrderRepo(db)
+
+	orders, err := repo.FindAll(repo.WhereOrderState(-1))
+	require.NoError(t, err)
+	assert.Len(t, orders, 6, "Negative state should not filter anything")
 }
