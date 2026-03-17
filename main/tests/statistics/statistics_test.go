@@ -27,7 +27,8 @@ const (
 )
 
 // versionHeaders provides a Client-Version header high enough to pass any
-// MinVersionCheck middleware.
+// MinVersionCheck middleware. Tests that need to bypass version gating should
+// attach these headers to requests.
 var versionHeaders = map[string]string{"Client-Version": "99.0.0"}
 
 // --- P0 ---

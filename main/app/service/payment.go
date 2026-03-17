@@ -508,58 +508,6 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 					return err
 				}
 			}
-
-			// 更新订单状态
-			event.NewSystemBus().PublishPayFinishMemberSaleOrderEvent(event.PayFinishMemberSaleOrderPayload{
-				BasePayload: event.BasePayload{
-					Ctx:                 p.ctx,
-					CompanyUuid:         p.ctx.GetCompanyUuid(),
-					Source:              constant.SourceMember,
-					SaleBillUuid:        memberSaleOrder.SaleBillUuid,
-					SaleOrderUuid:       memberSaleOrder.SaleOrderUuid,
-					MemberSaleOrderUuid: memberSaleOrder.Uuid,
-					MemberUuid:          memberSaleOrder.MemberUuid,
-				},
-				MemberSaleOrderUuid: memberSaleOrder.Uuid,
-			})
-		} else if order.RelatedType == constant.PaymentOrderRelatedTypeSaleOrder {
-			// 非会员端外送订单支付成功（可能是会员端堂食订单或 Kiosk 自助点餐机订单）
-			// 先查询销售订单获取 SaleBillUuid
-			saleOrder, err := repository.NewSaleOrderRepo(db).GetSaleOrderByUuid(order.RelatedUuid)
-			if err == nil && saleOrder != nil {
-				// 查询销售账单
-				saleBill, err := repository.NewOrderRepo(db).GetSaleBill(
-					repository.CommonRepo.WhereByUuid(saleOrder.SaleBillUuid),
-				)
-				if err == nil {
-					// 根据订单来源分发不同的事件
-					if saleBill.Source == constant.SaleBillSourceMember {
-						// 会员端堂食订单支付成功，发布事件
-						event.NewSystemBus().PublishPayFinishMemberDineInOrderEvent(event.PayFinishMemberDineInOrderPayload{
-							BasePayload: event.BasePayload{
-								Ctx:           p.ctx,
-								CompanyUuid:   p.ctx.GetCompanyUuid(),
-								Source:        constant.SourceMember,
-								SaleBillUuid:  saleBill.Uuid,
-								SaleOrderUuid: order.RelatedUuid,
-							},
-							PaymentOrderUuid: paymentOrderUuid,
-						})
-						// case constant.SaleBillSourceKiosk:
-						// 	// Kiosk 订单支付成功，发布事件触发送厨
-						// 	event.NewSystemBus().PublishPayFinishKioskOrderEvent(event.PayFinishKioskOrderPayload{
-						// 		BasePayload: event.BasePayload{
-						// 			Ctx:           p.ctx,
-						// 			CompanyUuid:   p.ctx.GetCompanyUuid(),
-						// 			Source:        constant.SourceKiosk,
-						// 			SaleBillUuid:  saleBill.Uuid,
-						// 			SaleOrderUuid: order.RelatedUuid,
-						// 		},
-						// 		PaymentOrderUuid: paymentOrderUuid,
-						// 	})
-					}
-				}
-			}
 		}
 
 		return nil
@@ -567,6 +515,66 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 		fmt.Println("更新支付订单失败 - 03", err)
 		logger.Logger.Error("更新支付订单失败 - 03", zap.Error(err))
 		return err
+	}
+	// 会员端订单支付成功
+	if order.MemberSaleOrderUuid > 0 {
+		memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(order.MemberSaleOrderUuid)
+		if err != nil {
+			return err
+		}
+
+		// 更新订单状态
+		event.NewSystemBus().PublishPayFinishMemberSaleOrderEvent(event.PayFinishMemberSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:                 p.ctx,
+				CompanyUuid:         p.ctx.GetCompanyUuid(),
+				Source:              constant.SourceMember,
+				SaleBillUuid:        memberSaleOrder.SaleBillUuid,
+				SaleOrderUuid:       memberSaleOrder.SaleOrderUuid,
+				MemberSaleOrderUuid: memberSaleOrder.Uuid,
+				MemberUuid:          memberSaleOrder.MemberUuid,
+			},
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+		})
+	} else if order.RelatedType == constant.PaymentOrderRelatedTypeSaleOrder {
+		// 非会员端外送订单支付成功（可能是会员端堂食订单或 Kiosk 自助点餐机订单）
+		// 先查询销售订单获取 SaleBillUuid
+		saleOrder, err := repository.NewSaleOrderRepo(db).GetSaleOrderByUuid(order.RelatedUuid)
+		if err == nil && saleOrder != nil {
+			// 查询销售账单
+			saleBill, err := repository.NewOrderRepo(db).GetSaleBill(
+				repository.CommonRepo.WhereByUuid(saleOrder.SaleBillUuid),
+			)
+			if err == nil {
+				// 根据订单来源分发不同的事件
+				switch saleBill.Source {
+				case constant.SaleBillSourceMember:
+					// 会员端堂食订单支付成功，发布事件
+					event.NewSystemBus().PublishPayFinishMemberDineInOrderEvent(event.PayFinishMemberDineInOrderPayload{
+						BasePayload: event.BasePayload{
+							Ctx:           p.ctx,
+							CompanyUuid:   p.ctx.GetCompanyUuid(),
+							Source:        constant.SourceMember,
+							SaleBillUuid:  saleBill.Uuid,
+							SaleOrderUuid: order.RelatedUuid,
+						},
+						PaymentOrderUuid: paymentOrderUuid,
+					})
+					// case constant.SaleBillSourceKiosk:
+					// 	// Kiosk 订单支付成功，发布事件触发送厨
+					// 	event.NewSystemBus().PublishPayFinishKioskOrderEvent(event.PayFinishKioskOrderPayload{
+					// 		BasePayload: event.BasePayload{
+					// 			Ctx:           p.ctx,
+					// 			CompanyUuid:   p.ctx.GetCompanyUuid(),
+					// 			Source:        constant.SourceKiosk,
+					// 			SaleBillUuid:  saleBill.Uuid,
+					// 			SaleOrderUuid: order.RelatedUuid,
+					// 		},
+					// 		PaymentOrderUuid: paymentOrderUuid,
+					// 	})
+				}
+			}
+		}
 	}
 	return nil
 }

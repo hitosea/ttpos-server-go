@@ -175,9 +175,10 @@ func (s *stockReconciliationSrv) GetStockReconciliationTemplate(ctx context.Cont
 		logger.Logger.Error("获取盘点单模板失败", zap.Error(err))
 		return resp.StockReconciliationTemplateResp{
 			Data: resp.StockReconciliationTemplateData{
-				Daily:   []string{},
-				Weekly:  []string{},
-				Monthly: []string{},
+				Daily:    []string{},
+				Weekly:   []string{},
+				Monthly:  []string{},
+				Property: []string{},
 			},
 		}, nil
 	}
@@ -240,6 +241,20 @@ func (s *stockReconciliationSrv) fetchReconciliationTemplate(_ context.Context) 
 	// 检查业务状态码
 	if apiResp.Code != 0 {
 		return resp.StockReconciliationTemplateResp{}, fmt.Errorf("盘点模板服务返回业务错误: code=%d, message=%s", apiResp.Code, apiResp.Message)
+	}
+
+	// 确保切片不为 nil，避免 JSON 返回 null
+	if apiResp.Data.Data.Daily == nil {
+		apiResp.Data.Data.Daily = []string{}
+	}
+	if apiResp.Data.Data.Weekly == nil {
+		apiResp.Data.Data.Weekly = []string{}
+	}
+	if apiResp.Data.Data.Monthly == nil {
+		apiResp.Data.Data.Monthly = []string{}
+	}
+	if apiResp.Data.Data.Property == nil {
+		apiResp.Data.Data.Property = []string{}
 	}
 
 	return apiResp.Data, nil

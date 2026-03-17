@@ -2610,8 +2610,13 @@ func (s *Srv) GetStoreScanOrderSetting(ctx context.Context) (setting.StoreScanOr
 		return setting.StoreScanOrderSettingResp{}, errors.WithMessage(err, "获取公司设置失败")
 	}
 
-	// 获取云平台设置（判断外送和到店自取是否可用）
-	// 外送服务可用性与 /member/base 接口的 is_open_rider 字段保持一致
+	// 从数据库读取配置，解析失败或不存在时使用默认值
+	data := setting.StoreScanOrderSetting{IsEnabled: 1, EnableDelivery: 1, EnableSelfPickup: 1}
+	if raw := s.getSettingByKey(ctx, constant.SettingStoreScanOrder); raw.Key != "" {
+		_ = json.Unmarshal([]byte(raw.Values), &data)
+	}
+
+	// 组装响应，云平台可用状态实时计算
 	deliveryAvailable := 0
 	if companySetting.IsOpenRider() {
 		deliveryAvailable = 1
@@ -2621,35 +2626,13 @@ func (s *Srv) GetStoreScanOrderSetting(ctx context.Context) (setting.StoreScanOr
 		selfPickupAvailable = 1
 	}
 
-	// 获取门店点餐设置
-	storeScanOrderSetting := s.getSettingByKey(ctx, constant.SettingStoreScanOrder)
-	if storeScanOrderSetting.Key == "" {
-		// 返回默认值
-		return setting.StoreScanOrderSettingResp{
-			IsEnabled:           0,
-			EnableDelivery:      0,
-			EnableSelfPickup:    0,
-			DeliveryAvailable:   deliveryAvailable,
-			SelfPickupAvailable: selfPickupAvailable,
-		}, nil
-	}
-
-	var result setting.StoreScanOrderSettingResp
-	if err := json.Unmarshal([]byte(storeScanOrderSetting.Values), &result); err != nil {
-		return setting.StoreScanOrderSettingResp{
-			IsEnabled:           0,
-			EnableDelivery:      0,
-			EnableSelfPickup:    0,
-			DeliveryAvailable:   deliveryAvailable,
-			SelfPickupAvailable: selfPickupAvailable,
-		}, nil
-	}
-
-	// 更新可用状态
-	result.DeliveryAvailable = deliveryAvailable
-	result.SelfPickupAvailable = selfPickupAvailable
-
-	return result, nil
+	return setting.StoreScanOrderSettingResp{
+		IsEnabled:           data.IsEnabled,
+		EnableDelivery:      data.EnableDelivery,
+		EnableSelfPickup:    data.EnableSelfPickup,
+		DeliveryAvailable:   deliveryAvailable,
+		SelfPickupAvailable: selfPickupAvailable,
+	}, nil
 }
 
 // SaveStoreScanOrderSetting 保存门店点餐配置
@@ -2670,7 +2653,7 @@ func (s *Srv) SaveStoreScanOrderSetting(ctx context.Context, settingReq req.Save
 	}
 
 	// 保存设置
-	data := setting.StoreScanOrderSettingResp{
+	data := setting.StoreScanOrderSetting{
 		IsEnabled:        settingReq.IsEnabled,
 		EnableDelivery:   settingReq.EnableDelivery,
 		EnableSelfPickup: settingReq.EnableSelfPickup,
