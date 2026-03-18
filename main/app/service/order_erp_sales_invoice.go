@@ -595,6 +595,13 @@ func (s *orderSrv) SyncMemberOrderToErp(ctx context.Context, saleBill *model.Sal
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
 
+	if company == nil {
+		ctx.Log().Error("SyncMemberOrderToErp, Company or CompanySetting not found",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("saleBillUuid", saleBill.Uuid))
+		return
+	}
+
 	// 检查 ERP 是否启用
 	if !company.IsOpenErpPhase3() || companySetting.ErpnextSiteCode == "" {
 		return
