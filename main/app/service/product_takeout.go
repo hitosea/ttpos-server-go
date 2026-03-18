@@ -674,6 +674,22 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 		}
 	}
 
+	// HQ 编辑外卖商品 → 自动推送到子店
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		takeoutUuid := existTakeout.Uuid
+		utils.Go(func() {
+			hqPushSrv.OnHqProductTakeoutChanged(ctx, takeoutUuid)
+		})
+	}
+
+	// 子店编辑总部外卖商品 → 标记 override
+	if isHeadquarterProduct {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProductTakeout, existTakeout.Uuid, constant.HqFieldTakeoutShelf)
+		_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProductTakeout, existTakeout.Uuid, constant.HqFieldTakeoutPrice)
+	}
+
 	return nil
 }
 
@@ -914,6 +930,22 @@ func (s *productTakeoutSrv) UpdateProductTakeoutShopStatus(ctx context.Context, 
 	); err != nil {
 		logger.Logger.Error("更新外卖商品状态失败", zap.Any("func", "UpdateProductTakeoutShopStatus"), zap.Any("params", statusReq), zap.Error(err))
 		return errors.WithMessage(err, "更新外卖商品状态失败")
+	}
+
+	// HQ 修改外卖商品状态 → 自动推送到子店
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		takeoutUuid := takeout.Uuid
+		utils.Go(func() {
+			hqPushSrv.OnHqProductTakeoutChanged(ctx, takeoutUuid)
+		})
+	}
+
+	// 子店修改总部外卖商品状态 → 标记 override
+	if companySetting.IsSubShop() && takeout.HeadquarterUuid > 0 {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProductTakeout, takeout.Uuid, constant.HqFieldTakeoutShelf)
 	}
 
 	return nil

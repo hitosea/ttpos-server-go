@@ -91,6 +91,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterFullReductionActivityRoutes(shopGroup, dbm, cache)        // 满减活动管理
 			shop.RegisterTakeoutHandlers(shopGroup, dbm, cache)                    // 外卖平台集成
 			shop.RegisterStockLossHandlers(shopGroup, dbm, cache)                  // 报损管理
+			shop.RegisterHqPushHandlers(shopGroup, dbm, cache)                     // 总部推送控制
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")

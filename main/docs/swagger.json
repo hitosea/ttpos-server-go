@@ -14182,6 +14182,60 @@
                 }
             }
         },
+        "/cashier/order/product_quotation": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "计算商品的价格明细（不校验库存、不写数据库），用于在下单前展示报价信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "订单商品报价",
+                "parameters": [
+                    {
+                        "description": "报价参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderProductQuotationReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "报价结果",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderProductQuotationResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/cashier/order/query_staff": {
             "get": {
                 "security": [
@@ -28963,6 +29017,154 @@
                 }
             }
         },
+        "/shop/product/hq_batch_push": {
+            "post": {
+                "description": "批量推送商品/物品数据到指定子店，支持字段级推送和全量同步",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.总部推送"
+                ],
+                "summary": "批量推送到子店",
+                "parameters": [
+                    {
+                        "description": "推送参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.HqBatchPushReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.HqBatchPushResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/product/hq_batch_push_store_list": {
+            "get": {
+                "description": "获取总部下所有子店列表，用于选择批量推送目标",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.总部推送"
+                ],
+                "summary": "获取可推送门店列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.HqBatchPushStoreListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/product/hq_control_setting": {
+            "get": {
+                "description": "获取总部对各字段的控制模式（统一控制/分开控制）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.总部推送"
+                ],
+                "summary": "获取总部控制设置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.HqControlSettingResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "更新总部对各字段的控制模式，从分开切换为统一时会触发强制推送",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.总部推送"
+                ],
+                "summary": "更新总部控制设置",
+                "parameters": [
+                    {
+                        "description": "控制设置参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.HqControlSettingUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/product/import": {
             "post": {
                 "security": [
@@ -41177,6 +41379,22 @@
                     "description": "收银方式 - 店内 (不包含外送和外卖)",
                     "type": "integer"
                 },
+                "all_scan_avg_order_price": {
+                    "description": "点餐方式-扫码平均订单金额",
+                    "type": "number"
+                },
+                "all_scan_max_order_price": {
+                    "description": "点餐方式-扫码最大订单金额",
+                    "type": "number"
+                },
+                "all_scan_min_order_price": {
+                    "description": "点餐方式-扫码最小订单金额",
+                    "type": "number"
+                },
+                "all_scan_order_num": {
+                    "description": "扫码点餐",
+                    "type": "integer"
+                },
                 "all_table_avg_order_price": {
                     "description": "总桌数平均订单金额",
                     "type": "number"
@@ -41570,6 +41788,10 @@
                     "description": "平均订单金额",
                     "type": "number"
                 },
+                "avg_scan_order_amount": {
+                    "description": "扫码点餐-平均订单金额",
+                    "type": "number"
+                },
                 "avg_takeout_order_amount": {
                     "description": "外送点餐-平均订单金额",
                     "type": "number"
@@ -41598,6 +41820,10 @@
                     "description": "最大订单金额",
                     "type": "number"
                 },
+                "max_scan_order_amount": {
+                    "description": "扫码点餐-最大订单金额",
+                    "type": "number"
+                },
                 "max_takeout_order_amount": {
                     "description": "外送点餐-最大订单金额",
                     "type": "number"
@@ -41620,6 +41846,10 @@
                 },
                 "min_order_amount": {
                     "description": "最小订单金额",
+                    "type": "number"
+                },
+                "min_scan_order_amount": {
+                    "description": "扫码点餐-最小订单金额",
                     "type": "number"
                 },
                 "min_takeout_order_amount": {
@@ -41716,6 +41946,10 @@
                 "total_sale_amount": {
                     "description": "总销售额",
                     "type": "number"
+                },
+                "total_scan_order_num": {
+                    "description": "扫码点餐-订单数",
+                    "type": "integer"
                 },
                 "total_service_fee": {
                     "description": "服务费",
@@ -42539,6 +42773,14 @@
                     "description": "内部编码",
                     "type": "string"
                 },
+                "is_negative_stock_editable": {
+                    "description": "负库存是否可编辑",
+                    "type": "boolean"
+                },
+                "is_safety_stock_editable": {
+                    "description": "HQ 控制字段可编辑性（仅子店+总部来源物品有意义）",
+                    "type": "boolean"
+                },
                 "last_purchase_quantity": {
                     "description": "上次采购数量（默认销售单位）",
                     "type": "number"
@@ -42765,6 +43007,10 @@
                 },
                 "is_editable": {
                     "description": "是否可编辑",
+                    "type": "boolean"
+                },
+                "is_negative_stock_editable": {
+                    "description": "HQ 控制字段可编辑性（仅子店+总部来源物品有意义）",
                     "type": "boolean"
                 },
                 "locale_name": {
@@ -44128,9 +44374,21 @@
                     "description": "商品图片",
                     "type": "string"
                 },
+                "is_dine_shelf_editable": {
+                    "description": "HQ 控制字段可编辑性（仅子店+总部来源商品有意义）",
+                    "type": "boolean"
+                },
                 "is_show_kitchen": {
                     "description": "是否在厨显端显示：1-是；0-否",
                     "type": "integer"
+                },
+                "is_takeout_price_editable": {
+                    "description": "外卖价格是否可编辑",
+                    "type": "boolean"
+                },
+                "is_takeout_shelf_editable": {
+                    "description": "外卖上下架是否可编辑",
+                    "type": "boolean"
                 },
                 "label": {
                     "description": "商品标签",
@@ -44537,6 +44795,10 @@
                     "description": "商品图片UUID",
                     "type": "integer"
                 },
+                "is_dine_shelf_editable": {
+                    "description": "HQ 控制字段可编辑性（仅子店+总部来源商品有意义）",
+                    "type": "boolean"
+                },
                 "is_editable": {
                     "description": "是否可编辑 1-是 0-否",
                     "type": "boolean"
@@ -44567,6 +44829,14 @@
                 },
                 "is_show_tablet": {
                     "description": "是否显示在平板端 1-显示 0-不显示",
+                    "type": "boolean"
+                },
+                "is_takeout_price_editable": {
+                    "description": "外卖价格是否可编辑",
+                    "type": "boolean"
+                },
+                "is_takeout_shelf_editable": {
+                    "description": "外卖上下架是否可编辑",
                     "type": "boolean"
                 },
                 "locale_name": {
@@ -44892,6 +45162,10 @@
                 },
                 "is_show_h5": {
                     "description": "是否显示在h5 1-显示 2-不显示",
+                    "type": "boolean"
+                },
+                "is_show_kiosk": {
+                    "description": "是否显示在自助点餐机",
                     "type": "boolean"
                 },
                 "is_show_kitchen": {
@@ -45680,12 +45954,24 @@
                     "description": "商品图片",
                     "type": "string"
                 },
+                "is_dine_shelf_editable": {
+                    "description": "HQ 控制字段可编辑性（仅子店+总部来源商品有意义）",
+                    "type": "boolean"
+                },
                 "is_editable": {
                     "description": "是否可编辑",
                     "type": "boolean"
                 },
                 "is_sold_out": {
                     "description": "是否售罄 false-否 true-是",
+                    "type": "boolean"
+                },
+                "is_takeout_price_editable": {
+                    "description": "外卖价格是否可编辑",
+                    "type": "boolean"
+                },
+                "is_takeout_shelf_editable": {
+                    "description": "外卖上下架是否可编辑",
                     "type": "boolean"
                 },
                 "locale_name": {
@@ -48100,6 +48386,70 @@
                 }
             }
         },
+        "req.HqBatchPushReq": {
+            "type": "object",
+            "required": [
+                "field_types"
+            ],
+            "properties": {
+                "field_types": {
+                    "description": "推送类型列表：dine_shelf/takeout_shelf/takeout_price/negative_stock",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "is_all_stores": {
+                    "description": "是否推送到所有子店",
+                    "type": "boolean"
+                },
+                "store_uuids": {
+                    "description": "指定子店UUID列表（is_all_stores=false 时生效）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "req.HqControlSettingUpdateReq": {
+            "type": "object",
+            "properties": {
+                "hq_control_dine_shelf": {
+                    "description": "店内上下架控制模式：0-分开控制，1-统一控制",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "hq_control_negative_stock": {
+                    "description": "负库存控制模式：0-分开控制，1-统一控制",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "hq_control_takeout_price": {
+                    "description": "外卖价格控制模式：0-分开控制，1-统一控制",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "hq_control_takeout_shelf": {
+                    "description": "外卖上下架控制模式：0-分开控制，1-统一控制",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                }
+            }
+        },
         "req.InitShopReq": {
             "type": "object",
             "required": [
@@ -49724,6 +50074,17 @@
                     "description": "商品价格单价。",
                     "type": "number"
                 },
+                "product_type": {
+                    "description": "商品类型 0-商品 1-套餐",
+                    "type": "integer"
+                },
+                "products": {
+                    "description": "套餐子商品列表（套餐时必填）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductRequest"
+                    }
+                },
                 "sauce_uuid": {
                     "description": "小料ID列表",
                     "type": "array",
@@ -49770,6 +50131,32 @@
                 "order_product_uuid": {
                     "description": "订单商品UUID",
                     "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.OrderProductQuotationReq": {
+            "type": "object",
+            "required": [
+                "products",
+                "sale_bill_uuid",
+                "sale_order_uuid"
+            ],
+            "properties": {
+                "products": {
+                    "description": "商品信息列表",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/req.ProductParams"
+                    }
                 },
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
@@ -50950,7 +51337,7 @@
                     "type": "integer"
                 },
                 "shows": {
-                    "description": "显示：123456",
+                    "description": "显示：1234567",
                     "type": "string"
                 },
                 "sku_name": {
@@ -51031,7 +51418,7 @@
                     "type": "integer"
                 },
                 "shows": {
-                    "description": "显示：123456",
+                    "description": "显示：1234567",
                     "type": "string"
                 },
                 "sku_name": {
@@ -60276,6 +60663,65 @@
                 }
             }
         },
+        "resp.HqBatchPushResp": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "description": "推送结果消息",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.HqBatchPushStoreItem": {
+            "type": "object",
+            "properties": {
+                "company_uuid": {
+                    "description": "子店UUID",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "子店名称",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "子店状态",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.HqBatchPushStoreListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "子店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.HqBatchPushStoreItem"
+                    }
+                }
+            }
+        },
+        "resp.HqControlSettingResp": {
+            "type": "object",
+            "properties": {
+                "hq_control_dine_shelf": {
+                    "description": "店内上下架控制模式：0-分开控制，1-统一控制",
+                    "type": "integer"
+                },
+                "hq_control_negative_stock": {
+                    "description": "负库存控制模式：0-分开控制，1-统一控制",
+                    "type": "integer"
+                },
+                "hq_control_takeout_price": {
+                    "description": "外卖价格控制模式：0-分开控制，1-统一控制",
+                    "type": "integer"
+                },
+                "hq_control_takeout_shelf": {
+                    "description": "外卖上下架控制模式：0-分开控制，1-统一控制",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.InstantHideOrderListResp": {
             "type": "object",
             "properties": {
@@ -62640,6 +63086,34 @@
                 "uuid": {
                     "description": "销售订单商品ID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.OrderProductQuotationResp": {
+            "type": "object",
+            "properties": {
+                "bill_calc": {
+                    "description": "账单级金额",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.QuotationBillCalc"
+                        }
+                    ]
+                },
+                "order_calc": {
+                    "description": "订单级金额",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.QuotationOrderCalc"
+                        }
+                    ]
+                },
+                "products": {
+                    "description": "商品明细列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.QuotationProduct"
+                    }
                 }
             }
         },
@@ -65572,6 +66046,161 @@
                 "voice_call_enabled": {
                     "description": "语音叫号开关",
                     "type": "boolean"
+                }
+            }
+        },
+        "resp.QuotationBillCalc": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "账单总金额",
+                    "type": "number"
+                },
+                "discount_fee": {
+                    "description": "折扣金额",
+                    "type": "number"
+                },
+                "member_discount_fee": {
+                    "description": "会员折扣金额",
+                    "type": "number"
+                },
+                "origin_amount": {
+                    "description": "账单原始金额",
+                    "type": "number"
+                },
+                "product_amount": {
+                    "description": "商品金额",
+                    "type": "number"
+                },
+                "product_original_amount": {
+                    "description": "商品原始金额",
+                    "type": "number"
+                },
+                "service_fee": {
+                    "description": "服务费",
+                    "type": "number"
+                },
+                "tax_fee": {
+                    "description": "税费",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.QuotationOrderCalc": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "应付金额",
+                    "type": "number"
+                },
+                "custom_discount_fee": {
+                    "description": "自定义折扣",
+                    "type": "number"
+                },
+                "member_discount_fee": {
+                    "description": "会员折扣",
+                    "type": "number"
+                },
+                "origin_amount": {
+                    "description": "原始应付金额",
+                    "type": "number"
+                },
+                "product_amount": {
+                    "description": "商品金额（折后）",
+                    "type": "number"
+                },
+                "product_original_amount": {
+                    "description": "商品原始金额",
+                    "type": "number"
+                },
+                "service_fee": {
+                    "description": "服务费",
+                    "type": "number"
+                },
+                "tax_fee": {
+                    "description": "税费",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.QuotationProduct": {
+            "type": "object",
+            "properties": {
+                "add_price": {
+                    "description": "加价金额（套餐子商品加价）",
+                    "type": "number"
+                },
+                "custom_discount_fee": {
+                    "description": "自定义折扣金额",
+                    "type": "number"
+                },
+                "discount_fee": {
+                    "description": "折扣金额合计",
+                    "type": "number"
+                },
+                "flavor_price": {
+                    "description": "规格原价",
+                    "type": "number"
+                },
+                "locale_name": {
+                    "description": "商品名称(多语言)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "member_discount_fee": {
+                    "description": "会员折扣金额",
+                    "type": "number"
+                },
+                "num": {
+                    "description": "数量",
+                    "type": "number"
+                },
+                "origin_total_price": {
+                    "description": "应收金额（折前）",
+                    "type": "number"
+                },
+                "price": {
+                    "description": "最终单价（折后）",
+                    "type": "number"
+                },
+                "product_package_uuid": {
+                    "description": "商品包UUID",
+                    "type": "integer"
+                },
+                "product_price": {
+                    "description": "原始单价（规格原价+加料价+加价）",
+                    "type": "number"
+                },
+                "sale_price": {
+                    "description": "销售价（折前单价）",
+                    "type": "number"
+                },
+                "sale_price_no_tax": {
+                    "description": "销售价（不含税）",
+                    "type": "number"
+                },
+                "sauce_price": {
+                    "description": "加料价格",
+                    "type": "number"
+                },
+                "service_fee": {
+                    "description": "服务费",
+                    "type": "number"
+                },
+                "service_tax_fee": {
+                    "description": "服务费税费",
+                    "type": "number"
+                },
+                "tax_fee": {
+                    "description": "商品税费",
+                    "type": "number"
+                },
+                "total_price": {
+                    "description": "应收金额（折后）",
+                    "type": "number"
                 }
             }
         },

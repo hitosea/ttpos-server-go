@@ -4451,4 +4451,31 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_category_visibility` (
     KEY `idx_headquarter_uuid` (`headquarter_uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物品分类可见性配置表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_hq_field_override` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一ID',
+    `entity_type` varchar(50) NOT NULL DEFAULT '' COMMENT '实体类型: product/product_takeout/material',
+    `entity_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '实体UUID',
+    `field_type` varchar(50) NOT NULL DEFAULT '' COMMENT '字段类型: dine_shelf/takeout_shelf/takeout_price/safety_stock/negative_stock',
+    `create_time` int unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    UNIQUE KEY `uk_entity_field` (`entity_uuid`, `field_type`, `delete_time`),
+    KEY `idx_entity_type` (`entity_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='总部字段覆盖追踪表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_hq_control_setting` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一ID',
+    `field_type` varchar(50) NOT NULL DEFAULT '' COMMENT '字段类型: dine_shelf/takeout_shelf/takeout_price/negative_stock',
+    `control_mode` int NOT NULL DEFAULT 0 COMMENT '控制模式: 0-分开控制 1-统一控制',
+    `create_time` bigint unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` bigint unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` bigint unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_field_type` (`field_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='总部控制设置（KV表）';
+
 SET FOREIGN_KEY_CHECKS = 1;
