@@ -2267,5 +2267,7 @@
     "安全库存设置": "Safety Stock Setting",
     "点餐设置": "Ordering Settings",
     "扫码接单": "Scan QR to accept orders",
-    "是否显示非自助餐商品": "Show non-buffet items?"
+    "是否显示非自助餐商品": "Show non-buffet items?",
+    "桌码点餐": "Table code ordering",
+    "门店点餐码": "Store ordering code"
 }

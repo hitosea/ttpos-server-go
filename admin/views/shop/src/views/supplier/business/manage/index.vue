@@ -92,7 +92,7 @@
         </div>
       </el-form-item>
 
-      <el-form-item :label="$t('会员端')" v-auth="'/card/user/index'">
+      <el-form-item :label="$t('门店点餐码')" v-auth="'/card/user/index'">
         <el-button @click="downloadFile('member')" type="primary">{{ $t('二维码') }}</el-button>
         <p class="copy-link" @click="handleCopyLink">{{ $t('复制链接') }}</p>
       </el-form-item>
