@@ -717,6 +717,10 @@ class Order extends BaseModelOrder
             'takeaway_min_order_price' => $data['all_takeaway_min_order_price'],
             'takeaway_max_order_price' => $data['all_takeaway_max_order_price'],
             'takeaway_avg_order_price' => $data['all_takeaway_avg_order_price'],
+            'scan_order_num' => $data['all_scan_order_num'], // 扫码点餐订单数
+            'scan_min_order_price' => $data['all_scan_min_order_price'], // 扫码点餐最小订单金额
+            'scan_max_order_price' => $data['all_scan_max_order_price'], // 扫码点餐最大订单金额
+            'scan_avg_order_price' => $data['all_scan_avg_order_price'], // 扫码点餐平均订单金额
             'incomes' => $incomes,
         ];
     }

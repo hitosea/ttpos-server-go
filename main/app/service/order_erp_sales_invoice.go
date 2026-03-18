@@ -615,6 +615,18 @@ func (s *orderSrv) SyncMemberOrderToErp(ctx context.Context, saleBill *model.Sal
 		return
 	}
 
+	// 无已支付的付款单则跳过（先食后付场景在结账时走 InstantOrderPaymentFinish 推送）
+	hasPaidOrder := false
+	for _, po := range saleOrder.PaymentOrders {
+		if !po.IsDelete() && po.Status == constant.PaymentOrderStatusPaid {
+			hasPaidOrder = true
+			break
+		}
+	}
+	if !hasPaidOrder {
+		return
+	}
+
 	// 已经推送过则跳过（幂等）
 	if saleOrder.ErpSyncStatus > 0 {
 		return

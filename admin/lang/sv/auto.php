@@ -888,6 +888,7 @@ return [
     "扫一扫支付" => "Skanna för att betala",
     "扫码H5设置" => "Inställningar för H5-skanning",
     "扫码下单" => "Skanna för att beställa",
+    "扫码" => "Skanna",
     "扫码点餐" => "Skanna för att beställa mat",
     "扫码端" => "Skanningsenhet",
     "找不到数据" => "Data kunde inte hittas",
