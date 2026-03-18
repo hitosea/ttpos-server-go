@@ -394,7 +394,8 @@ func Test_Member_DineIn_Create_PackageEmptySub_Fail(t *testing.T) {
 	}
 }
 
-// Test_Member_DineIn_Create_IsAcceptOrder 验证普通商品堂食订单创建后 is_accept_order=1（会员堂食非H5默认已接单）
+// Test_Member_DineIn_Create_IsAcceptOrder 验证普通商品堂食订单创建后 is_accept_order=1（已接单）
+// 业务逻辑：堂食订单非 H5 商品，创建时默认标记为已接单（is_accept_order=1）
 // Route: POST /api/v1/member/order/dine_in/create
 func Test_Member_DineIn_Create_IsAcceptOrder(t *testing.T) {
 	// 1. 创建租户数据库
@@ -450,7 +451,7 @@ func Test_Member_DineIn_Create_IsAcceptOrder(t *testing.T) {
 		t.Fatalf("failed to unmarshal response data: %v", err)
 	}
 
-	// 9. 查询 sale_order_product 表，验证 is_accept_order=1（会员堂食非H5，默认已接单）
+	// 9. 查询 sale_order_product 表，验证 is_accept_order=1（堂食订单默认已接单）
 	rows, err := db.Query(
 		"SELECT is_accept_order FROM ttpos_sale_order_product WHERE sale_bill_uuid = ? AND delete_time = 0",
 		result.SaleBillUuid,
@@ -477,7 +478,8 @@ func Test_Member_DineIn_Create_IsAcceptOrder(t *testing.T) {
 	t.Logf("verified %d sale_order_product records all have is_accept_order=1", count)
 }
 
-// Test_Member_DineIn_Create_Package_IsAcceptOrder 验证套餐商品堂食订单创建后 is_accept_order=1（含子商品，会员堂食非H5默认已接单）
+// Test_Member_DineIn_Create_Package_IsAcceptOrder 验证套餐商品堂食订单创建后 is_accept_order=1（含子商品，已接单）
+// 业务逻辑：堂食订单非 H5 商品，创建时默认标记为已接单（is_accept_order=1）
 // Route: POST /api/v1/member/order/dine_in/create
 func Test_Member_DineIn_Create_Package_IsAcceptOrder(t *testing.T) {
 	// 1. 创建租户数据库
@@ -545,7 +547,7 @@ func Test_Member_DineIn_Create_Package_IsAcceptOrder(t *testing.T) {
 		t.Fatalf("failed to unmarshal response data: %v", err)
 	}
 
-	// 9. 查询 sale_order_product 表，验证所有商品（主商品 + 子商品）的 is_accept_order=1（会员堂食非H5默认已接单）
+	// 9. 查询 sale_order_product 表，验证所有商品（主商品 + 子商品）的 is_accept_order=1（堂食默认已接单）
 	rows, err := db.Query(
 		"SELECT product_type, is_accept_order FROM ttpos_sale_order_product WHERE sale_bill_uuid = ? AND delete_time = 0",
 		result.SaleBillUuid,

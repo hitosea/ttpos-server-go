@@ -4070,20 +4070,31 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 	// 1. 是否自动加购。平板不自动加购
 	// 2. 判断是否需要给点餐账单自动加购商品。当map列表中有商品时，表示需要自动加购
 	if !noAutoAdd && len(planAutoFlavorProduct) > 0 && shopCartInfo.SaleBill.IsAutoAddMustProduct() {
-		errTx := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
-			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
-			ctx.SetDB(tx)
-			// 自动加购
-			err = autoAddSaleOrderProductToDesk(ctx, s, planAutoFlavorProduct, saleBillUuid, saleOrderUuid, shopCartInfo.SaleBill, h5AutoAdd)
-			if err != nil {
-				return errors.WithMessage(err, "自动添加必点商品失败")
-			}
-			return nil
-		})
-		if errTx != nil {
-			return nil, false, errors.WithMessage(errTx, "自动添加必点商品失败")
+		// 加分布式锁，防止并发请求（收银机cart_info + H5 ping）同时触发自动加购导致商品重复添加
+		s.lock.LockUuid(saleBillUuid)
+		defer s.lock.UnlockUuid(saleBillUuid)
+
+		// 获取锁后重新检查auto_add_must_product标志，防止另一个请求已经完成自动加购
+		latestSaleBill, errBill := repository.NewSaleBillRepo(db).GetSaleBillByUuid(saleBillUuid)
+		if errBill != nil {
+			return nil, false, errors.WithMessage(errBill, "获取账单信息失败")
 		}
-		isAutoAdd = true
+		if latestSaleBill.IsAutoAddMustProduct() {
+			errTx := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
+				// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
+				ctx.SetDB(tx)
+				// 自动加购
+				err = autoAddSaleOrderProductToDesk(ctx, s, planAutoFlavorProduct, saleBillUuid, saleOrderUuid, shopCartInfo.SaleBill, h5AutoAdd)
+				if err != nil {
+					return errors.WithMessage(err, "自动添加必点商品失败")
+				}
+				return nil
+			})
+			if errTx != nil {
+				return nil, false, errors.WithMessage(errTx, "自动添加必点商品失败")
+			}
+			isAutoAdd = true
+		}
 	}
 
 	// 获取新的购物车商品数据
