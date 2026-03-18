@@ -43,6 +43,8 @@ const (
 	MaterialImportStatusError      = "error"      // 导入失败
 )
 
+const errMsgGetMaterialDetailFailed = "获取物品详情失败"
+
 // MaterialImportProgressData 物品导入进度数据结构
 type MaterialImportProgressData struct {
 	Time     int64                       `json:"time"`     // 时间戳
@@ -668,7 +670,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 	// 获取物品详情
 	material, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
 	if err != nil {
-		return material_resp.MaterialDetailResp{}, errors.WithMessage(err, "获取物品详情失败")
+		return material_resp.MaterialDetailResp{}, errors.WithMessage(err, errMsgGetMaterialDetailFailed)
 	}
 
 	// 获取单位列表
@@ -722,7 +724,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 func (s *materialSrv) buildMaterialUnitList(ctx context.Context, materialUnitRepo repository.IMaterialUnitRepo, baseUnitUuid uint64) ([]material_resp.MaterialUnit, error) {
 	materialUnitList, err := materialUnitRepo.GetMaterialUnitListByBaseUnitUuid(baseUnitUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "获取物品详情失败")
+		return nil, errors.WithMessage(err, errMsgGetMaterialDetailFailed)
 	}
 	unitList := make([]material_resp.MaterialUnit, 0, len(materialUnitList))
 	for _, materialUnit := range materialUnitList {
@@ -1703,7 +1705,15 @@ func (s *materialSrv) updateMaterialByErpItemTx(tx *gorm.DB, request req.Materia
 	purchaseUnitUuid := resolveUpdatePurchaseUnit(productUnitRepo, request, updateData)
 
 	// 同步单位列表
-	saveUnitUuids, err := syncMaterialUnits(materialUnitRepo, productUnitRepo, commonRepo, material, request, stockUnit, purchaseUnitUuid, updateData)
+	saveUnitUuids, err := syncMaterialUnits(syncMaterialUnitsParams{
+		materialUnitRepo: materialUnitRepo,
+		productUnitRepo:  productUnitRepo,
+		commonRepo:       commonRepo,
+		material:         material,
+		stockUnit:        stockUnit,
+		purchaseUnitUuid: purchaseUnitUuid,
+		updateData:       updateData,
+	}, request)
 	if err != nil {
 		return err
 	}
@@ -1773,30 +1783,32 @@ func resolveUpdatePurchaseUnit(productUnitRepo repository.IProductUnitRepo, requ
 	return purchaseUnit.Uuid
 }
 
+// syncMaterialUnitsParams 同步单位列表的参数
+type syncMaterialUnitsParams struct {
+	materialUnitRepo repository.IMaterialUnitRepo
+	productUnitRepo  repository.IProductUnitRepo
+	commonRepo       repository.ICommonRepo
+	material         *model.Material
+	stockUnit        *model.ProductUnit
+	purchaseUnitUuid uint64
+	updateData       map[string]any
+}
+
 // syncMaterialUnits 同步物品的单位列表（基准单位 + 非基准单位），返回保留的 MaterialUnit UUID 列表
-func syncMaterialUnits(
-	materialUnitRepo repository.IMaterialUnitRepo,
-	productUnitRepo repository.IProductUnitRepo,
-	commonRepo repository.ICommonRepo,
-	material *model.Material,
-	request req.MaterialEditErpReq,
-	stockUnit *model.ProductUnit,
-	purchaseUnitUuid uint64,
-	updateData map[string]any,
-) ([]uint64, error) {
+func syncMaterialUnits(p syncMaterialUnitsParams, request req.MaterialEditErpReq) ([]uint64, error) {
 	saveUnitUuids := make([]uint64, 0, len(request.Uoms))
 	for _, uom := range request.Uoms {
-		productUnit, _ := productUnitRepo.GetProductUnitByErpnextUom(uom.Uom)
+		productUnit, _ := p.productUnitRepo.GetProductUnitByErpnextUom(uom.Uom)
 		if productUnit == nil {
 			return nil, errors.WithMessage(errors.New(fmt.Sprintf("单位不存在: %s %s", request.ItemCode, uom.Uom)))
 		}
-		savedUuid, err := syncSingleMaterialUnit(materialUnitRepo, commonRepo, material, productUnit, stockUnit, uom.ConversionRate)
+		savedUuid, err := syncSingleMaterialUnit(p.materialUnitRepo, p.commonRepo, p.material, productUnit, p.stockUnit, uom.ConversionRate)
 		if err != nil {
 			return nil, err
 		}
 		saveUnitUuids = append(saveUnitUuids, savedUuid)
-		if productUnit.Uuid == purchaseUnitUuid {
-			updateData["purchase_unit_uuid"] = savedUuid
+		if productUnit.Uuid == p.purchaseUnitUuid {
+			p.updateData["purchase_unit_uuid"] = savedUuid
 		}
 	}
 	return saveUnitUuids, nil
@@ -1984,7 +1996,7 @@ func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req
 		if ctx.GetCompany().IsOpenErp() {
 			existingMaterials, err := materialRepo.GetMaterialDetailByUuids(request.Uuids)
 			if err != nil {
-				return errors.WithMessage(err, "获取物品详情失败")
+				return errors.WithMessage(err, errMsgGetMaterialDetailFailed)
 			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			for _, existingMaterial := range existingMaterials {
@@ -2063,7 +2075,7 @@ func (s *materialSrv) UpdateMaterialVisibleBatch(ctx context.Context, request re
 		// 检查物品是否存在且不是总部物品（总部物品不能修改）
 		materials, err := materialRepo.GetMaterialDetailByUuids(request.Uuids)
 		if err != nil {
-			return errors.WithMessage(err, "获取物品详情失败")
+			return errors.WithMessage(err, errMsgGetMaterialDetailFailed)
 		}
 
 		// 过滤掉总部物品
