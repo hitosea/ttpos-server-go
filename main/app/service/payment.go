@@ -557,6 +557,7 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 							Source:        constant.SourceMember,
 							SaleBillUuid:  saleBill.Uuid,
 							SaleOrderUuid: order.RelatedUuid,
+							MemberUuid:    saleBill.ConsumerUuid,
 						},
 						PaymentOrderUuid: paymentOrderUuid,
 					})

@@ -371,6 +371,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					SaleBillUuid: saleBill.Uuid,
 					H5OrderUuid:  h5OrderUuid,
 					OperatorUuid: int64(ctx.GetStaffUuid()),
+					MemberUuid:   saleBill.ConsumerUuid,
 				},
 				IsAutoOrder: isAutoOrder,
 			})
