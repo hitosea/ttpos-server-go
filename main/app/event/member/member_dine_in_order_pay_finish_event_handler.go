@@ -175,6 +175,7 @@ func createH5OrderForMemberDineIn(payload event.PayFinishMemberDineInOrderPayloa
 
 // autoAcceptMemberDineInOrder 自动接单会员端堂食订单
 // 使用接单设置（AcceptOrderSetting）判断是否开启自动接单及金额限额
+// 自动接单成功后会在 saleBill 上标记 production_time，确保后续保存时不丢失
 func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload, saleBill *model.SaleBill) {
 	dbm := database.GetDBManager(config.DatabaseConf{})
 	db := dbm.GetDB(payload.CompanyUuid)
@@ -269,6 +270,10 @@ func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload
 			zap.Any("result", result))
 		return
 	}
+
+	// 自动接单成功，标记 production_time 到当前内存 saleBill 上
+	// 后续 markMemberDineInOrderComplete 保存时会将此值一并写入数据库
+	saleBill.SetCookingStatus()
 
 	logger.Logger.Info("autoAcceptMemberDineInOrder, auto accept success",
 		zap.Uint64("company_uuid", payload.CompanyUuid),
