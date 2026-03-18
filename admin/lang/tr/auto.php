@@ -1608,6 +1608,7 @@ return [
     "系统提供支持。" => "Sistem destek sağlar.",
     "会员充值" => "Üye yükleme",
     "赠" => "Hediye",
+    "扫码" => "Tarama",
     "扫码点餐" => "QR kod ile sipariş",
     "门店业务设置" => "Mağaza iş ayarları",
     "赠菜原因不能为空" => "Yemek hediye etme nedeni boş olamaz",
