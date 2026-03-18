@@ -2274,4 +2274,5 @@ return [
     "密码必须包含字母、数字、符号中至少2种" => "Password must include at least two of: letters, numbers, symbols",
     "超管" => "Super Admin",
     "商户UUID不能为空" => "Merchant UUID cannot be empty",
+    "缓存失效任务执行失败: " => "Cache invalidation task failed to execute:",
 ];
