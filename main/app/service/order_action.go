@@ -377,7 +377,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			})
 		}
 
-		// 发起“送厨”操作的事件
+		// 发起"送厨"操作的事件
 		utils.Go(func() {
 			s.bus.PublishSentCookingEvent(event.SentCookingPayload{
 				BasePayload: event.BasePayload{ // 送厨
@@ -388,6 +388,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					SaleOrderUuid: saleOrderUuid,
 					H5OrderUuid:   h5OrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
+					MemberUuid:    saleBill.ConsumerUuid,
 				},
 				BatchMode: batchCookingMode,
 				BatchPrintMode: func() string {
