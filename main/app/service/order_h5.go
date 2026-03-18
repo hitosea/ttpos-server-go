@@ -347,6 +347,13 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		staff := ctx.GetStaff()
 		saleBill.SetFinishSaleBill(staff.DutyNo, staff.Uuid, staff.GetUserName())
 		saleBill.CalcAll()
+
+		// 计算结账抹零（只有无手续费时才抹零），确保后续 SyncMemberOrderToErp 使用正确的值
+		if saleOrder := saleBill.GetFirstSaleOrder(); saleOrder != nil {
+			if saleOrder.CalcCommissionFee() == 0 {
+				saleOrder.SetCheckOutZeroFee()
+			}
+		}
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
@@ -366,6 +373,12 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
 			if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
 				return errors.WithMessage(err, "更新账单失败")
+			}
+			// 保存 SaleOrder（含结账抹零金额）
+			for _, so := range saleBill.SaleOrders {
+				if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*so); err != nil {
+					return errors.WithMessage(err, "更新销售订单失败")
+				}
 			}
 		}
 

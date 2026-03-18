@@ -241,6 +241,22 @@ func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload
 	// 设置上下文来源为会员端
 	payload.Ctx.SetSource(constant.SourceMember)
 
+	// 确保上下文中有 Company（支付回调路由无 JWT 中间件，ctx 中可能缺失）
+	if payload.Ctx.GetCompany().Uuid == 0 {
+		company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(payload.CompanyUuid)
+		if err != nil {
+			logger.Logger.Error("autoAcceptMemberDineInOrder, GetCompanyInfoByUuid failed",
+				zap.Uint64("company_uuid", payload.CompanyUuid),
+				zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+				zap.Error(err))
+			return
+		}
+		payload.Ctx.SetCompany(*company)
+		if company.CompanySetting != nil {
+			payload.Ctx.SetCompanySetting(*company.CompanySetting)
+		}
+	}
+
 	// 确保上下文中有 CompanySetting（支付回调路由无 JWT 中间件，ctx 中可能缺失）
 	if payload.Ctx.GetCompanySetting().Uuid == 0 {
 		companySetting, err := settingSrv.GetCompanySetting(payload.Ctx)
@@ -425,18 +441,6 @@ func markMemberDineInOrderComplete(payload event.PayFinishMemberDineInOrderPaylo
 		zap.Uint64("company_uuid", payload.CompanyUuid),
 		zap.Uint64("saleBillUuid", payload.SaleBillUuid),
 		zap.Uint64("saleOrderUuid", payload.SaleOrderUuid))
-
-	// 会员堂食订单结账完成后，同步到 ERP（无接单场景）
-	// 有接单场景由 AcceptH5Order 触发，此处通过 ErpSyncStatus 幂等控制避免重复推送
-	// 直接复用上方已加载的 saleBill，避免重复 GetSaleBillAllInfo 查询
-	utils.Go(func() {
-		settingSrv := setting.NewSrv(dbm, cache.Global)
-		orderSrv := service.NewOrderSrv(dbm, service.NewLocaleSrv(), settingSrv,
-			service.NewMustPlanSrv(dbm), service.NewPaymentMethodSrv(dbm, settingSrv),
-			service.NewMemberSrv(dbm, cache.Global), service.NewCashBoxSrv(dbm),
-			service.WithSmsSrv(dbm))
-		orderSrv.SyncMemberOrderToErp(payload.Ctx, saleBill, db)
-	})
 }
 
 // cookingAndFinishMemberDineInOrder 执行送厨和结账逻辑（备用，当前未使用）
