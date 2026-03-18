@@ -165,20 +165,31 @@ func createH5OrderForMemberDineIn(payload event.PayFinishMemberDineInOrderPayloa
 		zap.Uint64("saleBillUuid", payload.SaleBillUuid),
 		zap.String("deskNo", saleBill.SerialNo))
 
-	// 支付完成后尝试自动接单（如果开启且符合条件）
-	// 自动接单会同时完成接单和送厨
-	autoAcceptMemberDineInOrder(payload, saleBill)
-
 	// 支付完成后将订单标记为已完成
 	markMemberDineInOrderComplete(payload, saleBill)
+
+	// 支付完成后尝试自动接单（如果开启且符合条件）
+	// 自动接单会同时完成接单和送厨
+	// 注意：必须在 markMemberDineInOrderComplete 之后执行，否则统计不会执行
+	autoAcceptMemberDineInOrder(payload)
 }
 
 // autoAcceptMemberDineInOrder 自动接单会员端堂食订单
 // 使用接单设置（AcceptOrderSetting）判断是否开启自动接单及金额限额
-// 自动接单成功后会在 saleBill 上标记 production_time，确保后续保存时不丢失
-func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload, saleBill *model.SaleBill) {
+// 注意：必须在 markMemberDineInOrderComplete 之后调用，内部会重新查询最新的 saleBill
+func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload) {
 	dbm := database.GetDBManager(config.DatabaseConf{})
 	db := dbm.GetDB(payload.CompanyUuid)
+
+	// 重新从数据库获取最新的 saleBill（markMemberDineInOrderComplete 已更新数据库）
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(payload.SaleBillUuid)
+	if err != nil {
+		logger.Logger.Error("autoAcceptMemberDineInOrder, GetSaleBillAllInfo failed",
+			zap.Uint64("company_uuid", payload.CompanyUuid),
+			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+			zap.Error(err))
+		return
+	}
 
 	// 获取接单设置
 	settingSrv := setting.NewSrv(dbm, cache.Global)
@@ -287,10 +298,6 @@ func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload
 		return
 	}
 
-	// 自动接单成功，标记 production_time 到当前内存 saleBill 上
-	// 后续 markMemberDineInOrderComplete 保存时会将此值一并写入数据库
-	saleBill.SetCookingStatus()
-
 	logger.Logger.Info("autoAcceptMemberDineInOrder, auto accept success",
 		zap.Uint64("company_uuid", payload.CompanyUuid),
 		zap.Uint64("saleBillUuid", payload.SaleBillUuid),
@@ -336,7 +343,7 @@ func markMemberDineInOrderComplete(payload event.PayFinishMemberDineInOrderPaylo
 	}
 
 	// 更新 SaleOrder 状态为已完成，并记录结账完成后的字段
-	for index, _ := range saleBill.SaleOrders {
+	for index := range saleBill.SaleOrders {
 		saleOrder := saleBill.SaleOrders[index]
 		// 计算手续费（各付款单手续费之和）
 		commissionFee := saleOrder.CalcCommissionFee()
@@ -401,7 +408,7 @@ func markMemberDineInOrderComplete(payload event.PayFinishMemberDineInOrderPaylo
 	// 完成销售账单（参考收银机 FinishSaleBill 流程）
 	if saleBill.CanFinishSaleBill() {
 		if saleBill.DutyNo == "" {
-			// 自动接单未设置 duty_no（可能自动接单关闭或失败），按优先级查找可用班次
+			// 按优先级查找可用班次（自动接单在 markComplete 之后执行，此时 duty_no 尚未设置）
 			// 1. 主收银机的班次 2. 最先登录的收银机班次 3. 留空等下次登录分配
 			shiftLogRepo := repository.NewShiftLogRepo(db)
 			dutyNo, cashierUuid, cashierName, err := shiftLogRepo.GetAvailableShiftInfo()
