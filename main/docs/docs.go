@@ -55965,6 +55965,10 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 500
                 },
+                "business_status": {
+                    "description": "营业状态: 1-测试营业 2-正常营业（可选）",
+                    "type": "integer"
+                },
                 "company_name": {
                     "description": "公司名称，区别于店铺名称，最大500个字符",
                     "type": "string",
@@ -57926,6 +57930,10 @@ const docTemplate = `{
         "resp.Company": {
             "type": "object",
             "properties": {
+                "business_status": {
+                    "description": "营业状态: 1-测试营业 2-正常营业",
+                    "type": "integer"
+                },
                 "expire_time": {
                     "description": "店铺到期时间，0表示没有过期时间",
                     "type": "integer"
@@ -58545,6 +58553,10 @@ const docTemplate = `{
                 "address": {
                     "description": "地址，必填，最大500个字符",
                     "type": "string"
+                },
+                "business_status": {
+                    "description": "营业状态: 1-测试营业 2-正常营业",
+                    "type": "integer"
                 },
                 "company_name": {
                     "description": "公司名称，区别于店铺名称，最大500个字符",
@@ -68166,6 +68178,10 @@ const docTemplate = `{
                 "address": {
                     "description": "地址",
                     "type": "string"
+                },
+                "business_status": {
+                    "description": "营业状态: 1-测试营业 2-正常营业",
+                    "type": "integer"
                 },
                 "company_name": {
                     "description": "公司名称，区别于店铺名称",

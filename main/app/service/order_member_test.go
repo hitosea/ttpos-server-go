@@ -175,15 +175,15 @@ func makeSaleOrderProduct(uuid uint64, flavorBomUuid uint64, productType uint8, 
 	boms := make([]*model.SaleOrderProductBom, 0)
 	// 添加 flavor bom
 	boms = append(boms, &model.SaleOrderProductBom{
-		BaseModel:    model.BaseModel{Uuid: flavorBomUuid},
-		IsFlavorBom:  constant.ProductBomTypeFlavor, // 1 = 规格
+		BaseModel:      model.BaseModel{Uuid: flavorBomUuid},
+		IsFlavorBom:    constant.ProductBomTypeFlavor, // 1 = 规格
 		ProductBomUuid: flavorBomUuid,
 	})
 	// 添加 sauce boms
 	for _, sauceUuid := range sauceUuids {
 		boms = append(boms, &model.SaleOrderProductBom{
-			BaseModel:    model.BaseModel{Uuid: sauceUuid},
-			IsFlavorBom:  constant.ProductBomTypeSauce, // 0 = 小料
+			BaseModel:      model.BaseModel{Uuid: sauceUuid},
+			IsFlavorBom:    constant.ProductBomTypeSauce, // 0 = 小料
 			ProductBomUuid: sauceUuid,
 		})
 	}

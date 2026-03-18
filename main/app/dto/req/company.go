@@ -75,6 +75,12 @@ type ParamUpdateCompany struct {
 	PrinterLimit     int      `json:"printer_limit"`       // 打印机限制
 }
 
+// UpdateBusinessStatusReq 更新营业状态请求
+type UpdateBusinessStatusReq struct {
+	Uuid           uint64 `json:"uuid" binding:"required"`                      // 门店UUID
+	BusinessStatus int    `json:"business_status" binding:"required,oneof=1 2"` // 营业状态: 1-测试营业 2-正常营业
+}
+
 // 商家名称、商家LOGO、地址、经纬度、公司名称、联系电话、税号、语言、时区
 type UpdateCompanySettingReq struct {
 	Uuid        uint64             `json:"uuid" binding:"required"`           // 门店UUID

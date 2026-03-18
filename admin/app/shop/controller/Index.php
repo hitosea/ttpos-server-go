@@ -189,10 +189,22 @@ class Index extends Controller
         $settingData = SettingModel::getAll($this->store['app']['uuid'] ?? 0);
         $store = $settingData[SettingEnum::STORE]['values'];
         $taxRate = $settingData[SettingEnum::TAX_RATE]['values'];
+        // 从时段表推导营业状态：存在 end_time=0 的记录则为测试营业
+        $businessStatus = 2; // 默认正常营业
+        $appId = request()->appId;
+        $openPeriod = Db::connect('shop' . $appId)
+            ->table('ttpos_business_status_period')
+            ->where('end_time', 0)
+            ->where('delete_time', 0)
+            ->find();
+        if ($openPeriod) {
+            $businessStatus = 1; // 测试营业
+        }
         $settings = [
             'shop_name' => $store['name'] ?? '',
             'shop_bg_img' => $store['logoUrl'] ?? '',
             'is_open_tax' => $taxRate['is_open'] ?? 0, // 是否开启税率 0-关闭 1-开启
+            'business_status' => $businessStatus, // 营业状态: 1-测试营业 2-正常营业
         ];
         //
         $language = getSettingLanguages();

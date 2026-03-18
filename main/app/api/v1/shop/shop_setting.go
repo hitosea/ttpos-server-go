@@ -54,6 +54,16 @@ func (h *SettingHandler) SaveStoreSetting(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
+	// 处理营业状态切换
+	if updateStoreSetting.BusinessStatus != nil {
+		if err := h.companySrv.UpdateBusinessStatus(ctx, req.UpdateBusinessStatusReq{
+			Uuid:           ctx.GetCompanyUuid(),
+			BusinessStatus: *updateStoreSetting.BusinessStatus,
+		}); err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+	}
 	helper.Success(c, "保存成功")
 }
 

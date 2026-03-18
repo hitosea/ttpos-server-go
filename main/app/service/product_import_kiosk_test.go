@@ -11,15 +11,15 @@ import (
 // TestParseShowsKiosk 验证 Shows 字符串中 "7" 正确解析为 IsShowKiosk
 func TestParseShowsKiosk(t *testing.T) {
 	tests := []struct {
-		name            string
-		shows           string
-		wantCashier     bool
-		wantTablet      bool
-		wantKitchen     bool
-		wantAssistant   bool
-		wantH5          bool
-		wantDelivery    bool
-		wantKiosk       bool
+		name          string
+		shows         string
+		wantCashier   bool
+		wantTablet    bool
+		wantKitchen   bool
+		wantAssistant bool
+		wantH5        bool
+		wantDelivery  bool
+		wantKiosk     bool
 	}{
 		{
 			name:        "全部显示端 1234567",
@@ -33,9 +33,9 @@ func TestParseShowsKiosk(t *testing.T) {
 			wantCashier: true, wantKiosk: true,
 		},
 		{
-			name:        "仅自助点餐机 7",
-			shows:       "7",
-			wantKiosk:   true,
+			name:      "仅自助点餐机 7",
+			shows:     "7",
+			wantKiosk: true,
 		},
 		{
 			name:        "不含自助点餐机 123456",
@@ -104,10 +104,10 @@ func TestDecimalPricingKioskValidation(t *testing.T) {
 		wantError     bool
 	}{
 		{
-			name:      "小数计价+自助点餐机=报错",
-			numType:   2,
+			name:        "小数计价+自助点餐机=报错",
+			numType:     2,
 			isShowKiosk: true,
-			wantError: true,
+			wantError:   true,
 		},
 		{
 			name:      "小数计价+仅收银机=通过",
@@ -121,18 +121,18 @@ func TestDecimalPricingKioskValidation(t *testing.T) {
 			wantError:    true,
 		},
 		{
-			name:      "整数计价+自助点餐机=通过",
-			numType:   1,
+			name:        "整数计价+自助点餐机=通过",
+			numType:     1,
 			isShowKiosk: true,
-			wantError: false,
+			wantError:   false,
 		},
 		{
-			name:          "小数计价+多端(含Kiosk)=报错",
-			numType:       2,
-			isShowTablet:  true,
-			isShowAssist:  true,
-			isShowKiosk:   true,
-			wantError:     true,
+			name:         "小数计价+多端(含Kiosk)=报错",
+			numType:      2,
+			isShowTablet: true,
+			isShowAssist: true,
+			isShowKiosk:  true,
+			wantError:    true,
 		},
 	}
 
@@ -150,11 +150,11 @@ func TestDecimalPricingKioskValidation(t *testing.T) {
 // TestDeliveryValidation 验证外送显示校验：开启扫码点餐到店自取或外送均可通过
 func TestDeliveryValidation(t *testing.T) {
 	tests := []struct {
-		name               string
-		deliveryStatus     int
+		name                string
+		deliveryStatus      int
 		isOpenMemberInstant int
-		isShowDelivery     bool
-		wantError          bool
+		isShowDelivery      bool
+		wantError           bool
 	}{
 		{
 			name:           "外送未开+自取未开+选择外送=报错",

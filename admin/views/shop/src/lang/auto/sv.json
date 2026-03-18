@@ -2264,5 +2264,6 @@
     "安全库存设置": "Inställning för säkerhetslager",
     "点餐设置": "Mataläggningsinställningar",
     "扫码接单": "Skanna QR för att ta emot beställningar",
-    "是否显示非自助餐商品": "Visa icke-bufféartiklar?"
+    "是否显示非自助餐商品": "Visa icke-bufféartiklar?",
+    "当前门店营业状态为：“测试营业”，门店订单数据不计入汇总统计，仅用于内部测试。若确认正式营业请到“商家档案”板块进行开启。": "Butikens nuvarande driftstatus är: \"Testöppen\". Butikens orderdata ingår inte i sammanställda statistiker och används endast för interna tester. Om du bekräftar officiell öppning, aktivera den i avsnittet \"Butiksprofil\"."
 }
