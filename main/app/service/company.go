@@ -1,8 +1,6 @@
 package service
 
 import (
-	"sort"
-	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -170,52 +168,7 @@ func (s *companySrv) GetCompanyListWithStoreCode(ctx context.Context) (resp.Saas
 		})
 	}
 
-	// 对 list 按 StoreCode 排序
-	// 排序规则：
-	// 1. StoreCode 为空的排在最前面
-	// 2. 空 StoreCode 之间：按 CompanyUuid 升序排序（保证稳定性）
-	// 3. 非空 StoreCode：去掉 "No." 前缀后，纯数字按数字大小排序（去掉前缀0），否则按字符串排序（不区分大小写）
-	sort.Slice(list, func(i, j int) bool {
-		item1 := list[i]
-		item2 := list[j]
-
-		isEmpty1 := item1.StoreCode == ""
-		isEmpty2 := item2.StoreCode == ""
-
-		// 1. StoreCode 为空的排在最前面
-		if isEmpty1 != isEmpty2 {
-			return isEmpty1 // true 排在前面
-		}
-
-		// 2. 如果都是空字符串，按 CompanyUuid 排序
-		if isEmpty1 && isEmpty2 {
-			return item1.Uuid < item2.Uuid
-		}
-
-		// 3. 如果都有 StoreCode，按新规则排序
-		// 去掉 "No." 前缀（如果有）
-		processed1 := utils.ProcessStoreCodeForSort(item1.StoreCode)
-		processed2 := utils.ProcessStoreCodeForSort(item2.StoreCode)
-
-		// 判断处理后的内容是否只有数字
-		isDigits1 := utils.IsOnlyDigits(processed1)
-		isDigits2 := utils.IsOnlyDigits(processed2)
-
-		// 如果都是纯数字，按数字大小排序
-		if isDigits1 && isDigits2 {
-			num1, _ := utils.ParseNumberWithoutLeadingZeros(processed1)
-			num2, _ := utils.ParseNumberWithoutLeadingZeros(processed2)
-			return num1 < num2
-		}
-
-		// 如果一个是数字一个不是，数字排在前面
-		if isDigits1 != isDigits2 {
-			return isDigits1
-		}
-
-		// 否则按不区分大小写的字符串排序
-		return strings.ToLower(processed1) < strings.ToLower(processed2)
-	})
+	utils.SortByStoreCode(list)
 
 	return resp.SaasCompanyListWithStoreCodeResp{
 		List: list,

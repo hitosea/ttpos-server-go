@@ -124,7 +124,7 @@ func FreeSaleOrderEventHandler() {
 			setting := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
 			storeSetting, err := setting.GetStoreSetting(payload.Ctx)
 			if err != nil {
-				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetStoreSetting failed", zap.Error(err))
+				logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, GetStoreSetting failed", zap.Error(err))
 				return
 			}
 			//
@@ -133,7 +133,7 @@ func FreeSaleOrderEventHandler() {
 			err = repository.NewSaleOrderPeakTimeRepo(db).Record("inc", payload.SaleBill, 0.0, storeSetting.TimeZone)
 			if err != nil {
 				fmt.Println("SubscribeCheckoutSaleOrderEvent process, Record failed", payload, err)
-				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, Record failed", zap.Any("payload", payload), zap.Error(err))
+				logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, Record failed", zap.Error(err))
 			}
 		})
 

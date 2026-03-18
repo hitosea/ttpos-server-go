@@ -197,16 +197,29 @@ func (s *sSelling) buildCustomerCountFilters(filter *erp.Customer) [][]string {
 // 返回：
 //   - error: 错误信息
 func (s *sSelling) AddCompanyToCustomer(ctx context.Context, customer *erp.Customer, companyName string) error {
-	// 添加新公司
-	companies := append(customer.Companies, &erp.AllowedToTransactWith{
+	// 先获取完整客户文档（ListCustomers 不返回 companies 子表，直接用会导致覆盖清空）
+	fullCustomer, err := s.GetCustomer(ctx, customer.Name)
+	if err != nil {
+		return gerror.Wrapf(err, "获取客户完整信息失败")
+	}
+
+	// 查重：如果已包含该公司则跳过
+	for _, company := range fullCustomer.Companies {
+		if company.Company == companyName {
+			return nil
+		}
+	}
+
+	// 在完整列表上追加新公司
+	companies := append(fullCustomer.Companies, &erp.AllowedToTransactWith{
 		Company: companyName,
 	})
 
 	// 调用ERP接口更新客户
-	_, err := service.Document().Update(ctx, &erp.ErpReq{
+	_, err = service.Document().Update(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeCustomer,
 		Name:    customer.Name,
-	}, map[string]interface{}{
+	}, map[string]any{
 		"companies": companies,
 	})
 	if err != nil {

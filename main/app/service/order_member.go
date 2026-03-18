@@ -492,13 +492,17 @@ func (s *orderSrv) PayDineInOrder(ctx context.Context, request req.PayDineInOrde
 		return errors.New("请选择支付方式")
 	}
 
-	// 更新订单备注
+	// 记录提交支付时间（仅首次提交时记录）
+	if saleBill.SubmitPayTime == 0 {
+		saleBill.SubmitPayTime = time.Now().Unix()
+	}
+
+	// 更新订单备注和提交支付时间
 	if request.Remark != "" {
 		saleBill.Remark = request.Remark
-		// 保存更新
-		if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
-			return errors.WithMessage(err, "更新订单失败")
-		}
+	}
+	if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
+		return errors.WithMessage(err, "更新订单失败")
 	}
 
 	return nil
@@ -2979,7 +2983,7 @@ func (s *orderSrv) addDineInProducts(ctx context.Context, saleBillUuid, saleOrde
 		SaleOrderUuid:  saleOrderUuid,
 		Products:       productParams,
 		IsMemberAdd:    false, // 堂食订单不应用外送折扣率
-		IsMemberDineIn: true,  // 会员堂食下单，商品标记为未接单
+		IsMemberDineIn: true,  // 会员堂食下单. 标记商品都是结账减库存
 	}
 	return s.ActionAdd(ctx, params, targetSaleBill)
 }
@@ -3062,6 +3066,10 @@ func (s *orderSrv) buildDineInOrderListQueryOptions(ctx context.Context, billSta
 		},
 		repository.CommonRepo.WhereBySource(constant.SaleBillSourceMember),
 		repository.CommonRepo.WhereByBillType(constant.SaleBillTypeInstant), // 堂食订单 BillType = 1
+		// 只显示已提交支付的订单（调用过 /member/order/dine_in/pay 接口）
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("submit_pay_time > 0")
+		},
 		repository.CommonRepo.SortWithCreateTime("desc"),
 		repository.CommonRepo.Preload(
 			repository.WithPreload{
@@ -3210,8 +3218,14 @@ func (s *orderSrv) buildMemberDineInOrderItem(ctx context.Context, saleBill mode
 		amount = 0
 	}
 
+	saleOrderUuid := uint64(0)
+	if saleOrder := saleBill.GetFirstSaleOrder(); saleOrder != nil {
+		saleOrderUuid = saleOrder.Uuid
+	}
+
 	return resp.MemberDineInOrder{
 		SaleBillUuid:  saleBill.Uuid,
+		SaleOrderUuid: saleOrderUuid,
 		CompanyName:   ctx.GetCompany().Name,
 		SerialNo:      saleBill.SerialNo,
 		OrderNo:       saleBill.OrderNo,
@@ -3221,6 +3235,7 @@ func (s *orderSrv) buildMemberDineInOrderItem(ctx context.Context, saleBill mode
 		Amount:        amount,
 		ProductAmount: productAmount,
 		CreateTime:    saleBill.CreateTime,
+		SubmitPayTime: saleBill.SubmitPayTime,
 		ProductList:   productList,
 	}
 }
@@ -3317,10 +3332,10 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 
 	// 计算剩余支付时间
 	var remainingPaymentTime int64
-	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() {
+	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() && saleBill.SubmitPayTime > 0 {
 		// 假设支付超时时间为15分钟
 		paymentTimeout := int64(15 * 60)
-		remaining := paymentTimeout - (time.Now().Unix() - saleBill.CreateTime)
+		remaining := paymentTimeout - (time.Now().Unix() - saleBill.SubmitPayTime)
 		if remaining > 0 {
 			remainingPaymentTime = remaining
 		}
@@ -3335,8 +3350,39 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		cancelTime = saleOrder.DeleteTime
 	}
 
+	// 待支付状态下获取支付方式列表（用于发起支付）
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+	paymentMethodList := resp.PaymentMethodList{List: make([]resp.PaymentMethodItem, 0)}
+	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() {
+		paymentMethods, _ := repository.NewPaymentMethodRepo(db).GetLianLianPayPaymentMethodList()
+		for _, paymentMethod := range paymentMethods {
+			paymentMethodList.List = append(paymentMethodList.List, resp.PaymentMethodItem{
+				Source:        paymentMethod.Source,
+				SourceText:    constant.PaymentMethodSourceTextMap[paymentMethod.Source],
+				Uuid:          paymentMethod.Uuid,
+				PaymentName:   paymentMethod.GetPaymentName(),
+				PaymentMethod: paymentMethod.GetName(),
+				FeePercent:    paymentMethod.FeePercent,
+				Logo: func() string {
+					if paymentMethod.IsWechatPay() {
+						return baseUrl + "/image/pay/wechat_pay.png"
+					}
+					if paymentMethod.IsAliPay() {
+						return baseUrl + "/image/pay/alipay.png"
+					}
+					if paymentMethod.IsQrPromptPay() {
+						return baseUrl + "/image/pay/qr_prompt_pay.png"
+					}
+					return ""
+				}(),
+				Code: paymentMethod.Code,
+			})
+		}
+	}
+
 	return &resp.GetMemberDineInOrderDetailResp{
 		SaleBillUuid:         saleBill.Uuid,
+		SaleOrderUuid:        saleOrder.Uuid,
 		CompanyName:          company.Name,
 		SerialNo:             saleBill.SerialNo,
 		OrderNo:              saleBill.OrderNo,
@@ -3344,6 +3390,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		DiningMethod:         saleBill.DiningMethod,
 		Remark:               saleBill.Remark,
 		CreateTime:           saleBill.CreateTime,
+		SubmitPayTime:        saleBill.SubmitPayTime,
 		PayTime:              payTime,
 		CancelTime:           cancelTime,
 		RemainingPaymentTime: remainingPaymentTime,
@@ -3358,6 +3405,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		ProductList: resp.MemberDineInOrderProductList{
 			List: productList,
 		},
+		PaymentMethods: paymentMethodList,
 	}, nil
 }
 

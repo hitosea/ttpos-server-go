@@ -102,7 +102,7 @@ func (model *Material) GetUnitUuidByUom(uom string) (uint64, error) {
 // 通过uom名获取单位
 func (model *Material) GetUnitByUom(uom string) (*MaterialUnit, error) {
 	for _, unit := range model.NotBaseUnitList {
-		if unit.Unit.ErpnextUom == uom {
+		if unit.Unit != nil && unit.Unit.ErpnextUom == uom {
 			return unit, nil
 		}
 	}

@@ -43,6 +43,8 @@ const (
 	MaterialImportStatusError      = "error"      // 导入失败
 )
 
+const errMsgGetMaterialDetailFailed = "获取物品详情失败"
+
 // MaterialImportProgressData 物品导入进度数据结构
 type MaterialImportProgressData struct {
 	Time     int64                       `json:"time"`     // 时间戳
@@ -93,7 +95,7 @@ type IMaterialSrv interface {
 	SyncMaterial(ctx context.Context, syncHeadquarterData bool) error         // 同步物品
 	SyncProductBomCard(ctx context.Context, syncHeadquarterData bool) error   // 同步成本卡
 
-	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
+	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64, extraOpts ...repository.DBOption) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
 
 	CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error // 检查物品安全库存
 
@@ -622,21 +624,120 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 }
 
 // GetMaterialDetail 获取物品详情
+// getMaterialUnitName 安全获取 MaterialUnit 关联的 ProductUnit 多语言名称
+func getMaterialUnitName(mu *model.MaterialUnit, lang string) string {
+	if mu == nil || mu.Unit == nil {
+		return ""
+	}
+	return mu.Unit.MultiLanguageName.GetNameByLang(lang)
+}
+
+// getMaterialUnitLocaleName 安全获取 MaterialUnit 的多语言名称
+func getMaterialUnitLocaleName(mu *model.MaterialUnit) dto.LocaleResponse {
+	if mu == nil {
+		return dto.LocaleResponse{}
+	}
+	return *language.JsonToLocaleResponse(mu.Name)
+}
+
+// getFromUnitUuid 安全获取 MaterialUnit 对应的 ProductUnit UUID
+func getFromUnitUuid(material *model.Material, unitUuid uint64) uint64 {
+	if u := material.GetUnit(unitUuid); u != nil {
+		return u.UnitUuid
+	}
+	return 0
+}
+
+// getOriginCountry 获取原产地国家信息
+func getOriginCountry(code string) *material_resp.CountryItem {
+	if code == "" {
+		return nil
+	}
+	country := constant.GetCountryByCode(code)
+	if country == nil {
+		return nil
+	}
+	return &material_resp.CountryItem{
+		Code:       country.Code,
+		LocaleName: country.GetLocaleNames(),
+	}
+}
+
 func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDetailReq) (material_resp.MaterialDetailResp, error) {
 	dbId := ctx.GetDbId()
-	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
+	return s.doGetMaterialDetail(ctx,
+		repository.NewMaterialRepo(s.dbm.GetDB(dbId)),
+		repository.NewMaterialUnitRepo(s.dbm.GetDB(dbId)),
+		req,
+	)
+}
 
+// doGetMaterialDetail 获取物品详情的核心逻辑（可测试）
+func (s *materialSrv) doGetMaterialDetail(
+	ctx context.Context,
+	materialRepo repository.IMaterialRepo,
+	materialUnitRepo repository.IMaterialUnitRepo,
+	req req.MaterialDetailReq,
+) (material_resp.MaterialDetailResp, error) {
 	// 获取物品详情
 	material, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
 	if err != nil {
-		return material_resp.MaterialDetailResp{}, errors.WithMessage(err, "获取物品详情失败")
+		return material_resp.MaterialDetailResp{}, errors.WithMessage(err, errMsgGetMaterialDetailFailed)
 	}
-	unitList := []material_resp.MaterialUnit{}
-	materialUnitRepo := repository.NewMaterialUnitRepo(s.dbm.GetDB(dbId))
-	materialUnitList, err := materialUnitRepo.GetMaterialUnitListByBaseUnitUuid(material.Unit.Uuid)
+
+	// 获取单位列表
+	var baseUnitUuid uint64
+	if material.Unit != nil {
+		baseUnitUuid = material.Unit.Uuid
+	}
+	unitList, err := s.buildMaterialUnitList(ctx, materialUnitRepo, baseUnitUuid)
 	if err != nil {
-		return material_resp.MaterialDetailResp{}, errors.WithMessage(err, "获取物品详情失败")
+		return material_resp.MaterialDetailResp{}, err
 	}
+
+	// 获取默认销售单位信息
+	defaultSalesUnitUuid, defaultSalesUnitLocaleName := s.getDefaultSalesUnitInfo(materialUnitRepo, material.DefaultSalesUnitUuid)
+
+	lang := ctx.GetLanguage()
+	return material_resp.MaterialDetailResp{
+		Uuid:                       material.Uuid,
+		LocaleName:                 material.MultiLanguageName.GetNames(),
+		Code:                       material.Code,
+		CategoryUuid:               material.CategoryUuid,
+		CategoryName:               material.Category.MultiLanguageName.GetNameByLang(lang),
+		Status:                     int(utils.BoolToUint(material.Status)),
+		AllowSubstoreVisible:       material.AllowSubstoreVisible,
+		AllowNegativeStock:         material.AllowNegativeStock == constant.Yes,
+		BarcodeValue:               material.BarcodeValue,
+		InternalCode:               material.InternalCode,
+		SafetyStock:                material.SafetyStock,
+		UnitName:                   getMaterialUnitName(material.Unit, lang),
+		UnitUuid:                   material.UnitUuid,
+		FromUnitUuid:               getFromUnitUuid(material, material.UnitUuid),
+		UnitList:                   material_resp.MaterialUnitListResp{List: unitList},
+		PurchaseUnitName:           getMaterialUnitName(material.PurchaseUnit, lang),
+		PurchaseUnitUuid:           material.PurchaseUnitUuid,
+		FromPurchaseUnitUuid:       getFromUnitUuid(material, material.PurchaseUnitUuid),
+		CostUnitName:               getMaterialUnitName(material.CostUnit, lang),
+		CostUnitUuid:               material.CostUnitUuid,
+		FromCostUnitUuid:           getFromUnitUuid(material, material.CostUnitUuid),
+		PurchaseUnitLocaleName:     getMaterialUnitLocaleName(material.GetUnit(material.PurchaseUnitUuid)),
+		CostUnitLocaleName:         getMaterialUnitLocaleName(material.GetUnit(material.CostUnitUuid)),
+		UnitLocaleName:             getMaterialUnitLocaleName(material.GetBaseUnit()),
+		DefaultSalesUnitUuid:       defaultSalesUnitUuid,
+		DefaultSalesUnitLocaleName: defaultSalesUnitLocaleName,
+		OriginCountry:              getOriginCountry(material.OriginCountryCode),
+		IsEditable:                 !material.IsHeadquarter(),
+	}, nil
+}
+
+// buildMaterialUnitList 构建物品单位列表响应
+func (s *materialSrv) buildMaterialUnitList(ctx context.Context, materialUnitRepo repository.IMaterialUnitRepo, baseUnitUuid uint64) ([]material_resp.MaterialUnit, error) {
+	materialUnitList, err := materialUnitRepo.GetMaterialUnitListByBaseUnitUuid(baseUnitUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, errMsgGetMaterialDetailFailed)
+	}
+	unitList := make([]material_resp.MaterialUnit, 0, len(materialUnitList))
 	for _, materialUnit := range materialUnitList {
 		unitList = append(unitList, material_resp.MaterialUnit{
 			Uuid:           materialUnit.Uuid,
@@ -646,99 +747,19 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 			ConversionRate: materialUnit.ConversionRate,
 		})
 	}
+	return unitList, nil
+}
 
-	purchaseUnit := material.GetUnit(material.PurchaseUnitUuid)
-	costUnit := material.GetUnit(material.CostUnitUuid)
-	baseUnit := material.GetBaseUnit()
-	var purchaseUnitLocaleName, costUnitLocaleName, baseUnitLocaleName dto.LocaleResponse
-	if purchaseUnit != nil {
-		purchaseUnitLocaleName = *language.JsonToLocaleResponse(purchaseUnit.Name)
+// getDefaultSalesUnitInfo 获取默认销售单位信息
+func (s *materialSrv) getDefaultSalesUnitInfo(materialUnitRepo repository.IMaterialUnitRepo, defaultSalesUnitUuid uint64) (uint64, dto.LocaleResponse) {
+	if defaultSalesUnitUuid == 0 {
+		return 0, dto.LocaleResponse{}
 	}
-	if costUnit != nil {
-		costUnitLocaleName = *language.JsonToLocaleResponse(costUnit.Name)
+	materialUnit, err := materialUnitRepo.GetMaterialUnitsByUuid(defaultSalesUnitUuid)
+	if err != nil || materialUnit.Unit == nil {
+		return 0, dto.LocaleResponse{}
 	}
-	if baseUnit != nil {
-		baseUnitLocaleName = *language.JsonToLocaleResponse(baseUnit.Name)
-	}
-
-	fromUnitUuid := uint64(0)
-	if material.Unit != nil {
-		fromUnitUuid = material.GetUnit(material.UnitUuid).UnitUuid
-	}
-	fromPurchaseUnitUuid := uint64(0)
-	if material.PurchaseUnit != nil {
-		fromPurchaseUnitUuid = material.GetUnit(material.PurchaseUnitUuid).UnitUuid
-	}
-	fromCostUnitUuid := uint64(0)
-	if material.CostUnit != nil {
-		fromCostUnitUuid = material.GetUnit(material.CostUnitUuid).UnitUuid
-	}
-
-	// 获取原产地国家信息
-	var originCountry *material_resp.CountryItem
-	if material.OriginCountryCode != "" {
-		country := constant.GetCountryByCode(material.OriginCountryCode)
-		if country != nil {
-			originCountry = &material_resp.CountryItem{
-				Code:       country.Code,
-				LocaleName: country.GetLocaleNames(),
-			}
-		}
-	}
-
-	// 获取默认销售单位信息
-	var defaultSalesUnitUuid uint64
-	var defaultSalesUnitLocaleName dto.LocaleResponse
-	if material.DefaultSalesUnitUuid > 0 {
-		materialUnitRepo := repository.NewMaterialUnitRepo(s.dbm.GetDB(dbId))
-		materialUnit, err := materialUnitRepo.GetMaterialUnitsByUuid(material.DefaultSalesUnitUuid)
-		if err == nil && materialUnit.Unit != nil {
-			defaultSalesUnitLocaleName = materialUnit.Unit.MultiLanguageName.GetNames()
-			// 返回 MaterialUnit UUID（与采购单位、成本单位一致）
-			defaultSalesUnitUuid = materialUnit.Uuid
-		}
-	}
-
-	return material_resp.MaterialDetailResp{
-		Uuid:                 material.Uuid,
-		LocaleName:           material.MultiLanguageName.GetNames(),
-		Code:                 material.Code,
-		CategoryUuid:         material.CategoryUuid,
-		CategoryName:         material.Category.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		Status:               int(utils.BoolToUint(material.Status)),
-		AllowSubstoreVisible: material.AllowSubstoreVisible,
-		AllowNegativeStock:   material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
-		BarcodeValue:         material.BarcodeValue,
-		InternalCode:         material.InternalCode,
-		SafetyStock:          material.SafetyStock,
-		UnitName:             material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		UnitUuid:             material.UnitUuid,
-		FromUnitUuid:         fromUnitUuid,
-		UnitList:             material_resp.MaterialUnitListResp{List: unitList},
-		PurchaseUnitName: func() string {
-			if material.PurchaseUnit == nil {
-				return ""
-			}
-			return material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-		}(),
-		PurchaseUnitUuid:     material.PurchaseUnitUuid,
-		FromPurchaseUnitUuid: fromPurchaseUnitUuid,
-		CostUnitName: func() string {
-			if material.CostUnit == nil {
-				return ""
-			}
-			return material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-		}(),
-		CostUnitUuid:               material.CostUnitUuid,
-		FromCostUnitUuid:           fromCostUnitUuid,
-		PurchaseUnitLocaleName:     purchaseUnitLocaleName,
-		CostUnitLocaleName:         costUnitLocaleName,
-		UnitLocaleName:             baseUnitLocaleName,
-		DefaultSalesUnitUuid:       defaultSalesUnitUuid,
-		DefaultSalesUnitLocaleName: defaultSalesUnitLocaleName,
-		OriginCountry:              originCountry,
-		IsEditable:                 !material.IsHeadquarter(), // 总部物品不可编辑
-	}, nil
+	return materialUnit.Uuid, materialUnit.Unit.MultiLanguageName.GetNames()
 }
 
 // GetMaterialStockDetail 获取物品库存详情
@@ -872,146 +893,185 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.Mater
 	return nil
 }
 
+// isUomInConversion 检查目标单位是否在转换系数列表中（含基准单位）
+func isUomInConversion(targetUom, stockUom string, uoms []req.MaterialUomReq) bool {
+	if targetUom == stockUom {
+		return true
+	}
+	for _, uom := range uoms {
+		if uom.Uom == targetUom {
+			return true
+		}
+	}
+	return false
+}
+
+// resolveUomProductUnitUuid 解析 UOM code 对应的 ProductUnit UUID，校验是否在转换系数中
+// 返回 (uuid, error)：不在转换系数中返回 (0, nil)；在转换系数中但 ProductUnit 不存在返回 error
+func resolveUomProductUnitUuid(productUnitRepo repository.IProductRepo, uom, itemCode, stockUom string, uoms []req.MaterialUomReq, label string) (uint64, error) {
+	if uom == "" {
+		return 0, nil
+	}
+	if !isUomInConversion(uom, stockUom, uoms) {
+		logger.Logger.Warn(fmt.Sprintf("同步物品-%s不在转换系数中，已跳过", label),
+			zap.String("item_code", itemCode),
+			zap.String("uom", uom),
+		)
+		return 0, nil
+	}
+	pu, err := productUnitRepo.GetProductUnitByErpnextUom(uom)
+	if err != nil {
+		return 0, errors.WithMessage(err, fmt.Sprintf("%s不存在: %s %s", label, itemCode, uom))
+	}
+	return pu.Uuid, nil
+}
+
+// buildErpUnitList 构建 ERP 同步用的非基准单位列表
+func buildErpUnitList(productUnitRepo repository.IProductRepo, uoms []req.MaterialUomReq, stockUom string) ([]req.MaterialUnitReq, error) {
+	unitList := make([]req.MaterialUnitReq, 0, len(uoms))
+	for _, unit := range uoms {
+		if unit.Uom == stockUom {
+			continue
+		}
+		productUnit, err := productUnitRepo.GetProductUnitByErpnextUom(unit.Uom)
+		if err != nil {
+			return nil, errors.WithMessage(err, fmt.Sprintf("单位不存在: %s", unit.Uom))
+		}
+		unitList = append(unitList, req.MaterialUnitReq{
+			Uuid:           productUnit.Uuid,
+			ConversionRate: unit.ConversionRate,
+		})
+	}
+	return unitList, nil
+}
+
+// boolToStatus 将 disabled 布尔值转换为状态整数（disabled=true → 0, disabled=false → 1）
+func boolToStatus(disabled bool) int {
+	if disabled {
+		return 0
+	}
+	return 1
+}
+
 func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.MaterialAddErpReq) (*model.Material, error) {
-	// 切换为当前数据库
 	db := ctx.GetDB()
 	if db == nil {
-		dbId := ctx.GetDbId()
-		db = s.dbm.GetDB(dbId)
+		db = s.dbm.GetDB(ctx.GetDbId())
 	}
 
-	// 创建多语言名称, 异步翻译
 	localeName := model.MultiLanguageName{
-		EnName:   request.ItemName,
-		ZhName:   request.ItemName,
-		ZhTwName: request.ItemName,
-		ThName:   request.ItemName,
-		MyName:   request.ItemName,
-		JaName:   request.ItemName,
-		KoName:   request.ItemName,
-		TrName:   request.ItemName,
-		SvName:   request.ItemName,
+		EnName: request.ItemName, ZhName: request.ItemName, ZhTwName: request.ItemName,
+		ThName: request.ItemName, MyName: request.ItemName, JaName: request.ItemName,
+		KoName: request.ItemName, TrName: request.ItemName, SvName: request.ItemName,
 	}
 
-	// 获取单位信息
 	productUnitRepo := repository.NewProductRepo(db)
 	productUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.StockUom)
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("基准单位不存在: %s", request.StockUom))
 	}
 
-	// 获取采购单位
-	var purchaseUnitUuid uint64
-	if request.PurchaseUom != "" {
-		purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
-		if err != nil {
-			return nil, errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
-		}
-		purchaseUnitUuid = purchaseUnit.Uuid
+	purchaseUnitUuid, err := resolveUomProductUnitUuid(productUnitRepo, request.PurchaseUom, request.ItemCode, request.StockUom, request.Uoms, "采购单位")
+	if err != nil {
+		return nil, err
 	}
-
-	// 获取默认销售单位
-	var defaultSalesUnitUuid uint64
-	if request.DefaultSalesUnit != "" {
-		defaultSalesUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.DefaultSalesUnit)
-		if err != nil {
-			return nil, errors.WithMessage(err, fmt.Sprintf("默认销售单位不存在: %s", request.DefaultSalesUnit))
-		}
-		defaultSalesUnitUuid = defaultSalesUnit.Uuid
+	defaultSalesUnitUuid, err := resolveUomProductUnitUuid(productUnitRepo, request.DefaultSalesUnit, request.ItemCode, request.StockUom, request.Uoms, "默认销售单位")
+	if err != nil {
+		return nil, err
 	}
 
 	var material *model.Material
-
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		productUnitRepo := repository.NewProductRepo(tx)
-
-		// 获取物品分类信息
-		commonRepo := repository.NewCommonRepo()
-		materialCategoryRepo := repository.NewMaterialRepo(tx)
-		materialCategory, exists, err := materialCategoryRepo.GetMaterialCategoryByCode(request.ClassificationCode)
-		if err != nil {
-			return errors.WithMessage(err, fmt.Sprintf("获取物品分类失败: %s", request.ClassificationCode))
-		}
-		var materialCategoryUuid uint64 = 1
-		if exists {
-			materialCategoryUuid = materialCategory.Uuid
-		}
-
-		unitList := []req.MaterialUnitReq{}
-		for _, unit := range request.Uoms {
-			if unit.Uom == request.StockUom {
-				continue
-			}
-			// 查询单位信息
-			productUnit, err := productUnitRepo.GetProductUnitByErpnextUom(unit.Uom)
-			if err != nil {
-				return errors.WithMessage(err, fmt.Sprintf("单位不存在: %s", unit.Uom))
-			}
-			unitList = append(unitList, req.MaterialUnitReq{
-				Uuid:           productUnit.Uuid,
-				ConversionRate: unit.ConversionRate,
-			})
-		}
-
-		// 获取单位信息
-		params := req.MaterialAddReq{
-			LocaleName:   localeName.GetNames(),
-			CategoryUuid: materialCategoryUuid,
-			Status: func() int {
-				if request.Disabled {
-					return 0
-				}
-				return 1
-			}(),
-			InitStock:            request.OpeningStock,
-			BarcodeValue:         request.BarcodeValue,
-			UnitUuid:             productUnit.Uuid,
-			UnitList:             unitList,
-			PurchaseUnitUuid:     purchaseUnitUuid,
-			CostUnitUuid:         productUnit.Uuid,
-			DefaultSalesUnitUuid: defaultSalesUnitUuid,
-			InternalCode:         request.InternalCode,
-			AllowNegativeStock:   request.AllowNegativeStock,
-		}
-		if request.AllowSubstoreVisible {
-			params.AllowSubstoreVisible = 1
-		}
-		params.SetHeadquarterUuid(0)
-		// 获取默认仓库ID
-		warehouseUuid, err := repository.NewWarehouseRepo(tx).GetDefaultWarehouse()
-		if err != nil {
-			return errors.WithMessage(err, "默认仓库不存在")
-		}
-		params.SetWarehouseUuid(warehouseUuid.Uuid)
-		params.SetIsSync(true)    // 从总店同步物品到本地，忽略检查内部编码唯一性
-		params.SetIsErpSync(true) // 从ERP同步物品到本地，不创建仓库物品
-		material, _, err = addMaterial(ctx, tx, s.settingSrv, params)
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-		// 更新物品数据, 根据NotForSale判断是否删除
-		materialRepo := repository.NewMaterialRepo(tx)
-		updateData := map[string]any{
-			"code":                  request.ItemCode,
-			"delivered_by_supplier": request.DeliveredBySupplier,
-			"supplier_erp_code":     request.SupplierErpCode,
-			"specification":         request.Specification,
-		}
-		if request.NotForSale {
-			updateData["delete_time"] = time.Now().Unix()
-		} else {
-			updateData["delete_time"] = 0
-		}
-		err = materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(material.Uuid))
-		if err != nil {
-			return errors.WithMessage(err, "更新物品数据失败")
-		}
-		return nil
+		material, err = s.addMaterialByErpItemTx(ctx, tx, request, localeName, productUnit.Uuid, purchaseUnitUuid, defaultSalesUnitUuid)
+		return err
 	}); err != nil {
 		return nil, errors.WithMessage(err)
 	}
-
 	return material, nil
+}
+
+// addMaterialByErpItemTx 在事务中执行 ERP 物品创建逻辑
+func (s *materialSrv) addMaterialByErpItemTx(ctx context.Context, tx *gorm.DB, request req.MaterialAddErpReq, localeName model.MultiLanguageName, stockUnitUuid, purchaseUnitUuid, defaultSalesUnitUuid uint64) (*model.Material, error) {
+	productUnitRepo := repository.NewProductRepo(tx)
+	commonRepo := repository.NewCommonRepo()
+
+	materialCategoryUuid, err := resolveMaterialCategoryUuid(repository.NewMaterialRepo(tx), request.ClassificationCode)
+	if err != nil {
+		return nil, err
+	}
+
+	unitList, err := buildErpUnitList(productUnitRepo, request.Uoms, request.StockUom)
+	if err != nil {
+		return nil, err
+	}
+
+	params := req.MaterialAddReq{
+		LocaleName:           localeName.GetNames(),
+		CategoryUuid:         materialCategoryUuid,
+		Status:               boolToStatus(request.Disabled),
+		InitStock:            request.OpeningStock,
+		BarcodeValue:         request.BarcodeValue,
+		UnitUuid:             stockUnitUuid,
+		UnitList:             unitList,
+		PurchaseUnitUuid:     purchaseUnitUuid,
+		CostUnitUuid:         stockUnitUuid,
+		DefaultSalesUnitUuid: defaultSalesUnitUuid,
+		InternalCode:         request.InternalCode,
+		AllowNegativeStock:   request.AllowNegativeStock,
+	}
+	if request.AllowSubstoreVisible {
+		params.AllowSubstoreVisible = 1
+	}
+	params.SetHeadquarterUuid(0)
+
+	warehouseUuid, err := repository.NewWarehouseRepo(tx).GetDefaultWarehouse()
+	if err != nil {
+		return nil, errors.WithMessage(err, "默认仓库不存在")
+	}
+	params.SetWarehouseUuid(warehouseUuid.Uuid)
+	params.SetIsSync(true)
+	params.SetIsErpSync(true)
+
+	material, _, err := addMaterial(ctx, tx, s.settingSrv, params)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	updateData := map[string]any{
+		"code":                  request.ItemCode,
+		"delivered_by_supplier": request.DeliveredBySupplier,
+		"supplier_erp_code":     request.SupplierErpCode,
+		"specification":         request.Specification,
+		"delete_time":           deleteTimeFromNotForSale(request.NotForSale),
+	}
+	err = repository.NewMaterialRepo(tx).UpdateMaterialData(updateData, commonRepo.WhereByUuid(material.Uuid))
+	if err != nil {
+		return nil, errors.WithMessage(err, "更新物品数据失败")
+	}
+	return material, nil
+}
+
+// resolveMaterialCategoryUuid 根据分类编码获取分类 UUID，不存在则返回默认值 1
+func resolveMaterialCategoryUuid(materialRepo repository.IMaterialRepo, classificationCode string) (uint64, error) {
+	if classificationCode == "" {
+		return 1, nil
+	}
+	materialCategory, exists, err := materialRepo.GetMaterialCategoryByCode(classificationCode)
+	if err != nil {
+		return 0, errors.WithMessage(err, fmt.Sprintf("获取物品分类失败: %s", classificationCode))
+	}
+	if exists {
+		return materialCategory.Uuid, nil
+	}
+	return 1, nil
+}
+
+// deleteTimeFromNotForSale 根据 NotForSale 标记返回删除时间
+func deleteTimeFromNotForSale(notForSale bool) int64 {
+	if notForSale {
+		return time.Now().Unix()
+	}
+	return 0
 }
 
 // AddMaterial 添加物品
@@ -1613,205 +1673,311 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.MaterialEditErpReq) error {
 	db := ctx.GetDB()
 	if db == nil {
-		dbId := ctx.GetDbId()
-		db = s.dbm.GetDB(dbId)
+		db = s.dbm.GetDB(ctx.GetDbId())
 	}
 
 	commonRepo := repository.NewCommonRepo()
-
 	err := commonRepo.Transaction(db, func(tx *gorm.DB) error {
-		materialRepo := repository.NewMaterialRepo(tx)
-		productUnitRepo := repository.NewProductUnitRepo(tx)
-		materialUnitRepo := repository.NewMaterialUnitRepo(tx)
-
-		updateData := map[string]any{
-			"barcode_value":         request.BarcodeValue,        // 条形码值
-			"internal_code":         request.InternalCode,        // 内部编码
-			"delivered_by_supplier": request.DeliveredBySupplier, // 是否由供应商配送
-			"supplier_erp_code":     request.SupplierErpCode,     // 供应商ERP编码
-			"specification":         request.Specification,       // 规格
-			"status": func() int {
-				if request.Disabled {
-					return 0
-				}
-				return 1
-			}(),
-		}
-
-		// 更新 allow_negative_stock 字段
-		if request.AllowNegativeStock != nil {
-			value := 0
-			if *request.AllowNegativeStock {
-				value = 1
-			}
-			updateData["allow_negative_stock"] = value
-		}
-
-		material, err := materialRepo.GetMaterialDetailContainsDeletedByUuid(request.Uuid)
-		if err != nil {
-			return errors.WithMessage(err, "物品不存在:"+strconv.FormatUint(request.Uuid, 10))
-		}
-
-		// 同步物品分类
-		var materialCategoryUuid uint64 = 1
-		if request.ClassificationCode != "" {
-			materialCategory, exists, err := materialRepo.GetMaterialCategoryByCode(request.ClassificationCode)
-			if err != nil {
-				return errors.WithMessage(err, "获取物品分类失败："+request.ClassificationCode)
-			}
-			if exists {
-				materialCategoryUuid = materialCategory.Uuid
-			}
-		}
-		updateData["category_uuid"] = materialCategoryUuid
-
-		// 基准单位
-		stockUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.StockUom)
-		if err != nil {
-			return errors.WithMessage(err, fmt.Sprintf("基准单位不存在：%s %s", request.ItemCode, request.StockUom))
-		}
-
-		// 采购单位
-		var purchaseUnitUuid uint64
-		if request.PurchaseUom != "" {
-			purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
-			if err != nil {
-				return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
-			}
-			purchaseUnitUuid = purchaseUnit.Uuid
-		} else {
-			updateData["purchase_unit_uuid"] = 0
-		}
-
-		// 同步单位
-		saveUnitUuids := []uint64{}
-		for _, uom := range request.Uoms {
-			productUnit, _ := productUnitRepo.GetProductUnitByErpnextUom(uom.Uom)
-			if productUnit == nil {
-				return errors.WithMessage(errors.New(fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, uom.Uom)))
-			}
-
-			if productUnit.Uuid == stockUnit.Uuid {
-				// 基准单位
-				err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
-					"name":            productUnit.Name,
-					"unit_uuid":       productUnit.Uuid,
-					"conversion_rate": uom.ConversionRate,
-					"is_default":      1,
-					"delete_time":     0,
-				}, commonRepo.WhereByUuid(material.Unit.Uuid))
-				if err != nil {
-					return errors.WithMessage(err, "更新基准单位失败")
-				}
-				saveUnitUuids = append(saveUnitUuids, material.Unit.Uuid)
-				if productUnit.Uuid == purchaseUnitUuid {
-					updateData["purchase_unit_uuid"] = material.Unit.Uuid
-				}
-			} else {
-				var exist bool
-				materialUnit := materialUnitRepo.GetMaterialUnit(
-					commonRepo.WhereByUnitUuid(productUnit.Uuid),
-					commonRepo.WhereByMaterialUuid(material.Uuid),
-					commonRepo.WhereByIsDefault(0),
-					commonRepo.WhereBySoftDelete(),
-				)
-				if materialUnit.Uuid > 0 {
-					exist = true
-				}
-				if exist {
-					err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
-						"name":            productUnit.Name,
-						"conversion_rate": uom.ConversionRate,
-						"is_default":      0,
-						"delete_time":     0,
-					}, commonRepo.WhereByUuid(materialUnit.Uuid))
-					if err != nil {
-						return errors.WithMessage(err, "更新非基准单位失败")
-					}
-					saveUnitUuids = append(saveUnitUuids, materialUnit.Uuid)
-					if productUnit.Uuid == purchaseUnitUuid {
-						updateData["purchase_unit_uuid"] = materialUnit.Uuid
-					}
-				} else {
-					uuid, err := materialUnitRepo.CreateMaterialUnit(model.MaterialUnit{
-						Name:           productUnit.Name,
-						UnitUuid:       productUnit.Uuid,
-						ConversionRate: uom.ConversionRate,
-						FromUnitUuid:   material.Unit.Uuid,
-						MaterialUuid:   material.Uuid,
-					})
-					if err != nil {
-						return errors.WithMessage(err, "创建非基准单位失败")
-					}
-					saveUnitUuids = append(saveUnitUuids, uuid)
-					if productUnit.Uuid == purchaseUnitUuid {
-						updateData["purchase_unit_uuid"] = uuid
-					}
-				}
-			}
-		}
-
-		if len(saveUnitUuids) > 0 {
-			err := materialUnitRepo.DestroyMaterialUnit(
-				commonRepo.WhereByUuidNotIn(saveUnitUuids),
-				commonRepo.WhereBySoftDelete(),
-				commonRepo.WhereByMaterialUuid(material.Uuid),
-			)
-			if err != nil {
-				return errors.WithMessage(err, "删除非基准单位失败")
-			}
-		}
-
-		if !slices.Contains(saveUnitUuids, material.CostUnitUuid) {
-			updateData["cost_unit_uuid"] = 0
-		}
-
-		// 处理默认销售单位（如果传入）
-		// ERPNext 传入的是 UOM code，需要转换为 MaterialUnit UUID
-		if request.DefaultSalesUnit != "" {
-			defaultSalesUnitProductUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.DefaultSalesUnit)
-			if err != nil {
-				return errors.WithMessage(err, fmt.Sprintf("默认销售单位不存在: %s %s", request.ItemCode, request.DefaultSalesUnit))
-			}
-			// 查找对应的 MaterialUnit UUID
-			var defaultSalesUnitMaterialUnitUuid uint64
-			// 检查是否是基准单位
-			if material.Unit != nil && material.Unit.Unit != nil && material.Unit.Unit.Uuid == defaultSalesUnitProductUnit.Uuid {
-				defaultSalesUnitMaterialUnitUuid = material.UnitUuid
-			} else {
-				// 检查是否是非基准单位
-				materialUnit := materialUnitRepo.GetMaterialUnit(
-					commonRepo.WhereByUnitUuid(defaultSalesUnitProductUnit.Uuid),
-					commonRepo.WhereByMaterialUuid(material.Uuid),
-					commonRepo.WhereBySoftDelete(),
-				)
-				if materialUnit.Uuid > 0 {
-					defaultSalesUnitMaterialUnitUuid = materialUnit.Uuid
-				}
-			}
-			if defaultSalesUnitMaterialUnitUuid > 0 {
-				updateData["default_sales_unit_uuid"] = defaultSalesUnitMaterialUnitUuid
-			}
-		} else {
-			updateData["default_sales_unit_uuid"] = 0
-		}
-
-		// 根据NotForSale设置删除时间，物品下架时设置为当前时间，上架时重置为0
-		if request.NotForSale && material.DeleteTime == 0 {
-			updateData["delete_time"] = time.Now().Unix()
-		} else if !request.NotForSale {
-			updateData["delete_time"] = 0
-		}
-
-		return materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(material.Uuid))
-
+		return s.updateMaterialByErpItemTx(tx, request, commonRepo)
 	})
-
 	if err != nil {
 		return errors.WithMessage(err)
 	}
-
 	return nil
+}
+
+// updateMaterialByErpItemTx 在事务中执行 ERP 物品更新逻辑
+func (s *materialSrv) updateMaterialByErpItemTx(tx *gorm.DB, request req.MaterialEditErpReq, commonRepo repository.ICommonRepo) error {
+	return doUpdateMaterialByErpItem(
+		repository.NewMaterialRepo(tx),
+		repository.NewProductUnitRepo(tx),
+		repository.NewMaterialUnitRepo(tx),
+		commonRepo,
+		request,
+	)
+}
+
+// doUpdateMaterialByErpItem 执行 ERP 物品更新的核心逻辑（可测试）
+func doUpdateMaterialByErpItem(
+	materialRepo repository.IMaterialRepo,
+	productUnitRepo repository.IProductUnitRepo,
+	materialUnitRepo repository.IMaterialUnitRepo,
+	commonRepo repository.ICommonRepo,
+	request req.MaterialEditErpReq,
+) error {
+	updateData := buildErpUpdateData(request)
+
+	material, err := materialRepo.GetMaterialDetailContainsDeletedByUuid(request.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "物品不存在:"+strconv.FormatUint(request.Uuid, 10))
+	}
+
+	// 同步物品分类
+	materialCategoryUuid, err := resolveMaterialCategoryUuid(materialRepo, request.ClassificationCode)
+	if err != nil {
+		return err
+	}
+	updateData["category_uuid"] = materialCategoryUuid
+
+	// 基准单位
+	stockUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.StockUom)
+	if err != nil {
+		return errors.WithMessage(err, fmt.Sprintf("基准单位不存在：%s %s", request.ItemCode, request.StockUom))
+	}
+
+	// 采购单位
+	purchaseUnitUuid := resolveUpdatePurchaseUnit(productUnitRepo, request, updateData)
+
+	// 同步单位列表
+	saveUnitUuids, err := syncMaterialUnits(syncMaterialUnitsParams{
+		materialUnitRepo: materialUnitRepo,
+		productUnitRepo:  productUnitRepo,
+		commonRepo:       commonRepo,
+		material:         material,
+		stockUnit:        stockUnit,
+		purchaseUnitUuid: purchaseUnitUuid,
+		updateData:       updateData,
+	}, request)
+	if err != nil {
+		return err
+	}
+
+	// 清理已删除的单位
+	if err := cleanupDeletedUnits(materialUnitRepo, commonRepo, material, saveUnitUuids); err != nil {
+		return err
+	}
+
+	// 处理成本单位、采购单位悬空引用
+	handleDanglingUnitRefs(material, saveUnitUuids, updateData)
+
+	// 处理默认销售单位
+	resolveDefaultSalesUnit(productUnitRepo, materialUnitRepo, commonRepo, material, request, updateData)
+
+	// 处理删除时间
+	setDeleteTime(material, request.NotForSale, updateData)
+
+	return materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(material.Uuid))
+}
+
+// buildErpUpdateData 构建 ERP 更新物品的基础字段
+func buildErpUpdateData(request req.MaterialEditErpReq) map[string]any {
+	updateData := map[string]any{
+		"barcode_value":         request.BarcodeValue,
+		"internal_code":         request.InternalCode,
+		"delivered_by_supplier": request.DeliveredBySupplier,
+		"supplier_erp_code":     request.SupplierErpCode,
+		"specification":         request.Specification,
+		"status":                boolToStatus(request.Disabled),
+	}
+	if request.AllowNegativeStock != nil {
+		value := 0
+		if *request.AllowNegativeStock {
+			value = 1
+		}
+		updateData["allow_negative_stock"] = value
+	}
+	return updateData
+}
+
+// resolveUpdatePurchaseUnit 解析更新时的采购单位，返回 ProductUnit UUID
+func resolveUpdatePurchaseUnit(productUnitRepo repository.IProductUnitRepo, request req.MaterialEditErpReq, updateData map[string]any) uint64 {
+	if request.PurchaseUom == "" {
+		updateData["purchase_unit_uuid"] = 0
+		return 0
+	}
+	if !isUomInConversion(request.PurchaseUom, request.StockUom, request.Uoms) {
+		updateData["purchase_unit_uuid"] = 0
+		logger.Logger.Warn("同步物品-采购单位不在转换系数中，已清空",
+			zap.String("item_code", request.ItemCode),
+			zap.String("purchase_uom", request.PurchaseUom),
+		)
+		return 0
+	}
+	purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
+	if err != nil {
+		// ProductUnit 不存在但在转换系数中，清空并记录警告
+		updateData["purchase_unit_uuid"] = 0
+		logger.Logger.Warn("同步物品-采购单位ProductUnit不存在，已清空",
+			zap.String("item_code", request.ItemCode),
+			zap.String("purchase_uom", request.PurchaseUom),
+			zap.Error(err),
+		)
+		return 0
+	}
+	return purchaseUnit.Uuid
+}
+
+// syncMaterialUnitsParams 同步单位列表的参数
+type syncMaterialUnitsParams struct {
+	materialUnitRepo repository.IMaterialUnitRepo
+	productUnitRepo  repository.IProductUnitRepo
+	commonRepo       repository.ICommonRepo
+	material         *model.Material
+	stockUnit        *model.ProductUnit
+	purchaseUnitUuid uint64
+	updateData       map[string]any
+}
+
+// syncMaterialUnits 同步物品的单位列表（基准单位 + 非基准单位），返回保留的 MaterialUnit UUID 列表
+func syncMaterialUnits(p syncMaterialUnitsParams, request req.MaterialEditErpReq) ([]uint64, error) {
+	saveUnitUuids := make([]uint64, 0, len(request.Uoms))
+	for _, uom := range request.Uoms {
+		productUnit, _ := p.productUnitRepo.GetProductUnitByErpnextUom(uom.Uom)
+		if productUnit == nil {
+			return nil, errors.WithMessage(errors.New(fmt.Sprintf("单位不存在: %s %s", request.ItemCode, uom.Uom)))
+		}
+		savedUuid, err := syncSingleMaterialUnit(p.materialUnitRepo, p.commonRepo, p.material, productUnit, p.stockUnit, uom.ConversionRate)
+		if err != nil {
+			return nil, err
+		}
+		saveUnitUuids = append(saveUnitUuids, savedUuid)
+		if productUnit.Uuid == p.purchaseUnitUuid {
+			p.updateData["purchase_unit_uuid"] = savedUuid
+		}
+	}
+	return saveUnitUuids, nil
+}
+
+// syncSingleMaterialUnit 同步单个单位（创建或更新），返回保留的 MaterialUnit UUID
+func syncSingleMaterialUnit(
+	materialUnitRepo repository.IMaterialUnitRepo,
+	commonRepo repository.ICommonRepo,
+	material *model.Material,
+	productUnit *model.ProductUnit,
+	stockUnit *model.ProductUnit,
+	conversionRate float64,
+) (uint64, error) {
+	if productUnit.Uuid == stockUnit.Uuid {
+		// 基准单位：更新
+		err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
+			"name": productUnit.Name, "unit_uuid": productUnit.Uuid,
+			"conversion_rate": conversionRate, "is_default": 1, "delete_time": 0,
+		}, commonRepo.WhereByUuid(material.Unit.Uuid))
+		if err != nil {
+			return 0, errors.WithMessage(err, "更新基准单位失败")
+		}
+		return material.Unit.Uuid, nil
+	}
+	// 非基准单位：查找已存在的或创建新的
+	return syncNonBaseUnit(materialUnitRepo, commonRepo, material, productUnit, conversionRate)
+}
+
+// syncNonBaseUnit 同步非基准单位，存在则更新，不存在则创建
+func syncNonBaseUnit(
+	materialUnitRepo repository.IMaterialUnitRepo,
+	commonRepo repository.ICommonRepo,
+	material *model.Material,
+	productUnit *model.ProductUnit,
+	conversionRate float64,
+) (uint64, error) {
+	materialUnit := materialUnitRepo.GetMaterialUnit(
+		commonRepo.WhereByUnitUuid(productUnit.Uuid),
+		commonRepo.WhereByMaterialUuid(material.Uuid),
+		commonRepo.WhereByIsDefault(0),
+		commonRepo.WhereBySoftDelete(),
+	)
+	if materialUnit.Uuid > 0 {
+		err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
+			"name": productUnit.Name, "conversion_rate": conversionRate,
+			"is_default": 0, "delete_time": 0,
+		}, commonRepo.WhereByUuid(materialUnit.Uuid))
+		if err != nil {
+			return 0, errors.WithMessage(err, "更新非基准单位失败")
+		}
+		return materialUnit.Uuid, nil
+	}
+	uuid, err := materialUnitRepo.CreateMaterialUnit(model.MaterialUnit{
+		Name: productUnit.Name, UnitUuid: productUnit.Uuid,
+		ConversionRate: conversionRate, FromUnitUuid: material.Unit.Uuid,
+		MaterialUuid: material.Uuid,
+	})
+	if err != nil {
+		return 0, errors.WithMessage(err, "创建非基准单位失败")
+	}
+	return uuid, nil
+}
+
+// cleanupDeletedUnits 删除不在保留列表中的 MaterialUnit
+func cleanupDeletedUnits(materialUnitRepo repository.IMaterialUnitRepo, commonRepo repository.ICommonRepo, material *model.Material, saveUnitUuids []uint64) error {
+	if len(saveUnitUuids) == 0 {
+		return nil
+	}
+	err := materialUnitRepo.DestroyMaterialUnit(
+		commonRepo.WhereByUuidNotIn(saveUnitUuids),
+		commonRepo.WhereBySoftDelete(),
+		commonRepo.WhereByMaterialUuid(material.Uuid),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "删除非基准单位失败")
+	}
+	return nil
+}
+
+// handleDanglingUnitRefs 处理成本单位和采购单位的悬空引用
+func handleDanglingUnitRefs(material *model.Material, saveUnitUuids []uint64, updateData map[string]any) {
+	// 成本单位不在保留列表中时，回退到基准单位而非清零
+	if !slices.Contains(saveUnitUuids, material.CostUnitUuid) {
+		if material.Unit != nil {
+			updateData["cost_unit_uuid"] = material.Unit.Uuid
+		} else {
+			updateData["cost_unit_uuid"] = 0
+		}
+	}
+	// 采购单位：如果循环中未设置 purchase_unit_uuid 且旧值指向已删除的单位，清空
+	if _, ok := updateData["purchase_unit_uuid"]; !ok {
+		if !slices.Contains(saveUnitUuids, material.PurchaseUnitUuid) {
+			updateData["purchase_unit_uuid"] = 0
+		}
+	}
+}
+
+// resolveDefaultSalesUnit 解析默认销售单位并设置到 updateData
+func resolveDefaultSalesUnit(
+	productUnitRepo repository.IProductUnitRepo,
+	materialUnitRepo repository.IMaterialUnitRepo,
+	commonRepo repository.ICommonRepo,
+	material *model.Material,
+	request req.MaterialEditErpReq,
+	updateData map[string]any,
+) {
+	if request.DefaultSalesUnit == "" || !isUomInConversion(request.DefaultSalesUnit, request.StockUom, request.Uoms) {
+		updateData["default_sales_unit_uuid"] = 0
+		return
+	}
+	productUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.DefaultSalesUnit)
+	if err != nil {
+		updateData["default_sales_unit_uuid"] = 0
+		return
+	}
+	muUuid := findMaterialUnitByProductUnit(material, materialUnitRepo, commonRepo, productUnit.Uuid)
+	updateData["default_sales_unit_uuid"] = muUuid
+}
+
+// findMaterialUnitByProductUnit 根据 ProductUnit UUID 查找对应的 MaterialUnit UUID
+func findMaterialUnitByProductUnit(material *model.Material, materialUnitRepo repository.IMaterialUnitRepo, commonRepo repository.ICommonRepo, productUnitUuid uint64) uint64 {
+	// 检查是否是基准单位
+	if material.Unit != nil && material.Unit.Unit != nil && material.Unit.Unit.Uuid == productUnitUuid {
+		return material.UnitUuid
+	}
+	// 检查是否是非基准单位
+	materialUnit := materialUnitRepo.GetMaterialUnit(
+		commonRepo.WhereByUnitUuid(productUnitUuid),
+		commonRepo.WhereByMaterialUuid(material.Uuid),
+		commonRepo.WhereBySoftDelete(),
+	)
+	if materialUnit.Uuid > 0 {
+		return materialUnit.Uuid
+	}
+	return 0
+}
+
+// setDeleteTime 根据 NotForSale 标记设置删除时间
+func setDeleteTime(material *model.Material, notForSale bool, updateData map[string]any) {
+	if notForSale && material.DeleteTime == 0 {
+		updateData["delete_time"] = time.Now().Unix()
+	} else if !notForSale {
+		updateData["delete_time"] = 0
+	}
 }
 
 // DeleteMaterial 删除物品
@@ -1854,7 +2020,7 @@ func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req
 		if ctx.GetCompany().IsOpenErp() {
 			existingMaterials, err := materialRepo.GetMaterialDetailByUuids(request.Uuids)
 			if err != nil {
-				return errors.WithMessage(err, "获取物品详情失败")
+				return errors.WithMessage(err, errMsgGetMaterialDetailFailed)
 			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			for _, existingMaterial := range existingMaterials {
@@ -1933,7 +2099,7 @@ func (s *materialSrv) UpdateMaterialVisibleBatch(ctx context.Context, request re
 		// 检查物品是否存在且不是总部物品（总部物品不能修改）
 		materials, err := materialRepo.GetMaterialDetailByUuids(request.Uuids)
 		if err != nil {
-			return errors.WithMessage(err, "获取物品详情失败")
+			return errors.WithMessage(err, errMsgGetMaterialDetailFailed)
 		}
 
 		// 过滤掉总部物品
@@ -3998,7 +4164,9 @@ func (s *materialSrv) disableProductBomCard(ctx context.Context, db *gorm.DB, pr
 }
 
 // GetWarehouseItemConsumption 获取仓库物品消耗量
-func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) {
+// SI 模式下，排除已结账订单的消耗（这部分由 getPendingStockEntryConsumption 通过 sale_order_material 处理）
+// 仅保留未结账订单的当班消耗（如已下单但未结账的桌台）
+func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64, extraOpts ...repository.DBOption) (material_resp.MaterialConsumptionListResp, error) {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	// 查询当前未交班的班次列表
 	staffShiftLogList, err := repository.NewShiftLogRepo(db).GetShiftLogList(
@@ -4011,8 +4179,9 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 	for _, staffShiftLog := range staffShiftLogList {
 		staffShiftLogUuids = append(staffShiftLogUuids, staffShiftLog.Uuid)
 	}
+
 	// 查询这些班次中指定仓库下的物品消耗量（只查需要的字段，减少 I/O）
-	itemLogs, err := repository.NewWarehouseFormRepo(db).GetWarehouseOutFormItem(
+	queryOpts := []repository.DBOption{
 		func(db *gorm.DB) *gorm.DB {
 			return db.Select("material_uuid, num")
 		},
@@ -4025,7 +4194,13 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 		func(db *gorm.DB) *gorm.DB {
 			return db.Where("revoke_time = 0 AND material_uuid != 0") // 未撤销且物品uuid不为0, 获取有效的物品出库记录
 		},
-	)
+	}
+
+	// 追加调用者传入的额外查询条件（如 SI 模式排除已同步订单的 scope）
+	// 由调用者预构建并传入，避免每次调用重复构建相同子查询
+	queryOpts = append(queryOpts, extraOpts...)
+
+	itemLogs, err := repository.NewWarehouseFormRepo(db).GetWarehouseOutFormItem(queryOpts...)
 	if err != nil {
 		return material_resp.MaterialConsumptionListResp{}, errors.WithMessage(err, "获取仓库物品消耗量失败")
 	}

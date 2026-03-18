@@ -15,6 +15,7 @@ type HTTPClient struct {
 	client  *http.Client
 	baseURL string
 	token   string
+	headers map[string]string
 }
 
 // NewHTTPClient creates a new HTTP client for testing.
@@ -38,6 +39,12 @@ func NewHTTPClient(baseURL ...string) *HTTPClient {
 // WithToken sets the authorization token for subsequent requests.
 func (c *HTTPClient) WithToken(token string) *HTTPClient {
 	c.token = token
+	return c
+}
+
+// WithHeaders sets persistent headers for all subsequent requests.
+func (c *HTTPClient) WithHeaders(headers map[string]string) *HTTPClient {
+	c.headers = headers
 	return c
 }
 
@@ -112,7 +119,12 @@ func (c *HTTPClient) doRequest(tb testing.TB, req *http.Request, headers ...map[
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
 	}
 
-	// Set additional headers
+	// Set persistent headers
+	for key, value := range c.headers {
+		req.Header.Set(key, value)
+	}
+
+	// Set additional headers (per-request override)
 	for _, h := range headers {
 		for key, value := range h {
 			req.Header.Set(key, value)

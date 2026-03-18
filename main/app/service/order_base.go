@@ -119,7 +119,8 @@ func (s *orderSrv) createInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		}
 
 		// 创建销售账单设置
-		saleBillSetting, err := s.CreateSaleBillSetting(ctx, tx, saleBill.Uuid, saleBill.DeskUuid, false)
+		isMemberDineIn := ctx.GetSource() == jwt.SourceMember
+		saleBillSetting, err := s.CreateSaleBillSetting(ctx, tx, saleBill.Uuid, saleBill.DeskUuid, false, isMemberDineIn)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
@@ -176,7 +177,8 @@ func (s *orderSrv) CreateInstantOrderInCache(ctx context.Context, orderNo string
 	}
 
 	// 创建销售账单设置（不保存到数据库）
-	saleBillSetting, err := s.NewSaleBillSetting(ctx, billUuid, 0, false)
+	isMemberDineIn := ctx.GetSource() == jwt.SourceMember
+	saleBillSetting, err := s.NewSaleBillSetting(ctx, billUuid, 0, false, isMemberDineIn)
 	if err != nil {
 		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
 	}
@@ -246,7 +248,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.GetMealNum(), req.Remark, req.DeskUuid, desk.DeskNo, staff.DutyNo, staff.Uuid, staff.GetUserName())
 
 	// 构建销售账单设置
-	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, req.DeskUuid, false)
+	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, req.DeskUuid, false, false)
 	if err != nil {
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}

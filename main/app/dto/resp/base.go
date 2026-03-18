@@ -146,6 +146,7 @@ type Company struct {
 	IsOpenH5Order         int    `json:"is_open_h5_order"`         // 是否开启扫码接单功能: 0不开启, 1开启
 	IsOpenOldOrder        int    `json:"is_open_old_order"`        // 是否开启旧订单功能: 0不开启, 1开启
 	IsOpenRider           bool   `json:"is_open_rider"`            // 是否开启外送
+	IsOpenStoreScanOrder  bool   `json:"is_open_store_scan_order"` // 是否开启会员端堂食订单(扫码点餐到店自取)
 	IsEnableErp           bool   `json:"is_show_inventory"`        // 是否显示移动管理端进销存功能
 	IsOpenMap             bool   `json:"is_open_map"`              // 是否开启地图
 	IsOpenDataManagement  bool   `json:"is_open_data_management"`  // 是否开启数据管理功能

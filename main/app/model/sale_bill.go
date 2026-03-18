@@ -76,6 +76,7 @@ type SaleBill struct {
 	FinishTime     int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
 	HideBillTime   int64 `gorm:"column:hide_bill_time;type:int(10);default:0;comment:隐藏账单时间（时间戳）" json:"hide_bill_time"`
 	ProductionTime int64 `gorm:"column:production_time;type:int(10);default:0;comment:首次送厨时间（时间戳）" json:"production_time"`
+	SubmitPayTime  int64 `gorm:"column:submit_pay_time;type:int(10) unsigned;default:0;comment:提交支付时间（时间戳）" json:"submit_pay_time"`
 
 	// 收银员名称
 	CashierName string `gorm:"column:cashier_name;type:varchar(255);default:'';comment:收银员名称" json:"cashier_name"`

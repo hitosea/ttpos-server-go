@@ -184,7 +184,7 @@ type StockReconciliation struct {
 	CostCenter          string                    `json:"cost_center,omitempty"`           // 成本中心
 	DocType             string                    `json:"doctype,omitempty"`               // 文档类型
 	Items               []StockReconciliationItem `json:"items,omitempty"`                 // 明细项目
-	CustomInventoryType string                    `json:"custom_inventory_type,omitempty"` // 盘点类型：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items
+	CustomInventoryType string                    `json:"custom_inventory_type,omitempty"` // 盘点类型：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items/Fixed asset inventory
 }
 
 // StockReconciliationItem 库存盘点明细

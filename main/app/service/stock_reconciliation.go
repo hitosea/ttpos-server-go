@@ -35,6 +35,13 @@ import (
 	"gorm.io/gorm"
 )
 
+// 盘点单服务错误消息常量
+const (
+	errMsgQueryWarehouseItem   = "查询仓库物品失败"
+	errMsgApproveReconcilation = "审核盘点单失败"
+	errMsgItemDisabledFmt      = "物品%s状态已关闭，请修改物品状态"
+)
+
 // IStockReconciliationSrv 盘点单服务接口
 type IStockReconciliationSrv interface {
 	GetStockReconciliationList(ctx context.Context, req req.StockReconciliationListReq) (resp.StockReconciliationListResp, error)             // 获取盘点单列表
@@ -175,9 +182,10 @@ func (s *stockReconciliationSrv) GetStockReconciliationTemplate(ctx context.Cont
 		logger.Logger.Error("获取盘点单模板失败", zap.Error(err))
 		return resp.StockReconciliationTemplateResp{
 			Data: resp.StockReconciliationTemplateData{
-				Daily:   []string{},
-				Weekly:  []string{},
-				Monthly: []string{},
+				Daily:    []string{},
+				Weekly:   []string{},
+				Monthly:  []string{},
+				Property: []string{},
 			},
 		}, nil
 	}
@@ -242,6 +250,20 @@ func (s *stockReconciliationSrv) fetchReconciliationTemplate(_ context.Context) 
 		return resp.StockReconciliationTemplateResp{}, fmt.Errorf("盘点模板服务返回业务错误: code=%d, message=%s", apiResp.Code, apiResp.Message)
 	}
 
+	// 确保切片不为 nil，避免 JSON 返回 null
+	if apiResp.Data.Data.Daily == nil {
+		apiResp.Data.Data.Daily = []string{}
+	}
+	if apiResp.Data.Data.Weekly == nil {
+		apiResp.Data.Data.Weekly = []string{}
+	}
+	if apiResp.Data.Data.Monthly == nil {
+		apiResp.Data.Data.Monthly = []string{}
+	}
+	if apiResp.Data.Data.Property == nil {
+		apiResp.Data.Data.Property = []string{}
+	}
+
 	return apiResp.Data, nil
 }
 
@@ -291,7 +313,7 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 
 	bookedQuantityMap, err := s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
 	if err != nil {
-		return detailResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+		return detailResp, errors.WithMessage(errors.New(errMsgQueryWarehouseItem), err.Error())
 	}
 
 	// 物品单位明细
@@ -648,7 +670,7 @@ func (s *stockReconciliationSrv) getWarehouseMaterialUuidMap(db *gorm.DB, wareho
 	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
 	warehouseItems, err := warehouseItemRepo.GetByWarehouseUuid(warehouseUuid)
 	if err != nil {
-		return nil, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+		return nil, errors.WithMessage(errors.New(errMsgQueryWarehouseItem), err.Error())
 	}
 	for _, item := range warehouseItems {
 		warehouseMaterialUUidMap[item.MaterialUuid] = true
@@ -687,13 +709,13 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 		var err error
 		bookedQuantityMap, err = s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
 		if err != nil {
-			return errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+			return errors.WithMessage(errors.New(errMsgQueryWarehouseItem), err.Error())
 		}
 	}
 
 	warehouseMaterialUUidMap, err := s.getWarehouseMaterialUuidMap(db, stockReconciliation.WarehouseUuid)
 	if err != nil {
-		return errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+		return errors.WithMessage(errors.New(errMsgQueryWarehouseItem), err.Error())
 	}
 
 	lang := ctx.GetLanguage()
@@ -833,7 +855,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 					if ctx.Version(context.GTE, constant.ClientVersionV2100) {
 						return errors.NewWithCode(constant.CodeItemDisabled, materialName)
 					}
-					message := i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态", materialName)
+					message := i18n.Translate(ctx.GetLanguage(), errMsgItemDisabledFmt, materialName)
 					return errors.New(message)
 				}
 			}
@@ -841,7 +863,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 				if ctx.Version(context.GTE, constant.ClientVersionV2100) {
 					return errors.NewWithCode(constant.CodeItemDisabled, itemName)
 				}
-				message := i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态", itemName)
+				message := i18n.Translate(ctx.GetLanguage(), errMsgItemDisabledFmt, itemName)
 				return errors.New(message)
 			}
 			return errors.WithMessage(errors.New("提交盘点单失败"), err.Error())
@@ -903,225 +925,241 @@ func (s *stockReconciliationSrv) DeleteStockReconciliation(ctx context.Context, 
 func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context, req req.StockReconciliationApproveReq) ([]dto.LocaleResponse, error) {
 	db := ctx.GetDB()
 
-	// 加锁
 	s.lock.LockUuid(req.Uuid)
 	defer s.lock.UnlockUuid(req.Uuid)
 
-	stockReconciliationRepo := repository.NewStockReconciliationRepo(db)
+	stockReconciliation, err := s.loadAndValidateStockReconciliation(ctx, db, req.Uuid)
+	if err != nil {
+		return nil, err
+	}
 
-	opts := []repository.DBOption{
-		stockReconciliationRepo.WhereUuid(req.Uuid),
+	// 检查物品是否被禁用
+	if disabledMaterials := s.checkDisabledMaterials(stockReconciliation); len(disabledMaterials) > 0 {
+		return disabledMaterials, errors.New("请修改物品状态")
+	}
+
+	// 获取仓库已有物品集合
+	warehouseMaterialUuids, err := s.getWarehouseMaterialSet(db, stockReconciliation.WarehouseUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	// 开启事务
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := s.updateStatusAndAnnotation(tx, req.Uuid, req.Annotation); err != nil {
+			return err
+		}
+		if err := s.processStockReconciliationItems(tx, stockReconciliation, warehouseMaterialUuids); err != nil {
+			return err
+		}
+		return s.approveStockReconciliationInERP(ctx, stockReconciliation)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// loadAndValidateStockReconciliation 加载并校验盘点单
+func (s *stockReconciliationSrv) loadAndValidateStockReconciliation(ctx context.Context, db *gorm.DB, uuid uint64) (*model.StockReconciliation, error) {
+	stockReconciliationRepo := repository.NewStockReconciliationRepo(db)
+	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliation(
+		stockReconciliationRepo.WhereUuid(uuid),
 		stockReconciliationRepo.WithStockReconciliationItemsMultiLanguageName(),
 		stockReconciliationRepo.WithStockReconciliationItemsMaterialBaseUnit(),
 		stockReconciliationRepo.WithWarehouse(),
-	}
-	// 查询盘点单
-	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliation(opts...)
+	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询盘点单失败")
 	}
 	if stockReconciliation == nil {
 		return nil, errors.New("盘点单不存在")
 	}
-
-	// 只有已提交状态的盘点单才能审核
 	if stockReconciliation.Status != constant.StockReconciliationStatusSubmitted {
 		return nil, errors.New("当前状态不允许审核")
 	}
-
-	// 检查仓库是否被禁用
 	if ctx.Version(context.GTE, constant.ClientVersionV2100) && stockReconciliation.Warehouse != nil && stockReconciliation.Warehouse.IsDisabled() {
 		return nil, errors.NewWithCode(constant.CodeWarehouseDisabled, i18n.Translate(ctx.GetLanguage(), "仓库状态已关闭，请修改仓库状态"))
 	}
+	return stockReconciliation, nil
+}
 
-	disabledMaterials := make([]dto.LocaleResponse, 0)
-	for _, item := range stockReconciliation.StockReconciliationItems {
-		// 跳过已删除物品明细
+// checkDisabledMaterials 检查盘点单物品中是否有被禁用的
+func (s *stockReconciliationSrv) checkDisabledMaterials(sr *model.StockReconciliation) []dto.LocaleResponse {
+	var disabledMaterials []dto.LocaleResponse
+	for _, item := range sr.StockReconciliationItems {
 		if item.DeleteTime > 0 {
 			continue
 		}
-		// 如果从提交到审核期间，物品已禁用，则提示请求该物品为开启
 		if !item.Material.Status {
 			disabledMaterials = append(disabledMaterials, item.Material.MultiLanguageName.GetNames())
 		}
 	}
+	return disabledMaterials
+}
 
-	if len(disabledMaterials) > 0 {
-		return disabledMaterials, errors.New("请修改物品状态")
-	}
-
-	// 获取仓库Uuid获取仓库物品信息列表
-	warehouseItems, err := repository.NewWarehouseItemRepo(db).GetByWarehouseUuid(stockReconciliation.WarehouseUuid)
+// getWarehouseMaterialSet 获取仓库已有物品的 UUID 集合
+func (s *stockReconciliationSrv) getWarehouseMaterialSet(db *gorm.DB, warehouseUuid uint64) (map[uint64]struct{}, error) {
+	warehouseItems, err := repository.NewWarehouseItemRepo(db).GetByWarehouseUuid(warehouseUuid)
 	if err != nil {
-		return disabledMaterials, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+		return nil, errors.WithMessage(errors.New(errMsgQueryWarehouseItem), err.Error())
 	}
-	warehouseMaterialUuids := make(map[uint64]struct{})
+	m := make(map[uint64]struct{})
 	for _, item := range warehouseItems {
-		warehouseMaterialUuids[item.MaterialUuid] = struct{}{}
+		m[item.MaterialUuid] = struct{}{}
+	}
+	return m, nil
+}
+
+// updateStatusAndAnnotation 更新盘点单状态为已审核并保存批注
+func (s *stockReconciliationSrv) updateStatusAndAnnotation(tx *gorm.DB, uuid uint64, annotation string) error {
+	stockReconciliationRepo := repository.NewStockReconciliationRepo(tx)
+	updateData := map[string]any{
+		"status":      constant.StockReconciliationStatusApproved,
+		"update_time": int(time.Now().Unix()),
+	}
+	if err := stockReconciliationRepo.UpdateStockReconciliationData(updateData, stockReconciliationRepo.WhereUuid(uuid)); err != nil {
+		return errors.WithMessage(errors.New(errMsgApproveReconcilation), err.Error())
 	}
 
-	// 开启事务
-	err = db.Transaction(func(tx *gorm.DB) error {
-		stockReconciliationRepo := repository.NewStockReconciliationRepo(tx)
-
-		// 更新盘点单状态为已审核
-		updateData := map[string]any{
-			"status":      constant.StockReconciliationStatusApproved, // 2-已审核
-			"update_time": int(time.Now().Unix()),
-		}
-		if err := stockReconciliationRepo.UpdateStockReconciliationData(updateData, stockReconciliationRepo.WhereUuid(req.Uuid)); err != nil {
-			return errors.WithMessage(errors.New("审核盘点单失败"), err.Error())
-		}
-
-		// 保存批注记录（审核通过必须创建批注记录）
-		annotationRepo := repository.NewStockReconciliationAnnotationRepo(tx)
-		annotation := &model.StockReconciliationAnnotation{
-			StockReconciliationUuid: req.Uuid,
+	return errors.WithMessage(
+		repository.NewStockReconciliationAnnotationRepo(tx).Create(&model.StockReconciliationAnnotation{
+			StockReconciliationUuid: uuid,
 			AnnotationType:          constant.StockReconciliationAnnotationTypeApprove,
-			Content:                 req.Annotation,
+			Content:                 annotation,
+		}),
+		"保存批注失败",
+	)
+}
+
+// processStockReconciliationItems 处理盘点单物品：更新库存并生成盈亏日志
+func (s *stockReconciliationSrv) processStockReconciliationItems(tx *gorm.DB, sr *model.StockReconciliation, warehouseMaterialUuids map[uint64]struct{}) error {
+	stockReconciliationRepo := repository.NewStockReconciliationRepo(tx)
+	txWarehouseItemRepo := repository.NewWarehouseItemRepo(tx)
+
+	var warehouseLogs []*model.WarehouseInOutLog
+	for _, item := range sr.StockReconciliationItems {
+		if item.DeleteTime > 0 {
+			continue
 		}
-		if err := annotationRepo.Create(annotation); err != nil {
-			return errors.WithMessage(err, "保存批注失败")
+		if item.Material.DeleteTime > 0 {
+			if err := stockReconciliationRepo.DeleteStockReconciliationItem(item.Uuid); err != nil {
+				return errors.WithMessage(errors.New("审核盘点单时移除已删除物品失败"), err.Error())
+			}
+			continue
 		}
 
-		// 生成盘点快照（SI 模式下记录未扣减订单），并构建待扣减量映射
-		// 快照需要在差异计算之前生成，以便用 PendingQty 修正 BookedQuantity
-		pendingQtyByCode := make(map[string]decimal.Decimal) // item_code → pending_qty
-		companySetting := ctx.GetCompanySetting()
-		if companySetting.IsErpSalesInvoiceMode() && stockReconciliation.Warehouse != nil {
-			erpStockEntrySrv := NewErpStockEntrySrv(s.dbm)
-			if err := erpStockEntrySrv.GenerateStocktakeSnapshot(tx, stockReconciliation.Uuid, stockReconciliation.Warehouse.ErpCode); err != nil {
-				logger.Logger.Error("生成盘点快照失败", zap.Error(err))
-				// 快照生成失败不阻塞盘点流程
-			} else {
-				// 读取刚写入的快照，构建 pendingQtyByCode
-				var snapshots []model.StocktakeSnapshot
-				if err := tx.Where("stock_reconciliation_uuid = ?", stockReconciliation.Uuid).
-					Where("delete_time = 0").
-					Find(&snapshots).Error; err != nil {
-					logger.Logger.Error("读取盘点快照失败", zap.Error(err))
-				} else {
-					for _, snap := range snapshots {
-						pendingQtyByCode[snap.ItemCode] = decimal.NewFromFloat(snap.PendingQty)
-					}
-				}
-			}
+		if err := s.upsertWarehouseItemStock(txWarehouseItemRepo, sr.WarehouseUuid, item, warehouseMaterialUuids); err != nil {
+			return err
 		}
 
-		// 遍历所有物品
-		var warehouseLogs []*model.WarehouseInOutLog
-		for _, item := range stockReconciliation.StockReconciliationItems {
-			// 跳过已删除物品明细
-			if item.DeleteTime > 0 {
-				continue
-			}
-			material := item.Material
-			// 审核时，物品被删除，则删除物品明细
-			if item.Material.DeleteTime > 0 {
-				if err := stockReconciliationRepo.DeleteStockReconciliationItem(item.Uuid); err != nil {
-					return errors.WithMessage(errors.New("审核盘点单时移除已删除物品失败"), err.Error())
-				}
-				continue
-			}
-			stockQuantity := item.CountedQuantity.Truncate(3).InexactFloat64()
-			_, exists := warehouseMaterialUuids[item.MaterialUuid]
-			txWarehouseItemRepo := repository.NewWarehouseItemRepo(tx)
-			if !exists { // 仓库不存在该物品，则新增仓库物品，库存数量为实盘数量
-				if err := txWarehouseItemRepo.Create(&model.WarehouseItem{
-					WarehouseUuid: stockReconciliation.WarehouseUuid,
-					MaterialUuid:  item.MaterialUuid,
-					MaterialCode:  item.Material.Code,
-					Stock:         stockQuantity,
-					Valuation:     1.0, // 和同步仓库物品库存一致
-				}); err != nil {
-					return errors.WithMessage(errors.New("创建仓库物品失败"), err.Error())
-				}
-			} else { // 仓库存在该物品，则更新仓库物品库存为实盘数量
-				if err := txWarehouseItemRepo.UpdateStockByWarehouseAndMaterial(
-					stockReconciliation.WarehouseUuid, item.MaterialUuid, stockQuantity); err != nil {
-					return errors.WithMessage(errors.New("更新仓库物品库存失败"), err.Error())
-				}
-			}
-
-			// 有盈亏才记录日志（SI 模式下用快照修正账面库存）
-			effectiveBooked := item.BookedQuantity
-			if pending, ok := pendingQtyByCode[material.Code]; ok && pending.IsPositive() {
-				// 预期库存 = 账面库存 - 待扣减量（未通过 Stock Entry 扣减的订单消耗）
-				effectiveBooked = effectiveBooked.Sub(pending)
-			}
-			if !item.CountedQuantity.Equal(effectiveBooked) {
-				scene := constant.WarehouseInOutLogSceneProfitIn    // 盘盈
-				logType := constant.WarehouseInOutLogLogTypeIn      // 入库
-				if item.CountedQuantity.LessThan(effectiveBooked) { // 盘亏出库
-					logType = constant.WarehouseInOutLogLogTypeOut
-					scene = constant.WarehouseInOutLogSceneLossOut
-				}
-				diff := item.CountedQuantity.Sub(effectiveBooked).Abs()
-				valuation := 0.0 // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
-				warehouseLogs = append(warehouseLogs, &model.WarehouseInOutLog{
-					LogType:              logType,
-					Scene:                scene,
-					WarehouseUuid:        stockReconciliation.WarehouseUuid,
-					MaterialUuid:         item.MaterialUuid,
-					MaterialName:         item.MaterialName,
-					MaterialBaseUnitUuid: material.Unit.Uuid, // 基准单位
-					MaterialBaseUnitName: material.Unit.Name, // 基准单位名称
-					Num:                  diff.Truncate(3).InexactFloat64(),
-					Price:                valuation,
-					Amount:               decimal.NewFromFloat(valuation).Mul(diff).Truncate(3).InexactFloat64(),
-					OrderNo:              stockReconciliation.OrderNo,
-				})
-			}
+		if log := s.buildProfitLossLog(sr, item); log != nil {
+			warehouseLogs = append(warehouseLogs, log)
 		}
-		if len(warehouseLogs) > 0 {
-			if err := repository.NewWarehouseInOutLogRepo(tx).CreateBatch(warehouseLogs); err != nil {
-				return errors.WithMessage(errors.New("创建盘盈盘亏出入库记录失败"), err.Error())
-			}
-		}
-
-		// 调用erp接口审核盘点单
-		if ctx.GetCompany().IsOpenErp() && stockReconciliation.ErpCode != "" {
-			companySetting := ctx.GetCompanySetting()
-			erpSrv := erp.NewIErpSrv(s.dbm)
-			_, err := erpSrv.ApproveStockReconciliation(ctx, companySetting, &stock.SubmitStockReconciliationReq{
-				StockReconciliationName: stockReconciliation.ErpCode,
-			})
-			if err != nil {
-				logger.Logger.Error("审核盘点单失败", zap.Error(err))
-				// 检查是否是仓库禁用错误
-				if ctx.Version(context.GTE, constant.ClientVersionV2100) && strings.Contains(err.Error(), "Disabled Warehouse") {
-					return errors.NewWithCode(constant.CodeWarehouseDisabled, i18n.Translate(ctx.GetLanguage(), "仓库状态已关闭，请修改仓库状态"))
-				}
-				// 提取物品名称
-				itemName := s.extractName("Item", "is disabled", err.Error())
-				for _, item := range stockReconciliation.StockReconciliationItems {
-					if item.Material.Code == itemName {
-						materialName := item.Material.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-						if ctx.Version(context.GTE, constant.ClientVersionV2100) {
-							return errors.NewWithCode(constant.CodeItemDisabled, materialName)
-						}
-						message := i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态", materialName)
-						return errors.New(message)
-					}
-				}
-				if itemName != "" {
-					if ctx.Version(context.GTE, constant.ClientVersionV2100) {
-						return errors.NewWithCode(constant.CodeItemDisabled, itemName)
-					}
-					message := i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态", itemName)
-					return errors.New(message)
-				}
-				return errors.WithMessage(errors.New("审核盘点单失败"), err.Error())
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return disabledMaterials, err
 	}
 
-	return disabledMaterials, nil
+	if len(warehouseLogs) > 0 {
+		if err := repository.NewWarehouseInOutLogRepo(tx).CreateBatch(warehouseLogs); err != nil {
+			return errors.WithMessage(errors.New("创建盘盈盘亏出入库记录失败"), err.Error())
+		}
+	}
+	return nil
+}
+
+// upsertWarehouseItemStock 新增或更新仓库物品库存为实盘数量
+func (s *stockReconciliationSrv) upsertWarehouseItemStock(repo repository.IWarehouseItemRepo, warehouseUuid uint64, item *model.StockReconciliationItem, existingMaterials map[uint64]struct{}) error {
+	stockQuantity := item.CountedQuantity.Truncate(3).InexactFloat64()
+	if _, exists := existingMaterials[item.MaterialUuid]; !exists {
+		if err := repo.Create(&model.WarehouseItem{
+			WarehouseUuid: warehouseUuid,
+			MaterialUuid:  item.MaterialUuid,
+			MaterialCode:  item.Material.Code,
+			Stock:         stockQuantity,
+			Valuation:     1.0,
+		}); err != nil {
+			return errors.WithMessage(errors.New("创建仓库物品失败"), err.Error())
+		}
+		return nil
+	}
+	if err := repo.UpdateStockByWarehouseAndMaterial(warehouseUuid, item.MaterialUuid, stockQuantity); err != nil {
+		return errors.WithMessage(errors.New("更新仓库物品库存失败"), err.Error())
+	}
+	return nil
+}
+
+// buildProfitLossLog 构建盘盈盘亏出入库日志（无差异则返回 nil）
+func (s *stockReconciliationSrv) buildProfitLossLog(sr *model.StockReconciliation, item *model.StockReconciliationItem) *model.WarehouseInOutLog {
+	if item.CountedQuantity.Equal(item.BookedQuantity) {
+		return nil
+	}
+	scene := constant.WarehouseInOutLogSceneProfitIn
+	logType := constant.WarehouseInOutLogLogTypeIn
+	if item.CountedQuantity.LessThan(item.BookedQuantity) {
+		logType = constant.WarehouseInOutLogLogTypeOut
+		scene = constant.WarehouseInOutLogSceneLossOut
+	}
+	diff := item.CountedQuantity.Sub(item.BookedQuantity).Abs()
+	valuation := 0.0
+	return &model.WarehouseInOutLog{
+		LogType:              logType,
+		Scene:                scene,
+		WarehouseUuid:        sr.WarehouseUuid,
+		MaterialUuid:         item.MaterialUuid,
+		MaterialName:         item.MaterialName,
+		MaterialBaseUnitUuid: item.Material.Unit.Uuid,
+		MaterialBaseUnitName: item.Material.Unit.Name,
+		Num:                  diff.Truncate(3).InexactFloat64(),
+		Price:                valuation,
+		Amount:               decimal.NewFromFloat(valuation).Mul(diff).Truncate(3).InexactFloat64(),
+		OrderNo:              sr.OrderNo,
+	}
+}
+
+// approveStockReconciliationInERP 调用 ERP 接口审核盘点单
+func (s *stockReconciliationSrv) approveStockReconciliationInERP(ctx context.Context, sr *model.StockReconciliation) error {
+	if !ctx.GetCompany().IsOpenErp() || sr.ErpCode == "" {
+		return nil
+	}
+
+	companySetting := ctx.GetCompanySetting()
+	_, err := erp.NewIErpSrv(s.dbm).ApproveStockReconciliation(ctx, companySetting, &stock.SubmitStockReconciliationReq{
+		StockReconciliationName: sr.ErpCode,
+	})
+	if err == nil {
+		return nil
+	}
+
+	logger.Logger.Error(errMsgApproveReconcilation, zap.Error(err))
+	return s.handleErpApproveError(ctx, sr, err)
+}
+
+// handleErpApproveError 处理 ERP 审核盘点单失败的错误
+func (s *stockReconciliationSrv) handleErpApproveError(ctx context.Context, sr *model.StockReconciliation, erpErr error) error {
+	errMsg := erpErr.Error()
+	isV2100 := ctx.Version(context.GTE, constant.ClientVersionV2100)
+
+	if isV2100 && strings.Contains(errMsg, "Disabled Warehouse") {
+		return errors.NewWithCode(constant.CodeWarehouseDisabled, i18n.Translate(ctx.GetLanguage(), "仓库状态已关闭，请修改仓库状态"))
+	}
+
+	itemName := s.extractName("Item", "is disabled", errMsg)
+	if itemName == "" {
+		return errors.WithMessage(errors.New(errMsgApproveReconcilation), errMsg)
+	}
+
+	// 在盘点单物品中找到对应的多语言名称
+	for _, item := range sr.StockReconciliationItems {
+		if item.Material.Code == itemName {
+			itemName = item.Material.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+			break
+		}
+	}
+
+	if isV2100 {
+		return errors.NewWithCode(constant.CodeItemDisabled, itemName)
+	}
+	return errors.New(i18n.Translate(ctx.GetLanguage(), errMsgItemDisabledFmt, itemName))
 }
 
 // RejectStockReconciliation 驳回盘点单
@@ -1236,7 +1274,7 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(ctx context.Context, 
 	// 获取仓库Uuid获取仓库物品信息列表
 	warehouseItems, err := warehouseItemRepo.GetByWarehouseUuid(warehouseUuid)
 	if err != nil {
-		return nil, nil, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+		return nil, nil, errors.WithMessage(errors.New(errMsgQueryWarehouseItem), err.Error())
 	}
 
 	// 获取所有物品UUID
@@ -1342,7 +1380,7 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 
 	warehouseMaterialUUidMap, err := s.getWarehouseMaterialUuidMap(db, checkReq.WarehouseUuid)
 	if err != nil {
-		return listResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+		return listResp, errors.WithMessage(errors.New(errMsgQueryWarehouseItem), err.Error())
 	}
 
 	bookedQuantityMap := make(map[uint64]decimal.Decimal)
@@ -1365,7 +1403,7 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 
 		bookedQuantityMap, err = s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
 		if err != nil {
-			return listResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+			return listResp, errors.WithMessage(errors.New(errMsgQueryWarehouseItem), err.Error())
 		}
 
 		limitedMaterialUuids := make([]uint64, 0)
@@ -1408,7 +1446,7 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 		var err error
 		bookedQuantityMap, err = s.getBookedQuantityMap(db, checkReq.WarehouseUuid)
 		if err != nil {
-			return listResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+			return listResp, errors.WithMessage(errors.New(errMsgQueryWarehouseItem), err.Error())
 		}
 	}
 	var warehouseDisabled bool
