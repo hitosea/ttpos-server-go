@@ -2274,4 +2274,5 @@ return [
     "密码必须包含字母、数字、符号中至少2种" => "Lösenord måste innehålla minst två av: bokstäver, siffror, symboler",
     "超管" => "Superadmin",
     "商户UUID不能为空" => "Handlarens UUID får inte vara tom",
+    "缓存失效任务执行失败: " => "Cache-invalideringsuppgift misslyckades att utföra:",
 ];
