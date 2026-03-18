@@ -140,6 +140,7 @@ type PurchaseReceiptCreateReq struct {
 	FileUuids          []uint64                       `json:"file_uuids" binding:"omitempty,max=10"`            // 附件UUID列表，最多10个
 	DeliveryNoteNo     string                         `json:"delivery_note_no" binding:"omitempty,max=255"`     // v2.16.0+ DN单号
 	SourceSupplierCode string                         `json:"source_supplier_code" binding:"omitempty,max=255"` // v2.16.0+ 供应商编码
+	IsAutoReceipt      bool                           `json:"-"`                                                // 是否自动收货（仅内部使用，不接受外部传参）
 }
 
 // PurchaseReceiptUpdateReq 更新收货记录请求

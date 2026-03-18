@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `hide_bill_time` INT(10) NOT NULL DEFAULT 0 COMMENT '隐藏账单(挂单)时间(时间戳)',
     `lock_time` INT(10) NOT NULL DEFAULT 0 COMMENT '锁单时间',
     `production_time` INT(10) NOT NULL DEFAULT 0 COMMENT '首次送厨时间(时间戳)',
+    `submit_pay_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '提交支付时间（时间戳）',
     `finish_time` INT(10) NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳),结账时间',
     `is_kitchen_confirm` INT(10) NOT NULL DEFAULT 0 COMMENT '厨显是否确认退菜，确认后不在厨显端显示已经整单取消的菜品,0:未确认,1:已确认',
     `reverse_settle_count` INT(10) NOT NULL DEFAULT 0 COMMENT '反结账次数',
@@ -1239,6 +1240,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order` (
     `target_warehouse_name` TEXT COMMENT '目标仓库名称',
     `delivery_note_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP Delivery Note号',
     `is_from_delivery_note` INT(10) NOT NULL DEFAULT 0 COMMENT '是否来自DN单:0-否 1-是',
+    `is_auto_receipt` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否自动收货:0-否 1-是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2625,6 +2627,19 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '集团设置表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_business_status_period` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '记录UUID',
+    `start_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '测试营业开始时间(时间戳)',
+    `end_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '测试营业结束时间(时间戳), 0=进行中',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_end_time` (`end_time`),
+    KEY `idx_time_range` (`start_time`, `end_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '测试营业时段记录表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_customer_call` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '客户呼叫记录ID',
@@ -3522,7 +3537,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation` (
   `uuid` bigint NOT NULL DEFAULT 0 COMMENT '盘点单ID',
   `order_no` varchar(255) NOT NULL DEFAULT '' COMMENT '单据编号',
   `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP盘点单号',
-  `type` int(10) NOT NULL DEFAULT 1 COMMENT '盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘',
+  `type` int(10) NOT NULL DEFAULT 1 COMMENT '盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点',
   `warehouse_uuid` bigint NOT NULL DEFAULT 0 COMMENT '仓库ID',
   `purpose` int(10) NOT NULL DEFAULT 1 COMMENT '盘点目的 1-库存盘点 2-期初盘点',
   `status` int(10) NOT NULL DEFAULT 0 COMMENT '状态 0-已保存 1-已提交 2-已审核 3-已驳回',

@@ -1,3 +1,0 @@
-  - **API (Handler)**: Parsing -> Validate -> Call Service -> Response.
-    - **Repository Usage**: Allowed for constructing Query Options (e.g. `repository.With...`) or simple lookups. **Avoid** complex DB logic here.
-  - **Service**: Business logic -> Call Repository. **NEVER** call `gorm.DB` methods directly (e.g., `db.Create`).

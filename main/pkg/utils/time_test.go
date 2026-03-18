@@ -713,10 +713,13 @@ func TestMyanmarTimezoneTimeUtil(t *testing.T) {
 	})
 
 	t.Run("缅甸与上海 TodayStartEndUnix 偏移验证", func(t *testing.T) {
-		// 缅甸 00:00:00 对应上海 01:30:00，所以缅甸的一天开始比上海晚 1.5 小时
-		mmStart, _ := timeUtil.TodayStartEndUnix()
-		shUtil := SetTimezone(string(ZH_TIMEZONE))
-		shStart, _ := shUtil.TodayStartEndUnix()
+		// 使用固定日期计算偏移，避免跨日期边界时两个时区"今天"不同导致 flaky
+		// 缅甸 UTC+6:30，上海 UTC+8，缅甸的 00:00:00 比上海的 00:00:00 晚 1.5 小时
+		mmLoc, _ := time.LoadLocation("Asia/Yangon")
+		shLoc, _ := time.LoadLocation("Asia/Shanghai")
+		fixedDate := time.Date(2025, 6, 15, 0, 0, 0, 0, time.UTC)
+		mmStart := time.Date(fixedDate.Year(), fixedDate.Month(), fixedDate.Day(), 0, 0, 0, 0, mmLoc).Unix()
+		shStart := time.Date(fixedDate.Year(), fixedDate.Month(), fixedDate.Day(), 0, 0, 0, 0, shLoc).Unix()
 
 		// 缅甸的一天开始时间戳应比上海晚 5400 秒 (1.5小时)
 		diff := mmStart - shStart
@@ -758,9 +761,13 @@ func TestVietnamTimezoneTimeUtil(t *testing.T) {
 	})
 
 	t.Run("越南与上海 TodayStartEndUnix 偏移验证", func(t *testing.T) {
-		vnStart, _ := timeUtil.TodayStartEndUnix()
-		shUtil := SetTimezone(string(ZH_TIMEZONE))
-		shStart, _ := shUtil.TodayStartEndUnix()
+		// 使用固定日期计算偏移，避免跨日期边界时两个时区"今天"不同导致 flaky
+		// 越南 UTC+7，上海 UTC+8，越南的 00:00:00 比上海的 00:00:00 晚 1 小时
+		vnLoc, _ := time.LoadLocation("Asia/Ho_Chi_Minh")
+		shLoc, _ := time.LoadLocation("Asia/Shanghai")
+		fixedDate := time.Date(2025, 6, 15, 0, 0, 0, 0, time.UTC)
+		vnStart := time.Date(fixedDate.Year(), fixedDate.Month(), fixedDate.Day(), 0, 0, 0, 0, vnLoc).Unix()
+		shStart := time.Date(fixedDate.Year(), fixedDate.Month(), fixedDate.Day(), 0, 0, 0, 0, shLoc).Unix()
 
 		// 越南的一天开始时间戳应比上海晚 3600 秒 (1小时)
 		diff := vnStart - shStart

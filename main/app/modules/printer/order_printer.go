@@ -25,10 +25,17 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(req *printer_request.PrintingSt
 
 	// 设备sn
 	deviceSn := p.ctx.GetDeviceSn()
-	// 如果不是收银端和助手端，从订单获取 获取设备品牌
+	// 如果不是收银端和助手端，从订单获取设备品牌
 	if p.ctx.GetSource() != constant.SourceCashier && p.ctx.GetSource() != constant.SourceAssistant {
-		deviceRepo := repository.NewDeviceRepo(p.ctx.GetDB())
-		deviceSn = deviceRepo.GetDeviceSn(deviceRepo.WhereUuid(req.SaleBill.DeviceUuid))
+		db := p.ctx.GetDB()
+		deviceRepo := repository.NewDeviceRepo(db)
+		if req.SaleBill.DeviceUuid != 0 {
+			deviceSn = deviceRepo.GetDeviceSn(deviceRepo.WhereUuid(req.SaleBill.DeviceUuid))
+		}
+		// 如果订单未绑定设备或设备查找失败，fallback 到主设备（与外送订单打印逻辑一致）
+		if deviceSn == "" {
+			deviceSn = deviceRepo.GetDeviceSn(deviceRepo.WhereMain())
+		}
 		if deviceSn == "" {
 			return nil, errors.New("获取设备失败")
 		}

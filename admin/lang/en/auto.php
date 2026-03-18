@@ -1608,6 +1608,7 @@ return [
     "系统提供支持。" => ".",
     "会员充值" => "Member top-up",
     "赠" => "Gift",
+    "扫码" => "Scan",
     "扫码点餐" => "Scan to order",
     "门店业务设置" => "Store business settings",
     "赠菜原因不能为空" => "The reason for giving away food cannot be empty",

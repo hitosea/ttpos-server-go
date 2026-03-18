@@ -15,4 +15,5 @@ export default {
     currency: 'currency',
     supplier: 'supplier',
     erp: 'erp',
+    settings: 'settings',
 };

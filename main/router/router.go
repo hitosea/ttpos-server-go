@@ -67,6 +67,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterStaffHandlers(shopGroup, dbm, cache)                      // 管理员管理
 			shop.RegisterRoleHandlers(shopGroup, dbm, cache)                       // 角色管理
 			shop.RegisterSettingHandlers(shopGroup, dbm, cache)                    // 设置
+			shop.RegisterAutoReceiptHandlers(shopGroup, dbm, cache)                 // 自动收货
 			shop.RegisterPaymentMethodHandlers(shopGroup, dbm, cache)              // 支付方式管理
 			shop.RegisterProductHandlers(shopGroup, dbm, cache)                    // 商品
 			shop.RegisterProductLabelHandlers(shopGroup, dbm, cache)               // 商品标签
@@ -74,7 +75,6 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterMaterialCategoryVisibilityHandlers(shopGroup, dbm, cache) // 物品分类可见性
 			shop.RegisterMiscHandlers(shopGroup, dbm, cache)                       // 杂项
 			shop.RegisterPurchaseHandlers(shopGroup, dbm, cache)                   // 采购
-			shop.RegisterAIAgentHandlers(shopGroup, dbm, cache)                    // AI智能采购
 			shop.RegisterSupplierHandlers(shopGroup, dbm, cache)                   // 供应商
 			shop.RegisterCallBoardHandlers(shopGroup, dbm, cache)                  // 叫号展示
 			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache)                  // 仓库管理

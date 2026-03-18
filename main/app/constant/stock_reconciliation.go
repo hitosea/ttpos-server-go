@@ -22,6 +22,8 @@ const (
 	StockReconciliationTypeWeekly = 4
 	// StockReconciliationTypeMonthly 盘点类型-月盘
 	StockReconciliationTypeMonthly = 5
+	// StockReconciliationTypeProperty 盘点类型-固定资产盘点
+	StockReconciliationTypeProperty = 6
 )
 
 // StockReconciliationTypeToErpInventoryType 将盘点类型转换为 ERP inventory_type
@@ -37,6 +39,8 @@ func StockReconciliationTypeToErpInventoryType(stockType int) string {
 		return "Designated item inventory"
 	case StockReconciliationTypeAll:
 		return "Inventory of all items"
+	case StockReconciliationTypeProperty:
+		return "Fixed asset inventory"
 	default:
 		return ""
 	}

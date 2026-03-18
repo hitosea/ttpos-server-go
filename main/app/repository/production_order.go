@@ -492,6 +492,8 @@ func (r *productionRepo) GetProductionOrderList(pageNo, pageSize int, productBom
 	} else {
 		db.Where("finished_time BETWEEN ? AND ?", startTime, endTime) // 选择时间区间
 	}
+	// 排除测试营业时段的生产订单
+	db = db.Where(ExcludeTestBusinessSQL(""))
 	err := db.
 		Where("status = ?", constant.ProductionOrderProductStatusFinished). // 已经完成出餐的商品
 		Order("finished_time desc").                                        // 按照完成时间最新的在前
@@ -518,6 +520,8 @@ func (r *productionRepo) GetProductionOrderListCount(productBomUuids []uint64, s
 	} else {
 		db.Where("finished_time BETWEEN ? AND ?", startTime, endTime) // 选择时间区间
 	}
+	// 排除测试营业时段的生产订单
+	db = db.Where(ExcludeTestBusinessSQL(""))
 	err := db.
 		Where("status = ?", constant.ProductionOrderProductStatusFinished). // 已经完成出餐的商品
 		Count(&count).Error

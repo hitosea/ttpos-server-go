@@ -6,10 +6,7 @@ import (
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
-	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
-	vo "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
@@ -29,7 +26,7 @@ type IErpStockEntrySrv interface {
 	TriggerStockEntryDeduction(ctx cc.Context, companyUuid uint64) error
 	// GenerateStocktakeSnapshot 生成盘点快照
 	// 查询未通过 Stock Entry 扣减的订单，从预计算的原材料表按 item_code 合并后保存到快照表
-	GenerateStocktakeSnapshot(db *gorm.DB, stockReconciliationUuid uint64, warehouseErpCode string) error
+	GenerateStocktakeSnapshot(ctx cc.Context, db *gorm.DB, stockReconciliationUuid uint64, warehouseErpCode string) error
 }
 
 type erpStockEntrySrv struct {
@@ -85,13 +82,8 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 	// === 堂食订单：查询 uuid 列表（轻量，无 Preload） ===
 	saleOrderRepo := repository.NewSaleOrderRepo(db)
 	orders, err := saleOrderRepo.GetSaleOrderList(
-		func(db *gorm.DB) *gorm.DB {
-			return db.Where("erp_stock_deducted = ?", 0).
-				Where("erp_sales_invoice_name != ''").
-				Where("status = ?", constant.SaleOrderStatusFinish).
-				Where("delete_time = 0").
-				Select("uuid") // 只需要 uuid
-		},
+		saleOrderRepo.WherePendingStockEntry(),
+		func(db *gorm.DB) *gorm.DB { return db.Select("uuid") },
 	)
 	if err != nil {
 		return fmt.Errorf("查询未出库订单失败: %w", err)
@@ -178,14 +170,8 @@ func (s *erpStockEntrySrv) TriggerStockEntryDeduction(ctx cc.Context, companyUui
 
 	// === 外卖订单部分 ===
 	takeoutRepo := persistence.NewTakeoutOrderRepo(db)
-	takeoutOrders, _, err := takeoutRepo.GetList(
-		func(db *gorm.DB) *gorm.DB {
-			return db.Where("erp_stock_deducted = ?", 0).
-				Where("erp_pos_invoice_resp != ''").
-				Where("erp_sync_status = ?", 3). // 仅 SI 回调成功的订单（排除 POS Invoice 和未完成的 SI）
-				Where("order_state = ?", vo.TakeoutOrderStateCompleted).
-				Where("delete_time = 0")
-		},
+	takeoutOrders, err := takeoutRepo.FindAll(
+		takeoutRepo.WherePendingStockEntry(),
 		takeoutRepo.WithTakeoutOrderMaterials(),
 	)
 	if err != nil {
@@ -740,15 +726,12 @@ func (s *erpStockEntrySrv) markOrdersDeducted(db *gorm.DB, orderUuids []uint64) 
 	if len(orderUuids) == 0 {
 		return nil
 	}
-	result := db.Model(&model.SaleOrder{}).
-		Where("uuid IN ?", orderUuids).
-		Update("erp_stock_deducted", 1)
-	if result.Error != nil {
+	if err := repository.NewSaleOrderRepo(db).BatchMarkErpStockDeducted(orderUuids); err != nil {
 		logger.Logger.Error("标记堂食订单扣减完成失败",
 			zap.Any("order_uuids", orderUuids),
-			zap.Error(result.Error),
+			zap.Error(err),
 		)
-		return result.Error
+		return err
 	}
 	return nil
 }
@@ -758,15 +741,12 @@ func (s *erpStockEntrySrv) markTakeoutOrdersDeducted(db *gorm.DB, orderUuids []u
 	if len(orderUuids) == 0 {
 		return nil
 	}
-	result := db.Model(&takeoutModel.TakeoutOrder{}).
-		Where("uuid IN ?", orderUuids).
-		Update("erp_stock_deducted", 1)
-	if result.Error != nil {
+	if err := repository.NewTakeoutRepo(db).BatchMarkErpStockDeducted(orderUuids); err != nil {
 		logger.Logger.Error("标记外卖订单扣减完成失败",
 			zap.Any("order_uuids", orderUuids),
-			zap.Error(result.Error),
+			zap.Error(err),
 		)
-		return result.Error
+		return err
 	}
 	return nil
 }
@@ -782,17 +762,12 @@ func (s *erpStockEntrySrv) fetchItemStatusMap(ctx cc.Context, companySetting mod
 	const batchSize = 200
 	statusMap := make(map[string]*item.ItemInfo, len(itemCodes))
 
-	for i := 0; i < len(itemCodes); i += batchSize {
-		end := i + batchSize
-		if end > len(itemCodes) {
-			end = len(itemCodes)
-		}
-		batch := itemCodes[i:end]
-
+	fetchBatch := func(batch []string) error {
 		client, conn, err := erp.NewErpItemClient()
 		if err != nil {
-			return nil, err
+			return err
 		}
+		defer conn.Close()
 
 		// 使用逗号分隔的 item_code 触发 BMP 侧 in 过滤
 		// 不按 Branch/CompanyAbbr 过滤：item_code 全局唯一，此处只需检查物品是否 disabled/非 stock，
@@ -801,21 +776,31 @@ func (s *erpStockEntrySrv) fetchItemStatusMap(ctx cc.Context, companySetting mod
 			ContainDisabled: true,
 			ItemCode:        strings.Join(batch, ","),
 		})
-		conn.Close()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if result.GetCode() != "0" {
-			return nil, fmt.Errorf("查询ERPNext物品列表失败: %s", result.GetMessage())
+			return fmt.Errorf("查询ERPNext物品列表失败: %s", result.GetMessage())
 		}
 
 		resp := &item.GetItemListResp{}
 		if err := result.Data.UnmarshalTo(resp); err != nil {
-			return nil, err
+			return err
 		}
 
 		for _, info := range resp.ItemList {
 			statusMap[info.ItemCode] = info
+		}
+		return nil
+	}
+
+	for i := 0; i < len(itemCodes); i += batchSize {
+		end := i + batchSize
+		if end > len(itemCodes) {
+			end = len(itemCodes)
+		}
+		if err := fetchBatch(itemCodes[i:end]); err != nil {
+			return nil, err
 		}
 	}
 	return statusMap, nil
@@ -856,17 +841,13 @@ func (s *erpStockEntrySrv) fetchItemStockMap(ctx cc.Context, companySetting mode
 // GenerateStocktakeSnapshot 生成盘点快照
 // 查询 erp_stock_deducted=0 且 SI 已创建的已结账订单
 // 从预计算的原材料表读取，按 item_code + warehouseErpCode 合并，保存到 stocktake_snapshot 表
-func (s *erpStockEntrySrv) GenerateStocktakeSnapshot(db *gorm.DB, stockReconciliationUuid uint64, warehouseErpCode string) error {
+func (s *erpStockEntrySrv) GenerateStocktakeSnapshot(ctx cc.Context, db *gorm.DB, stockReconciliationUuid uint64, warehouseErpCode string) error {
+	companyUuid := ctx.GetCompanyUuid()
 	// === 堂食订单：查询 uuid 列表（轻量） ===
 	saleOrderRepo := repository.NewSaleOrderRepo(db)
 	orders, err := saleOrderRepo.GetSaleOrderList(
-		func(db *gorm.DB) *gorm.DB {
-			return db.Where("erp_stock_deducted = ?", 0).
-				Where("erp_sales_invoice_name != ''").
-				Where("status = ?", constant.SaleOrderStatusFinish).
-				Where("delete_time = 0").
-				Select("uuid")
-		},
+		saleOrderRepo.WherePendingStockEntry(),
+		func(db *gorm.DB) *gorm.DB { return db.Select("uuid") },
 	)
 	if err != nil {
 		return fmt.Errorf("查询未出库订单失败: %w", err)
@@ -913,18 +894,12 @@ func (s *erpStockEntrySrv) GenerateStocktakeSnapshot(db *gorm.DB, stockReconcili
 
 	// === 外卖订单部分 ===
 	takeoutRepo := persistence.NewTakeoutOrderRepo(db)
-	takeoutOrders, _, err := takeoutRepo.GetList(
-		func(db *gorm.DB) *gorm.DB {
-			return db.Where("erp_stock_deducted = ?", 0).
-				Where("erp_pos_invoice_resp != ''").
-				Where("erp_sync_status = ?", 3). // 仅 SI 回调成功的订单（排除 POS Invoice 和未完成的 SI）
-				Where("order_state = ?", vo.TakeoutOrderStateCompleted).
-				Where("delete_time = 0")
-		},
+	takeoutOrders, err := takeoutRepo.FindAll(
+		takeoutRepo.WherePendingStockEntry(),
 		takeoutRepo.WithTakeoutOrderMaterials(),
 	)
 	if err != nil {
-		logger.Logger.Error("查询外卖未出库订单失败（快照）", zap.Error(err))
+		logger.Logger.Error("查询外卖未出库订单失败（快照）", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
 	}
 
 	for _, to := range takeoutOrders {
@@ -955,7 +930,7 @@ func (s *erpStockEntrySrv) GenerateStocktakeSnapshot(db *gorm.DB, stockReconcili
 	if len(allSnapshotOrderUuids) > 0 {
 		existingLogs, logErr := repository.NewStockDeductionLogRepo(db).GetByOrderUuids(allSnapshotOrderUuids)
 		if logErr != nil {
-			logger.Logger.Error("查询已扣减日志失败（快照）", zap.Error(logErr))
+			logger.Logger.Error("查询已扣减日志失败（快照）", zap.Uint64("company_uuid", companyUuid), zap.Error(logErr))
 		}
 		for _, log := range existingLogs {
 			if item, ok := mergeMap[log.ErpCode]; ok {
@@ -983,11 +958,12 @@ func (s *erpStockEntrySrv) GenerateStocktakeSnapshot(db *gorm.DB, stockReconcili
 		})
 	}
 
-	if err := db.CreateInBatches(&snapshots, 100).Error; err != nil {
+	if err := repository.NewStocktakeSnapshotRepo(db).BatchCreate(snapshots, 100); err != nil {
 		return fmt.Errorf("保存盘点快照失败: %w", err)
 	}
 
 	logger.Logger.Info("盘点快照生成成功",
+		zap.Uint64("company_uuid", companyUuid),
 		zap.Uint64("stock_reconciliation_uuid", stockReconciliationUuid),
 		zap.Int("snapshot_count", len(snapshots)),
 		zap.Int("order_count", len(orderSet)),

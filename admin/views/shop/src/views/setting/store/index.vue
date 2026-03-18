@@ -470,7 +470,8 @@
             setSessionStorage('supplier', res.data.supplier);
             // 设置erp数据
             setSessionStorage('erp', res.data.erp);
-            //
+            // 设置settings数据
+            setSessionStorage('settings', res.data.settings);
             await changeUserInfo(dataInfo);
             let auth = getSessionStorage('authlist');
             let authlist = {};

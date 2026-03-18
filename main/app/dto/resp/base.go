@@ -146,6 +146,7 @@ type Company struct {
 	IsOpenH5Order         int    `json:"is_open_h5_order"`         // 是否开启扫码接单功能: 0不开启, 1开启
 	IsOpenOldOrder        int    `json:"is_open_old_order"`        // 是否开启旧订单功能: 0不开启, 1开启
 	IsOpenRider           bool   `json:"is_open_rider"`            // 是否开启外送
+	IsOpenStoreScanOrder  bool   `json:"is_open_store_scan_order"` // 是否开启会员端堂食订单(扫码点餐到店自取)
 	IsEnableErp           bool   `json:"is_show_inventory"`        // 是否显示移动管理端进销存功能
 	IsOpenMap             bool   `json:"is_open_map"`              // 是否开启地图
 	IsOpenDataManagement  bool   `json:"is_open_data_management"`  // 是否开启数据管理功能
@@ -153,6 +154,7 @@ type Company struct {
 	IsOpenGrabDelivery    bool   `json:"is_open_grab_delivery"`    // 是否开启Grab外卖功能
 	IsOpenLINEMANDelivery bool   `json:"is_open_lineman_delivery"` // 是否开启LINE MAN外卖功能
 	StoreCode             string `json:"store_code"`               // 店铺编码，shop端用于显示
+	BusinessStatus        int    `json:"business_status"`          // 营业状态: 1-测试营业 2-正常营业
 }
 
 type Permission struct {
@@ -360,4 +362,5 @@ type ShopProfile struct {
 	DefaultLanguage string                 `json:"default_language"` // 默认语言
 	LanguageList    []dto.LanguageItem     `json:"language_list"`    // 语言列表，当前勾选了的语言列表
 	Language        []string               `json:"language"`         // 云平台限制商家的可用语言列表
+	BusinessStatus  int                    `json:"business_status"`  // 营业状态: 1-测试营业 2-正常营业
 }

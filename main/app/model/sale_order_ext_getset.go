@@ -1178,7 +1178,7 @@ func (model *SaleOrder) SetFinishStatus(final FinalAmount) {
 	model.FinalPrice = final.FinalPrice
 	model.PaymentCommissionFee = final.PaymentCommissionFee
 	model.GiftAmount = final.GiftAmount
-
+	model.Unit = final.Unit
 }
 
 // SetFreeOrder 设置免单

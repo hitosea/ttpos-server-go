@@ -1725,6 +1725,7 @@ return [
     "系统提供支持。" => "Das System bietet Unterstützung.",
     "会员充值" => "Mitgliedsaufladung",
     "赠" => "Geschenk",
+    "扫码" => "Scan",
     "扫码点餐" => "Bestellen Sie, indem Sie den QR-Code scannen",
     "门店业务设置" => "Geschäftseinstellungen für Filialen",
     "赠菜原因不能为空" => "Der Grund für das kostenlose Gericht darf nicht leer sein",

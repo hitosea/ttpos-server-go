@@ -22,10 +22,10 @@ const (
 	SettingBuffet         = "buffet"           // 自助餐-自助餐设置
 	SettingPointsRule     = "points_rule"      // 积分规则设置
 	SettingCloudBasic     = "cloud_basic"      // 云端-基础信息
-	SettingBatchColor      = "batch_color"       // 分批类型颜色设置
-	SettingDataManage      = "data_manage"       // 数据管理设置
-	SettingStoreScanOrder  = "store_scan_order"  // 门店点餐设置
-	SettingTemplateStyle   = "template_style"    // 模板样式设置
+	SettingBatchColor     = "batch_color"      // 分批类型颜色设置
+	SettingDataManage     = "data_manage"      // 数据管理设置
+	SettingStoreScanOrder = "store_scan_order" // 门店点餐设置
+	SettingTemplateStyle  = "template_style"   // 模板样式设置
 )
 
 const (

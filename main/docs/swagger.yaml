@@ -4179,6 +4179,32 @@ definitions:
         description: 会员端销售订单UUID
         type: integer
     type: object
+  req.CreateAutoReceiptRuleReq:
+    properties:
+      delay_days:
+        minimum: 0
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 规则名称（多语言）
+      shop_uuids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+      status:
+        enum:
+        - 0
+        - 1
+        type: integer
+      warehouse_erp_code:
+        type: string
+    required:
+    - locale_name
+    - shop_uuids
+    - warehouse_erp_code
+    type: object
   req.CreateMemberDineInOrderReq:
     properties:
       products:
@@ -4293,6 +4319,16 @@ definitions:
         type: string
     required:
     - sign
+    type: object
+  req.DeleteAutoReceiptRuleReq:
+    properties:
+      uuids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    required:
+    - uuids
     type: object
   req.DeleteFreeOrGiftReasonReq:
     properties:
@@ -9224,7 +9260,7 @@ definitions:
         description: 是否在保存后提交
         type: boolean
       type:
-        description: 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘
+        description: 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点
         type: integer
       uuid:
         description: 盘点单UUID，如果为0，表示新建
@@ -9664,6 +9700,36 @@ definitions:
     required:
     - is_auto_order
     type: object
+  req.UpdateAutoReceiptRuleReq:
+    properties:
+      delay_days:
+        minimum: 0
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 规则名称（多语言）
+      shop_uuids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+      status:
+        enum:
+        - 0
+        - 1
+        type: integer
+      uuid:
+        type: integer
+      warehouse_erp_code:
+        description: 发货仓库ERP编码
+        type: string
+    required:
+    - locale_name
+    - shop_uuids
+    - uuid
+    - warehouse_erp_code
+    type: object
   req.UpdateBindInfoReq:
     properties:
       background_image_url:
@@ -10045,6 +10111,9 @@ definitions:
         description: 地址，必填，最大500个字符
         maxLength: 500
         type: string
+      business_status:
+        description: '营业状态: 1-测试营业 2-正常营业（可选）'
+        type: integer
       company_name:
         description: 公司名称，区别于店铺名称，最大500个字符
         maxLength: 500
@@ -10709,6 +10778,117 @@ definitions:
           $ref: '#/definitions/resp.Attribute'
         type: array
     type: object
+  resp.AutoReceiptLogItem:
+    properties:
+      receipt_erp_order_no:
+        type: string
+      receipt_order_no:
+        type: string
+      receipt_order_uuid:
+        type: integer
+      receipt_time:
+        type: integer
+      shop_company_uuid:
+        type: integer
+      shop_name:
+        type: string
+      uuid:
+        type: integer
+    type: object
+  resp.AutoReceiptLogListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.AutoReceiptLogItem'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.AutoReceiptRuleGroup:
+    properties:
+      delay_days:
+        type: integer
+      locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      shop_count:
+        type: integer
+      shops:
+        items:
+          $ref: '#/definitions/resp.AutoReceiptRuleShop'
+        type: array
+      status:
+        type: integer
+      uuid:
+        type: integer
+      warehouse_erp_code:
+        type: string
+      warehouse_locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+    type: object
+  resp.AutoReceiptRuleListResp:
+    properties:
+      configured_count:
+        type: integer
+      list:
+        items:
+          $ref: '#/definitions/resp.AutoReceiptRuleGroup'
+        type: array
+      unconfigured_count:
+        type: integer
+      unconfigured_shops:
+        items:
+          $ref: '#/definitions/resp.UnconfiguredShopItem'
+        type: array
+    type: object
+  resp.AutoReceiptRuleShop:
+    properties:
+      shop_code:
+        type: string
+      shop_name:
+        type: string
+      shop_uuid:
+        type: integer
+      uuid:
+        type: integer
+    type: object
+  resp.AutoReceiptShopItem:
+    properties:
+      disabled:
+        type: boolean
+      disabled_reason:
+        type: string
+      name:
+        type: string
+      status:
+        type: integer
+      store_code:
+        type: string
+      uuid:
+        type: integer
+    type: object
+  resp.AutoReceiptShopListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.AutoReceiptShopItem'
+        type: array
+    type: object
+  resp.AutoReceiptWarehouseItem:
+    properties:
+      erp_code:
+        type: string
+      locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      type:
+        type: string
+    type: object
+  resp.AutoReceiptWarehouseListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.AutoReceiptWarehouseItem'
+        type: array
+    type: object
   resp.BatchTagInfo:
     properties:
       color:
@@ -11244,6 +11424,9 @@ definitions:
     type: object
   resp.Company:
     properties:
+      business_status:
+        description: '营业状态: 1-测试营业 2-正常营业'
+        type: integer
       expire_time:
         description: 店铺到期时间，0表示没有过期时间
         type: integer
@@ -11276,6 +11459,9 @@ definitions:
         type: integer
       is_open_rider:
         description: 是否开启外送
+        type: boolean
+      is_open_store_scan_order:
+        description: 是否开启会员端堂食订单(扫码点餐到店自取)
         type: boolean
       is_show_inventory:
         description: 是否显示移动管理端进销存功能
@@ -11676,6 +11862,9 @@ definitions:
       address:
         description: 地址，必填，最大500个字符
         type: string
+      business_status:
+        description: '营业状态: 1-测试营业 2-正常营业'
+        type: integer
       company_name:
         description: 公司名称，区别于店铺名称，最大500个字符
         type: string
@@ -12849,6 +13038,10 @@ definitions:
       pay_time:
         description: 支付时间
         type: integer
+      payment_methods:
+        allOf:
+        - $ref: '#/definitions/resp.PaymentMethodList'
+        description: 支付方式列表（待支付时返回）
       product_list:
         allOf:
         - $ref: '#/definitions/resp.MemberDineInOrderProductList'
@@ -16813,6 +17006,9 @@ definitions:
         items:
           $ref: '#/definitions/resp.ReceiptFileInfo'
         type: array
+      is_auto_receipt:
+        description: 是否自动收货
+        type: boolean
       is_from_delivery_note:
         description: 是否来自DN单据
         type: boolean
@@ -16867,6 +17063,9 @@ definitions:
       expect_arrival_time:
         description: 期望到货日期
         type: integer
+      is_auto_receipt:
+        description: 是否自动收货
+        type: boolean
       is_from_delivery_note:
         description: 是否来自DN单据
         type: boolean
@@ -17157,6 +17356,9 @@ definitions:
       erp_order_no:
         description: ERP收货单号
         type: string
+      is_auto_receipt:
+        description: 是否自动收货
+        type: boolean
       is_confirmed:
         description: 是否已确认
         type: boolean
@@ -18189,6 +18391,9 @@ definitions:
       address:
         description: 地址
         type: string
+      business_status:
+        description: '营业状态: 1-测试营业 2-正常营业'
+        type: integer
       company_name:
         description: 公司名称，区别于店铺名称
         type: string
@@ -18682,7 +18887,7 @@ definitions:
         description: 提交时间
         type: integer
       type:
-        description: 盘点类型 1-指定物品盘点 2-全部物品盘点
+        description: 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点
         type: integer
       update_time:
         description: 更新时间
@@ -18719,7 +18924,7 @@ definitions:
         description: 提交时间
         type: integer
       type:
-        description: 盘点类型 1-指定物品盘点 2-全部物品盘点
+        description: 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点
         type: integer
       uuid:
         description: 盘点单UUID
@@ -18816,6 +19021,11 @@ definitions:
         type: array
       monthly:
         description: 月盘物品编号列表
+        items:
+          type: string
+        type: array
+      property:
+        description: 固定资产盘点物品编号列表
         items:
           type: string
         type: array
@@ -19675,6 +19885,13 @@ definitions:
         items:
           $ref: '#/definitions/resp.TransferOrderWarehouseItem'
         type: array
+    type: object
+  resp.UnconfiguredShopItem:
+    properties:
+      name:
+        type: string
+      uuid:
+        type: integer
     type: object
   resp.UnprocessedAbnormalPrint:
     properties:
@@ -35299,6 +35516,230 @@ paths:
       summary: 翻译
       tags:
       - 通用
+  /shop/auto_receipt/log/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据日志UUID查询对应门店的收货单详情，跨门店库查询
+      parameters:
+      - description: 记录UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.PurchaseReceiptOrderDetailResp'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取自动收货记录详情
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/log/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页查询自动收货执行日志，支持按门店和收货时间范围筛选。前端传入日期时间字符串，后端根据总店时区解析为时间戳
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - default: 20
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      - description: 门店UUID
+        in: query
+        name: shop_company_uuid
+        type: integer
+      - description: '收货时间范围-开始（格式: 2006-01-02 15:04:05）'
+        in: query
+        name: start_time
+        type: string
+      - description: '收货时间范围-结束（格式: 2006-01-02 15:04:05）'
+        in: query
+        name: end_time
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.AutoReceiptLogListResp'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取自动收货记录列表
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/rule/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建自动收货规则，关联门店列表。同一门店在同一仓库内仅允许配置一次
+      parameters:
+      - description: 创建自动收货规则请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CreateAutoReceiptRuleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建自动收货规则
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/rule/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 批量删除自动收货规则，级联软删除关联的门店记录
+      parameters:
+      - description: 删除自动收货规则请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteAutoReceiptRuleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除自动收货规则
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/rule/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前总部下所有自动收货规则，返回规则及关联门店
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.AutoReceiptRuleListResp'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取自动收货规则列表
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/rule/update:
+    post:
+      consumes:
+      - application/json
+      description: 全量更新自动收货规则，包括名称、仓库、延迟天数、状态和门店列表。门店列表为全量替换语义，自动 diff 增删
+      parameters:
+      - description: 更新自动收货规则请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateAutoReceiptRuleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新自动收货规则
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/shop_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前总部下所有子门店，已在同仓库其他规则中配置的门店标记为 disabled
+      parameters:
+      - description: 仓库ERP编码
+        in: query
+        name: warehouse_erp_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.AutoReceiptShopListResp'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取可选门店列表
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/warehouse/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前总部下所有有ERP编码的仓库，用于创建/编辑规则时选择仓库
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.AutoReceiptWarehouseListResp'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取发货仓库列表
+      tags:
+      - 商家端.自动收货配置
   /shop/base:
     get:
       consumes:

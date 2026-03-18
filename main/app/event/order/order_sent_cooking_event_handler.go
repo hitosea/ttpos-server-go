@@ -119,6 +119,7 @@ func SentCookingEventHandler() {
 				SaleOrderUuid: payload.SaleOrderUuid,
 				H5OrderUuid:   payload.H5OrderUuid,
 				OperatorUuid:  payload.GetOperatorUuid(),
+				MemberUuid:    payload.MemberUuid,
 			}
 			record.Data = payload.ToJsonString()
 			record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
