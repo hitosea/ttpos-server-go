@@ -286,7 +286,7 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, request req.OrderDiscountR
 	saleOrder.SetCustomDiscount(request.GetDiscount())
 
 	// 获取最新的设置
-	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, saleBill.DeskUuid, false)
+	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, saleBill.DeskUuid, false, false)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -469,7 +469,7 @@ func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscoun
 	saleOrder.SetAllDiscountCancel()
 
 	// 获取最新的设置
-	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, saleBill.DeskUuid, false)
+	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, saleBill.DeskUuid, false, false)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
