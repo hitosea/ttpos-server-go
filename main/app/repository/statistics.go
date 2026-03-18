@@ -327,6 +327,15 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 		InstantOrderNumForAvg            int64
 		InstantOrderTakeawayNumForAvg    int64
 		TakeoutOrderNumForAvg            int64
+		// 扫码订单统计
+		TotalScanOrderAmount    decimal.Decimal
+		TotalScanOrderNum       int64
+		MinScanOrderAmount      decimal.Decimal
+		MaxScanOrderAmount      decimal.Decimal
+		AvgScanOrderAmount      decimal.Decimal
+		ScanOrderAmounts        []decimal.Decimal
+		AvgScanOrderAmountSum   decimal.Decimal
+		ScanOrderNumForAvg      int64
 	}
 
 	groupedData := make(map[string]*groupData)
@@ -342,6 +351,7 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 				InstantOrderAmounts:         make([]decimal.Decimal, 0),
 				InstantOrderTakeawayAmounts: make([]decimal.Decimal, 0),
 				TakeoutOrderAmounts:         make([]decimal.Decimal, 0),
+				ScanOrderAmounts:            make([]decimal.Decimal, 0),
 			}
 		}
 
@@ -420,6 +430,16 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 			}
 		}
 
+		// 扫码订单（scan_order_amount 在子查询中已通过 source=5 过滤，> 0 即为扫码订单）
+		scanOrderAmount := decimal.NewFromFloat(item.ScanOrderAmount)
+		group.TotalScanOrderAmount = group.TotalScanOrderAmount.Add(scanOrderAmount)
+		if scanOrderAmount.GreaterThan(decimal.Zero) && item.IsMeger == 0 {
+			group.TotalScanOrderNum++
+			if item.IsSpecial == 0 {
+				group.ScanOrderAmounts = append(group.ScanOrderAmounts, scanOrderAmount)
+			}
+		}
+
 		// 累加用于计算平均值的字段
 		group.AvgOrderAmountSum = group.AvgOrderAmountSum.Add(decimal.NewFromFloat(item.AvgOrderAmount))
 		if item.DeskUuid > 0 && item.IsTakeout == 0 {
@@ -439,6 +459,10 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 		if item.IsTakeout == 1 && item.IsMeger == 0 {
 			group.AvgTakeoutOrderAmountSum = group.AvgTakeoutOrderAmountSum.Add(decimal.NewFromFloat(item.AvgTakeoutOrderAmount))
 			group.TakeoutOrderNumForAvg++
+		}
+		if scanOrderAmount.GreaterThan(decimal.Zero) && item.IsMeger == 0 {
+			group.AvgScanOrderAmountSum = group.AvgScanOrderAmountSum.Add(decimal.NewFromFloat(item.AvgScanOrderAmount))
+			group.ScanOrderNumForAvg++
 		}
 		if item.IsMeger == 0 {
 			group.OrderNumForAvg++
@@ -516,6 +540,21 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 				group.MaxTakeoutOrderAmount = amt
 			}
 		}
+		// 扫码订单最小/最大值
+		if len(group.ScanOrderAmounts) > 0 {
+			minScan := group.ScanOrderAmounts[0]
+			maxScan := group.ScanOrderAmounts[0]
+			for _, amt := range group.ScanOrderAmounts[1:] {
+				if amt.LessThan(minScan) {
+					minScan = amt
+				}
+				if amt.GreaterThan(maxScan) {
+					maxScan = amt
+				}
+			}
+			group.MinScanOrderAmount = minScan
+			group.MaxScanOrderAmount = maxScan
+		}
 
 		// 计算平均值
 		if group.OrderNumForAvg > 0 {
@@ -532,6 +571,9 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 		}
 		if group.TakeoutOrderNumForAvg > 0 {
 			group.AvgTakeoutOrderAmount = group.AvgTakeoutOrderAmountSum.Div(decimal.NewFromInt(group.TakeoutOrderNumForAvg)).Round(2)
+		}
+		if group.ScanOrderNumForAvg > 0 {
+			group.AvgScanOrderAmount = group.AvgScanOrderAmountSum.Div(decimal.NewFromInt(group.ScanOrderNumForAvg)).Round(2)
 		}
 
 		// 转换为结果格式
@@ -583,6 +625,11 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 				MinTakeoutOrderAmount:           sql.NullFloat64{Float64: group.MinTakeoutOrderAmount.InexactFloat64(), Valid: len(group.TakeoutOrderAmounts) > 0},
 				MaxTakeoutOrderAmount:           sql.NullFloat64{Float64: group.MaxTakeoutOrderAmount.InexactFloat64(), Valid: len(group.TakeoutOrderAmounts) > 0 && group.MaxTakeoutOrderAmount.GreaterThan(decimal.Zero)},
 				AvgTakeoutOrderAmount:           sql.NullFloat64{Float64: group.AvgTakeoutOrderAmount.InexactFloat64(), Valid: group.TakeoutOrderNumForAvg > 0},
+				TotalScanOrderAmount:            sql.NullFloat64{Float64: group.TotalScanOrderAmount.InexactFloat64(), Valid: true},
+				TotalScanOrderNum:               sql.NullInt64{Int64: group.TotalScanOrderNum, Valid: true},
+				MinScanOrderAmount:              sql.NullFloat64{Float64: group.MinScanOrderAmount.InexactFloat64(), Valid: len(group.ScanOrderAmounts) > 0},
+				MaxScanOrderAmount:              sql.NullFloat64{Float64: group.MaxScanOrderAmount.InexactFloat64(), Valid: len(group.ScanOrderAmounts) > 0 && group.MaxScanOrderAmount.GreaterThan(decimal.Zero)},
+				AvgScanOrderAmount:              sql.NullFloat64{Float64: group.AvgScanOrderAmount.InexactFloat64(), Valid: group.ScanOrderNumForAvg > 0},
 			},
 			Day: sql.NullString{String: dateKey, Valid: true},
 		})
