@@ -633,7 +633,11 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 	}
 	unitList := []material_resp.MaterialUnit{}
 	materialUnitRepo := repository.NewMaterialUnitRepo(s.dbm.GetDB(dbId))
-	materialUnitList, err := materialUnitRepo.GetMaterialUnitListByBaseUnitUuid(material.Unit.Uuid)
+	var baseUnitUuid uint64
+	if material.Unit != nil {
+		baseUnitUuid = material.Unit.Uuid
+	}
+	materialUnitList, err := materialUnitRepo.GetMaterialUnitListByBaseUnitUuid(baseUnitUuid)
 	if err != nil {
 		return material_resp.MaterialDetailResp{}, errors.WithMessage(err, "获取物品详情失败")
 	}
@@ -663,15 +667,21 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 
 	fromUnitUuid := uint64(0)
 	if material.Unit != nil {
-		fromUnitUuid = material.GetUnit(material.UnitUuid).UnitUuid
+		if u := material.GetUnit(material.UnitUuid); u != nil {
+			fromUnitUuid = u.UnitUuid
+		}
 	}
 	fromPurchaseUnitUuid := uint64(0)
 	if material.PurchaseUnit != nil {
-		fromPurchaseUnitUuid = material.GetUnit(material.PurchaseUnitUuid).UnitUuid
+		if u := material.GetUnit(material.PurchaseUnitUuid); u != nil {
+			fromPurchaseUnitUuid = u.UnitUuid
+		}
 	}
 	fromCostUnitUuid := uint64(0)
 	if material.CostUnit != nil {
-		fromCostUnitUuid = material.GetUnit(material.CostUnitUuid).UnitUuid
+		if u := material.GetUnit(material.CostUnitUuid); u != nil {
+			fromCostUnitUuid = u.UnitUuid
+		}
 	}
 
 	// 获取原产地国家信息
@@ -711,12 +721,17 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		BarcodeValue:         material.BarcodeValue,
 		InternalCode:         material.InternalCode,
 		SafetyStock:          material.SafetyStock,
-		UnitName:             material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		UnitName: func() string {
+			if material.Unit != nil && material.Unit.Unit != nil {
+				return material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+			}
+			return ""
+		}(),
 		UnitUuid:             material.UnitUuid,
 		FromUnitUuid:         fromUnitUuid,
 		UnitList:             material_resp.MaterialUnitListResp{List: unitList},
 		PurchaseUnitName: func() string {
-			if material.PurchaseUnit == nil {
+			if material.PurchaseUnit == nil || material.PurchaseUnit.Unit == nil {
 				return ""
 			}
 			return material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
@@ -724,7 +739,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		PurchaseUnitUuid:     material.PurchaseUnitUuid,
 		FromPurchaseUnitUuid: fromPurchaseUnitUuid,
 		CostUnitName: func() string {
-			if material.CostUnit == nil {
+			if material.CostUnit == nil || material.CostUnit.Unit == nil {
 				return ""
 			}
 			return material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
@@ -872,6 +887,19 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.Mater
 	return nil
 }
 
+// isUomInConversion 检查目标单位是否在转换系数列表中（含基准单位）
+func isUomInConversion(targetUom, stockUom string, uoms []req.MaterialUomReq) bool {
+	if targetUom == stockUom {
+		return true
+	}
+	for _, uom := range uoms {
+		if uom.Uom == targetUom {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.MaterialAddErpReq) (*model.Material, error) {
 	// 切换为当前数据库
 	db := ctx.GetDB()
@@ -900,24 +928,38 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		return nil, errors.WithMessage(err, fmt.Sprintf("基准单位不存在: %s", request.StockUom))
 	}
 
-	// 获取采购单位
+	// 获取采购单位：校验是否在转换系数中，不在则跳过
 	var purchaseUnitUuid uint64
 	if request.PurchaseUom != "" {
-		purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
-		if err != nil {
-			return nil, errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+		if isUomInConversion(request.PurchaseUom, request.StockUom, request.Uoms) {
+			purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
+			if err != nil {
+				return nil, errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+			}
+			purchaseUnitUuid = purchaseUnit.Uuid
+		} else {
+			logger.Logger.Warn("同步物品-采购单位不在转换系数中，已跳过",
+				zap.String("item_code", request.ItemCode),
+				zap.String("purchase_uom", request.PurchaseUom),
+			)
 		}
-		purchaseUnitUuid = purchaseUnit.Uuid
 	}
 
-	// 获取默认销售单位
+	// 获取默认销售单位：校验是否在转换系数中，不在则跳过
 	var defaultSalesUnitUuid uint64
 	if request.DefaultSalesUnit != "" {
-		defaultSalesUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.DefaultSalesUnit)
-		if err != nil {
-			return nil, errors.WithMessage(err, fmt.Sprintf("默认销售单位不存在: %s", request.DefaultSalesUnit))
+		if isUomInConversion(request.DefaultSalesUnit, request.StockUom, request.Uoms) {
+			defaultSalesUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.DefaultSalesUnit)
+			if err != nil {
+				return nil, errors.WithMessage(err, fmt.Sprintf("默认销售单位不存在: %s", request.DefaultSalesUnit))
+			}
+			defaultSalesUnitUuid = defaultSalesUnit.Uuid
+		} else {
+			logger.Logger.Warn("同步物品-默认销售单位不在转换系数中，已跳过",
+				zap.String("item_code", request.ItemCode),
+				zap.String("default_sales_unit", request.DefaultSalesUnit),
+			)
 		}
-		defaultSalesUnitUuid = defaultSalesUnit.Uuid
 	}
 
 	var material *model.Material
@@ -1671,14 +1713,23 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			return errors.WithMessage(err, fmt.Sprintf("基准单位不存在：%s %s", request.ItemCode, request.StockUom))
 		}
 
-		// 采购单位
+		// 采购单位：校验 PurchaseUom 是否在转换系数列表中，不在则清空
 		var purchaseUnitUuid uint64
 		if request.PurchaseUom != "" {
-			purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
-			if err != nil {
-				return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+			if isUomInConversion(request.PurchaseUom, request.StockUom, request.Uoms) {
+				purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
+				if err != nil {
+					return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+				}
+				purchaseUnitUuid = purchaseUnit.Uuid
+			} else {
+				// 采购单位不在转换系数中，清空
+				updateData["purchase_unit_uuid"] = 0
+				logger.Logger.Warn("同步物品-采购单位不在转换系数中，已清空",
+					zap.String("item_code", request.ItemCode),
+					zap.String("purchase_uom", request.PurchaseUom),
+				)
 			}
-			purchaseUnitUuid = purchaseUnit.Uuid
 		} else {
 			updateData["purchase_unit_uuid"] = 0
 		}
@@ -1762,35 +1813,56 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			}
 		}
 
+		// 成本单位不在保留列表中时，回退到基准单位而非清零
 		if !slices.Contains(saveUnitUuids, material.CostUnitUuid) {
-			updateData["cost_unit_uuid"] = 0
+			if material.Unit != nil {
+				updateData["cost_unit_uuid"] = material.Unit.Uuid
+			} else {
+				updateData["cost_unit_uuid"] = 0
+			}
+		}
+
+		// 采购单位：如果循环中未设置 purchase_unit_uuid 且旧值指向已删除的单位，清空
+		if _, ok := updateData["purchase_unit_uuid"]; !ok {
+			if !slices.Contains(saveUnitUuids, material.PurchaseUnitUuid) {
+				updateData["purchase_unit_uuid"] = 0
+			}
 		}
 
 		// 处理默认销售单位（如果传入）
 		// ERPNext 传入的是 UOM code，需要转换为 MaterialUnit UUID
 		if request.DefaultSalesUnit != "" {
-			defaultSalesUnitProductUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.DefaultSalesUnit)
-			if err != nil {
-				return errors.WithMessage(err, fmt.Sprintf("默认销售单位不存在: %s %s", request.ItemCode, request.DefaultSalesUnit))
-			}
-			// 查找对应的 MaterialUnit UUID
-			var defaultSalesUnitMaterialUnitUuid uint64
-			// 检查是否是基准单位
-			if material.Unit != nil && material.Unit.Unit != nil && material.Unit.Unit.Uuid == defaultSalesUnitProductUnit.Uuid {
-				defaultSalesUnitMaterialUnitUuid = material.UnitUuid
-			} else {
-				// 检查是否是非基准单位
-				materialUnit := materialUnitRepo.GetMaterialUnit(
-					commonRepo.WhereByUnitUuid(defaultSalesUnitProductUnit.Uuid),
-					commonRepo.WhereByMaterialUuid(material.Uuid),
-					commonRepo.WhereBySoftDelete(),
-				)
-				if materialUnit.Uuid > 0 {
-					defaultSalesUnitMaterialUnitUuid = materialUnit.Uuid
+			// 校验销售单位是否在转换系数中或等于基准单位
+			if isUomInConversion(request.DefaultSalesUnit, request.StockUom, request.Uoms) {
+				defaultSalesUnitProductUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.DefaultSalesUnit)
+				if err != nil {
+					return errors.WithMessage(err, fmt.Sprintf("默认销售单位不存在: %s %s", request.ItemCode, request.DefaultSalesUnit))
 				}
-			}
-			if defaultSalesUnitMaterialUnitUuid > 0 {
-				updateData["default_sales_unit_uuid"] = defaultSalesUnitMaterialUnitUuid
+				// 查找对应的 MaterialUnit UUID
+				var defaultSalesUnitMaterialUnitUuid uint64
+				// 检查是否是基准单位
+				if material.Unit != nil && material.Unit.Unit != nil && material.Unit.Unit.Uuid == defaultSalesUnitProductUnit.Uuid {
+					defaultSalesUnitMaterialUnitUuid = material.UnitUuid
+				} else {
+					// 检查是否是非基准单位
+					materialUnit := materialUnitRepo.GetMaterialUnit(
+						commonRepo.WhereByUnitUuid(defaultSalesUnitProductUnit.Uuid),
+						commonRepo.WhereByMaterialUuid(material.Uuid),
+						commonRepo.WhereBySoftDelete(),
+					)
+					if materialUnit.Uuid > 0 {
+						defaultSalesUnitMaterialUnitUuid = materialUnit.Uuid
+					}
+				}
+				if defaultSalesUnitMaterialUnitUuid > 0 {
+					updateData["default_sales_unit_uuid"] = defaultSalesUnitMaterialUnitUuid
+				} else {
+					// 对应的 MaterialUnit 不存在（被删除），清空
+					updateData["default_sales_unit_uuid"] = 0
+				}
+			} else {
+				// 销售单位不在转换系数中，清空
+				updateData["default_sales_unit_uuid"] = 0
 			}
 		} else {
 			updateData["default_sales_unit_uuid"] = 0
