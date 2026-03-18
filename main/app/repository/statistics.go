@@ -121,8 +121,8 @@ var (
 		"SUM(IF(desk_uuid = 0 AND order_source_uuid > 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_takeaway_amount",
 		"SUM(IF(is_takeout = 1 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS takeout_order_amount",
 		"SUM(IF(is_takeout = 1, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_takeout_order_amount",
-		"SUM(IF(source IN (4, 5) AND desk_uuid = 0 AND order_source_uuid = 0 AND is_takeout = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS scan_order_amount",
-		"SUM(IF(source IN (4, 5) AND desk_uuid = 0 AND order_source_uuid = 0 AND is_takeout = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_scan_order_amount",
+		"SUM(IF(source = 5 AND desk_uuid = 0 AND is_takeout = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS scan_order_amount",
+		"SUM(IF(source = 5 AND desk_uuid = 0 AND is_takeout = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_scan_order_amount",
 		"complete_time",
 	}
 	// 统计销售
@@ -173,11 +173,11 @@ var (
 		"MIN(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.takeout_order_amount ELSE NULL END) AS min_takeout_order_amount",                                                                            // 最小外送订单金额
 		"MAX(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount > 0 THEN t.takeout_order_amount ELSE NULL END) AS max_takeout_order_amount",                                                                                                                     // 最大外送订单金额
 		"ROUND(SUM(t.avg_takeout_order_amount) / COUNT(CASE WHEN t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END), 2) AS avg_takeout_order_amount",                                                                                                                  // 平均外送订单金额
-		"SUM(t.scan_order_amount) AS total_scan_order_amount",                                                                                                                                                                                                       // 总扫码订单金额
-		"COUNT(CASE WHEN t.scan_order_amount > 0 AND t.is_meger = 0 THEN 1 END) AS total_scan_order_num",                                                                                                                                                           // 总扫码订单数量
-		"MIN(CASE WHEN t.scan_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 AND t.scan_order_amount > 0 THEN t.scan_order_amount ELSE NULL END) AS min_scan_order_amount",                                                                              // 最小扫码订单金额
-		"MAX(CASE WHEN t.scan_order_amount > 0 AND t.is_meger = 0 THEN t.scan_order_amount ELSE NULL END) AS max_scan_order_amount",                                                                                                                                // 最大扫码订单金额
-		"ROUND(SUM(t.avg_scan_order_amount) / COUNT(CASE WHEN t.scan_order_amount > 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_scan_order_amount",                                                                                                                 // 平均扫码订单金额
+		"SUM(t.scan_order_amount) AS total_scan_order_amount",                                                                                                                         // 总扫码订单金额
+		"COUNT(CASE WHEN t.scan_order_amount > 0 AND t.is_meger = 0 THEN 1 END) AS total_scan_order_num",                                                                              // 总扫码订单数量
+		"MIN(CASE WHEN t.scan_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 AND t.scan_order_amount > 0 THEN t.scan_order_amount ELSE NULL END) AS min_scan_order_amount", // 最小扫码订单金额
+		"MAX(CASE WHEN t.scan_order_amount > 0 AND t.is_meger = 0 THEN t.scan_order_amount ELSE NULL END) AS max_scan_order_amount",                                                   // 最大扫码订单金额
+		"ROUND(SUM(t.avg_scan_order_amount) / COUNT(CASE WHEN t.scan_order_amount > 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_scan_order_amount",                                    // 平均扫码订单金额
 	}
 )
 
