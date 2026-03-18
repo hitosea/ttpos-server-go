@@ -164,6 +164,13 @@ func (m *mockMaterialRepo) GetMaterialCategoryByCode(code string) (*model.Materi
 	return nil, false, nil
 }
 
+func (m *mockMaterialRepo) GetMaterialDetailByUuid(uuid uint64) (*model.Material, error) {
+	if mat, ok := m.materials[uuid]; ok {
+		return mat, nil
+	}
+	return nil, fmt.Errorf("not found: %d", uuid)
+}
+
 func (m *mockMaterialRepo) GetMaterialDetailContainsDeletedByUuid(uuid uint64) (*model.Material, error) {
 	if mat, ok := m.materials[uuid]; ok {
 		return mat, nil
@@ -1485,6 +1492,109 @@ func TestDoUpdateMaterialByErpItem(t *testing.T) {
 		data := matRepo.updatedData[0]
 		if dt, ok := data["delete_time"]; !ok || dt.(int64) == 0 {
 			t.Error("expected non-zero delete_time for not-for-sale item")
+		}
+	})
+}
+
+func TestDoGetMaterialDetail(t *testing.T) {
+	srv := &materialSrv{}
+
+	t.Run("material not found returns error", func(t *testing.T) {
+		matRepo := &mockMaterialRepo{materials: map[uint64]*model.Material{}}
+		ctx := &mockContext{language: "en"}
+		_, err := srv.doGetMaterialDetail(ctx, matRepo, nil, req.MaterialDetailReq{Uuid: 999})
+		if err == nil {
+			t.Error("expected error for missing material")
+		}
+	})
+
+	t.Run("unit list error returns error", func(t *testing.T) {
+		mat := &model.Material{
+			Unit:     &model.MaterialUnit{BaseModel: model.BaseModel{Uuid: 10}},
+			Category: model.MaterialCategory{},
+		}
+		mat.Uuid = 1
+		matRepo := &mockMaterialRepo{materials: map[uint64]*model.Material{1: mat}}
+		muRepo := &mockMaterialUnitRepo{unitListErr: fmt.Errorf("db error")}
+		ctx := &mockContext{language: "en"}
+		_, err := srv.doGetMaterialDetail(ctx, matRepo, muRepo, req.MaterialDetailReq{Uuid: 1})
+		if err == nil {
+			t.Error("expected error from buildMaterialUnitList")
+		}
+	})
+
+	t.Run("happy path returns detail", func(t *testing.T) {
+		baseUnit := &model.MaterialUnit{
+			BaseModel: model.BaseModel{Uuid: 10},
+			Unit: &model.ProductUnit{
+				BaseModel:         model.BaseModel{Uuid: 100},
+				MultiLanguageName: model.MultiLanguageName{EnName: "Kilogram", ZhName: "千克"},
+			},
+			Name: `{"en":"Kg","zh":"千克"}`,
+		}
+		mat := &model.Material{
+			Unit: baseUnit,
+			Category: model.MaterialCategory{
+				MultiLanguageName: model.MultiLanguageName{EnName: "Food", ZhName: "食品"},
+			},
+			PurchaseUnit: &model.MaterialUnit{
+				Unit: &model.ProductUnit{
+					MultiLanguageName: model.MultiLanguageName{EnName: "Gram", ZhName: "克"},
+				},
+			},
+			CostUnit: baseUnit,
+		}
+		mat.Uuid = 1
+		mat.Code = "MAT001"
+		mat.UnitUuid = 10
+		mat.CategoryUuid = 42
+		mat.BarcodeValue = "123456"
+		mat.InternalCode = "IC001"
+		mat.MultiLanguageName = model.MultiLanguageName{EnName: "Flour", ZhName: "面粉"}
+
+		matRepo := &mockMaterialRepo{materials: map[uint64]*model.Material{1: mat}}
+		muRepo := &mockMaterialUnitRepo{} // empty unit list
+		ctx := &mockContext{language: "en"}
+
+		resp, err := srv.doGetMaterialDetail(ctx, matRepo, muRepo, req.MaterialDetailReq{Uuid: 1})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resp.Uuid != 1 {
+			t.Errorf("expected uuid=1, got %d", resp.Uuid)
+		}
+		if resp.Code != "MAT001" {
+			t.Errorf("expected code=MAT001, got %s", resp.Code)
+		}
+		if resp.CategoryUuid != 42 {
+			t.Errorf("expected category_uuid=42, got %d", resp.CategoryUuid)
+		}
+		if resp.UnitName != "Kilogram" {
+			t.Errorf("expected unit_name=Kilogram, got %s", resp.UnitName)
+		}
+		if resp.BarcodeValue != "123456" {
+			t.Errorf("expected barcode=123456, got %s", resp.BarcodeValue)
+		}
+		if !resp.IsEditable {
+			t.Error("expected IsEditable=true for non-headquarter item")
+		}
+	})
+
+	t.Run("nil base unit", func(t *testing.T) {
+		mat := &model.Material{
+			Category: model.MaterialCategory{},
+		}
+		mat.Uuid = 2
+		matRepo := &mockMaterialRepo{materials: map[uint64]*model.Material{2: mat}}
+		muRepo := &mockMaterialUnitRepo{}
+		ctx := &mockContext{language: "en"}
+
+		resp, err := srv.doGetMaterialDetail(ctx, matRepo, muRepo, req.MaterialDetailReq{Uuid: 2})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resp.UnitName != "" {
+			t.Errorf("expected empty unit name for nil unit, got %s", resp.UnitName)
 		}
 	})
 }

@@ -665,8 +665,20 @@ func getOriginCountry(code string) *material_resp.CountryItem {
 
 func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDetailReq) (material_resp.MaterialDetailResp, error) {
 	dbId := ctx.GetDbId()
-	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
+	return s.doGetMaterialDetail(ctx,
+		repository.NewMaterialRepo(s.dbm.GetDB(dbId)),
+		repository.NewMaterialUnitRepo(s.dbm.GetDB(dbId)),
+		req,
+	)
+}
 
+// doGetMaterialDetail 获取物品详情的核心逻辑（可测试）
+func (s *materialSrv) doGetMaterialDetail(
+	ctx context.Context,
+	materialRepo repository.IMaterialRepo,
+	materialUnitRepo repository.IMaterialUnitRepo,
+	req req.MaterialDetailReq,
+) (material_resp.MaterialDetailResp, error) {
 	// 获取物品详情
 	material, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
 	if err != nil {
@@ -674,7 +686,6 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 	}
 
 	// 获取单位列表
-	materialUnitRepo := repository.NewMaterialUnitRepo(s.dbm.GetDB(dbId))
 	var baseUnitUuid uint64
 	if material.Unit != nil {
 		baseUnitUuid = material.Unit.Uuid
