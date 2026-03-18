@@ -400,7 +400,23 @@ func markMemberDineInOrderComplete(payload event.PayFinishMemberDineInOrderPaylo
 
 	// 完成销售账单（参考收银机 FinishSaleBill 流程）
 	if saleBill.CanFinishSaleBill() {
-		saleBill.SetFinishSaleBill("", 0, "") // 会员端无收银员信息
+		if saleBill.DutyNo == "" {
+			// 自动接单未设置 duty_no（可能自动接单关闭或失败），按优先级查找可用班次
+			// 1. 主收银机的班次 2. 最先登录的收银机班次 3. 留空等下次登录分配
+			shiftLogRepo := repository.NewShiftLogRepo(db)
+			dutyNo, cashierUuid, cashierName, err := shiftLogRepo.GetAvailableShiftInfo()
+			if err != nil {
+				logger.Logger.Warn("markMemberDineInOrderComplete, GetAvailableShiftInfo failed",
+					zap.Uint64("company_uuid", payload.CompanyUuid),
+					zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+					zap.Error(err))
+			}
+			saleBill.SetFinishSaleBill(dutyNo, cashierUuid, cashierName)
+		} else {
+			// duty_no 已由 AcceptH5Order 自动接单设置，仅标记完成状态
+			saleBill.Status = constant.SaleBillStatusComplete
+			saleBill.FinishTime = time.Now().Unix()
+		}
 		// 内存中将sale_order_product改为已接单,让会员端堂食订单的价格计算正确
 		for _, saleOrder := range saleBill.SaleOrders {
 			for index := range saleOrder.SaleOrderProducts {
