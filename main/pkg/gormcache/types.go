@@ -129,4 +129,3 @@ func (c *Config) Copy() *Config {
 		Debug:             c.Debug,
 	}
 }
-

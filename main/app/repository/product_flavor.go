@@ -19,6 +19,7 @@ type IProductFlavorRepo interface {
 	DeleteProductFlavor(opts ...DBOption) error                          // 删除商品规格
 	GetProductFlavorList(uuids ...uint64) ([]model.ProductFlavor, error) // 获取商品规格列表
 	DestroyProductFlavor(opts ...DBOption) error                         // 销毁商品规格
+	UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error
 }
 
 // ProductFlavorRepo 定义商品规格仓库结构
@@ -110,4 +111,9 @@ func (r *ProductFlavorRepo) DestroyProductFlavor(opts ...DBOption) error {
 func (r *ProductFlavorRepo) CreateProductFlavorList(productFlavors []model.ProductFlavor) error {
 	err := r.db.Create(&productFlavors).Error
 	return errors.WithMessage(err)
+}
+
+// UpdateNameByMultiLanguageNameUuid 根据多语言名称UUID更新name字段
+func (r *ProductFlavorRepo) UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error {
+	return r.db.Model(&model.ProductFlavor{}).Where("multi_language_name_uuid = ?", multiLanguageNameUuid).Update("name", name).Error
 }

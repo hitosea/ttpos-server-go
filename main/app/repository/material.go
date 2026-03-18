@@ -71,6 +71,9 @@ type IMaterialRepo interface {
 	DestroyMaterial(opts ...DBOption) error     // 销毁物品
 	DestroyMaterialUnit(opts ...DBOption) error // 销毁物品单位
 
+	WhereCodeNotEmpty() DBOption // 编码非空条件
+	UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error
+
 	WithRelatedMaterialList() DBOption
 	WithUnit() DBOption
 	WithMultiLanguageName(opts ...DBOption) DBOption
@@ -465,7 +468,7 @@ func (r *MaterialRepoImpl) UpdateMaterialCode(uuid uint64, code string) error {
 
 // UpdateMaterial 更新物品
 func (r *MaterialRepoImpl) UpdateMaterial(material model.Material) error {
-	if err := r.db.Model(&model.Material{}).Where("uuid = ?", material.Uuid).Updates(material).Error; err != nil {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", material.Uuid).Debug().Updates(material).Error; err != nil {
 		return errors.WithMessage(err, "更新物品失败")
 	}
 	return nil
@@ -899,6 +902,18 @@ func (r *MaterialRepoImpl) DestroyMaterialUnit(opts ...DBOption) error {
 	}
 
 	return db.Delete(&model.MaterialUnit{}).Error
+}
+
+// WhereCodeNotEmpty 编码非空条件
+func (r *MaterialRepoImpl) WhereCodeNotEmpty() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("code != ''")
+	}
+}
+
+// UpdateNameByMultiLanguageNameUuid 根据多语言名称UUID更新name字段
+func (r *MaterialRepoImpl) UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error {
+	return r.db.Model(&model.Material{}).Where("multi_language_name_uuid = ?", multiLanguageNameUuid).Update("name", name).Error
 }
 
 func (r *MaterialRepoImpl) GetMaterialByCode(code string, opts ...DBOption) (model.Material, error) {

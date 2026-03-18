@@ -22,8 +22,10 @@ type CompanyInfoRespWithStoreCode struct {
 	Name      string `json:"name"`       // 门店名称
 	StoreCode string `json:"store_code"` // 店铺编码
 	Status    int    `json:"status"`     // 状态 1-启用 0-禁用
-
 }
+
+func (c CompanyInfoRespWithStoreCode) GetStoreCode() string { return c.StoreCode }
+func (c CompanyInfoRespWithStoreCode) GetUuid() uint64      { return c.Uuid }
 type SaasCompanyListWithStoreCodeResp struct {
 	List []CompanyInfoRespWithStoreCode `json:"list"`
 }

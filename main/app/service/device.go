@@ -226,7 +226,8 @@ func (s *deviceSrv) IsDeviceBind(ctx context.Context, companyUuid uint64, source
 }
 
 func (s *deviceSrv) UpdateRemark(ctx context.Context, editSettingReq req.EditDeviceRemarkReq) error {
-	return ctx.GetDB().Model(&model.Device{}).Where("uuid = ?", ctx.GetDeviceUuid()).Updates(map[string]any{
+	deviceRepo := repository.NewDeviceRepo(ctx.GetDB())
+	return deviceRepo.UpdateDevice(ctx.GetDeviceUuid(), map[string]any{
 		"remark": editSettingReq.Remark,
-	}).Error
+	})
 }

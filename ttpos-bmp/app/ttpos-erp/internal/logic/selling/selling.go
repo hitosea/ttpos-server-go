@@ -29,6 +29,7 @@ const (
 	DefaultCashPaymentDefault    = 1
 	DefaultTaxChargeType         = "Actual"
 	DefaultTaxAccountHeadPrefix  = "Cash - "
+	DefaultAccountCurrency       = "THB"
 
 	// 时间格式
 	DateFormat = "Y-m-d"

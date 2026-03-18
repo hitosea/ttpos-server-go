@@ -229,6 +229,7 @@ message PurchaseOrderItemInput {
   double rate = 3; // 单价，可选
   string uom = 4; // 单位，可选
 //  string warehouse = 5; // 仓库，可选
+  double custom_last_purchase_qty = 6; // 上次采购数量（默认销售单位），可选，由TTPOS传入
 }
 
 // 创建采购订单响应消息

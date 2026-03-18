@@ -12,6 +12,7 @@ import (
 type IWarehouseInOutLogRepo interface {
 	// 基础操作
 	Create(warehouseLog *model.WarehouseInOutLog) error
+	CreateBatch(warehouseLogs []*model.WarehouseInOutLog) error
 	Update(warehouseLog *model.WarehouseInOutLog) error
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.WarehouseInOutLog, error)
@@ -58,6 +59,14 @@ func NewWarehouseInOutLogRepo(db *gorm.DB) IWarehouseInOutLogRepo {
 // Create 创建仓库出入库日志
 func (r *WarehouseInOutLogRepoImpl) Create(warehouseLog *model.WarehouseInOutLog) error {
 	return r.db.Create(warehouseLog).Error
+}
+
+// CreateBatch 批量创建仓库出入库日志
+func (r *WarehouseInOutLogRepoImpl) CreateBatch(warehouseLogs []*model.WarehouseInOutLog) error {
+	if len(warehouseLogs) == 0 {
+		return nil
+	}
+	return r.db.Create(&warehouseLogs).Error
 }
 
 // Update 更新仓库出入库日志

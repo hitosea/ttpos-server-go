@@ -28,6 +28,14 @@ class TimeZoneEnum extends Enum
                 'value' => 'Asia/Bangkok',
             ],
             [
+                'name' => '（UTC+07:00）' . __('胡志明市，河内'),
+                'value' => 'Asia/Ho_Chi_Minh',
+            ],
+            [
+                'name' => '（UTC+06:30）' . __('内比都，仰光'),
+                'value' => 'Asia/Yangon',
+            ],
+            [
                 'name' => '（UTC+3:00）' . __('安卡拉'),
                 'value' => 'Europe/Istanbul',
             ],

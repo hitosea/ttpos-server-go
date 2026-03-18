@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
@@ -27,6 +28,9 @@ type IPurchaseOrderItemRepo interface {
 	GetByPurchaseOrderUuid(purchaseOrderUuid uint64, opts ...DBOption) ([]model.PurchaseOrderItem, error)
 	GetList(opts ...DBOption) ([]model.PurchaseOrderItem, error)
 	Count(opts ...DBOption) (int64, error)
+
+	// 按UUID更新指定字段
+	UpdateByUuid(uuid uint64, data map[string]any) error
 
 	// 条件查询选项
 	WhereUuid(uuid uint64) DBOption
@@ -56,6 +60,9 @@ type IPurchaseOrderItemRepo interface {
 		month string,
 		excludeOrderUuid uint64,
 	) (float64, error)
+
+	// GetLastCompletedBrandPurchaseBaseQty 批量查询每个物品最近一次已完成品牌采购的基准单位数量
+	GetLastCompletedBrandPurchaseBaseQty(materialUuids []uint64) (map[uint64]float64, error)
 }
 
 // PurchaseOrderItemRepoImpl 采购订单明细Repository实现
@@ -329,9 +336,106 @@ func (r *PurchaseOrderItemRepoImpl) GetNotReceivedQuantityByMaterialUuid(materia
 	return count, nil
 }
 
+// UpdateByUuid 按UUID更新指定字段
+func (r *PurchaseOrderItemRepoImpl) UpdateByUuid(uuid uint64, data map[string]any) error {
+	return r.db.Model(&model.PurchaseOrderItem{}).Where("uuid = ?", uuid).Updates(data).Error
+}
+
 // WithPreloadUnits 预加载单位
 func (r *PurchaseOrderItemRepoImpl) WithPreloadUnits() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Units")
 	}
+}
+
+// GetLastCompletedBrandPurchaseBaseQty 批量查询每个物品最近一次已完成品牌采购的基准单位数量
+// 返回 map[materialUuid]baseUnitQuantity
+func (r *PurchaseOrderItemRepoImpl) GetLastCompletedBrandPurchaseBaseQty(
+	materialUuids []uint64,
+) (map[uint64]float64, error) {
+	result := make(map[uint64]float64)
+	if len(materialUuids) == 0 {
+		return result, nil
+	}
+
+	// Step 1: 使用子查询查询每个 material 最近一次已通过品采的 item 记录（限一个月内）
+	type itemRecord struct {
+		Uuid               uint64
+		MaterialUuid       uint64
+		Num                float64
+		UnitConversionRate float64
+	}
+	oneMonthAgo := time.Now().AddDate(0, -1, 0).Unix()
+
+	// 子查询：获取每个 material 最近审核通过的采购单 pass_time
+	latestTimeSubQuery := r.db.Table("ttpos_purchase_order_item poi2").
+		Select("poi2.material_uuid, MAX(po2.pass_time) AS max_time").
+		Joins("JOIN ttpos_purchase_order po2 ON po2.uuid = poi2.purchase_order_uuid").
+		Where("po2.purchase_type = ?", constant.PurchaseTypeBrand).
+		Where("po2.status = ?", constant.PurchaseOrderStatusCompleted).
+		Where("po2.pass_time >= ?", oneMonthAgo).
+		Where("poi2.material_uuid IN ?", materialUuids).
+		Where("po2.delete_time = 0").
+		Where("poi2.delete_time = 0").
+		Group("poi2.material_uuid")
+
+	var records []itemRecord
+	err := r.db.Table("ttpos_purchase_order_item poi").
+		Select("poi.uuid, poi.material_uuid, poi.num, poi.unit_conversion_rate").
+		Joins("JOIN ttpos_purchase_order po ON po.uuid = poi.purchase_order_uuid").
+		Joins("JOIN (?) latest ON poi.material_uuid = latest.material_uuid AND po.pass_time = latest.max_time", latestTimeSubQuery).
+		Where("po.purchase_type = ?", constant.PurchaseTypeBrand).
+		Where("po.status = ?", constant.PurchaseOrderStatusCompleted).
+		Where("po.delete_time = 0").
+		Where("poi.delete_time = 0").
+		Order("po.uuid DESC").
+		Scan(&records).Error
+	if err != nil {
+		return result, err
+	}
+
+	if len(records) == 0 {
+		return result, nil
+	}
+
+	// 按 material_uuid 去重（同一时间可能有多条，取第一条）
+	latestItems := make(map[uint64]itemRecord)
+	itemUuids := make([]uint64, 0)
+	for _, record := range records {
+		if _, exists := latestItems[record.MaterialUuid]; !exists {
+			latestItems[record.MaterialUuid] = record
+			itemUuids = append(itemUuids, record.Uuid)
+		}
+	}
+
+	// Step 2: 查询这些 item 的多单位子表
+	var units []model.PurchaseOrderItemUnit
+	err = r.db.Where("item_uuid IN ? AND delete_time = 0", itemUuids).Find(&units).Error
+	if err != nil {
+		return result, err
+	}
+
+	// 按 item_uuid 分组
+	unitsByItem := make(map[uint64][]model.PurchaseOrderItemUnit)
+	for _, unit := range units {
+		unitsByItem[unit.ItemUuid] = append(unitsByItem[unit.ItemUuid], unit)
+	}
+
+	// 计算基准单位数量
+	for materialUuid, item := range latestItems {
+		itemUnits, hasUnits := unitsByItem[item.Uuid]
+		if hasUnits && len(itemUnits) > 0 {
+			// 多单位：SUM(unit.num × unit.conversion_rate)
+			var baseQty float64
+			for _, u := range itemUnits {
+				baseQty += u.Num * u.UnitConversionRate
+			}
+			result[materialUuid] = baseQty
+		} else {
+			// 单单位：item.num × item.unit_conversion_rate
+			result[materialUuid] = item.Num * item.UnitConversionRate
+		}
+	}
+
+	return result, nil
 }

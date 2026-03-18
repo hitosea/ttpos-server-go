@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
@@ -286,9 +287,15 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		return nil, nil
 	}
 
+	// 获取销售账单UUID（兼容桌台扫码订单和会员端堂食订单）
+	saleBillUuid := h5Order.SaleBillUuid
+	if saleBillUuid == 0 && h5Order.SaleOrder != nil {
+		saleBillUuid = h5Order.SaleOrder.SaleBillUuid
+	}
+
 	if ctx.NoLock() {
-		s.lock.LockUuid(h5Order.SaleOrder.SaleBillUuid)
-		defer s.lock.UnlockUuid(h5Order.SaleOrder.SaleBillUuid)
+		s.lock.LockUuid(saleBillUuid)
+		defer s.lock.UnlockUuid(saleBillUuid)
 		ctx.AddLock()
 	}
 
@@ -301,14 +308,14 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	if isAutoOrder {
 		h5Order.IsAutoAccept = 1
 	}
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill, "repository.NewOrderRepo(db).GetSaleBillAllInfo")
+	}
 
 	{
 		ignoreMust := true // 接单，送厨忽略必点方案
-		// 获取销售账单信息
-		saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(h5Order.SaleOrder.SaleBillUuid)
-		if errSaleBill != nil {
-			return nil, errors.WithMessage(errSaleBill, "repository.NewOrderRepo(db).GetSaleBillAllInfo")
-		}
+
 		ctx.Log().Debug("获取销售账单信息")
 
 		// 获取本次接单的商品列表
@@ -334,6 +341,21 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 			return checkServiceRes, nil
 		}
 	}
+
+	// 会员端堂食订单：接单后标记账单完成并重新计算价格
+	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
+		staff := ctx.GetStaff()
+		saleBill.SetFinishSaleBill(staff.DutyNo, staff.Uuid, staff.GetUserName())
+		saleBill.CalcAll()
+
+		// 计算结账抹零（只有无手续费时才抹零），确保后续 SyncMemberOrderToErp 使用正确的值
+		if saleOrder := saleBill.GetFirstSaleOrder(); saleOrder != nil {
+			if saleOrder.CalcCommissionFee() == 0 {
+				saleOrder.SetCheckOutZeroFee()
+			}
+		}
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 更新h5订单
 		if err := repository.NewH5OrderRepo(db).UpdateH5OrderRecord(*h5Order); err != nil {
@@ -346,17 +368,66 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 				return errors.WithMessage(err, "更新h5订单商品失败")
 			}
 		}
-		// 更新销售订单商品.将该h5订单的商品变为已接单
-		// for _, saleOrderProduct := range h5Order.SaleOrderProducts {
-		// 	if err := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*saleOrderProduct); err != nil {
-		// 		return errors.WithMessage(err, "将已下单的h5订单商品变为已接单单的h5订单商品失败")
-		// 	}
-		// }
+
+		// 会员端堂食订单：保存账单完成状态和重新计算的价格
+		if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
+			if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
+				return errors.WithMessage(err, "更新账单失败")
+			}
+			// 保存 SaleOrder（含结账抹零金额）
+			for _, so := range saleBill.SaleOrders {
+				if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*so); err != nil {
+					return errors.WithMessage(err, "更新销售订单失败")
+				}
+			}
+		}
 
 		return nil
 	}); err != nil {
 		return nil, errors.WithMessage(err, "接单失败")
 	}
+
+	// 先付后食：接单后发布结账事件，触发打印、叫号屏、统计等后续流程
+	if saleOrder := saleBill.GetFirstSaleOrder(); saleOrder != nil && len(saleOrder.PaymentOrders) > 0 {
+		payTypes := make([]event.PayType, 0, len(saleOrder.PaymentOrders))
+		totalPay := 0.0
+		for _, po := range saleOrder.PaymentOrders {
+			payTypes = append(payTypes, event.PayType{
+				Name:     po.PaymentMethodName,
+				Price:    po.Amount,
+				FeeMoney: po.PaymentCommissionFee,
+			})
+			totalPay += po.Amount
+		}
+		// 实付金额 = 所有付款单金额之和 - 找零
+		actualPrice := totalPay - saleOrder.ChangeAmount
+
+		utils.Go(func() {
+			s.bus.PublishCheckoutSaleOrderEvent(event.CheckoutSaleOrderPayload{
+				BasePayload: event.BasePayload{
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  saleBillUuid,
+					SaleOrderUuid: saleOrder.Uuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				SaleBill:    saleBill,
+				OrderPrice:  saleOrder.GetOriginAmountValue(),
+				PayPrice:    saleOrder.PaymentAmount,
+				ActualPrice: actualPrice,
+				ChangeDue:   saleOrder.ChangeAmount,
+				PayType:     payTypes,
+			})
+		})
+	}
+
+	// 会员堂食订单接单成功后，同步到 ERP（有接单场景）
+	// 异步推送，失败不影响接单结果；通过 ErpSyncStatus 幂等控制避免重复推送
+	utils.Go(func() {
+		s.SyncMemberOrderToErp(ctx, saleBill, db)
+	})
+
 	return nil, nil
 }
 func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error {
@@ -373,6 +444,13 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 	// 非待处理状态不可操作
 	if h5Order.Status != constant.H5OrderStatusOrder {
 		return errors.WithMessage(errors.New("当前状态不可操作"))
+	}
+
+	// 会员端堂食订单需要加锁，防止与接单等操作并发
+	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn && h5Order.SaleBillUuid != 0 && ctx.NoLock() {
+		s.lock.LockUuid(h5Order.SaleBillUuid)
+		defer s.lock.UnlockUuid(h5Order.SaleBillUuid)
+		ctx.AddLock()
 	}
 
 	// 拒单,保证h5订单的商品快照信息
@@ -414,6 +492,78 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 	}); err != nil {
 		return errors.WithMessage(err, "拒单失败")
 	}
+
+	// 会员端堂食订单：拒单后执行退款（原路退回）并取消订单
+	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
+		if err := s.refundMemberDineInOrder(ctx, h5Order); err != nil {
+			logger.Logger.Error("RejectH5Order, refundMemberDineInOrder failed",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("h5OrderUuid", h5OrderUuid),
+				zap.Uint64("saleBillUuid", h5Order.SaleBillUuid),
+				zap.Error(err))
+			return errors.WithMessage(err, "退款失败")
+		}
+	}
+
+	return nil
+}
+
+// refundMemberDineInOrder 会员端堂食订单拒单后退款（原路退回）并取消订单
+func (s *orderSrv) refundMemberDineInOrder(ctx context.Context, h5Order *model.H5Order) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+
+	// 获取销售账单完整信息（包含 SaleOrder、PaymentOrders）
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(h5Order.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取销售账单失败")
+	}
+	if len(saleBill.SaleOrders) == 0 {
+		return errors.New("销售账单无关联订单")
+	}
+
+	saleOrder := saleBill.GetFirstSaleOrder()
+
+	// 检查是否存在支付订单
+	if len(saleOrder.PaymentOrders) == 0 {
+		logger.Logger.Warn("refundMemberDineInOrder, no payment orders to refund",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("saleBillUuid", h5Order.SaleBillUuid))
+		return nil
+	}
+
+	// 调用 MemberSaleOrderRefund 发起退款（原路退回）
+	// MemberSaleOrderRefund 内部通过 ctx.GetDB() 获取数据库连接，
+	// 遍历所有 PaymentOrders 创建退款记录并调用连连支付 Refund API
+	_, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
+		CancelReason: "拒单退款",
+	})
+	if err != nil {
+		return errors.WithMessage(err, "发起退款失败")
+	}
+
+	// 更新 SaleBill 和 SaleOrder 状态为已取消
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		saleBill.Status = constant.SaleBillStatusCanceled
+		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
+			return errors.WithMessage(err, "更新销售账单状态失败")
+		}
+		for _, order := range saleBill.SaleOrders {
+			order.Status = constant.SaleOrderStatusCanceled
+			if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*order); err != nil {
+				return errors.WithMessage(err, "更新销售订单状态失败")
+			}
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err, "取消订单失败")
+	}
+
+	logger.Logger.Info("refundMemberDineInOrder, refund and cancel success",
+		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+		zap.Uint64("h5OrderUuid", h5Order.Uuid),
+		zap.Uint64("saleBillUuid", h5Order.SaleBillUuid))
+
 	return nil
 }
 

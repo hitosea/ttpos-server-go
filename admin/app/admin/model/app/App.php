@@ -101,6 +101,8 @@ class App extends AppModel
             "su.enable_grab_delivery",
             // LINE MAN外卖控制
             "su.enable_lineman_delivery",
+            // 扫码点餐到店自取
+            "su.is_open_member_instant",
         ];
         //
         $countWhere = 'where 1 = 1';

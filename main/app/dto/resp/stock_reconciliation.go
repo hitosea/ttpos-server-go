@@ -15,7 +15,7 @@ type StockReconciliationInfo struct {
 	Uuid                uint64             `json:"uuid"`                  // 盘点单UUID
 	OrderNo             string             `json:"order_no"`              // 单据编号
 	ErpCode             string             `json:"erp_code"`              // ERP盘点单号
-	Type                int                `json:"type"`                  // 盘点类型 1-指定物品盘点 2-全部物品盘点
+	Type                int                `json:"type"`                  // 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点
 	WarehouseUuid       uint64             `json:"warehouse_uuid"`        // 仓库UUID
 	WarehouseLocaleName dto.LocaleResponse `json:"warehouse_locale_name"` // 仓库多语言名称
 	Status              int                `json:"status"`                // 状态 0-已保存 1-已提交 2-已审核 3-已驳回
@@ -29,7 +29,7 @@ type StockReconciliationDetailResp struct {
 	Uuid          uint64                               `json:"uuid"`            // 盘点单UUID
 	OrderNo       string                               `json:"order_no"`        // 单据编号
 	ErpCode       string                               `json:"erp_code"`        // ERP盘点单号
-	Type          int                                  `json:"type"`            // 盘点类型 1-指定物品盘点 2-全部物品盘点
+	Type          int                                  `json:"type"`            // 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点
 	WarehouseUuid uint64                               `json:"warehouse_uuid"`  // 仓库UUID
 	WarehouseName dto.LocaleResponse                   `json:"warehouse_name"`  // 仓库名称
 	Purpose       int                                  `json:"purpose"`         // 盘点目的 1-库存盘点 2-期初盘点
@@ -83,11 +83,14 @@ type StockReconciliationCheckMaterialsResp struct {
 	IsDeleted                  bool               `json:"is_deleted"`                    // 是否已删除
 	UnitCount                  uint               `json:"unit_count"`                    // 单位数量
 	ExistsInWarehouse          bool               `json:"exists_in_warehouse"`           // 是否在仓库中
+	IsZeroValuationRate        bool               `json:"is_zero_valuation_rate"`        // 估值率是否为0
+	InternalCode               string             `json:"internal_code"`                 // 内部编码
 }
 
 type StockReconciliationCheckMaterialsListResp struct {
-	List              []StockReconciliationCheckMaterialsResp `json:"list"`               // 物品列表
-	WarehouseDisabled bool                                    `json:"warehouse_disabled"` // 仓库是否禁用 true-被禁用；false-正常
+	List                   []StockReconciliationCheckMaterialsResp `json:"list"`                      // 物品列表
+	WarehouseDisabled      bool                                    `json:"warehouse_disabled"`        // 仓库是否禁用 true-被禁用；false-正常
+	AllowZeroValuationRate bool                                    `json:"allow_zero_valuation_rate"` // 是否允许盘点估值率为0
 }
 
 // StockReconciliationTemplateResp 盘点单模板响应
@@ -99,9 +102,10 @@ type StockReconciliationTemplateResp struct {
 
 // StockReconciliationTemplateData 盘点单模板数据
 type StockReconciliationTemplateData struct {
-	Daily   []string `json:"daily"`   // 日盘物品编号列表
-	Weekly  []string `json:"weekly"`  // 周盘物品编号列表
-	Monthly []string `json:"monthly"` // 月盘物品编号列表
+	Daily    []string `json:"daily"`    // 日盘物品编号列表
+	Weekly   []string `json:"weekly"`   // 周盘物品编号列表
+	Monthly  []string `json:"monthly"`  // 月盘物品编号列表
+	Property []string `json:"property"` // 固定资产盘点物品编号列表
 }
 
 // StockReconciliationAnnotationListResp 盘点单批注列表响应

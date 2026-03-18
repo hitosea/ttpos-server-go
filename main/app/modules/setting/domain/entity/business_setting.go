@@ -40,6 +40,7 @@ type BusinessSetting struct {
 	RefundAuthorizedStaffIds      []uint64                    `json:"refund_authorized_staff_ids"`      // 退款授权员工ID
 	EnableOrderSource             string                      `json:"enable_order_source"`              // 外卖功能开关 0-关闭 1-开启
 	EnableNationality             string                      `json:"enable_nationality"`               // 国籍功能开关 0-关闭 1-开启
+	AllowZeroValuationRate        string                      `json:"allow_zero_valuation_rate"`        // 盘点允许估值率为0 0-关闭 1-开启
 
 	// 以下字段在旧服务 Business 中不存在（新增字段），可以放在最后
 	IsAutoOrder            string            `json:"is_auto_order,omitempty"`              // 是否自动接单 0-关闭 1-开启
@@ -218,6 +219,7 @@ func DefaultBusinessSetting() *BusinessSetting {
 		BatchCookingMode:              "post",            // 分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"
 		EnableOrderSource:             "0",               // 外卖功能开关 0-关闭 1-开启
 		EnableNationality:             "0",               // 国籍功能开关 0-关闭 1-开启
+		AllowZeroValuationRate:        "1",               // 盘点允许估值率为0 0-关闭 1-开启，默认开启
 		DiscountNeedPassword:          "0",               // 折扣操作是否需要密码 0-否 1-是
 		DiscountAuthorizedStaffIds:    make([]uint64, 0), // 折扣操作授权员工ID列表
 		RefundNeedPassword:            "0",               // 退款操作是否需要密码 0-否 1-是

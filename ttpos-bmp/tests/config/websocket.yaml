@@ -1,0 +1,72 @@
+# WebSocket service test configuration
+server:
+  address: ":14051"
+  openapiPath: "/api.json"
+  logStdout: true
+
+websocket:
+  maxConnections: 100
+  readBufferSize: 4096
+  writeBufferSize: 4096
+  handshakeTimeout: "10s"
+  readTimeout: "60s"
+  writeTimeout: "10s"
+  pingInterval: "30s"
+  pongTimeout: "10s"
+  maxMessageSize: 1048576
+  enableCompression: false
+  enableAuth: false
+
+jwt:
+  secret: "test-ws-api-key"
+  expire: 86400
+
+grpc:
+  name: "ttpos-websocket"
+  address: ":14052"
+  logStdout: true
+
+database:
+  default:
+    link: "mysql:test:test@tcp(mysql-test:3306)/websocket"
+    debug: false
+    charset: "utf8mb4"
+    maxIdle: 5
+    maxOpen: 20
+    maxLifetime: "30s"
+
+redis:
+  default:
+    address: "redis-test:6379"
+    db: 0
+    cluster: false
+    minIdle: 2
+    maxIdle: 10
+    maxActive: 20
+
+queue:
+  switch: false
+
+health:
+  enable: true
+  path: "/health"
+  token: "test-health-token"
+  cacheTtl: "2s"
+  timeout: "500ms"
+  dependencies:
+    mysql:
+      enabled: true
+      pingQuery: "SELECT 1"
+    redis:
+      enabled: true
+      cluster: false
+    rocketmq:
+      enabled: false
+    nacos:
+      enabled: false
+  degrade:
+    pausePush: false
+
+logger:
+  level: "all"
+  stdout: true

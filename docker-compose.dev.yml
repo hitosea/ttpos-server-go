@@ -103,6 +103,7 @@ services:
     build:
       dockerfile: main/Dockerfile-dev
     image: ttpos-server-go
+    pull_policy: build 
     volumes:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
@@ -115,7 +116,7 @@ services:
 
   reconciliation_templates:
     container_name: "saas-reconciliation-templates-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-reconciliation-templates:1.1.0
+    image: hub.hitosea.com/ttpos-server/ttpos-server-reconciliation-templates:1.2.0
     environment:
       - PORT=3000
       - GCS_BUCKET=ttpos-stock-reconciliation

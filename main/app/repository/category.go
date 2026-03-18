@@ -13,9 +13,12 @@ import (
 // IProductCategoryRepo 商品类别
 type IProductCategoryRepo interface {
 	CreateProductCategory(productCategory model.ProductCategory) (uint64, error)
+	CreateProductCategoryRecord(productCategory *model.ProductCategory) error
 	UpdateProductCategory(id uint, productCategory model.ProductCategory) error
+	UpdateProductCategoryData(data map[string]any, opts ...DBOption) error
 	GetProductCategory(opts ...DBOption) (*model.ProductCategory, error)
 	WithMultiLanguageName(opts ...DBOption) DBOption
+	UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error
 }
 
 func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {

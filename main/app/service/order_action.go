@@ -371,12 +371,13 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					SaleBillUuid: saleBill.Uuid,
 					H5OrderUuid:  h5OrderUuid,
 					OperatorUuid: int64(ctx.GetStaffUuid()),
+					MemberUuid:   saleBill.ConsumerUuid,
 				},
 				IsAutoOrder: isAutoOrder,
 			})
 		}
 
-		// 发起“送厨”操作的事件
+		// 发起"送厨"操作的事件
 		utils.Go(func() {
 			s.bus.PublishSentCookingEvent(event.SentCookingPayload{
 				BasePayload: event.BasePayload{ // 送厨
@@ -387,6 +388,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					SaleOrderUuid: saleOrderUuid,
 					H5OrderUuid:   h5OrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
+					MemberUuid:    saleBill.ConsumerUuid,
 				},
 				BatchMode: batchCookingMode,
 				BatchPrintMode: func() string {
@@ -812,9 +814,10 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 }
 
 type ActionAddOption struct {
-	IsTableAdd  bool // 是否是平板端加购
-	IsMemberAdd bool // 是否是会员端加购
-	skipLimit   bool // 是否跳过加购时的限购检查。使用场景是加购并送厨时，因为送厨会在坚持一次限购，所有加购时不检查
+	IsTableAdd     bool // 是否是平板端加购
+	IsMemberAdd    bool // 是否是会员端加购
+	skipLimit      bool // 是否跳过加购时的限购检查。使用场景是加购并送厨时，因为送厨会在坚持一次限购，所有加购时不检查
+	skipValidation bool // 是否跳过所有业务校验（库存、上下架、限购等）。用于报价接口
 }
 
 func WithIsMemberAdd() func(option *ActionAddOption) {
@@ -832,6 +835,12 @@ func WithIsTableAdd() func(option *ActionAddOption) {
 func WithSkipLimit() func(option *ActionAddOption) {
 	return func(option *ActionAddOption) {
 		option.skipLimit = true
+	}
+}
+
+func WithSkipValidation() func(option *ActionAddOption) {
+	return func(option *ActionAddOption) {
+		option.skipValidation = true
 	}
 }
 
@@ -857,11 +866,12 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 
 	// 录入订单商品数据
 	saleOrderProducts, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
-		IsH5Product: request.IsH5Product,
-		Setting:     *saleBill.SaleBillSetting,
-		SaleBill:    saleBill,
-		SaleOrder:   saleOrder,
-		Products:    request.Products,
+		IsH5Product:    request.IsH5Product,
+		IsMemberDineIn: request.IsMemberDineIn,
+		Setting:        *saleBill.SaleBillSetting,
+		SaleBill:       saleBill,
+		SaleOrder:      saleOrder,
+		Products:       request.Products,
 	}, options...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "构建商品失败")
@@ -906,11 +916,12 @@ func (s *orderSrv) actionAddSimple(ctx context.Context, request req.ProductAddRe
 	}
 	// 录入订单商品数据
 	saleOrderProducts, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
-		IsH5Product: request.IsH5Product,
-		Setting:     *saleBill.SaleBillSetting,
-		SaleBill:    saleBill,
-		SaleOrder:   saleOrder,
-		Products:    request.Products,
+		IsH5Product:    request.IsH5Product,
+		IsMemberDineIn: request.IsMemberDineIn,
+		Setting:        *saleBill.SaleBillSetting,
+		SaleBill:       saleBill,
+		SaleOrder:      saleOrder,
+		Products:       request.Products,
 	}, options...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "构建商品失败")
@@ -1029,25 +1040,32 @@ func (s *orderSrv) updateProductBatchFlagToZero(tx *gorm.DB, productUuids []uint
 		return nil
 	}
 	now := time.Now().Unix()
+	saleOrderProductRepo := repository.NewSaleOrderProductRepo(tx)
+	productionRepo := repository.NewProductionRepo(tx)
+	whereProductUuids := repository.CommonRepo.WhereInUuids(productUuids)
+	whereSaleOrderProductUuids := func(db *gorm.DB) *gorm.DB {
+		return db.Where("sale_order_product_uuid IN (?)", productUuids)
+	}
+
 	// 后置模式下，取消分批类型
 	if modeType == constant.BatchCookingModePost {
-		if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", productUuids).Updates(map[string]interface{}{"is_batch": 0, "batch_time": now}).Error; err != nil {
+		if err := saleOrderProductRepo.Update(map[string]any{"is_batch": 0, "batch_time": now}, whereProductUuids); err != nil {
 			return errors.WithMessage(err, "更新销售订单商品 is_batch 失败")
 		}
-		if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", productUuids).Updates(map[string]interface{}{
+		if err := productionRepo.UpdateProduct([]repository.DBOption{whereSaleOrderProductUuids}, map[string]any{
 			"is_batch":    0,
 			"batch_time":  now,
 			"create_time": now,
-		}).Error; err != nil {
+		}); err != nil {
 			return errors.WithMessage(err, "更新生产订单商品 is_batch 失败")
 		}
 	}
 	// 前置模式下，只更新 batch_time 字段. 不取消分批类型
 	if modeType == constant.BatchCookingModePre {
-		if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", productUuids).Updates(map[string]interface{}{"batch_time": now}).Error; err != nil {
+		if err := saleOrderProductRepo.Update(map[string]any{"batch_time": now}, whereProductUuids); err != nil {
 			return errors.WithMessage(err, "更新销售订单商品 is_batch 失败")
 		}
-		if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", productUuids).Updates(map[string]interface{}{"batch_time": now}).Error; err != nil {
+		if err := productionRepo.UpdateProduct([]repository.DBOption{whereSaleOrderProductUuids}, map[string]any{"batch_time": now}); err != nil {
 			return errors.WithMessage(err, "更新生产订单商品 is_batch 失败")
 		}
 	}

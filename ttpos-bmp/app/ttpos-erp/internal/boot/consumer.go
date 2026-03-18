@@ -15,7 +15,10 @@ func InitConsumer(ctx context.Context) {
 	queue.RegisterConsumer(&selling.CancelPosInvoice{})
 	queue.RegisterConsumer(&selling.ClosePosEntryConsumer{})
 	queue.RegisterConsumer(&selling.RedoPosConsumer{})
-	//注册其他消费者
+	// Sales Invoice 消费者
+	queue.RegisterConsumer(&selling.SaveSalesInvoiceConsumer{})
+	queue.RegisterConsumer(&selling.CancelSalesInvoiceConsumer{})
+	queue.RegisterConsumer(&selling.ReturnSalesInvoiceConsumer{})
 
 	queue.StartConsumersListener(ctx)
 }

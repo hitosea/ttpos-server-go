@@ -142,23 +142,24 @@ func (po *PurchaseOrder) GetExpectArrivalDate() time.Time {
 // PurchaseOrderItem 采购申请物品表 ttpos_purchase_order_item
 type PurchaseOrderItem struct {
 	BaseModel
-	PurchaseOrderUuid   uint64  `gorm:"column:purchase_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:采购申请ID;index" json:"purchase_order_uuid"`
-	MaterialCode        string  `gorm:"column:material_code;type:varchar(255);not null;default:'';comment:物品编码, 提交采购时记录后不再修改" json:"material_code"`
-	MaterialName        string  `gorm:"column:material_name;type:text;not null;default:'';comment:物品名称JSON, 提交采购时记录后不再修改" json:"material_name"`
-	MaterialUuid        uint64  `gorm:"column:material_uuid;type:bigint(20) unsigned;not null;default:0;comment:物品ID" json:"material_uuid"`
-	Num                 float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:申请数量" json:"num"`
-	ArrivalNum          float64 `gorm:"column:arrival_num;type:decimal(14,4);not null;default:0.0000;comment:到货数量" json:"arrival_num"`
-	UnitUuid            uint64  `gorm:"column:unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:单位ID-采购单位ID" json:"unit_uuid"`
-	UnitName            string  `gorm:"column:unit_name;type:text;not null;default:'';comment:单位名称JSON, 提交采购时记录后不再修改" json:"unit_name"`
-	UnitConversionRate  float64 `gorm:"column:unit_conversion_rate;type:decimal(12,4);not null;default:1;comment:单位转换率。申请数量*转换率=基准单位申请数量" json:"unit_conversion_rate"`
-	BaseUnitUuid        uint64  `gorm:"column:base_unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:基准单位ID" json:"base_unit_uuid"`
-	BaseUnitName        string  `gorm:"column:base_unit_name;type:text;not null;default:'';comment:基准单位名称JSON, 提交采购时记录后不再修改" json:"base_unit_name"`
-	Valuation           float64 `gorm:"column:valuation;type:decimal(14,2);not null;default:0.00;comment:估值单价" json:"valuation"`
-	TotalPrice          float64 `gorm:"column:total_price;type:decimal(14,2);not null;default:0.00;comment:总价" json:"total_price"`
-	ErpnextUom          string  `gorm:"column:erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext单位" json:"erpnext_uom"`
-	BaseErpnextUom      string  `gorm:"column:base_erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext基准单位" json:"base_erpnext_uom"`
-	DeliveredBySupplier int     `gorm:"column:delivered_by_supplier;type:int(10);not null;default:0;comment:是否由供应商配送，0-否，1-是" json:"delivered_by_supplier"`
-	SupplierErpCode     string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商ERP编码" json:"supplier_erp_code"`
+	PurchaseOrderUuid     uint64  `gorm:"column:purchase_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:采购申请ID;index" json:"purchase_order_uuid"`
+	MaterialCode          string  `gorm:"column:material_code;type:varchar(255);not null;default:'';comment:物品编码, 提交采购时记录后不再修改" json:"material_code"`
+	MaterialName          string  `gorm:"column:material_name;type:text;not null;default:'';comment:物品名称JSON, 提交采购时记录后不再修改" json:"material_name"`
+	MaterialUuid          uint64  `gorm:"column:material_uuid;type:bigint(20) unsigned;not null;default:0;comment:物品ID" json:"material_uuid"`
+	Num                   float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:申请数量" json:"num"`
+	ArrivalNum            float64 `gorm:"column:arrival_num;type:decimal(14,4);not null;default:0.0000;comment:到货数量" json:"arrival_num"`
+	UnitUuid              uint64  `gorm:"column:unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:单位ID-采购单位ID" json:"unit_uuid"`
+	UnitName              string  `gorm:"column:unit_name;type:text;not null;default:'';comment:单位名称JSON, 提交采购时记录后不再修改" json:"unit_name"`
+	UnitConversionRate    float64 `gorm:"column:unit_conversion_rate;type:decimal(12,4);not null;default:1;comment:单位转换率。申请数量*转换率=基准单位申请数量" json:"unit_conversion_rate"`
+	BaseUnitUuid          uint64  `gorm:"column:base_unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:基准单位ID" json:"base_unit_uuid"`
+	BaseUnitName          string  `gorm:"column:base_unit_name;type:text;not null;default:'';comment:基准单位名称JSON, 提交采购时记录后不再修改" json:"base_unit_name"`
+	Valuation             float64 `gorm:"column:valuation;type:decimal(14,2);not null;default:0.00;comment:估值单价" json:"valuation"`
+	TotalPrice            float64 `gorm:"column:total_price;type:decimal(14,2);not null;default:0.00;comment:总价" json:"total_price"`
+	ErpnextUom            string  `gorm:"column:erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext单位" json:"erpnext_uom"`
+	BaseErpnextUom        string  `gorm:"column:base_erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext基准单位" json:"base_erpnext_uom"`
+	DeliveredBySupplier   int     `gorm:"column:delivered_by_supplier;type:int(10);not null;default:0;comment:是否由供应商配送，0-否，1-是" json:"delivered_by_supplier"`
+	SupplierErpCode       string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商ERP编码" json:"supplier_erp_code"`
+	StoreSnapshotQuantity float64 `gorm:"column:store_snapshot_quantity;type:decimal(14,4);not null;default:0;comment:申请时门店库存（默认销售单位）" json:"store_snapshot_quantity"`
 
 	// 关联关系
 	PurchaseOrder *PurchaseOrder          `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`
@@ -260,6 +261,7 @@ type PurchaseReceiptOrder struct {
 	TargetWarehouseName    string  `gorm:"column:target_warehouse_name;type:text;comment:目标仓库名称" json:"target_warehouse_name"`
 	DeliveryNoteNo         string  `gorm:"column:delivery_note_no;type:varchar(255);not null;default:'';comment:ERP Delivery Note号" json:"delivery_note_no"`
 	IsFromDeliveryNote     int     `gorm:"column:is_from_delivery_note;type:int(10);not null;default:0;comment:是否来自DN单:0-否 1-是" json:"is_from_delivery_note"`
+	IsAutoReceipt          int     `gorm:"column:is_auto_receipt;type:tinyint(1);not null;default:0;comment:是否自动收货:0-否 1-是" json:"is_auto_receipt"`
 
 	// 关联关系
 	PurchaseOrder PurchaseOrder              `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`

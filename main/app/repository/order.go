@@ -37,6 +37,7 @@ type IOrderRepo interface {
 	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)      // 创建销售订单自助餐加钟
 	UpdateSaleOrderBuffetDelayProductRecord(model model.SaleOrderBuffetDelayProduct) error                                     // 更新销售订单自助餐加钟
 	CancelOrder(ctx context.Context, saleBillUuid uint64, deskUuid uint64, reason string) error                                // 取消订单
+	CancelOrderWithoutTx(saleBillUuid uint64) error                                                                            // 取消订单（无事务，仅更新状态）
 	CancelDeskOrder(ctx context.Context, deskUuid uint64, reason string) error                                                 // 取消桌台订单
 	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                               // 删除订单
 	HideOrder(saleBillUuid uint64) error                                                                                       // 隐藏订单
@@ -74,7 +75,11 @@ type IOrderQueryRepo interface {
 	GetSaleBillBatchCookingMode(saleBillUuid uint64) (string, error)                                                                           // 获取销售账单当前的分批送厨模式
 	UpdateSaleBillOrderRemark(saleBillUuid uint64, orderRemark string) error                                                                   // 更新销售账单整单备注
 	GetSaleOrderUuids(opts ...DBOption) []uint64
-	GetSaleBillList(opts ...DBOption) []model.SaleBill // 获取销售账单列表
+	GetSaleBillList(opts ...DBOption) []model.SaleBill     // 获取销售账单列表
+	GetSaleBillUuids(opts ...DBOption) []uint64            // 获取销售账单UUID列表
+	SumSaleBillPaymentAmount(opts ...DBOption) float64     // 统计销售账单实付金额合计
+	SumSaleBillRefundAmount(opts ...DBOption) float64      // 统计销售账单退款金额合计
+	CountAndSumSaleBill(opts ...DBOption) (int64, float64) // 统计销售账单数量和实付金额合计
 }
 
 // orderRepo 订单仓库
@@ -463,13 +468,21 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 		}(),
 	}
 	if param.IsOnlyDataManage == 1 {
-		uuidList := strings.Split(param.SaleBillUuids, ",")
-		uuids := []uint64{}
-		for _, uuid := range uuidList {
-			uuid, _ := strconv.ParseUint(uuid, 10, 64)
-			uuids = append(uuids, uint64(uuid))
+		if param.SaleBillUuids != "" {
+			uuidList := strings.Split(param.SaleBillUuids, ",")
+			uuids := []uint64{}
+			for _, uuid := range uuidList {
+				uuid, _ := strconv.ParseUint(uuid, 10, 64)
+				uuids = append(uuids, uint64(uuid))
+			}
+			opts = append(opts, CommonRepo.WhereInUuids(uuids))
+		} else {
+			// 子查询模式：通过子查询关联 data_manage 表筛选，避免全量加载 UUID
+			opts = append(opts, CommonRepo.WhereInDataManageSubQuery(r.db, "uuid",
+				CommonRepo.WhereByType(model.DataManageTypeOrder),
+				CommonRepo.WhereBySoftDelete(),
+			))
 		}
-		opts = append(opts, CommonRepo.WhereInUuids(uuids))
 	}
 	if param.IsOnlyDataManage == 0 && param.IsContainDataManage == 0 {
 		opts = append(opts,
@@ -1366,6 +1379,23 @@ func (r *orderRepo) CancelOrder(ctx context.Context, saleBillUuid uint64, deskUu
 	})
 	if err != nil {
 		return fmt.Errorf("CancelOrder: %v", err)
+	}
+	return nil
+}
+
+// CancelOrderWithoutTx 取消订单（无事务，仅更新 SaleBill 和 SaleOrder 状态为已取消）
+func (r *orderRepo) CancelOrderWithoutTx(saleBillUuid uint64) error {
+	if err := r.db.Model(&model.SaleOrder{}).
+		Where("sale_bill_uuid = ?", saleBillUuid).
+		Where("status = ?", constant.SaleOrderStatusPending).
+		Update("status", constant.SaleOrderStatusCanceled).Error; err != nil {
+		return fmt.Errorf("CancelOrderWithoutTx: update sale_order: %v", err)
+	}
+	if err := r.db.Model(&model.SaleBill{}).
+		Where("uuid = ?", saleBillUuid).
+		Where("status = ?", constant.SaleBillStatusPending).
+		Update("status", constant.SaleBillStatusCanceled).Error; err != nil {
+		return fmt.Errorf("CancelOrderWithoutTx: update sale_bill: %v", err)
 	}
 	return nil
 }
@@ -2584,6 +2614,62 @@ func (r *orderRepo) GetSaleBillList(opts ...DBOption) []model.SaleBill {
 	}
 	db.Find(&saleBills)
 	return saleBills
+}
+
+// GetSaleBillUuids 获取销售账单UUID列表
+func (r *orderRepo) GetSaleBillUuids(opts ...DBOption) []uint64 {
+	var uuids []uint64
+	db := r.db.Model(&model.SaleBill{}).Session(&gorm.Session{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Pluck("uuid", &uuids)
+	return uuids
+}
+
+// SumSaleBillPaymentAmount 统计销售账单实付金额合计
+func (r *orderRepo) SumSaleBillPaymentAmount(opts ...DBOption) float64 {
+	var result struct{ Total float64 }
+	db := r.db.Model(&model.SaleBill{}).Session(&gorm.Session{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Select("COALESCE(SUM(payment_amount), 0) as total").Scan(&result)
+	return result.Total
+}
+
+// SumSaleBillRefundAmount 统计销售账单退款金额合计（通过 sale_order -> return_order 关联查询）
+func (r *orderRepo) SumSaleBillRefundAmount(opts ...DBOption) float64 {
+	// 构建匹配的 sale_bill uuid 子查询
+	saleBillDB := r.db.Model(&model.SaleBill{}).Session(&gorm.Session{}).Select("uuid")
+	for _, opt := range opts {
+		saleBillDB = opt(saleBillDB)
+	}
+	// 通过 sale_order 关联查询 return_order 的退款金额
+	saleOrderDB := r.db.Model(&model.SaleOrder{}).
+		Where("sale_bill_uuid IN (?)", saleBillDB).
+		Where("delete_time = 0").
+		Select("uuid")
+	var result struct{ Total float64 }
+	r.db.Model(&model.ReturnOrder{}).
+		Where("related_order_uuid IN (?)", saleOrderDB).
+		Select("COALESCE(SUM(refund_amount), 0) as total").
+		Scan(&result)
+	return result.Total
+}
+
+// CountAndSumSaleBill 统计销售账单数量和实付金额合计
+func (r *orderRepo) CountAndSumSaleBill(opts ...DBOption) (int64, float64) {
+	var result struct {
+		Count int64
+		Total float64
+	}
+	db := r.db.Model(&model.SaleBill{}).Session(&gorm.Session{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Select("COUNT(*) as count, COALESCE(SUM(payment_amount), 0) as total").Scan(&result)
+	return result.Count, result.Total
 }
 
 // extractUUIDFromKey 从缓存 key 中提取 UUID

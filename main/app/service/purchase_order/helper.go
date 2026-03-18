@@ -360,10 +360,12 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 }
 
 // reduceHeadquarterStockAndLog 减少总部库存并记录出入库日志
+// itemDefaultWarehouseMap: 物品编码 -> 本地仓库UUID的映射（从 ERP item_defaults 查询得到），新流程时使用
 func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 	ctx context.Context,
 	subDb, headquarterDb *gorm.DB,
 	purchaseOrder *model.PurchaseOrder,
+	itemDefaultWarehouseMap map[string]uint64,
 ) error {
 	lang := ctx.GetLanguage()
 
@@ -373,27 +375,47 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
 		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
 		materialRepo := repository.NewMaterialRepo(tx)
+		warehouseRepo := repository.NewWarehouseRepo(tx)
 
-		// 获取目标仓库
-		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(purchaseOrder.WarehouseErpCode)
-		if err != nil {
-			logger.Logger.Error("reduceHeadquarterStockAndLog-GetByErpCode", zap.Any("warehouseErpCode", purchaseOrder.WarehouseErpCode), zap.Any("err", err))
-			return errors.WithMessage(errors.New("获取总部出库仓库信息失败"), err.Error())
+		// 按物品默认仓库或采购单指定仓库确定出库仓库
+		// 新流程：每个物品使用 ERP item_defaults 中的默认仓库；旧流程：使用采购单上指定的仓库
+		usePerItemWarehouse := purchaseOrder.WarehouseErpCode == ""
+
+		// 旧流程：获取采购单指定的单一仓库
+		var singleWarehouse *model.Warehouse
+		if !usePerItemWarehouse {
+			var err error
+			singleWarehouse, err = warehouseRepo.GetByErpCode(purchaseOrder.WarehouseErpCode)
+			if err != nil {
+				logger.Logger.Error("reduceHeadquarterStockAndLog-GetByErpCode", zap.Any("warehouseErpCode", purchaseOrder.WarehouseErpCode), zap.Any("err", err))
+				return errors.WithMessage(errors.New("获取总部出库仓库信息失败"), err.Error())
+			}
 		}
 
 		// 获取在途仓库
 		transitWarehouse, _ := repository.NewWarehouseRepo(subDb).GetTransitWarehouse()
 
 		// 处理每个采购明细
+		type stockReduceItem struct {
+			warehouseItemUuid uint64
+			warehouseUuid     uint64
+			item              model.PurchaseOrderItem
+		}
 		var errMaterialsList []string
-		updateMaterialsMap := make(map[uint64]model.PurchaseOrderItem)
+		var reduceItems []stockReduceItem
+
 		for _, item := range purchaseOrder.Items {
+			// 直采物品（由供应商直接发货）不扣减总部库存
+			if item.DeliveredBySupplier == 1 {
+				continue
+			}
+
 			actualNum := item.GetUnitsTotalConversionRateNum()
 			if actualNum <= 0 {
 				continue
 			}
 
-			// 获取物料UUID
+			// 获取物料信息
 			material, err := materialRepo.GetMaterialByUuid(
 				item.MaterialUuid,
 				materialRepo.WithRelatedMaterialList(),
@@ -403,24 +425,45 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			}
 			item.Material = &material
 
-			// 查找或创建仓库商品库存记录
+			// 确定出库仓库
+			var targetWarehouseUuid uint64
+			if usePerItemWarehouse {
+				// 新流程：使用 ERP item_defaults 中物品的默认仓库
+				if whUuid, ok := itemDefaultWarehouseMap[item.MaterialCode]; ok && whUuid != 0 {
+					targetWarehouseUuid = whUuid
+				} else {
+					// 物品在 ERP 未配置默认仓库，跳过库存扣减（ERP侧会走保底方案）
+					logger.Logger.Warn("reduceHeadquarterStockAndLog-物品未配置默认仓库，跳过库存扣减",
+						zap.Uint64("material_uuid", item.MaterialUuid),
+						zap.String("material_code", item.MaterialCode),
+						zap.Uint64("company_uuid", purchaseOrder.CompanyUuid),
+					)
+					continue
+				}
+			} else {
+				targetWarehouseUuid = singleWarehouse.Uuid
+			}
+
+			// 查找仓库商品库存记录
 			materialName := *language.JsonToLocaleResponse(item.MaterialName)
-			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, item.MaterialUuid)
+			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouseUuid, item.MaterialUuid)
 			if err != nil {
 				if err == gorm.ErrRecordNotFound {
 					errMaterialsList = append(errMaterialsList, materialName.GetLocale(lang))
 				} else {
-					logger.Logger.Error("reduceHeadquarterStockAndLog-GetByWarehouseAndMaterial", zap.Any("targetWarehouseUuid", targetWarehouse.Uuid), zap.Any("itemMaterialUuid", item.MaterialUuid), zap.Any("err", err))
+					logger.Logger.Error("reduceHeadquarterStockAndLog-GetByWarehouseAndMaterial", zap.Any("targetWarehouseUuid", targetWarehouseUuid), zap.Any("itemMaterialUuid", item.MaterialUuid), zap.Any("err", err))
 					return errors.WithMessage(errors.New("查询仓库商品库存失败"), err.Error())
 				}
-				// 如果查询失败，跳过后续处理
 				continue
 			} else if warehouseItem.Stock < actualNum {
 				errMaterialsList = append(errMaterialsList, materialName.GetLocale(lang))
 			}
 
-			// 添加到更新库存列表
-			updateMaterialsMap[warehouseItem.Uuid] = item
+			reduceItems = append(reduceItems, stockReduceItem{
+				warehouseItemUuid: warehouseItem.Uuid,
+				warehouseUuid:     targetWarehouseUuid,
+				item:              item,
+			})
 		}
 		if len(errMaterialsList) > 0 {
 			return errors.NewWithCodeAndData(
@@ -444,13 +487,14 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 		}()
 
 		// 减少库存
-		for warehouseItemUuid, item := range updateMaterialsMap {
+		for _, reduceItem := range reduceItems {
+			item := reduceItem.item
 			actualNum := item.GetUnitsTotalConversionRateNum()
 
 			// 减少仓库物品库存
-			err = warehouseItemRepo.ReduceStock(warehouseItemUuid, actualNum)
+			err := warehouseItemRepo.ReduceStock(reduceItem.warehouseItemUuid, actualNum)
 			if err != nil {
-				logger.Logger.Error("reduceHeadquarterStockAndLog-ReduceStock", zap.Any("warehouseItemUuid", warehouseItemUuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
+				logger.Logger.Error("reduceHeadquarterStockAndLog-ReduceStock", zap.Any("warehouseItemUuid", reduceItem.warehouseItemUuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
 				return errors.WithMessage(errors.New("减少总部库存失败"), err.Error())
 			}
 
@@ -458,7 +502,7 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			warehouseLog := &model.WarehouseInOutLog{
 				LogType:              constant.WarehouseInOutLogLogTypeOut,    // 出库
 				Scene:                constant.WarehouseInOutLogSceneDelivery, // 发货出库
-				WarehouseUuid:        targetWarehouse.Uuid,
+				WarehouseUuid:        reduceItem.warehouseUuid,
 				MaterialUuid:         item.MaterialUuid,
 				MaterialName:         item.MaterialName,
 				MaterialBaseUnitUuid: item.BaseUnitUuid,
@@ -1032,4 +1076,65 @@ func (h *purchaseOrderHelper) getMinDailyLimit(
 		}
 	}
 	return -1
+}
+
+// getLastPurchaseQtyByMaterialCode 查询上次品牌采购数量，转换为默认销售单位，返回 map[MaterialCode]qty
+func (h *purchaseOrderHelper) getLastPurchaseQtyByMaterialCode(
+	db *gorm.DB,
+	purchaseOrder *model.PurchaseOrder,
+) map[string]float64 {
+	result := make(map[string]float64)
+
+	// 收集物品UUID和Code映射
+	materialUuids := make([]uint64, 0, len(purchaseOrder.Items))
+	uuidToCode := make(map[uint64]string)
+	for _, item := range purchaseOrder.Items {
+		if item.MaterialCode != "" {
+			materialUuids = append(materialUuids, item.MaterialUuid)
+			uuidToCode[item.MaterialUuid] = item.MaterialCode
+		}
+	}
+	if len(materialUuids) == 0 {
+		return result
+	}
+
+	// 查询上次完成品牌采购的基准单位数量
+	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(db)
+	baseQtyMap, err := purchaseOrderItemRepo.GetLastCompletedBrandPurchaseBaseQty(materialUuids)
+	if err != nil {
+		logger.Logger.Warn("查询上次品牌采购数量失败", zap.Error(err))
+		return result
+	}
+
+	// 查询物品的默认销售单位转换率
+	materialRepo := repository.NewMaterialRepo(db)
+	materials, err := materialRepo.GetMaterialByUuids(materialUuids, materialRepo.WithNotBaseUnitList())
+	if err != nil {
+		logger.Logger.Warn("查询物品默认销售单位失败", zap.Error(err))
+		return result
+	}
+	conversionRateMap := make(map[uint64]float64)
+	for _, m := range materials {
+		if m.DefaultSalesUnitUuid > 0 {
+			for _, unit := range m.NotBaseUnitList {
+				if unit.Uuid == m.DefaultSalesUnitUuid && unit.ConversionRate != 0 {
+					conversionRateMap[m.Uuid] = unit.ConversionRate
+				}
+			}
+		}
+	}
+
+	// 转换为默认销售单位并按MaterialCode建立映射
+	for materialUuid, baseQty := range baseQtyMap {
+		code, ok := uuidToCode[materialUuid]
+		if !ok || baseQty == 0 {
+			continue
+		}
+		if rate, hasRate := conversionRateMap[materialUuid]; hasRate {
+			result[code] = decimal.NewFromFloat(baseQty).Div(decimal.NewFromFloat(rate)).Round(4).InexactFloat64()
+		} else {
+			result[code] = decimal.NewFromFloat(baseQty).Round(4).InexactFloat64()
+		}
+	}
+	return result
 }

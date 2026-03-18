@@ -321,16 +321,16 @@ func TestFromLinemanPlaceOrder(t *testing.T) {
 		t.Fatalf("Expected 2 modifiers, got %d", len(item.Modifiers))
 	}
 
-	// 第一个 Modifier（TTPOS-FLAVOR-592）
+	// 第一个 Modifier（FLAVOR-MILD，来自 property TTPOS-FLAVOR-592 的 value ID）
 	modifier1 := item.Modifiers[0]
-	if modifier1.ID == nil || *modifier1.ID != "TTPOS-FLAVOR-592" {
-		t.Errorf("Expected Modifier[0].ID 'TTPOS-FLAVOR-592', got '%v'", modifier1.ID)
+	if modifier1.ID == nil || *modifier1.ID != "FLAVOR-MILD" {
+		t.Errorf("Expected Modifier[0].ID 'FLAVOR-MILD', got '%v'", modifier1.ID)
 	}
 
-	// 第二个 Modifier（TTPOS-SIZE-001）
+	// 第二个 Modifier（SIZE-LARGE，来自 property TTPOS-SIZE-001 的 value ID）
 	modifier2 := item.Modifiers[1]
-	if modifier2.ID == nil || *modifier2.ID != "TTPOS-SIZE-001" {
-		t.Errorf("Expected Modifier[1].ID 'TTPOS-SIZE-001', got '%v'", modifier2.ID)
+	if modifier2.ID == nil || *modifier2.ID != "SIZE-LARGE" {
+		t.Errorf("Expected Modifier[1].ID 'SIZE-LARGE', got '%v'", modifier2.ID)
 	}
 
 	// Price is now *int64 (minor unit): 20.0 THB = 2000 satang
@@ -511,8 +511,10 @@ func TestRoundTripLineman(t *testing.T) {
 		t.Errorf("OrderShortCode mismatch: expected '%s', got '%s'", original.OrderShortCode, converted.OrderShortCode)
 	}
 
-	if converted.RestaurantRevenue != original.RestaurantRevenue {
-		t.Errorf("RestaurantRevenue mismatch: expected %.2f, got %.2f", original.RestaurantRevenue, converted.RestaurantRevenue)
+	// ToLinemanPlaceOrder returns satang (int64) cast to float64, not converted back to THB
+	expectedRevenue := original.RestaurantRevenue * 100
+	if converted.RestaurantRevenue != expectedRevenue {
+		t.Errorf("RestaurantRevenue mismatch: expected %.2f, got %.2f", expectedRevenue, converted.RestaurantRevenue)
 	}
 
 	if converted.CustomerType != original.CustomerType {
@@ -535,10 +537,10 @@ func TestRoundTripLineman(t *testing.T) {
 		t.Errorf("Item.Quantity mismatch: expected %d, got %d", origItem.Quantity, convItem.Quantity)
 	}
 
-	// Note: There may be slight floating point differences due to conversion
-	// 150.16 * 100 = 15016, 15016 / 100 = 150.16
-	if convItem.UnitPrice != origItem.UnitPrice {
-		t.Errorf("Item.UnitPrice mismatch: expected %.2f, got %.2f", origItem.UnitPrice, convItem.UnitPrice)
+	// ToLinemanPlaceOrder returns satang (int64) cast to float64, not converted back to THB
+	expectedUnitPrice := origItem.UnitPrice * 100
+	if convItem.UnitPrice != expectedUnitPrice {
+		t.Errorf("Item.UnitPrice mismatch: expected %.2f, got %.2f", expectedUnitPrice, convItem.UnitPrice)
 	}
 
 	if convItem.Memo != origItem.Memo {

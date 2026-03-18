@@ -82,6 +82,7 @@ func (s *purchaseOrderSrv) getDNReceiptList(
 		return nil, nil
 	}
 
+	db := ctx.GetDB()
 	result := make([]resp.ReceiptListItem, 0, len(dnListResp.DeliveryNoteList))
 
 	// 构建采购单物品编码集合（用于判断 DN 物品是否在采购单中存在）
@@ -129,6 +130,14 @@ func (s *purchaseOrderSrv) getDNReceiptList(
 			receiptOrderInfos = append(receiptOrderInfos, s.buildReceiptOrderInfo(ctx, receipt))
 		}
 
+		// 通过 DN 发货仓库(SetWarehouse)查找 TTPOS 仓库，获取多语言名称
+		localeWarehouseName := *language.JsonToLocaleResponse(purchaseOrder.WarehouseName) // fallback
+		if dn.SetWarehouse != "" {
+			if wh, err := repository.NewWarehouseRepo(db).GetByErpCode(dn.SetWarehouse); err == nil && wh != nil {
+				localeWarehouseName = *language.JsonToLocaleResponse(wh.Name)
+			}
+		}
+
 		result = append(result, resp.ReceiptListItem{
 			IsDeliveryNote:      true,
 			DeliveryNoteNo:      dn.Name,
@@ -136,7 +145,7 @@ func (s *purchaseOrderSrv) getDNReceiptList(
 			SupplierName:        purchaseOrder.SupplierName,
 			SupplierErpCode:     purchaseOrder.SupplierErpCode,
 			ErpPurchaseOrderNo:  purchaseOrder.ErpOrderNo,
-			LocaleWarehouseName: *language.JsonToLocaleResponse(purchaseOrder.WarehouseName),
+			LocaleWarehouseName: localeWarehouseName,
 			ReceiptOrders:       receiptOrderInfos,
 		})
 	}
@@ -335,12 +344,13 @@ func (s *purchaseOrderSrv) buildReceiptOrderInfo(ctx context.Context, receipt mo
 	}
 
 	return resp.ReceiptListOrderInfo{
-		Uuid:        receipt.Uuid,
-		DisplayNo:   displayNo,
-		Status:      receipt.Status,
-		ErpOrderNo:  receipt.ErpOrderNo,
-		CreateTime:  int64(receipt.CreateTime),
-		IsConfirmed: isConfirmed,
+		Uuid:          receipt.Uuid,
+		DisplayNo:     displayNo,
+		Status:        receipt.Status,
+		ErpOrderNo:    receipt.ErpOrderNo,
+		CreateTime:    int64(receipt.CreateTime),
+		IsConfirmed:   isConfirmed,
+		IsAutoReceipt: receipt.IsAutoReceipt == 1,
 	}
 }
 
@@ -381,23 +391,31 @@ func (s *purchaseOrderSrv) getDNPendingItems(
 	purchaseOrder *model.PurchaseOrder,
 	dnNo string,
 ) (resp.ReceiptPendingItemsResp, error) {
-	result := resp.ReceiptPendingItemsResp{
-		IsDeliveryNote:      true,
-		DeliveryNoteNo:      dnNo,
-		SupplierName:        purchaseOrder.SupplierName,
-		SupplierErpCode:     purchaseOrder.SupplierErpCode,
-		LocaleWarehouseName: *language.JsonToLocaleResponse(purchaseOrder.WarehouseName),
-		OrderNo:             purchaseOrder.OrderNo,
-		Items:               make([]resp.ReceiptPendingItemInfo, 0),
-	}
-
 	db := ctx.GetDB()
 
 	// 调用ERP获取DN详情（包含物品）
 	erpSrv := erp.NewIErpSrv(s.dbm)
 	targetDN, err := erpSrv.GetDeliveryNote(ctx, dnNo)
 	if err != nil {
-		return result, err
+		return resp.ReceiptPendingItemsResp{}, err
+	}
+
+	// 通过 DN 发货仓库(SetWarehouse)查找 TTPOS 仓库，获取多语言名称
+	localeWarehouseName := *language.JsonToLocaleResponse(purchaseOrder.WarehouseName) // fallback
+	if targetDN != nil && targetDN.SetWarehouse != "" {
+		if wh, whErr := repository.NewWarehouseRepo(db).GetByErpCode(targetDN.SetWarehouse); whErr == nil && wh != nil {
+			localeWarehouseName = *language.JsonToLocaleResponse(wh.Name)
+		}
+	}
+
+	result := resp.ReceiptPendingItemsResp{
+		IsDeliveryNote:      true,
+		DeliveryNoteNo:      dnNo,
+		SupplierName:        purchaseOrder.SupplierName,
+		SupplierErpCode:     purchaseOrder.SupplierErpCode,
+		LocaleWarehouseName: localeWarehouseName,
+		OrderNo:             purchaseOrder.OrderNo,
+		Items:               make([]resp.ReceiptPendingItemInfo, 0),
 	}
 
 	// 将DN物品按item_code分组，收集每个物品的所有单位信息

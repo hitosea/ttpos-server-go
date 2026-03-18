@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/metrics"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
@@ -32,9 +33,19 @@ import (
 
 // CreateInstantOrder 创建点餐订单
 func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 判断是否有待支付、未挂单的订单（收银机端特有检查）
+	_, hasInstantOrder, err := HasInstantOrder(ctx, db)
+	if err != nil {
+		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
+	}
+	if hasInstantOrder {
+		return resp.CreateInstantOrderResp{}, errors.New("有待支付、未挂单的订单")
+	}
+
 	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		if config.Server.Mode == constant.ServerModeStop { // 暂时关闭特性功能
-			db := ctx.GetDB()
 			// 创建订单编号
 			orderNo, err := s.createOrderNo(ctx, db, constant.OrderSourceInstant)
 			if err != nil {
@@ -70,21 +81,14 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	return s.createInstantOrder(ctx)
 }
 
-// createInstantOrder 创建点餐订单
+// createInstantOrder 创建点餐订单（内部方法，不检查 HasInstantOrder）
+// 调用方需自行决定是否检查 HasInstantOrder
 func (s *orderSrv) createInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error) {
 	dbId := ctx.GetDbId()
 	var billUuid uint64
 	var orderUuid uint64
 	db := s.dbm.GetDB(dbId)
 
-	// 判断是否有待支付、未挂单的订单
-	_, hasInstantOrder, err := HasInstantOrder(ctx, db)
-	if err != nil {
-		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
-	}
-	if hasInstantOrder {
-		return resp.CreateInstantOrderResp{}, errors.New("有待支付、未挂单的订单")
-	}
 	if err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 创建订单编号
 		orderNo, err := s.createOrderNo(ctx, tx, constant.OrderSourceInstant)
@@ -108,6 +112,7 @@ func (s *orderSrv) createInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			DeviceUuid:    ctx.GetDeviceUuid(),
 			Source:        constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
 			ClientVersion: constant.NormalizeClientVersion(ctx.GetVersion()),
+			ConsumerUuid:  s.getConsumerUuidForInstantOrder(ctx), // 会员端创建订单时关联会员UUID
 		})
 		if err != nil {
 			return errors.WithMessage(err)
@@ -132,6 +137,8 @@ func (s *orderSrv) createInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	}); err != nil {
 		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
 	}
+
+	metrics.OrdersTotal.WithLabelValues(ctx.GetSource(), constant.OrderSourceInstant).Inc()
 
 	return resp.CreateInstantOrderResp{
 		SaleBillUuid:  billUuid,
@@ -161,6 +168,7 @@ func (s *orderSrv) CreateInstantOrderInCache(ctx context.Context, orderNo string
 		DeviceUuid:    ctx.GetDeviceUuid(),
 		Source:        constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
 		ClientVersion: constant.NormalizeClientVersion(ctx.GetVersion()),
+		ConsumerUuid:  s.getConsumerUuidForInstantOrder(ctx), // 会员端创建订单时关联会员UUID
 
 		// 设置默认值的必点方案、自动加购必点商品
 		ShowMustPlan:       constant.SaleBillShowMustPlanYes,
@@ -353,6 +361,8 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}); err != nil {
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}
+
+	metrics.OrdersTotal.WithLabelValues(ctx.GetSource(), constant.OrderSourceDesk).Inc()
 
 	return resp.CreateDeskOrderResp{
 		SaleBillUuid:  saleBill.Uuid,
@@ -1501,4 +1511,13 @@ func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProdu
 	}
 
 	return &resp.ProductPackageDetailRes{List: productPackageDetailList}, nil
+}
+
+// getConsumerUuidForInstantOrder 获取堂食订单的消费者UUID
+// 仅在会员端请求时返回会员UUID，其他端返回0
+func (s *orderSrv) getConsumerUuidForInstantOrder(ctx context.Context) uint64 {
+	if ctx.GetSource() == jwt.SourceMember {
+		return ctx.GetMemberUuid()
+	}
+	return 0
 }

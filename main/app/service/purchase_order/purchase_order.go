@@ -51,7 +51,11 @@ type IPurchaseOrderSrv interface {
 	UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error                                           // 更新收货单
 	CancelPurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderCancelReq) error                                           // 取消收货单
 	GetReceiptPendingItems(ctx context.Context, req req.ReceiptPendingItemsReq) (resp.ReceiptPendingItemsResp, error)                      // v2.16.0+ 获取待收货物品
-	GetPurchaseReceiptNewList(ctx context.Context, req req.PurchaseReceiptNewListReq) (resp.PurchaseReceiptNewListResp, error)             // 新收货单列表（按采购单维度）
+	GetPurchaseReceiptNewList(ctx context.Context, req req.PurchaseReceiptNewListReq) (resp.PurchaseReceiptNewListResp, error) // 新收货单列表（按采购单维度）
+
+	// 品牌采购自动审批设置
+	GetBrandPurchaseAutoApprove(ctx context.Context) (int, error)                 // 获取品牌采购自动审批开关
+	SetBrandPurchaseAutoApprove(ctx context.Context, value int) error             // 设置品牌采购自动审批开关
 }
 
 // purchaseOrderSrv 采购申请服务实现
@@ -237,18 +241,75 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 	}
 	// 获取子店所有仓库物品库存（门店数量）
 	if subUuid != 0 {
-		var warehouseItems []model.WarehouseItem
-		subDb := s.dbm.GetDB(subUuid)
-		subDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid in (?)", subDb.Model(&model.Warehouse{}).Select("uuid").Where("delete_time = 0")).Find(&warehouseItems)
+		subWarehouseItemRepo := repository.NewWarehouseItemRepo(s.dbm.GetDB(subUuid))
+		warehouseItems, _ := subWarehouseItemRepo.GetItemsInActiveWarehouses()
 		for _, warehouseItem := range warehouseItems {
 			storeQuantityMap[warehouseItem.MaterialUuid] += warehouseItem.Stock
 		}
 	}
-	// 总店指定仓库物品库存（可采购数量）
-	if hqUuid != 0 {
-		var warehouseItems []model.WarehouseItem
+	// 总店物品默认仓库库存（可采购数量）
+	if hqUuid != 0 && purchaseOrder.IsHeadquarterPurchase() {
 		hqDb := s.dbm.GetDB(hqUuid)
-		hqDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid = (?)", hqDb.Model(&model.Warehouse{}).Select("uuid").Where("erp_code = ? AND delete_time = 0", purchaseOrder.WarehouseErpCode)).Find(&warehouseItems)
+		// 收集采购单中的物品编码和UUID映射
+		itemCodes := make([]string, 0, len(purchaseOrder.Items))
+		itemCodeToMaterialUuid := make(map[string]uint64)
+		materialUuids := make([]uint64, 0, len(purchaseOrder.Items))
+		for _, item := range purchaseOrder.Items {
+			materialUuids = append(materialUuids, item.MaterialUuid)
+			if item.MaterialCode != "" {
+				itemCodes = append(itemCodes, item.MaterialCode)
+				itemCodeToMaterialUuid[item.MaterialCode] = item.MaterialUuid
+			}
+		}
+		// 从 ERPNext 查询每个物品的默认仓库（按总部公司简称）
+		hqCompanyAbbr := companySetting.ErpnextHeadquarterAbbr
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		itemWarehouses, err := erpSrv.GetItemDefaultWarehouses(ctx, itemCodes, hqCompanyAbbr, false)
+		if err == nil && len(itemWarehouses) > 0 {
+			// 收集所有不同的仓库 ErpCode
+			warehouseErpCodes := make(map[string]bool)
+			for _, whErpCode := range itemWarehouses {
+				if whErpCode != "" {
+					warehouseErpCodes[whErpCode] = true
+				}
+			}
+			// 查询各仓库 ErpCode 对应的本地仓库 UUID
+			warehouseRepo := repository.NewWarehouseRepo(hqDb)
+			erpCodeToUuid := make(map[string]uint64)
+			for erpCode := range warehouseErpCodes {
+				wh, err := warehouseRepo.GetByErpCode(erpCode)
+				if err == nil && wh != nil {
+					erpCodeToUuid[erpCode] = wh.Uuid
+				}
+			}
+			// 构建 materialUuid -> warehouseUuid 映射
+			materialWarehouseMap := make(map[uint64]uint64)
+			for itemCode, whErpCode := range itemWarehouses {
+				if materialUuid, ok := itemCodeToMaterialUuid[itemCode]; ok {
+					if warehouseUuid, ok := erpCodeToUuid[whErpCode]; ok {
+						materialWarehouseMap[materialUuid] = warehouseUuid
+					}
+				}
+			}
+			// 查询各物品在总部各仓库的库存
+			hqWarehouseItemRepo := repository.NewWarehouseItemRepo(hqDb)
+			stockByWarehouse, _ := hqWarehouseItemRepo.GetMaterialStockByWarehouse(materialUuids)
+			// 按物品的默认仓库匹配库存
+			for _, stockResult := range stockByWarehouse {
+				if defaultWh, ok := materialWarehouseMap[stockResult.MaterialUuid]; ok && stockResult.WarehouseUuid == defaultWh {
+					avaliableQuantityMap[stockResult.MaterialUuid] = stockResult.Stock
+				}
+			}
+		} else if err != nil {
+			logger.Logger.Warn("获取物品默认仓库失败，可采购数量将为0",
+				zap.Uint64("company_uuid", companySetting.CompanyUuid),
+				zap.Error(err),
+			)
+		}
+	} else if hqUuid != 0 && purchaseOrder.WarehouseErpCode != "" {
+		// 兼容旧数据：如果采购单仍有指定仓库，按原逻辑查询
+		hqWarehouseItemRepo := repository.NewWarehouseItemRepo(s.dbm.GetDB(hqUuid))
+		warehouseItems, _ := hqWarehouseItemRepo.GetByWarehouseErpCode(purchaseOrder.WarehouseErpCode)
 		for _, warehouseItem := range warehouseItems {
 			avaliableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
 		}
@@ -298,6 +359,17 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 	disallowedSet := make(map[string]bool)
 	for _, code := range disallowedMaterials {
 		disallowedSet[code] = true
+	}
+
+	// 品牌采购：查询上次完成的品牌采购基准单位数量
+	lastPurchaseBaseQtyMap := make(map[uint64]float64)
+	if purchaseOrder.IsHeadquarterPurchase() {
+		materialUuids := make([]uint64, 0, len(purchaseOrder.Items))
+		for _, item := range purchaseOrder.Items {
+			materialUuids = append(materialUuids, item.MaterialUuid)
+		}
+		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(db)
+		lastPurchaseBaseQtyMap, _ = purchaseOrderItemRepo.GetLastCompletedBrandPurchaseBaseQty(materialUuids)
 	}
 
 	lang := ctx.GetLanguage()
@@ -386,6 +458,10 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		}(item)
 		itemInfo.AvailableQuantity = decimal.NewFromFloat(avaliableQuantityMap[item.MaterialUuid]).Round(3).InexactFloat64()
 		itemInfo.StoreQuantity = decimal.NewFromFloat(storeQuantityMap[item.MaterialUuid]).Round(3).InexactFloat64()
+		// 上次采购数量（基准单位，后面转换为默认销售单位）
+		itemInfo.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseBaseQtyMap[item.MaterialUuid]).Round(3).InexactFloat64()
+		// 申请时门店库存快照（已按默认销售单位存储）
+		itemInfo.StoreSnapshotQuantity = decimal.NewFromFloat(item.StoreSnapshotQuantity).Round(3).InexactFloat64()
 
 		if item.Material != nil {
 			// 销售单位UUID
@@ -398,6 +474,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 					if unit.ConversionRate != 0 {
 						itemInfo.AvailableQuantity = decimal.NewFromFloat(avaliableQuantityMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 						itemInfo.StoreQuantity = decimal.NewFromFloat(storeQuantityMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+						itemInfo.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseBaseQtyMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 					}
 				}
 			}
@@ -603,9 +680,6 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 		if req.SupplierErpCode == "" {
 			return resp.PurchaseOrderCreateResp{}, errors.New("供应商编码不能为空")
 		}
-		if req.PurchaseType == 2 && req.WarehouseErpCode == "" {
-			return resp.PurchaseOrderCreateResp{}, errors.New("仓库编码不能为空")
-		}
 	}
 
 	db := ctx.GetDB()
@@ -809,9 +883,6 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 			if ctx.Version(context.GTE, "2.6.0") {
 				if req.SupplierErpCode == "" {
 					return errors.New("供应商编码不能为空")
-				}
-				if purchaseOrder.IsHeadquarterPurchase() && req.WarehouseErpCode == "" {
-					return errors.New("仓库编码不能为空")
 				}
 			}
 			// 获取仓库名称
@@ -1180,6 +1251,64 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 			}
 		}
 
+		// 品牌采购：记录提交时的门店库存快照（默认销售单位）
+		if purchaseOrder.IsHeadquarterPurchase() {
+			storeUuid := companySetting.CompanyUuid
+			if storeUuid != 0 {
+				// 收集物品 UUID
+				materialUuids := make([]uint64, 0, len(purchaseOrder.Items))
+				for _, item := range purchaseOrder.Items {
+					if item.Num > 0 {
+						materialUuids = append(materialUuids, item.MaterialUuid)
+					}
+				}
+				// 查询门店所有仓库的基准单位库存
+				storeWarehouseItemRepo := repository.NewWarehouseItemRepo(s.dbm.GetDB(storeUuid))
+				warehouseItems, whErr := storeWarehouseItemRepo.GetItemsInActiveWarehouses()
+				if whErr != nil {
+					logger.Logger.Warn("查询门店仓库库存失败", zap.Uint64("store_uuid", storeUuid), zap.Error(whErr))
+				}
+				storeStockMap := make(map[uint64]float64)
+				for _, wi := range warehouseItems {
+					storeStockMap[wi.MaterialUuid] += wi.Stock
+				}
+				// 查询物品的默认销售单位转换率
+				materialRepo := repository.NewMaterialRepo(tx)
+				materials, matErr := materialRepo.GetMaterialByUuids(materialUuids, materialRepo.WithNotBaseUnitList())
+				if matErr != nil {
+					logger.Logger.Warn("查询物品默认销售单位失败", zap.Error(matErr))
+				}
+				conversionRateMap := make(map[uint64]float64)
+				for _, m := range materials {
+					if m.DefaultSalesUnitUuid > 0 {
+						for _, unit := range m.NotBaseUnitList {
+							if unit.Uuid == m.DefaultSalesUnitUuid && unit.ConversionRate != 0 {
+								conversionRateMap[m.Uuid] = unit.ConversionRate
+							}
+						}
+					}
+				}
+				// 设置每个物品的门店库存快照
+				for i := range purchaseOrder.Items {
+					item := &purchaseOrder.Items[i]
+					if item.Num <= 0 {
+						continue
+					}
+					baseStock := storeStockMap[item.MaterialUuid]
+					if rate, ok := conversionRateMap[item.MaterialUuid]; ok {
+						item.StoreSnapshotQuantity = decimal.NewFromFloat(baseStock).Div(decimal.NewFromFloat(rate)).Round(4).InexactFloat64()
+					} else {
+						item.StoreSnapshotQuantity = decimal.NewFromFloat(baseStock).Round(4).InexactFloat64()
+					}
+					if err := purchaseOrderItemRepo.UpdateByUuid(item.Uuid, map[string]any{
+						"store_snapshot_quantity": item.StoreSnapshotQuantity,
+					}); err != nil {
+						return errors.WithMessage(errors.New("记录门店库存快照失败"), err.Error())
+					}
+				}
+			}
+		}
+
 		oldStatus := purchaseOrder.Status
 		purchaseOrder.Status = constant.PurchaseOrderStatusPending
 		purchaseOrder.OrderTime = time.Now().Unix()
@@ -1198,14 +1327,16 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 			logStatus = constant.PurchaseOrderStatusRecommitted
 
 			// 子店采购单驳回理由清空
-			tx.Model(&model.PurchaseOrder{}).Where("uuid = ?", req.Uuid).Updates(map[string]any{
+			repository.NewPurchaseOrderRepo(tx).UpdateByMap(map[string]any{
 				"reject_reason":      "",
 				"headquarter_status": constant.HeadquarterStatusDraft,
-			})
+			}, repository.CommonRepo.WhereByUuid(req.Uuid))
 			// 总店子店采购单标记删除、清空驳回理由
-			s.dbm.GetDB(companySetting.HeadquarterUuid).Model(&model.PurchaseOrder{}).Where("sub_uuid = ?", req.Uuid).Updates(map[string]any{
+			repository.NewPurchaseOrderRepo(s.dbm.GetDB(companySetting.HeadquarterUuid)).UpdateByMap(map[string]any{
 				"delete_time":   time.Now().Unix(),
 				"reject_reason": "",
+			}, func(db *gorm.DB) *gorm.DB {
+				return db.Where("sub_uuid = ?", req.Uuid)
 			})
 		}
 
@@ -1286,6 +1417,18 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 					return err
 				}
 			}
+
+			// 总部审核品牌采购：校验物品默认仓库配置
+			if companySetting.IsHeadquarter() && purchaseOrder.IsHeadquarterPurchase() && !req.IsConfirm {
+				noWarehouseItems := s.checkItemDefaultWarehouse(ctx, purchaseOrder)
+				if len(noWarehouseItems) > 0 {
+					return errors.NewWithCodeAndData(
+						constant.CodePurchaseOrderItemNoDefaultWarehouse,
+						noWarehouseItems,
+						fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 未配置默认发货仓，请联系管理员处理。是否继续审核？（将由系统指定物品库存仓库进行发货）"), strings.Join(noWarehouseItems, ", ")),
+					)
+				}
+			}
 		}
 
 		// 处理审核逻辑
@@ -1352,7 +1495,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 
 		// 调用ERP接口
 		if ctx.GetCompany().IsOpenErp() && purchaseOrder.Status == constant.PurchaseOrderStatusApproved {
-			return s.handleErpApproval(ctx, tx, &companySetting, purchaseOrder)
+			return s.handleErpApproval(ctx, tx, &companySetting, purchaseOrder, false)
 		}
 
 		return nil
@@ -1401,7 +1544,10 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 		return errors.New("获取总部数据库失败")
 	}
 
-	return headquarterDb.Transaction(func(hqTx *gorm.DB) error {
+	var hqPurchaseOrderUuid uint64
+	var shouldAutoApprove bool
+
+	err := headquarterDb.Transaction(func(hqTx *gorm.DB) error {
 		// 整单复制到总部
 		subUuid := purchaseOrder.Uuid
 		headquarterPurchaseOrder := model.PurchaseOrder{}
@@ -1494,16 +1640,144 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 			return errors.WithMessage(errors.New("创建总部采购申请明细失败"), err.Error())
 		}
 
+		hqPurchaseOrderUuid = headquarterPurchaseOrder.Uuid
+		// 在事务内查询总部设置，避免事务外额外 DB 查询
+		hqSetting := repository.NewCompanySettingRepo(hqTx).Get()
+		shouldAutoApprove = hqSetting.BrandPurchaseAutoApprove == 1
 		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// 总部采购单创建成功后，检查自动审批开关，异步执行总部自动审批
+	if shouldAutoApprove && ctx.GetCompany().IsOpenErp() {
+		headquarterUuid := companySetting.HeadquarterUuid
+		companyUuid := ctx.GetCompanyUuid()
+		lang := ctx.GetLanguage()
+		utils.Go(func() {
+			s.autoApproveHeadquarter(headquarterUuid, companyUuid, hqPurchaseOrderUuid, lang)
+		})
+	}
+
+	return nil
+}
+
+// autoApproveHeadquarter 后台任务：总部自动审批品牌采购单
+// 最多重试3次，使用指数退避（2s, 4s, 8s）
+func (s *purchaseOrderSrv) autoApproveHeadquarter(
+	headquarterUuid uint64,
+	companyUuid uint64,
+	hqPurchaseOrderUuid uint64,
+	lang string,
+) {
+	const maxRetries = 3
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			// 指数退避: 2s, 4s, 8s
+			backoff := time.Duration(1<<uint(attempt)) * time.Second
+			time.Sleep(backoff)
+		}
+
+		err := s.doAutoApproveHeadquarter(headquarterUuid, companyUuid, hqPurchaseOrderUuid, lang)
+		if err == nil {
+			logger.Logger.Info("品牌采购自动审批成功",
+				zap.Uint64("company_uuid", companyUuid),
+				zap.Uint64("headquarter_uuid", headquarterUuid),
+				zap.Uint64("hq_purchase_order_uuid", hqPurchaseOrderUuid),
+				zap.Int("attempt", attempt+1),
+			)
+			return
+		}
+
+		logger.Logger.Error("品牌采购自动审批失败",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.Uint64("headquarter_uuid", headquarterUuid),
+			zap.Uint64("hq_purchase_order_uuid", hqPurchaseOrderUuid),
+			zap.Int("attempt", attempt+1),
+			zap.Int("max_retries", maxRetries),
+			zap.Error(err),
+		)
+	}
+
+	logger.Logger.Error("品牌采购自动审批最终失败，已达最大重试次数",
+		zap.Uint64("company_uuid", companyUuid),
+		zap.Uint64("headquarter_uuid", headquarterUuid),
+		zap.Uint64("hq_purchase_order_uuid", hqPurchaseOrderUuid),
+		zap.Int("max_retries", maxRetries),
+	)
+}
+
+// doAutoApproveHeadquarter 执行总部自动审批（单次尝试）
+func (s *purchaseOrderSrv) doAutoApproveHeadquarter(
+	headquarterUuid uint64,
+	companyUuid uint64,
+	hqPurchaseOrderUuid uint64,
+	lang string,
+) error {
+	headquarterDb := s.dbm.GetDB(headquarterUuid)
+	if headquarterDb == nil {
+		return errors.New("获取总部数据库失败")
+	}
+
+	return headquarterDb.Transaction(func(hqTx *gorm.DB) error {
+		// 加载总部采购单（含明细）
+		hqPORepo := repository.NewPurchaseOrderRepo(hqTx)
+		hqPO, err := hqPORepo.GetByUuid(hqPurchaseOrderUuid, hqPORepo.WithItems())
+		if err != nil {
+			return errors.WithMessage(errors.New("查询总部采购申请失败"), err.Error())
+		}
+
+		// 仅审批待审核状态的采购单
+		if hqPO.Status != constant.PurchaseOrderStatusPending {
+			logger.Logger.Info("品牌采购自动审批跳过：采购单状态非待审核",
+				zap.Uint64("company_uuid", companyUuid),
+				zap.Uint64("hq_purchase_order_uuid", hqPurchaseOrderUuid),
+				zap.Int("status", hqPO.Status),
+			)
+			return nil
+		}
+
+		// 更新总部采购单状态为已通过
+		hqPO.Status = constant.PurchaseOrderStatusApproved
+		hqPO.HeadquarterStatus = constant.HeadquarterStatusApproved
+		hqPO.PassTime = time.Now().Unix()
+		err = hqPORepo.Update(hqPO)
+		if err != nil {
+			return errors.WithMessage(errors.New("更新总部采购申请状态失败"), err.Error())
+		}
+
+		// 构造简易 context 用于 ERP 调用和操作日志
+		ctx := context.NewContext(
+			context.WithCompanyUuid(headquarterUuid),
+			context.WithLanguage(lang),
+			context.WithStaff(model.Staff{RealName: "系统自动审批"}),
+		)
+
+		// 记录自动审批操作日志
+		_ = s.helper.createPurchaseOrderLog(hqTx, hqPO.Uuid, ctx, "approve", "自动审批通过",
+			constant.PurchaseOrderStatusPending, constant.PurchaseOrderStatusApproved, "品牌采购自动审批", "{}")
+
+		// 调用 ERP 审核流程
+		hqCompanySetting := repository.NewCompanySettingRepo(hqTx).Get()
+		err = s.handleErpApproval(ctx, hqTx, &hqCompanySetting, hqPO, true)
+		if err != nil {
+			return err
+		}
+
+		// syncToSubShop: 后台任务不在子店事务内，可安全使用新连接同步
+		return s.syncToSubShop(hqPO)
 	})
 }
 
 // handleErpApproval 处理ERP审核
+// autoApprove: 品牌采购自动审批标记，true 时 ERP 侧 SO 自动提交并生成 DN
 func (s *purchaseOrderSrv) handleErpApproval(
 	ctx context.Context,
 	tx *gorm.DB,
 	companySetting *model.CompanySetting,
 	purchaseOrder *model.PurchaseOrder,
+	autoApprove bool,
 ) error {
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 
@@ -1512,7 +1786,7 @@ func (s *purchaseOrderSrv) handleErpApproval(
 
 	if purchaseOrder.IsHeadquarterPurchase() {
 		// 内部采购
-		erpOrderNo, erpSaleOrderNo, err = s.handleInternalPurchaseErp(ctx, tx, purchaseOrder)
+		erpOrderNo, erpSaleOrderNo, err = s.handleInternalPurchaseErp(ctx, tx, purchaseOrder, autoApprove)
 		if err != nil {
 			return err
 		}
@@ -1533,7 +1807,8 @@ func (s *purchaseOrderSrv) handleErpApproval(
 	}
 
 	// 同步状态到子商户采购申请
-	if purchaseOrder.IsHeadquarterPurchase() {
+	// 自动审批路径下跳过，由 doAutoApproveHeadquarter 在 ERP 完成后统一调用 syncToSubShop
+	if purchaseOrder.IsHeadquarterPurchase() && !autoApprove {
 		return s.syncToSubShop(purchaseOrder)
 	}
 
@@ -1541,11 +1816,22 @@ func (s *purchaseOrderSrv) handleErpApproval(
 }
 
 // handleInternalPurchaseErp 处理内部采购ERP
+// autoApprove: 品牌采购自动审批标记
 func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 	ctx context.Context,
 	tx *gorm.DB,
 	purchaseOrder *model.PurchaseOrder,
+	autoApprove bool,
 ) (string, string, error) {
+	// 获取子公司数据库
+	subDb := s.dbm.GetDB(purchaseOrder.CompanyUuid)
+	if subDb == nil {
+		return "", "", errors.New("获取子店数据库失败")
+	}
+
+	// 查询上次品牌采购数量（默认销售单位），从子店数据库查询
+	lastPurchaseQtyByCode := s.helper.getLastPurchaseQtyByMaterialCode(subDb, purchaseOrder)
+
 	// 构建物料请求项
 	stockItems := make([]*stock.MaterialRequestItem, 0, len(purchaseOrder.Items))
 	for _, item := range purchaseOrder.Items {
@@ -1565,10 +1851,11 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 				erpnextUom = materialUnit.Unit.ErpnextUom
 			}
 			stockItems = append(stockItems, &stock.MaterialRequestItem{
-				ItemCode:     item.MaterialCode,
-				Qty:          item.Num,
-				ScheduleDate: purchaseOrder.ExpectArrivalTime,
-				Uom:          erpnextUom,
+				ItemCode:              item.MaterialCode,
+				Qty:                   item.Num,
+				ScheduleDate:          purchaseOrder.ExpectArrivalTime,
+				Uom:                   erpnextUom,
+				CustomLastPurchaseQty: lastPurchaseQtyByCode[item.MaterialCode],
 			})
 		} else {
 			for _, unit := range item.Units {
@@ -1576,23 +1863,51 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 					continue
 				}
 				stockItems = append(stockItems, &stock.MaterialRequestItem{
-					ItemCode:     item.MaterialCode,
-					Qty:          unit.Num,
-					ScheduleDate: purchaseOrder.ExpectArrivalTime,
-					Uom:          unit.ErpnextUom,
+					ItemCode:              item.MaterialCode,
+					Qty:                   unit.Num,
+					ScheduleDate:          purchaseOrder.ExpectArrivalTime,
+					Uom:                   unit.ErpnextUom,
+					CustomLastPurchaseQty: lastPurchaseQtyByCode[item.MaterialCode],
 				})
 			}
 		}
 	}
 
-	// 获取子公司数据库
-	subDb := s.dbm.GetDB(purchaseOrder.CompanyUuid)
-	if subDb == nil {
-		return "", "", errors.New("获取子店数据库失败")
+	// 查询物品在 ERP 中的默认仓库映射（新流程：采购单无指定仓库时使用）
+	itemDefaultWarehouseMap := make(map[string]uint64)
+	if purchaseOrder.WarehouseErpCode == "" {
+		itemCodes := make([]string, 0, len(purchaseOrder.Items))
+		for _, item := range purchaseOrder.Items {
+			if item.MaterialCode != "" {
+				itemCodes = append(itemCodes, item.MaterialCode)
+			}
+		}
+		companySetting := ctx.GetCompanySetting()
+		hqCompanyAbbr := companySetting.ErpnextCompanyAbbr // 此处是总部审核，companySetting 为总部
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		erpItemWarehouses, erpErr := erpSrv.GetItemDefaultWarehouses(ctx, itemCodes, hqCompanyAbbr, false)
+		if erpErr != nil {
+			logger.Logger.Warn("handleInternalPurchaseErp-查询ERP物品默认仓库失败",
+				zap.Uint64("company_uuid", companySetting.CompanyUuid),
+				zap.Error(erpErr),
+			)
+		} else {
+			// 将 warehouse_erp_code 映射为本地仓库 UUID
+			warehouseRepo := repository.NewWarehouseRepo(tx)
+			for itemCode, whErpCode := range erpItemWarehouses {
+				if whErpCode == "" {
+					continue
+				}
+				wh, err := warehouseRepo.GetByErpCode(whErpCode)
+				if err == nil && wh != nil {
+					itemDefaultWarehouseMap[itemCode] = wh.Uuid
+				}
+			}
+		}
 	}
 
 	// 减总部库存并记录出入库日志
-	err := s.helper.reduceHeadquarterStockAndLog(ctx, subDb, tx, purchaseOrder)
+	err := s.helper.reduceHeadquarterStockAndLog(ctx, subDb, tx, purchaseOrder, itemDefaultWarehouseMap)
 	if err != nil {
 		return "", "", err
 	}
@@ -1601,6 +1916,7 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 	subCompanySetting := repository.NewCompanySettingRepo(subDb).Get()
 
 	// 调用erp接口
+	hqCompanySetting := ctx.GetCompanySetting() // 审核时为总部
 	stockResp, err := erp.NewIErpSrv(s.dbm).SaveMaterialRequest(ctx, subCompanySetting, &stock.SaveMaterialRequestReq{
 		TransactionDate: purchaseOrder.OrderTime,
 		RequiredBy:      purchaseOrder.ExpectArrivalTime,
@@ -1610,10 +1926,12 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 			}
 			return purchaseOrder.SupplierName
 		}(),
-		SourceWarehouse: purchaseOrder.WarehouseErpCode,
-		TargetWarehouse: purchaseOrder.DefaultWarehouseErpCode,
-		Items:           stockItems,
-		RefNo:           purchaseOrder.OrderNo, // 来源单据号，用于跟踪ttpos原始订单号
+		SourceWarehouse:   purchaseOrder.WarehouseErpCode,
+		TargetWarehouse:   purchaseOrder.DefaultWarehouseErpCode,
+		Items:             stockItems,
+		RefNo:             purchaseOrder.OrderNo, // 来源单据号，用于跟踪ttpos原始订单号
+		SourceCompanyAbbr: hqCompanySetting.ErpnextCompanyAbbr,
+		AutoApprove:       autoApprove,
 	})
 	if err != nil {
 		return "", "", s.helper.handleErpError(ctx, err, purchaseOrder)
@@ -1781,14 +2099,13 @@ func (s *purchaseOrderSrv) syncItemSupplierFieldsToSubShop(subDb *gorm.DB, purch
 	}
 
 	// 批量更新子店物品的供应商字段
+	subItemRepo := repository.NewPurchaseOrderItemRepo(subDb)
 	for _, subItem := range subItems {
 		if supplierInfo, ok := materialSupplierMap[subItem.MaterialCode]; ok {
-			if err := subDb.Model(&model.PurchaseOrderItem{}).
-				Where("uuid = ?", subItem.Uuid).
-				Updates(map[string]any{
-					"delivered_by_supplier": supplierInfo.DeliveredBySupplier,
-					"supplier_erp_code":     supplierInfo.SupplierErpCode,
-				}).Error; err != nil {
+			if err := subItemRepo.UpdateByUuid(subItem.Uuid, map[string]any{
+				"delivered_by_supplier": supplierInfo.DeliveredBySupplier,
+				"supplier_erp_code":     supplierInfo.SupplierErpCode,
+			}); err != nil {
 				return err
 			}
 		}
@@ -2071,23 +2388,6 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(
 		return s.receiptSrv.GetPurchaseReceiptOrderList(ctx, reqs)
 	}
 
-	// 定义查询结果结构
-	type QueryResult struct {
-		Uuid         uint64 `json:"uuid"`
-		OrderNo      string `json:"order_no"`
-		ErpOrderNo   string `json:"erp_order_no"`
-		CreateTime   int64  `json:"create_time"`
-		PurchaseType int    `json:"purchase_type"`
-		Type         int    `json:"type"` // 1-收货单 2-采购单
-		ReceiveTime  int64  `json:"receive_time"`
-	}
-
-	var results []QueryResult
-	var total int64
-
-	// 构建查询条件
-	orderNoPattern := "%" + reqs.OrderNo + "%"
-
 	// 时间格式兼容处理函数：前端传毫秒时间戳，数据库存秒时间戳
 	convertTimestamp := func(timestamp int64) int64 {
 		if timestamp <= 0 {
@@ -2100,47 +2400,27 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(
 		return timestamp
 	}
 
-	// 处理时间字段
-	receiveTimeStart := convertTimestamp(reqs.ReceiptTimeStart)
-	receiveTimeEnd := convertTimestamp(reqs.ReceiptTimeEnd)
-
-	// 联合查询
-	sql := `
-		SELECT * FROM (
-			SELECT uuid, order_no, erp_order_no, create_time, purchase_type, 0 as receive_time, 2 as type FROM ttpos_purchase_order
-			WHERE status = ?
-			UNION ALL
-			SELECT uuid, order_no, erp_order_no, create_time, receipt_type as purchase_type, receive_time, 1 as type FROM ttpos_purchase_receipt_order
-			WHERE status in (?)
-		) t 
-		WHERE t.purchase_type = ?
-		AND (t.order_no LIKE ? OR t.erp_order_no LIKE ?)
-	`
-	// 添加收货时间过滤条件
-	if receiveTimeStart > 0 && receiveTimeEnd > 0 {
-		sql += fmt.Sprintf(" AND (t.receive_time >= %d AND t.receive_time <= %d)", receiveTimeStart, receiveTimeEnd)
-	}
-
 	// 状态筛选
 	status := constant.PurchaseOrderStatusApproved
 	if len(reqs.StatusIn) > 0 && reqs.StatusIn[0] != 0 {
 		status = -1
 	}
-
-	// 状态筛选
 	if len(reqs.StatusIn) == 0 {
 		reqs.StatusIn = []int{0, 1, 2}
 	}
 
-	// 先查询总数
-	countSql := fmt.Sprintf(`SELECT COUNT(*) FROM (%s) t`, sql)
-	err := ctx.GetDB().Raw(countSql, status, reqs.StatusIn, reqs.ReceiptType, orderNoPattern, orderNoPattern).Scan(&total).Error
-	if err != nil {
-		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询总数失败"), err.Error())
-	}
-
-	// 执行分页查询
-	err = ctx.GetDB().Raw(sql+" LIMIT ? OFFSET ?", status, reqs.StatusIn, reqs.ReceiptType, orderNoPattern, orderNoPattern, reqs.PageReq.PageSize, reqs.PageSize*(reqs.PageReq.PageNo-1)).Scan(&results).Error
+	// 通过Repository执行联合查询
+	purchaseOrderRepo := repository.NewPurchaseOrderRepo(ctx.GetDB())
+	results, total, err := purchaseOrderRepo.GetPurchaseReceiptOrderUnionList(repository.PurchaseReceiptUnionListParams{
+		Status:           status,
+		StatusIn:         reqs.StatusIn,
+		ReceiptType:      reqs.ReceiptType,
+		OrderNoPattern:   "%" + reqs.OrderNo + "%",
+		ReceiveTimeStart: convertTimestamp(reqs.ReceiptTimeStart),
+		ReceiveTimeEnd:   convertTimestamp(reqs.ReceiptTimeEnd),
+		PageSize:         reqs.PageReq.PageSize,
+		PageNo:           reqs.PageReq.PageNo,
+	})
 	if err != nil {
 		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询列表失败"), err.Error())
 	}
@@ -2374,4 +2654,40 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptNewList(
 			Total:    total,
 		},
 	}, nil
+}
+
+// GetBrandPurchaseAutoApprove 获取品牌采购自动审批开关
+func (s *purchaseOrderSrv) GetBrandPurchaseAutoApprove(ctx context.Context) (int, error) {
+	companySetting := ctx.GetCompanySetting()
+	if !companySetting.IsHeadquarter() {
+		return 0, errors.New("仅总部可操作")
+	}
+	return companySetting.BrandPurchaseAutoApprove, nil
+}
+
+// SetBrandPurchaseAutoApprove 设置品牌采购自动审批开关
+func (s *purchaseOrderSrv) SetBrandPurchaseAutoApprove(ctx context.Context, value int) error {
+	companySetting := ctx.GetCompanySetting()
+	if !companySetting.IsHeadquarter() {
+		return errors.New("仅总部可操作")
+	}
+	if value != 0 && value != 1 {
+		return errors.New("参数值无效")
+	}
+	companyUuid := ctx.GetCompanyUuid()
+	db := ctx.GetDB()
+
+	// 更新商户库
+	data := map[string]any{"brand_purchase_auto_approve": value}
+	if err := repository.NewCompanySettingRepo(db).UpdateByCompanyUuid(companyUuid, data); err != nil {
+		return errors.WithMessage(errors.New("保存商户设置失败"), err.Error())
+	}
+
+	// 同步更新saas主库
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	if err := repository.NewCompanySettingRepo(saasDB).UpdateByCompanyUuid(companyUuid, data); err != nil {
+		return errors.WithMessage(errors.New("保存saas设置失败"), err.Error())
+	}
+
+	return nil
 }

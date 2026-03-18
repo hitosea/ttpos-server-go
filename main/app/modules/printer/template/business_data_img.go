@@ -373,6 +373,27 @@ func (t *businessDataImgTemplate) GetPrintContent(
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.All.AllTakeawayAvgOrderPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 			)
 		}
+		// 点餐方式-扫码
+		if businessData.All.AllScanOrderNum > 0 {
+			img.LineFeed(1, 12)
+			img.SetAlignment(pkg.AlignCenter)
+			img.SetFontWeight(2)
+			img.AppendText(t.base.Translate("点餐方式-扫码"))
+			img.SetFontWeight(1)
+			img.LineFeed(1)
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
+				pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.All.AllScanOrderNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			)
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: t.base.Translate("最小/大订单金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
+				pkg.ColumnConfig{Text: fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.All.AllScanMinOrderPrice), t.base.GetPriceAndUnit(businessData.All.AllScanMaxOrderPrice)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			)
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: t.base.Translate("平均订单金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
+				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.All.AllScanAvgOrderPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			)
+		}
 		// 支付方式
 		img.AppendSplitLine()
 		img.LineFeed(1)

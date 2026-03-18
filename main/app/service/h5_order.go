@@ -58,6 +58,10 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 	if listReq.DeskRegionUuid > 0 {
 		dbOptions = append(dbOptions, h5OrderRepo.WhereDeskRegionUuid(listReq.DeskRegionUuid))
 	}
+	// 订单类型条件（-1=全部、0=桌台扫码订单、1=会员端堂食订单）
+	if listReq.OrderType >= 0 {
+		dbOptions = append(dbOptions, h5OrderRepo.WhereOrderType(listReq.OrderType))
+	}
 	dbOptions = append(
 		dbOptions,
 		h5OrderRepo.WhereIsNeedAudit(1),
@@ -128,6 +132,7 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 				DeskNo:       order.DeskNo,
 				Price:        price,
 				Status:       order.Status,
+				OrderType:    order.OrderType,
 			},
 			DeskRegionUuid: regionUuid,
 			Num:            num,
@@ -244,6 +249,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 				DeskNo:       h5Order.DeskNo,
 				Price:        price,
 				Status:       h5Order.Status,
+				OrderType:    h5Order.OrderType,
 			},
 			DeskUuid: h5Order.DeskUuid,
 			Cashier:  cashier,

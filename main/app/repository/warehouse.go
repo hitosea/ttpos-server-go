@@ -37,6 +37,17 @@ type IWarehouseRepo interface {
 
 	WithItems() DBOption
 	WithMultiLanguageName() DBOption
+
+	// 批量操作
+	UpdateByUuid(uuid uint64, data map[string]any) error
+	DeleteByUuids(uuids []uint64) error
+	DeleteHeadquarterWarehouses() error
+	CreateBatch(warehouses []model.Warehouse) error
+
+	// 条件查询选项
+	WhereErpCodeNotEmpty() DBOption
+
+	UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error
 }
 
 // WarehouseRepoImpl 仓库Repository实现
@@ -299,4 +310,42 @@ func (r *WarehouseRepoImpl) WithMultiLanguageName() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("MultiLanguageName")
 	}
+}
+
+// UpdateByUuid 根据UUID更新仓库数据
+func (r *WarehouseRepoImpl) UpdateByUuid(uuid uint64, data map[string]any) error {
+	return r.db.Model(&model.Warehouse{}).Where("uuid = ?", uuid).Updates(data).Error
+}
+
+// DeleteByUuids 根据UUID列表批量软删除仓库
+func (r *WarehouseRepoImpl) DeleteByUuids(uuids []uint64) error {
+	if len(uuids) == 0 {
+		return nil
+	}
+	return r.db.Model(&model.Warehouse{}).Where("uuid IN (?)", uuids).Update("delete_time", time.Now().Unix()).Error
+}
+
+// DeleteHeadquarterWarehouses 删除所有总部仓库（硬删除）
+func (r *WarehouseRepoImpl) DeleteHeadquarterWarehouses() error {
+	return r.db.Where("headquarter_uuid > 0").Delete(&model.Warehouse{}).Error
+}
+
+// CreateBatch 批量创建仓库
+func (r *WarehouseRepoImpl) CreateBatch(warehouses []model.Warehouse) error {
+	if len(warehouses) == 0 {
+		return nil
+	}
+	return r.db.Create(&warehouses).Error
+}
+
+// WhereErpCodeNotEmpty ERP编码非空条件
+func (r *WarehouseRepoImpl) WhereErpCodeNotEmpty() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erp_code != ''")
+	}
+}
+
+// UpdateNameByMultiLanguageNameUuid 根据多语言名称UUID更新name字段
+func (r *WarehouseRepoImpl) UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error {
+	return r.db.Model(&model.Warehouse{}).Where("multi_language_name_uuid = ?", multiLanguageNameUuid).Update("name", name).Error
 }

@@ -1893,13 +1893,15 @@ func (x *CreatePurchaseOrderReq) GetBuyingPriceList() string {
 
 // 采购订单项目输入
 type PurchaseOrderItemInput struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，必填"` // 物品编码，必填
-	Qty           float64                `protobuf:"fixed64,2,opt,name=qty,proto3" json:"qty,omitempty" dc:"数量，必填"`                           // 数量，必填
-	Rate          float64                `protobuf:"fixed64,3,opt,name=rate,proto3" json:"rate,omitempty" dc:"单价，可选"`                         // 单价，可选
-	Uom           string                 `protobuf:"bytes,4,opt,name=uom,proto3" json:"uom,omitempty" dc:"单位，可选"`                             // 单位，可选
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，必填"` // 物品编码，必填
+	Qty      float64                `protobuf:"fixed64,2,opt,name=qty,proto3" json:"qty,omitempty" dc:"数量，必填"`                           // 数量，必填
+	Rate     float64                `protobuf:"fixed64,3,opt,name=rate,proto3" json:"rate,omitempty" dc:"单价，可选"`                         // 单价，可选
+	Uom      string                 `protobuf:"bytes,4,opt,name=uom,proto3" json:"uom,omitempty" dc:"单位，可选"`                             // 单位，可选
+	// string warehouse = 5; // 仓库，可选
+	CustomLastPurchaseQty float64 `protobuf:"fixed64,6,opt,name=custom_last_purchase_qty,json=customLastPurchaseQty,proto3" json:"custom_last_purchase_qty,omitempty" dc:"string warehouse = 5; // 仓库，可选上次采购数量（默认销售单位），可选，由TTPOS传入"` // 上次采购数量（默认销售单位），可选，由TTPOS传入
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *PurchaseOrderItemInput) Reset() {
@@ -1958,6 +1960,13 @@ func (x *PurchaseOrderItemInput) GetUom() string {
 		return x.Uom
 	}
 	return ""
+}
+
+func (x *PurchaseOrderItemInput) GetCustomLastPurchaseQty() float64 {
+	if x != nil {
+		return x.CustomLastPurchaseQty
+	}
+	return 0
 }
 
 // 创建采购订单响应消息
@@ -2476,12 +2485,13 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\bcurrency\x18\x05 \x01(\tR\bcurrency\x124\n" +
 	"\x05items\x18\x06 \x03(\v2\x1e.buying.PurchaseOrderItemInputR\x05items\x12\x18\n" +
 	"\aremarks\x18\a \x01(\tR\aremarks\x12*\n" +
-	"\x11buying_price_list\x18\b \x01(\tR\x0fbuyingPriceList\"m\n" +
+	"\x11buying_price_list\x18\b \x01(\tR\x0fbuyingPriceList\"\xa6\x01\n" +
 	"\x16PurchaseOrderItemInput\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x10\n" +
 	"\x03qty\x18\x02 \x01(\x01R\x03qty\x12\x12\n" +
 	"\x04rate\x18\x03 \x01(\x01R\x04rate\x12\x10\n" +
-	"\x03uom\x18\x04 \x01(\tR\x03uom\"f\n" +
+	"\x03uom\x18\x04 \x01(\tR\x03uom\x127\n" +
+	"\x18custom_last_purchase_qty\x18\x06 \x01(\x01R\x15customLastPurchaseQty\"f\n" +
 	"\x17CreatePurchaseOrderResp\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1f\n" +

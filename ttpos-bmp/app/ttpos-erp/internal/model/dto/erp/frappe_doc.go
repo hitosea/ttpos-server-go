@@ -78,4 +78,5 @@ type ReportParams struct {
 	ReportName           string `json:"report_name,omitempty"`                           // 报表名称
 	Filters              string `json:"filters,omitempty"`                               //json 格式的筛选条件
 	IgnorePreparedReport bool   `default:"true" json:"ignore_prepared_report,omitempty"` // 是否忽略已准备好的报表
+	PageLength           int    `json:"page_length,omitempty"`                           // 每页条数，0表示不限制
 }

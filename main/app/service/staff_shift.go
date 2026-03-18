@@ -86,6 +86,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 
 	var erpnextOpenPosEntryName string
 	var openingPaymentMethodsStr string
+	shiftVersion := constant.ShiftVersionNew
 	// 调用rpc接口生成PosEntry
 	companySetting := ctx.GetCompanySetting()
 	company := ctx.GetCompany()
@@ -98,7 +99,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 			commonRepo.WhereBySoftDelete(),
 		)
 
-		// 保存支付方式UUID列表（逗号分隔）
+		// 保存支付方式UUID列表（逗号分隔，仅用于内部对账参考）
 		uuids := make([]string, 0)
 		for _, paymentMethod := range paymentMethodList {
 			uuids = append(uuids, fmt.Sprintf("%d", paymentMethod.Uuid))
@@ -107,51 +108,9 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 			openingPaymentMethodsStr = strings.Join(uuids, ",")
 		}
 
-		openPosEntryDetailList := make([]req.OpenPosEntryDetail, 0)
-		for _, paymentMethod := range paymentMethodList {
-			openPosEntryDetail := req.OpenPosEntryDetail{}
-			// 如果是系统默认的现金支付方式，则设置开账金额为上一班次遗留金额
-			if paymentMethod.Source == constant.PaymentMethodSourceSystem && paymentMethod.Code == constant.PaymentMethodCodeCash {
-				if paymentMethod.ErpnextPaymentId != "" {
-					openPosEntryDetail.PaymentId = &paymentMethod.ErpnextPaymentId
-				} else {
-					openPosEntryDetail.ModeOfPayment = "Cash"
-				}
-				openPosEntryDetail.OpeningAmount = previousShiftCash
-				openPosEntryDetailList = append(openPosEntryDetailList, openPosEntryDetail)
-				continue
-			}
-			// 如果是连连支付，并且没有 PaymentID，则跳过该支付方式
-			if paymentMethod.Source == constant.PaymentMethodSourceLianLianPay && paymentMethod.ErpnextPaymentId == "" {
-				continue
-			}
-			// 如果是其他支付方式，并且有 PaymentID 则设置 PaymentID，否则设置 ModeOfPayment
-			// 如果两个字段都为空，则跳过该支付方式（兼容旧数据）
-			if paymentMethod.ErpnextPaymentId != "" {
-				openPosEntryDetail.PaymentId = &paymentMethod.ErpnextPaymentId
-				openPosEntryDetail.OpeningAmount = 0
-				openPosEntryDetailList = append(openPosEntryDetailList, openPosEntryDetail)
-			} else if paymentMethod.ErpnextPayment != "" {
-				openPosEntryDetail.ModeOfPayment = paymentMethod.ErpnextPayment
-				openPosEntryDetail.OpeningAmount = 0
-				openPosEntryDetailList = append(openPosEntryDetailList, openPosEntryDetail)
-			}
-		}
-
-		erpSrv := erp.NewIErpSrv(s.dbm)
-		openPosEntryName, err := erpSrv.OpenPosEntry(ctx.GetContext(), req.OpenPosEntryReq{
-			SiteCode:           companySetting.ErpnextSiteCode,
-			PosProfileName:     companySetting.ErpnextPosProfileName,
-			CashierEmail:       companySetting.ErpnextAdminEmail,
-			CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
-			PeriodStartDate:    time.Now().Unix(),
-			OpenPosEntryDetail: openPosEntryDetailList,
-			Branch:             companySetting.ErpnextBranchName,
-		})
-		if err != nil {
-			return model.StaffShiftLog{}, errors.WithMessage(err, "开账失败")
-		}
-		erpnextOpenPosEntryName = openPosEntryName
+		// 新版班次不再调用 ERP OpenPosEntry
+		// 旧版兼容逻辑保留：如果需要回退到旧版，可通过配置控制
+		// （当前默认全部使用新版，不创建 Opening Entry）
 	}
 
 	shiftLog, err := shiftLogRepo.Create(model.StaffShiftLog{
@@ -165,6 +124,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 
 		ErpnextOpenPosEntryName: erpnextOpenPosEntryName,
 		OpeningPaymentMethods:   openingPaymentMethodsStr,
+		ShiftVersion:            shiftVersion,
 	})
 	if err != nil {
 		return model.StaffShiftLog{}, errors.WithMessage(err, "创建交班记录失败")
@@ -538,20 +498,13 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			})
 			if err != nil {
 				ctx.Log().Info("ClosePosEntry", zap.String("msg", err.Error()))
-				// 1、交班时物品被禁用
+				// 1、交班时物品被禁用 - 记录日志但不阻塞交班
 				msg := utils.ShortenErpnextError(err.Error())
 				if isItemDisabled, itemCode := utils.IsItemDisabledError(msg); isItemDisabled {
-					material, err := repository.NewMaterialRepo(db).GetMaterialByErpCode(itemCode)
-					if err != nil {
-						ctx.Log().Info("GetMaterialByErpCode", zap.String("msg", err.Error()), zap.String("erp_msg", msg))
-						return errors.WithMessage(err)
-					}
-					// 物品被禁用，无法交班
-					tips := i18n.Translate(ctx.GetLanguage(), "物品被禁用，无法交班")
-					name := material.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-					return errors.WithMessage(errors.New(fmt.Sprintf("%s: %s", tips, name)), fmt.Sprintf("物品%s已禁用", name))
+					ctx.Log().Info("ClosePosEntry ItemDisabled, skip", zap.String("item_code", itemCode), zap.String("erp_msg", msg))
+				} else {
+					return errors.WithMessage(errors.New("交班失败，请重试"), "交班失败")
 				}
-				return errors.WithMessage(errors.New("交班失败，请重试"), "交班失败")
 			}
 		}
 		shiftEndTime := time.Now().Unix()
@@ -656,11 +609,13 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 func (s *staffShiftSrv) CountInvoiceCount(ctx context.Context, shiftLogUuid uint64) int64 {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	// 查询当前班次中，所有完成结账的sale_order数量
-	saleOrderCount := int64(0)
-	db.Model(&model.SaleOrder{}).Where("staff_shift_log_uuid = ? and delete_time = 0 and status = ?", shiftLogUuid, constant.SaleOrderStatusFinish).Count(&saleOrderCount)
+	saleOrderCount, _ := repository.NewSaleOrderRepo(db).CountSaleOrders(func(db *gorm.DB) *gorm.DB {
+		return db.Where("staff_shift_log_uuid = ? AND delete_time = 0 AND status = ?", shiftLogUuid, constant.SaleOrderStatusFinish)
+	})
 	// 查询当前班次中，所有return_order数量
-	returnOrderCount := int64(0)
-	db.Model(&model.ReturnOrder{}).Where("staff_shift_log_uuid = ? and delete_time = 0", shiftLogUuid).Count(&returnOrderCount)
+	returnOrderCount, _ := repository.NewReturnOrderRepo(db).CountReturnOrders(func(db *gorm.DB) *gorm.DB {
+		return db.Where("staff_shift_log_uuid = ? AND delete_time = 0", shiftLogUuid)
+	})
 	return returnOrderCount + saleOrderCount
 }
 
@@ -1312,6 +1267,13 @@ func (s *staffShiftSrv) ValidatePaymentMethod(ctx context.Context, shiftNo strin
 	if err != nil {
 		return false, errors.WithMessage(err, "班次记录不存在")
 	}
+
+	// 新版班次（无ERP开关帐）：不再限制支付方式，直接允许使用
+	if shiftLog.IsNewShiftVersion() {
+		return true, nil
+	}
+
+	// === 以下为旧版班次（ShiftVersion=1）的兼容逻辑 ===
 
 	// 如果未保存支付方式列表（历史数据），返回 false（不允许使用）
 	if shiftLog.OpeningPaymentMethods == "" {

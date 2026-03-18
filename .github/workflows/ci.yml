@@ -1,0 +1,236 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop, dev, release, test, 'release/*']
+
+env:
+  GO_VERSION: '1.23'
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  # Gate: skip entire pipeline by adding 'skip-ci' label to PR
+  # ═══════════════════════════════════════════════════════════════
+
+  check-skip:
+    name: Check Skip
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-ci') }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "CI not skipped"
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 1: Quality (Concurrent)
+  # ═══════════════════════════════════════════════════════════════
+
+  quality-lint:
+    name: Lint
+    needs: [check-skip]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: main/go.sum
+
+      - name: Run go vet
+        working-directory: main
+        run: go vet ./... || { go clean -cache && go vet ./...; }
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.62.2
+          working-directory: main
+          args: --new-from-rev=origin/${{ github.base_ref }}
+
+  quality-unit-main:
+    name: Main Unit Tests
+    needs: [check-skip]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: main/go.sum
+
+      - name: Main Unit Tests
+        run: |
+          mkdir -p coverage
+          cd main && go test -short -v -count=1 -coverprofile=../coverage/unit.out -covermode=set ./...
+          bash tests/fix-coverage-paths.sh ../coverage/unit.out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage
+          path: coverage/unit.out
+          retention-days: 3
+
+  quality-unit-bmp:
+    name: BMP Unit Tests
+    needs: [check-skip]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: ttpos-bmp/go.sum
+
+      - name: BMP Unit Tests
+        working-directory: ttpos-bmp
+        run: |
+          mkdir -p ../coverage
+          go test -count=1 -coverprofile=../coverage/bmp-unit.out -covermode=set ./...
+          bash tests/fix-coverage-paths.sh ../coverage/bmp-unit.out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bmp-unit-coverage
+          path: coverage/bmp-unit.out
+          retention-days: 3
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 2: Integration (Concurrent)
+  # ═══════════════════════════════════════════════════════════════
+
+  int-main:
+    name: Main Integration Tests
+    needs: [quality-lint, quality-unit-main, quality-unit-bmp]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: main/go.sum
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          registry: hub.hitosea.com
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Run Main Integration
+        run: make test-main-local BUILD_ID="${GITHUB_RUN_ID}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: int-coverage
+          path: coverage/total.out
+          retention-days: 3
+
+  int-bmp:
+    name: BMP Integration Tests
+    needs: [quality-lint, quality-unit-main, quality-unit-bmp]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: ttpos-bmp/go.sum
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          registry: hub.hitosea.com
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Run BMP Integration
+        run: make test-bmp-local BUILD_ID="${GITHUB_RUN_ID}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bmp-int-coverage
+          path: coverage/bmp-total.out
+          retention-days: 3
+
+  # ═══════════════════════════════════════════════════════════════
+  # PHASE 3: SonarQube Analysis
+  # ═══════════════════════════════════════════════════════════════
+
+  sonarqube:
+    name: SonarQube Analysis
+    needs: [int-main, int-bmp]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: coverage/
+
+      - name: Merge coverage reports
+        run: |
+          shopt -s nullglob
+          out_files=(coverage/**/*.out)
+          shopt -u nullglob
+
+          if [[ ${#out_files[@]} -eq 0 ]]; then
+            echo "No coverage files found, creating empty final.out"
+            echo "mode: set" > coverage/final.out
+            exit 0
+          fi
+
+          # Filter out final.out and get first file for header
+          first_file=""
+          for f in "${out_files[@]}"; do
+            [[ "$f" != *"final.out" ]] && first_file="$f" && break
+          done
+
+          if [[ -n "$first_file" ]]; then
+            head -1 "$first_file" > coverage/final.out
+            for f in "${out_files[@]}"; do
+              [[ "$f" != *"final.out" ]] && tail -n +2 "$f" >> coverage/final.out
+            done
+          else
+            echo "mode: set" > coverage/final.out
+          fi
+
+      - name: Verify coverage merge
+        run: |
+          if [[ -f coverage/final.out ]]; then
+            echo "Coverage report created:"
+            head -1 coverage/final.out
+            wc -l coverage/final.out
+          fi
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+        with:
+          args: >
+            -Dproject.settings=sonar-project.properties
+            -Dsonar.go.coverage.reportPaths=coverage/final.out
+            -Dsonar.scm.revision=${{ github.event.pull_request.head.sha || github.sha }}
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
+            -Dsonar.pullrequest.branch=${{ github.head_ref }}
+            -Dsonar.pullrequest.base=${{ github.base_ref }}

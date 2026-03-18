@@ -85,6 +85,23 @@ func (req *CreateMemberOrderReq) Validate() error {
 		if product.FlavorUuid <= 0 {
 			return errors.New("商品规格ID不能为0")
 		}
+		// 套餐校验
+		if product.ProductType == 1 {
+			if len(product.Products) == 0 {
+				return errors.New("套餐子商品不能为空")
+			}
+			for _, sub := range product.Products {
+				if sub.FlavorUuid <= 0 {
+					return errors.New("套餐子商品规格ID不能为0")
+				}
+				if sub.Num <= 0 {
+					return errors.New("套餐子商品数量不能为0")
+				}
+				if sub.ProductPackageGroupUuid <= 0 {
+					return errors.New("套餐子商品分组ID不能为0")
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -93,15 +110,96 @@ type GetMemberOrderFormInfoReq struct {
 	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 }
 
+// GetDineInOrderFormInfoReq 获取堂食订单提交表单信息请求参数
+type GetDineInOrderFormInfoReq struct {
+	SaleBillUuid  uint64 `form:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
+	SaleOrderUuid uint64 `form:"sale_order_uuid" binding:"required"` // 销售订单UUID
+}
+
+// PayDineInOrderReq 堂食订单提交支付请求参数
+type PayDineInOrderReq struct {
+	SaleBillUuid      uint64 `json:"sale_bill_uuid" binding:"required"`      // 销售账单UUID
+	SaleOrderUuid     uint64 `json:"sale_order_uuid" binding:"required"`     // 销售订单UUID
+	PaymentMethodUuid uint64 `json:"payment_method_uuid" binding:"required"` // 支付方式UUID
+	Remark            string `json:"remark"`                                 // 订单备注
+}
+
+// SetDineInOrderDiningMethodReq 设置堂食订单用餐方式请求参数
+type SetDineInOrderDiningMethodReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+	DiningMethod uint   `json:"dining_method"`                     // 用餐方式 0:堂食 1:打包
+}
+
+// GetDineInOrderPayInfoReq 获取堂食订单支付信息请求参数
+type GetDineInOrderPayInfoReq struct {
+	SaleBillUuid      uint64 `form:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
+	SaleOrderUuid     uint64 `form:"sale_order_uuid" binding:"required"` // 销售订单UUID
+	PaymentMethodUuid uint64 `form:"payment_method_uuid"`                // 支付方式UUID
+}
+
+// GetDineInOrderPayStatusReq 获取堂食订单支付状态请求参数
+type GetDineInOrderPayStatusReq struct {
+	SaleBillUuid  uint64 `form:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
+	SaleOrderUuid uint64 `form:"sale_order_uuid" binding:"required"` // 销售订单UUID
+}
+
+// CheckDineInOrderReq 会员端堂食订单结算前检查请求参数
+type CheckDineInOrderReq struct {
+	SaleBillUuid  uint64 `form:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
+	SaleOrderUuid uint64 `form:"sale_order_uuid" binding:"required"` // 销售订单UUID
+}
+
+// 创建会员端堂食订单请求参数
+type CreateMemberDineInOrderReq struct {
+	SaleBillUuid  uint64               `json:"sale_bill_uuid"`  // 销售账单UUID. 值为0时，表示创建新订单。值不为0时，表示向已有订单添加商品。
+	SaleOrderUuid uint64               `json:"sale_order_uuid"` // 销售订单UUID. 更新订单时必填。
+	Products      []OrderProductAddReq `json:"products"`        // 商品列表
+}
+
+func (req *CreateMemberDineInOrderReq) Validate() error {
+	if len(req.Products) == 0 {
+		return errors.New("未选购商品，请先选购商品")
+	}
+	for _, product := range req.Products {
+		if product.Num <= 0 {
+			return errors.New("商品数量不能为0")
+		}
+		if product.FlavorUuid <= 0 {
+			return errors.New("商品规格ID不能为0")
+		}
+		// 套餐校验
+		if product.ProductType == 1 {
+			if len(product.Products) == 0 {
+				return errors.New("套餐子商品不能为空")
+			}
+			for _, sub := range product.Products {
+				if sub.FlavorUuid <= 0 {
+					return errors.New("套餐子商品规格ID不能为0")
+				}
+				if sub.Num <= 0 {
+					return errors.New("套餐子商品数量不能为0")
+				}
+				if sub.ProductPackageGroupUuid <= 0 {
+					return errors.New("套餐子商品分组ID不能为0")
+				}
+			}
+		}
+	}
+	return nil
+}
+
 type OrderProductAddReq struct {
-	FlavorUuid        uint64   `json:"flavor_uuid"`    // 某个规格商品ID
-	SauceUuidList     []uint64 `json:"sauce_uuid"`     // 小料ID列表
-	AttributeUuidList []uint64 `json:"attribute_uuid"` // 属性ID列表
-	Num               float64  `json:"num"`            // 商品数量。
-	Price             float64  `json:"price"`          // 商品价格单价。
+	FlavorUuid        uint64           `json:"flavor_uuid"`    // 某个规格商品ID
+	SauceUuidList     []uint64         `json:"sauce_uuid"`     // 小料ID列表
+	AttributeUuidList []uint64         `json:"attribute_uuid"` // 属性ID列表
+	Num               float64          `json:"num"`            // 商品数量。
+	Price             float64          `json:"price"`          // 商品价格单价。
+	ProductType       uint             `json:"product_type"`   // 商品类型 0-商品 1-套餐
+	Products          []ProductRequest `json:"products"`       // 套餐子商品列表（套餐时必填）
 }
 
 // 商品key。格式：规格id-属性id,属性id-加料id,加料id
+// 套餐商品key。格式：pkg:规格id-子商品签名
 func (req *OrderProductAddReq) ProductKey(attributeUuidList []uint64) string {
 	// 先排序
 	sort.Slice(attributeUuidList, func(i, j int) bool {
@@ -120,8 +218,45 @@ func (req *OrderProductAddReq) ProductKey(attributeUuidList []uint64) string {
 	for _, sauceUuid := range req.SauceUuidList {
 		SauceUuidListStr = append(SauceUuidListStr, fmt.Sprintf("%d", sauceUuid))
 	}
-	// 按照“规格id-属性id,属性id-加料id,加料id”的格式拼接
-	return fmt.Sprintf("%d-%s-%s", req.FlavorUuid, strings.Join(AttributeUuidListStr, ","), strings.Join(SauceUuidListStr, ","))
+
+	baseKey := fmt.Sprintf("%d-%s-%s", req.FlavorUuid, strings.Join(AttributeUuidListStr, ","), strings.Join(SauceUuidListStr, ","))
+
+	// 套餐商品：加 pkg: 前缀 + 子商品签名
+	if req.ProductType == 1 {
+		return "pkg:" + baseKey + "-" + req.packageSubProductSign()
+	}
+	return baseKey
+}
+
+// packageSubProductSign 生成套餐子商品签名，用于区分不同配置的同一套餐
+func (req *OrderProductAddReq) packageSubProductSign() string {
+	type subKey struct {
+		FlavorUuid              uint64
+		ProductPackageGroupUuid uint64
+		Num                     float64
+		UnitNum                 float64
+	}
+	subKeys := make([]subKey, 0, len(req.Products))
+	for _, sub := range req.Products {
+		subKeys = append(subKeys, subKey{
+			FlavorUuid:              sub.FlavorUuid,
+			ProductPackageGroupUuid: sub.ProductPackageGroupUuid,
+			Num:                     sub.Num,
+			UnitNum:                 sub.UnitNum,
+		})
+	}
+	// 排序保证相同配置的套餐生成相同签名
+	sort.Slice(subKeys, func(i, j int) bool {
+		if subKeys[i].ProductPackageGroupUuid != subKeys[j].ProductPackageGroupUuid {
+			return subKeys[i].ProductPackageGroupUuid < subKeys[j].ProductPackageGroupUuid
+		}
+		return subKeys[i].FlavorUuid < subKeys[j].FlavorUuid
+	})
+	parts := make([]string, 0, len(subKeys))
+	for _, sk := range subKeys {
+		parts = append(parts, fmt.Sprintf("%d:%d:%.2f:%.2f", sk.ProductPackageGroupUuid, sk.FlavorUuid, sk.Num, sk.UnitNum))
+	}
+	return strings.Join(parts, "|")
 }
 
 // 判断是不是自助餐

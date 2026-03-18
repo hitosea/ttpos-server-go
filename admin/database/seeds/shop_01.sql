@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '销售账单编号',
     `duty_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '当班编号,用于标记该账单属于哪个当班',
     `serial_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号 (点餐流水号)',
-    `bill_type` INT(10) NOT NULL DEFAULT 0 COMMENT '账单类型, 0-桌台订单、1-点餐订单、2-会员端订单',
+    `bill_type` INT(10) NOT NULL DEFAULT 0 COMMENT '账单类型, 0-桌台订单、1-点餐订单(包括会员端的堂食订单)、2-会员端订单(仅外送)',
     `dining_method` INT(10) NOT NULL DEFAULT 0 COMMENT '用餐方式,0-堂食(店内就餐) 1-打包',
     `order_source_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '订单来源UUID（0=店内，>0=外卖）',
     `order_source_name` TEXT COMMENT '订单来源名称快照（JSON），不随后台更新',
@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `hide_bill_time` INT(10) NOT NULL DEFAULT 0 COMMENT '隐藏账单(挂单)时间(时间戳)',
     `lock_time` INT(10) NOT NULL DEFAULT 0 COMMENT '锁单时间',
     `production_time` INT(10) NOT NULL DEFAULT 0 COMMENT '首次送厨时间(时间戳)',
+    `submit_pay_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '提交支付时间（时间戳）',
     `finish_time` INT(10) NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳),结账时间',
     `is_kitchen_confirm` INT(10) NOT NULL DEFAULT 0 COMMENT '厨显是否确认退菜，确认后不在厨显端显示已经整单取消的菜品,0:未确认,1:已确认',
     `reverse_settle_count` INT(10) NOT NULL DEFAULT 0 COMMENT '反结账次数',
@@ -148,9 +149,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     -- 收银员名称
     `cashier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银员名称',
     -- erp相关
-    `erp_products_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品发票名称',
-    `erp_material_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原材料发票名称',
     `erp_discount_amount` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '订单应收优惠金额，整单改价优惠掉的金额',
+    `erp_sales_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'Sales Invoice名称',
+    `erp_payment_entry_names` TEXT NULL COMMENT 'Payment Entry名称(JSON)',
+    `erp_sync_status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'ERP同步状态: 0=未同步 1=已入队 2=进行中 3=成功 4=失败',
+    `erp_reverse_count` INT(11) NOT NULL DEFAULT 0 COMMENT '反结账次数',
+    `erp_stock_deducted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '库存是否已通过StockEntry扣减',
     -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
@@ -602,8 +606,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '扫码订单ID',
     `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台uuid',
-    `desk_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌台编号',
+    `desk_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌台编号（桌台扫码订单）或取餐号（会员端堂食订单）',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-未下单 1-未接单 2-已接单 3-已拒单',
+    `order_type` INT(10) NOT NULL DEFAULT 0 COMMENT '订单类型, 0-桌台扫码订单 1-会员端堂食订单',
     `is_need_audit` int(11) DEFAULT 1 COMMENT '是否需要审核，0-不需要审核，直接送厨 1-需要审核',
     `is_auto_accept` INT(10) NOT NULL DEFAULT 0 COMMENT '是否自动接单, 0-否 1-是',
     `is_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否是自助餐, 0-非自助餐 1-自助餐',
@@ -1183,6 +1188,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item` (
     `base_erpnext_uom` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext基准单位',
     `delivered_by_supplier` INT(10) NOT NULL DEFAULT 0 COMMENT '是否由供应商配送，0-否，1-是',
     `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商ERP编码',
+    `store_snapshot_quantity` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '申请时门店库存（默认销售单位，如不存在，取基准单位）',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1234,6 +1240,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order` (
     `target_warehouse_name` TEXT COMMENT '目标仓库名称',
     `delivery_note_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP Delivery Note号',
     `is_from_delivery_note` INT(10) NOT NULL DEFAULT 0 COMMENT '是否来自DN单:0-否 1-是',
+    `is_auto_receipt` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否自动收货:0-否 1-是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1937,6 +1944,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order` (
     `balance`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '充值前会员余额',
     `balance_recharged`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '充值后会员余额',
     `erp_products_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品发票名称',
+    `erp_payment_entry_names` TEXT DEFAULT NULL COMMENT 'Payment Entry名称(JSON)',
+    `erp_sync_status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'ERP同步状态: 0=未同步 1=已入队 3=成功 4=失败',
     `reverse_settle_count` INT(11) NOT NULL DEFAULT 0 COMMENT '反结账次数',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -2577,8 +2586,11 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `enable_table_map` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用桌台地图能力：0-否；1-是',
     `enable_data_management` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用数据管理能力：0-否；1-是',
     `enable_kiosk` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用自助点餐机：0-否；1-是',
+    `is_open_member_instant` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启会员端即时点餐功能（扫码点餐到店自取）: 0不开启, 1开启',
     `enable_grab_delivery` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用Grab外卖：0-否；1-是',
     `enable_lineman_delivery` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用LINE MAN外卖：0-否；1-是',
+    `erp_invoice_mode` INT(11) NOT NULL DEFAULT 1 COMMENT 'ERP发票模式: 0=POS Invoice 1=Sales Invoice',
+    `brand_purchase_auto_approve` INT(3) NOT NULL DEFAULT 0 COMMENT '品牌采购自动审批: 0-关闭 1-开启',
     `is_open_kitchen_kds` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
     `is_open_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
     `is_open_h5_order` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
@@ -2787,6 +2799,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_shift_log` (
     `erpnext_close_pos_entry_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext结账名称',
     `erpnext_async_record_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext异步记录ID',
     `opening_payment_methods` VARCHAR(2000) NOT NULL DEFAULT '' COMMENT '开账时的支付方式UUID列表（逗号分隔）',
+    `shift_version` TINYINT(1) NOT NULL DEFAULT 2 COMMENT '班次版本: 1=旧版(有ERP开关帐) 2=新版(无ERP开关帐)',
     `shift_end_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '当班结束时间',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -3511,7 +3524,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation` (
   `uuid` bigint NOT NULL DEFAULT 0 COMMENT '盘点单ID',
   `order_no` varchar(255) NOT NULL DEFAULT '' COMMENT '单据编号',
   `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP盘点单号',
-  `type` int(10) NOT NULL DEFAULT 1 COMMENT '盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘',
+  `type` int(10) NOT NULL DEFAULT 1 COMMENT '盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点',
   `warehouse_uuid` bigint NOT NULL DEFAULT 0 COMMENT '仓库ID',
   `purpose` int(10) NOT NULL DEFAULT 1 COMMENT '盘点目的 1-库存盘点 2-期初盘点',
   `status` int(10) NOT NULL DEFAULT 0 COMMENT '状态 0-已保存 1-已提交 2-已审核 3-已驳回',
@@ -3576,6 +3589,41 @@ CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation_annotation` (
   KEY `idx_stock_reconciliation_uuid` (`stock_reconciliation_uuid`),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点单批注表';
+
+-- 盘点快照-未出库订单快照
+CREATE TABLE IF NOT EXISTS `ttpos_stocktake_snapshot` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT 'UUID',
+  `stock_reconciliation_uuid` bigint NOT NULL DEFAULT 0 COMMENT '关联盘点单UUID',
+  `item_code` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP物品编码',
+  `warehouse_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP仓库编码',
+  `pending_qty` decimal(12,3) NOT NULL DEFAULT 0 COMMENT '待扣减数量',
+  `order_count` int NOT NULL DEFAULT 0 COMMENT '涉及订单数',
+  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `idx_uuid` (`uuid`),
+  KEY `idx_stock_reconciliation_uuid` (`stock_reconciliation_uuid`),
+  KEY `idx_item_warehouse` (`item_code`, `warehouse_erp_code`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点快照-未出库订单快照';
+
+-- 库存扣减日志-Stock Entry item级别记录
+CREATE TABLE IF NOT EXISTS `ttpos_stock_deduction_log` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT 'UUID',
+  `sale_order_uuid` bigint NOT NULL DEFAULT 0 COMMENT '关联订单UUID',
+  `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP物品编码(item_code)',
+  `qty` decimal(14,4) NOT NULL DEFAULT 0 COMMENT '扣减数量',
+  `stock_entry_name` varchar(255) NOT NULL DEFAULT '' COMMENT '关联的Stock Entry单据名',
+  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `idx_uuid` (`uuid`),
+  KEY `idx_order_erp_code` (`sale_order_uuid`, `erp_code`),
+  KEY `idx_erp_code` (`erp_code`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='库存扣减日志-Stock Entry item级别记录';
 
 -- 报损单主表
 CREATE TABLE IF NOT EXISTS `ttpos_stock_loss` (
@@ -4103,6 +4151,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order` (
     `accepted_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '接单人UUID',
     `staff_shift_log_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '员工班次日志UUID',
     `erp_pos_invoice_resp` text COMMENT 'ERP POS Invoice响应数据(JSON)',
+    `erp_sync_status` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'ERP同步状态: 0=未同步 1=已入队 3=成功 4=失败',
+    `erp_stock_deducted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '库存是否已通过StockEntry扣减',
     `rejected_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '拒单人UUID',
     `reject_reason_code` varchar(50) NOT NULL DEFAULT '' COMMENT '拒单原因代码',
     `reject_reason` varchar(255) NOT NULL DEFAULT '' COMMENT '拒单原因',

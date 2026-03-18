@@ -240,6 +240,7 @@ CREATE TABLE `ttpos_company_setting` (
     `enable_table_map` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用桌台地图能力：0-否；1-是',
     `enable_data_management` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用数据管理能力：0-否；1-是',
     `enable_kiosk` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用自助点餐机：0-否；1-是',
+    `is_open_member_instant` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启会员端即时点餐功能（扫码点餐到店自取）: 0不开启, 1开启',
     `enable_grab_delivery` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用Grab外卖：0-否；1-是',
     `is_open_kitchen_kds` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
     `is_open_buffet` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
@@ -652,5 +653,65 @@ CREATE TABLE `ttpos_db_pool_stats` (
   KEY `idx_sample_time` (`sample_time`),
   KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据库连接池统计记录表';
+
+-- ----------------------------
+-- Table structure for ttpos_auto_receipt_rule
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_auto_receipt_rule`;
+CREATE TABLE IF NOT EXISTS `ttpos_auto_receipt_rule` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '唯一标识',
+  `headquarter_company_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '总部company_uuid（租户隔离）',
+  `name` varchar(1000) NOT NULL DEFAULT '' COMMENT '规则名称（多语言JSON）',
+  `warehouse_erp_code` varchar(100) NOT NULL DEFAULT '' COMMENT '发货仓库ERP编码',
+  `delay_days` int NOT NULL DEFAULT '0' COMMENT 'DN发送后N天自动收货（0=当天24:00）',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态：1=启用，0=禁用',
+  `create_time` int unsigned NOT NULL DEFAULT '0' COMMENT '创建时间',
+  `update_time` int unsigned NOT NULL DEFAULT '0' COMMENT '更新时间',
+  `delete_time` int unsigned NOT NULL DEFAULT '0' COMMENT '删除时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_uuid` (`uuid`),
+  KEY `idx_hq_status` (`headquarter_company_uuid`,`status`,`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='品采自动收货规则主表';
+
+-- ----------------------------
+-- Table structure for ttpos_auto_receipt_rule_shop
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_auto_receipt_rule_shop`;
+CREATE TABLE IF NOT EXISTS `ttpos_auto_receipt_rule_shop` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '唯一标识',
+  `rule_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '关联规则主表UUID',
+  `shop_company_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '门店company_uuid',
+  `create_time` int unsigned NOT NULL DEFAULT '0' COMMENT '创建时间',
+  `update_time` int unsigned NOT NULL DEFAULT '0' COMMENT '更新时间',
+  `delete_time` int unsigned NOT NULL DEFAULT '0' COMMENT '删除时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_uuid` (`uuid`),
+  KEY `idx_rule` (`rule_uuid`,`delete_time`),
+  KEY `idx_shop` (`shop_company_uuid`,`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='品采自动收货规则门店子表';
+
+-- ----------------------------
+-- Table structure for ttpos_auto_receipt_log
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_auto_receipt_log`;
+CREATE TABLE IF NOT EXISTS `ttpos_auto_receipt_log` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '唯一标识',
+  `headquarter_company_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '总部company_uuid（租户隔离）',
+  `rule_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '触发规则UUID（关联auto_receipt_rule）',
+  `shop_company_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '门店company_uuid',
+  `receipt_order_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '收货单UUID',
+  `receipt_order_no` varchar(100) NOT NULL DEFAULT '' COMMENT '收货单号',
+  `receipt_erp_order_no` varchar(255) NOT NULL DEFAULT '' COMMENT '收货单ERP单号',
+  `receipt_time` int unsigned NOT NULL DEFAULT '0' COMMENT '收货日期（当天0点时间戳，筛选用）',
+  `create_time` int unsigned NOT NULL DEFAULT '0' COMMENT '创建时间',
+  `update_time` int unsigned NOT NULL DEFAULT '0' COMMENT '更新时间',
+  `delete_time` int unsigned NOT NULL DEFAULT '0' COMMENT '删除时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_uuid` (`uuid`),
+  KEY `idx_hq_date` (`headquarter_company_uuid`,`receipt_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='品采自动收货记录表';
 
 SET FOREIGN_KEY_CHECKS = 1;

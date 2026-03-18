@@ -303,13 +303,14 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 
 	itemList := make([]g.MapStrAny, 0)
 	for _, item := range req.Items {
-		itemList = append(itemList, g.MapStrAny{
+		itemData := g.MapStrAny{
 			"item_code":     item.ItemCode,
 			"qty":           item.Qty,
 			"uom":           item.Uom,
 			"schedule_date": service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.RequiredBy)).Format("Y-m-d"),
 			"warehouse":     targetWarehouseName,
-		})
+		}
+		itemList = append(itemList, itemData)
 	}
 	data["items"] = itemList
 	resp, err := service.Document().Create(ctx, erp.DocTypeMaterialRequest, &data)
@@ -433,46 +434,7 @@ func (s *sStock) getCompanyInfo(ctx context.Context, companyAbbr string) (*compa
 
 // queryStockLedgerList 执行库存分类账查询
 func (s *sStock) queryStockLedgerList(ctx context.Context, companyName string, req *stock.GetStockLedgerReq) ([]*stock.StockLedger, error) {
-	// 构建查询过滤器
-	filters := gjson.New(g.Map{
-		"company": companyName,
-	})
-
-	// 按仓库过滤
-	if len(req.Warehouse) > 0 {
-		filters.Set("warehouse", req.Warehouse)
-	} else if len(req.Branch) > 0 {
-		// 如果没有指定仓库但指定了分支，获取默认仓库
-		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName, req.Branch)
-		if err == nil && len(warehouse.Name) > 0 {
-			filters.Set("warehouse", warehouse.Name)
-		}
-	}
-
-	// 按物品编码过滤
-	if len(req.ItemCode) > 0 {
-		filters.Set("item_code", req.ItemCode)
-	}
-
-	// 按凭证编号过滤
-	if len(req.VoucherNo) > 0 {
-		filters.Set("voucher_no", req.VoucherNo)
-	}
-
-	// 按日期范围过滤
-	if len(req.FromDate) > 0 {
-		filters.Set("from_date", req.FromDate)
-	}
-	if len(req.ToDate) > 0 {
-		filters.Set("to_date", req.ToDate)
-	}
-
-	// 设置查询限制
-	if req.Limit > 0 && req.Limit <= 1000 {
-		filters.Set("limit", req.Limit)
-	} else {
-		filters.Set("limit", consts.Limit100)
-	}
+	filters := s.buildStockLedgerFilters(ctx, companyName, req)
 
 	// 执行库存分类账报表查询
 	resp, err := service.Report().Run(ctx, &erp.ReportParams{
@@ -485,57 +447,88 @@ func (s *sStock) queryStockLedgerList(ctx context.Context, companyName string, r
 	}
 
 	// 解析响应数据
-	j := resp
-
-	// 转换为库存分类账列表
-	dataArray := j.GetJsons("message.result")
+	dataArray := resp.GetJsons("message.result")
 	stockLedgerList := make([]*stock.StockLedger, 0, len(dataArray))
 
 	for _, data := range dataArray {
-		// 检查是否存在必要的数据字段
-		if data.Contains("item_code") {
-			// 直接使用StockLedger结构体解析
-			var ledger erp.StockLedger
-			if err := gconv.Struct(data, &ledger); err != nil {
-				g.Log().Warningf(ctx, "解析库存分类账数据失败: %v", err)
-				continue
-			}
-
-			// 转换为API响应格式
-			stockLedger := &stock.StockLedger{
-				ItemCode:             ledger.ItemCode,
-				Date:                 ledger.Date,
-				Warehouse:            ledger.Warehouse,
-				PostingDate:          ledger.PostingDate,
-				PostingTime:          ledger.PostingTime,
-				ActualQty:            ledger.ActualQty,
-				IncomingRate:         ledger.IncomingRate,
-				ValuationRate:        ledger.ValuationRate,
-				Company:              ledger.Company,
-				VoucherType:          ledger.VoucherType,
-				QtyAfterTransaction:  ledger.QtyAfterTransaction,
-				StockValueDifference: ledger.StockValueDifference,
-				SerialAndBatchBundle: s.safeStringValue(ledger.SerialAndBatchBundle),
-				VoucherNo:            ledger.VoucherNo,
-				StockValue:           ledger.StockValue,
-				BatchNo:              s.safeStringValue(ledger.BatchNo),
-				SerialNo:             s.safeStringValue(ledger.SerialNo),
-				Project:              s.safeStringValue(ledger.Project),
-				Name:                 ledger.Name,
-				ItemName:             ledger.ItemName,
-				Description:          ledger.Description,
-				ItemGroup:            ledger.ItemGroup,
-				Brand:                s.safeStringValue(ledger.Brand),
-				StockUom:             ledger.StockUom,
-				InQty:                ledger.InQty,
-				OutQty:               ledger.OutQty,
-				InOutRate:            ledger.InOutRate,
-			}
-			stockLedgerList = append(stockLedgerList, stockLedger)
+		if !data.Contains("item_code") {
+			continue
 		}
+		var ledger erp.StockLedger
+		if err := gconv.Struct(data, &ledger); err != nil {
+			g.Log().Warningf(ctx, "解析库存分类账数据失败: %v", err)
+			continue
+		}
+		stockLedgerList = append(stockLedgerList, &stock.StockLedger{
+			ItemCode:             ledger.ItemCode,
+			Date:                 ledger.Date,
+			Warehouse:            ledger.Warehouse,
+			PostingDate:          ledger.PostingDate,
+			PostingTime:          ledger.PostingTime,
+			ActualQty:            ledger.ActualQty,
+			IncomingRate:         ledger.IncomingRate,
+			ValuationRate:        ledger.ValuationRate,
+			Company:              ledger.Company,
+			VoucherType:          ledger.VoucherType,
+			QtyAfterTransaction:  ledger.QtyAfterTransaction,
+			StockValueDifference: ledger.StockValueDifference,
+			SerialAndBatchBundle: s.safeStringValue(ledger.SerialAndBatchBundle),
+			VoucherNo:            ledger.VoucherNo,
+			StockValue:           ledger.StockValue,
+			BatchNo:              s.safeStringValue(ledger.BatchNo),
+			SerialNo:             s.safeStringValue(ledger.SerialNo),
+			Project:              s.safeStringValue(ledger.Project),
+			Name:                 ledger.Name,
+			ItemName:             ledger.ItemName,
+			Description:          ledger.Description,
+			ItemGroup:            ledger.ItemGroup,
+			Brand:                s.safeStringValue(ledger.Brand),
+			StockUom:             ledger.StockUom,
+			InQty:                ledger.InQty,
+			OutQty:               ledger.OutQty,
+			InOutRate:            ledger.InOutRate,
+		})
 	}
 
 	return stockLedgerList, nil
+}
+
+// buildStockLedgerFilters 构建库存分类账查询过滤器
+func (s *sStock) buildStockLedgerFilters(ctx context.Context, companyName string, req *stock.GetStockLedgerReq) *gjson.Json {
+	filters := gjson.New(g.Map{
+		"company": companyName,
+	})
+
+	// 按仓库过滤
+	if len(req.Warehouse) > 0 {
+		filters.Set("warehouse", req.Warehouse)
+	} else if len(req.Branch) > 0 {
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName, req.Branch)
+		if err == nil && len(warehouse.Name) > 0 {
+			filters.Set("warehouse", warehouse.Name)
+		}
+	}
+
+	if len(req.ItemCode) > 0 {
+		filters.Set("item_code", req.ItemCode)
+	}
+	if len(req.VoucherNo) > 0 {
+		filters.Set("voucher_no", req.VoucherNo)
+	}
+	if len(req.FromDate) > 0 {
+		filters.Set("from_date", req.FromDate)
+	}
+	if len(req.ToDate) > 0 {
+		filters.Set("to_date", req.ToDate)
+	}
+
+	if req.Limit > 0 && req.Limit <= 1000 {
+		filters.Set("limit", req.Limit)
+	} else {
+		filters.Set("limit", consts.Limit100)
+	}
+
+	return filters
 }
 
 // safeStringValue 安全地获取指针字符串的值

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -12,20 +13,22 @@ import (
 // IMultiLanguageNameRepo 定义多语言名称仓库接口
 type IMultiLanguageNameRepo interface {
 	IMultiLanguageNameQueryRepo
-	CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) (uint64, error)          // 创建多语言名称
-	CreateMultiLanguageNameDUPLICATE(multiLanguageName model.MultiLanguageName) (uint64, error) // 创建或更新多语言名称（ON DUPLICATE KEY UPDATE）
-	CreateMultiLanguageNameList(multiLanguageNames []model.MultiLanguageName) error             // 创建多语言名称列表
-	UpdateMultiLanguageName(id uint64, multiLanguageName model.MultiLanguageName) error         // 更新多语言名称
-	UpdateMultiLanguageNameData(data map[string]any, opts ...DBOption) error                    // 更新多语言名称数据
-	DeleteMultiLanguageName(id uint64) error                                                    // 删除多语言名称
-	DestroyMultiLanguageName(opts ...DBOption) error                                            // 销毁多语言名称
-	NotOverwriteMultiLanguageName(id uint64) error                                              // 不要覆盖多语言名称
+	CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) (uint64, error)                                                     // 创建多语言名称
+	CreateMultiLanguageNameDUPLICATE(multiLanguageName model.MultiLanguageName) (uint64, error)                                            // 创建或更新多语言名称（ON DUPLICATE KEY UPDATE）
+	CreateMultiLanguageNameList(multiLanguageNames []model.MultiLanguageName) error                                                        // 创建多语言名称列表
+	UpdateMultiLanguageName(id uint64, multiLanguageName model.MultiLanguageName) error                                                    // 更新多语言名称
+	UpdateMultiLanguageNameData(data map[string]any, opts ...DBOption) error                                                               // 更新多语言名称数据
+	DeleteMultiLanguageName(id uint64) error                                                                                               // 删除多语言名称
+	DestroyMultiLanguageName(opts ...DBOption) error                                                                                       // 销毁多语言名称
+	NotOverwriteMultiLanguageName(id uint64) error                                                                                         // 不要覆盖多语言名称
+	FindInBatches(batchSize int, fn func(batch []model.MultiLanguageName, batchRepo IMultiLanguageNameRepo) error, opts ...DBOption) error // 分批查询并处理
 }
 
 type IMultiLanguageNameQueryRepo interface {
 	GetMultiLanguageName(opts ...DBOption) (*model.MultiLanguageName, error)
-	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error)            // 获取多语言名称
-	GetMultiLanguageNameListByUuids(uuids []uint64) ([]*model.MultiLanguageName, error) // 根据UUID列表批量获取多语言名称
+	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error)                              // 获取多语言名称
+	GetMultiLanguageNameListByUuids(uuids []uint64) ([]*model.MultiLanguageName, error)                   // 根据UUID列表批量获取多语言名称
+	CountNameExistsByTable(tableName string, lang string, text string, excludeUuid uint64) (int64, error) // 按表名和语言查询多语言名称是否重复
 }
 
 // NewMultiLanguageNameRepo 创建新的多语言名称仓库
@@ -164,4 +167,49 @@ func (r *MultiLanguageNameRepoImpl) DestroyMultiLanguageName(opts ...DBOption) e
 // NotOverwriteMultiLanguageName 不要覆盖多语言名称
 func (r *MultiLanguageNameRepoImpl) NotOverwriteMultiLanguageName(id uint64) error {
 	return r.db.Model(&model.MultiLanguageName{}).Where("uuid = ?", id).Update("not_overwrite", 1).Error
+}
+
+// CountNameExistsByTable 按表名和语言查询多语言名称是否重复
+func (r *MultiLanguageNameRepoImpl) CountNameExistsByTable(tableName string, lang string, text string, excludeUuid uint64) (int64, error) {
+	langColumnMap := map[string]string{
+		"zh":   "zh_name",
+		"zhtw": "zh_tw_name",
+		"en":   "en_name",
+		"ja":   "ja_name",
+		"ko":   "ko_name",
+		"my":   "my_name",
+		"sv":   "sv_name",
+		"th":   "th_name",
+		"tr":   "tr_name",
+	}
+	langColumn, ok := langColumnMap[lang]
+	if !ok {
+		return 0, errors.New("不支持的语言: " + lang)
+	}
+
+	mlnTable := r.db.Table("multi_language_name").Name()
+	bizTable := r.db.Table(tableName).Name()
+	var count int64
+	query := r.db.Table(bizTable).
+		Joins(fmt.Sprintf("JOIN %s ON %s.multi_language_name_uuid = %s.uuid", mlnTable, bizTable, mlnTable)).
+		Where(fmt.Sprintf("%s.%s = ?", mlnTable, langColumn), text).
+		Where(fmt.Sprintf("%s.delete_time = 0", mlnTable))
+	if excludeUuid != 0 {
+		query = query.Where(fmt.Sprintf("%s.uuid != ?", bizTable), excludeUuid)
+	}
+	err := query.Count(&count).Error
+	return count, err
+}
+
+// FindInBatches 分批查询并处理多语言名称
+func (r *MultiLanguageNameRepoImpl) FindInBatches(batchSize int, fn func(batch []model.MultiLanguageName, batchRepo IMultiLanguageNameRepo) error, opts ...DBOption) error {
+	var results []model.MultiLanguageName
+	query := r.db.Model(&model.MultiLanguageName{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	return query.FindInBatches(&results, batchSize, func(tx *gorm.DB, batch int) error {
+		batchRepo := NewMultiLanguageNameRepo(tx)
+		return fn(results, batchRepo)
+	}).Error
 }

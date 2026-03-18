@@ -113,6 +113,7 @@ type PurchaseOrderApproveReq struct {
 	Action       string `json:"action" binding:"required,oneof=approve reject"` // 审核动作：approve-通过，reject-驳回
 	RejectReason string `json:"reject_reason"`                                  // 驳回备注，可以为空最大100个字符
 	Remark       string `json:"remark"`                                         // 批注, 可以为空最大100个字符
+	IsConfirm    bool   `json:"is_confirm"`                                     // 是否确认审核（跳过默认仓库校验提示）
 }
 
 // PurchaseOrderSubmitReq 提交采购订单请求
@@ -139,6 +140,7 @@ type PurchaseReceiptCreateReq struct {
 	FileUuids          []uint64                       `json:"file_uuids" binding:"omitempty,max=10"`            // 附件UUID列表，最多10个
 	DeliveryNoteNo     string                         `json:"delivery_note_no" binding:"omitempty,max=255"`     // v2.16.0+ DN单号
 	SourceSupplierCode string                         `json:"source_supplier_code" binding:"omitempty,max=255"` // v2.16.0+ 供应商编码
+	IsAutoReceipt      bool                           `json:"-"`                                                // 是否自动收货（仅内部使用，不接受外部传参）
 }
 
 // PurchaseReceiptUpdateReq 更新收货记录请求

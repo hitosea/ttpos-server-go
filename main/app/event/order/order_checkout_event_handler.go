@@ -615,7 +615,7 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 		if saleOrder.ConsumerUuid != 0 && saleOrder.Member != nil && saleOrder.Member.IsExistActivityAndReferrer() {
 
 			if !saleOrder.IsSettled() {
-				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SaleOrder not settled", zap.Any("saleOrder", saleOrder))
+				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SaleOrder not settled", zap.Any("saleOrder-uuid", saleOrder.Uuid))
 				continue
 			}
 

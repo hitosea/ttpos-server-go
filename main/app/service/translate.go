@@ -116,13 +116,13 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 	db := s.dbm.GetDB(companyUuid)
 	translateClient := utils.NewTranslateClient()
 	translatedMultiLanguageMap := make(map[uint64]dto.LocaleResponse)
-	var multiLanguageNames []model.MultiLanguageName
 	// 根据Uuid分批获取多语言数据，每次获取100条
-	db.Model(&model.MultiLanguageName{}).Scopes(repository.NotDeleted).Where("uuid in (?) AND en_name != ''", multiLanguageNameUuids).FindInBatches(&multiLanguageNames, 100, func(tx *gorm.DB, batch int) error {
+	multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(db)
+	multiLanguageNameRepo.FindInBatches(100, func(batch []model.MultiLanguageName, batchRepo repository.IMultiLanguageNameRepo) error {
 		var translateItems []utils.TranslateItem
 
 		var uuidList []uint64
-		for _, multiLanguageName := range multiLanguageNames {
+		for _, multiLanguageName := range batch {
 			translateItems = append(translateItems, utils.TranslateItem{
 				Lang:    "en",
 				Content: multiLanguageName.EnName,
@@ -140,7 +140,7 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 			logger.Logger.Error("Translate-Redis-GetMultiLanguageNameUuids", zap.Any("err", err))
 			return nil
 		}
-		for _, multiLanguageName := range multiLanguageNames {
+		for _, multiLanguageName := range batch {
 			translated, ok := multiLanguageMap[multiLanguageName.EnName]
 			// 未翻译成功 或者 已从集合中移除，则跳过修改
 			if !ok || !slices.Contains(multiLanguageNameUuids, strconv.FormatUint(multiLanguageName.Uuid, 10)) {
@@ -173,7 +173,7 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 				}
 			}
 			// 更新翻译
-			tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", multiLanguageName.Uuid).Updates(map[string]any{
+			batchRepo.UpdateMultiLanguageNameData(map[string]any{
 				"zh_name":       translated.ZH,
 				"th_name":       translated.TH,
 				"en_name":       translated.EN,
@@ -184,7 +184,7 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 				"tr_name":       translated.TR,
 				"sv_name":       translated.SV,
 				"not_overwrite": 0,
-			})
+			}, repository.CommonRepo.WhereByUuid(multiLanguageName.Uuid))
 			// 翻译后 - 从集合中移除
 			if err := s.RemoveMultiLanguageNameUuidFromSet(companyUuid, multiLanguageName.Uuid); err != nil {
 				logger.Logger.Error("Translate-Redis-RemoveMultiLanguageNameUuidFromSet", zap.Uint64("multiLanguageNameUuid", multiLanguageName.Uuid), zap.Any("err", err))
@@ -193,6 +193,8 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 			}
 		}
 		return nil
+	}, func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid IN (?) AND en_name != ''", multiLanguageNameUuids)
 	})
 
 	// 不在DB中的多语言Uuid，需要从集合中移除
@@ -204,19 +206,30 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 
 	// 修改多语言uuid对应的模型的name
 	if len(translatedMultiLanguageMap) > 0 {
+		productUnitRepo := repository.NewProductUnitRepo(db)
+		warehouseRepo := repository.NewWarehouseRepo(db)
+		materialRepo := repository.NewMaterialRepo(db)
+		productFlavorRepo := repository.NewProductFlavorRepo(db)
+		productAttributeRepo := repository.NewProductAttributeRepo(db)
+		productSauceRepo := repository.NewProductSauceRepo(db)
+		productRepo := repository.NewProductRepo(db)
+		productBomCardRepo := repository.NewProductBomCardRepo(db)
+		productCategoryRepo := repository.NewProductCategoryRepo(db)
+		productPackageTakeoutRepo := repository.NewProductPackageTakeoutRepo(db)
+
 		for uuid, translated := range translatedMultiLanguageMap {
 			translatedText := translated.ToJson()
-			db.Model(&model.ProductUnit{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)                 // 单位
-			db.Model(&model.Warehouse{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)                   // 仓库
-			db.Model(&model.Material{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)                    // 物品
-			db.Model(&model.ProductFlavor{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)               // 规格
-			db.Model(&model.ProductAttribute{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)            // 属性
-			db.Model(&model.ProductSauce{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)                // 加料
-			db.Model(&model.ProductPackage{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)              // 商品
-			db.Model(&model.ProductPackage{}).Where("describe_multi_language_name_uuid = ?", uuid).Update("describe", translatedText) // 商品描述
-			db.Model(&model.ProductBomCard{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)              // 成本卡
-			db.Model(&model.ProductCategory{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)             // 分类
-			db.Model(&model.ProductPackageTakeout{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)       // 外卖商品
+			productUnitRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)           // 单位
+			warehouseRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)             // 仓库
+			materialRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)              // 物品
+			productFlavorRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)         // 规格
+			productAttributeRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)      // 属性
+			productSauceRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)          // 加料
+			productRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)               // 商品
+			productRepo.UpdateDescribeByDescribeMultiLanguageNameUuid(uuid, translatedText)   // 商品描述
+			productBomCardRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)        // 成本卡
+			productCategoryRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText)       // 分类
+			productPackageTakeoutRepo.UpdateNameByMultiLanguageNameUuid(uuid, translatedText) // 外卖商品
 		}
 	}
 

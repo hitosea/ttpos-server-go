@@ -7,7 +7,8 @@ import (
 
 // ProductListReq 商品列表查询
 type ProductListReq struct {
-	dto.PageReq // 分页参数
+	dto.PageReq     // 分页参数
+	OrderType   int `form:"order_type" json:"order_type"` // 订单类型：0-外送（默认），1-堂食（到店自取）
 	// 以下字段不参与json序列化,内部方法使用
 	RecommendProductPackageUuids []uint64 `json:"-"` // 推荐商品uuid列表
 	IsMember                     bool     `json:"-"` // 是否是会员端查询商品列表
@@ -26,8 +27,9 @@ type ProductRecommendListReq struct {
 
 // ProductSearchReq 商品搜索查询
 type ProductSearchReq struct {
-	Keyword  string `form:"keyword" json:"keyword" binding:"required"` // 搜索关键词
-	IsMember bool   `json:"-"`                                         // 是否是会员端查询商品列表
+	Keyword   string `form:"keyword" json:"keyword" binding:"required"` // 搜索关键词
+	OrderType int    `form:"order_type" json:"order_type"`              // 订单类型：0-外送（默认），1-堂食（到店自取）
+	IsMember  bool   `json:"-"`                                         // 是否是会员端查询商品列表
 }
 
 // ProductUnitListReq 商品单位列表查询
@@ -290,7 +292,7 @@ type ProductImportListItemReq struct {
 	ProductRatingTaxType  string             `json:"product_rating_tax_type"`  // 堂食税类
 	ProductTakeoutTaxType string             `json:"product_takeout_tax_type"` // 外带税类
 	DeductStockType       int                `json:"deduct_stock_type"`        // 库存计算方式, 2-付款减库存 1-下单减库存
-	Shows                 string             `json:"shows"`                    // 显示：123456
+	Shows                 string             `json:"shows"`                    // 显示：1234567
 	IsEnableGrade         int                `json:"is_enable_grade"`          // 是否开启会员折扣(1开启 0关闭)
 	OpenOverallDiscount   int                `json:"open_overall_discount"`    // 整单折扣(1开启 0关闭)
 	Row                   int                `json:"row"`                      // excel表的行编号
@@ -330,7 +332,7 @@ type ProductImportItemReq struct {
 	ProductRatingTaxType  string             `json:"product_rating_tax_type"`  // 堂食税类
 	ProductTakeoutTaxType string             `json:"product_takeout_tax_type"` // 外带税类
 	DeductStockType       int                `json:"deduct_stock_type"`        // 库存计算方式, 2-付款减库存 1-下单减库存
-	Shows                 string             `json:"shows"`                    // 显示：123456
+	Shows                 string             `json:"shows"`                    // 显示：1234567
 	IsEnableGrade         int                `json:"is_enable_grade"`          // 是否开启会员折扣(1开启 0关闭)
 	OpenOverallDiscount   int                `json:"open_overall_discount"`    // 整单折扣(1开启 0关闭)
 	Row                   int                `json:"row"`                      // excel表的行编号

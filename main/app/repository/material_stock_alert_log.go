@@ -20,6 +20,8 @@ type IMaterialStockAlertLogRepo interface {
 	ShouldSendAlert(companyUuid, materialUuid, warehouseUuid uint64) (bool, *model.MaterialStockAlertLog, error)
 	// ClearAlertLog 清除预警记录（软删除）
 	ClearAlertLog(companyUuid, materialUuid, warehouseUuid uint64) error
+	// DeleteByAlertTypeNot 删除非指定类型的预警记录（软删除）
+	DeleteByAlertTypeNot(alertType string) error
 }
 
 type materialStockAlertLogRepo struct {
@@ -141,4 +143,12 @@ func (r *materialStockAlertLogRepo) ClearAlertLog(companyUuid, materialUuid, war
 		return errors.WithMessage(err, "清除预警记录失败")
 	}
 	return nil
+}
+
+// DeleteByAlertTypeNot 删除非指定类型的预警记录（软删除）
+func (r *materialStockAlertLogRepo) DeleteByAlertTypeNot(alertType string) error {
+	return r.db.Model(&model.MaterialStockAlertLog{}).
+		Where("alert_type != ?", alertType).
+		Where("delete_time = 0").
+		Update("delete_time", time.Now().Unix()).Error
 }

@@ -30,7 +30,7 @@ const (
 
 var SourceTextMap = map[string]string{
 	SourceCashier:   "收银端",
-	SourceMember:    "会员端",
+	SourceMember:    "门店点餐码",
 	SourceAssistant: "点餐助手",
 	SourceShop:      "商家后台",
 	SourceTablet:    "平板端",

@@ -513,6 +513,7 @@ type ProductImportListItem struct {
 	IsShowAssistant       bool               `json:"is_show_assistant"`                           // 是否显示在点餐助手 1-显示 2-不显示
 	IsShowH5              bool               `json:"is_show_h5"`                                  // 是否显示在h5 1-显示 2-不显示
 	IsShowDelivery        bool               `json:"is_show_delivery"`                            // 是否显示在外送 1-显示 2-不显示
+	IsShowKiosk           bool               `json:"is_show_kiosk"`                               // 是否显示在自助点餐机
 	UnitUuid              uint64             `json:"unit_uuid"`                                   // 单位UUID
 	CategoryUuid          uint64             `json:"category_uuid"`                               // 分类UUID
 	SkuUuid               uint64             `json:"sku_uuid"`                                    // 规格UUID

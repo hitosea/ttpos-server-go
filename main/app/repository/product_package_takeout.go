@@ -13,6 +13,8 @@ type IProductPackageTakeoutRepo interface {
 	UpdateProductPackageTakeout(data map[string]any, opts ...DBOption) error
 	DestroyProductPackageTakeout(opts ...DBOption) error
 	ForceDestroyProductPackageTakeout(opts ...DBOption) error
+	CascadeSoftDeleteForRemovedProducts(tx *gorm.DB) error // 级联软删除已删除商品的外卖关联数据
+	UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error
 }
 
 type IProductPackageTakeoutQueryRepo interface {
@@ -285,6 +287,11 @@ func (r *productPackageTakeoutRepoImpl) WithDescribeMultiLanguageName(opts ...DB
 	}
 }
 
+// UpdateNameByMultiLanguageNameUuid 根据多语言名称UUID更新name字段
+func (r *productPackageTakeoutRepoImpl) UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error {
+	return r.db.Model(&model.ProductPackageTakeout{}).Where("multi_language_name_uuid = ?", multiLanguageNameUuid).Update("name", name).Error
+}
+
 // WithProductCategory 预加载外卖分类
 func (r *productPackageTakeoutRepoImpl) WithProductCategory(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -355,4 +362,32 @@ func (r *productPackageTakeoutRepoImpl) WithProductPackageGroupItemTakeouts(opts
 			return db
 		})
 	}
+}
+
+// CascadeSoftDeleteForRemovedProducts 级联软删除已删除商品关联的外卖数据
+func (r *productPackageTakeoutRepoImpl) CascadeSoftDeleteForRemovedProducts(tx *gorm.DB) error {
+	now := time.Now().Unix()
+	// 商品删除或数量类型为小数时，标记删除外卖商品
+	if err := tx.Model(&model.ProductPackageTakeout{}).Where("product_package_uuid in (?)",
+		tx.Model(&model.ProductPackage{}).Where("delete_time > 0 OR num_type = 1").Select("uuid")).
+		Update("delete_time", now).Error; err != nil {
+		return err
+	}
+	// 标记删除外卖BOM
+	deletedTakeoutSubquery := tx.Model(&model.ProductPackageTakeout{}).Where("delete_time > 0").Select("uuid")
+	if err := tx.Model(&model.ProductBomTakeout{}).Where("product_package_takeout_uuid in (?)", deletedTakeoutSubquery).
+		Update("delete_time", now).Error; err != nil {
+		return err
+	}
+	// 标记删除外卖属性
+	if err := tx.Model(&model.ProductPackageAttributeTakeout{}).Where("product_package_takeout_uuid in (?)", deletedTakeoutSubquery).
+		Update("delete_time", now).Error; err != nil {
+		return err
+	}
+	// 标记删除外卖组合项
+	if err := tx.Model(&model.ProductPackageGroupItemTakeout{}).Where("product_package_takeout_uuid in (?)", deletedTakeoutSubquery).
+		Update("delete_time", now).Error; err != nil {
+		return err
+	}
+	return nil
 }

@@ -84,13 +84,21 @@ func (req *OrderCartProductAddReq) IsH5Product() bool {
 	return req.isH5Product
 }
 
+// OrderProductQuotationReq 订单商品报价请求参数
+type OrderProductQuotationReq struct {
+	SaleBillUuid  uint64          `json:"sale_bill_uuid" binding:"required"`      // 销售账单UUID
+	SaleOrderUuid uint64          `json:"sale_order_uuid" binding:"required"`     // 销售订单UUID
+	Products      []ProductParams `json:"products" binding:"required,min=1,dive"` // 商品信息列表
+}
+
 // ProductAddReq 添加商品请求参数
 type ProductAddReq struct {
-	SaleBillUuid  uint64          `json:"sale_bill_uuid"`  // 销售账单ID。
-	SaleOrderUuid uint64          `json:"sale_order_uuid"` // 销售订单ID。
-	Products      []ProductParams `json:"products"`        // 商品信息列表·
-	IsH5Product   bool            `json:"is_h5_product"`   // 是否是H5商品
-	IsMemberAdd   bool            `json:"is_member_add"`   // 是否是会员端加购
+	SaleBillUuid   uint64          `json:"sale_bill_uuid"`    // 销售账单ID。
+	SaleOrderUuid  uint64          `json:"sale_order_uuid"`   // 销售订单ID。
+	Products       []ProductParams `json:"products"`          // 商品信息列表·
+	IsH5Product    bool            `json:"is_h5_product"`     // 是否是H5商品
+	IsMemberAdd    bool            `json:"is_member_add"`     // 是否是会员端加购
+	IsMemberDineIn bool            `json:"is_member_dine_in"` // 是否是会员端堂食下单
 }
 
 type GetProductPackageDetailReq struct {

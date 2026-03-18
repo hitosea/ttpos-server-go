@@ -13,10 +13,11 @@ type H5Order struct {
 	DeskUuid      uint64 `gorm:"column:desk_uuid;not null;default:0;comment:'桌台uuid'"`                         // 桌台uuid
 	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单uuid'"`                 // 销售订单uuid
 	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;not null;default:0;comment:'销售账单uuid'"`                  // 销售账单uuid
-	DeskNo        string `gorm:"column:desk_no;type:varchar(255);not null;default:'';comment:'桌台编号'"`          // 桌台编号
+	DeskNo        string `gorm:"column:desk_no;type:varchar(255);not null;default:'';comment:'桌台编号或取餐号'"`      // 桌台编号（桌台扫码订单）或取餐号（会员端堂食订单）
 	Status        uint   `gorm:"column:status;not null;default:0;comment:'状态, 0-未下单 1-未接单 2-已接单 3-已拒单'"`       // 状态
 	IsAutoAccept  uint   `gorm:"column:is_auto_accept;not null;default:0;comment:'是否自动接单, 0-否 1-是'"`           // 是否自动接单, 0-否 1-是
 	IsNeedAudit   int    `gorm:"column:is_need_audit;not null;default:0;comment:'是否需要审核，0-不需要审核，直接送厨 1-需要审核'"` // 是否需要审核，0-不需要审核，直接送厨 1-需要审核
+	OrderType     uint   `gorm:"column:order_type;not null;default:0;comment:'订单类型, 0-桌台扫码订单 1-会员端堂食订单'"`      // 订单类型：0=桌台扫码订单、1=会员端堂食订单
 	OrderTime     int64  `gorm:"column:order_time;not null;default:0;comment:'下单时间(时间戳)'"`                     // 下单时间
 
 	// 拒单或接单信息

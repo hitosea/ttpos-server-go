@@ -338,8 +338,8 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 		lastSyncTime := time.Now().Unix()
 		// 未报错才记录上次同步完成时间
 		if !isExceptionOccurred {
-			s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
-			s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+			repository.NewCompanyRepo(s.dbm.GetDB(companyUuid)).UpdateCompany(companyUuid, map[string]any{"last_sync_time": lastSyncTime})
+			repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).UpdateCompany(companyUuid, map[string]any{"last_sync_time": lastSyncTime})
 		}
 		// 推送websocket
 		utils.Go(func() {
@@ -388,8 +388,8 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 
 	// 更新公司的最后同步时间
 	if finalStatus == constant.SyncTaskStatusSuccess {
-		s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", endTime)
-		s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", endTime)
+		repository.NewCompanyRepo(s.dbm.GetDB(companyUuid)).UpdateCompany(companyUuid, map[string]any{"last_sync_time": endTime})
+		repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).UpdateCompany(companyUuid, map[string]any{"last_sync_time": endTime})
 	}
 }
 
@@ -634,20 +634,16 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 
 	// 从总部表中查询所有总部数据的多语言UUID
 	for _, cfg := range tableConfigs {
-		var records []map[string]any
-		query := headquarterDB.Table(cfg.tableName).
-			Select(cfg.multiLanguageUuidColumn).
-			Where("delete_time = 0").
-			Where(cfg.multiLanguageUuidColumn + " > 0")
-
-		// 使用自定义筛选条件或默认条件（headquarter_uuid = 0）
-		if cfg.filterCondition != "" {
-			query = query.Where(cfg.filterCondition)
-		} else {
-			query = query.Where("headquarter_uuid = 0")
+		opts := []repository.DBOption{
+			func(db *gorm.DB) *gorm.DB { return db.Where("delete_time = 0") },
+			func(db *gorm.DB) *gorm.DB { return db.Where(cfg.multiLanguageUuidColumn + " > 0") },
 		}
-
-		err := query.Find(&records).Error
+		if cfg.filterCondition != "" {
+			opts = append(opts, func(db *gorm.DB) *gorm.DB { return db.Where(cfg.filterCondition) })
+		} else {
+			opts = append(opts, func(db *gorm.DB) *gorm.DB { return db.Where("headquarter_uuid = 0") })
+		}
+		records, err := repository.SelectColumnFromTable(headquarterDB, cfg.tableName, cfg.multiLanguageUuidColumn, opts...)
 		if err != nil {
 			logger.Logger.Error("同步多语言-查询表失败",
 				zap.String("table", cfg.tableName),
@@ -684,20 +680,18 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 	logger.Logger.Info("同步多语言-开始同步", zap.Int("count", len(multiLanguageUuids)))
 
 	// 从总部查询所有多语言数据
-	var headquarterMultiLanguages []model.MultiLanguageName
-	err := headquarterDB.Model(&model.MultiLanguageName{}).
-		Where("delete_time = 0").
-		Where("uuid IN (?)", multiLanguageUuids).
-		Find(&headquarterMultiLanguages).Error
+	headquarterMultiLanguages, err := repository.NewMultiLanguageNameRepo(headquarterDB).GetMultiLanguageNameListByUuids(multiLanguageUuids)
 	if err != nil {
 		return errors.WithMessage(err, "获取总部多语言数据失败")
 	}
 
 	// 在事务中批量同步多语言数据：先删除，再创建
 	err = subShopDB.Transaction(func(tx *gorm.DB) error {
+		multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
+
 		// 步骤1：删除子店中这些UUID对应的所有多语言记录
 		if len(multiLanguageUuids) > 0 {
-			err := tx.Where("uuid IN (?)", multiLanguageUuids).Delete(&model.MultiLanguageName{}).Error
+			err := multiLanguageNameRepo.DestroyMultiLanguageName(repository.CommonRepo.WhereInUuids(multiLanguageUuids))
 			if err != nil {
 				logger.Logger.Error("同步多语言-删除子店旧多语言数据失败", zap.Error(err))
 				return errors.WithMessage(err, "删除子店旧多语言数据失败")
@@ -709,28 +703,28 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 		if len(headquarterMultiLanguages) > 0 {
 			// 构建要插入的多语言记录列表
 			insertMultiLanguages := make([]model.MultiLanguageName, 0, len(headquarterMultiLanguages))
-			for _, hqMultiLanguage := range headquarterMultiLanguages {
+			for _, hqML := range headquarterMultiLanguages {
 				insertMultiLanguages = append(insertMultiLanguages, model.MultiLanguageName{
 					BaseModel: model.BaseModel{
-						Uuid:       hqMultiLanguage.Uuid,
-						CreateTime: hqMultiLanguage.CreateTime,
-						UpdateTime: hqMultiLanguage.UpdateTime,
-						DeleteTime: hqMultiLanguage.DeleteTime,
+						Uuid:       hqML.Uuid,
+						CreateTime: hqML.CreateTime,
+						UpdateTime: hqML.UpdateTime,
+						DeleteTime: hqML.DeleteTime,
 					},
-					EnName:   hqMultiLanguage.EnName,
-					ZhName:   hqMultiLanguage.ZhName,
-					ZhTwName: hqMultiLanguage.ZhTwName,
-					ThName:   hqMultiLanguage.ThName,
-					MyName:   hqMultiLanguage.MyName,
-					JaName:   hqMultiLanguage.JaName,
-					KoName:   hqMultiLanguage.KoName,
-					TrName:   hqMultiLanguage.TrName,
-					SvName:   hqMultiLanguage.SvName,
+					EnName:   hqML.EnName,
+					ZhName:   hqML.ZhName,
+					ZhTwName: hqML.ZhTwName,
+					ThName:   hqML.ThName,
+					MyName:   hqML.MyName,
+					JaName:   hqML.JaName,
+					KoName:   hqML.KoName,
+					TrName:   hqML.TrName,
+					SvName:   hqML.SvName,
 				})
 			}
 
 			// 批量插入多语言记录
-			err := tx.Create(&insertMultiLanguages).Error
+			err := multiLanguageNameRepo.CreateMultiLanguageNameList(insertMultiLanguages)
 			if err != nil {
 				logger.Logger.Error("同步多语言-批量创建多语言记录失败", zap.Error(err))
 				return errors.WithMessage(err, "批量创建多语言记录失败")
@@ -756,18 +750,16 @@ func (s *SyncSrv) SyncMarketingCouponByUuids(ctx context.Context, uuids []uint64
 	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
 	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
 
+	subShopCouponRepo := repository.NewMarketingCouponRepo(subShopDB)
+	hqCouponRepo := repository.NewMarketingCouponRepo(headquarterDB)
+
 	// 标记删除未勾选的优惠券
-	if err := subShopDB.Table("ttpos_marketing_coupon").
-		Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-		Where("uuid NOT IN (?)", uuids).
-		Update("delete_time", time.Now().Unix()).Error; err != nil {
+	if err := subShopCouponRepo.SoftDeleteByHeadquarterExcludeUuids(companySetting.HeadquarterUuid, uuids); err != nil {
 		return errors.WithMessage(err, "标记删除未勾选的优惠券失败")
 	}
 
 	// 查询总部优惠券
-	var hqCoupons []model.MarketingCoupon
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0 AND uuid IN (?)", uuids).
-		Find(&hqCoupons).Error
+	hqCoupons, err := hqCouponRepo.FindHeadquarterByUuids(uuids)
 	if err != nil {
 		return errors.WithMessage(err, "查询总部优惠券失败")
 	}
@@ -775,14 +767,14 @@ func (s *SyncSrv) SyncMarketingCouponByUuids(ctx context.Context, uuids []uint64
 	// 同步到分店（先删除再创建）
 	for _, hqCoupon := range hqCoupons {
 		// 删除分店中已有的该优惠券
-		subShopDB.Unscoped().Where("uuid = ?", hqCoupon.Uuid).Delete(&model.MarketingCoupon{})
+		subShopCouponRepo.UnscopedDeleteByUuid(hqCoupon.Uuid)
 
 		// 创建新的优惠券（标记来源）
 		newCoupon := hqCoupon
 		newCoupon.HeadquarterUuid = companySetting.HeadquarterUuid
 		newCoupon.ID = 0 // 重置ID，让数据库自动生成
 
-		err = subShopDB.Create(&newCoupon).Error
+		err = subShopCouponRepo.CreateCoupon(&newCoupon)
 		if err != nil {
 			logger.Logger.Error("同步优惠券失败", zap.Uint64("uuid", hqCoupon.Uuid), zap.Error(err))
 			continue
@@ -799,19 +791,17 @@ func (s *SyncSrv) SyncFullReductionByUuids(ctx context.Context, uuids []uint64) 
 	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
 	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
 
+	subShopActivityRepo := repository.NewFullReductionActivityRepo(subShopDB)
+	subShopRuleRepo := repository.NewFullReductionActivityRuleRepo(subShopDB)
+	hqActivityRepo := repository.NewFullReductionActivityRepo(headquarterDB)
+
 	// 标记删除未勾选的满额减活动
-	if err := subShopDB.Table("ttpos_full_reduction_activity").
-		Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-		Where("uuid NOT IN (?)", uuids).
-		Update("delete_time", time.Now().Unix()).Error; err != nil {
+	if err := subShopActivityRepo.SoftDeleteByHeadquarterExcludeUuids(companySetting.HeadquarterUuid, uuids); err != nil {
 		return errors.WithMessage(err, "标记删除未勾选的满额减活动失败")
 	}
 
 	// 查询总部满额减活动（包含规则）
-	var hqActivities []model.FullReductionActivity
-	err := headquarterDB.Preload("Rules").
-		Where("delete_time = 0 AND headquarter_uuid = 0 AND uuid IN (?)", uuids).
-		Find(&hqActivities).Error
+	hqActivities, err := hqActivityRepo.FindHeadquarterByUuidsWithRules(uuids)
 	if err != nil {
 		return errors.WithMessage(err, "查询总部满额减活动失败")
 	}
@@ -819,8 +809,8 @@ func (s *SyncSrv) SyncFullReductionByUuids(ctx context.Context, uuids []uint64) 
 	// 同步到分店（先删除再创建）
 	for _, hqActivity := range hqActivities {
 		// 删除分店中已有的该活动（包括规则）
-		subShopDB.Unscoped().Where("uuid = ?", hqActivity.Uuid).Delete(&model.FullReductionActivity{})
-		subShopDB.Unscoped().Where("full_reduction_activity_uuid = ?", hqActivity.Uuid).Delete(&model.FullReductionActivityRule{})
+		subShopActivityRepo.UnscopedDeleteByUuid(hqActivity.Uuid)
+		subShopRuleRepo.UnscopedDeleteByActivityUuid(hqActivity.Uuid)
 
 		// 创建新的满额减活动
 		newActivity := hqActivity
@@ -832,7 +822,7 @@ func (s *SyncSrv) SyncFullReductionByUuids(ctx context.Context, uuids []uint64) 
 			newActivity.Rules[i].ID = 0
 		}
 
-		err = subShopDB.Create(&newActivity).Error
+		err = subShopActivityRepo.Create(&newActivity)
 		if err != nil {
 			logger.Logger.Error("同步满额减活动失败", zap.Uint64("uuid", hqActivity.Uuid), zap.Error(err))
 			continue
@@ -849,31 +839,29 @@ func (s *SyncSrv) SyncProductLabelByUuids(ctx context.Context, uuids []uint64) e
 	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
 	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
 
+	subShopLabelRepo := repository.NewProductLabelRepo(subShopDB)
+	hqLabelRepo := repository.NewProductLabelRepo(headquarterDB)
+
 	// 标记删除未勾选的菜品标签
-	if err := subShopDB.Table("ttpos_product_label").
-		Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-		Where("uuid NOT IN (?)", uuids).
-		Update("delete_time", time.Now().Unix()).Error; err != nil {
+	if err := subShopLabelRepo.SoftDeleteByHeadquarterExcludeUuids(companySetting.HeadquarterUuid, uuids); err != nil {
 		return errors.WithMessage(err, "标记删除未勾选的菜品标签失败")
 	}
 
 	// 查询总部菜品标签
-	var hqLabels []model.ProductLabel
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0 AND uuid IN (?)", uuids).
-		Find(&hqLabels).Error
+	hqLabels, err := hqLabelRepo.FindHeadquarterByUuids(uuids)
 	if err != nil {
 		return errors.WithMessage(err, "查询总部菜品标签失败")
 	}
 
 	// 同步到分店（先删除再创建）
 	for _, hqLabel := range hqLabels {
-		subShopDB.Unscoped().Where("uuid = ?", hqLabel.Uuid).Delete(&model.ProductLabel{})
+		subShopLabelRepo.UnscopedDeleteByUuid(hqLabel.Uuid)
 
 		newLabel := hqLabel
 		newLabel.HeadquarterUuid = companySetting.HeadquarterUuid
 		newLabel.ID = 0
 
-		err = subShopDB.Create(&newLabel).Error
+		_, err = subShopLabelRepo.CreateProductLabel(newLabel)
 		if err != nil {
 			logger.Logger.Error("同步菜品标签失败", zap.Uint64("uuid", hqLabel.Uuid), zap.Error(err))
 			continue
@@ -890,19 +878,17 @@ func (s *SyncSrv) SyncMarketingActivityByUuids(ctx context.Context, uuids []uint
 	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
 	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
 
+	subShopMktActivityRepo := repository.NewMarketingActivityRepo(subShopDB)
+	subShopMktPrizeRepo := repository.NewMarketingActivityPrizeRepo(subShopDB)
+	hqMktActivityRepo := repository.NewMarketingActivityRepo(headquarterDB)
+
 	// 标记删除未勾选的营销活动
-	if err := subShopDB.Table("ttpos_marketing_activity").
-		Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-		Where("uuid NOT IN (?)", uuids).
-		Update("delete_time", time.Now().Unix()).Error; err != nil {
+	if err := subShopMktActivityRepo.SoftDeleteByHeadquarterExcludeUuids(companySetting.HeadquarterUuid, uuids); err != nil {
 		return errors.WithMessage(err, "标记删除未勾选的营销活动失败")
 	}
 
 	// 查询总部营销活动（包含奖品）
-	var hqActivities []model.MarketingActivity
-	err := headquarterDB.Preload("Prizes").
-		Where("delete_time = 0 AND headquarter_uuid = 0 AND uuid IN (?)", uuids).
-		Find(&hqActivities).Error
+	hqActivities, err := hqMktActivityRepo.FindHeadquarterByUuidsWithPrizes(uuids)
 	if err != nil {
 		return errors.WithMessage(err, "查询总部营销活动失败")
 	}
@@ -910,8 +896,8 @@ func (s *SyncSrv) SyncMarketingActivityByUuids(ctx context.Context, uuids []uint
 	// 同步到分店（先删除再创建）
 	for _, hqActivity := range hqActivities {
 		// 删除分店中已有的该活动（包括奖品）
-		subShopDB.Unscoped().Where("uuid = ?", hqActivity.Uuid).Delete(&model.MarketingActivity{})
-		subShopDB.Unscoped().Where("activity_uuid = ?", hqActivity.Uuid).Delete(&model.MarketingActivityPrize{})
+		subShopMktActivityRepo.UnscopedDeleteByUuid(hqActivity.Uuid)
+		subShopMktPrizeRepo.UnscopedDeleteByActivityUuid(hqActivity.Uuid)
 
 		// 创建新的营销活动
 		newActivity := hqActivity
@@ -923,7 +909,7 @@ func (s *SyncSrv) SyncMarketingActivityByUuids(ctx context.Context, uuids []uint
 			newActivity.Prizes[i].ID = 0
 		}
 
-		err = subShopDB.Create(&newActivity).Error
+		err = subShopMktActivityRepo.CreateActivity(&newActivity)
 		if err != nil {
 			logger.Logger.Error("同步营销活动失败", zap.Uint64("uuid", hqActivity.Uuid), zap.Error(err))
 			continue
@@ -941,11 +927,11 @@ func (s *SyncSrv) SyncPaymentMethodByUuids(ctx context.Context, uuids []uint64) 
 	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
 	headquarterUuid := companySetting.HeadquarterUuid
 
+	hqPaymentRepo := repository.NewPaymentMethodRepo(headquarterDB)
+	subShopPaymentRepo := repository.NewPaymentMethodRepo(subShopDB)
+
 	// 查询总部支付方式（排除 code=40 和 code=10）
-	var hqPayments []model.PaymentMethod
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0 AND uuid IN (?)", uuids).
-		Where("code NOT IN (?)", []int{model.PaymentMethodCash, model.PaymentMethodBalance}).
-		Find(&hqPayments).Error
+	hqPayments, err := hqPaymentRepo.FindHeadquarterByUuidsExcludeCodes(uuids, []int{model.PaymentMethodCash, model.PaymentMethodBalance})
 	if err != nil {
 		return errors.WithMessage(err, "查询总部支付方式失败")
 	}
@@ -959,17 +945,19 @@ func (s *SyncSrv) SyncPaymentMethodByUuids(ctx context.Context, uuids []uint64) 
 
 	for _, hqPayment := range hqPayments {
 		// 检查分店是否已有同名支付方式（payment_name）
-		var existPayment model.PaymentMethod
-		err := subShopDB.Where("payment_name = ? AND delete_time = 0", hqPayment.PaymentName).
-			First(&existPayment).Error
+		existPayment, findErr := subShopPaymentRepo.GetPaymentMethodError(
+			subShopPaymentRepo.WherePaymentName(hqPayment.PaymentName),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
 
-		if err == nil {
+		if findErr == nil {
 			// 分店已有同名支付方式
 			if specialCodes[existPayment.Code] {
 				// 特殊code：只更新 headquarter_uuid
-				err = subShopDB.Model(&model.PaymentMethod{}).
-					Where("id = ?", existPayment.ID).
-					Update("headquarter_uuid", headquarterUuid).Error
+				err = subShopPaymentRepo.UpdatePaymentMethod(
+					map[string]any{"headquarter_uuid": headquarterUuid},
+					func(db *gorm.DB) *gorm.DB { return db.Where("id = ?", existPayment.ID) },
+				)
 				if err != nil {
 					logger.Logger.Error("更新支付方式headquarter_uuid失败",
 						zap.String("name", hqPayment.PaymentName),
@@ -1007,7 +995,7 @@ func (s *SyncSrv) SyncPaymentMethodByUuids(ctx context.Context, uuids []uint64) 
 			// 其他字段使用数据库默认值
 		}
 
-		err = subShopDB.Create(&newPayment).Error
+		err = subShopPaymentRepo.CreatePaymentMethod(newPayment)
 		if err != nil {
 			logger.Logger.Error("创建支付方式失败",
 				zap.String("name", hqPayment.PaymentName),
@@ -1026,12 +1014,7 @@ func (s *SyncSrv) SyncPaymentMethodByUuids(ctx context.Context, uuids []uint64) 
 // generatePaymentCode 生成支付方式code（与手动添加source=1规则一致）
 func (s *SyncSrv) generatePaymentCode(db *gorm.DB) int {
 	// 根据PHP代码：删除的值也要计算，防止重复，如果数据库找不到，则默认从20000开始
-	var maxCode int
-	db.Model(&model.PaymentMethod{}).Unscoped(). // 包含已删除的
-							Where("source = ? AND code >= 20000", model.PaymentSourceDefault).
-							Select("COALESCE(MAX(code), 19900)"). // 如果找不到，返回19900，+100后为20000
-							Scan(&maxCode)
-
+	maxCode := repository.NewPaymentMethodRepo(db).GetMaxCodeBySource(model.PaymentSourceDefault, 20000)
 	return maxCode + 100 // 每次递增100
 }
 
@@ -1149,11 +1132,10 @@ func (s *SyncSrv) checkGroupSynced(subShopDB *gorm.DB, headquarterUuid uint64, d
 			continue
 		}
 
-		var count int64
-		err := subShopDB.Table(tableName).
-			Where("headquarter_uuid = ?", headquarterUuid).
-			Where("delete_time = 0").
-			Count(&count).Error
+		count, err := repository.CountByTable(subShopDB, tableName,
+			repository.CommonRepo.WhereByHeadquarterUuid(headquarterUuid),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
 		if err != nil {
 			logger.Logger.Error("检查分组同步状态失败", zap.String("dataType", dataType), zap.Error(err))
 			continue
@@ -1170,11 +1152,7 @@ func (s *SyncSrv) checkGroupSynced(subShopDB *gorm.DB, headquarterUuid uint64, d
 
 // checkPaymentGroupSynced 检查支付数据组是否已同步
 func (s *SyncSrv) checkPaymentGroupSynced(subShopDB *gorm.DB, headquarterUuid uint64) bool {
-	var count int64
-	err := subShopDB.Table("ttpos_payment_method").
-		Where("headquarter_uuid = ?", headquarterUuid).
-		Where("delete_time = 0").
-		Count(&count).Error
+	count, err := repository.NewPaymentMethodRepo(subShopDB).CountByHeadquarter(headquarterUuid)
 	if err != nil {
 		logger.Logger.Error("检查支付数据组同步状态失败", zap.Error(err))
 		return false
@@ -1284,11 +1262,11 @@ func (s *SyncSrv) hasActivityDataDependsOnProductData(ctx context.Context) bool 
 	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
 
 	// 检查product_package表中是否存在使用了product_label的记录
-	var count int64
-	err := headquarterDB.Table("ttpos_product_package").
-		Where("headquarter_uuid = 0 AND delete_time = 0").
-		Where("product_label_uuid > 0").
-		Count(&count).Error
+	productPackageTable := headquarterDB.NamingStrategy.TableName("product_package")
+	count, err := repository.CountByTable(headquarterDB, productPackageTable,
+		func(db *gorm.DB) *gorm.DB { return db.Where("headquarter_uuid = 0 AND delete_time = 0") },
+		func(db *gorm.DB) *gorm.DB { return db.Where("product_label_uuid > 0") },
+	)
 	if err != nil {
 		logger.Logger.Error("查询product_package使用product_label失败", zap.Error(err))
 		return false
@@ -1332,8 +1310,8 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		lastSyncTime := time.Now().Unix()
 		// 未报错才记录上次同步完成时间
 		if !isExceptionOccurred {
-			s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
-			s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+			repository.NewCompanyRepo(s.dbm.GetDB(companyUuid)).UpdateCompany(companyUuid, map[string]any{"last_sync_time": lastSyncTime})
+			repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).UpdateCompany(companyUuid, map[string]any{"last_sync_time": lastSyncTime})
 		}
 
 		// 推送websocket
@@ -1540,17 +1518,16 @@ func (s *SyncSrv) SyncMarketingCoupon(ctx context.Context) error {
 	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
 	headquarterUuid := companySetting.HeadquarterUuid
 
+	subShopCouponRepo := repository.NewMarketingCouponRepo(subShopDB)
+	hqCouponRepo := repository.NewMarketingCouponRepo(headquarterDB)
+
 	// 硬删除子店中已有的总部优惠券
-	if err := subShopDB.Unscoped().
-		Where("headquarter_uuid = ?", headquarterUuid).
-		Delete(&model.MarketingCoupon{}).Error; err != nil {
+	if err := subShopCouponRepo.UnscopedDeleteByHeadquarter(headquarterUuid); err != nil {
 		return errors.WithMessage(err, "硬删除子店中的总部优惠券失败")
 	}
 
 	// 查询总部所有优惠券
-	var hqCoupons []model.MarketingCoupon
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").
-		Find(&hqCoupons).Error
+	hqCoupons, err := hqCouponRepo.FindAllHeadquarter()
 	if err != nil {
 		return errors.WithMessage(err, "查询总部优惠券失败")
 	}
@@ -1561,7 +1538,7 @@ func (s *SyncSrv) SyncMarketingCoupon(ctx context.Context) error {
 		newCoupon.HeadquarterUuid = headquarterUuid
 		newCoupon.ID = 0
 
-		err = subShopDB.Create(&newCoupon).Error
+		err = subShopCouponRepo.CreateCoupon(&newCoupon)
 		if err != nil {
 			logger.Logger.Error("同步优惠券失败", zap.Uint64("uuid", hqCoupon.Uuid), zap.Error(err))
 			continue
@@ -1578,23 +1555,21 @@ func (s *SyncSrv) SyncFullReduction(ctx context.Context) error {
 	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
 	headquarterUuid := companySetting.HeadquarterUuid
 
+	subShopActivityRepo := repository.NewFullReductionActivityRepo(subShopDB)
+	subShopRuleRepo := repository.NewFullReductionActivityRuleRepo(subShopDB)
+	hqActivityRepo := repository.NewFullReductionActivityRepo(headquarterDB)
+
 	// 硬删除子店中已有的总部满额减活动（包括规则）
-	var existingActivities []model.FullReductionActivity
-	subShopDB.Where("headquarter_uuid = ?", headquarterUuid).Find(&existingActivities)
+	existingActivities, _ := subShopActivityRepo.FindByHeadquarter(headquarterUuid)
 	for _, activity := range existingActivities {
-		subShopDB.Unscoped().Where("full_reduction_activity_uuid = ?", activity.Uuid).Delete(&model.FullReductionActivityRule{})
+		subShopRuleRepo.UnscopedDeleteByActivityUuid(activity.Uuid)
 	}
-	if err := subShopDB.Unscoped().
-		Where("headquarter_uuid = ?", headquarterUuid).
-		Delete(&model.FullReductionActivity{}).Error; err != nil {
+	if err := subShopActivityRepo.UnscopedDeleteByHeadquarter(headquarterUuid); err != nil {
 		return errors.WithMessage(err, "硬删除子店中的总部满额减活动失败")
 	}
 
 	// 查询总部所有满额减活动（包含规则）
-	var hqActivities []model.FullReductionActivity
-	err := headquarterDB.Preload("Rules").
-		Where("delete_time = 0 AND headquarter_uuid = 0").
-		Find(&hqActivities).Error
+	hqActivities, err := hqActivityRepo.FindAllHeadquarterWithRules()
 	if err != nil {
 		return errors.WithMessage(err, "查询总部满额减活动失败")
 	}
@@ -1610,7 +1585,7 @@ func (s *SyncSrv) SyncFullReduction(ctx context.Context) error {
 			newActivity.Rules[i].ID = 0
 		}
 
-		err = subShopDB.Create(&newActivity).Error
+		err = subShopActivityRepo.Create(&newActivity)
 		if err != nil {
 			logger.Logger.Error("同步满额减活动失败", zap.Uint64("uuid", hqActivity.Uuid), zap.Error(err))
 			continue
@@ -1627,17 +1602,16 @@ func (s *SyncSrv) SyncProductLabel(ctx context.Context) error {
 	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
 	headquarterUuid := companySetting.HeadquarterUuid
 
+	subShopLabelRepo := repository.NewProductLabelRepo(subShopDB)
+	hqLabelRepo := repository.NewProductLabelRepo(headquarterDB)
+
 	// 硬删除子店中已有的总部菜品标签
-	if err := subShopDB.Unscoped().
-		Where("headquarter_uuid = ?", headquarterUuid).
-		Delete(&model.ProductLabel{}).Error; err != nil {
+	if err := subShopLabelRepo.UnscopedDeleteByHeadquarter(headquarterUuid); err != nil {
 		return errors.WithMessage(err, "硬删除子店中的总部菜品标签失败")
 	}
 
 	// 查询总部所有菜品标签
-	var hqLabels []model.ProductLabel
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").
-		Find(&hqLabels).Error
+	hqLabels, err := hqLabelRepo.FindAllHeadquarter()
 	if err != nil {
 		return errors.WithMessage(err, "查询总部菜品标签失败")
 	}
@@ -1648,7 +1622,7 @@ func (s *SyncSrv) SyncProductLabel(ctx context.Context) error {
 		newLabel.HeadquarterUuid = headquarterUuid
 		newLabel.ID = 0
 
-		err = subShopDB.Create(&newLabel).Error
+		_, err = subShopLabelRepo.CreateProductLabel(newLabel)
 		if err != nil {
 			logger.Logger.Error("同步菜品标签失败", zap.Uint64("uuid", hqLabel.Uuid), zap.Error(err))
 			continue
@@ -1665,23 +1639,21 @@ func (s *SyncSrv) SyncMarketingActivity(ctx context.Context) error {
 	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
 	headquarterUuid := companySetting.HeadquarterUuid
 
+	subShopMktActivityRepo := repository.NewMarketingActivityRepo(subShopDB)
+	subShopMktPrizeRepo := repository.NewMarketingActivityPrizeRepo(subShopDB)
+	hqMktActivityRepo := repository.NewMarketingActivityRepo(headquarterDB)
+
 	// 硬删除子店中已有的总部营销活动（包括奖品）
-	var existingActivities []model.MarketingActivity
-	subShopDB.Where("headquarter_uuid = ?", headquarterUuid).Find(&existingActivities)
+	existingActivities, _ := subShopMktActivityRepo.FindByHeadquarter(headquarterUuid)
 	for _, activity := range existingActivities {
-		subShopDB.Unscoped().Where("activity_uuid = ?", activity.Uuid).Delete(&model.MarketingActivityPrize{})
+		subShopMktPrizeRepo.UnscopedDeleteByActivityUuid(activity.Uuid)
 	}
-	if err := subShopDB.Unscoped().
-		Where("headquarter_uuid = ?", headquarterUuid).
-		Delete(&model.MarketingActivity{}).Error; err != nil {
+	if err := subShopMktActivityRepo.UnscopedDeleteByHeadquarter(headquarterUuid); err != nil {
 		return errors.WithMessage(err, "硬删除子店中的总部营销活动失败")
 	}
 
 	// 查询总部所有营销活动（包含奖品）
-	var hqActivities []model.MarketingActivity
-	err := headquarterDB.Preload("Prizes").
-		Where("delete_time = 0 AND headquarter_uuid = 0").
-		Find(&hqActivities).Error
+	hqActivities, err := hqMktActivityRepo.FindAllHeadquarterWithPrizes()
 	if err != nil {
 		return errors.WithMessage(err, "查询总部营销活动失败")
 	}
@@ -1697,7 +1669,7 @@ func (s *SyncSrv) SyncMarketingActivity(ctx context.Context) error {
 			newActivity.Prizes[i].ID = 0
 		}
 
-		err = subShopDB.Create(&newActivity).Error
+		err = subShopMktActivityRepo.CreateActivity(&newActivity)
 		if err != nil {
 			logger.Logger.Error("同步营销活动失败", zap.Uint64("uuid", hqActivity.Uuid), zap.Error(err))
 			continue

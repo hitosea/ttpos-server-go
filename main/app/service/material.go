@@ -93,7 +93,7 @@ type IMaterialSrv interface {
 	SyncMaterial(ctx context.Context, syncHeadquarterData bool) error         // 同步物品
 	SyncProductBomCard(ctx context.Context, syncHeadquarterData bool) error   // 同步成本卡
 
-	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
+	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64, extraOpts ...repository.DBOption) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
 
 	CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error // 检查物品安全库存
 
@@ -186,12 +186,14 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	if companySetting.IsHeadquarter() {
 		hqUuid = companySetting.CompanyUuid
 	}
-	// 查询总店指定仓库物品数量
 	hqDb := s.dbm.GetDB(hqUuid)
-	var warehouseItems []model.WarehouseItem
-	hqDb.Model(&model.WarehouseItem{}).Where("warehouse_uuid = (?)", hqDb.Model(&model.Warehouse{}).Select("uuid").Where("erp_code = ?", req.WarehouseErpCode).Limit(1)).Find(&warehouseItems)
-	for _, warehouseItem := range warehouseItems {
-		availableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
+	// 兼容旧流程：有指定仓库时按仓库查询可采购数量
+	if req.WarehouseErpCode != "" {
+		hqWarehouseItemRepo := repository.NewWarehouseItemRepo(hqDb)
+		warehouseItems, _ := hqWarehouseItemRepo.GetByWarehouseErpCode(req.WarehouseErpCode)
+		for _, warehouseItem := range warehouseItems {
+			availableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
+		}
 	}
 
 	// 任务39419物品可见性,要求失效这个过滤功能
@@ -231,6 +233,59 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 
 	if err != nil {
 		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(err, "获取物品列表失败")
+	}
+
+	// 品牌采购新流程：无指定仓库时，按物品默认仓库查询可采购数量
+	if req.PurchaseType == 2 && req.WarehouseErpCode == "" && hqUuid != 0 && len(materials) > 0 {
+		itemCodes := make([]string, 0, len(materials))
+		itemCodeToUuid := make(map[string]uint64)
+		materialUuids := make([]uint64, 0, len(materials))
+		for _, material := range materials {
+			materialUuids = append(materialUuids, material.Uuid)
+			if material.Code != "" {
+				itemCodes = append(itemCodes, material.Code)
+				itemCodeToUuid[material.Code] = material.Uuid
+			}
+		}
+		hqCompanyAbbr := companySetting.ErpnextHeadquarterAbbr
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		itemWarehouses, erpErr := erpSrv.GetItemDefaultWarehouses(ctx, itemCodes, hqCompanyAbbr, false)
+		if erpErr == nil && len(itemWarehouses) > 0 {
+			warehouseErpCodes := make(map[string]bool)
+			for _, whErpCode := range itemWarehouses {
+				if whErpCode != "" {
+					warehouseErpCodes[whErpCode] = true
+				}
+			}
+			warehouseRepo := repository.NewWarehouseRepo(hqDb)
+			erpCodeToUuid := make(map[string]uint64)
+			for erpCode := range warehouseErpCodes {
+				wh, whErr := warehouseRepo.GetByErpCode(erpCode)
+				if whErr == nil && wh != nil {
+					erpCodeToUuid[erpCode] = wh.Uuid
+				}
+			}
+			materialWarehouseMap := make(map[uint64]uint64)
+			for itemCode, whErpCode := range itemWarehouses {
+				if materialUuid, ok := itemCodeToUuid[itemCode]; ok {
+					if warehouseUuid, ok := erpCodeToUuid[whErpCode]; ok {
+						materialWarehouseMap[materialUuid] = warehouseUuid
+					}
+				}
+			}
+			hqWarehouseItemRepo := repository.NewWarehouseItemRepo(hqDb)
+			stockByWarehouse, _ := hqWarehouseItemRepo.GetMaterialStockByWarehouse(materialUuids)
+			for _, stockResult := range stockByWarehouse {
+				if defaultWh, ok := materialWarehouseMap[stockResult.MaterialUuid]; ok && stockResult.WarehouseUuid == defaultWh {
+					availableQuantityMap[stockResult.MaterialUuid] = stockResult.Stock
+				}
+			}
+		} else if erpErr != nil {
+			logger.Logger.Warn("GetMaterialList-获取物品默认仓库失败，可采购数量将为0",
+				zap.Uint64("company_uuid", companySetting.CompanyUuid),
+				zap.Error(erpErr),
+			)
+		}
 	}
 
 	// 品牌采购：批量查询限购配置和禁止采购物品（避免 N+1 查询问题）
@@ -274,6 +329,21 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 					disallowedSet[code] = true
 				}
 			}
+		}
+	}
+
+	// 品牌采购：查询上次完成的品牌采购基准单位数量
+	lastPurchaseBaseQtyMap := make(map[uint64]float64)
+	if req.PurchaseType == 2 && len(materials) > 0 {
+		matUuids := make([]uint64, 0, len(materials))
+		for _, material := range materials {
+			matUuids = append(matUuids, material.Uuid)
+		}
+		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(s.dbm.GetDB(dbId))
+		var lpErr error
+		lastPurchaseBaseQtyMap, lpErr = purchaseOrderItemRepo.GetLastCompletedBrandPurchaseBaseQty(matUuids)
+		if lpErr != nil {
+			logger.Logger.Warn("查询上次品牌采购数量失败", zap.Error(lpErr))
 		}
 	}
 
@@ -457,6 +527,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			AllowNegativeStock:         material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
 			AvailableQuantity:          decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
 			StoreQuantity:              stockNum,
+			LastPurchaseQuantity:       decimal.NewFromFloat(lastPurchaseBaseQtyMap[material.Uuid]).Round(3).InexactFloat64(),
 			QuotaConfig: func() material_resp.MaterialQuotaConfig {
 				if req.PurchaseType != 2 {
 					return material_resp.MaterialQuotaConfig{
@@ -525,6 +596,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				if unit.ConversionRate != 0 {
 					respMaterial.AvailableQuantity = decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 					respMaterial.StoreQuantity = decimal.NewFromFloat(stockNum).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+					respMaterial.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseBaseQtyMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 				}
 			}
 		}
@@ -649,9 +721,14 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 			}
 			return material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
 		}(),
-		PurchaseUnitUuid:           material.PurchaseUnitUuid,
-		FromPurchaseUnitUuid:       fromPurchaseUnitUuid,
-		CostUnitName:               material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		PurchaseUnitUuid:     material.PurchaseUnitUuid,
+		FromPurchaseUnitUuid: fromPurchaseUnitUuid,
+		CostUnitName: func() string {
+			if material.CostUnit == nil {
+				return ""
+			}
+			return material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+		}(),
 		CostUnitUuid:               material.CostUnitUuid,
 		FromCostUnitUuid:           fromCostUnitUuid,
 		PurchaseUnitLocaleName:     purchaseUnitLocaleName,
@@ -3519,13 +3596,18 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 				}
 				if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeFlavor { // 规格商品
 					// 更新product_bom表的成本卡uuid
-					if err := tx.Model(&model.ProductBom{}).Where("uuid = ?", objectByItemCodeResp.ProductBom.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
+					txProductBomRepo := repository.NewProductBomRepo(tx)
+					commonRepo := repository.NewCommonRepo()
+					if err := txProductBomRepo.UpdateProductBom(
+						map[string]any{"product_bom_card_uuid": bomCard.Uuid},
+						commonRepo.WhereByUuid(objectByItemCodeResp.ProductBom.Uuid),
+					); err != nil {
 						logger.Logger.Info("同步成本卡时，更新product_bom表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
 						continue
 					}
 				} else if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeSauce { // 小料
 					// 更新product_sauce表的成本卡uuid
-					if err := tx.Model(&model.ProductSauce{}).Where("uuid = ?", objectByItemCodeResp.ProductSauce.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
+					if err := repository.NewProductSauceRepo(tx).UpdateProductBomCard(objectByItemCodeResp.ProductSauce.Uuid, bomCard.Uuid); err != nil {
 						logger.Logger.Info("同步成本卡时，更新product_sauce表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
 						continue
 					}
@@ -3579,12 +3661,17 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			// 删除所有总部的成本卡
-			tx.Model(&model.ProductBomCard{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.ProductBomCard{})
+			txBomCardRepo := repository.NewProductBomCardRepo(tx)
+			if err := txBomCardRepo.HardDeleteByHeadquarterUuid(companySetting.HeadquarterUuid); err != nil {
+				return errors.WithMessage(err, "删除总部成本卡失败")
+			}
 			productBomCardUuids := []uint64{}
 			for _, productBomCard := range productBomCardList {
 				productBomCardUuids = append(productBomCardUuids, productBomCard.Uuid)
 			}
-			tx.Model(&model.RelatedMaterial{}).Where("related_uuid IN (?)", productBomCardUuids).Delete(&model.RelatedMaterial{})
+			if err := txBomCardRepo.HardDeleteRelatedMaterialsByUuids(productBomCardUuids); err != nil {
+				return errors.WithMessage(err, "删除总部成本卡关联物料失败")
+			}
 
 			for _, productBomCard := range productBomCardList {
 				// 过滤掉数据不完整的成本卡（如无多语言名称）
@@ -3911,7 +3998,9 @@ func (s *materialSrv) disableProductBomCard(ctx context.Context, db *gorm.DB, pr
 }
 
 // GetWarehouseItemConsumption 获取仓库物品消耗量
-func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) {
+// SI 模式下，排除已结账订单的消耗（这部分由 getPendingStockEntryConsumption 通过 sale_order_material 处理）
+// 仅保留未结账订单的当班消耗（如已下单但未结账的桌台）
+func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64, extraOpts ...repository.DBOption) (material_resp.MaterialConsumptionListResp, error) {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	// 查询当前未交班的班次列表
 	staffShiftLogList, err := repository.NewShiftLogRepo(db).GetShiftLogList(
@@ -3924,8 +4013,9 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 	for _, staffShiftLog := range staffShiftLogList {
 		staffShiftLogUuids = append(staffShiftLogUuids, staffShiftLog.Uuid)
 	}
+
 	// 查询这些班次中指定仓库下的物品消耗量（只查需要的字段，减少 I/O）
-	itemLogs, err := repository.NewWarehouseFormRepo(db).GetWarehouseOutFormItem(
+	queryOpts := []repository.DBOption{
 		func(db *gorm.DB) *gorm.DB {
 			return db.Select("material_uuid, num")
 		},
@@ -3938,7 +4028,13 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 		func(db *gorm.DB) *gorm.DB {
 			return db.Where("revoke_time = 0 AND material_uuid != 0") // 未撤销且物品uuid不为0, 获取有效的物品出库记录
 		},
-	)
+	}
+
+	// 追加调用者传入的额外查询条件（如 SI 模式排除已同步订单的 scope）
+	// 由调用者预构建并传入，避免每次调用重复构建相同子查询
+	queryOpts = append(queryOpts, extraOpts...)
+
+	itemLogs, err := repository.NewWarehouseFormRepo(db).GetWarehouseOutFormItem(queryOpts...)
 	if err != nil {
 		return material_resp.MaterialConsumptionListResp{}, errors.WithMessage(err, "获取仓库物品消耗量失败")
 	}
@@ -3998,7 +4094,8 @@ func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid 
 
 	var companyUuids []uint64
 	if companyUuid == 0 {
-		s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Scopes(repository.NotDeleted).Pluck("uuid", &companyUuids)
+		companyRepo := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB))
+		companyUuids, _ = companyRepo.GetAllCompanyUuids()
 	} else {
 		companyUuids = append(companyUuids, companyUuid)
 	}
@@ -4466,8 +4563,8 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 			for warehouseUuid, stock := range warehouseStocks {
 				warehouseName, exists := warehouseNameMap[warehouseUuid]
 				if !exists {
-					var warehouse model.Warehouse
-					err := s.dbm.GetDB(companyUuid).Model(&model.Warehouse{}).Preload("MultiLanguageName").Where("uuid = ?", warehouseUuid).Find(&warehouse).Error
+					warehouseRepo := repository.NewWarehouseRepo(s.dbm.GetDB(companyUuid))
+					warehouse, err := warehouseRepo.GetByUuid(warehouseUuid, warehouseRepo.WithMultiLanguageName())
 					if err != nil {
 						logger.Logger.Error("查询仓库失败",
 							zap.Uint64("company_uuid", companyUuid),

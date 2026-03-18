@@ -116,14 +116,17 @@ func (x *MaterialRequest) GetStatus() string {
 }
 
 type MaterialRequestItem struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，"`              // 物品编码，
-	ScheduleDate  int64                  `protobuf:"varint,2,opt,name=schedule_date,json=scheduleDate,proto3" json:"schedule_date,omitempty" dc:"到货时间，"` // 到货时间，
-	Qty           float64                `protobuf:"fixed64,3,opt,name=qty,proto3" json:"qty,omitempty" dc:"物品数量，"`                                      // 物品数量，
-	Warehouse     string                 `protobuf:"bytes,4,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选"`                          // 仓库名称，可选
-	Uom           string                 `protobuf:"bytes,5,opt,name=uom,proto3" json:"uom,omitempty" dc:"物品单位，"`                                        // 物品单位，
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                         protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode                      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，"`                                                                                            // 物品编码，
+	ScheduleDate                  int64                  `protobuf:"varint,2,opt,name=schedule_date,json=scheduleDate,proto3" json:"schedule_date,omitempty" dc:"到货时间，"`                                                                               // 到货时间，
+	Qty                           float64                `protobuf:"fixed64,3,opt,name=qty,proto3" json:"qty,omitempty" dc:"物品数量，"`                                                                                                                    // 物品数量，
+	Warehouse                     string                 `protobuf:"bytes,4,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选"`                                                                                                        // 仓库名称，可选
+	Uom                           string                 `protobuf:"bytes,5,opt,name=uom,proto3" json:"uom,omitempty" dc:"物品单位，"`                                                                                                                      // 物品单位，
+	CustomLastPurchaseQty         float64                `protobuf:"fixed64,6,opt,name=custom_last_purchase_qty,json=customLastPurchaseQty,proto3" json:"custom_last_purchase_qty,omitempty" dc:"上次采购数量（默认销售单位），可选，由TTPOS传入"`                          // 上次采购数量（默认销售单位），可选，由TTPOS传入
+	CustomQtyAvailableForPurchase float64                `protobuf:"fixed64,7,opt,name=custom_qty_available_for_purchase,json=customQtyAvailableForPurchase,proto3" json:"custom_qty_available_for_purchase,omitempty" dc:"可采购数量（总店默认仓库库存），可选，由BMP填入"` // 可采购数量（总店默认仓库库存），可选，由BMP填入
+	CustomStoreQty                float64                `protobuf:"fixed64,8,opt,name=custom_store_qty,json=customStoreQty,proto3" json:"custom_store_qty,omitempty" dc:"门店库存（门店所有仓库库存），可选，由BMP填入"`                                                   // 门店库存（门店所有仓库库存），可选，由BMP填入
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *MaterialRequestItem) Reset() {
@@ -191,20 +194,43 @@ func (x *MaterialRequestItem) GetUom() string {
 	return ""
 }
 
+func (x *MaterialRequestItem) GetCustomLastPurchaseQty() float64 {
+	if x != nil {
+		return x.CustomLastPurchaseQty
+	}
+	return 0
+}
+
+func (x *MaterialRequestItem) GetCustomQtyAvailableForPurchase() float64 {
+	if x != nil {
+		return x.CustomQtyAvailableForPurchase
+	}
+	return 0
+}
+
+func (x *MaterialRequestItem) GetCustomStoreQty() float64 {
+	if x != nil {
+		return x.CustomStoreQty
+	}
+	return 0
+}
+
 type SaveMaterialRequestReq struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	TransactionDate int64                  `protobuf:"varint,1,opt,name=transaction_date,json=transactionDate,proto3" json:"transaction_date,omitempty" dc:"单据日期,必填"` // 单据日期,必填
-	CompanyAbbr     string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写,必填"`              // 公司缩写,必填
-	Branch          string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称 必填"`                                           // 分支名称 必填
-	RequiredBy      int64                  `protobuf:"varint,4,opt,name=required_by,json=requiredBy,proto3" json:"required_by,omitempty" dc:"需求时间,必填"`                // 需求时间,必填
-	SourceWarehouse string                 `protobuf:"bytes,5,opt,name=source_warehouse,json=sourceWarehouse,proto3" json:"source_warehouse,omitempty" dc:"来源仓库，必填"`  //来源仓库，必填
-	TargetWarehouse string                 `protobuf:"bytes,6,opt,name=target_warehouse,json=targetWarehouse,proto3" json:"target_warehouse,omitempty" dc:"目标仓库，必填"`  //目标仓库，必填
-	Purpose         string                 `protobuf:"bytes,7,opt,name=purpose,proto3" json:"purpose,omitempty" dc:"申请目的,可选 默认 Purchase"`                             // 申请目的,可选 默认 Purchase
-	Supplier        string                 `protobuf:"bytes,8,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商名称, purpose 为 Purchases时 必填"`                // 供应商名称, purpose 为 Purchases时 必填
-	Items           []*MaterialRequestItem `protobuf:"bytes,9,rep,name=items,proto3" json:"items,omitempty" dc:"物品列表，"`                                               // 物品列表，
-	RefNo           string                 `protobuf:"bytes,10,opt,name=ref_no,json=refNo,proto3" json:"ref_no,omitempty" dc:"来源单据号，可选，用于跟踪 ttpos 原始订单号"`             // 来源单据号，可选，用于跟踪 ttpos 原始订单号
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	TransactionDate   int64                  `protobuf:"varint,1,opt,name=transaction_date,json=transactionDate,proto3" json:"transaction_date,omitempty" dc:"单据日期,必填"`                                // 单据日期,必填
+	CompanyAbbr       string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写,必填"`                                             // 公司缩写,必填
+	Branch            string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称 必填"`                                                                          // 分支名称 必填
+	RequiredBy        int64                  `protobuf:"varint,4,opt,name=required_by,json=requiredBy,proto3" json:"required_by,omitempty" dc:"需求时间,必填"`                                               // 需求时间,必填
+	SourceWarehouse   string                 `protobuf:"bytes,5,opt,name=source_warehouse,json=sourceWarehouse,proto3" json:"source_warehouse,omitempty" dc:"来源仓库，必填"`                                 //来源仓库，必填
+	TargetWarehouse   string                 `protobuf:"bytes,6,opt,name=target_warehouse,json=targetWarehouse,proto3" json:"target_warehouse,omitempty" dc:"目标仓库，必填"`                                 //目标仓库，必填
+	Purpose           string                 `protobuf:"bytes,7,opt,name=purpose,proto3" json:"purpose,omitempty" dc:"申请目的,可选 默认 Purchase"`                                                            // 申请目的,可选 默认 Purchase
+	Supplier          string                 `protobuf:"bytes,8,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商名称, purpose 为 Purchases时 必填"`                                               // 供应商名称, purpose 为 Purchases时 必填
+	Items             []*MaterialRequestItem `protobuf:"bytes,9,rep,name=items,proto3" json:"items,omitempty" dc:"物品列表，"`                                                                              // 物品列表，
+	RefNo             string                 `protobuf:"bytes,10,opt,name=ref_no,json=refNo,proto3" json:"ref_no,omitempty" dc:"来源单据号，可选，用于跟踪 ttpos 原始订单号"`                                            // 来源单据号，可选，用于跟踪 ttpos 原始订单号
+	SourceCompanyAbbr string                 `protobuf:"bytes,11,opt,name=source_company_abbr,json=sourceCompanyAbbr,proto3" json:"source_company_abbr,omitempty" dc:"来源公司缩写（总部公司），可选，用于查询总店物品默认仓库库存"` // 来源公司缩写（总部公司），可选，用于查询总店物品默认仓库库存
+	AutoApprove       bool                   `protobuf:"varint,12,opt,name=auto_approve,json=autoApprove,proto3" json:"auto_approve,omitempty" dc:"品牌采购自动审批标记，开启时 SO 自动提交并生成 DN"`                      // 品牌采购自动审批标记，开启时 SO 自动提交并生成 DN
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *SaveMaterialRequestReq) Reset() {
@@ -305,6 +331,20 @@ func (x *SaveMaterialRequestReq) GetRefNo() string {
 		return x.RefNo
 	}
 	return ""
+}
+
+func (x *SaveMaterialRequestReq) GetSourceCompanyAbbr() string {
+	if x != nil {
+		return x.SourceCompanyAbbr
+	}
+	return ""
+}
+
+func (x *SaveMaterialRequestReq) GetAutoApprove() bool {
+	if x != nil {
+		return x.AutoApprove
+	}
+	return false
 }
 
 type SaveMaterialRequestResp struct {
@@ -942,14 +982,14 @@ func (x *StockReconciliationItem) GetValuationRate() float64 {
 // 保存库存盘点请求
 type SaveStockReconciliationReq struct {
 	state         protoimpl.MessageState     `protogen:"open.v1"`
-	CompanyAbbr   string                     `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，必填"`                                                                                                               // 公司缩写，必填
-	Branch        string                     `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                                                                            // 分支名称，可选
-	PostingDate   string                     `protobuf:"bytes,3,opt,name=posting_date,json=postingDate,proto3" json:"posting_date,omitempty" dc:"过账日期，必填，格式：YYYY-MM-DD"`                                                                                                 // 过账日期，必填，格式：YYYY-MM-DD
-	PostingTime   string                     `protobuf:"bytes,4,opt,name=posting_time,json=postingTime,proto3" json:"posting_time,omitempty" dc:"过账时间，可选，格式：HH:MM:SS，如 18:20:11"`                                                                                        // 过账时间，可选，格式：HH:MM:SS，如 18:20:11
-	Purpose       string                     `protobuf:"bytes,5,opt,name=purpose,proto3" json:"purpose,omitempty" dc:"用途，可选，默认 Stock Reconciliation / Opening Stock"`                                                                                                    // 用途，可选，默认 Stock Reconciliation / Opening Stock
-	Warehouse     string                     `protobuf:"bytes,6,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选"`                                                                                                                                      // 仓库名称，可选
-	Items         []*StockReconciliationItem `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty" dc:"盘点明细，必填"`                                                                                                                                              // 盘点明细，必填
-	InventoryType string                     `protobuf:"bytes,8,opt,name=inventory_type,json=inventoryType,proto3" json:"inventory_type,omitempty" dc:"盘点类型，可选，可选值：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items"` // 盘点类型，可选，可选值：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items
+	CompanyAbbr   string                     `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，必填"`                                                                                                                                     // 公司缩写，必填
+	Branch        string                     `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                                                                                                  // 分支名称，可选
+	PostingDate   string                     `protobuf:"bytes,3,opt,name=posting_date,json=postingDate,proto3" json:"posting_date,omitempty" dc:"过账日期，必填，格式：YYYY-MM-DD"`                                                                                                                       // 过账日期，必填，格式：YYYY-MM-DD
+	PostingTime   string                     `protobuf:"bytes,4,opt,name=posting_time,json=postingTime,proto3" json:"posting_time,omitempty" dc:"过账时间，可选，格式：HH:MM:SS，如 18:20:11"`                                                                                                              // 过账时间，可选，格式：HH:MM:SS，如 18:20:11
+	Purpose       string                     `protobuf:"bytes,5,opt,name=purpose,proto3" json:"purpose,omitempty" dc:"用途，可选，默认 Stock Reconciliation / Opening Stock"`                                                                                                                          // 用途，可选，默认 Stock Reconciliation / Opening Stock
+	Warehouse     string                     `protobuf:"bytes,6,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选"`                                                                                                                                                            // 仓库名称，可选
+	Items         []*StockReconciliationItem `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty" dc:"盘点明细，必填"`                                                                                                                                                                    // 盘点明细，必填
+	InventoryType string                     `protobuf:"bytes,8,opt,name=inventory_type,json=inventoryType,proto3" json:"inventory_type,omitempty" dc:"盘点类型，可选，可选值：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items/Fixed asset inventory"` // 盘点类型，可选，可选值：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items/Fixed asset inventory
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1931,13 +1971,16 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\x15material_request_type\x18\x04 \x01(\tR\x13materialRequestType\x12\x18\n" +
 	"\acompany\x18\x05 \x01(\tR\acompany\x120\n" +
 	"\x05items\x18\x06 \x03(\v2\x1a.stock.MaterialRequestItemR\x05items\x12\x16\n" +
-	"\x06status\x18\a \x01(\tR\x06status\"\x99\x01\n" +
+	"\x06status\x18\a \x01(\tR\x06status\"\xc6\x02\n" +
 	"\x13MaterialRequestItem\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12#\n" +
 	"\rschedule_date\x18\x02 \x01(\x03R\fscheduleDate\x12\x10\n" +
 	"\x03qty\x18\x03 \x01(\x01R\x03qty\x12\x1c\n" +
 	"\twarehouse\x18\x04 \x01(\tR\twarehouse\x12\x10\n" +
-	"\x03uom\x18\x05 \x01(\tR\x03uom\"\xf4\x02\n" +
+	"\x03uom\x18\x05 \x01(\tR\x03uom\x127\n" +
+	"\x18custom_last_purchase_qty\x18\x06 \x01(\x01R\x15customLastPurchaseQty\x12H\n" +
+	"!custom_qty_available_for_purchase\x18\a \x01(\x01R\x1dcustomQtyAvailableForPurchase\x12(\n" +
+	"\x10custom_store_qty\x18\b \x01(\x01R\x0ecustomStoreQty\"\xc7\x03\n" +
 	"\x16SaveMaterialRequestReq\x12)\n" +
 	"\x10transaction_date\x18\x01 \x01(\x03R\x0ftransactionDate\x12!\n" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x16\n" +
@@ -1950,7 +1993,9 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\bsupplier\x18\b \x01(\tR\bsupplier\x120\n" +
 	"\x05items\x18\t \x03(\v2\x1a.stock.MaterialRequestItemR\x05items\x12\x15\n" +
 	"\x06ref_no\x18\n" +
-	" \x01(\tR\x05refNo\"\x95\x01\n" +
+	" \x01(\tR\x05refNo\x12.\n" +
+	"\x13source_company_abbr\x18\v \x01(\tR\x11sourceCompanyAbbr\x12!\n" +
+	"\fauto_approve\x18\f \x01(\bR\vautoApprove\"\x95\x01\n" +
 	"\x17SaveMaterialRequestResp\x122\n" +
 	"\x15material_request_name\x18\x01 \x01(\tR\x13materialRequestName\x12%\n" +
 	"\x0epurchase_order\x18\x02 \x01(\tR\rpurchaseOrder\x12\x1f\n" +

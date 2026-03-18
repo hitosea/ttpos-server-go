@@ -125,6 +125,18 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		fmt.Println("获取H5设置失败", zap.Error(err))
 	}
 
+	// 获取门店点餐设置
+	storeScanOrderSetting, err := settingSrv.GetStoreScanOrderSetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取门店点餐设置失败", zap.Error(err))
+	}
+
+	// 获取模板样式设置
+	templateStyleSetting, err := settingSrv.GetTemplateStyleSetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取模板样式设置失败", zap.Error(err))
+	}
+
 	// 返回
 	member := ctx.GetMember()
 	return member_resp.MemberBaseInfoResp{
@@ -138,12 +150,14 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 			IsVisitor: member.IsVisitor,
 		},
 		Member: member_resp.MemberResp{
-			IsMemberShowSoldOut: cashierSetting.MemberShowSoldOut == "1",
-			LanguageList:        h5Setting.LanguageList,
-			Language:            h5Setting.Language,
-			DefaultLanguage:     h5Setting.DefaultLanguage,
-			IsOpenRider:         company.CompanySetting.IsOpenRider(),
-			AreaCode:            areaCodes,
+			IsMemberShowSoldOut:  cashierSetting.MemberShowSoldOut == "1",
+			LanguageList:         h5Setting.LanguageList,
+			Language:             h5Setting.Language,
+			DefaultLanguage:      h5Setting.DefaultLanguage,
+			IsOpenRider:          company.CompanySetting.IsOpenRider() && storeScanOrderSetting.EnableDelivery == 1,
+			IsOpenStoreScanOrder: company.CompanySetting.IsOpenMemberInstant == 1 && storeScanOrderSetting.EnableSelfPickup == 1,
+			IsStoreResting:       storeScanOrderSetting.IsStoreResting(company.CompanySetting.Timezone, businessSetting.OpeningHours),
+			AreaCode:             areaCodes,
 		},
 		Company: member_resp.CompanyResp{
 			Uuid:         company.Uuid,
@@ -153,7 +167,8 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 			LinkPhone:    company.CompanySetting.LinkPhone, // 公司联系电话
 			OpeningHours: businessSetting.OpeningHours,     // 公司营业时间
 		},
-		Currency: currencySetting,
+		Currency:      currencySetting,
+		TemplateStyle: templateStyleSetting.TemplateStyle,
 	}, nil
 
 }

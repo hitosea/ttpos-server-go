@@ -94,9 +94,13 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 		}
 	}
 
-	// 按物品编码过滤
+	// 按物品编码过滤（支持逗号分隔的批量查询，使用 in 操作符）
 	if len(req.ItemCode) > 0 {
-		filters = append(filters, g.ArrayStr{"item_code", "=", req.ItemCode})
+		if gstr.Contains(req.ItemCode, ",") {
+			filters = append(filters, g.ArrayStr{"item_code", "in", req.ItemCode})
+		} else {
+			filters = append(filters, g.ArrayStr{"item_code", "=", req.ItemCode})
+		}
 	}
 
 	// 按物品编码前缀过滤
@@ -209,6 +213,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			ItemGroupName:       itemGroupCodeName,
 			VariantOf:           itemInfo.VariantOf,
 			NotForSale:          itemInfo.CustomNotForSale,
+			IsStockItem:         itemInfo.IsStockItem == 1,
 			AllowNegativeStock:  proto.Bool(itemInfo.AllowNegativeStock == 1),
 			DeliveredBySupplier: itemInfo.DeliveredBySupplier == 1,
 			SupplierItems:       convertSupplierItems(itemInfo.SupplierItems),
@@ -803,11 +808,12 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 		filters.Set("item_code", req.ItemCode)
 	}
 
-	// 执行库存报表查询
+	// 执行库存报表查询（设置大 page_length 避免分页截断）
 	resp, err := service.Report().Run(ctx, &erp.ReportParams{
 		ReportName:           erp.DocTypeStockProjectedQty,
 		Filters:              filters.String(),
 		IgnorePreparedReport: true,
+		PageLength:           99999,
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询库存报表失败")
@@ -993,4 +999,206 @@ func convertSupplierItems(dtoItems []erp.ItemSupplier) []*item.SupplierItem {
 		})
 	}
 	return result
+}
+
+// GetItemDefaultWarehouses 批量获取物品在指定公司的发货仓库
+// 按以下优先级为每个物品确定仓库：
+//  1. Item Defaults 的 default_warehouse（物品主数据中配置的默认发货仓库，公司维度）
+//  2. Bin 表中该物品库存最多的仓库（该公司下）
+//  3. 公司默认仓库（is_default / alias=Default）
+//  4. 公司下任意可用仓库
+func (s *sItem) GetItemDefaultWarehouses(ctx context.Context, itemCodes []string, companyAbbr string, onlyItemDefaults bool) (map[string]string, error) {
+	if len(itemCodes) == 0 {
+		return make(map[string]string), nil
+	}
+
+	// 将公司简称转换为公司全名
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, companyAbbr)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取公司名称失败, companyAbbr: %s", companyAbbr)
+	}
+
+	result := make(map[string]string, len(itemCodes))
+	var pendingItemCodes []string
+
+	// ── 优先级 1：通过 Item 主文档 JOIN 子表查询 default_warehouse ──
+	// 注意：直接查询 Child DocType "Item Default" 会触发 Frappe 的 check_parent_permission 权限校验
+	// 改为查询 Item 主文档并通过子表过滤格式自动 JOIN，权限检查走 Item 主文档
+	itemDefaultResp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: "Item",
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{"name", "`tabItem Default`.default_warehouse"},
+		Filters: [][]string{
+			{"name", "in", gstr.Join(itemCodes, ",")},
+			{"Item Default", "company", "=", companyName},
+			{"Item Default", "default_warehouse", "!=", ""},
+		},
+		Limit: consts.Limit999,
+	})
+	if err != nil {
+		g.Log().Warningf(ctx, "GetItemDefaultWarehouses-批量查询Item Default失败: %v", err)
+		pendingItemCodes = append(pendingItemCodes, itemCodes...)
+	} else {
+		foundSet := make(map[string]bool, len(itemCodes))
+		for _, row := range itemDefaultResp.GetJsons("data") {
+			itemCode := row.Get("name").String()
+			warehouse := row.Get("default_warehouse").String()
+			if itemCode != "" && warehouse != "" {
+				result[itemCode] = warehouse
+				foundSet[itemCode] = true
+			}
+		}
+		for _, itemCode := range itemCodes {
+			if !foundSet[itemCode] {
+				pendingItemCodes = append(pendingItemCodes, itemCode)
+			}
+		}
+	}
+
+	// 仅检查 item_defaults 时，不走回退逻辑
+	if onlyItemDefaults {
+		return result, nil
+	}
+
+	// ── 优先级 2：Bin 表中该物品库存最多的仓库（批量查询）──
+	companyWarehouses, err := s.getCompanyWarehouseNames(ctx, companyName)
+	if err != nil {
+		g.Log().Warningf(ctx, "GetItemDefaultWarehouses-查询公司仓库列表失败, company: %s, err: %v", companyName, err)
+	}
+
+	if len(companyWarehouses) > 0 && len(pendingItemCodes) > 0 {
+		pendingItemCodes = s.batchResolveMaxStockWarehouses(ctx, pendingItemCodes, companyWarehouses, result)
+	}
+
+	if len(pendingItemCodes) == 0 {
+		return result, nil
+	}
+
+	// ── 优先级 3：公司默认仓库 ──
+	defaultWarehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName, "")
+	if err == nil && defaultWarehouse != nil && defaultWarehouse.Name != "" {
+		for _, itemCode := range pendingItemCodes {
+			result[itemCode] = defaultWarehouse.Name
+		}
+		return result, nil
+	}
+
+	// ── 优先级 4：公司下任意可用仓库 ──
+	if len(companyWarehouses) > 0 {
+		fallbackWarehouse := companyWarehouses[0]
+		for _, itemCode := range pendingItemCodes {
+			result[itemCode] = fallbackWarehouse
+		}
+	}
+
+	return result, nil
+}
+
+// getCompanyWarehouseNames 获取公司下所有非禁用仓库名称列表
+func (s *sItem) getCompanyWarehouseNames(ctx context.Context, companyName string) ([]string, error) {
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeWarehouse,
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{"name"},
+		Filters: [][]string{
+			{"company", "=", companyName},
+			{"disabled", "=", "0"},
+			{"is_group", "=", "0"},
+		},
+		Limit: consts.Limit999,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for _, wh := range resp.GetJsons("data") {
+		if name := wh.Get("name").String(); name != "" {
+			names = append(names, name)
+		}
+	}
+	return names, nil
+}
+
+// getMaxStockWarehouse 从 Bin 表查询物品在指定仓库列表中库存最多的仓库
+func (s *sItem) getMaxStockWarehouse(ctx context.Context, itemCode string, warehouses []string) string {
+	// 查询该物品在所有仓库的库存
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeBin,
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{"warehouse", "actual_qty"},
+		Filters: [][]string{
+			{"item_code", "=", itemCode},
+			{"actual_qty", ">", "0"},
+		},
+		Limit: consts.Limit999,
+	})
+	if err != nil {
+		return ""
+	}
+
+	// 构建公司仓库集合，用于过滤
+	warehouseSet := make(map[string]bool, len(warehouses))
+	for _, wh := range warehouses {
+		warehouseSet[wh] = true
+	}
+
+	// 在公司仓库中找库存最多的
+	var maxWarehouse string
+	var maxQty float64
+	for _, binData := range resp.GetJsons("data") {
+		wh := binData.Get("warehouse").String()
+		qty := binData.Get("actual_qty").Float64()
+		if warehouseSet[wh] && qty > maxQty {
+			maxQty = qty
+			maxWarehouse = wh
+		}
+	}
+	return maxWarehouse
+}
+
+// batchResolveMaxStockWarehouses 批量查询 Bin 表，为每个物品找到库存最多的公司仓库
+// 返回仍未解析的物品编码列表，已解析的结果写入 result
+func (s *sItem) batchResolveMaxStockWarehouses(ctx context.Context, itemCodes []string, companyWarehouses []string, result map[string]string) []string {
+	// 批量查询 Bin 表：所有待处理物品在公司仓库中的库存
+	binResp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeBin,
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{"item_code", "warehouse", "actual_qty"},
+		Filters: [][]string{
+			{"item_code", "in", gstr.Join(itemCodes, ",")},
+			{"warehouse", "in", gstr.Join(companyWarehouses, ",")},
+			{"actual_qty", ">", "0"},
+		},
+		Limit: consts.Limit999,
+	})
+	if err != nil {
+		g.Log().Warningf(ctx, "batchResolveMaxStockWarehouses-批量查询Bin失败: %v", err)
+		return itemCodes
+	}
+
+	// 按物品分组，找每个物品库存最大的仓库
+	type binEntry struct {
+		warehouse string
+		qty       float64
+	}
+	maxByItem := make(map[string]binEntry, len(itemCodes))
+	for _, row := range binResp.GetJsons("data") {
+		ic := row.Get("item_code").String()
+		wh := row.Get("warehouse").String()
+		qty := row.Get("actual_qty").Float64()
+		if existing, ok := maxByItem[ic]; !ok || qty > existing.qty {
+			maxByItem[ic] = binEntry{warehouse: wh, qty: qty}
+		}
+	}
+
+	var stillPending []string
+	for _, itemCode := range itemCodes {
+		if entry, ok := maxByItem[itemCode]; ok {
+			result[itemCode] = entry.warehouse
+		} else {
+			stillPending = append(stillPending, itemCode)
+		}
+	}
+	return stillPending
 }

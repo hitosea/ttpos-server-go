@@ -65,3 +65,22 @@ func (r *ProductCategoryRepoImpl) GetProductCategoryListWithMultiLanguageName() 
 	err := r.db.Model(&model.ProductCategory{}).Preload("MultiLanguageName").Find(&productCategories).Error
 	return productCategories, errors.WithMessage(err)
 }
+
+// UpdateNameByMultiLanguageNameUuid 根据多语言名称UUID更新name字段
+func (r *ProductCategoryRepoImpl) UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error {
+	return r.db.Model(&model.ProductCategory{}).Where("multi_language_name_uuid = ?", multiLanguageNameUuid).Update("name", name).Error
+}
+
+// CreateProductCategoryRecord 创建商品类别（指针版，自动填充UUID）
+func (r *ProductCategoryRepoImpl) CreateProductCategoryRecord(productCategory *model.ProductCategory) error {
+	return r.db.Create(productCategory).Error
+}
+
+// UpdateProductCategoryData 通用更新商品类别
+func (r *ProductCategoryRepoImpl) UpdateProductCategoryData(data map[string]any, opts ...DBOption) error {
+	db := r.db.Model(&model.ProductCategory{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(data).Error
+}

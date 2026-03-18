@@ -5,6 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 )
@@ -30,8 +31,10 @@ type IReturnOrderRepo interface {
 
 // IReturnOrderQueryRepo 退货单查询仓库接口
 type IReturnOrderQueryRepo interface {
-	GetReturnOrder(opts ...DBOption) (model.ReturnOrder, error)             // 获取退货单
-	GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error) // 获取退货金额
+	GetReturnOrder(opts ...DBOption) (model.ReturnOrder, error)               // 获取退货单
+	GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error)   // 获取退货金额
+	CountReturnOrders(opts ...DBOption) (int64, error)                        // 统计退货单数量
+	SumRefundAmountWithSaleOrderJoin(saleBillUuids []uint64) (float64, error) // 统计退款金额（关联销售订单）
 }
 
 func NewReturnOrderRepo(db *gorm.DB) IReturnOrderRepo {
@@ -151,6 +154,30 @@ func (r *returnOrderRepo) WithPaymentMethod() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("PaymentMethod")
 	}
+}
+
+// CountReturnOrders 统计退货单数量
+func (r *returnOrderRepo) CountReturnOrders(opts ...DBOption) (int64, error) {
+	var count int64
+	db := r.db.Model(&model.ReturnOrder{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&count).Error
+	return count, err
+}
+
+// SumRefundAmountWithSaleOrderJoin 统计退款金额（关联销售订单，过滤已完成订单）
+func (r *returnOrderRepo) SumRefundAmountWithSaleOrderJoin(saleBillUuids []uint64) (float64, error) {
+	var result struct{ Amount float64 }
+	err := r.db.Table("ttpos_return_order AS ro").
+		Select("COALESCE(SUM(ro.refund_amount), 0) AS amount").
+		Joins("INNER JOIN ttpos_sale_order AS so ON ro.related_order_uuid = so.uuid AND so.delete_time = ? AND so.status = ?", constant.NotDeleted, constant.SaleOrderStatusFinish).
+		Where("ro.delete_time = ?", constant.NotDeleted).
+		Where("ro.related_order_type = ?", constant.ReturnOrderRelatedOrderTypeSaleOrder).
+		Where("so.sale_bill_uuid IN (?)", saleBillUuids).
+		Scan(&result).Error
+	return result.Amount, err
 }
 
 func (r *returnOrderRepo) WhereUuid(uuid uint64) DBOption {

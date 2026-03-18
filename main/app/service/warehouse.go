@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
@@ -225,8 +226,8 @@ func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWar
 			TrName:   addReq.LocaleName.TR,
 			SvName:   addReq.LocaleName.SV,
 		}
-		err = tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
-		if err != nil {
+		multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
+		if _, err = multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName); err != nil {
 			return errors.WithMessage(err, "创建多语言名称失败")
 		}
 		warehouse.Name = addReq.LocaleName.ToJson()
@@ -249,8 +250,8 @@ func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWar
 		}
 		warehouse.ErpCode = erpCode
 		// 保存到数据库
-		err = tx.Model(&model.Warehouse{}).Create(&warehouse).Error
-		if err != nil {
+		warehouseRepo := repository.NewWarehouseRepo(tx)
+		if err = warehouseRepo.Create(&warehouse); err != nil {
 			return errors.WithMessage(err, "创建仓库失败")
 		}
 		return nil
@@ -328,23 +329,24 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 更新多语言名称
-		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", warehouse.MultiLanguageNameUuid).Updates(map[string]any{
-			"zh_name":    updateReq.LocaleName.ZH,
-			"th_name":    updateReq.LocaleName.TH,
-			"en_name":    updateReq.LocaleName.EN,
-			"zh_tw_name": updateReq.LocaleName.ZHTW,
-			"ja_name":    updateReq.LocaleName.JA,
-			"ko_name":    updateReq.LocaleName.KO,
-			"my_name":    updateReq.LocaleName.MY,
-			"tr_name":    updateReq.LocaleName.TR,
-			"sv_name":    updateReq.LocaleName.SV,
-		}).Error
+		multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
+		err = multiLanguageNameRepo.UpdateMultiLanguageName(warehouse.MultiLanguageNameUuid, model.MultiLanguageName{
+			ZhName:   updateReq.LocaleName.ZH,
+			ThName:   updateReq.LocaleName.TH,
+			EnName:   updateReq.LocaleName.EN,
+			ZhTwName: updateReq.LocaleName.ZHTW,
+			JaName:   updateReq.LocaleName.JA,
+			KoName:   updateReq.LocaleName.KO,
+			MyName:   updateReq.LocaleName.MY,
+			TrName:   updateReq.LocaleName.TR,
+			SvName:   updateReq.LocaleName.SV,
+		})
 		if err != nil {
 			return errors.WithMessage(err, "更新多语言名称失败")
 		}
 		// 更新仓库
-		err = tx.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(updateData).Error
-		if err != nil {
+		warehouseRepo := repository.NewWarehouseRepo(tx)
+		if err = warehouseRepo.UpdateByUuid(warehouse.Uuid, updateData); err != nil {
 			return errors.WithMessage(err, "更新仓库失败")
 		}
 
@@ -762,11 +764,19 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 	var headquarter model.CompanySetting
 	var headquarterWarehouses []model.Warehouse
 	if companySetting.IsSubShop() && syncHeadquarterData {
-		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+		companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB))
+		headquarter, err = companySettingRepo.GetOne(
+			repository.CommonRepo.WhereByUuid(companySetting.HeadquarterUuid),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
-		s.dbm.GetDB(headquarter.Uuid).Model(&model.Warehouse{}).Preload("MultiLanguageName").Find(&headquarterWarehouses)
+		hqWarehouseRepo := repository.NewWarehouseRepo(s.dbm.GetDB(headquarter.Uuid))
+		headquarterWarehouses, err = hqWarehouseRepo.Get(hqWarehouseRepo.WithMultiLanguageName())
+		if err != nil {
+			return errors.WithMessage(err, "获取总部仓库失败")
+		}
 	}
 
 	// 本店ttpos仓库
@@ -780,7 +790,8 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 	var deletingWarehouseUuids []uint64
 	// 本店仓库 erp_code 和 model.Warehouse 的映射
 	warehouseMap := make(map[string]model.Warehouse)
-	db.Model(&model.Warehouse{}).Scopes(repository.ExcludeHeadquarter).Where("erp_code != ''").Find(&warehouses)
+	localWarehouseRepo := repository.NewWarehouseRepo(db)
+	warehouses, _ = localWarehouseRepo.Get(repository.ExcludeHeadquarter, localWarehouseRepo.WhereErpCodeNotEmpty())
 	for _, warehouse := range warehouses {
 		if warehouse.IsDefault == 1 {
 			existsDefaultWarehouse = true
@@ -796,9 +807,9 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 	var multiLanguageNameUuids []uint64
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		txWarehouseRepo := repository.NewWarehouseRepo(tx)
 		if len(deletingWarehouseUuids) > 0 {
-			err = tx.Model(&model.Warehouse{}).Where("uuid IN (?)", deletingWarehouseUuids).Update("delete_time", time.Now().Unix()).Error
-			if err != nil {
+			if err = txWarehouseRepo.DeleteByUuids(deletingWarehouseUuids); err != nil {
 				return errors.WithMessage(errors.New("erp已删除仓库，标记删除ttpos仓库失败"), err.Error())
 			}
 		}
@@ -836,7 +847,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 			}
 
 			if warehouse.Uuid != 0 { // 如果存在，则更新
-				tx.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(map[string]any{
+				txWarehouseRepo.UpdateByUuid(warehouse.Uuid, map[string]any{
 					"type":        warehouseType,
 					"status":      status,
 					"is_default":  isDefault,
@@ -858,8 +869,8 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 					TrName:   erpWarehouse.AliasName,
 					SvName:   erpWarehouse.AliasName,
 				}
-				err = tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
-				if err != nil {
+				txMultiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
+				if _, err = txMultiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName); err != nil {
 					return errors.WithMessage(errors.New("创建多语言名称失败"), err.Error())
 				}
 				// 处理code
@@ -897,7 +908,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 		// 同步ttpos总店数据（多语言由 SyncMultiLanguage 任务处理）
 		if len(headquarterWarehouses) > 0 && syncHeadquarterData {
 			// 删除仓库
-			tx.Where("headquarter_uuid > 0").Delete(&model.Warehouse{})
+			txWarehouseRepo.DeleteHeadquarterWarehouses()
 
 			for _, headquarterWarehouse := range headquarterWarehouses {
 				multiLanguageName := headquarterWarehouse.MultiLanguageName.GetNames()
@@ -923,16 +934,17 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 			}
 		}
 		if len(insertingWarehouses) > 0 {
-			err = tx.Model(&model.Warehouse{}).Create(&insertingWarehouses).Error
-			if err != nil {
+			if err = txWarehouseRepo.CreateBatch(insertingWarehouses); err != nil {
 				return errors.WithMessage(err, "同步子店erp仓库或总部仓库失败")
 			}
 		}
 		// 更新所有物品的warehouse_uuid为默认仓库Uuid
-		var defaultWarehouse model.Warehouse
-		tx.Model(&model.Warehouse{}).Where("erp_code = ?", defaultWarehouseErpCode).Scopes(repository.NotDeleted).Find(&defaultWarehouse)
-		if err := tx.Model(&model.Material{}).Where("id > 0").Update("warehouse_uuid", defaultWarehouse.Uuid).Error; err != nil {
-			return errors.WithMessage(errors.New("更新所有物品的warehouse_uuid为默认仓库Uuid失败"), err.Error())
+		defaultWarehouse, _ := txWarehouseRepo.GetByErpCode(defaultWarehouseErpCode)
+		if defaultWarehouse != nil {
+			txMaterialRepo := repository.NewMaterialRepo(tx)
+			if err := txMaterialRepo.UpdateAllMaterialWarehouseUuid(defaultWarehouse.Uuid); err != nil {
+				return errors.WithMessage(errors.New("更新所有物品的warehouse_uuid为默认仓库Uuid失败"), err.Error())
+			}
 		}
 		return nil
 	})
@@ -954,76 +966,275 @@ func (s *warehouseSrv) SyncWarehouseItemStock(ctx context.Context) error {
 	}
 
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	warehouseRepo := repository.NewWarehouseRepo(db)
-	warehouses, err := warehouseRepo.Get(repository.ExcludeHeadquarter)
+	warehouses, err := repository.NewWarehouseRepo(db).Get(repository.ExcludeHeadquarter)
 	if err != nil {
 		return errors.WithMessage(err, "查询仓库列表失败")
 	}
 
 	// 获取所有material
-	var materials []model.Material
-	db.Model(&model.Material{}).Where("code != ''").Find(&materials)
+	materialRepo := repository.NewMaterialRepo(db)
+	materials := materialRepo.GetMaterialList(materialRepo.WhereCodeNotEmpty())
 	materialMap := make(map[string]model.Material)
 	for _, material := range materials {
 		materialMap[material.Code] = material
 	}
 
+	// SI 模式下，获取待扣减消耗和排除条件
+	pendingSEConsumption, consumptionExtraOpts, err := s.buildSIModeOpts(ctx, db)
+	if err != nil {
+		return err
+	}
+
 	var insertingWarehouseItems []model.WarehouseItem
 	for _, warehouse := range warehouses {
-		stockBinList, err := erp.NewIErpSrv(s.dbm).GetMaterialStockNumByBin(ctx, warehouse.ErpCode)
+		newItems, err := s.syncWarehouseStock(ctx, db, warehouse, materialMap, pendingSEConsumption, consumptionExtraOpts)
 		if err != nil {
-			return errors.WithMessage(err, "获取仓库物品库存数量失败")
+			return err
 		}
-		// 仓库内物品
-		var warehouseItems []model.WarehouseItem
-		db.Model(&model.WarehouseItem{}).Where("warehouse_uuid = ? AND material_code != ''", warehouse.Uuid).Scopes(repository.NotDeleted).Find(&warehouseItems)
-		warehouseItemMap := make(map[string]model.WarehouseItem)
-		for _, warehouseItem := range warehouseItems {
-			warehouseItemMap[warehouseItem.MaterialCode] = warehouseItem
-		}
-
-		materialConsumption, err := s.materialSrv.GetWarehouseItemConsumption(ctx, warehouse.Uuid)
-		if err != nil {
-			return errors.WithMessage(err, "获取仓库物品消耗量失败")
-		}
-		materialConsumptionMap := make(map[string]float64)
-		for _, consumption := range materialConsumption.List {
-			materialConsumptionMap[consumption.MaterialCode] = consumption.Consumption
-		}
-
-		for _, stock := range stockBinList {
-			material, ok := materialMap[stock.ItemCode]
-			if !ok {
-				continue
-			}
-			// 仓库物品库存的计算，可能为负数
-			stockNum := stock.ActualQty - materialConsumptionMap[stock.ItemCode]
-
-			// 添加或修改仓库物品库存
-			if warehouseItem, ok := warehouseItemMap[stock.ItemCode]; ok {
-				if err := db.Model(&model.WarehouseItem{}).Where("uuid = ?", warehouseItem.Uuid).Update("stock", stockNum).Error; err != nil {
-					return errors.WithMessage(err, "更新仓库物品库存失败")
-				}
-			} else {
-				insertingWarehouseItems = append(insertingWarehouseItems, model.WarehouseItem{
-					WarehouseUuid: warehouse.Uuid,
-					MaterialUuid:  material.Uuid,
-					MaterialCode:  material.Code,
-					Stock:         stockNum,
-					Valuation:     1.0, // 默认
-				})
-			}
-		}
+		insertingWarehouseItems = append(insertingWarehouseItems, newItems...)
 	}
 
 	if len(insertingWarehouseItems) > 0 {
-		err = db.Model(&model.WarehouseItem{}).Create(&insertingWarehouseItems).Error
-		if err != nil {
+		if err = repository.NewWarehouseItemRepo(db).CreateBatchValues(insertingWarehouseItems); err != nil {
 			return errors.WithMessage(err, "创建仓库物品库存失败")
 		}
 	}
 
-	return err
+	return nil
+}
+
+// buildSIModeOpts 构建 SI 模式下的待扣减消耗和查询排除条件
+// 非 SI 模式返回 nil，调用方无需区分
+func (s *warehouseSrv) buildSIModeOpts(ctx context.Context, db *gorm.DB) (map[uint64]map[string]float64, []repository.DBOption, error) {
+	companySetting := ctx.GetCompanySetting()
+	if !companySetting.IsErpSalesInvoiceMode() {
+		return nil, nil, nil
+	}
+
+	pendingSEConsumption, err := s.getPendingStockEntryConsumption(ctx, db)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "获取待 Stock Entry 扣减消耗量失败")
+	}
+
+	saleOrderRepo := repository.NewSaleOrderRepo(db)
+	takeoutRepo := persistence.NewTakeoutOrderRepo(db)
+	// 堂食：排除已创建 Sales Invoice 的订单
+	// 注意：故意不加 erp_stock_deducted=0——已扣减的订单消耗已反映在 ERPNext actual_qty 中
+	settledSubquery := db.Table("ttpos_sale_order").Select("uuid").Scopes(saleOrderRepo.WhereSettledWithInvoice())
+	// 外卖：排除已同步 ERPNext 的已完成订单
+	completedSubquery := db.Table("ttpos_takeout_order").Select("uuid").Where("delete_time = 0").Scopes(takeoutRepo.WhereCompletedWithInvoice())
+	extraOpts := []repository.DBOption{
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("sale_order_uuid = 0 OR sale_order_uuid NOT IN (?)", settledSubquery)
+		},
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("takeout_order_uuid = 0 OR takeout_order_uuid NOT IN (?)", completedSubquery)
+		},
+	}
+
+	return pendingSEConsumption, extraOpts, nil
+}
+
+// syncWarehouseStock 同步单个仓库的物品库存，返回需要新建的仓库物品
+func (s *warehouseSrv) syncWarehouseStock(
+	ctx context.Context, db *gorm.DB, warehouse model.Warehouse,
+	materialMap map[string]model.Material,
+	pendingSEConsumption map[uint64]map[string]float64,
+	consumptionExtraOpts []repository.DBOption,
+) ([]model.WarehouseItem, error) {
+	stockBinList, err := erp.NewIErpSrv(s.dbm).GetMaterialStockNumByBin(ctx, warehouse.ErpCode)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取仓库物品库存数量失败")
+	}
+
+	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+	warehouseItems, _ := warehouseItemRepo.GetByWarehouseUuid(warehouse.Uuid, warehouseItemRepo.WhereMaterialCodeNotEmpty())
+	warehouseItemMap := make(map[string]model.WarehouseItem)
+	for _, warehouseItem := range warehouseItems {
+		warehouseItemMap[warehouseItem.MaterialCode] = warehouseItem
+	}
+
+	materialConsumption, err := s.materialSrv.GetWarehouseItemConsumption(ctx, warehouse.Uuid, consumptionExtraOpts...)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取仓库物品消耗量失败")
+	}
+	materialConsumptionMap := make(map[string]float64)
+	for _, consumption := range materialConsumption.List {
+		materialConsumptionMap[consumption.MaterialCode] = consumption.Consumption
+	}
+
+	// 当前仓库的待 SE 扣减量（nil map 读取返回 0，无需判空）
+	pendingSEMap := pendingSEConsumption[warehouse.Uuid]
+
+	var newItems []model.WarehouseItem
+	for _, stock := range stockBinList {
+		material, ok := materialMap[stock.ItemCode]
+		if !ok {
+			continue
+		}
+		// 仓库物品库存的计算，可能为负数
+		// = ERPNext 账面库存 - 当班消耗 - 待 Stock Entry 扣减的消耗
+		stockNum := stock.ActualQty - materialConsumptionMap[stock.ItemCode] - pendingSEMap[stock.ItemCode]
+
+		if warehouseItem, ok := warehouseItemMap[stock.ItemCode]; ok {
+			if err := warehouseItemRepo.UpdateStockByUuid(warehouseItem.Uuid, stockNum); err != nil {
+				return nil, errors.WithMessage(err, "更新仓库物品库存失败")
+			}
+		} else {
+			newItems = append(newItems, model.WarehouseItem{
+				WarehouseUuid: warehouse.Uuid,
+				MaterialUuid:  material.Uuid,
+				MaterialCode:  material.Code,
+				Stock:         stockNum,
+				Valuation:     1.0,
+			})
+		}
+	}
+
+	return newItems, nil
+}
+
+// getPendingStockEntryConsumption 获取待 Stock Entry 扣减的消耗量
+// 查询 erp_stock_deducted=0 的已完成订单（堂食+外卖），汇总其原料消耗
+// 返回 map[warehouseUuid]map[materialCode]pendingQty
+func (s *warehouseSrv) getPendingStockEntryConsumption(ctx context.Context, db *gorm.DB) (map[uint64]map[string]float64, error) {
+	result := make(map[uint64]map[string]float64)
+	orderUuidSet := make(map[uint64]bool)
+
+	if err := s.collectSaleOrderConsumption(db, result, orderUuidSet); err != nil {
+		return nil, err
+	}
+	if err := s.collectTakeoutOrderConsumption(db, result, orderUuidSet); err != nil {
+		return nil, err
+	}
+
+	if len(result) == 0 {
+		return result, nil
+	}
+
+	s.offsetDeductedConsumption(ctx, db, result, orderUuidSet)
+	return result, nil
+}
+
+// collectSaleOrderConsumption 收集待扣减堂食订单的物料消耗
+func (s *warehouseSrv) collectSaleOrderConsumption(db *gorm.DB, result map[uint64]map[string]float64, orderUuidSet map[uint64]bool) error {
+	saleOrderRepo := repository.NewSaleOrderRepo(db)
+	orders, err := saleOrderRepo.GetSaleOrderList(
+		saleOrderRepo.WherePendingStockEntry(),
+		func(db *gorm.DB) *gorm.DB { return db.Select("uuid") },
+	)
+	if err != nil {
+		return errors.WithMessage(err, "查询待扣减堂食订单失败")
+	}
+
+	var saleOrderUuids []uint64
+	for _, order := range orders {
+		saleOrderUuids = append(saleOrderUuids, order.Uuid)
+	}
+	if len(saleOrderUuids) == 0 {
+		return nil
+	}
+
+	materials, err := repository.NewSaleOrderMaterialRepo(db).GetBySaleOrderUuids(saleOrderUuids)
+	if err != nil {
+		return errors.WithMessage(err, "查询堂食订单原料失败")
+	}
+	for _, m := range materials {
+		materialCode := ""
+		if m.Material != nil {
+			materialCode = m.Material.Code
+		}
+		if materialCode == "" || m.WarehouseUuid == 0 {
+			continue
+		}
+		if result[m.WarehouseUuid] == nil {
+			result[m.WarehouseUuid] = make(map[string]float64)
+		}
+		result[m.WarehouseUuid][materialCode] += m.Num
+		orderUuidSet[m.SaleOrderUuid] = true
+	}
+	return nil
+}
+
+// collectTakeoutOrderConsumption 收集待扣减外卖订单的物料消耗
+func (s *warehouseSrv) collectTakeoutOrderConsumption(db *gorm.DB, result map[uint64]map[string]float64, orderUuidSet map[uint64]bool) error {
+	takeoutRepo := persistence.NewTakeoutOrderRepo(db)
+	takeoutOrders, err := takeoutRepo.FindAll(
+		takeoutRepo.WherePendingStockEntry(),
+		takeoutRepo.WithTakeoutOrderMaterials(),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "查询待扣减外卖订单失败")
+	}
+	for _, to := range takeoutOrders {
+		for _, m := range to.TakeoutOrderMaterials {
+			if m.ErpCode == "" || m.WarehouseUuid == 0 {
+				continue
+			}
+			if result[m.WarehouseUuid] == nil {
+				result[m.WarehouseUuid] = make(map[string]float64)
+			}
+			result[m.WarehouseUuid][m.ErpCode] += m.Num
+			orderUuidSet[to.Uuid] = true
+		}
+	}
+	return nil
+}
+
+// offsetDeductedConsumption 扣除 stock_deduction_log 中已提交到 ERPNext 的扣减量
+// 按仓库比例分配已扣减量（stock_deduction_log 不含仓库信息）
+func (s *warehouseSrv) offsetDeductedConsumption(ctx context.Context, db *gorm.DB, result map[uint64]map[string]float64, orderUuidSet map[uint64]bool) {
+	allOrderUuids := make([]uint64, 0, len(orderUuidSet))
+	for uuid := range orderUuidSet {
+		allOrderUuids = append(allOrderUuids, uuid)
+	}
+
+	deductedByCode := s.queryDeductedByCode(ctx, db, allOrderUuids)
+	if len(deductedByCode) == 0 {
+		return
+	}
+
+	// 按 erpCode 汇总所有仓库的待扣减总量
+	totalPendingByCode := make(map[string]float64)
+	for _, byCode := range result {
+		for code, qty := range byCode {
+			totalPendingByCode[code] += qty
+		}
+	}
+
+	// 按仓库比例扣除已提交的扣减量
+	for _, byCode := range result {
+		for code, qty := range byCode {
+			deducted := deductedByCode[code]
+			total := totalPendingByCode[code]
+			if deducted <= 0 || total <= 0 {
+				continue
+			}
+			reduction := deducted * (qty / total)
+			byCode[code] -= reduction
+			if byCode[code] <= 0 {
+				delete(byCode, code)
+			}
+		}
+	}
+}
+
+// queryDeductedByCode 查询 stock_deduction_log 中已扣减量（按 erpCode 汇总）
+func (s *warehouseSrv) queryDeductedByCode(ctx context.Context, db *gorm.DB, orderUuids []uint64) map[string]float64 {
+	deductedByCode := make(map[string]float64)
+	if len(orderUuids) == 0 {
+		return deductedByCode
+	}
+	logs, err := repository.NewStockDeductionLogRepo(db).GetByOrderUuids(orderUuids)
+	if err != nil {
+		logger.Logger.Warn("getPendingStockEntryConsumption: 查询已扣减日志失败，跳过扣除已提交量",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Error(err))
+		return deductedByCode
+	}
+	for _, log := range logs {
+		deductedByCode[log.ErpCode] += log.Qty
+	}
+	return deductedByCode
 }
 
 // CheckCodeExists 检查仓库编码是否存在

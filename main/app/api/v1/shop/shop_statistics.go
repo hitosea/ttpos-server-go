@@ -940,12 +940,9 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/statistics/business", wrapper.CountBusiness)                                             // 统计营业数据，移动管理端首页-店内概况
 		privateApi.GET("/statistics/payment_method", wrapper.CountPaymentMethod)                                  // 统计支付方式
 		privateApi.GET("/statistics/product_category", wrapper.CountProductCategory)                              // 统计商品分类
 		privateApi.GET("/statistics/product", wrapper.CountProduct)                                               // 统计商品
-		privateApi.GET("/statistics/area", wrapper.CountArea)                                                     // 统计区域，移动管理端首页-区域数据
-		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)                                      // 统计商品排行，移动管理端首页-销量、销售额排行
 		privateApi.GET("/statistics/product_sales", wrapper.CountProductSales)                                    // 统计商品销售
 		privateApi.GET("/statistics/product_sales/export", wrapper.ExportProductSales)                            // 导出商品销售统计
 		privateApi.GET("/statistics/7days", wrapper.Count7Days)                                                   // 统计7天
@@ -971,5 +968,13 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/company/payment_methods", wrapper.GetCompanyPaymentMethods)                   // 获取门店支付方式列表（汇总去重）
 		privateApi.GET("/statistics/company/business/summary", wrapper.CountCompanyBusinessSummary)               // 获取门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
 		privateApi.GET("/statistics/company/business/summary/export", wrapper.ExportCompanyBusinessSummary)       // 导出门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
+	}
+
+	// 需要认证 + 版本检查
+	versionApi := router.Group("", middleware.MinVersionCheck(settingSrv, middleware.TypeStatistics), middleware.Auth(authSrv, dbm))
+	{
+		versionApi.GET("/statistics/business", wrapper.CountBusiness)          // 统计营业数据，移动管理端首页-店内概况
+		versionApi.GET("/statistics/area", wrapper.CountArea)                  // 统计区域，移动管理端首页-区域数据
+		versionApi.GET("/statistics/product_rank", wrapper.CountProductRank)   // 统计商品排行，移动管理端首页-销量、销售额排行
 	}
 }

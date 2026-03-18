@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
@@ -31,6 +32,7 @@ type ISaleBillQueryRepo interface {
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)
 	GetSaleBillList(opts ...DBOption) ([]*model.SaleBill, error)
 	GetSaleBillListPage(pageNo, pageSize int, opts ...DBOption) ([]*model.SaleBill, int64, error)
+	WhereKeyword(keyword string, language string) DBOption
 	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
 	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error)                       // 获取销售订单的拆单序号。用于操作日志展示
@@ -39,8 +41,10 @@ type ISaleBillQueryRepo interface {
 	GetMemberSaleBillLatest() (*model.SaleBill, error)                                             // 获取最新的一条会员端销售账单
 	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
-	GetDeskSaleBillUnPay() ([]*model.SaleBill, error) // 获取所有未付款的桌台账单
-	GetCompleteTotal() (int64, error)                 // 获取总数量
+	GetDeskSaleBillUnPay() ([]*model.SaleBill, error)                               // 获取所有未付款的桌台账单
+	GetCompleteTotal() (int64, error)                                               // 获取总数量
+	PluckOrderNos(orderNoPrefix string, startTime, endTime int64) ([]string, error) // 查询订单编号
+	PluckPendingUuidsWithBatchTag() ([]uint64, error)                               // 获取有分批类型的进行中账单UUID列表
 }
 
 type saleBillRepo struct {
@@ -333,6 +337,27 @@ func (r *saleBillRepo) GetCompleteTotal() (int64, error) {
 	return total, nil
 }
 
+// PluckOrderNos 查询指定前缀和时间范围内的订单编号
+func (r *saleBillRepo) PluckOrderNos(orderNoPrefix string, startTime, endTime int64) ([]string, error) {
+	var orderNos []string
+	err := r.db.Model(&model.SaleBill{}).
+		Where("order_no LIKE ?", orderNoPrefix+"%").
+		Where("create_time >= ? AND create_time <= ?", startTime, endTime).
+		Pluck("order_no", &orderNos).Error
+	return orderNos, err
+}
+
+// PluckPendingUuidsWithBatchTag 获取有分批类型的进行中账单UUID列表
+func (r *saleBillRepo) PluckPendingUuidsWithBatchTag() ([]uint64, error) {
+	var uuids []uint64
+	err := r.db.Model(&model.SaleBill{}).
+		Where("status = ?", constant.SaleBillStatusPending).
+		Where("delete_time = ?", 0).
+		Where("batch_tag_uuid <> ?", 0).
+		Select("uuid").Scan(&uuids).Error
+	return uuids, err
+}
+
 // UpdateDutyNo 更新销售账单的当班编号
 func (r *saleBillRepo) UpdateDutyNo(saleBillUuid uint64, dutyNo string) error {
 	if err := r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
@@ -419,4 +444,33 @@ func (r *saleBillRepo) UpdateNationality(saleBillUuid uint64, nationalityUuid ui
 		Select("nationality_uuid", "nationality_name").
 		Where("uuid = ?", saleBillUuid).
 		Updates(saleBill).Error
+}
+
+// WhereKeyword 根据订单号或商品名称搜索销售账单
+func (r *saleBillRepo) WhereKeyword(keyword string, language string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if keyword == "" {
+			return db
+		}
+
+		// 安全列名映射，防止 SQL 注入
+		columnName, ok := languageColumnMap[language]
+		if !ok {
+			columnName = "en_name"
+		}
+
+		// 获取表前缀
+		prefix := config.Database.TablePrefix
+
+		// 子查询：通过商品名称查找对应的 sale_bill uuid
+		// sale_order_product -> sale_order.sale_bill_uuid
+		subQuery := r.db.Table(prefix+"sale_order so").
+			Select("DISTINCT so.sale_bill_uuid").
+			Joins("INNER JOIN "+prefix+"sale_order_product sop ON sop.sale_order_uuid = so.uuid AND sop.delete_time = 0").
+			Joins("LEFT JOIN "+prefix+"multi_language_name mln ON sop.multi_language_name_uuid = mln.uuid").
+			Where("so.delete_time = ?", 0).
+			Where("mln."+columnName+" LIKE ?", "%"+keyword+"%")
+
+		return db.Where("(uuid IN (?) OR order_no LIKE ?)", subQuery, "%"+keyword+"%")
+	}
 }

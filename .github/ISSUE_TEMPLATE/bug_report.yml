@@ -1,0 +1,115 @@
+name: Bug Report
+description: Report a bug — fill the scenarios, assign to a developer
+title: "[BUG] "
+labels: ["bug", "status:open"]
+assignees: []
+
+body:
+
+  # ════════════════════════════════════════════════════════════════════════════
+  #  Tester fills this form, then assigns to the developer
+  # ════════════════════════════════════════════════════════════════════════════
+
+  - type: markdown
+    attributes:
+      value: |
+        Fill in the bug details below, then **assign this issue to the responsible developer**.
+
+        **Workflow:**
+        1. You (tester) create this issue and assign to developer
+        2. Developer fixes and opens a PR linking this issue (`Closes #N`)
+        3. You review the PR — approve to merge & auto-close, or request changes
+
+  # ── Classification ────────────────────────────────────────────────────────
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - "critical — system crash / data loss / security"
+        - "major — key feature broken, no workaround"
+        - "minor — feature degraded, workaround exists"
+        - "trivial — cosmetic / UX issue"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "P0 — fix immediately (blocking production)"
+        - "P1 — fix this sprint"
+        - "P2 — fix next sprint"
+        - "P3 — backlog"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options:
+        - main
+        - bmp/erp
+        - bmp/takeout
+        - bmp/message
+        - bmp/websocket
+        - admin (legacy)
+        - infrastructure
+        - multiple modules
+    validations:
+      required: true
+
+  - type: input
+    id: terminal
+    attributes:
+      label: Affected Terminal
+      placeholder: "pos, shop, kds, assistant, tablet, mobile, menu, member"
+    validations:
+      required: true
+
+  # ── Bug Scenarios ─────────────────────────────────────────────────────────
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      placeholder: |
+        **Actual behavior:** ...
+        **Expected behavior:** ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. Login as [role] on [terminal]
+        2. Navigate to / Call API `POST /api/v1/...`
+        3. With payload `{...}`
+        4. Observe error `...`
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Screenshots, error messages, API responses, or logs
+      placeholder: Drag and drop images, or paste error output here.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        - Deployment: dev / staging / production
+        - App version:
+        - Account / company used:
+    validations:
+      required: true

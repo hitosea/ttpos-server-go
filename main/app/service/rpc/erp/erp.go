@@ -28,7 +28,6 @@ type IErpSrv interface {
 	InitShop(ctx pkgCtx.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error)
 	GetUomList(ctx context.Context, getUomListReq req.GetUomListReq) (resp.GetUomListResp, error)
 	GetAttributeList(ctx context.Context, getAttributeListReq req.GetAttributeListReq) (resp.GetAttributeListResp, error)
-	SyncUomAndAttribute(ctx pkgCtx.Context, syncUomAndAttributeReq req.SyncUomAndAttributeReq) error
 	GetPosProfileList(ctx context.Context, getPosProfileListReq req.GetPosProfileListReq) (resp.GetPosProfileListResp, error)
 	AddLianPayment(ctx pkgCtx.Context, addLianPaymentReq req.ErpnextSiteAddLianLianPaymentReq) error
 	OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntryReq) (string, error)
@@ -40,6 +39,10 @@ type IErpSrv interface {
 	ParseSavePosInvoiceError(err error) (*resp.GetPosInvoiceErrorResp, error)
 	CancelPosInvoice(ctx pkgCtx.Context, cancelPosInvoiceReq req.CancelPosInvoiceReq) error
 	ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error)
+	// Sales Invoice 模式（替代 POS Invoice）
+	SaveSalesInvoice(ctx pkgCtx.Context, saveSalesInvoiceReq req.SaveSalesInvoiceReq) (*selling.SaveSalesInvoiceResp, error)
+	CancelSalesInvoice(ctx pkgCtx.Context, cancelSalesInvoiceReq req.CancelSalesInvoiceReq) (*selling.CancelSalesInvoiceResp, error)
+	ReturnSalesInvoice(ctx pkgCtx.Context, returnSalesInvoiceReq req.ReturnSalesInvoiceReq) (*selling.ReturnSalesInvoiceResp, error)
 	GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetPaymentMethodListReq) (*resp.GetPaymentMethodListResp, error)
 	AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.AddPaymentMethodReq) error
 	SaveModeOfPayment(ctx pkgCtx.Context, saveModeOfPaymentReq req.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error)
@@ -73,19 +76,20 @@ type IErpSrv interface {
 	DeleteSupplier(ctx context.Context, deleteSupplierReq req.DeleteSupplierReq) error
 
 	// 物品
-	AddMaterial(ctx pkgCtx.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)                                   // 添加物品
-	AddProductBomCard(ctx pkgCtx.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error)               // 添加成本卡
-	AddProduct(ctx pkgCtx.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)                                     // 添加商品
-	DeleteProduct(ctx pkgCtx.Context, params req.DeleteProductErpReq) error                                                 // 删除商品。删除所有规格和商品模版
-	AddProductBom(ctx pkgCtx.Context, params req.ProductBomAddErpReq) (*item.CreateSingleVariantItemResp, error)            // 添加套餐bom
-	DeleteProductBom(ctx pkgCtx.Context, params req.DeleteProductBomErpReq) error                                           // 删除套餐bom
-	AddPackage(ctx pkgCtx.Context, params req.PackageAddErpReq) (*item.ItemInfo, error)                                     // 添加套餐
-	GetMaterialStockNum(ctx pkgCtx.Context, warehouseErpCode string) ([]*item.ItemStock, error)                             // 获取仓库物品库存数量
-	GetHeadquarterMaterialList(ctx pkgCtx.Context, params req.GetHeadquarterMaterialListReq) (*item.GetItemListResp, error) // 获取总部物品列表
-	GetSubShopMaterialList(ctx pkgCtx.Context) (*item.GetItemListResp, error)                                               // 获取子公司物品列表
-	GetMaterialList(ctx pkgCtx.Context, params GetMaterialListReq) (*item.GetItemListResp, error)                           // 获取物品列表
-	GetProductBomCardList(ctx pkgCtx.Context) (*manufacturing.GetBomListResp, error)                                        // 获取成本卡列表
-	GetProductBomCardDetail(ctx pkgCtx.Context, params req.ErpProductBomCardDetailReq) (*manufacturing.GetBomResp, error)   // 获取成本卡详情
+	GetItemDefaultWarehouses(ctx pkgCtx.Context, itemCodes []string, companyAbbr string, onlyItemDefaults bool) (map[string]string, error) // 批量获取物品默认仓库
+	AddMaterial(ctx pkgCtx.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)                                                  // 添加物品
+	AddProductBomCard(ctx pkgCtx.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error)                              // 添加成本卡
+	AddProduct(ctx pkgCtx.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)                                                    // 添加商品
+	DeleteProduct(ctx pkgCtx.Context, params req.DeleteProductErpReq) error                                                                // 删除商品。删除所有规格和商品模版
+	AddProductBom(ctx pkgCtx.Context, params req.ProductBomAddErpReq) (*item.CreateSingleVariantItemResp, error)                           // 添加套餐bom
+	DeleteProductBom(ctx pkgCtx.Context, params req.DeleteProductBomErpReq) error                                                          // 删除套餐bom
+	AddPackage(ctx pkgCtx.Context, params req.PackageAddErpReq) (*item.ItemInfo, error)                                                    // 添加套餐
+	GetMaterialStockNum(ctx pkgCtx.Context, warehouseErpCode string) ([]*item.ItemStock, error)                                            // 获取仓库物品库存数量
+	GetHeadquarterMaterialList(ctx pkgCtx.Context, params req.GetHeadquarterMaterialListReq) (*item.GetItemListResp, error)                // 获取总部物品列表
+	GetSubShopMaterialList(ctx pkgCtx.Context) (*item.GetItemListResp, error)                                                              // 获取子公司物品列表
+	GetMaterialList(ctx pkgCtx.Context, params GetMaterialListReq) (*item.GetItemListResp, error)                                          // 获取物品列表
+	GetProductBomCardList(ctx pkgCtx.Context) (*manufacturing.GetBomListResp, error)                                                       // 获取成本卡列表
+	GetProductBomCardDetail(ctx pkgCtx.Context, params req.ErpProductBomCardDetailReq) (*manufacturing.GetBomResp, error)                  // 获取成本卡详情
 
 	// 仓库
 	CreateWarehouse(ctx context.Context, createWarehouseReq req.CreateErpnextWarehouseReq) (string, error)                        // 创建仓库

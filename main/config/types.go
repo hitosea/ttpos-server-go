@@ -85,6 +85,11 @@ type SMSConf struct {
 	ProjectName string // 项目名称
 }
 
+type MetricsConf struct {
+	Enabled bool   // Enable/disable metrics
+	Port    string // Separate metrics server port
+}
+
 type GoogleBucketConf struct {
 	GoogleApplicationCredentialsFileName  string // 谷歌云证书文件名
 	GoogleApplicationBucketName           string // 谷歌云bucket - 安装包

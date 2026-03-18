@@ -10,6 +10,7 @@ import (
 
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -126,8 +127,8 @@ func (s *UploadFileSrvImpl) UploadVideo(ctx context.Context, fileReader io.Reade
 // GetUploadFile 获取文件
 func (s *UploadFileSrvImpl) GetUploadFile(ctx context.Context, uuid uint64) (*resp.UploadFileResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
-	var uploadFile model.File
-	err := db.Model(&model.File{}).Where("uuid = ? AND delete_time = 0", uuid).First(&uploadFile).Error
+	fileRepo := repository.NewFileRepo(db)
+	uploadFile, err := fileRepo.GetFileByUuid(uuid)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("文件不存在")
@@ -216,8 +217,7 @@ func (s *UploadFileSrvImpl) uploadFile(ctx context.Context, fileReader io.Reader
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
-	err = db.Create(&uploadFile).Error
-	if err != nil {
+	if err = repository.NewFileRepo(db).CreateFile(uploadFile); err != nil {
 		return nil, fmt.Errorf("保存文件记录失败: %v", err)
 	}
 

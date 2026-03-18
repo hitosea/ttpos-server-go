@@ -133,6 +133,7 @@ type H5BaseInfo struct {
 	CloudBasic    setting.CloudBasic  `json:"cloud"`            // 云端基础信息
 	Business      setting.Business    `json:"business"`         // 门店业务设置.为了前端业务统一，这个字段实际未返回任何东西
 	Kitchen       setting.KitchenResp `json:"kitchen"`          // 厨显设置
+	TemplateStyle int                 `json:"template_style"`   // 模板样式：1/2/3
 }
 
 type Menu struct {
@@ -147,6 +148,7 @@ type MenuBaseInfo struct {
 	Company       Company            `json:"company"`          // 商家信息
 	IsShowSoldOut bool               `json:"is_show_sold_out"` // 电子菜单是否显示售罄商品
 	Menu          Menu               `json:"menu"`             // 菜单设置
+	TemplateStyle int                `json:"template_style"`   // 模板样式：1/2/3
 }
 
 type GetBaseInfoResponse struct {

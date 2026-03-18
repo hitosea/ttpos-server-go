@@ -1,0 +1,10 @@
+{
+  "name": "Stock Reconciliation-custom_inventory_type",
+  "doctype": "Custom Field",
+  "label": "Inventory Type",
+  "fieldname": "custom_inventory_type",
+  "fieldtype": "Select",
+  "options": "Daily inventory\nWeekly inventory\nMonthly inventory\nFixed asset inventory\nDesignated item inventory\nInventory of all items",
+  "insert_after": "purpose",
+  "dt": "Stock Reconciliation"
+}

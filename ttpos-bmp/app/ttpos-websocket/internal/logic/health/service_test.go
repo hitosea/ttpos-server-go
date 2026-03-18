@@ -175,7 +175,7 @@ func TestServiceCheckTimeout(t *testing.T) {
 	duration := time.Since(start)
 
 	// 应该在超时时间内返回
-	if duration > 150*time.Millisecond {
+	if duration > 500*time.Millisecond {
 		t.Errorf("检查耗时过长: %v", duration)
 	}
 

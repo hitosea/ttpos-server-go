@@ -1,0 +1,37 @@
+# Dockerfile.coverage.dockerignore
+# Only affects BMP coverage/test builds — does NOT apply to production Dockerfiles.
+# BuildKit feature: <Dockerfile>.dockerignore scopes exclusions per Dockerfile.
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+.cursor
+
+# CI/CD and docs
+.github
+.scannerwork
+docs
+openspec
+tools
+
+# Admin (legacy PHP/Vue) — not needed for BMP builds
+admin
+
+# Main module — not needed for BMP builds
+main
+
+# Coverage output
+coverage
+
+# Docker configs (not needed inside containers)
+docker
+docker-compose*.yml
+
+# Other
+*.md
+*.log
+LICENSE

@@ -33,6 +33,15 @@ const (
 	ErpWarehouseTypeTransit = "Transit"
 )
 
+// ErpSyncStatus ERP同步状态
+const (
+	ErpSyncStatusNotSynced  = 0
+	ErpSyncStatusQueued     = 1
+	ErpSyncStatusInProgress = 2
+	ErpSyncStatusSuccess    = 3
+	ErpSyncStatusFailed     = 4
+)
+
 // ErpPosInvoiceErrorScene 保存POS发票错误场景
 const (
 	// 物品库存不足

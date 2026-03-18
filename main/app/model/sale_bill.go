@@ -27,7 +27,7 @@ type SaleBill struct {
 	IsSplitOrder uint `gorm:"column:is_split_order;type:tinyint(1);default:0;comment:是否拆单, 0-否 1-是" json:"is_split_order"`
 
 	// 订单类型字段
-	BillType        uint   `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单、2-会员端订单" json:"bill_type"`
+	BillType        uint   `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单(包括会员端的堂食订单)、2-会员端订单(仅外送)" json:"bill_type"`
 	DiningMethod    uint   `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
 	OrderSourceUuid uint64 `gorm:"column:order_source_uuid;type:bigint(20);default:0;comment:订单来源UUID（0=店内，>0=外卖）" json:"order_source_uuid"`
 	OrderSourceName string `gorm:"column:order_source_name;type:text;default:'';comment:外卖来源名称快照（JSON），不随后台更新" json:"order_source_name"`
@@ -76,6 +76,7 @@ type SaleBill struct {
 	FinishTime     int64 `gorm:"column:finish_time;type:int(10);default:0;comment:完成时间（时间戳）" json:"finish_time"`
 	HideBillTime   int64 `gorm:"column:hide_bill_time;type:int(10);default:0;comment:隐藏账单时间（时间戳）" json:"hide_bill_time"`
 	ProductionTime int64 `gorm:"column:production_time;type:int(10);default:0;comment:首次送厨时间（时间戳）" json:"production_time"`
+	SubmitPayTime  int64 `gorm:"column:submit_pay_time;type:int(10) unsigned;default:0;comment:提交支付时间（时间戳）" json:"submit_pay_time"`
 
 	// 收银员名称
 	CashierName string `gorm:"column:cashier_name;type:varchar(255);default:'';comment:收银员名称" json:"cashier_name"`
@@ -395,6 +396,10 @@ func (model *SaleBill) GetBuffetProductMap() map[uint64]bool {
 // 2. 未交班。
 // 3. 未退款 todo 在调用反结账接口时也检查
 func (model *SaleBill) IsCellReverseSettle(staffUuid uint64, cashierLoginTime int64) bool {
+	// 会员端堂食订单不允许反结账
+	if model.Source == constant.SaleBillSourceMember && model.BillType == constant.SaleBillTypeInstant {
+		return false
+	}
 	// 账单未完成，不能反结账
 	if model.Status != constant.SaleBillStatusComplete {
 		return false

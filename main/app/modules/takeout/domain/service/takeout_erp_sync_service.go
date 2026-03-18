@@ -19,10 +19,13 @@ import (
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
+
 	appContext "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
+
+	"gorm.io/gorm"
 )
 
 // ITakeoutErpSyncService ERP 同步领域服务接口
@@ -85,15 +88,25 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	if takeoutOrder.IsErpInvoiceSynced() {
 		return nil // 如果订单已同步到 ERP，则不重复同步
 	}
-	// 如果订单没有班次，则不同步 ERP
-	if !takeoutOrder.IsExistShiftLog() {
-		return nil
-	}
 
-	// 4. 查询 ERP 开账名称
-	erpOpenPosEntryName, err := takeoutOrderRepo.GetErpOpenPosEntryNameByOrderUuid(takeoutOrder.Uuid)
-	if erpOpenPosEntryName == "" {
-		return errors.WithMessage(err, "查询 ERP 开账名称失败")
+	// 判断是否使用 Sales Invoice 模式：公司配置为 SI 模式且关联班次为新版
+	useSalesInvoice := false
+	var erpOpenPosEntryName string
+	if companySetting.IsErpSalesInvoiceMode() {
+		shiftLog, _ := repository.NewShiftLogRepo(db).GetShiftLog(func(q *gorm.DB) *gorm.DB {
+			return q.Where("uuid = ?", takeoutOrder.StaffShiftLogUuid)
+		})
+		useSalesInvoice = shiftLog.Uuid == 0 || shiftLog.IsNewShiftVersion()
+	}
+	if !useSalesInvoice {
+		// POS Invoice 模式需要班次和 OpenPosEntry
+		if !takeoutOrder.IsExistShiftLog() {
+			return nil
+		}
+		erpOpenPosEntryName, err = takeoutOrderRepo.GetErpOpenPosEntryNameByOrderUuid(takeoutOrder.Uuid)
+		if erpOpenPosEntryName == "" {
+			return errors.WithMessage(err, "查询 ERP 开账名称失败")
+		}
 	}
 
 	// 检查支付方式是否已存在（通过 payment_name 或 code）
@@ -113,14 +126,6 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 		return nil
 	}
 
-	// 9. 构建 POS Invoice 请求参数
-	savePosInvoiceReq := buildPosInvoiceRequest(
-		takeoutOrder,
-		&companySetting,
-		erpOpenPosEntryName,
-		&existPayment,
-	)
-
 	// 10. 创建 ERP 上下文
 	erpCtx := appContext.NewContext(
 		appContext.WithContext(ctx.GetContext()),
@@ -133,35 +138,61 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	)
 	erpCtx.SetDB(db)
 
-	// 11. 调用 ERP RPC 适配器保存 POS Invoice
-	savePosInvoiceResp, err := rpc.NewErpRpcAdapter(database.GetDBManager(config.Database)).SavePosInvoice(erpCtx, savePosInvoiceReq)
-	if err != nil {
-		logger.Logger.Error("同步 Grab 订单到 ERP 失败",
+	erpAdapter := rpc.NewErpRpcAdapter(database.GetDBManager(config.Database))
+
+	if useSalesInvoice {
+		// Sales Invoice 模式
+		saveSalesInvoiceReq := buildSalesInvoiceRequest(takeoutOrder, &companySetting, &existPayment, ctx.GetCompanyUuid())
+		saveSalesInvoiceResp, err := erpAdapter.SaveSalesInvoice(erpCtx, saveSalesInvoiceReq)
+		if err != nil {
+			logger.Logger.Error("同步外卖订单到 ERP(SI模式)失败",
+				zap.Uint64("orderUuid", orderUuid),
+				zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
+				zap.Error(err))
+			return errors.WithMessage(err, "保存 Sales Invoice 失败")
+		}
+		respJson, err := json.Marshal(saveSalesInvoiceResp)
+		if err != nil {
+			logger.Logger.Error("序列化 ERP 响应数据失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		} else {
+			if err := takeoutOrderRepo.UpdateByMap(takeoutOrder.Uuid, map[string]interface{}{
+				"erp_pos_invoice_resp": string(respJson),
+				"erp_sync_status":      1, // 已入队待处理，SI/PE 名称由 BMP consumer 异步回写
+			}); err != nil {
+				logger.Logger.Error("保存 ERP 响应数据到订单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+			}
+		}
+		logger.Logger.Info("成功同步外卖订单到 ERP(SI模式)",
 			zap.Uint64("orderUuid", orderUuid),
 			zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
-			zap.Error(err))
-		return errors.WithMessage(err, "保存 POS Invoice 失败")
-	}
-
-	// 12. 保存 ERP 响应数据到订单
-	respJson, err := json.Marshal(savePosInvoiceResp)
-	if err != nil {
-		logger.Logger.Error("序列化 ERP 响应数据失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+			zap.String("salesInvoiceName", saveSalesInvoiceResp.SalesInvoiceName))
 	} else {
-		// 更新订单的 ERP 响应字段
-		if err := takeoutOrderRepo.UpdateByMap(takeoutOrder.Uuid, map[string]interface{}{
-			"erp_pos_invoice_resp": string(respJson),
-		}); err != nil {
-			logger.Logger.Error("保存 ERP 响应数据到订单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		// POS Invoice 模式（默认）
+		savePosInvoiceReq := buildPosInvoiceRequest(takeoutOrder, &companySetting, erpOpenPosEntryName, &existPayment)
+		savePosInvoiceResp, err := erpAdapter.SavePosInvoice(erpCtx, savePosInvoiceReq)
+		if err != nil {
+			logger.Logger.Error("同步外卖订单到 ERP 失败",
+				zap.Uint64("orderUuid", orderUuid),
+				zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
+				zap.Error(err))
+			return errors.WithMessage(err, "保存 POS Invoice 失败")
 		}
+		respJson, err := json.Marshal(savePosInvoiceResp)
+		if err != nil {
+			logger.Logger.Error("序列化 ERP 响应数据失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+		} else {
+			if err := takeoutOrderRepo.UpdateByMap(takeoutOrder.Uuid, map[string]interface{}{
+				"erp_pos_invoice_resp": string(respJson),
+			}); err != nil {
+				logger.Logger.Error("保存 ERP 响应数据到订单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+			}
+		}
+		logger.Logger.Info("成功同步外卖订单到 ERP",
+			zap.Uint64("orderUuid", orderUuid),
+			zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
+			zap.String("erpProductsInvoiceName", savePosInvoiceResp.ProductsInvoiceName),
+			zap.String("erpMaterialInvoiceName", savePosInvoiceResp.MaterialInvoiceName))
 	}
-
-	// 13. 记录 ERP 发票信息到日志
-	logger.Logger.Info("成功同步 外卖订单到 ERP",
-		zap.Uint64("orderUuid", orderUuid),
-		zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
-		zap.String("erpProductsInvoiceName", savePosInvoiceResp.ProductsInvoiceName),
-		zap.String("erpMaterialInvoiceName", savePosInvoiceResp.MaterialInvoiceName))
 
 	return nil
 }
@@ -204,6 +235,42 @@ func buildPosInvoiceRequest(
 		Payments:         payments,
 		TakeoutOrderNo:   &takeoutOrder.PlatformOrderId,
 		TakeoutProvider:  &takeoutProvider, // Grab, LineMan
+	}
+}
+
+// buildSalesInvoiceRequest 构建 Sales Invoice 请求参数（SI 模式）
+func buildSalesInvoiceRequest(
+	takeoutOrder *takeoutModel.TakeoutOrder,
+	companySetting *model.CompanySetting,
+	existPayment *model.PaymentMethod,
+	companyUuid uint64,
+) req.SaveSalesInvoiceReq {
+	items := buildPosInvoiceItems(takeoutOrder)
+	payments := buildPosInvoicePayments(takeoutOrder, existPayment)
+	taxes := buildPosInvoiceTaxes(takeoutOrder)
+	materialItems := buildPosInvoiceMaterialItems(takeoutOrder)
+
+	takeoutProvider := takeoutOrder.GetNoSpacePlatformName()
+
+	return req.SaveSalesInvoiceReq{
+		SiteCode:          companySetting.ErpnextSiteCode,
+		OrderNo:           strconv.FormatUint(takeoutOrder.Uuid, 10),
+		SaleOrderUuid:     strconv.FormatUint(takeoutOrder.Uuid, 10),
+		Company:           companySetting.ErpnextCompanyAbbr,
+		Customer:          "Default",
+		Currency:          "THB",
+		PriceListCurrency: "THB",
+		PostingDatetime:   takeoutOrder.AcceptedTime,
+		Branch:            companySetting.ErpnextBranchName,
+		UpdateStock:       0, // 延迟扣库存
+		Items:             items,
+		MaterialItems:     materialItems,
+		Taxes:             taxes,
+		Payments:          payments,
+		TakeoutOrderNo:    &takeoutOrder.PlatformOrderId,
+		TakeoutProvider:   &takeoutProvider,
+		CompanyUuid:       strconv.FormatUint(companyUuid, 10),
+		OrderType:         "takeout",
 	}
 }
 
@@ -289,11 +356,11 @@ func buildPosInvoiceItems(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 				}
 				items = append(items, &selling.PosInvoiceItem{
 					ItemCode:    sauceItemCode,
-					Qty:         float64(item.Quantity),        // 修饰符数量
-					Rate:        0,                             // 修饰符没有单独单价（已计入主商品）
-					Amount:      0,                             // 修饰符没有单独金额
-					Description: modifierName.EN,               // 规格名称
-					IsFreeItem:  true,                          // 修饰符标记为免费（价格已包含在主商品中）
+					Qty:         float64(item.Quantity), // 修饰符数量
+					Rate:        0,                      // 修饰符没有单独单价（已计入主商品）
+					Amount:      0,                      // 修饰符没有单独金额
+					Description: modifierName.EN,        // 规格名称
+					IsFreeItem:  true,                   // 修饰符标记为免费（价格已包含在主商品中）
 				})
 			}
 		}
@@ -500,52 +567,77 @@ func (s *takeoutErpSyncService) SyncOrderCancelledToERP(ctx appContext.Context, 
 		return nil
 	}
 
-	// 6. 解析 ERP 响应数据，获取发票名称
-	erpResp := takeoutOrder.GetErpPosInvoiceResp()
-
-	// 8. 如果订单没有班次，则无法取消发票
-	if takeoutOrder.StaffShiftLogUuid == 0 {
-		logger.Logger.Warn("外卖订单没有班次信息，无法取消 ERP 发票",
-			zap.Uint64("orderUuid", orderUuid),
-			zap.String("platformOrderId", takeoutOrder.PlatformOrderId))
-		return nil
-	}
-
-	// 9. 查询班次信息
-	shiftLog, err := takeoutOrderRepo.GetShiftLogByOrderUuid(orderUuid)
-	if err != nil {
-		return errors.WithMessage(err, "查询班次信息失败")
-	}
-	if shiftLog.IsHandedOver() {
-		return errors.New("当前班次已交班，无法取消发票")
-	}
-
-	// 10. 调用 ERP 服务取消发票
 	erpAdapter := rpc.NewErpRpcAdapter(database.GetDBManager(config.Database))
-	err = erpAdapter.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
-		ProductsInvoiceName: func() string {
-			if erpResp != nil {
-				return erpResp.ProductsInvoiceName
-			}
-			return ""
-		}(),
-		MaterialInvoiceName: func() string {
-			if erpResp != nil {
-				return erpResp.MaterialInvoiceName
-			}
-			return ""
-		}(),
-		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,          // 异步模式必填
-		OrderNo:          strconv.FormatUint(takeoutOrder.Uuid, 10), // 使用订单UUID作为 ERP 订单号, 异步模式必填
-		Remark:           remarkData,                                // 附注信息（JSON格式，包含 shop_uuid 等路由信息，用于 BMP 回调）
-	})
-	if err != nil {
-		logger.Logger.Error("取消外卖订单 ERP 发票失败",
-			zap.Uint64("orderUuid", orderUuid),
-			zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
-			zap.String("erpResp", erpResp.String()),
-			zap.Error(err))
-		return errors.WithMessage(err, "取消 ERP 发票失败")
+
+	if companySetting.IsErpSalesInvoiceMode() {
+		// SI 模式：解析 SI 响应，调用 CancelSalesInvoice
+		siResp := takeoutOrder.GetErpSalesInvoiceResp()
+		salesInvoiceName := ""
+		var paymentEntryNames []string
+		if siResp != nil {
+			salesInvoiceName = siResp.SalesInvoiceName
+			paymentEntryNames = siResp.PaymentEntryNames
+		}
+		err = erpAdapter.CancelSalesInvoice(ctx, req.CancelSalesInvoiceReq{
+			SiteCode:          companySetting.ErpnextSiteCode,
+			OrderNo:           strconv.FormatUint(takeoutOrder.Uuid, 10),
+			SaleOrderUuid:     strconv.FormatUint(takeoutOrder.Uuid, 10),
+			SalesInvoiceName:  salesInvoiceName,
+			PaymentEntryNames: paymentEntryNames,
+			StockDeducted:     takeoutOrder.ErpStockDeducted == 1,
+			Remark:            remarkData,
+		})
+		if err != nil {
+			logger.Logger.Error("取消外卖订单 ERP 发票失败(SI模式)",
+				zap.Uint64("orderUuid", orderUuid),
+				zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
+				zap.String("salesInvoiceName", salesInvoiceName),
+				zap.Error(err))
+			return errors.WithMessage(err, "取消 Sales Invoice 失败")
+		}
+	} else {
+		// POS Invoice 模式：需要班次信息
+		erpResp := takeoutOrder.GetErpPosInvoiceResp()
+
+		if takeoutOrder.StaffShiftLogUuid == 0 {
+			logger.Logger.Warn("外卖订单没有班次信息，无法取消 ERP 发票",
+				zap.Uint64("orderUuid", orderUuid),
+				zap.String("platformOrderId", takeoutOrder.PlatformOrderId))
+			return nil
+		}
+
+		shiftLog, err := takeoutOrderRepo.GetShiftLogByOrderUuid(orderUuid)
+		if err != nil {
+			return errors.WithMessage(err, "查询班次信息失败")
+		}
+		if shiftLog.IsHandedOver() {
+			return errors.New("当前班次已交班，无法取消发票")
+		}
+
+		err = erpAdapter.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
+			ProductsInvoiceName: func() string {
+				if erpResp != nil {
+					return erpResp.ProductsInvoiceName
+				}
+				return ""
+			}(),
+			MaterialInvoiceName: func() string {
+				if erpResp != nil {
+					return erpResp.MaterialInvoiceName
+				}
+				return ""
+			}(),
+			OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
+			OrderNo:          strconv.FormatUint(takeoutOrder.Uuid, 10),
+			Remark:           remarkData,
+		})
+		if err != nil {
+			logger.Logger.Error("取消外卖订单 ERP 发票失败",
+				zap.Uint64("orderUuid", orderUuid),
+				zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
+				zap.Error(err))
+			return errors.WithMessage(err, "取消 ERP 发票失败")
+		}
 	}
 
 	// 清空订单的 erp_pos_invoice_resp 字段，使 SyncOrderToERP 能够重新同步

@@ -31,6 +31,14 @@ type IMarketingActivityRepo interface {
 	GetValidActivityByUuid(uuid uint64) (*model.MarketingActivity, error)                 // 根据uuid获取正在进行中的营销活动
 	GenerateQrCode(params *QrCodeParams) (string, error)                                  // 生成二维码
 
+	SoftDeleteByHeadquarterExcludeUuids(headquarterUuid uint64, excludeUuids []uint64) error // 软删除总部活动（排除指定uuid）
+	FindHeadquarterByUuidsWithPrizes(uuids []uint64) ([]model.MarketingActivity, error)      // 根据uuid列表查询总部活动（含奖品）
+	UnscopedDeleteByUuid(uuid uint64) error                                                  // 根据uuid硬删除活动
+	CreateActivity(activity *model.MarketingActivity) error                                  // 创建活动
+	UnscopedDeleteByHeadquarter(headquarterUuid uint64) error                                // 根据总部uuid硬删除活动
+	FindByHeadquarter(headquarterUuid uint64) ([]model.MarketingActivity, error)             // 根据总部uuid查询活动
+	FindAllHeadquarterWithPrizes() ([]model.MarketingActivity, error)                        // 查询所有总部活动（含奖品）
+
 	WithLanguage() DBOption
 	WithPrizes() DBOption
 }
@@ -184,4 +192,60 @@ func (r *MarketingActivityRepo) GenerateQrCode(params *QrCodeParams) (string, er
 	}
 	// 转换为base64
 	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(qr), nil
+}
+
+// SoftDeleteByHeadquarterExcludeUuids 软删除总部活动（排除指定uuid）
+func (r *MarketingActivityRepo) SoftDeleteByHeadquarterExcludeUuids(headquarterUuid uint64, excludeUuids []uint64) error {
+	return r.db.Model(&model.MarketingActivity{}).
+		Where("headquarter_uuid = ? AND uuid NOT IN (?)", headquarterUuid, excludeUuids).
+		Update("delete_time", time.Now().Unix()).Error
+}
+
+// FindHeadquarterByUuidsWithPrizes 根据uuid列表查询总部活动（含奖品）
+func (r *MarketingActivityRepo) FindHeadquarterByUuidsWithPrizes(uuids []uint64) ([]model.MarketingActivity, error) {
+	var activities []model.MarketingActivity
+	err := r.db.Where("delete_time = 0 AND headquarter_uuid = 0 AND uuid IN (?)", uuids).
+		Preload("Prizes").
+		Find(&activities).Error
+	if err != nil {
+		return nil, err
+	}
+	return activities, nil
+}
+
+// UnscopedDeleteByUuid 根据uuid硬删除活动
+func (r *MarketingActivityRepo) UnscopedDeleteByUuid(uuid uint64) error {
+	return r.db.Unscoped().Where("uuid = ?", uuid).Delete(&model.MarketingActivity{}).Error
+}
+
+// CreateActivity 创建活动
+func (r *MarketingActivityRepo) CreateActivity(activity *model.MarketingActivity) error {
+	return r.db.Create(activity).Error
+}
+
+// UnscopedDeleteByHeadquarter 根据总部uuid硬删除活动
+func (r *MarketingActivityRepo) UnscopedDeleteByHeadquarter(headquarterUuid uint64) error {
+	return r.db.Unscoped().Where("headquarter_uuid = ?", headquarterUuid).Delete(&model.MarketingActivity{}).Error
+}
+
+// FindByHeadquarter 根据总部uuid查询活动
+func (r *MarketingActivityRepo) FindByHeadquarter(headquarterUuid uint64) ([]model.MarketingActivity, error) {
+	var activities []model.MarketingActivity
+	err := r.db.Where("headquarter_uuid = ?", headquarterUuid).Find(&activities).Error
+	if err != nil {
+		return nil, err
+	}
+	return activities, nil
+}
+
+// FindAllHeadquarterWithPrizes 查询所有总部活动（含奖品）
+func (r *MarketingActivityRepo) FindAllHeadquarterWithPrizes() ([]model.MarketingActivity, error) {
+	var activities []model.MarketingActivity
+	err := r.db.Where("delete_time = 0 AND headquarter_uuid = 0").
+		Preload("Prizes").
+		Find(&activities).Error
+	if err != nil {
+		return nil, err
+	}
+	return activities, nil
 }
