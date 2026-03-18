@@ -398,6 +398,11 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 		tasks.NewAutoReceiptTask(dbm, cache).Execute()
 	})
 
+	// 每天凌晨3点删除7天前的订单操作耗时记录
+	_, _ = c.AddFunc("0 0 3 * * *", func() {
+		tasks.NewDelOperationDurationTask(dbm, cache).Execute()
+	})
+
 	// 启动定时器
 	c.Start()
 }
