@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"testing"
 
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	pkgctx "ttpos-server-go/pkg/context"
 
 	"gorm.io/gorm"
 )
@@ -42,9 +44,14 @@ func (m *mockProductUnitRepo) GetProductUnitByErpnextUom(uom string) (*model.Pro
 // mockMaterialUnitRepo implements repository.IMaterialUnitRepo for unit testing
 type mockMaterialUnitRepo struct {
 	units         map[uint64]model.MaterialUnit // unit_uuid → MaterialUnit
+	unitList      []*model.MaterialUnit         // for GetMaterialUnitListByBaseUnitUuid
+	unitListErr   error                         // error for GetMaterialUnitListByBaseUnitUuid
 	createdUnits  []model.MaterialUnit
 	updatedData   []map[string]any
 	destroyCalled bool
+	updateErr     error // error for UpdateMaterialUnit
+	createErr     error // error for CreateMaterialUnit
+	destroyErr    error // error for DestroyMaterialUnit
 }
 
 func (m *mockMaterialUnitRepo) GetMaterialUnit(opts ...repository.DBOption) model.MaterialUnit {
@@ -71,6 +78,9 @@ func (m *mockMaterialUnitRepo) GetMaterialUnitList(opts ...repository.DBOption) 
 }
 
 func (m *mockMaterialUnitRepo) CreateMaterialUnit(mu model.MaterialUnit) (uint64, error) {
+	if m.createErr != nil {
+		return 0, m.createErr
+	}
 	m.createdUnits = append(m.createdUnits, mu)
 	return 999, nil
 }
@@ -80,15 +90,27 @@ func (m *mockMaterialUnitRepo) CreateMaterialUnitList(mus []model.MaterialUnit) 
 }
 
 func (m *mockMaterialUnitRepo) UpdateMaterialUnit(data map[string]any, opts ...repository.DBOption) error {
+	if m.updateErr != nil {
+		return m.updateErr
+	}
 	m.updatedData = append(m.updatedData, data)
 	return nil
 }
 
 func (m *mockMaterialUnitRepo) GetMaterialUnitListByBaseUnitUuid(baseUnitUuid uint64) ([]*model.MaterialUnit, error) {
+	if m.unitListErr != nil {
+		return nil, m.unitListErr
+	}
+	if m.unitList != nil {
+		return m.unitList, nil
+	}
 	return nil, nil
 }
 
 func (m *mockMaterialUnitRepo) DestroyMaterialUnit(opts ...repository.DBOption) error {
+	if m.destroyErr != nil {
+		return m.destroyErr
+	}
 	m.destroyCalled = true
 	return nil
 }
@@ -121,6 +143,49 @@ func (m *mockCommonRepo) WhereBySoftDelete() repository.DBOption {
 func (m *mockCommonRepo) WhereByUuidNotIn(uuids []uint64) repository.DBOption {
 	return func(db *gorm.DB) *gorm.DB { return db }
 }
+
+// mockMaterialRepo implements repository.IMaterialRepo for unit testing
+type mockMaterialRepo struct {
+	repository.IMaterialRepo
+	categories  map[string]*model.MaterialCategory
+	categoryErr error // error for GetMaterialCategoryByCode
+	materials   map[uint64]*model.Material
+	updatedData []map[string]any
+	updateErr   error // error for UpdateMaterialData
+}
+
+func (m *mockMaterialRepo) GetMaterialCategoryByCode(code string) (*model.MaterialCategory, bool, error) {
+	if m.categoryErr != nil {
+		return nil, false, m.categoryErr
+	}
+	if cat, ok := m.categories[code]; ok {
+		return cat, true, nil
+	}
+	return nil, false, nil
+}
+
+func (m *mockMaterialRepo) GetMaterialDetailContainsDeletedByUuid(uuid uint64) (*model.Material, error) {
+	if mat, ok := m.materials[uuid]; ok {
+		return mat, nil
+	}
+	return nil, fmt.Errorf("not found: %d", uuid)
+}
+
+func (m *mockMaterialRepo) UpdateMaterialData(data map[string]any, opts ...repository.DBOption) error {
+	if m.updateErr != nil {
+		return m.updateErr
+	}
+	m.updatedData = append(m.updatedData, data)
+	return nil
+}
+
+// mockContext implements pkg/context.Context for unit testing
+type mockContext struct {
+	pkgctx.Context
+	language string
+}
+
+func (m *mockContext) GetLanguage() string { return m.language }
 
 // --- Tests ---
 
@@ -631,6 +696,34 @@ func TestResolveUpdatePurchaseUnit(t *testing.T) {
 }
 
 func TestSyncNonBaseUnit(t *testing.T) {
+	t.Run("update error returns error", func(t *testing.T) {
+		muRepo := &mockMaterialUnitRepo{
+			units:     map[uint64]model.MaterialUnit{200: {BaseModel: model.BaseModel{Uuid: 50}}},
+			updateErr: fmt.Errorf("update failed"),
+		}
+		material := &model.Material{Unit: &model.MaterialUnit{BaseModel: model.BaseModel{Uuid: 10}}}
+		material.Uuid = 1
+		productUnit := &model.ProductUnit{BaseModel: model.BaseModel{Uuid: 200}, Name: "Gram"}
+		_, err := syncNonBaseUnit(muRepo, &mockCommonRepo{}, material, productUnit, 1000)
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	t.Run("create error returns error", func(t *testing.T) {
+		muRepo := &mockMaterialUnitRepo{
+			units:     map[uint64]model.MaterialUnit{},
+			createErr: fmt.Errorf("create failed"),
+		}
+		material := &model.Material{Unit: &model.MaterialUnit{BaseModel: model.BaseModel{Uuid: 10}}}
+		material.Uuid = 1
+		productUnit := &model.ProductUnit{BaseModel: model.BaseModel{Uuid: 300}, Name: "Piece"}
+		_, err := syncNonBaseUnit(muRepo, &mockCommonRepo{}, material, productUnit, 10)
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
 	t.Run("existing unit gets updated", func(t *testing.T) {
 		muRepo := &mockMaterialUnitRepo{
 			units: map[uint64]model.MaterialUnit{
@@ -685,6 +778,17 @@ func TestSyncNonBaseUnit(t *testing.T) {
 }
 
 func TestSyncSingleMaterialUnit(t *testing.T) {
+	t.Run("base unit update error returns error", func(t *testing.T) {
+		muRepo := &mockMaterialUnitRepo{updateErr: fmt.Errorf("update failed")}
+		material := &model.Material{Unit: &model.MaterialUnit{BaseModel: model.BaseModel{Uuid: 10}}}
+		stockUnit := &model.ProductUnit{BaseModel: model.BaseModel{Uuid: 100}}
+		productUnit := &model.ProductUnit{BaseModel: model.BaseModel{Uuid: 100}, Name: "Kg"}
+		_, err := syncSingleMaterialUnit(muRepo, &mockCommonRepo{}, material, productUnit, stockUnit, 1)
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
 	t.Run("base unit gets updated", func(t *testing.T) {
 		muRepo := &mockMaterialUnitRepo{}
 		material := &model.Material{
@@ -724,6 +828,16 @@ func TestSyncSingleMaterialUnit(t *testing.T) {
 }
 
 func TestCleanupDeletedUnits(t *testing.T) {
+	t.Run("destroy error returns error", func(t *testing.T) {
+		muRepo := &mockMaterialUnitRepo{destroyErr: fmt.Errorf("destroy failed")}
+		material := &model.Material{}
+		material.Uuid = 1
+		err := cleanupDeletedUnits(muRepo, &mockCommonRepo{}, material, []uint64{10})
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
 	t.Run("empty save list does nothing", func(t *testing.T) {
 		muRepo := &mockMaterialUnitRepo{}
 		err := cleanupDeletedUnits(muRepo, &mockCommonRepo{}, &model.Material{}, nil)
@@ -814,3 +928,566 @@ func TestResolveDefaultSalesUnit(t *testing.T) {
 		}
 	})
 }
+
+func TestResolveMaterialCategoryUuid(t *testing.T) {
+	t.Run("empty code returns 1", func(t *testing.T) {
+		uuid, err := resolveMaterialCategoryUuid(nil, "")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if uuid != 1 {
+			t.Errorf("expected 1, got %d", uuid)
+		}
+	})
+
+	t.Run("code found returns category uuid", func(t *testing.T) {
+		repo := &mockMaterialRepo{
+			categories: map[string]*model.MaterialCategory{
+				"FOOD": {BaseModel: model.BaseModel{Uuid: 42}},
+			},
+		}
+		uuid, err := resolveMaterialCategoryUuid(repo, "FOOD")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if uuid != 42 {
+			t.Errorf("expected 42, got %d", uuid)
+		}
+	})
+
+	t.Run("repo error returns error", func(t *testing.T) {
+		repo := &mockMaterialRepo{categoryErr: fmt.Errorf("db error")}
+		_, err := resolveMaterialCategoryUuid(repo, "FOOD")
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	t.Run("code not found returns 1", func(t *testing.T) {
+		repo := &mockMaterialRepo{
+			categories: map[string]*model.MaterialCategory{},
+		}
+		uuid, err := resolveMaterialCategoryUuid(repo, "UNKNOWN")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if uuid != 1 {
+			t.Errorf("expected 1, got %d", uuid)
+		}
+	})
+}
+
+func TestSyncMaterialUnits(t *testing.T) {
+	t.Run("syncs all uoms", func(t *testing.T) {
+		muRepo := &mockMaterialUnitRepo{
+			units: map[uint64]model.MaterialUnit{},
+		}
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{
+				"Kg": {BaseModel: model.BaseModel{Uuid: 100}, Name: "Kg"},
+				"g":  {BaseModel: model.BaseModel{Uuid: 101}, Name: "g"},
+			},
+		}
+		material := &model.Material{
+			Unit: &model.MaterialUnit{BaseModel: model.BaseModel{Uuid: 10}},
+		}
+		material.Uuid = 1
+		stockUnit := &model.ProductUnit{BaseModel: model.BaseModel{Uuid: 100}}
+		updateData := map[string]any{}
+
+		uuids, err := syncMaterialUnits(syncMaterialUnitsParams{
+			materialUnitRepo: muRepo,
+			productUnitRepo:  puRepo,
+			commonRepo:       &mockCommonRepo{},
+			material:         material,
+			stockUnit:        stockUnit,
+			purchaseUnitUuid: 101, // g is purchase unit
+			updateData:       updateData,
+		}, req.MaterialEditErpReq{
+			Uoms: []req.MaterialUomReq{
+				{Uom: "Kg", ConversionRate: 1},
+				{Uom: "g", ConversionRate: 1000},
+			},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(uuids) != 2 {
+			t.Fatalf("expected 2 uuids, got %d", len(uuids))
+		}
+		// g matched purchaseUnitUuid=101, so purchase_unit_uuid should be set
+		if _, ok := updateData["purchase_unit_uuid"]; !ok {
+			t.Error("expected purchase_unit_uuid to be set for matching purchase unit")
+		}
+	})
+
+	t.Run("unknown uom returns error", func(t *testing.T) {
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{},
+		}
+		_, err := syncMaterialUnits(syncMaterialUnitsParams{
+			productUnitRepo: puRepo,
+			commonRepo:      &mockCommonRepo{},
+			material:        &model.Material{},
+			stockUnit:       &model.ProductUnit{},
+			updateData:      map[string]any{},
+		}, req.MaterialEditErpReq{
+			Uoms:     []req.MaterialUomReq{{Uom: "INVALID"}},
+			ItemCode: "IT001",
+		})
+		if err == nil {
+			t.Error("expected error for unknown uom")
+		}
+	})
+
+	t.Run("sync single unit error propagates", func(t *testing.T) {
+		muRepo := &mockMaterialUnitRepo{
+			units:     map[uint64]model.MaterialUnit{},
+			updateErr: fmt.Errorf("update failed"),
+		}
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{
+				"Kg": {BaseModel: model.BaseModel{Uuid: 100}, Name: "Kg"},
+			},
+		}
+		material := &model.Material{
+			Unit: &model.MaterialUnit{BaseModel: model.BaseModel{Uuid: 10}},
+		}
+		material.Uuid = 1
+		stockUnit := &model.ProductUnit{BaseModel: model.BaseModel{Uuid: 100}}
+		_, err := syncMaterialUnits(syncMaterialUnitsParams{
+			materialUnitRepo: muRepo,
+			productUnitRepo:  puRepo,
+			commonRepo:       &mockCommonRepo{},
+			material:         material,
+			stockUnit:        stockUnit,
+			updateData:       map[string]any{},
+		}, req.MaterialEditErpReq{
+			Uoms: []req.MaterialUomReq{{Uom: "Kg", ConversionRate: 1}},
+		})
+		if err == nil {
+			t.Error("expected error from syncSingleMaterialUnit")
+		}
+	})
+
+	t.Run("empty uoms returns empty list", func(t *testing.T) {
+		uuids, err := syncMaterialUnits(syncMaterialUnitsParams{
+			updateData: map[string]any{},
+		}, req.MaterialEditErpReq{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(uuids) != 0 {
+			t.Errorf("expected 0, got %d", len(uuids))
+		}
+	})
+}
+
+func TestGetDefaultSalesUnitInfo(t *testing.T) {
+	srv := &materialSrv{}
+
+	t.Run("zero uuid returns empty", func(t *testing.T) {
+		uuid, locale := srv.getDefaultSalesUnitInfo(nil, 0)
+		if uuid != 0 {
+			t.Errorf("expected 0, got %d", uuid)
+		}
+		if locale.EN != "" {
+			t.Error("expected empty locale")
+		}
+	})
+
+	t.Run("unit not found returns empty", func(t *testing.T) {
+		muRepo := &mockMaterialUnitRepo{
+			units: map[uint64]model.MaterialUnit{},
+		}
+		uuid, locale := srv.getDefaultSalesUnitInfo(muRepo, 999)
+		if uuid != 0 {
+			t.Errorf("expected 0, got %d", uuid)
+		}
+		if locale.EN != "" {
+			t.Error("expected empty locale")
+		}
+	})
+
+	t.Run("unit found but no product unit returns empty", func(t *testing.T) {
+		muRepo := &mockMaterialUnitRepo{
+			units: map[uint64]model.MaterialUnit{
+				50: {BaseModel: model.BaseModel{Uuid: 50}, Unit: nil},
+			},
+		}
+		uuid, locale := srv.getDefaultSalesUnitInfo(muRepo, 50)
+		if uuid != 0 {
+			t.Errorf("expected 0, got %d", uuid)
+		}
+		if locale.EN != "" {
+			t.Error("expected empty locale")
+		}
+	})
+
+	t.Run("unit found with product unit returns data", func(t *testing.T) {
+		muRepo := &mockMaterialUnitRepo{
+			units: map[uint64]model.MaterialUnit{
+				50: {
+					BaseModel: model.BaseModel{Uuid: 50},
+					Unit: &model.ProductUnit{
+						MultiLanguageName: model.MultiLanguageName{EnName: "Kilogram", ZhName: "千克"},
+					},
+				},
+			},
+		}
+		uuid, locale := srv.getDefaultSalesUnitInfo(muRepo, 50)
+		if uuid != 50 {
+			t.Errorf("expected 50, got %d", uuid)
+		}
+		if locale.EN != "Kilogram" {
+			t.Errorf("expected EN=Kilogram, got %q", locale.EN)
+		}
+	})
+}
+
+func TestBuildMaterialUnitList(t *testing.T) {
+	srv := &materialSrv{}
+
+	t.Run("repo error returns error", func(t *testing.T) {
+		ctx := &mockContext{language: "en"}
+		muRepo := &mockMaterialUnitRepo{unitListErr: fmt.Errorf("db error")}
+		_, err := srv.buildMaterialUnitList(ctx, muRepo, 0)
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	t.Run("empty list returns empty", func(t *testing.T) {
+		ctx := &mockContext{language: "en"}
+		muRepo := &mockMaterialUnitRepo{}
+		list, err := srv.buildMaterialUnitList(ctx, muRepo, 0)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(list) != 0 {
+			t.Errorf("expected empty list, got %d", len(list))
+		}
+	})
+
+	t.Run("returns unit list with locale names", func(t *testing.T) {
+		ctx := &mockContext{language: "en"}
+		muRepo := &mockMaterialUnitRepo{
+			unitList: []*model.MaterialUnit{
+				{
+					BaseModel:      model.BaseModel{Uuid: 10},
+					UnitUuid:       100,
+					ConversionRate: 1,
+					Unit: &model.ProductUnit{
+						MultiLanguageName: model.MultiLanguageName{EnName: "Kilogram", ZhName: "千克"},
+					},
+				},
+				{
+					BaseModel:      model.BaseModel{Uuid: 20},
+					UnitUuid:       101,
+					ConversionRate: 1000,
+					Unit: &model.ProductUnit{
+						MultiLanguageName: model.MultiLanguageName{EnName: "Gram", ZhName: "克"},
+					},
+				},
+			},
+		}
+		list, err := srv.buildMaterialUnitList(ctx, muRepo, 10)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(list) != 2 {
+			t.Fatalf("expected 2 units, got %d", len(list))
+		}
+		if list[0].Name != "Kilogram" {
+			t.Errorf("expected name=Kilogram, got %q", list[0].Name)
+		}
+		if list[1].ConversionRate != 1000 {
+			t.Errorf("expected conversion_rate=1000, got %v", list[1].ConversionRate)
+		}
+	})
+}
+
+func TestDoUpdateMaterialByErpItem(t *testing.T) {
+	// helper to build a standard material with base unit
+	newTestMaterial := func(uuid uint64) *model.Material {
+		m := &model.Material{
+			Unit: &model.MaterialUnit{
+				BaseModel: model.BaseModel{Uuid: 10},
+				Unit:      &model.ProductUnit{BaseModel: model.BaseModel{Uuid: 100}},
+			},
+		}
+		m.Uuid = uuid
+		m.UnitUuid = 10
+		m.CostUnitUuid = 10
+		m.PurchaseUnitUuid = 10
+		return m
+	}
+
+	t.Run("happy path with single unit", func(t *testing.T) {
+		matRepo := &mockMaterialRepo{
+			materials: map[uint64]*model.Material{
+				1: newTestMaterial(1),
+			},
+		}
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{
+				"Kg": {BaseModel: model.BaseModel{Uuid: 100}, Name: "Kg"},
+			},
+		}
+		muRepo := &mockMaterialUnitRepo{
+			units: map[uint64]model.MaterialUnit{},
+		}
+
+		err := doUpdateMaterialByErpItem(matRepo, puRepo, muRepo, &mockCommonRepo{},
+			req.MaterialEditErpReq{
+				Uuid:     1,
+				ItemCode: "IT001",
+				StockUom: "Kg",
+				Uoms:     []req.MaterialUomReq{{Uom: "Kg", ConversionRate: 1}},
+			})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(matRepo.updatedData) != 1 {
+			t.Fatal("expected UpdateMaterialData to be called once")
+		}
+		data := matRepo.updatedData[0]
+		if data["category_uuid"] != uint64(1) {
+			t.Errorf("expected category_uuid=1 (default), got %v", data["category_uuid"])
+		}
+	})
+
+	t.Run("material not found returns error", func(t *testing.T) {
+		matRepo := &mockMaterialRepo{
+			materials: map[uint64]*model.Material{},
+		}
+		err := doUpdateMaterialByErpItem(matRepo, nil, nil, nil,
+			req.MaterialEditErpReq{Uuid: 999})
+		if err == nil {
+			t.Error("expected error for missing material")
+		}
+	})
+
+	t.Run("stock unit not found returns error", func(t *testing.T) {
+		matRepo := &mockMaterialRepo{
+			materials: map[uint64]*model.Material{
+				1: newTestMaterial(1),
+			},
+		}
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{},
+		}
+
+		err := doUpdateMaterialByErpItem(matRepo, puRepo, nil, &mockCommonRepo{},
+			req.MaterialEditErpReq{
+				Uuid:     1,
+				ItemCode: "IT001",
+				StockUom: "INVALID",
+			})
+		if err == nil {
+			t.Error("expected error for missing stock unit")
+		}
+	})
+
+	t.Run("with classification code", func(t *testing.T) {
+		matRepo := &mockMaterialRepo{
+			materials: map[uint64]*model.Material{
+				1: newTestMaterial(1),
+			},
+			categories: map[string]*model.MaterialCategory{
+				"FOOD": {BaseModel: model.BaseModel{Uuid: 42}},
+			},
+		}
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{
+				"Kg": {BaseModel: model.BaseModel{Uuid: 100}, Name: "Kg"},
+			},
+		}
+		muRepo := &mockMaterialUnitRepo{
+			units: map[uint64]model.MaterialUnit{},
+		}
+
+		err := doUpdateMaterialByErpItem(matRepo, puRepo, muRepo, &mockCommonRepo{},
+			req.MaterialEditErpReq{
+				Uuid:               1,
+				ItemCode:           "IT001",
+				StockUom:           "Kg",
+				ClassificationCode: "FOOD",
+				Uoms:               []req.MaterialUomReq{{Uom: "Kg", ConversionRate: 1}},
+			})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		data := matRepo.updatedData[0]
+		if data["category_uuid"] != uint64(42) {
+			t.Errorf("expected category_uuid=42, got %v", data["category_uuid"])
+		}
+	})
+
+	t.Run("with multiple units and purchase unit", func(t *testing.T) {
+		mat := newTestMaterial(1)
+		mat.PurchaseUnitUuid = 0
+		matRepo := &mockMaterialRepo{
+			materials: map[uint64]*model.Material{1: mat},
+		}
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{
+				"Kg": {BaseModel: model.BaseModel{Uuid: 100}, Name: "Kg"},
+				"g":  {BaseModel: model.BaseModel{Uuid: 101}, Name: "g"},
+			},
+		}
+		muRepo := &mockMaterialUnitRepo{
+			units: map[uint64]model.MaterialUnit{},
+		}
+
+		err := doUpdateMaterialByErpItem(matRepo, puRepo, muRepo, &mockCommonRepo{},
+			req.MaterialEditErpReq{
+				Uuid:        1,
+				ItemCode:    "IT001",
+				StockUom:    "Kg",
+				PurchaseUom: "g",
+				Uoms: []req.MaterialUomReq{
+					{Uom: "Kg", ConversionRate: 1},
+					{Uom: "g", ConversionRate: 1000},
+				},
+			})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		data := matRepo.updatedData[0]
+		// g was created and matched as purchase unit
+		if _, ok := data["purchase_unit_uuid"]; !ok {
+			t.Error("expected purchase_unit_uuid to be set")
+		}
+	})
+
+	t.Run("category resolve error returns error", func(t *testing.T) {
+		matRepo := &mockMaterialRepo{
+			materials:   map[uint64]*model.Material{1: newTestMaterial(1)},
+			categoryErr: fmt.Errorf("db error"),
+		}
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{
+				"Kg": {BaseModel: model.BaseModel{Uuid: 100}, Name: "Kg"},
+			},
+		}
+		err := doUpdateMaterialByErpItem(matRepo, puRepo, nil, &mockCommonRepo{},
+			req.MaterialEditErpReq{
+				Uuid:               1,
+				ItemCode:           "IT001",
+				StockUom:           "Kg",
+				ClassificationCode: "BAD",
+			})
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	t.Run("sync units error returns error", func(t *testing.T) {
+		matRepo := &mockMaterialRepo{
+			materials: map[uint64]*model.Material{1: newTestMaterial(1)},
+		}
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{
+				"Kg": {BaseModel: model.BaseModel{Uuid: 100}, Name: "Kg"},
+			},
+		}
+		// Force syncMaterialUnits to fail by having an uom that doesn't exist in puRepo
+		err := doUpdateMaterialByErpItem(matRepo, puRepo, &mockMaterialUnitRepo{}, &mockCommonRepo{},
+			req.MaterialEditErpReq{
+				Uuid:     1,
+				ItemCode: "IT001",
+				StockUom: "Kg",
+				Uoms: []req.MaterialUomReq{
+					{Uom: "Kg", ConversionRate: 1},
+					{Uom: "INVALID", ConversionRate: 1},
+				},
+			})
+		if err == nil {
+			t.Error("expected error from syncMaterialUnits")
+		}
+	})
+
+	t.Run("cleanup error returns error", func(t *testing.T) {
+		matRepo := &mockMaterialRepo{
+			materials: map[uint64]*model.Material{1: newTestMaterial(1)},
+		}
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{
+				"Kg": {BaseModel: model.BaseModel{Uuid: 100}, Name: "Kg"},
+			},
+		}
+		muRepo := &mockMaterialUnitRepo{
+			units:      map[uint64]model.MaterialUnit{},
+			destroyErr: fmt.Errorf("destroy failed"),
+		}
+		err := doUpdateMaterialByErpItem(matRepo, puRepo, muRepo, &mockCommonRepo{},
+			req.MaterialEditErpReq{
+				Uuid:     1,
+				ItemCode: "IT001",
+				StockUom: "Kg",
+				Uoms:     []req.MaterialUomReq{{Uom: "Kg", ConversionRate: 1}},
+			})
+		if err == nil {
+			t.Error("expected error from cleanupDeletedUnits")
+		}
+	})
+
+	t.Run("update material data error returns error", func(t *testing.T) {
+		matRepo := &mockMaterialRepo{
+			materials: map[uint64]*model.Material{1: newTestMaterial(1)},
+			updateErr: fmt.Errorf("update failed"),
+		}
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{
+				"Kg": {BaseModel: model.BaseModel{Uuid: 100}, Name: "Kg"},
+			},
+		}
+		muRepo := &mockMaterialUnitRepo{units: map[uint64]model.MaterialUnit{}}
+		err := doUpdateMaterialByErpItem(matRepo, puRepo, muRepo, &mockCommonRepo{},
+			req.MaterialEditErpReq{
+				Uuid:     1,
+				ItemCode: "IT001",
+				StockUom: "Kg",
+				Uoms:     []req.MaterialUomReq{{Uom: "Kg", ConversionRate: 1}},
+			})
+		if err == nil {
+			t.Error("expected error from UpdateMaterialData")
+		}
+	})
+
+	t.Run("not for sale sets delete_time", func(t *testing.T) {
+		matRepo := &mockMaterialRepo{
+			materials: map[uint64]*model.Material{
+				1: newTestMaterial(1),
+			},
+		}
+		puRepo := &mockProductUnitRepo{
+			units: map[string]*model.ProductUnit{
+				"Kg": {BaseModel: model.BaseModel{Uuid: 100}, Name: "Kg"},
+			},
+		}
+		muRepo := &mockMaterialUnitRepo{
+			units: map[uint64]model.MaterialUnit{},
+		}
+
+		err := doUpdateMaterialByErpItem(matRepo, puRepo, muRepo, &mockCommonRepo{},
+			req.MaterialEditErpReq{
+				Uuid:       1,
+				ItemCode:   "IT001",
+				StockUom:   "Kg",
+				NotForSale: true,
+				Uoms:       []req.MaterialUomReq{{Uom: "Kg", ConversionRate: 1}},
+			})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		data := matRepo.updatedData[0]
+		if dt, ok := data["delete_time"]; !ok || dt.(int64) == 0 {
+			t.Error("expected non-zero delete_time for not-for-sale item")
+		}
+	})
+}
+
+// Verify unused import suppression
+var _ dto.LocaleResponse

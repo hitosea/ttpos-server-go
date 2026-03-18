@@ -1677,10 +1677,23 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 
 // updateMaterialByErpItemTx 在事务中执行 ERP 物品更新逻辑
 func (s *materialSrv) updateMaterialByErpItemTx(tx *gorm.DB, request req.MaterialEditErpReq, commonRepo repository.ICommonRepo) error {
-	materialRepo := repository.NewMaterialRepo(tx)
-	productUnitRepo := repository.NewProductUnitRepo(tx)
-	materialUnitRepo := repository.NewMaterialUnitRepo(tx)
+	return doUpdateMaterialByErpItem(
+		repository.NewMaterialRepo(tx),
+		repository.NewProductUnitRepo(tx),
+		repository.NewMaterialUnitRepo(tx),
+		commonRepo,
+		request,
+	)
+}
 
+// doUpdateMaterialByErpItem 执行 ERP 物品更新的核心逻辑（可测试）
+func doUpdateMaterialByErpItem(
+	materialRepo repository.IMaterialRepo,
+	productUnitRepo repository.IProductUnitRepo,
+	materialUnitRepo repository.IMaterialUnitRepo,
+	commonRepo repository.ICommonRepo,
+	request req.MaterialEditErpReq,
+) error {
 	updateData := buildErpUpdateData(request)
 
 	material, err := materialRepo.GetMaterialDetailContainsDeletedByUuid(request.Uuid)
