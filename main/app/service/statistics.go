@@ -162,10 +162,9 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		}
 	}
 	takeoutSaleData := repository.NewStatisticsTakeoutRepo(db).CountTakeoutSale(repository.CountTakeoutReq{
-		TimeStart:           req.QueryStartTime,
-		TimeEnd:             req.QueryEndTime,
-		StaffShiftLogUuid:   staffShiftLogUuid,
-
+		TimeStart:         req.QueryStartTime,
+		TimeEnd:           req.QueryEndTime,
+		StaffShiftLogUuid: staffShiftLogUuid,
 	})
 	statisticsUtilSrv := NewStatisticsUtilSrv()
 	mergeSaleData := statisticsUtilSrv.MergeTakeoutStatistics(saleData, takeoutSaleData, cancelOrderData)
@@ -689,10 +688,9 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 		}
 	}
 	takeoutPaymentData := repository.NewStatisticsTakeoutRepo(ctx.GetDB()).CountTakeoutPayment(repository.CountTakeoutReq{
-		TimeStart:           req.QueryStartTime,
-		TimeEnd:             req.QueryEndTime,
-		StaffShiftLogUuid:   staffShiftLogUuid,
-
+		TimeStart:         req.QueryStartTime,
+		TimeEnd:           req.QueryEndTime,
+		StaffShiftLogUuid: staffShiftLogUuid,
 	})
 
 	var (
@@ -1155,11 +1153,11 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 
 	takeoutCategoryData := repository.NewStatisticsTakeoutRepo(ctx.GetDB()).CountTakeoutCategory(
 		repository.CountTakeoutReq{
-			TimeStart:           req.QueryStartTime,
-			TimeEnd:             req.QueryEndTime,
-			StaffShiftLogUuid:   staffShiftLogUuid,
-			Platform:            "", // 不筛选平台
-	
+			TimeStart:         req.QueryStartTime,
+			TimeEnd:           req.QueryEndTime,
+			StaffShiftLogUuid: staffShiftLogUuid,
+			Platform:          "", // 不筛选平台
+
 		},
 		req.CategoryType,
 		ctx.GetLanguage(),
@@ -1168,11 +1166,11 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 	// 获取外卖订单数量并累加到 orderNum
 	takeoutSaleData := repository.NewStatisticsTakeoutRepo(ctx.GetDB()).CountTakeoutSale(
 		repository.CountTakeoutReq{
-			TimeStart:           req.QueryStartTime,
-			TimeEnd:             req.QueryEndTime,
-			StaffShiftLogUuid:   staffShiftLogUuid,
-			Platform:            "", // 不筛选平台
-	
+			TimeStart:         req.QueryStartTime,
+			TimeEnd:           req.QueryEndTime,
+			StaffShiftLogUuid: staffShiftLogUuid,
+			Platform:          "", // 不筛选平台
+
 		},
 	)
 	orderNum += takeoutSaleData.TotalOrderNum
@@ -1270,11 +1268,11 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 
 	takeoutProductData := repository.NewStatisticsTakeoutRepo(ctx.GetDB()).CountTakeoutProduct(
 		repository.CountTakeoutReq{
-			TimeStart:           req.QueryStartTime,
-			TimeEnd:             req.QueryEndTime,
-			StaffShiftLogUuid:   staffShiftLogUuid,
-			Platform:            "", // 不筛选平台
-	
+			TimeStart:         req.QueryStartTime,
+			TimeEnd:           req.QueryEndTime,
+			StaffShiftLogUuid: staffShiftLogUuid,
+			Platform:          "", // 不筛选平台
+
 		},
 		ctx.GetLanguage(),
 	)
@@ -2282,8 +2280,8 @@ type CountReq struct {
 	OrderSource       int      `json:"order_source"`        // 订单来源: -1=全部, 1=店内, 2=外卖
 	Timezone          string   `json:"timezone"`            // 时区
 	StaffUuid         uint64   `json:"staff_uuid"`          // 操作员UUID
-	ExcludeDataManage bool `json:"exclude_data_manage"` // 是否排除数据管理订单
-	OnlyDataManage    bool `json:"only_data_manage"`    // 是否只查询数据管理订单
+	ExcludeDataManage bool     `json:"exclude_data_manage"` // 是否排除数据管理订单
+	OnlyDataManage    bool     `json:"only_data_manage"`    // 是否只查询数据管理订单
 }
 
 // buildCountOpts 构建统计选项
@@ -3013,17 +3011,17 @@ func (s *statisticsSrv) CountBusinessTimePeriod(ctx context.Context, req req.Bus
 
 	// 统计总时段数和时段数据
 	total, periodData := statisticsRepo.CountBusinessTimePeriod(repository.CountBusinessTimePeriodReq{
-		StartTime:          req.QueryStartTime,
-		EndTime:            req.QueryEndTime,
-		PeriodSeconds:      periodSeconds,
-		IsCreateTime:       req.StatisticsType == 0,
-		PageNo:             utils.IfInt(req.PageNo > 0, req.PageNo, 1),
-		PageSize:           utils.IfInt(req.PageSize > 0, req.PageSize, 10),
-		IsDesk:             req.OrderDesk == 1,
-		IsInstant:          req.OrderInstant == 1,
-		IsDelivery:         req.OrderDelivery == 1,
-		IsTakeout:          req.OrderTakeout == 1,
-		ExcludeDataManage:  req.ExcludeDataManage,
+		StartTime:         req.QueryStartTime,
+		EndTime:           req.QueryEndTime,
+		PeriodSeconds:     periodSeconds,
+		IsCreateTime:      req.StatisticsType == 0,
+		PageNo:            utils.IfInt(req.PageNo > 0, req.PageNo, 1),
+		PageSize:          utils.IfInt(req.PageSize > 0, req.PageSize, 10),
+		IsDesk:            req.OrderDesk == 1,
+		IsInstant:         req.OrderInstant == 1,
+		IsDelivery:        req.OrderDelivery == 1,
+		IsTakeout:         req.OrderTakeout == 1,
+		ExcludeDataManage: req.ExcludeDataManage,
 	}, opts...)
 
 	// 构建时段列表

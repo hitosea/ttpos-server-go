@@ -1581,35 +1581,33 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			CompanyName:     storeSetting.Company,
 			BusinessStatus:  businessStatus,
 		},
-		IsTtposSite:       companySetting.IsTtposSite(),
-		IsHeadquarter:     companySetting.IsHeadquarter(),
-		UpdateTime:        time.Now().Unix(),
-		ServerVersion:     utils.GetVersion(),
-		IsOpenTax:         taxSetting.IsOpen == "1",
-		IsSyncing:         slices.Contains(syncTaskManager.getRunningCompanyUuids(), company.Uuid),
-		LastSyncTime:      company.LastSyncTime,
-		HasChildren:       companySetting.HasChildren == 1,
-		HasDataPermission: hasDataPermission,
-		CompanyList:       s.GetCompanyList(ctx),
-		AllowedTransferTypes: func() string {
-			headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
-			if headquarterUuid == 0 {
-				businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-				if err != nil {
-					return "in,out"
-				}
-				return businessSetting.AllowedTransferTypes
-			} else {
-				copyCtx := ctx.Copy()
-				copyCtx.SetCompanyUuid(headquarterUuid)
-				businessSetting, err := s.settingSrv.GetBusinessSetting(copyCtx)
-				if err != nil {
-					return "in,out"
-				}
-				return businessSetting.AllowedTransferTypes
-			}
-		}(),
+		IsTtposSite:          companySetting.IsTtposSite(),
+		IsHeadquarter:        companySetting.IsHeadquarter(),
+		UpdateTime:           time.Now().Unix(),
+		ServerVersion:        utils.GetVersion(),
+		IsOpenTax:            taxSetting.IsOpen == "1",
+		IsSyncing:            slices.Contains(syncTaskManager.getRunningCompanyUuids(), company.Uuid),
+		LastSyncTime:         company.LastSyncTime,
+		HasChildren:          companySetting.HasChildren == 1,
+		HasDataPermission:    hasDataPermission,
+		CompanyList:          s.GetCompanyList(ctx),
+		AllowedTransferTypes: s.getAllowedTransferTypes(ctx),
 	}, nil
+}
+
+// getAllowedTransferTypes 获取允许的调拨类型
+func (s *authSrv) getAllowedTransferTypes(ctx context.Context) string {
+	headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
+	settingCtx := ctx
+	if headquarterUuid != 0 {
+		settingCtx = ctx.Copy()
+		settingCtx.SetCompanyUuid(headquarterUuid)
+	}
+	bs, err := s.settingSrv.GetBusinessSetting(settingCtx)
+	if err != nil {
+		return "in,out"
+	}
+	return bs.AllowedTransferTypes
 }
 
 // getTakeoutStatusList 获取外卖平台状态列表
