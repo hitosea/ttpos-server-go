@@ -66,6 +66,18 @@ definitions:
       all_cashier_order_num:
         description: 收银方式 - 店内 (不包含外送和外卖)
         type: integer
+      all_scan_avg_order_price:
+        description: 点餐方式-扫码平均订单金额
+        type: number
+      all_scan_max_order_price:
+        description: 点餐方式-扫码最大订单金额
+        type: number
+      all_scan_min_order_price:
+        description: 点餐方式-扫码最小订单金额
+        type: number
+      all_scan_order_num:
+        description: 扫码点餐
+        type: integer
       all_table_avg_order_price:
         description: 总桌数平均订单金额
         type: number
@@ -348,6 +360,9 @@ definitions:
       avg_order_amount:
         description: 平均订单金额
         type: number
+      avg_scan_order_amount:
+        description: 扫码点餐-平均订单金额
+        type: number
       avg_takeout_order_amount:
         description: 外送点餐-平均订单金额
         type: number
@@ -369,6 +384,9 @@ definitions:
       max_order_amount:
         description: 最大订单金额
         type: number
+      max_scan_order_amount:
+        description: 扫码点餐-最大订单金额
+        type: number
       max_takeout_order_amount:
         description: 外送点餐-最大订单金额
         type: number
@@ -386,6 +404,9 @@ definitions:
         type: number
       min_order_amount:
         description: 最小订单金额
+        type: number
+      min_scan_order_amount:
+        description: 扫码点餐-最小订单金额
         type: number
       min_takeout_order_amount:
         description: 外送点餐-最小订单金额
@@ -458,6 +479,9 @@ definitions:
       total_sale_amount:
         description: 总销售额
         type: number
+      total_scan_order_num:
+        description: 扫码点餐-订单数
+        type: integer
       total_service_fee:
         description: 服务费
         type: number
@@ -2568,6 +2592,9 @@ definitions:
       is_show_h5:
         description: 是否显示在h5 1-显示 2-不显示
         type: boolean
+      is_show_kiosk:
+        description: 是否显示在自助点餐机
+        type: boolean
       is_show_kitchen:
         description: 是否显示在送厨端 1-显示 2-不显示
         type: boolean
@@ -4116,6 +4143,32 @@ definitions:
         description: 会员端销售订单UUID
         type: integer
     type: object
+  req.CreateAutoReceiptRuleReq:
+    properties:
+      delay_days:
+        minimum: 0
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 规则名称（多语言）
+      shop_uuids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+      status:
+        enum:
+        - 0
+        - 1
+        type: integer
+      warehouse_erp_code:
+        type: string
+    required:
+    - locale_name
+    - shop_uuids
+    - warehouse_erp_code
+    type: object
   req.CreateMemberDineInOrderReq:
     properties:
       products:
@@ -4230,6 +4283,16 @@ definitions:
         type: string
     required:
     - sign
+    type: object
+  req.DeleteAutoReceiptRuleReq:
+    properties:
+      uuids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    required:
+    - uuids
     type: object
   req.DeleteFreeOrGiftReasonReq:
     properties:
@@ -5925,6 +5988,14 @@ definitions:
       price:
         description: 商品价格单价。
         type: number
+      product_type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
+      products:
+        description: 套餐子商品列表（套餐时必填）
+        items:
+          $ref: '#/definitions/req.ProductRequest'
+        type: array
       sauce_uuid:
         description: 小料ID列表
         items:
@@ -5963,6 +6034,25 @@ definitions:
         type: integer
     required:
     - order_product_uuid
+    - sale_bill_uuid
+    - sale_order_uuid
+    type: object
+  req.OrderProductQuotationReq:
+    properties:
+      products:
+        description: 商品信息列表
+        items:
+          $ref: '#/definitions/req.ProductParams'
+        minItems: 1
+        type: array
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+    required:
+    - products
     - sale_bill_uuid
     - sale_order_uuid
     type: object
@@ -6778,7 +6868,7 @@ definitions:
         description: excel表的行编号
         type: integer
       shows:
-        description: 显示：123456
+        description: 显示：1234567
         type: string
       sku_name:
         description: 规格名称
@@ -6836,7 +6926,7 @@ definitions:
         description: excel表的行编号
         type: integer
       shows:
-        description: 显示：123456
+        description: 显示：1234567
         type: string
       sku_name:
         description: 规格名称
@@ -9088,7 +9178,7 @@ definitions:
         description: 是否在保存后提交
         type: boolean
       type:
-        description: 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘
+        description: 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点
         type: integer
       uuid:
         description: 盘点单UUID，如果为0，表示新建
@@ -9527,6 +9617,36 @@ definitions:
         type: string
     required:
     - is_auto_order
+    type: object
+  req.UpdateAutoReceiptRuleReq:
+    properties:
+      delay_days:
+        minimum: 0
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 规则名称（多语言）
+      shop_uuids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+      status:
+        enum:
+        - 0
+        - 1
+        type: integer
+      uuid:
+        type: integer
+      warehouse_erp_code:
+        description: 发货仓库ERP编码
+        type: string
+    required:
+    - locale_name
+    - shop_uuids
+    - uuid
+    - warehouse_erp_code
     type: object
   req.UpdateBindInfoReq:
     properties:
@@ -10573,6 +10693,117 @@ definitions:
           $ref: '#/definitions/resp.Attribute'
         type: array
     type: object
+  resp.AutoReceiptLogItem:
+    properties:
+      receipt_erp_order_no:
+        type: string
+      receipt_order_no:
+        type: string
+      receipt_order_uuid:
+        type: integer
+      receipt_time:
+        type: integer
+      shop_company_uuid:
+        type: integer
+      shop_name:
+        type: string
+      uuid:
+        type: integer
+    type: object
+  resp.AutoReceiptLogListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.AutoReceiptLogItem'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.AutoReceiptRuleGroup:
+    properties:
+      delay_days:
+        type: integer
+      locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      shop_count:
+        type: integer
+      shops:
+        items:
+          $ref: '#/definitions/resp.AutoReceiptRuleShop'
+        type: array
+      status:
+        type: integer
+      uuid:
+        type: integer
+      warehouse_erp_code:
+        type: string
+      warehouse_locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+    type: object
+  resp.AutoReceiptRuleListResp:
+    properties:
+      configured_count:
+        type: integer
+      list:
+        items:
+          $ref: '#/definitions/resp.AutoReceiptRuleGroup'
+        type: array
+      unconfigured_count:
+        type: integer
+      unconfigured_shops:
+        items:
+          $ref: '#/definitions/resp.UnconfiguredShopItem'
+        type: array
+    type: object
+  resp.AutoReceiptRuleShop:
+    properties:
+      shop_code:
+        type: string
+      shop_name:
+        type: string
+      shop_uuid:
+        type: integer
+      uuid:
+        type: integer
+    type: object
+  resp.AutoReceiptShopItem:
+    properties:
+      disabled:
+        type: boolean
+      disabled_reason:
+        type: string
+      name:
+        type: string
+      status:
+        type: integer
+      store_code:
+        type: string
+      uuid:
+        type: integer
+    type: object
+  resp.AutoReceiptShopListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.AutoReceiptShopItem'
+        type: array
+    type: object
+  resp.AutoReceiptWarehouseItem:
+    properties:
+      erp_code:
+        type: string
+      locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      type:
+        type: string
+    type: object
+  resp.AutoReceiptWarehouseListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.AutoReceiptWarehouseItem'
+        type: array
+    type: object
   resp.BatchTagInfo:
     properties:
       color:
@@ -11140,6 +11371,9 @@ definitions:
         type: integer
       is_open_rider:
         description: 是否开启外送
+        type: boolean
+      is_open_store_scan_order:
+        description: 是否开启会员端堂食订单(扫码点餐到店自取)
         type: boolean
       is_show_inventory:
         description: 是否显示移动管理端进销存功能
@@ -12713,6 +12947,10 @@ definitions:
       pay_time:
         description: 支付时间
         type: integer
+      payment_methods:
+        allOf:
+        - $ref: '#/definitions/resp.PaymentMethodList'
+        description: 支付方式列表（待支付时返回）
       product_list:
         allOf:
         - $ref: '#/definitions/resp.MemberDineInOrderProductList'
@@ -14792,6 +15030,22 @@ definitions:
         description: 销售订单商品ID
         type: integer
     type: object
+  resp.OrderProductQuotationResp:
+    properties:
+      bill_calc:
+        allOf:
+        - $ref: '#/definitions/resp.QuotationBillCalc'
+        description: 账单级金额
+      order_calc:
+        allOf:
+        - $ref: '#/definitions/resp.QuotationOrderCalc'
+        description: 订单级金额
+      products:
+        description: 商品明细列表
+        items:
+          $ref: '#/definitions/resp.QuotationProduct'
+        type: array
+    type: object
   resp.OrderRemark:
     properties:
       locale_name:
@@ -16620,6 +16874,9 @@ definitions:
         items:
           $ref: '#/definitions/resp.ReceiptFileInfo'
         type: array
+      is_auto_receipt:
+        description: 是否自动收货
+        type: boolean
       is_from_delivery_note:
         description: 是否来自DN单据
         type: boolean
@@ -16674,6 +16931,9 @@ definitions:
       expect_arrival_time:
         description: 期望到货日期
         type: integer
+      is_auto_receipt:
+        description: 是否自动收货
+        type: boolean
       is_from_delivery_note:
         description: 是否来自DN单据
         type: boolean
@@ -16781,6 +17041,118 @@ definitions:
         description: 语音叫号开关
         type: boolean
     type: object
+  resp.QuotationBillCalc:
+    properties:
+      amount:
+        description: 账单总金额
+        type: number
+      discount_fee:
+        description: 折扣金额
+        type: number
+      member_discount_fee:
+        description: 会员折扣金额
+        type: number
+      origin_amount:
+        description: 账单原始金额
+        type: number
+      product_amount:
+        description: 商品金额
+        type: number
+      product_original_amount:
+        description: 商品原始金额
+        type: number
+      service_fee:
+        description: 服务费
+        type: number
+      tax_fee:
+        description: 税费
+        type: number
+    type: object
+  resp.QuotationOrderCalc:
+    properties:
+      amount:
+        description: 应付金额
+        type: number
+      custom_discount_fee:
+        description: 自定义折扣
+        type: number
+      member_discount_fee:
+        description: 会员折扣
+        type: number
+      origin_amount:
+        description: 原始应付金额
+        type: number
+      product_amount:
+        description: 商品金额（折后）
+        type: number
+      product_original_amount:
+        description: 商品原始金额
+        type: number
+      service_fee:
+        description: 服务费
+        type: number
+      tax_fee:
+        description: 税费
+        type: number
+    type: object
+  resp.QuotationProduct:
+    properties:
+      add_price:
+        description: 加价金额（套餐子商品加价）
+        type: number
+      custom_discount_fee:
+        description: 自定义折扣金额
+        type: number
+      discount_fee:
+        description: 折扣金额合计
+        type: number
+      flavor_price:
+        description: 规格原价
+        type: number
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称(多语言)
+      member_discount_fee:
+        description: 会员折扣金额
+        type: number
+      num:
+        description: 数量
+        type: number
+      origin_total_price:
+        description: 应收金额（折前）
+        type: number
+      price:
+        description: 最终单价（折后）
+        type: number
+      product_package_uuid:
+        description: 商品包UUID
+        type: integer
+      product_price:
+        description: 原始单价（规格原价+加料价+加价）
+        type: number
+      sale_price:
+        description: 销售价（折前单价）
+        type: number
+      sale_price_no_tax:
+        description: 销售价（不含税）
+        type: number
+      sauce_price:
+        description: 加料价格
+        type: number
+      service_fee:
+        description: 服务费
+        type: number
+      service_tax_fee:
+        description: 服务费税费
+        type: number
+      tax_fee:
+        description: 商品税费
+        type: number
+      total_price:
+        description: 应收金额（折后）
+        type: number
+    type: object
   resp.ReceiptFileInfo:
     properties:
       create_time:
@@ -16852,6 +17224,9 @@ definitions:
       erp_order_no:
         description: ERP收货单号
         type: string
+      is_auto_receipt:
+        description: 是否自动收货
+        type: boolean
       is_confirmed:
         description: 是否已确认
         type: boolean
@@ -18377,7 +18752,7 @@ definitions:
         description: 提交时间
         type: integer
       type:
-        description: 盘点类型 1-指定物品盘点 2-全部物品盘点
+        description: 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点
         type: integer
       update_time:
         description: 更新时间
@@ -18414,7 +18789,7 @@ definitions:
         description: 提交时间
         type: integer
       type:
-        description: 盘点类型 1-指定物品盘点 2-全部物品盘点
+        description: 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘 6-固定资产盘点
         type: integer
       uuid:
         description: 盘点单UUID
@@ -18511,6 +18886,11 @@ definitions:
         type: array
       monthly:
         description: 月盘物品编号列表
+        items:
+          type: string
+        type: array
+      property:
+        description: 固定资产盘点物品编号列表
         items:
           type: string
         type: array
@@ -19370,6 +19750,13 @@ definitions:
         items:
           $ref: '#/definitions/resp.TransferOrderWarehouseItem'
         type: array
+    type: object
+  resp.UnconfiguredShopItem:
+    properties:
+      name:
+        type: string
+      uuid:
+        type: integer
     type: object
   resp.UnprocessedAbnormalPrint:
     properties:
@@ -29830,6 +30217,37 @@ paths:
       summary: 打印发票
       tags:
       - 收银端.订单
+  /cashier/order/product_quotation:
+    post:
+      consumes:
+      - application/json
+      description: 计算商品的价格明细（不校验库存、不写数据库），用于在下单前展示报价信息
+      parameters:
+      - description: 报价参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderProductQuotationReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 报价结果
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderProductQuotationResp'
+              type: object
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 订单商品报价
+      tags:
+      - 收银端.订单
   /cashier/order/query_staff:
     get:
       consumes:
@@ -34963,6 +35381,230 @@ paths:
       summary: 翻译
       tags:
       - 通用
+  /shop/auto_receipt/log/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据日志UUID查询对应门店的收货单详情，跨门店库查询
+      parameters:
+      - description: 记录UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.PurchaseReceiptOrderDetailResp'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取自动收货记录详情
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/log/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页查询自动收货执行日志，支持按门店和收货时间范围筛选。前端传入日期时间字符串，后端根据总店时区解析为时间戳
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - default: 20
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      - description: 门店UUID
+        in: query
+        name: shop_company_uuid
+        type: integer
+      - description: '收货时间范围-开始（格式: 2006-01-02 15:04:05）'
+        in: query
+        name: start_time
+        type: string
+      - description: '收货时间范围-结束（格式: 2006-01-02 15:04:05）'
+        in: query
+        name: end_time
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.AutoReceiptLogListResp'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取自动收货记录列表
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/rule/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建自动收货规则，关联门店列表。同一门店在同一仓库内仅允许配置一次
+      parameters:
+      - description: 创建自动收货规则请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CreateAutoReceiptRuleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建自动收货规则
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/rule/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 批量删除自动收货规则，级联软删除关联的门店记录
+      parameters:
+      - description: 删除自动收货规则请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteAutoReceiptRuleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除自动收货规则
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/rule/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前总部下所有自动收货规则，返回规则及关联门店
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.AutoReceiptRuleListResp'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取自动收货规则列表
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/rule/update:
+    post:
+      consumes:
+      - application/json
+      description: 全量更新自动收货规则，包括名称、仓库、延迟天数、状态和门店列表。门店列表为全量替换语义，自动 diff 增删
+      parameters:
+      - description: 更新自动收货规则请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateAutoReceiptRuleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新自动收货规则
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/shop_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前总部下所有子门店，已在同仓库其他规则中配置的门店标记为 disabled
+      parameters:
+      - description: 仓库ERP编码
+        in: query
+        name: warehouse_erp_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.AutoReceiptShopListResp'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取可选门店列表
+      tags:
+      - 商家端.自动收货配置
+  /shop/auto_receipt/warehouse/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前总部下所有有ERP编码的仓库，用于创建/编辑规则时选择仓库
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.AutoReceiptWarehouseListResp'
+        "400":
+          description: 错误请求
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取发货仓库列表
+      tags:
+      - 商家端.自动收货配置
   /shop/base:
     get:
       consumes:

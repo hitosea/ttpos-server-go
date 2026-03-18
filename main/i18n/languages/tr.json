@@ -8010,5 +8010,20 @@
   "默认销售单位不存在: %s %s": "Varsayılan satış birimi mevcut değil: %s %s",
   "點餐-店內": "주문 - 매장 내",
   "龘": "龘",
-  "龙": "Ejderha"
+  "龙": "Ejderha",
+  "只有总店可以操作自动收货配置": "Yalnızca merkez ofis otomatik teslim alma yapılandırmasını yönetebilir",
+  "规则不存在": "Kural mevcut değil",
+  "门店 %d 已在该仓库的其他规则中配置": "Mağaza %d bu depo için başka bir kuralda zaten yapılandırılmış",
+  "创建规则门店失败": "Kural mağaza ilişkilendirmesi oluşturulamadı",
+  "更新规则失败": "Kural güncellenemedi",
+  "删除规则门店失败": "Kural mağaza ilişkilendirmesi silinemedi",
+  "删除门店失败": "Mağaza silinemedi",
+  "新增门店失败": "Mağaza eklenemedi",
+  "查询已配置门店失败": "Yapılandırılmış mağazalar sorgulanamadı",
+  "查询当前门店失败": "Mevcut mağaza sorgulanamadı",
+  "查询规则失败": "Kural sorgulanamadı",
+  "查询规则列表失败": "Kural listesi sorgulanamadı",
+  "查询规则门店失败": "Kural mağazaları sorgulanamadı",
+  "查询自动收货记录失败": "Otomatik teslim alma kayıtları sorgulanamadı",
+  "查询门店信息失败": "Mağaza bilgileri sorgulanamadı"
 }

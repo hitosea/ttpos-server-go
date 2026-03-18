@@ -219,6 +219,13 @@ func (c DBConfig) DSNWithoutDB() string {
 		c.Username, c.Password, c.Host, c.Port)
 }
 
+// NewSaasDB returns a connection to the saas (default) database.
+// Useful for tests that need to seed data in global tables (e.g., auto_receipt_rule, company).
+func NewSaasDB(tb testing.TB) *sql.DB {
+	tb.Helper()
+	return NewDB(tb, DefaultDBConfig())
+}
+
 // NewDB creates a new database connection for testing.
 func NewDB(tb testing.TB, config DBConfig) *sql.DB {
 	tb.Helper()

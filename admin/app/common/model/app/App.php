@@ -220,6 +220,7 @@ class App extends BaseModel
             'is_open_delivery' => $this->supplier?->delivery_status, // 是否开启外送
             'enable_grab_delivery' => $this->supplier?->enable_grab_delivery ?? 0, // 是否启用Grab外卖：0-否；1-是
             'enable_lineman_delivery' => $this->supplier?->enable_lineman_delivery ?? 0, // 是否启用LINE MAN外卖：0-否；1-是
+            'is_open_member_instant' => $this->supplier?->is_open_member_instant ?? 0, // 是否开启扫码点餐到店自取：0-否；1-是
         ];
         //
         return $data;

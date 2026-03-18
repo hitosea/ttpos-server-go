@@ -208,6 +208,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			TargetWarehouseName:    purchaseOrder.DefaultWarehouseName,
 			DeliveryNoteNo:         req.DeliveryNoteNo,
 			IsFromDeliveryNote:     utils.IfInt(req.DeliveryNoteNo != "", 1, 0),
+			IsAutoReceipt:          utils.IfInt(req.IsAutoReceipt, 1, 0),
 			ReceiptType: func() int {
 				if purchaseOrder.PurchaseType == 2 {
 					return 2
@@ -728,6 +729,7 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderList(
 		if err := copier.Copy(receiptInfo, &receipt); err != nil {
 			continue
 		}
+		receiptInfo.IsAutoReceipt = receipt.IsAutoReceipt == 1
 		listResp = append(listResp, receiptInfo)
 	}
 
@@ -769,6 +771,7 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 	detailResp.SupplierName = receipt.SupplierName
 	detailResp.LocaleWarehouseName = *language.JsonToLocaleResponse(receipt.SourceWarehouseName)
 	detailResp.IsFromDeliveryNote = receipt.IsFromDeliveryNote == 1
+	detailResp.IsAutoReceipt = receipt.IsAutoReceipt == 1
 
 	// 如果是DN收货单，预先获取DN数据和同DN的已到货数据
 	// key: "material_code:erpnext_uom", value: {dnQty, arrivedQty}

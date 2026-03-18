@@ -8010,5 +8010,20 @@
   "默认销售单位不存在: %s %s": "Default sales unit does not exist: %s %s",
   "點餐-店內": "Order - Dine-in",
   "龘": "龘",
-  "龙": "Dragon"
+  "龙": "Dragon",
+  "只有总店可以操作自动收货配置": "Only the head office can manage auto-receipt configuration",
+  "规则不存在": "Rule does not exist",
+  "门店 %d 已在该仓库的其他规则中配置": "Shop %d is already configured in another rule for this warehouse",
+  "创建规则门店失败": "Failed to create rule shop association",
+  "更新规则失败": "Failed to update rule",
+  "删除规则门店失败": "Failed to delete rule shop association",
+  "删除门店失败": "Failed to delete shop",
+  "新增门店失败": "Failed to add shop",
+  "查询已配置门店失败": "Failed to query configured shops",
+  "查询当前门店失败": "Failed to query current shop",
+  "查询规则失败": "Failed to query rule",
+  "查询规则列表失败": "Failed to query rule list",
+  "查询规则门店失败": "Failed to query rule shops",
+  "查询自动收货记录失败": "Failed to query auto-receipt records",
+  "查询门店信息失败": "Failed to query shop information"
 }

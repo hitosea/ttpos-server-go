@@ -65,8 +65,7 @@ jobs:
       - name: Main Unit Tests
         run: |
           mkdir -p coverage
-          cd main && go test -short -v -count=1 -coverprofile=../coverage/unit.out -covermode=set \
-            $(go list ./... | grep -v 'app/repository' | grep -v 'app/service')
+          cd main && go test -short -v -count=1 -coverprofile=../coverage/unit.out -covermode=set ./...
           bash tests/fix-coverage-paths.sh ../coverage/unit.out
 
       - uses: actions/upload-artifact@v4

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -200,4 +201,43 @@ func ParseNumberWithoutLeadingZeros(s string) (int, error) {
 		return 0, nil
 	}
 	return strconv.Atoi(trimmed)
+}
+
+// StoreCodeSortable 门店排序所需的接口
+type StoreCodeSortable interface {
+	GetStoreCode() string
+	GetUuid() uint64
+}
+
+// SortByStoreCode 按门店编码通用排序
+// 规则：空编码排最前（按UUID升序）；非空编码去 "No." 前缀后，纯数字按数值排序，数字优先于字母，字母不区分大小写排序
+func SortByStoreCode[T StoreCodeSortable](list []T) {
+	sort.Slice(list, func(i, j int) bool {
+		code1 := list[i].GetStoreCode()
+		code2 := list[j].GetStoreCode()
+		isEmpty1 := code1 == ""
+		isEmpty2 := code2 == ""
+
+		if isEmpty1 != isEmpty2 {
+			return isEmpty1
+		}
+		if isEmpty1 && isEmpty2 {
+			return list[i].GetUuid() < list[j].GetUuid()
+		}
+
+		processed1 := ProcessStoreCodeForSort(code1)
+		processed2 := ProcessStoreCodeForSort(code2)
+		isDigits1 := IsOnlyDigits(processed1)
+		isDigits2 := IsOnlyDigits(processed2)
+
+		if isDigits1 && isDigits2 {
+			num1, _ := ParseNumberWithoutLeadingZeros(processed1)
+			num2, _ := ParseNumberWithoutLeadingZeros(processed2)
+			return num1 < num2
+		}
+		if isDigits1 != isDigits2 {
+			return isDigits1
+		}
+		return strings.ToLower(processed1) < strings.ToLower(processed2)
+	})
 }
