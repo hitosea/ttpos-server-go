@@ -41,7 +41,7 @@ func setupDataManageTestDBWithOrders(t *testing.T) *database.DBManager {
 			custom_discount_fee REAL DEFAULT 0, member_discount_fee REAL DEFAULT 0,
 			gift_amount REAL DEFAULT 0, activity_amount REAL DEFAULT 0, free_amount REAL DEFAULT 0,
 			lock_time INTEGER DEFAULT 0, finish_time INTEGER DEFAULT 0,
-			hide_bill_time INTEGER DEFAULT 0, production_time INTEGER DEFAULT 0,
+			hide_bill_time INTEGER DEFAULT 0, production_time INTEGER DEFAULT 0, submit_pay_time INTEGER DEFAULT 0,
 			cashier_name TEXT DEFAULT '', consumer_uuid INTEGER DEFAULT 0, cashier_uuid INTEGER DEFAULT 0,
 			desk_uuid INTEGER DEFAULT 0, device_uuid INTEGER DEFAULT 0,
 			buffet_package1_uuid INTEGER DEFAULT 0, buffet_package2_uuid INTEGER DEFAULT 0,

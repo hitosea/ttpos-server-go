@@ -111,23 +111,24 @@ func WithStaffBindKey(key string) func(*StaffOptions) {
 
 // DeskOptions contains options for seeding a desk.
 type DeskOptions struct {
-	UUID        int64
-	CompanyUUID int64
-	Name        string
-	AreaUUID    int64
-	Status      int
+	UUID       int64
+	Name       string // maps to desk_no column
+	AreaUUID   int64  // Deprecated: use RegionUUID for full-schema tests
+	RegionUUID int64  // region_uuid column in full schema (shop_01.sql)
+	Status     int
 }
 
 // SeedDesk creates a desk in the database.
+// For full-schema (NewTestTenantFull) tests, use WithDeskRegionUUID to set the region.
 func SeedDesk(tb testing.TB, db *sql.DB, opts ...func(*DeskOptions)) DeskOptions {
 	tb.Helper()
 
 	opt := DeskOptions{
-		UUID:        generateSnowflakeID(),
-		CompanyUUID: 1234567890,
-		Name:        "Table 1",
-		AreaUUID:    0,
-		Status:      1,
+		UUID:       generateSnowflakeID(),
+		Name:       "Table 1",
+		AreaUUID:   0,
+		RegionUUID: 0,
+		Status:     0, // 0=vacant (not opened)
 	}
 
 	for _, o := range opts {
@@ -135,13 +136,22 @@ func SeedDesk(tb testing.TB, db *sql.DB, opts ...func(*DeskOptions)) DeskOptions
 	}
 
 	now := time.Now().Unix()
+
+	// Try full-schema INSERT first (region_uuid + desk_no columns); fall back to minimal schema (area_uuid)
 	_, err := db.Exec(`
-		INSERT INTO ttpos_desk (uuid, company_uuid, name, area_uuid, status, create_time, update_time)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, opt.UUID, opt.CompanyUUID, opt.Name, opt.AreaUUID, opt.Status, now, now)
+		INSERT INTO ttpos_desk (uuid, desk_no, region_uuid, status, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.Name, opt.RegionUUID, opt.Status, now, now)
 
 	if err != nil {
-		tb.Fatalf("failed to seed desk: %v", err)
+		// Fallback: minimal schema uses area_uuid and name columns
+		_, err = db.Exec(`
+			INSERT INTO ttpos_desk (uuid, name, area_uuid, status, create_time, update_time)
+			VALUES (?, ?, ?, ?, ?, ?)
+		`, opt.UUID, opt.Name, opt.AreaUUID, opt.Status, now, now)
+		if err != nil {
+			tb.Fatalf("failed to seed desk: %v", err)
+		}
 	}
 
 	return opt
@@ -158,6 +168,13 @@ func WithDeskUUID(uuid int64) func(*DeskOptions) {
 func WithDeskName(name string) func(*DeskOptions) {
 	return func(o *DeskOptions) {
 		o.Name = name
+	}
+}
+
+// WithDeskRegionUUID sets the region_uuid for the desk (full-schema only).
+func WithDeskRegionUUID(uuid int64) func(*DeskOptions) {
+	return func(o *DeskOptions) {
+		o.RegionUUID = uuid
 	}
 }
 
@@ -1212,4 +1229,218 @@ func SeedProductWithFlavor(tb testing.TB, db *sql.DB, productName string, price 
 	)
 
 	return bom.UUID
+}
+
+// MustPlanOptions contains options for seeding a product must plan.
+type MustPlanOptions struct {
+	UUID        int64
+	Name        string
+	UseChannel  string // "10"=dining, "20"=desk, "10,20"=both
+	MustType    int    // 0=each order, 1=each person
+	MustRule    int    // 0=fixed products, 1=optional
+	Status      int    // 1=enabled, 0=disabled
+	AutoCart    int    // 1=auto add to cart, 0=manual
+	AutoChange  int    // 1=customer can change qty
+	AutoCheck   int    // 1=check at order time
+	AutoCheckout int   // 1=check at checkout time
+}
+
+// SeedMustPlan creates a product_must_plan record in the tenant database.
+func SeedMustPlan(tb testing.TB, db *sql.DB, opts ...func(*MustPlanOptions)) MustPlanOptions {
+	tb.Helper()
+
+	opt := MustPlanOptions{
+		UUID:         generateSnowflakeID(),
+		Name:         "Test Must Plan",
+		UseChannel:   "20",
+		MustType:     0,
+		MustRule:     0,
+		Status:       1,
+		AutoCart:     1,
+		AutoChange:   1,
+		AutoCheck:    1,
+		AutoCheckout: 1,
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_product_must_plan
+		(uuid, name, use_channel, must_type, must_rule, status, auto_cart, auto_change, auto_check, auto_checkout, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.Name, opt.UseChannel, opt.MustType, opt.MustRule, opt.Status,
+		opt.AutoCart, opt.AutoChange, opt.AutoCheck, opt.AutoCheckout, now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed must plan: %v", err)
+	}
+
+	return opt
+}
+
+// WithMustPlanUUID sets the UUID for the must plan.
+func WithMustPlanUUID(uuid int64) func(*MustPlanOptions) {
+	return func(o *MustPlanOptions) { o.UUID = uuid }
+}
+
+// WithMustPlanUseChannel sets the use channel.
+func WithMustPlanUseChannel(ch string) func(*MustPlanOptions) {
+	return func(o *MustPlanOptions) { o.UseChannel = ch }
+}
+
+// WithMustPlanAutoCart sets auto_cart (1=auto, 0=manual).
+func WithMustPlanAutoCart(v int) func(*MustPlanOptions) {
+	return func(o *MustPlanOptions) { o.AutoCart = v }
+}
+
+// MustPlanItemOptions contains options for seeding a must plan item.
+type MustPlanItemOptions struct {
+	UUID                int64
+	ProductMustPlanUUID int64
+	ProductPackageUUID  int64
+}
+
+// SeedMustPlanItem creates a product_must_plan_item record.
+func SeedMustPlanItem(tb testing.TB, db *sql.DB, opts ...func(*MustPlanItemOptions)) MustPlanItemOptions {
+	tb.Helper()
+
+	opt := MustPlanItemOptions{
+		UUID: generateSnowflakeID(),
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_product_must_plan_item
+		(uuid, product_must_plan_uuid, product_package_uuid, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.ProductMustPlanUUID, opt.ProductPackageUUID, now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed must plan item: %v", err)
+	}
+
+	return opt
+}
+
+// WithMustPlanItemPlanUUID sets the must plan UUID.
+func WithMustPlanItemPlanUUID(uuid int64) func(*MustPlanItemOptions) {
+	return func(o *MustPlanItemOptions) { o.ProductMustPlanUUID = uuid }
+}
+
+// WithMustPlanItemPackageUUID sets the product package UUID.
+func WithMustPlanItemPackageUUID(uuid int64) func(*MustPlanItemOptions) {
+	return func(o *MustPlanItemOptions) { o.ProductPackageUUID = uuid }
+}
+
+// MustPlanRegionOptions contains options for seeding a must plan region.
+type MustPlanRegionOptions struct {
+	UUID                int64
+	ProductMustPlanUUID int64
+	DeskRegionUUID      int64
+}
+
+// SeedMustPlanRegion creates a product_must_plan_region record.
+func SeedMustPlanRegion(tb testing.TB, db *sql.DB, opts ...func(*MustPlanRegionOptions)) MustPlanRegionOptions {
+	tb.Helper()
+
+	opt := MustPlanRegionOptions{
+		UUID: generateSnowflakeID(),
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_product_must_plan_region
+		(uuid, product_must_plan_uuid, desk_region_uuid, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.ProductMustPlanUUID, opt.DeskRegionUUID, now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed must plan region: %v", err)
+	}
+
+	return opt
+}
+
+// WithMustPlanRegionPlanUUID sets the must plan UUID.
+func WithMustPlanRegionPlanUUID(uuid int64) func(*MustPlanRegionOptions) {
+	return func(o *MustPlanRegionOptions) { o.ProductMustPlanUUID = uuid }
+}
+
+// WithMustPlanRegionDeskRegionUUID sets the desk region UUID.
+func WithMustPlanRegionDeskRegionUUID(uuid int64) func(*MustPlanRegionOptions) {
+	return func(o *MustPlanRegionOptions) { o.DeskRegionUUID = uuid }
+}
+
+// DeskRegionOptions contains options for seeding a desk region.
+type DeskRegionOptions struct {
+	UUID int64
+	Name string
+	Sort int
+}
+
+// SeedDeskRegion creates a desk_region record in the tenant database.
+func SeedDeskRegion(tb testing.TB, db *sql.DB, opts ...func(*DeskRegionOptions)) DeskRegionOptions {
+	tb.Helper()
+
+	opt := DeskRegionOptions{
+		UUID: generateSnowflakeID(),
+		Name: `{"zh_name":"大厅","en_name":"Main Hall"}`,
+		Sort: 0,
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_desk_region (uuid, name, sort, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.Name, opt.Sort, now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed desk region: %v", err)
+	}
+
+	return opt
+}
+
+// WithDeskRegionRecordUUID sets the UUID for the desk region record.
+func WithDeskRegionRecordUUID(uuid int64) func(*DeskRegionOptions) {
+	return func(o *DeskRegionOptions) { o.UUID = uuid }
+}
+
+// SeedCashierPermissions seeds the ttpos_access table with all cashier permissions
+// required by constant.CashierPermissions. This is needed for super-admin staff
+// because getDbPermissions returns ALL access records (no filter) for is_super=1,
+// and the permission check matches access.Path against the CashierPermissions map.
+func SeedCashierPermissions(tb testing.TB, db *sql.DB) {
+	tb.Helper()
+
+	permissions := []string{
+		"cashier_table_open",
+		"cashier_table_delete",
+	}
+
+	now := time.Now().Unix()
+	for _, perm := range permissions {
+		_, err := db.Exec(`
+			INSERT INTO ttpos_access (uuid, name, path, create_time, update_time, delete_time)
+			VALUES (?, ?, ?, ?, ?, 0)
+		`, generateSnowflakeID(), perm, perm, now, now)
+		if err != nil {
+			tb.Fatalf("failed to seed access permission %s: %v", perm, err)
+		}
+	}
 }
