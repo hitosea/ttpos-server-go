@@ -1,7 +1,7 @@
 <template>
   <div class="right-content pr">
     <div class="right-content-top" v-if="business_status == 1">
-      {{ $t('当前门店营业状态为：“测试营业”，门店订单数据不计入汇总统计，仅用于内部测试。若确认正式营业请到“商家档案”板块进行开启。') }}
+      {{ $t('当前门店营业状态为：“测试营业”，若确认正式营业请到“商家档案”板块进行开启。') }}
     </div>
     <!--内容区域-->
     <div class="right-content-box">
@@ -25,8 +25,6 @@
   const { computedSettings } = useUserStore();
   const settings = computedSettings().settings;
   const business_status = settings?.value?.business_status || 1;
-
-  console.log(business_status);
 
   const selectMenu = (e) => {
     emit('selectMenu', e);
