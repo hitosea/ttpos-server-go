@@ -11,7 +11,9 @@ type SalesInvoice struct {
 	PostingTime                  string                      `json:"posting_time,omitempty"`
 	SetPostingTime               int                         `json:"set_posting_time,omitempty"`
 	Currency                     string                      `json:"currency"`
+	ConversionRate               float64                     `json:"conversion_rate,omitempty"`
 	PriceListCurrency            string                      `json:"price_list_currency,omitempty"`
+	PlcConversionRate            float64                     `json:"plc_conversion_rate,omitempty"`
 	SellingPriceList             string                      `json:"selling_price_list,omitempty"`
 	Branch                       string                      `json:"branch,omitempty"`
 	Items                        []SalesInvoiceItem          `json:"items"`

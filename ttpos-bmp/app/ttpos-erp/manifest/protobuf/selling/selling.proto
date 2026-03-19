@@ -234,7 +234,7 @@ message SaveSalesInvoiceReq {
   string sale_order_uuid = 2;                       // TTPOS 订单 UUID（幂等键）
   string sale_bill_uuid = 3;                        // TTPOS 账单 UUID
   string pos_profile = 4;                           // POS Profile 名称
-  string company = 5;                               // 公司
+  string company_abbr = 5;                           // 公司缩写（如 CFG），BMP 通过缩写查询公司全名
   string customer = 6;                              // 客户（默认客户或会员）
   string currency = 7;                              // 货币 THB/CNY
   string price_list_currency = 8;                   // 价格表货币
@@ -284,7 +284,7 @@ message ReturnSalesInvoiceReq {
   string sale_order_uuid = 2;
   string sales_invoice_name = 3;                    // 原 SI 名称
   int64 posting_datetime = 4;
-  string company = 5;
+  string company_abbr = 5;                            // 公司缩写（如 CFG）
   string customer = 6;
   repeated PosInvoiceItem items = 7;                // 退款商品
   repeated PosInvoiceItem material_items = 8;       // 退款物品
