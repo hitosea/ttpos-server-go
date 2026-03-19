@@ -313,8 +313,8 @@
                   <el-checkbox v-model="scope.row.is_show_tablet" :true-value="1" :false-value="2" :label="$t('平板')" :disabled="scope.row.num_type === 1" />
                   <el-checkbox v-model="scope.row.is_show_kitchen" :true-value="1" :false-value="2" :label="$t('厨显')" />
                   <el-checkbox v-model="scope.row.is_show_assistant" :true-value="1" :false-value="2" :label="$t('点餐助手')" :disabled="scope.row.num_type === 1" />
-                  <el-checkbox v-model="scope.row.is_show_h5" :true-value="1" :false-value="2" :label="$t('扫码点餐')" :disabled="scope.row.num_type === 1" />
-                  <el-checkbox v-if="showDelivery" v-model="scope.row.is_show_delivery" :true-value="1" :false-value="2" :label="$t('外送')" :disabled="scope.row.num_type === 1" />
+                  <el-checkbox v-model="scope.row.is_show_h5" :true-value="1" :false-value="2" :label="$t('桌码点餐')" :disabled="scope.row.num_type === 1" />
+                  <el-checkbox v-if="showDelivery" v-model="scope.row.is_show_delivery" :true-value="1" :false-value="2" :label="$t('扫码点餐')" :disabled="scope.row.num_type === 1" />
                 </el-form-item>
               </template>
             </el-table-column>
