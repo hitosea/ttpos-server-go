@@ -31,9 +31,9 @@ class AddMobileOrderAccess extends Migrator
         foreach ($roles as $role) {
             if ($role && isset($role['uuid'])) {
                 $roleAccessData = [
-                    ['uuid' => createUuid(), 'role_uuid' => $role['uuid'], 'access_uuid' => '2860200000000000', 'create_time' => time()],
-                    ['uuid' => createUuid(), 'role_uuid' => $role['uuid'], 'access_uuid' => '2860200000001000', 'create_time' => time()],
-                    ['uuid' => createUuid(), 'role_uuid' => $role['uuid'], 'access_uuid' => '2860200000002000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $role['uuid'], 'access_uuid' => '1724220614', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $role['uuid'], 'access_uuid' => '1724220615', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $role['uuid'], 'access_uuid' => '1724220616', 'create_time' => time()],
                 ];
                 $this->updateOrInsertData('role_access', ['role_uuid', 'access_uuid'], $roleAccessData);
             }
