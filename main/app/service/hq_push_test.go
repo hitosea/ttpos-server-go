@@ -1236,3 +1236,221 @@ func TestHqPush_GetStoreList_ExcludesHqSelf(t *testing.T) {
 		t.Error("store list should include sub-store")
 	}
 }
+
+// ========== Takeout Push Create Mode Tests ==========
+
+// Helper: seed HQ takeout with product_package_uuid and takeout_type
+func seedHqTakeoutFull(t *testing.T, hqDB *gorm.DB, uuid, productPackageUuid uint64, takeoutType uint, status uint, price float64) {
+	t.Helper()
+	hqDB.Exec("INSERT INTO ttpos_product_package_takeout (uuid, product_package_uuid, takeout_type, status, price, headquarter_uuid, delete_time) VALUES (?, ?, ?, ?, ?, 0, 0)",
+		uuid, productPackageUuid, takeoutType, status, price)
+}
+
+// Helper: seed store takeout with product_package_uuid, takeout_type, and a different UUID
+func seedStoreTakeoutFull(t *testing.T, storeDB *gorm.DB, uuid, productPackageUuid uint64, takeoutType uint, status uint, price float64) {
+	t.Helper()
+	storeDB.Exec("INSERT INTO ttpos_product_package_takeout (uuid, product_package_uuid, takeout_type, status, price, headquarter_uuid, delete_time) VALUES (?, ?, ?, ?, ?, ?, 0)",
+		uuid, productPackageUuid, takeoutType, status, price, testHqUuid)
+}
+
+// Test: store has no takeout but has product → creates takeout with default status=0
+func TestHqPush_TakeoutPush_CreatesWhenStoreHasProduct(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(9001)
+	takeoutUuid := uint64(9101)
+	takeoutType := uint(1) // Grab
+
+	// Seed: HQ has product + takeout; store has product but no takeout
+	seedHqProduct(t, hqDB, productUuid, 1)
+	seedStoreProduct(t, storeDB, productUuid, 1)
+	seedHqTakeoutFull(t, hqDB, takeoutUuid, productUuid, takeoutType, 1, 88.0)
+	seedHqBomTakeout(t, hqDB, 9201, takeoutUuid, 66.0)
+
+	controlRepo := srv.(*hqPushSrv).getHqControlRepo(testHqUuid)
+	hqDB2 := srv.(*hqPushSrv).dbm.GetDB(testHqUuid)
+	hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDB2)
+	hqTakeout, _ := hqTakeoutRepo.GetProductPackageTakeout(
+		repository.NewCommonRepo().WhereByUuid(takeoutUuid),
+		repository.NewCommonRepo().WhereByHeadquarterUuid(0),
+		hqTakeoutRepo.WithProductBomTakeouts(),
+		hqTakeoutRepo.WithProductPackageAttributeTakeouts(),
+		hqTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+	)
+	srv.(*hqPushSrv).pushSingleTakeoutToStore(testHqUuid, testStoreUuid, hqTakeout, controlRepo)
+
+	// Verify: store should now have a takeout record
+	var count int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND takeout_type = ? AND headquarter_uuid = ?",
+		productUuid, takeoutType, testHqUuid).Scan(&count)
+	if count != 1 {
+		t.Fatalf("expected 1 store takeout record, got %d", count)
+	}
+
+	// Verify: default status=0 (offline)
+	var status uint
+	storeDB.Raw("SELECT status FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND takeout_type = ? AND headquarter_uuid = ?",
+		productUuid, takeoutType, testHqUuid).Scan(&status)
+	if status != 0 {
+		t.Errorf("new takeout status: want 0 (offline), got %d", status)
+	}
+
+	// Verify: price copied from HQ
+	var price float64
+	storeDB.Raw("SELECT price FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND takeout_type = ? AND headquarter_uuid = ?",
+		productUuid, takeoutType, testHqUuid).Scan(&price)
+	if price != 88.0 {
+		t.Errorf("new takeout price: want 88.0, got %f", price)
+	}
+
+	// Verify: BOM association created
+	var storeTakeoutUuid uint64
+	storeDB.Raw("SELECT uuid FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND takeout_type = ? AND headquarter_uuid = ?",
+		productUuid, takeoutType, testHqUuid).Scan(&storeTakeoutUuid)
+	var bomCount int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_bom_takeout WHERE product_package_takeout_uuid = ?", storeTakeoutUuid).Scan(&bomCount)
+	if bomCount != 1 {
+		t.Errorf("expected 1 BOM takeout record, got %d", bomCount)
+	}
+	var bomPrice float64
+	storeDB.Raw("SELECT price FROM ttpos_product_bom_takeout WHERE product_package_takeout_uuid = ?", storeTakeoutUuid).Scan(&bomPrice)
+	if bomPrice != 66.0 {
+		t.Errorf("bom price: want 66.0, got %f", bomPrice)
+	}
+}
+
+// Test: store has no takeout AND no product → skips creation
+func TestHqPush_TakeoutPush_SkipsWhenStoreHasNoProduct(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(9002)
+	takeoutUuid := uint64(9102)
+	takeoutType := uint(1)
+
+	// Seed: HQ has product + takeout; store has NEITHER
+	seedHqProduct(t, hqDB, productUuid, 1)
+	seedHqTakeoutFull(t, hqDB, takeoutUuid, productUuid, takeoutType, 1, 50.0)
+
+	controlRepo := srv.(*hqPushSrv).getHqControlRepo(testHqUuid)
+	hqDB2 := srv.(*hqPushSrv).dbm.GetDB(testHqUuid)
+	hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDB2)
+	hqTakeout, _ := hqTakeoutRepo.GetProductPackageTakeout(
+		repository.NewCommonRepo().WhereByUuid(takeoutUuid),
+		repository.NewCommonRepo().WhereByHeadquarterUuid(0),
+		hqTakeoutRepo.WithProductBomTakeouts(),
+		hqTakeoutRepo.WithProductPackageAttributeTakeouts(),
+		hqTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+	)
+	srv.(*hqPushSrv).pushSingleTakeoutToStore(testHqUuid, testStoreUuid, hqTakeout, controlRepo)
+
+	// Verify: store should NOT have a takeout record
+	var count int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND headquarter_uuid = ?",
+		productUuid, testHqUuid).Scan(&count)
+	if count != 0 {
+		t.Errorf("expected 0 store takeout records (no product), got %d", count)
+	}
+}
+
+// Test: store has takeout with different UUID than HQ → still finds and updates (UUID mismatch fix)
+func TestHqPush_TakeoutPush_FindsByProductUuidNotTakeoutUuid(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(9003)
+	hqTakeoutUuid := uint64(9103)
+	storeTakeoutUuid := uint64(9903) // different UUID!
+	takeoutType := uint(1)
+
+	// Seed: HQ takeout uuid=9103, store takeout uuid=9903 (different, like after full sync)
+	seedHqProduct(t, hqDB, productUuid, 1)
+	seedStoreProduct(t, storeDB, productUuid, 1)
+	seedHqTakeoutFull(t, hqDB, hqTakeoutUuid, productUuid, takeoutType, 1, 99.0)
+	seedStoreTakeoutFull(t, storeDB, storeTakeoutUuid, productUuid, takeoutType, 0, 50.0)
+
+	controlRepo := srv.(*hqPushSrv).getHqControlRepo(testHqUuid)
+	hqDB2 := srv.(*hqPushSrv).dbm.GetDB(testHqUuid)
+	hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDB2)
+	hqTakeout, _ := hqTakeoutRepo.GetProductPackageTakeout(
+		repository.NewCommonRepo().WhereByUuid(hqTakeoutUuid),
+		repository.NewCommonRepo().WhereByHeadquarterUuid(0),
+		hqTakeoutRepo.WithProductBomTakeouts(),
+		hqTakeoutRepo.WithProductPackageAttributeTakeouts(),
+		hqTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+	)
+	srv.(*hqPushSrv).pushSingleTakeoutToStore(testHqUuid, testStoreUuid, hqTakeout, controlRepo)
+
+	// Verify: store takeout should be updated (found by product_package_uuid, not uuid)
+	var price float64
+	storeDB.Raw("SELECT price FROM ttpos_product_package_takeout WHERE uuid = ?", storeTakeoutUuid).Scan(&price)
+	if price != 99.0 {
+		t.Errorf("store takeout price: want 99.0 (updated), got %f", price)
+	}
+
+	// Verify: no duplicate record created
+	var count int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND headquarter_uuid = ?",
+		productUuid, testHqUuid).Scan(&count)
+	if count != 1 {
+		t.Errorf("expected exactly 1 takeout record, got %d", count)
+	}
+}
+
+// Test: created takeout syncs all association types (BOM + Attr + GroupItem)
+func TestHqPush_TakeoutPush_CreatesWithAllAssociations(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(9004)
+	takeoutUuid := uint64(9104)
+	takeoutType := uint(1)
+
+	// Seed product in both
+	seedHqProduct(t, hqDB, productUuid, 1)
+	seedStoreProduct(t, storeDB, productUuid, 1)
+
+	// Seed HQ takeout with all association types
+	seedHqTakeoutFull(t, hqDB, takeoutUuid, productUuid, takeoutType, 1, 100.0)
+	seedHqBomTakeout(t, hqDB, 9301, takeoutUuid, 55.0)
+	seedHqAttrTakeout(t, hqDB, 9401, takeoutUuid, 8501, 10.0)
+	seedHqGroupItemTakeout(t, hqDB, 9501, takeoutUuid, 8601, 8701, 15.0)
+
+	controlRepo := srv.(*hqPushSrv).getHqControlRepo(testHqUuid)
+	hqDB2 := srv.(*hqPushSrv).dbm.GetDB(testHqUuid)
+	hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDB2)
+	hqTakeout, _ := hqTakeoutRepo.GetProductPackageTakeout(
+		repository.NewCommonRepo().WhereByUuid(takeoutUuid),
+		repository.NewCommonRepo().WhereByHeadquarterUuid(0),
+		hqTakeoutRepo.WithProductBomTakeouts(),
+		hqTakeoutRepo.WithProductPackageAttributeTakeouts(),
+		hqTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+	)
+	srv.(*hqPushSrv).pushSingleTakeoutToStore(testHqUuid, testStoreUuid, hqTakeout, controlRepo)
+
+	// Get store takeout UUID
+	var storeTakeoutUuid uint64
+	storeDB.Raw("SELECT uuid FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND takeout_type = ? AND headquarter_uuid = ?",
+		productUuid, takeoutType, testHqUuid).Scan(&storeTakeoutUuid)
+	if storeTakeoutUuid == 0 {
+		t.Fatal("store takeout not created")
+	}
+
+	// Verify BOM
+	var bomCount int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_bom_takeout WHERE product_package_takeout_uuid = ?", storeTakeoutUuid).Scan(&bomCount)
+	if bomCount != 1 {
+		t.Errorf("BOM count: want 1, got %d", bomCount)
+	}
+
+	// Verify Attribute
+	var attrCount int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_package_attribute_takeout WHERE product_package_takeout_uuid = ?", storeTakeoutUuid).Scan(&attrCount)
+	if attrCount != 1 {
+		t.Errorf("Attribute count: want 1, got %d", attrCount)
+	}
+
+	// Verify GroupItem
+	var giCount int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_package_group_item_takeout WHERE product_package_takeout_uuid = ?", storeTakeoutUuid).Scan(&giCount)
+	if giCount != 1 {
+		t.Errorf("GroupItem count: want 1, got %d", giCount)
+	}
+}
