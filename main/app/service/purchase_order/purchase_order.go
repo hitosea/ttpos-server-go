@@ -361,15 +361,15 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		disallowedSet[code] = true
 	}
 
-	// 品牌采购：查询上次完成的品牌采购基准单位数量
-	lastPurchaseBaseQtyMap := make(map[uint64]float64)
+	// 品牌采购：查询上次完成的品牌采购基准单位数量和采购单位名称
+	lastPurchaseInfoMap := make(map[uint64]repository.LastBrandPurchaseInfo)
 	if purchaseOrder.IsHeadquarterPurchase() {
 		materialUuids := make([]uint64, 0, len(purchaseOrder.Items))
 		for _, item := range purchaseOrder.Items {
 			materialUuids = append(materialUuids, item.MaterialUuid)
 		}
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(db)
-		lastPurchaseBaseQtyMap, _ = purchaseOrderItemRepo.GetLastCompletedBrandPurchaseBaseQty(materialUuids)
+		lastPurchaseInfoMap, _ = purchaseOrderItemRepo.GetLastCompletedBrandPurchaseInfo(materialUuids)
 	}
 
 	lang := ctx.GetLanguage()
@@ -458,10 +458,18 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		}(item)
 		itemInfo.AvailableQuantity = decimal.NewFromFloat(avaliableQuantityMap[item.MaterialUuid]).Round(3).InexactFloat64()
 		itemInfo.StoreQuantity = decimal.NewFromFloat(storeQuantityMap[item.MaterialUuid]).Round(3).InexactFloat64()
-		// 上次采购数量（基准单位，后面转换为默认销售单位）
-		itemInfo.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseBaseQtyMap[item.MaterialUuid]).Round(3).InexactFloat64()
+		// 上次采购数量（基准单位，后面转换为默认销售单位）和采购单位名称
+		lastPurchaseInfo := lastPurchaseInfoMap[item.MaterialUuid]
+		itemInfo.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseInfo.BaseQty).Round(3).InexactFloat64()
+		itemInfo.LastPurchaseLocaleUnitName = *language.JsonToLocaleResponse(lastPurchaseInfo.UnitName)
 		// 申请时门店库存快照（已按默认销售单位存储）
 		itemInfo.StoreSnapshotQuantity = decimal.NewFromFloat(item.StoreSnapshotQuantity).Round(3).InexactFloat64()
+		// 物料状态：0-正常 1-禁用 2-删除
+		if item.Material == nil || item.Material.IsDelete() {
+			itemInfo.MaterialStatus = 2
+		} else if !item.Material.Status {
+			itemInfo.MaterialStatus = 1
+		}
 
 		if item.Material != nil {
 			// 销售单位UUID
@@ -474,7 +482,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 					if unit.ConversionRate != 0 {
 						itemInfo.AvailableQuantity = decimal.NewFromFloat(avaliableQuantityMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 						itemInfo.StoreQuantity = decimal.NewFromFloat(storeQuantityMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
-						itemInfo.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseBaseQtyMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+						itemInfo.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseInfo.BaseQty).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 					}
 				}
 			}
