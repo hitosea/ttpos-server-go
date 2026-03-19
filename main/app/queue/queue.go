@@ -37,7 +37,7 @@ func Init() {
 	baseQueue.InitMemberOrderCancel()
 
 	baseQueue.InitOperationDurationQueue()
-	baseQueue.InitDBPoolStatsQueue()
+	// baseQueue.InitDBPoolStatsQueue() // 连接池监控采集已关闭：利用率极低，无需持续采集
 
 	manager = rocketmq.NewManager(logger.Logger)
 	manager.RegisterConsumer(config.Rocketmq.GroupName, &config.Rocketmq)
