@@ -109,7 +109,7 @@ var rootCommand = &cobra.Command{
 			TTL:     5 * time.Minute, // 缓存 5 分钟
 			MaxRows: 1000,            // 超过 1000 行不缓存
 			AllowDBs: []string{ // 内测商户白名单（仅这些商户启用缓存）
-				"shop3290397937664000",
+				// "shop3290397937664000",
 			},
 			Tables: []string{ // 只缓存低频更新的表
 				// ==================== 商品相关 ====================
