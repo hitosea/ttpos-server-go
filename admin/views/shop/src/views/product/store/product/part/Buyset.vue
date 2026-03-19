@@ -87,7 +87,7 @@
         v-model="form.model.is_show_h5"
         :true-value="1"
         :false-value="2"
-        :label="$t('扫码点餐')"
+        :label="$t('桌码点餐')"
         size="large"
         :disabled="form.model.num_type == 1 || erp_is_open == 1"
       />
@@ -96,7 +96,7 @@
         v-model="form.model.is_show_delivery"
         :true-value="1"
         :false-value="2"
-        :label="$t('外送')"
+        :label="$t('扫码点餐')"
         size="large"
         :disabled="form.model.num_type == 1 || erp_is_open == 1"
       />
