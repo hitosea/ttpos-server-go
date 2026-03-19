@@ -63,7 +63,8 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 			Joins("LEFT JOIN "+nationalityTable+" AS n ON ss.nationality_uuid = n.uuid").
 			Joins("LEFT JOIN "+multiLanguageNameTable+" AS mln ON n.multi_language_name_uuid = mln.uuid").
 			Where("ss.complete_time >= ? AND ss.complete_time <= ?", startTime, endTime).
-			Where("ss.nationality_uuid > 0")
+			Where("ss.nationality_uuid > 0").
+			Where(ExcludeTestBusinessSQL("ss"))
 		if excludeDataManage && dataManageSubQuery != nil {
 			query = query.Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery)
 		}
@@ -122,7 +123,8 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 			Joins("LEFT JOIN "+orderSourceTable+" AS os ON ss.order_source_uuid = os.uuid").
 			Joins("LEFT JOIN "+multiLanguageNameTable+" AS mln ON os.multi_language_name_uuid = mln.uuid").
 			Where("ss.complete_time >= ? AND ss.complete_time <= ?", startTime, endTime).
-			Where("sb.bill_type = ?", constant.SaleBillTypeInstant)
+			Where("sb.bill_type = ?", constant.SaleBillTypeInstant).
+			Where(ExcludeTestBusinessSQL("ss"))
 		if excludeDataManage && dataManageSubQuery != nil {
 			query2 = query2.Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery)
 		}
@@ -187,7 +189,8 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 			Joins("LEFT JOIN "+saleBillTable+" AS sb ON ss.sale_bill_uuid = sb.uuid AND sb.delete_time = ?", constant.NotDeleted).
 			Where("ss.complete_time >= ? AND ss.complete_time <= ?", startTime, endTime).
 			Where("sb.bill_type = ?", constant.SaleBillTypeDesk).
-			Where("ss.source > ?", constant.SaleBillSourceDefault)
+			Where("ss.source > ?", constant.SaleBillSourceDefault).
+			Where(ExcludeTestBusinessSQL("ss"))
 		if excludeDataManage && dataManageSubQuery != nil {
 			query3 = query3.Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery)
 		}
@@ -249,7 +252,8 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 			constant.SaleBillTypeDesk, constant.SaleBillTypeDesk).
 		Joins("LEFT JOIN "+saleBillTable+" AS sb ON ss.sale_bill_uuid = sb.uuid AND sb.delete_time = ?", constant.NotDeleted).
 		Where("ss.complete_time >= ? AND ss.complete_time <= ?", startTime, endTime).
-		Where("sb.bill_type IN (?, ?)", constant.SaleBillTypeInstant, constant.SaleBillTypeDesk)
+		Where("sb.bill_type IN (?, ?)", constant.SaleBillTypeInstant, constant.SaleBillTypeDesk).
+		Where(ExcludeTestBusinessSQL("ss"))
 	if excludeDataManage && dataManageSubQuery != nil {
 		query4 = query4.Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery)
 	}
@@ -314,7 +318,8 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 		Where(buildDynamicTimeCondition("to_order", startTime, endTime)).
 		Where("to_order.accepted_time > 0").
 		Where("to_order.order_state IN (?)", validOrderStates).
-		Where("to_order.platform IN (?, ?)", "grab", "lineman") // 只统计 Grab 和 LINE MAN
+		Where("to_order.platform IN (?, ?)", "grab", "lineman"). // 只统计 Grab 和 LINE MAN
+		Where(ExcludeTestBusinessSQL("to_order"))
 	err = query5.Group("to_order.platform, name").
 		Order("order_count ASC").
 		Scan(&takeoutMethodResults).Error

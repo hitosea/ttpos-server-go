@@ -673,6 +673,9 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	if err != nil {
 		return cashierBase, errors.WithMessage(err)
 	}
+	// 从时段表推导营业状态
+	periodRepo := repository.NewBusinessStatusPeriodRepo(s.dbm.GetDB(company.Uuid))
+	businessStatus := periodRepo.GetBusinessStatus()
 	return resp.CashierBase{
 		Username:     staff.Username,
 		CashierUuid:  staff.Uuid,
@@ -700,6 +703,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 			IsOpenDataManagement:  companySetting.IsOpenDataManagement(),
 			IsOpenGrabDelivery:    companySetting.IsOpenGrabDelivery(),
 			IsOpenLINEMANDelivery: companySetting.IsOpenLINEMANDelivery(),
+			BusinessStatus:        businessStatus,
 		},
 		CloudBasic: cloudBasicSetting,
 		Printer:    printerSetting,
@@ -1527,6 +1531,10 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		hasDataPermission = true
 	}
 
+	// 从时段表推导营业状态
+	periodRepo := repository.NewBusinessStatusPeriodRepo(s.dbm.GetDB(company.Uuid))
+	businessStatus := periodRepo.GetBusinessStatus()
+
 	return resp.ShopBase{
 		Username:      staff.Username,
 		RealName:      staff.RealName,
@@ -1573,36 +1581,35 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			LanguageList:    storeSetting.Language,
 			Language:        companySetting.GetLanguages(),
 			CompanyName:     storeSetting.Company,
+			BusinessStatus:  businessStatus,
 		},
-		IsTtposSite:       companySetting.IsTtposSite(),
-		IsHeadquarter:     companySetting.IsHeadquarter(),
-		UpdateTime:        time.Now().Unix(),
-		ServerVersion:     utils.GetVersion(),
-		IsOpenTax:         taxSetting.IsOpen == "1",
-		IsSyncing:         slices.Contains(syncTaskManager.getRunningCompanyUuids(), company.Uuid),
-		LastSyncTime:      company.LastSyncTime,
-		HasChildren:       companySetting.HasChildren == 1,
-		HasDataPermission: hasDataPermission,
-		CompanyList:       s.GetCompanyList(ctx),
-		AllowedTransferTypes: func() string {
-			headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
-			if headquarterUuid == 0 {
-				businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-				if err != nil {
-					return "in,out"
-				}
-				return businessSetting.AllowedTransferTypes
-			} else {
-				copyCtx := ctx.Copy()
-				copyCtx.SetCompanyUuid(headquarterUuid)
-				businessSetting, err := s.settingSrv.GetBusinessSetting(copyCtx)
-				if err != nil {
-					return "in,out"
-				}
-				return businessSetting.AllowedTransferTypes
-			}
-		}(),
+		IsTtposSite:          companySetting.IsTtposSite(),
+		IsHeadquarter:        companySetting.IsHeadquarter(),
+		UpdateTime:           time.Now().Unix(),
+		ServerVersion:        utils.GetVersion(),
+		IsOpenTax:            taxSetting.IsOpen == "1",
+		IsSyncing:            slices.Contains(syncTaskManager.getRunningCompanyUuids(), company.Uuid),
+		LastSyncTime:         company.LastSyncTime,
+		HasChildren:          companySetting.HasChildren == 1,
+		HasDataPermission:    hasDataPermission,
+		CompanyList:          s.GetCompanyList(ctx),
+		AllowedTransferTypes: s.getAllowedTransferTypes(ctx),
 	}, nil
+}
+
+// getAllowedTransferTypes 获取允许的调拨类型
+func (s *authSrv) getAllowedTransferTypes(ctx context.Context) string {
+	headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
+	settingCtx := ctx
+	if headquarterUuid != 0 {
+		settingCtx = ctx.Copy()
+		settingCtx.SetCompanyUuid(headquarterUuid)
+	}
+	bs, err := s.settingSrv.GetBusinessSetting(settingCtx)
+	if err != nil {
+		return "in,out"
+	}
+	return bs.AllowedTransferTypes
 }
 
 // getTakeoutStatusList 获取外卖平台状态列表

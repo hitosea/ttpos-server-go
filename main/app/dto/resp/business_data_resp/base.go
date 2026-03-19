@@ -298,6 +298,11 @@ type BusinessDataShiftRefundAmount struct {
 	RefundAmount float64 `json:"refund_amount"` // 退款金额
 }
 
+// 营业数据 - 班次高峰期
+type BusinessDataShiftPeakHour struct {
+	PeakHourList []PeakHour `json:"peak_hour_list"` // 高峰时间列表
+}
+
 // 营业数据 - 全部
 type BusinessDataHome struct {
 	TotalReceivedPrice     float64    `json:"total_received_price"`      // 总实收金额

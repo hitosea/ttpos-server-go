@@ -29380,6 +29380,154 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product/hq_batch_push": {
+            "post": {
+                "description": "批量推送商品/物品数据到指定子店，支持字段级推送和全量同步",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.总部推送"
+                ],
+                "summary": "批量推送到子店",
+                "parameters": [
+                    {
+                        "description": "推送参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.HqBatchPushReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.HqBatchPushResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/product/hq_batch_push_store_list": {
+            "get": {
+                "description": "获取总部下所有子店列表，用于选择批量推送目标",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.总部推送"
+                ],
+                "summary": "获取可推送门店列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.HqBatchPushStoreListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/product/hq_control_setting": {
+            "get": {
+                "description": "获取总部对各字段的控制模式（统一控制/分开控制）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.总部推送"
+                ],
+                "summary": "获取总部控制设置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.HqControlSettingResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "更新总部对各字段的控制模式，从分开切换为统一时会触发强制推送",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.总部推送"
+                ],
+                "summary": "更新总部控制设置",
+                "parameters": [
+                    {
+                        "description": "控制设置参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.HqControlSettingUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/product/import": {
             "post": {
                 "security": [
@@ -42988,6 +43136,14 @@ const docTemplate = `{
                     "description": "内部编码",
                     "type": "string"
                 },
+                "is_negative_stock_editable": {
+                    "description": "负库存是否可编辑",
+                    "type": "boolean"
+                },
+                "is_safety_stock_editable": {
+                    "description": "HQ 控制字段可编辑性（仅子店+总部来源物品有意义）",
+                    "type": "boolean"
+                },
                 "last_purchase_quantity": {
                     "description": "上次采购数量（默认销售单位）",
                     "type": "number"
@@ -43214,6 +43370,10 @@ const docTemplate = `{
                 },
                 "is_editable": {
                     "description": "是否可编辑",
+                    "type": "boolean"
+                },
+                "is_negative_stock_editable": {
+                    "description": "HQ 控制字段可编辑性（仅子店+总部来源物品有意义）",
                     "type": "boolean"
                 },
                 "locale_name": {
@@ -44577,9 +44737,21 @@ const docTemplate = `{
                     "description": "商品图片",
                     "type": "string"
                 },
+                "is_dine_shelf_editable": {
+                    "description": "HQ 控制字段可编辑性（仅子店+总部来源商品有意义）",
+                    "type": "boolean"
+                },
                 "is_show_kitchen": {
                     "description": "是否在厨显端显示：1-是；0-否",
                     "type": "integer"
+                },
+                "is_takeout_price_editable": {
+                    "description": "外卖价格是否可编辑",
+                    "type": "boolean"
+                },
+                "is_takeout_shelf_editable": {
+                    "description": "外卖上下架是否可编辑",
+                    "type": "boolean"
                 },
                 "label": {
                     "description": "商品标签",
@@ -44986,6 +45158,10 @@ const docTemplate = `{
                     "description": "商品图片UUID",
                     "type": "integer"
                 },
+                "is_dine_shelf_editable": {
+                    "description": "HQ 控制字段可编辑性（仅子店+总部来源商品有意义）",
+                    "type": "boolean"
+                },
                 "is_editable": {
                     "description": "是否可编辑 1-是 0-否",
                     "type": "boolean"
@@ -45016,6 +45192,14 @@ const docTemplate = `{
                 },
                 "is_show_tablet": {
                     "description": "是否显示在平板端 1-显示 0-不显示",
+                    "type": "boolean"
+                },
+                "is_takeout_price_editable": {
+                    "description": "外卖价格是否可编辑",
+                    "type": "boolean"
+                },
+                "is_takeout_shelf_editable": {
+                    "description": "外卖上下架是否可编辑",
                     "type": "boolean"
                 },
                 "locale_name": {
@@ -46133,12 +46317,24 @@ const docTemplate = `{
                     "description": "商品图片",
                     "type": "string"
                 },
+                "is_dine_shelf_editable": {
+                    "description": "HQ 控制字段可编辑性（仅子店+总部来源商品有意义）",
+                    "type": "boolean"
+                },
                 "is_editable": {
                     "description": "是否可编辑",
                     "type": "boolean"
                 },
                 "is_sold_out": {
                     "description": "是否售罄 false-否 true-是",
+                    "type": "boolean"
+                },
+                "is_takeout_price_editable": {
+                    "description": "外卖价格是否可编辑",
+                    "type": "boolean"
+                },
+                "is_takeout_shelf_editable": {
+                    "description": "外卖上下架是否可编辑",
                     "type": "boolean"
                 },
                 "locale_name": {
@@ -48604,6 +48800,70 @@ const docTemplate = `{
                 "product_data_checked": {
                     "description": "商品数据组是否勾选",
                     "type": "boolean"
+                }
+            }
+        },
+        "req.HqBatchPushReq": {
+            "type": "object",
+            "required": [
+                "field_types"
+            ],
+            "properties": {
+                "field_types": {
+                    "description": "推送类型列表：dine_shelf/takeout_shelf/takeout_price/negative_stock",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "is_all_stores": {
+                    "description": "是否推送到所有子店",
+                    "type": "boolean"
+                },
+                "store_uuids": {
+                    "description": "指定子店UUID列表（is_all_stores=false 时生效）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "req.HqControlSettingUpdateReq": {
+            "type": "object",
+            "properties": {
+                "hq_control_dine_shelf": {
+                    "description": "店内上下架控制模式：0-分开控制，1-统一控制",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "hq_control_negative_stock": {
+                    "description": "负库存控制模式：0-分开控制，1-统一控制",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "hq_control_takeout_price": {
+                    "description": "外卖价格控制模式：0-分开控制，1-统一控制",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "hq_control_takeout_shelf": {
+                    "description": "外卖上下架控制模式：0-分开控制，1-统一控制",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
                 }
             }
         },
@@ -55965,6 +56225,10 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 500
                 },
+                "business_status": {
+                    "description": "营业状态: 1-测试营业 2-正常营业（可选）",
+                    "type": "integer"
+                },
                 "company_name": {
                     "description": "公司名称，区别于店铺名称，最大500个字符",
                     "type": "string",
@@ -57926,6 +58190,10 @@ const docTemplate = `{
         "resp.Company": {
             "type": "object",
             "properties": {
+                "business_status": {
+                    "description": "营业状态: 1-测试营业 2-正常营业",
+                    "type": "integer"
+                },
                 "expire_time": {
                     "description": "店铺到期时间，0表示没有过期时间",
                     "type": "integer"
@@ -58545,6 +58813,10 @@ const docTemplate = `{
                 "address": {
                     "description": "地址，必填，最大500个字符",
                     "type": "string"
+                },
+                "business_status": {
+                    "description": "营业状态: 1-测试营业 2-正常营业",
+                    "type": "integer"
                 },
                 "company_name": {
                     "description": "公司名称，区别于店铺名称，最大500个字符",
@@ -61044,6 +61316,65 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.DataGroupResp"
                     }
+                }
+            }
+        },
+        "resp.HqBatchPushResp": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "description": "推送结果消息",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.HqBatchPushStoreItem": {
+            "type": "object",
+            "properties": {
+                "company_uuid": {
+                    "description": "子店UUID",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "子店名称",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "子店状态",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.HqBatchPushStoreListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "子店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.HqBatchPushStoreItem"
+                    }
+                }
+            }
+        },
+        "resp.HqControlSettingResp": {
+            "type": "object",
+            "properties": {
+                "hq_control_dine_shelf": {
+                    "description": "店内上下架控制模式：0-分开控制，1-统一控制",
+                    "type": "integer"
+                },
+                "hq_control_negative_stock": {
+                    "description": "负库存控制模式：0-分开控制，1-统一控制",
+                    "type": "integer"
+                },
+                "hq_control_takeout_price": {
+                    "description": "外卖价格控制模式：0-分开控制，1-统一控制",
+                    "type": "integer"
+                },
+                "hq_control_takeout_shelf": {
+                    "description": "外卖上下架控制模式：0-分开控制，1-统一控制",
+                    "type": "integer"
                 }
             }
         },
@@ -68166,6 +68497,10 @@ const docTemplate = `{
                 "address": {
                     "description": "地址",
                     "type": "string"
+                },
+                "business_status": {
+                    "description": "营业状态: 1-测试营业 2-正常营业",
+                    "type": "integer"
                 },
                 "company_name": {
                     "description": "公司名称，区别于店铺名称",

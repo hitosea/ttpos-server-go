@@ -451,6 +451,7 @@ class OrderBusinessDataRepository
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
             'Content-Type: application/json; charset=utf-8',
+            'Client-Version: 199.99.99',
         ]);
         if (!$res) {
             return [];

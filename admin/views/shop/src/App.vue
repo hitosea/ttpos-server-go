@@ -330,6 +330,8 @@
         setSessionStorage('supplier', res.data.supplier);
         // 设置erp数据
         setSessionStorage('erp', res.data.erp);
+        // 设置settings数据
+        setSessionStorage('settings', res.data.settings);
         /*获取基础配置*/
         const dataInfo = {
           data: {

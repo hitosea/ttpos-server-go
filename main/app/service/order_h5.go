@@ -420,13 +420,25 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 				PayType:     payTypes,
 			})
 		})
+		// 外送订单完结时, 发布"统计"事件
+		utils.Go(func() {
+			event.NewSystemBus().PublishStatisticsSaleEvent(event.StatisticsSalePayload{
+				BasePayload: event.BasePayload{ // 统计
+					Ctx: ctx,
+				},
+				SaleBillUuid: saleBillUuid,
+			})
+		})
 	}
 
-	// 会员堂食订单接单成功后，同步到 ERP（有接单场景）
+	// 会员订单接单成功后，同步到 ERP（有接单场景）
 	// 异步推送，失败不影响接单结果；通过 ErpSyncStatus 幂等控制避免重复推送
-	utils.Go(func() {
-		s.SyncMemberOrderToErp(ctx, saleBill, db)
-	})
+	// 未支付订单会在 SyncMemberOrderToErp 内部跳过
+	if saleBill.Source == constant.SaleBillSourceMember {
+		utils.Go(func() {
+			s.SyncMemberOrderToErp(ctx, saleBill, db)
+		})
+	}
 
 	return nil, nil
 }

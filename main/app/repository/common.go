@@ -168,6 +168,8 @@ type ICommonRepo interface {
 	WhereByUuidNotIn(uuids []uint64) DBOption                                                 // 根据UUID列表查询
 	WhereInDataManageSubQuery(db *gorm.DB, field string, opts ...DBOption) DBOption           // 根据DataManage子查询
 	WhereNotInDataManageSubQuery(db *gorm.DB, field string, opts ...DBOption) DBOption        // 根据DataManage子查询不包含
+	WhereExcludeTestBusinessPeriod(tableAlias string) DBOption                                // 排除测试营业时段内的记录（按create_time）
+	WhereExcludeTestBusinessByRelatedOrder() DBOption                                         // 排除关联订单(sale_bill)创建时间落在测试营业时段内的记录
 	WhereByType(typ int) DBOption                                                             // 根据数据类型查询
 	WhereInSaleBillUuids(saleBillUuids []uint64) DBOption                                     // 根据销售单UUID列表查询
 	WhereByRelatedOrderType(relatedOrderType uint) DBOption                                   // 根据关联订单类型查询
@@ -767,6 +769,64 @@ func (r *commonRepo) WhereNotInDataManageSubQuery(db2 *gorm.DB, field string, op
 			subQuery = opt(subQuery)
 		}
 		return db.Where(field+" NOT IN (?)", subQuery)
+	}
+}
+
+// ExcludeTestBusinessSQL 返回排除测试营业时段的 NOT EXISTS SQL 片段。
+// tableAlias 非空时用 tableAlias.create_time 显式限定；为空时使用派生表消除歧义。
+// 可直接拼接到 raw SQL 或传入 db.Where()。
+func ExcludeTestBusinessSQL(tableAlias string) string {
+	if tableAlias != "" {
+		return excludeTestBusinessByFieldSQL(tableAlias + ".create_time")
+	}
+	return "NOT EXISTS (SELECT 1 FROM " +
+		"(SELECT start_time, end_time FROM ttpos_business_status_period WHERE delete_time = 0) bsp " +
+		"WHERE create_time >= bsp.start_time " +
+		"AND (bsp.end_time = 0 OR create_time <= bsp.end_time))"
+}
+
+// ExcludeTestBusinessByFieldSQL 返回基于自定义时间表达式排除测试营业时段的 NOT EXISTS SQL。
+// fieldExpr 为时间表达式，如 "create_time"、"t.create_time"、"(date + hour * 3600)" 等。
+func ExcludeTestBusinessByFieldSQL(fieldExpr string) string {
+	return excludeTestBusinessByFieldSQL(fieldExpr)
+}
+
+func excludeTestBusinessByFieldSQL(fieldExpr string) string {
+	return "NOT EXISTS (SELECT 1 FROM ttpos_business_status_period bsp " +
+		"WHERE bsp.delete_time = 0 " +
+		"AND " + fieldExpr + " >= bsp.start_time " +
+		"AND (bsp.end_time = 0 OR " + fieldExpr + " <= bsp.end_time))"
+}
+
+// WhereExcludeTestBusinessPeriod 排除创建时间落在测试营业时段内的记录
+// tableAlias 非空时用 tableAlias.create_time 显式限定列名
+// tableAlias 为空时使用派生表避免列名歧义（ttpos_business_status_period 也有 create_time 列，
+// SQL 会将未限定的 create_time 解析为子查询内表的列，导致过滤失效）
+func (r *commonRepo) WhereExcludeTestBusinessPeriod(tableAlias string) DBOption {
+	sql := ExcludeTestBusinessSQL(tableAlias)
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where(sql)
+	}
+}
+
+// ExcludeTestBusinessByRelatedOrderSQL 返回通过 related_order_uuid → sale_order → sale_bill 追溯
+// 到原始订单 create_time 的排除SQL。适用于 ttpos_return_order 等通过 related_order_uuid 关联的表。
+func ExcludeTestBusinessByRelatedOrderSQL() string {
+	return "NOT EXISTS (" +
+		"SELECT 1 FROM ttpos_sale_order so " +
+		"JOIN ttpos_sale_bill sb ON sb.uuid = so.sale_bill_uuid " +
+		"JOIN ttpos_business_status_period bsp ON bsp.delete_time = 0 " +
+		"AND sb.create_time >= bsp.start_time " +
+		"AND (bsp.end_time = 0 OR sb.create_time <= bsp.end_time) " +
+		"WHERE so.uuid = related_order_uuid" +
+		")"
+}
+
+// WhereExcludeTestBusinessByRelatedOrder 排除关联订单创建时间落在测试营业时段内的记录
+// 通过 related_order_uuid → sale_order → sale_bill.create_time 追溯
+func (r *commonRepo) WhereExcludeTestBusinessByRelatedOrder() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where(ExcludeTestBusinessByRelatedOrderSQL())
 	}
 }
 
