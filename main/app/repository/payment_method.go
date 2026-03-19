@@ -18,6 +18,7 @@ type IPaymentMethodRepo interface {
 	WhereCashierMemberRecharge() DBOption // 收银端充值时显示
 	WhereAssistant() DBOption             // 在助手端结账时显示
 	WhereKiosk() DBOption                 // 在自助点餐机结账时显示
+	WhereMember() DBOption                // 在会员端显示（堂食、外送订单）
 	WhereStatus(status int) DBOption
 	WhereExistsErpnextPayment() DBOption                // 存在ERPNext支付方式
 	WhereNotExistsErpnextPayment() DBOption             // 不存在ERPNext支付方式
@@ -156,6 +157,12 @@ func (r *paymentMethodRepo) WhereKiosk() DBOption {
 	}
 }
 
+func (r *paymentMethodRepo) WhereMember() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_show_member = 1")
+	}
+}
+
 func (r *paymentMethodRepo) WhereStatus(status int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
@@ -246,9 +253,10 @@ func (r *paymentMethodRepo) GetPaymentMethodsByCtx(ctx context.Context) []*model
 
 func (r *paymentMethodRepo) GetLianLianPayPaymentMethodList() ([]*model.PaymentMethod, error) {
 	opts := []DBOption{
-		// CommonRepo.WhereByStatus(constant.PaymentMethodStatusEnable),
+		CommonRepo.WhereByStatus(constant.PaymentMethodStatusEnable),
 		CommonRepo.WhereBySource(constant.PaymentMethodSourceLianLianPay),
 		CommonRepo.WhereBySoftDelete(),
+		r.WhereMember(), // 仅返回会员端显示的支付方式
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "LogoFile",
@@ -259,16 +267,7 @@ func (r *paymentMethodRepo) GetLianLianPayPaymentMethodList() ([]*model.PaymentM
 		),
 	}
 	paymentMethods := r.GetPaymentMethodList(opts...)
-	// 暂时不返回QR支付方式
-	result := make([]*model.PaymentMethod, 0)
-	if len(paymentMethods) > 0 {
-		for _, paymentMethod := range paymentMethods {
-			// if paymentMethod.Code != constant.PaymentMethodCodeLianLianQRPromptPay {
-			result = append(result, paymentMethod)
-			// }
-		}
-	}
-	return result, nil
+	return paymentMethods, nil
 }
 
 // ErpnextPaymentInfo ERP支付方式信息
