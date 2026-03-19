@@ -350,6 +350,16 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		_ = s.productSrv.SetCategoryDisplayInTakeout(ctx, addReq.SpecialCategoryUuid)
 	}
 
+	// HQ 创建外卖商品 → 自动推送到子店
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		takeoutUuid := productPackageTakeout.Uuid
+		utils.Go(func() {
+			hqPushSrv.OnHqProductTakeoutChanged(ctx, takeoutUuid)
+		})
+	}
+
 	return productPackageTakeout, nil
 }
 
@@ -905,6 +915,16 @@ func (s *productTakeoutSrv) DeleteProductTakeoutShop(ctx context.Context, delete
 	if err != nil {
 		logger.Logger.Error("删除外卖商品失败", zap.Any("func", "DeleteProductTakeoutShop"), zap.Any("params", deleteReq), zap.Error(err))
 		return err
+	}
+
+	// HQ 删除外卖商品 → 推送到子店同步删除
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		takeoutUuid := takeout.Uuid
+		utils.Go(func() {
+			hqPushSrv.OnHqProductTakeoutChanged(ctx, takeoutUuid)
+		})
 	}
 
 	return nil

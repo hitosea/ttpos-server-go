@@ -946,6 +946,8 @@ func (s *hqPushSrv) pushProductTakeoutToStores(hqUuid uint64, storeUuids []uint6
 		hqTakeoutRepo.WithProductBomTakeouts(),
 		hqTakeoutRepo.WithProductPackageAttributeTakeouts(),
 		hqTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+		hqTakeoutRepo.WithMultiLanguageName(),
+		hqTakeoutRepo.WithDescribeMultiLanguageName(),
 	)
 	if err != nil || hqTakeout == nil {
 		return
@@ -978,27 +980,49 @@ func (s *hqPushSrv) pushSingleTakeoutToStore(hqUuid, storeUuid uint64, hqTakeout
 	storeTakeoutRepo := repository.NewProductPackageTakeoutRepo(storeDB)
 	overrideRepo := repository.NewHqFieldOverrideRepo(storeDB)
 
-	// 检查子店是否存在该外卖商品（预加载关联表用于后续同步）
+	// 查找子店外卖商品（用 ProductPackageUuid+TakeoutType+HeadquarterUuid 匹配，与全量同步一致）
 	storeTakeout, err := storeTakeoutRepo.GetProductPackageTakeout(
-		commonRepo.WhereByUuid(hqTakeout.Uuid),
+		storeTakeoutRepo.WhereByProductPackageUuid(hqTakeout.ProductPackageUuid),
+		storeTakeoutRepo.WhereByTakeoutType(hqTakeout.TakeoutType),
 		commonRepo.WhereByHeadquarterUuid(hqUuid),
 		storeTakeoutRepo.WithProductBomTakeouts(),
 		storeTakeoutRepo.WithProductPackageAttributeTakeouts(),
 		storeTakeoutRepo.WithProductPackageGroupItemTakeouts(),
 	)
 	if err != nil || storeTakeout == nil {
+		// 子店不存在该外卖商品 → 创建（默认下架）
+		storeTakeout = s.createTakeoutInStore(storeDB, hqTakeout, hqUuid)
+		if storeTakeout == nil {
+			return
+		}
+		// 新创建的记录只需同步关联表
+		if err := commonRepo.Transaction(storeDB, func(tx *gorm.DB) error {
+			return syncTakeoutAssociations(tx, hqTakeout, storeTakeout, hqUuid, true)
+		}); err != nil {
+			logger.Logger.Error("同步新创建外卖商品关联表失败",
+				zap.Uint64("company_uuid", hqUuid),
+				zap.Uint64("store_uuid", storeUuid),
+				zap.Uint64("takeout_uuid", storeTakeout.Uuid),
+				zap.Error(err),
+			)
+		}
 		return
 	}
+
+	// 同步多语言名称到子店数据库（更新已有记录或创建新记录）
+	multiLangRepo := repository.NewMultiLanguageNameRepo(storeDB)
+	nameUuid := s.syncMultiLanguageName(multiLangRepo, storeTakeout.MultiLanguageNameUuid, &hqTakeout.MultiLanguageName)
+	descUuid := s.syncMultiLanguageName(multiLangRepo, storeTakeout.DescribeMultiLanguageNameUuid, &hqTakeout.DescribeMultiLanguageName)
 
 	// 构建不可覆盖字段更新数据
 	updateData := map[string]any{
 		"name":                              hqTakeout.Name,
-		"multi_language_name_uuid":          hqTakeout.MultiLanguageNameUuid,
+		"multi_language_name_uuid":          nameUuid,
 		"category_uuid":                     hqTakeout.CategoryUuid,
 		"special_category_uuid":             hqTakeout.SpecialCategoryUuid,
 		"image_file_uuid":                   hqTakeout.ImageFileUuid,
 		"describe":                          hqTakeout.Describe,
-		"describe_multi_language_name_uuid": hqTakeout.DescribeMultiLanguageNameUuid,
+		"describe_multi_language_name_uuid": descUuid,
 		"product_type":                      hqTakeout.ProductType,
 		"takeout_type":                      hqTakeout.TakeoutType,
 		"source":                            hqTakeout.Source,
@@ -1010,20 +1034,20 @@ func (s *hqPushSrv) pushSingleTakeoutToStore(hqUuid, storeUuid uint64, hqTakeout
 	// 处理外卖上下架（可覆盖字段，始终参与推送）
 	if controlRepo.IsUnifiedControl(hqUuid, constant.HqFieldTakeoutShelf) {
 		updateData["status"] = hqTakeout.Status
-		overrideRepo.ClearOverride(hqTakeout.Uuid, constant.HqFieldTakeoutShelf)
-	} else if !overrideRepo.IsOverridden(hqTakeout.Uuid, constant.HqFieldTakeoutShelf) {
+		overrideRepo.ClearOverride(storeTakeout.Uuid, constant.HqFieldTakeoutShelf)
+	} else if !overrideRepo.IsOverridden(storeTakeout.Uuid, constant.HqFieldTakeoutShelf) {
 		updateData["status"] = hqTakeout.Status
 	}
 
 	// 处理外卖价格（可覆盖字段，始终参与推送）
 	if controlRepo.IsUnifiedControl(hqUuid, constant.HqFieldTakeoutPrice) {
 		updateData["price"] = hqTakeout.Price
-		overrideRepo.ClearOverride(hqTakeout.Uuid, constant.HqFieldTakeoutPrice)
-	} else if !overrideRepo.IsOverridden(hqTakeout.Uuid, constant.HqFieldTakeoutPrice) {
+		overrideRepo.ClearOverride(storeTakeout.Uuid, constant.HqFieldTakeoutPrice)
+	} else if !overrideRepo.IsOverridden(storeTakeout.Uuid, constant.HqFieldTakeoutPrice) {
 		updateData["price"] = hqTakeout.Price
 	}
 
-	storeTakeoutRepo.UpdateProductPackageTakeout(updateData, commonRepo.WhereByUuid(hqTakeout.Uuid))
+	storeTakeoutRepo.UpdateProductPackageTakeout(updateData, commonRepo.WhereByUuid(storeTakeout.Uuid))
 
 	// 同步关联表（BomTakeout / AttributeTakeout / GroupItemTakeout）
 	syncBomPrice := false
@@ -1040,6 +1064,90 @@ func (s *hqPushSrv) pushSingleTakeoutToStore(hqUuid, storeUuid uint64, hqTakeout
 			zap.Error(err),
 		)
 	}
+}
+
+// createTakeoutInStore 在子店创建外卖商品主记录
+// 前置条件：子店必须已有对应的 ProductPackage（店内商品），否则跳过
+func (s *hqPushSrv) createTakeoutInStore(storeDB *gorm.DB, hqTakeout *model.ProductPackageTakeout, hqUuid uint64) *model.ProductPackageTakeout {
+	commonRepo := repository.NewCommonRepo()
+
+	// 检查子店是否存在对应的店内商品，不存在则跳过
+	_, err := repository.NewProductPackageRepo(storeDB).GetProductPackage(
+		commonRepo.WhereByUuid(hqTakeout.ProductPackageUuid),
+		commonRepo.WhereByHeadquarterUuid(hqUuid),
+		commonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		logger.Logger.Warn("子店不存在对应店内商品，跳过创建外卖商品",
+			zap.Uint64("product_package_uuid", hqTakeout.ProductPackageUuid),
+			zap.Uint64("headquarter_uuid", hqUuid),
+		)
+		return nil
+	}
+
+	// 在子店数据库创建多语言名称记录（名称 + 卖点）
+	// 注意：Name/Describe 字段可能为空，实际多语言数据存储在 MultiLanguageName 关联表中
+	multiLangRepo := repository.NewMultiLanguageNameRepo(storeDB)
+	var multiLanguageNameUuid uint64
+	if !hqTakeout.MultiLanguageName.IsNullName() {
+		mlName := hqTakeout.MultiLanguageName
+		mlName.ID = 0
+		mlName.Uuid = 0
+		multiLanguageNameUuid, _ = multiLangRepo.CreateMultiLanguageName(mlName)
+	}
+	var describeMultiLanguageNameUuid uint64
+	if !hqTakeout.DescribeMultiLanguageName.IsNullName() {
+		mlDescribe := hqTakeout.DescribeMultiLanguageName
+		mlDescribe.ID = 0
+		mlDescribe.Uuid = 0
+		describeMultiLanguageNameUuid, _ = multiLangRepo.CreateMultiLanguageName(mlDescribe)
+	}
+
+	newTakeout := &model.ProductPackageTakeout{
+		ProductPackageUuid:            hqTakeout.ProductPackageUuid,
+		MultiLanguageNameUuid:         multiLanguageNameUuid,
+		HeadquarterUuid:               hqUuid,
+		Name:                          hqTakeout.Name,
+		Describe:                      hqTakeout.Describe,
+		DescribeMultiLanguageNameUuid: describeMultiLanguageNameUuid,
+		ProductType:                   hqTakeout.ProductType,
+		Price:                         hqTakeout.Price,
+		TakeoutType:                   hqTakeout.TakeoutType,
+		Status:                        0, // 默认下架，子店需手动上架
+		CategoryUuid:                  hqTakeout.CategoryUuid,
+		SpecialCategoryUuid:           hqTakeout.SpecialCategoryUuid,
+		ImageFileUuid:                 hqTakeout.ImageFileUuid,
+		Source:                        hqTakeout.Source,
+		SourceProductId:               hqTakeout.SourceProductId,
+	}
+	// Uuid 由 BaseModel.BeforeCreate 自动生成
+	if err := repository.NewProductPackageTakeoutRepo(storeDB).CreateProductPackageTakeout(newTakeout); err != nil {
+		logger.Logger.Error("在子店创建外卖商品失败",
+			zap.Uint64("product_package_uuid", hqTakeout.ProductPackageUuid),
+			zap.Uint64("headquarter_uuid", hqUuid),
+			zap.Error(err),
+		)
+		return nil
+	}
+
+	return newTakeout
+}
+
+// syncMultiLanguageName 同步多语言名称到子店数据库
+// 如果子店已有记录（existingUuid > 0）则更新，否则创建新记录
+func (s *hqPushSrv) syncMultiLanguageName(repo repository.IMultiLanguageNameRepo, existingUuid uint64, hqLang *model.MultiLanguageName) uint64 {
+	if hqLang == nil || hqLang.IsNullName() {
+		return existingUuid
+	}
+	if existingUuid > 0 {
+		_ = repo.UpdateMultiLanguageName(existingUuid, *hqLang)
+		return existingUuid
+	}
+	newLang := *hqLang
+	newLang.ID = 0
+	newLang.Uuid = 0
+	uuid, _ := repo.CreateMultiLanguageName(newLang)
+	return uuid
 }
 
 // pushMaterialToStores 推送物品变更到多个子店
@@ -1253,8 +1361,8 @@ func buildSubStorePkgGroup(hq model.ProductPackageGroup) model.ProductPackageGro
 		ProductPackageUuid:    hq.ProductPackageUuid,
 		MultiLanguageNameUuid: hq.MultiLanguageName.Uuid,
 		GroupType:             hq.GroupType,
-		OptionalCount:        hq.OptionalCount,
-		OptionalMinCount:     hq.OptionalMinCount,
+		OptionalCount:         hq.OptionalCount,
+		OptionalMinCount:      hq.OptionalMinCount,
 	}
 }
 
