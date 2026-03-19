@@ -184,7 +184,11 @@ func (h *OrderHandler) SetDineInOrderDiningMethod(c *gin.Context) {
 	ctx.Log().Debug("设置堂食订单用餐方式", zap.Any("params", params))
 
 	// 设置用餐方式
+	tracker := helper.StartTrack(ctx, constant.ActionMemberDineInSetDiningMethod).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	err := h.orderSrv.SetDineInOrderDiningMethod(ctx, params)
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -215,7 +219,11 @@ func (h *OrderHandler) PayDineInOrder(c *gin.Context) {
 	ctx.Log().Debug("堂食订单提交支付", zap.Any("params", params))
 
 	// 提交支付
+	tracker := helper.StartTrack(ctx, constant.ActionMemberDineInPay).
+		WithBill(params.SaleBillUuid, params.SaleOrderUuid).
+		WithPath(c.Request.URL.Path)
 	err := h.orderSrv.PayDineInOrder(ctx, params)
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -733,7 +741,11 @@ func (h *OrderHandler) CancelDineInOrder(c *gin.Context) {
 		return
 	}
 	// 取消堂食订单
+	tracker := helper.StartTrack(ctx, constant.ActionMemberDineInCancel).
+		WithBill(params.SaleBillUuid, 0).
+		WithPath(c.Request.URL.Path)
 	err := h.orderSrv.CancelMemberDineInOrder(ctx, params)
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

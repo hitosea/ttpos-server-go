@@ -90,7 +90,9 @@ func (h *H5OrderHandler) RejectH5Order(c *gin.Context) {
 		return
 	}
 
+	tracker := helper.StartTrack(ctx, constant.ActionCashierRejectH5Order).WithBill(0, params.H5OrderUuid).WithPath(c.Request.URL.Path)
 	err := h.h5OrderSrv.RejectH5Order(ctx, params.H5OrderUuid)
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -116,7 +118,9 @@ func (h *H5OrderHandler) AcceptH5Order(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
+	tracker := helper.StartTrack(ctx, constant.ActionCashierAcceptH5Order).WithBill(0, params.H5OrderUuid).WithPath(c.Request.URL.Path)
 	checkRes, err := h.h5OrderSrv.AcceptH5Order(ctx, params.H5OrderUuid)
+	tracker.End(ctx, err)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
