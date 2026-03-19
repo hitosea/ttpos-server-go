@@ -88,8 +88,12 @@ const (
 	ActionOrderPrintInvoice = "order_print_invoice" // 打印发票
 
 	// 退货/反结账
-	ActionReturnOrder   = "return_order"   // 退货
-	ActionReverseSettle = "reverse_settle" // 反结账
+	ActionReturnOrder   = "return_order"    // 退货
+	ActionReReturnOrder = "re_return_order" // 重新退款
+	ActionReverseSettle = "reverse_settle"  // 反结账
+
+	// 订单商品报价
+	ActionOrderProductQuotation = "order_product_quotation" // 订单商品报价
 
 	// 其他
 	ActionOrderUnlock = "order_unlock" // 订单解锁
@@ -115,10 +119,14 @@ const (
 	ActionTabletCall            = "tablet_call"              // 平板呼叫服务
 
 	// Member 会员端操作
-	ActionMemberOrderCreate  = "member_order_create"  // 会员创建订单
-	ActionMemberOrderAddress = "member_order_address" // 会员设置地址
-	ActionMemberOrderPay     = "member_order_pay"     // 会员支付
-	ActionMemberOrderCancel  = "member_order_cancel"  // 会员取消订单
+	ActionMemberOrderCreate          = "member_order_create"            // 会员创建订单
+	ActionMemberOrderAddress         = "member_order_address"           // 会员设置地址
+	ActionMemberOrderPay             = "member_order_pay"               // 会员支付
+	ActionMemberOrderCancel          = "member_order_cancel"            // 会员取消订单
+	ActionMemberDineInSetDiningMethod = "member_dine_in_set_dining_method" // 会员设置堂食用餐方式
+	ActionMemberDineInPay            = "member_dine_in_pay"             // 会员堂食订单支付
+	ActionMemberDineInCancel         = "member_dine_in_cancel"          // 会员取消堂食订单
+	ActionMemberOrderCallback        = "member_order_callback"          // 会员订单回调
 
 	// Shop 商户后台操作
 	ActionShopOrderCancel         = "shop_order_cancel"           // 商户取消订单
@@ -130,6 +138,33 @@ const (
 	ActionShopMemberOrderCancel   = "shop_member_order_cancel"    // 商户取消会员订单
 	ActionShopMemberOrderReturn   = "shop_member_order_return"    // 商户退款会员订单
 	ActionShopMemberOrderReReturn = "shop_member_order_re_return" // 商户重新退款会员订单
+
+	// Cashier 收银端 H5 接单操作
+	ActionCashierRejectH5Order = "cashier_reject_h5_order" // 收银端拒绝H5订单
+	ActionCashierAcceptH5Order = "cashier_accept_h5_order" // 收银端接受H5订单
+
+	// Cashier 收银端会员订单操作
+	ActionCashierAcceptMemberOrder   = "cashier_accept_member_order"    // 收银端接受会员订单
+	ActionCashierRejectMemberOrder   = "cashier_reject_member_order"    // 收银端拒绝会员订单
+	ActionCashierCookFinishOrder     = "cashier_cook_finish_order"      // 收银端备餐完成
+	ActionCashierCancelMemberOrder   = "cashier_cancel_member_order"    // 收银端取消会员订单
+	ActionCashierMemberOrderReturn   = "cashier_member_order_return"    // 收银端会员订单退款
+	ActionCashierMemberOrderReReturn = "cashier_member_order_re_return" // 收银端会员订单重新退款
+
+	// Cashier 收银端充值订单操作
+	ActionCashierCancelRechargeOrder        = "cashier_cancel_recharge_order"         // 取消充值订单
+	ActionCashierRechargeOrderRefund        = "cashier_recharge_order_refund"         // 充值订单退款
+	ActionCashierRechargeOrderReReturn      = "cashier_recharge_order_re_return"      // 充值订单重新退款
+	ActionCashierRechargeOrderReverseSettle = "cashier_recharge_order_reverse_settle" // 充值订单反结账
+
+	// Cashier 收银端外卖订单操作
+	ActionCashierTakeoutAcceptOrder = "cashier_takeout_accept_order" // 收银端接受外卖订单
+	ActionCashierTakeoutRejectOrder = "cashier_takeout_reject_order" // 收银端拒绝外卖订单
+	ActionCashierTakeoutCancelOrder = "cashier_takeout_cancel_order" // 收银端取消外卖订单
+	ActionCashierTakeoutPrintOrder  = "cashier_takeout_print_order"  // 收银端打印外卖订单
+
+	// Assistant 助手端操作
+	ActionAssistantCheckAuthorization = "assistant_check_authorization" // 助手端检查授权
 
 	// Kitchen 厨房端操作
 	ActionKitchenConfirmReturn    = "kitchen_confirm_return"     // 厨房确认退菜
