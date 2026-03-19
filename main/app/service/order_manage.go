@@ -88,7 +88,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					payTypeNames = append(payTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
 				} else {
 					for _, payment := range order.PaymentOrders {
-						if payment.IsDelete() {
+						if payment.Status != constant.PaymentOrderStatusPaid || payment.IsDelete() {
 							continue
 						}
 						totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
@@ -151,7 +151,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					totalPayTypeNames = append(totalPayTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
 				} else {
 					for _, payment := range order.PaymentOrders {
-						if payment.IsDelete() {
+						if payment.Status != constant.PaymentOrderStatusPaid || payment.IsDelete() {
 							continue
 						}
 						totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
