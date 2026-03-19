@@ -22661,126 +22661,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/ai/procurement/analysis": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "分析仓库库存、预测需求、生成采购建议。返回分析结果和采购提案，等待审核。",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.AI采购"
-                ],
-                "summary": "AI 智能采购分析",
-                "parameters": [
-                    {
-                        "description": "采购分析请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/shop.RunAnalysisReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "分析结果",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/shop/ai/procurement/review": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "对AI生成的采购提案进行审核。通过后自动创建采购订单。",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.AI采购"
-                ],
-                "summary": "审核采购提案",
-                "parameters": [
-                    {
-                        "description": "审核请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/shop.SubmitReviewReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "审核结果",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/shop/ai/procurement/session": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "查询AI采购分析会话的当前状态。",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.AI采购"
-                ],
-                "summary": "查询分析状态",
-                "parameters": [
-                    {
-                        "description": "查询请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/shop.GetSessionReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "会话状态",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/shop/ai/translate": {
             "post": {
                 "security": [
@@ -36859,6 +36739,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/statistics/shift_peak_hour": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计班次高峰期数据",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.营业数据"
+                ],
+                "summary": "统计班次高峰期数据",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BusinessDataCountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.BusinessDataShiftPeakHour"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/statistics/shift_refund_amount": {
             "get": {
                 "security": [
@@ -42526,6 +42457,18 @@ const docTemplate = `{
                 }
             }
         },
+        "business_data_resp.BusinessDataShiftPeakHour": {
+            "type": "object",
+            "properties": {
+                "peak_hour_list": {
+                    "description": "高峰时间列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.PeakHour"
+                    }
+                }
+            }
+        },
         "business_data_resp.BusinessDataShiftRefundAmount": {
             "type": "object",
             "properties": {
@@ -43143,6 +43086,14 @@ const docTemplate = `{
                 "is_safety_stock_editable": {
                     "description": "HQ 控制字段可编辑性（仅子店+总部来源物品有意义）",
                     "type": "boolean"
+                },
+                "last_purchase_locale_unit_name": {
+                    "description": "上次采购时的单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "last_purchase_quantity": {
                     "description": "上次采购数量（默认销售单位）",
@@ -57306,9 +57257,6 @@ const docTemplate = `{
                 "disabled": {
                     "type": "boolean"
                 },
-                "disabled_reason": {
-                    "type": "string"
-                },
                 "name": {
                     "type": "string"
                 },
@@ -60556,6 +60504,10 @@ const docTemplate = `{
                     "description": "销售账单UUID",
                     "type": "integer"
                 },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                },
                 "serial_no": {
                     "description": "取餐号",
                     "type": "string"
@@ -60567,6 +60519,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.MemberDineInOrderStatusInfo"
                         }
                     ]
+                },
+                "submit_pay_time": {
+                    "description": "提交支付时间",
+                    "type": "integer"
                 }
             }
         },
@@ -62069,6 +62025,10 @@ const docTemplate = `{
                     "description": "销售账单UUID",
                     "type": "integer"
                 },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                },
                 "serial_no": {
                     "description": "取餐号",
                     "type": "string"
@@ -62080,6 +62040,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.MemberDineInOrderStatusInfo"
                         }
                     ]
+                },
+                "submit_pay_time": {
+                    "description": "提交支付时间",
+                    "type": "integer"
                 }
             }
         },
@@ -66062,6 +66026,14 @@ const docTemplate = `{
                     "description": "内部编码",
                     "type": "string"
                 },
+                "last_purchase_locale_unit_name": {
+                    "description": "上次采购时的单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "last_purchase_quantity": {
                     "description": "上次采购数量（默认销售单位）",
                     "type": "number"
@@ -66093,6 +66065,10 @@ const docTemplate = `{
                 "material_code": {
                     "description": "物品编码",
                     "type": "string"
+                },
+                "material_status": {
+                    "description": "物料状态 0-正常 1-禁用 2-删除",
+                    "type": "integer"
                 },
                 "material_uuid": {
                     "description": "物品ID",
@@ -73708,53 +73684,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "shop.GetSessionReq": {
-            "type": "object",
-            "required": [
-                "session_id"
-            ],
-            "properties": {
-                "session_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "shop.RunAnalysisReq": {
-            "type": "object",
-            "properties": {
-                "forecast_days": {
-                    "type": "integer",
-                    "maximum": 30,
-                    "minimum": 1
-                },
-                "warehouse_uuid": {
-                    "type": "integer"
-                }
-            }
-        },
-        "shop.SubmitReviewReq": {
-            "type": "object",
-            "required": [
-                "decision",
-                "session_id"
-            ],
-            "properties": {
-                "comment": {
-                    "type": "string",
-                    "maxLength": 500
-                },
-                "decision": {
-                    "type": "string",
-                    "enum": [
-                        "approved",
-                        "rejected"
-                    ]
-                },
-                "session_id": {
                     "type": "string"
                 }
             }
