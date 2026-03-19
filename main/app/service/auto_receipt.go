@@ -73,6 +73,10 @@ func (s *autoReceiptSrv) CreateRule(ctx context.Context, r req.CreateAutoReceipt
 	db := s.getSaasDB()
 	headquarterUuid := s.getHeadquarterUuid(ctx)
 
+	if !r.LocaleName.CheckLen(100) {
+		return errors.New("规则名称长度不能超过100个字符")
+	}
+
 	// 事务内校验 + 创建（避免 TOCTOU 竞态）
 	err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		shopRepo := repository.NewAutoReceiptRuleShopRepo(tx)
@@ -121,6 +125,10 @@ func (s *autoReceiptSrv) UpdateRule(ctx context.Context, r req.UpdateAutoReceipt
 	}
 	db := s.getSaasDB()
 	headquarterUuid := s.getHeadquarterUuid(ctx)
+
+	if !r.LocaleName.CheckLen(100) {
+		return errors.New("规则名称长度不能超过100个字符")
+	}
 
 	err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		ruleRepo := repository.NewAutoReceiptRuleRepo(tx)
@@ -404,7 +412,7 @@ func (s *autoReceiptSrv) GetWarehouseList(ctx context.Context) (resp.AutoReceipt
 	}
 
 	warehouseRepo := repository.NewWarehouseRepo(ctx.GetDB())
-	warehouses, err := warehouseRepo.Get(warehouseRepo.WhereErpCodeNotEmpty())
+	warehouses, err := warehouseRepo.Get(warehouseRepo.WhereErpCodeNotEmpty(), warehouseRepo.WhereStatus(1))
 	if err != nil {
 		return resp.AutoReceiptWarehouseListResp{}, errors.WithMessage(err, "查询仓库列表失败")
 	}

@@ -662,7 +662,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_auto_receipt_rule` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '唯一标识',
   `headquarter_company_uuid` bigint unsigned NOT NULL DEFAULT '0' COMMENT '总部company_uuid（租户隔离）',
-  `name` varchar(1000) NOT NULL DEFAULT '' COMMENT '规则名称（多语言JSON）',
+  `name` text COMMENT '规则名称（多语言JSON）',
   `warehouse_erp_code` varchar(100) NOT NULL DEFAULT '' COMMENT '发货仓库ERP编码',
   `delay_days` int NOT NULL DEFAULT '0' COMMENT 'DN发送后N天自动收货（0=当天24:00）',
   `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态：1=启用，0=禁用',
