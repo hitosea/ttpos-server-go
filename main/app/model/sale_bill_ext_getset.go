@@ -543,7 +543,7 @@ func (model *SaleBill) GetPayTypes(language string, saleOrderUuid uint64) []resp
 		} else {
 			// 正常支付方式处理
 			for _, payment := range saleOrder.PaymentOrders {
-				if payment.Status == 2 || payment.IsDelete() {
+				if payment.Status != constant.PaymentOrderStatusPaid || payment.IsDelete() {
 					continue
 				}
 				key := fmt.Sprintf("%s_%d", payment.PaymentMethodName, payment.Status)
