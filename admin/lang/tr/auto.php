@@ -1608,6 +1608,7 @@ return [
     "系统提供支持。" => "Sistem destek sağlar.",
     "会员充值" => "Üye yükleme",
     "赠" => "Hediye",
+    "扫码" => "Tarama",
     "扫码点餐" => "QR kod ile sipariş",
     "门店业务设置" => "Mağaza iş ayarları",
     "赠菜原因不能为空" => "Yemek hediye etme nedeni boş olamaz",
@@ -2273,4 +2274,5 @@ return [
     "密码必须包含字母、数字、符号中至少2种" => "Parola en az iki türden (harf, rakam, sembol) içermelidir",
     "超管" => "Süper Yönetici",
     "商户UUID不能为空" => "Tüccar UUID boş olamaz",
+    "缓存失效任务执行失败: " => "Önbellek geçersizleme görevi başarısız oldu:",
 ];

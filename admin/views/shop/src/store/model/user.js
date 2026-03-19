@@ -3,7 +3,7 @@ import { setStorage, getStorage } from '@/utils/storageData';
 import { computed } from 'vue';
 import AuthApi from '@/api/auth.js';
 import configObj from '@/config';
-let { strongToken, renderMenu, menu, currency, supplier, erp } = configObj;
+let { strongToken, renderMenu, menu, currency, supplier, erp, settings } = configObj;
 import { handRouterTable, handMenuData } from '@/utils/router';
 import { EEUIRELOAD } from '@/utils/platform.js';
 
@@ -18,6 +18,7 @@ export const useUserStore = defineStore('main', {
       currency: getStorage(currency),
       supplier: getStorage(supplier),
       erp: getStorage(erp),
+      settings: getStorage(settings),
     };
   },
   getters: {
@@ -38,6 +39,14 @@ export const useUserStore = defineStore('main', {
       return {
         supplier: computed(() => {
           return getStorage(supplier);
+        }),
+      };
+    },
+
+    computedSettings() {
+      return {
+        settings: computed(() => {
+          return getStorage(settings);
         }),
       };
     },

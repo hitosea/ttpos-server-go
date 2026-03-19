@@ -45,6 +45,10 @@ type Material struct {
 
 	// 限购配置
 	QuotaConfig MaterialQuotaConfig `json:"quota_config"` // 限购配置
+
+	// HQ 控制字段可编辑性（仅子店+总部来源物品有意义）
+	IsSafetyStockEditable   bool `json:"is_safety_stock_editable"`   // 安全库存是否可编辑
+	IsNegativeStockEditable bool `json:"is_negative_stock_editable"` // 负库存是否可编辑
 }
 
 // MaterialQuotaConfig 限购配置
@@ -103,6 +107,9 @@ type MaterialDetailResp struct {
 	DefaultSalesUnitLocaleName dto.LocaleResponse   `json:"default_sales_unit_locale_name"` // 默认销售单位多语言名称
 	OriginCountry              *CountryItem         `json:"origin_country"`                 // 原产地国家信息（可选）
 	IsEditable                 bool                 `json:"is_editable"`                    // 是否可编辑
+
+	// HQ 控制字段可编辑性（仅子店+总部来源物品有意义）
+	IsNegativeStockEditable bool `json:"is_negative_stock_editable"` // 负库存是否可编辑
 
 	// 兼容旧版本客户端
 	// 估值率,字段名称为 valuation, 兼容旧版本客户端, 2.12.0 版本后不再使用 valuation_rate 字段

@@ -2490,9 +2490,10 @@ func (s *orderSrv) OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts
 }
 
 // CreateSaleBillSetting 创建销售账单设置
-// isMember 是否是会员端订单
-func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, isMember bool) (*model.SaleBillSetting, error) {
-	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBillUuid, deskUuid, isMember)
+// isMemberTakeout: 是否是会员端外送订单
+// isMemberDineIn: 是否是会员端堂食订单
+func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, isMemberTakeout bool, isMemberDineIn bool) (*model.SaleBillSetting, error) {
+	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBillUuid, deskUuid, isMemberTakeout, isMemberDineIn)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

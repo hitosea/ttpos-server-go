@@ -74,6 +74,26 @@ func buildDynamicTimeCondition(tableAlias string, timeStart, timeEnd int64) stri
 	)
 }
 
+// applyExcludeTestBusiness 始终为 baseQuery 追加排除测试营业时段条件（按 create_time）
+// tableAlias 非空时用 tableAlias.create_time 显式限定列名
+// tableAlias 为空时使用派生表避免列名歧义（ttpos_business_status_period 也有 create_time 列）
+func applyExcludeTestBusiness(baseQuery *gorm.DB, tableAlias string) *gorm.DB {
+	if tableAlias != "" {
+		field := tableAlias + ".create_time"
+		return baseQuery.Where(
+			"NOT EXISTS (SELECT 1 FROM ttpos_business_status_period bsp " +
+				"WHERE bsp.delete_time = 0 " +
+				"AND " + field + " >= bsp.start_time " +
+				"AND (bsp.end_time = 0 OR " + field + " <= bsp.end_time))")
+	}
+	// 无表别名时：用派生表只暴露 start_time/end_time，消除 create_time 歧义
+	return baseQuery.Where(
+		"NOT EXISTS (SELECT 1 FROM " +
+			"(SELECT start_time, end_time FROM ttpos_business_status_period WHERE delete_time = 0) bsp " +
+			"WHERE create_time >= bsp.start_time " +
+			"AND (bsp.end_time = 0 OR create_time <= bsp.end_time))")
+}
+
 // CountTakeoutReq 统计外卖订单请求参数
 type CountTakeoutReq struct {
 	TimeStart         int64  // 时间开始（时间戳）
@@ -192,6 +212,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
 	baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time > 0")
 
+	// 排除测试营业时段的订单
+	baseQuery = applyExcludeTestBusiness(baseQuery, "ttpos_takeout_order")
+
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
 		baseQuery = baseQuery.Where("ttpos_takeout_order.staff_shift_log_uuid = ?", req.StaffShiftLogUuid)
@@ -293,6 +316,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPayment(req CountTakeoutReq) []model
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
 	baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time > 0")
 
+	// 排除测试营业时段的订单
+	baseQuery = applyExcludeTestBusiness(baseQuery, "ttpos_takeout_order")
+
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
 		baseQuery = baseQuery.Where("ttpos_takeout_order.staff_shift_log_uuid = ?", req.StaffShiftLogUuid)
@@ -384,6 +410,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutReceivedAmount(req CountTakeoutReq) 
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
 	baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time > 0")
 
+	// 排除测试营业时段的订单
+	baseQuery = applyExcludeTestBusiness(baseQuery, "ttpos_takeout_order")
+
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
 		baseQuery = baseQuery.Where("ttpos_takeout_order.staff_shift_log_uuid = ?", req.StaffShiftLogUuid)
@@ -454,6 +483,9 @@ func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
 	query = query.Where("to_order.accepted_time > 0")
 
+	// 排除测试营业时段的订单
+	query = applyExcludeTestBusiness(query, "to_order")
+
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
 		query = query.Where("to_order.staff_shift_log_uuid = ?", req.StaffShiftLogUuid)
@@ -512,6 +544,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessTimePeriod(req CountTakeoutB
 					OR
 					(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
 				)
+				AND `+ExcludeTestBusinessSQL("")+`
 		) AS subquery
 		GROUP BY period_start_time
 		ORDER BY period_start_time ASC
@@ -556,6 +589,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessSummary(req CountTakeoutBusi
 				OR
 				(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
 			)
+			AND `+ExcludeTestBusinessSQL("")+`
 		ORDER BY stat_time ASC
 	`, completedState, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr, completedState, completedState)
 
@@ -594,6 +628,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSale(req CountTakeoutChannelS
 				OR
 				(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
 			)
+			AND `+ExcludeTestBusinessSQL("")+`
 		ORDER BY stat_time ASC
 	`, completedState, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr, completedState, completedState)
 
@@ -633,6 +668,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutChannelSaleByPlatform(req CountTakeo
 				OR
 				(order_state != %d AND accepted_time >= ? AND accepted_time <= ?)
 			)
+			AND `+ExcludeTestBusinessSQL("")+`
 		ORDER BY stat_time ASC
 	`, completedState, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr, completedState, completedState)
 
@@ -665,6 +701,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutPaymentMethodRawData(req CountTakeou
 
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
 	baseQuery = baseQuery.Where("ttpos_takeout_order.accepted_time > 0")
+
+	// 排除测试营业时段的订单
+	baseQuery = applyExcludeTestBusiness(baseQuery, "ttpos_takeout_order")
 
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
@@ -764,6 +803,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutCategory(req CountTakeoutReq, catego
 
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
 	baseQuery = baseQuery.Where("to_order.accepted_time > 0")
+
+	// 排除测试营业时段的订单
+	baseQuery = applyExcludeTestBusiness(baseQuery, "to_order")
 
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
@@ -870,6 +912,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
 	baseQuery = baseQuery.Where("to_order.accepted_time > 0")
 
+	// 排除测试营业时段的订单
+	baseQuery = applyExcludeTestBusiness(baseQuery, "to_order")
+
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {
 		baseQuery = baseQuery.Where("to_order.staff_shift_log_uuid = ?", req.StaffShiftLogUuid)
@@ -949,6 +994,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutRefundAmount(req CountTakeoutReq) fl
 
 	// 仅统计接单时间>0的订单（取消状态需要接单后才能统计）
 	query = query.Where("accepted_time > 0")
+
+	// 排除测试营业时段的订单
+	query = applyExcludeTestBusiness(query, "")
 
 	// 按员工班次日志UUID筛选
 	if req.StaffShiftLogUuid > 0 {

@@ -359,10 +359,12 @@ func gracefulShutdown(srv *http.Server) {
 func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	c := cron.New(cron.WithSeconds())
 
-	// 删除7天前的打印日志
-	_, _ = c.AddFunc("0 6 * * *", func() {
+	// 删除7天前的打印日志（每天06:00）
+	if _, err := c.AddFunc("0 0 6 * * *", func() {
 		tasks.NewDelPrintTask(dbm, cache).Execute()
-	})
+	}); err != nil {
+		logger.Logger.Error("注册定时任务失败: 删除打印日志", zap.Error(err))
+	}
 
 	// // 每小时执行销售出库汇总任务
 	_, _ = c.AddFunc("0 0 * * * *", func() {
@@ -396,6 +398,11 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	// 每小时执行自动收货任务（时区前置过滤，仅处理到达本地午夜的门店）
 	_, _ = c.AddFunc("0 0 * * * *", func() {
 		tasks.NewAutoReceiptTask(dbm, cache).Execute()
+	})
+
+	// 每天凌晨3点删除7天前的订单操作耗时记录
+	_, _ = c.AddFunc("0 0 3 * * *", func() {
+		tasks.NewDelOperationDurationTask(dbm, cache).Execute()
 	})
 
 	// 启动定时器

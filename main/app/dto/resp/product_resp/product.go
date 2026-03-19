@@ -46,6 +46,10 @@ type Product struct {
 
 	Sort int `json:"-"` // 商品排序，内部字段，用于推荐商品列表排序
 
+	// HQ 控制字段可编辑性（仅子店+总部来源商品有意义）
+	IsDineShelfEditable    bool `json:"is_dine_shelf_editable"`    // 店内上下架是否可编辑
+	IsTakeoutShelfEditable bool `json:"is_takeout_shelf_editable"` // 外卖上下架是否可编辑
+	IsTakeoutPriceEditable bool `json:"is_takeout_price_editable"` // 外卖价格是否可编辑
 }
 
 // ProductLabelInfo 商品标签信息
@@ -647,6 +651,11 @@ type ProductDetailResp struct {
 
 	IsEditable      bool                       `json:"is_editable"`      // 是否可编辑 1-是 0-否
 	TakeoutProducts []ProductTakeoutSimpleInfo `json:"takeout_products"` // 外卖商品信息列表
+
+	// HQ 控制字段可编辑性（仅子店+总部来源商品有意义）
+	IsDineShelfEditable    bool `json:"is_dine_shelf_editable"`    // 店内上下架是否可编辑
+	IsTakeoutShelfEditable bool `json:"is_takeout_shelf_editable"` // 外卖上下架是否可编辑
+	IsTakeoutPriceEditable bool `json:"is_takeout_price_editable"` // 外卖价格是否可编辑
 }
 
 // ProductListResp 商品列表响应
@@ -674,6 +683,11 @@ type ProductShopListItemResp struct {
 	NumType             uint                              `json:"num_type"`              // 商品数量计算方法 0-整数 1-小数
 	IsEditable          bool                              `json:"is_editable"`           // 是否可编辑
 	TakeoutProducts     []ProductTakeoutSimpleInfo        `json:"takeout_products"`      // 外卖商品信息列表
+
+	// HQ 控制字段可编辑性（仅子店+总部来源商品有意义）
+	IsDineShelfEditable    bool `json:"is_dine_shelf_editable"`    // 店内上下架是否可编辑
+	IsTakeoutShelfEditable bool `json:"is_takeout_shelf_editable"` // 外卖上下架是否可编辑
+	IsTakeoutPriceEditable bool `json:"is_takeout_price_editable"` // 外卖价格是否可编辑
 }
 
 // ProductShopListItemTagResp 商品标签列表

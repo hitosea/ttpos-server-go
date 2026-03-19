@@ -30,7 +30,18 @@ func (r *printerLogDataRepo) Create(printerLogData model.PrinterLogData) (model.
 	return printerLogData, errors.WithMessage(err)
 }
 
-// 删除7天前的数据 - 从数据库上删除
+// 删除7天前的数据 - 分批物理删除，每批10000条
 func (r *printerLogDataRepo) Delete7DaysAgo() error {
-	return r.db.Model(&model.PrinterLogData{}).Where("create_time < ?", time.Now().Add(time.Duration(-7*24)*time.Hour).Unix()).Delete(&model.PrinterLogData{}).Error
+	threshold := time.Now().Add(-7 * 24 * time.Hour).Unix()
+	batchSize := 10000
+	for {
+		result := r.db.Where("create_time < ?", threshold).Limit(batchSize).Delete(&model.PrinterLogData{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			break
+		}
+	}
+	return nil
 }

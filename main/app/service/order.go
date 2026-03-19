@@ -73,22 +73,22 @@ type IOrderSrv interface {
 	GetProductPackageDetail(ctx context.Context, req req.GetProductPackageDetailReq) (*resp.ProductPackageDetailRes, error)                  // 获取商品选购详情
 
 	// manage
-	GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                               // 获取订单列表
-	ExportOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderExportListPaginationResp, error)                                      // 导出订单列表
-	GetPaymentAmount(ctx context.Context, req req.OrderPaymentAmountReq) resp.GetPaymentAmountResp                                               // 获取实付金额
-	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                        // 获取订单详情
-	GetRecordList(ctx context.Context, saleBillUuid uint64, h5OrderUuid uint64) ([]resp.OrderOperationLog, error)                                // 获取订单操作日志
-	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                               // 取消订单
-	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                               // 删除订单
-	ReturnOrder(ctx context.Context, req req.OrderReturnReq) (error, int)                                                                        // 退款订单
-	ReReturnOrder(ctx context.Context, req req.OrderReReturnReq) (error, int)                                                                    // 重新退款
-	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                       // 获取退款信息
-	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                       // 获取反结账信息
-	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                      // 反结账
-	OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                 // 修改订单备注
-	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, isMember bool) (*model.SaleBillSetting, error) // 创建销售账单设置
-	CheckAuthorization(ctx context.Context, operationType string) (bool, error)                                                                  // 检查授权（折扣操作）
-	VerifyPassword(ctx context.Context, req req.VerifyPasswordForSensitiveOperationReq) (bool, error)                                            // 密码验证（根据operation_type选择折扣操作或退款操作）
+	GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                                                           // 获取订单列表
+	ExportOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderExportListPaginationResp, error)                                                                  // 导出订单列表
+	GetPaymentAmount(ctx context.Context, req req.OrderPaymentAmountReq) resp.GetPaymentAmountResp                                                                           // 获取实付金额
+	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                                                    // 获取订单详情
+	GetRecordList(ctx context.Context, saleBillUuid uint64, h5OrderUuid uint64) ([]resp.OrderOperationLog, error)                                                            // 获取订单操作日志
+	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                                           // 取消订单
+	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                           // 删除订单
+	ReturnOrder(ctx context.Context, req req.OrderReturnReq) (error, int)                                                                                                    // 退款订单
+	ReReturnOrder(ctx context.Context, req req.OrderReReturnReq) (error, int)                                                                                                // 重新退款
+	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                                                   // 获取退款信息
+	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                                                   // 获取反结账信息
+	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                                                  // 反结账
+	OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                             // 修改订单备注
+	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, isMemberTakeout bool, isMemberDineIn bool) (*model.SaleBillSetting, error) // 创建销售账单设置
+	CheckAuthorization(ctx context.Context, operationType string) (bool, error)                                                                                              // 检查授权（折扣操作）
+	VerifyPassword(ctx context.Context, req req.VerifyPasswordForSensitiveOperationReq) (bool, error)                                                                        // 密码验证（根据operation_type选择折扣操作或退款操作）
 
 	// quotation
 	OrderProductQuotation(ctx context.Context, request req.OrderProductQuotationReq) (*resp.OrderProductQuotationResp, error) // 订单商品报价(只计算价格,不写数据库)
@@ -620,8 +620,9 @@ func parseServiceFeeRate(ServiceChargeRate string) (float64, error) {
 }
 
 // NewSaleBillSetting 创建销售账单设置
-// isMember: 是否是会员端
-func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, deskUuid uint64, isMember bool) (*model.SaleBillSetting, error) {
+// isMemberTakeout: 是否是会员端外送订单（不收服务费、不抹零、关闭积分）
+// isMemberDineIn: 是否是会员端堂食订单（收服务费、不抹零、关闭积分）
+func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, deskUuid uint64, isMemberTakeout bool, isMemberDineIn bool) (*model.SaleBillSetting, error) {
 	// 获取服务费设置
 	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(ctx)
 	if err != nil {
@@ -754,16 +755,20 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 		BatchCookingMode:   batchCookingMode,
 	}
 
-	// 如果是会员端订单，不收取服务费
-	if isMember {
-		// 不收取服务费
+	// 会员端外送订单：不收服务费、不抹零、关闭积分抵扣
+	if isMemberTakeout {
 		saleBillSetting.ServiceApply = 0
 		saleBillSetting.ServiceFeeType = constant.SaleBillSettingServiceFeeTypeNone
 		saleBillSetting.ServiceFeeValue = 0
-		// 不自动抹零
 		saleBillSetting.ZeroRule = constant.SaleBillSettingCheckoutZeroingMethodNone
 		saleBillSetting.ZeroCheckoutRule = constant.SaleBillSettingCheckoutZeroingMethodNone
-		// 关闭积分抵扣
+		saleBillSetting.OpenPointsExchange = 0
+	}
+
+	// 会员端堂食订单：收服务费、不抹零、关闭积分抵扣
+	if isMemberDineIn {
+		saleBillSetting.ZeroRule = constant.SaleBillSettingCheckoutZeroingMethodNone
+		saleBillSetting.ZeroCheckoutRule = constant.SaleBillSettingCheckoutZeroingMethodNone
 		saleBillSetting.OpenPointsExchange = 0
 	}
 
@@ -854,7 +859,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	}
 
 	// 创建销售账单设置
-	saleBillSetting, err := s.CreateSaleBillSetting(ctx, db, saleBill.Uuid, saleBill.DeskUuid, true)
+	saleBillSetting, err := s.CreateSaleBillSetting(ctx, db, saleBill.Uuid, saleBill.DeskUuid, true, false)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -3690,7 +3695,9 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 	}
 
 	oldSetting := saleBill.SaleBillSetting
-	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, saleBill.DeskUuid, false)
+	isMemberTakeout := saleBill.Source == constant.SaleBillSourceMember && saleBill.BillType == constant.SaleBillTypeTakeout
+	isMemberDineIn := saleBill.Source == constant.SaleBillSourceMember && saleBill.BillType == constant.SaleBillTypeInstant
+	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, saleBill.DeskUuid, isMemberTakeout, isMemberDineIn)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err)
 	}
