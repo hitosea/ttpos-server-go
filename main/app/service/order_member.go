@@ -442,10 +442,11 @@ func (s *orderSrv) SetDineInOrderDiningMethod(ctx context.Context, request req.S
 		return errors.New("订单已完成")
 	}
 
-	// 更新用餐方式（使用 Select 确保零值也能更新）
-	if err := db.Model(&model.SaleBill{}).Where("uuid = ?", request.SaleBillUuid).Select("dining_method").Updates(map[string]any{
-		"dining_method": request.DiningMethod,
-	}).Error; err != nil {
+	// 设置用餐方式并更新商品税率
+	saleBill.SetTakeoutSaleBill(request.DiningMethod)
+
+	// 重新计算金额并保存
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return errors.WithMessage(err, "更新订单失败")
 	}
 
