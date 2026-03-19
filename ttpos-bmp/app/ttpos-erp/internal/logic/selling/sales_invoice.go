@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
+	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
@@ -19,6 +20,12 @@ import (
 
 // SaveSalesInvoice 同步创建 Sales Invoice + Payment Entry
 func (s *sSelling) SaveSalesInvoice(ctx context.Context, req *selling.SaveSalesInvoiceReq) (*selling.SaveSalesInvoiceResp, error) {
+	// 通过公司缩写查询 ERPNext 公司全名
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "根据公司缩写[%s]查询公司名称失败", req.CompanyAbbr)
+	}
+
 	// 解析支付项 payment_id
 	if err := s.resolvePaymentIDs(ctx, req.Payments); err != nil {
 		return nil, err
@@ -27,7 +34,7 @@ func (s *sSelling) SaveSalesInvoice(ctx context.Context, req *selling.SaveSalesI
 	postingDate, postingTime := formatPostingDatetime(req.PostingDatetime)
 
 	// 构建 Sales Invoice 请求体
-	si := s.buildSalesInvoice(ctx, req, postingDate, postingTime)
+	si := s.buildSalesInvoice(ctx, req, companyName, postingDate, postingTime)
 
 	// 如果有物品明细，合并到 items（价格已为0）
 	isTakeout := req.TakeoutOrderNo != nil && *req.TakeoutOrderNo != ""
@@ -73,7 +80,7 @@ func (s *sSelling) SaveSalesInvoice(ctx context.Context, req *selling.SaveSalesI
 		if payment.Amount <= 0 {
 			continue
 		}
-		peName, peErr := s.createPaymentEntry(ctx, req, siName, payment, postingDate)
+		peName, peErr := s.createPaymentEntry(ctx, req, companyName, siName, payment, postingDate)
 		if peErr != nil {
 			g.Log().Errorf(ctx, "创建Payment Entry失败: mode=%s, amount=%.2f, err=%v",
 				payment.ModeOfPayment, payment.Amount, peErr)
@@ -125,6 +132,12 @@ func (s *sSelling) CancelSalesInvoice(ctx context.Context, req *selling.CancelSa
 
 // ReturnSalesInvoice 退款 Credit Note（退款时调用）
 func (s *sSelling) ReturnSalesInvoice(ctx context.Context, req *selling.ReturnSalesInvoiceReq) (*selling.ReturnSalesInvoiceResp, error) {
+	// 通过公司缩写查询 ERPNext 公司全名
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "根据公司缩写[%s]查询公司名称失败", req.CompanyAbbr)
+	}
+
 	// 解析支付项 payment_id
 	if err := s.resolvePaymentIDs(ctx, req.Payments); err != nil {
 		return nil, err
@@ -133,7 +146,7 @@ func (s *sSelling) ReturnSalesInvoice(ctx context.Context, req *selling.ReturnSa
 	postingDate, _ := formatPostingDatetime(req.PostingDatetime)
 
 	// 构建 Credit Note（is_return=1 的 Sales Invoice）
-	cn := s.buildCreditNote(ctx, req, postingDate)
+	cn := s.buildCreditNote(ctx, req, companyName, postingDate)
 
 	// 创建 Credit Note
 	resp, err := service.Document().Create(ctx, erp.DocTypeSalesInvoice, cn)
@@ -157,7 +170,7 @@ func (s *sSelling) ReturnSalesInvoice(ctx context.Context, req *selling.ReturnSa
 		if payment.Amount <= 0 {
 			continue
 		}
-		peName, peErr := s.createRefundPaymentEntry(ctx, req, cnName, payment, postingDate)
+		peName, peErr := s.createRefundPaymentEntry(ctx, req, companyName, cnName, payment, postingDate)
 		if peErr != nil {
 			g.Log().Errorf(ctx, "创建退款Payment Entry失败: mode=%s, amount=%.2f, err=%v",
 				payment.ModeOfPayment, payment.Amount, peErr)
@@ -173,7 +186,8 @@ func (s *sSelling) ReturnSalesInvoice(ctx context.Context, req *selling.ReturnSa
 }
 
 // buildSalesInvoice 构建 Sales Invoice 请求体
-func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSalesInvoiceReq, postingDate, postingTime string) *erp.SalesInvoice {
+// companyName: ERPNext 公司全名（如 "华莱士泰国"），由调用方通过 GetCompanyNameWithAbbr 查询得到
+func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSalesInvoiceReq, companyName, postingDate, postingTime string) *erp.SalesInvoice {
 	isTakeout := req.TakeoutOrderNo != nil && *req.TakeoutOrderNo != ""
 
 	items := make([]erp.SalesInvoiceItem, 0, len(req.Items))
@@ -204,7 +218,7 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 	for _, tax := range req.Taxes {
 		taxes = append(taxes, erp.SalesInvoiceTax{
 			ChargeType:  DefaultTaxChargeType,
-			AccountHead: DefaultTaxAccountHeadPrefix + req.Company,
+			AccountHead: DefaultTaxAccountHeadPrefix + req.CompanyAbbr,
 			Description: tax.Description,
 			Rate:        tax.Rate,
 			TaxAmount:   tax.TaxAmount,
@@ -213,7 +227,7 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 
 	si := &erp.SalesInvoice{
 		PosProfile:         req.PosProfile,
-		Company:            req.Company,
+		Company:            companyName,
 		Customer:           req.Customer,
 		IsPos:              0,
 		UpdateStock:        int(req.UpdateStock),
@@ -221,7 +235,10 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 		PostingTime:        postingTime,
 		SetPostingTime:     1,
 		Currency:           req.Currency,
+		ConversionRate:     1.0,
 		PriceListCurrency:  req.PriceListCurrency,
+		PlcConversionRate:  1.0,
+		SellingPriceList:   consts.DefaultSellingPriceList,
 		Branch:             req.Branch,
 		Items:              items,
 		Taxes:              taxes,
@@ -252,7 +269,8 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 }
 
 // buildCreditNote 构建 Credit Note 请求体
-func (s *sSelling) buildCreditNote(ctx context.Context, req *selling.ReturnSalesInvoiceReq, postingDate string) *erp.CreditNote {
+// companyName: ERPNext 公司全名（如 "华莱士泰国"）
+func (s *sSelling) buildCreditNote(ctx context.Context, req *selling.ReturnSalesInvoiceReq, companyName, postingDate string) *erp.CreditNote {
 	items := make([]erp.SalesInvoiceItem, 0, len(req.Items))
 	for _, item := range req.Items {
 		items = append(items, erp.SalesInvoiceItem{
@@ -280,7 +298,7 @@ func (s *sSelling) buildCreditNote(ctx context.Context, req *selling.ReturnSales
 	for _, tax := range req.Taxes {
 		taxes = append(taxes, erp.SalesInvoiceTax{
 			ChargeType:  DefaultTaxChargeType,
-			AccountHead: DefaultTaxAccountHeadPrefix + req.Company,
+			AccountHead: DefaultTaxAccountHeadPrefix + req.CompanyAbbr,
 			Description: tax.Description,
 			TaxAmount:   tax.TaxAmount, // Main 端已传负数
 		})
@@ -290,7 +308,7 @@ func (s *sSelling) buildCreditNote(ctx context.Context, req *selling.ReturnSales
 		IsReturn:           1,
 		ReturnAgainst:      req.SalesInvoiceName,
 		Customer:           req.Customer,
-		Company:            req.Company,
+		Company:            companyName,
 		PostingDate:        postingDate,
 		UpdateStock:        0,
 		Items:              items,
@@ -301,18 +319,18 @@ func (s *sSelling) buildCreditNote(ctx context.Context, req *selling.ReturnSales
 }
 
 // createPaymentEntry 创建收款 Payment Entry
-func (s *sSelling) createPaymentEntry(ctx context.Context, req *selling.SaveSalesInvoiceReq, siName string, payment *selling.PosInvoicePayment, postingDate string) (string, error) {
-	companyAbbr := req.Company // ERPNext account naming: "Account - company"
+// companyName: ERPNext 公司全名（如 "华莱士泰国"）
+func (s *sSelling) createPaymentEntry(ctx context.Context, req *selling.SaveSalesInvoiceReq, companyName, siName string, payment *selling.PosInvoicePayment, postingDate string) (string, error) {
 	pe := &erp.PaymentEntry{
 		PaymentType:             "Receive",
 		PartyType:               "Customer",
 		Party:                   req.Customer,
-		Company:                 req.Company,
+		Company:                 companyName,
 		ModeOfPayment:           payment.ModeOfPayment,
 		PaidAmount:              payment.Amount,
 		ReceivedAmount:          payment.Amount,
-		PaidFrom:                "Debtors - " + companyAbbr,
-		PaidTo:                  "Cash - " + companyAbbr,
+		PaidFrom:                "Debtors - " + req.CompanyAbbr,
+		PaidTo:                  "Cash - " + req.CompanyAbbr,
 		PaidFromAccountCurrency: req.Currency,
 		PaidToAccountCurrency:   req.Currency,
 		SourceExchangeRate:      1.0,
@@ -372,18 +390,18 @@ func (s *sSelling) createPaymentEntry(ctx context.Context, req *selling.SaveSale
 }
 
 // createRefundPaymentEntry 创建退款 Payment Entry（payment_type=Pay）
-func (s *sSelling) createRefundPaymentEntry(ctx context.Context, req *selling.ReturnSalesInvoiceReq, cnName string, payment *selling.PosInvoicePayment, postingDate string) (string, error) {
-	companyAbbr := req.Company
+// companyName: ERPNext 公司全名（如 "华莱士泰国"）
+func (s *sSelling) createRefundPaymentEntry(ctx context.Context, req *selling.ReturnSalesInvoiceReq, companyName, cnName string, payment *selling.PosInvoicePayment, postingDate string) (string, error) {
 	pe := &erp.PaymentEntry{
 		PaymentType:             "Pay",
 		PartyType:               "Customer",
 		Party:                   req.Customer,
-		Company:                 req.Company,
+		Company:                 companyName,
 		ModeOfPayment:           payment.ModeOfPayment,
 		PaidAmount:              payment.Amount,
 		ReceivedAmount:          payment.Amount,
-		PaidFrom:                "Cash - " + companyAbbr,
-		PaidTo:                  "Debtors - " + companyAbbr,
+		PaidFrom:                "Cash - " + req.CompanyAbbr,
+		PaidTo:                  "Debtors - " + req.CompanyAbbr,
 		PaidFromAccountCurrency: DefaultAccountCurrency,
 		PaidToAccountCurrency:   DefaultAccountCurrency,
 		SourceExchangeRate:      1.0,
