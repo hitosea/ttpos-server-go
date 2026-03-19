@@ -561,8 +561,8 @@ func (c *Controller) validateSaveSalesInvoiceReq(req *selling.SaveSalesInvoiceRe
 	if strings.TrimSpace(req.SaleOrderUuid) == "" {
 		return gerror.New("订单UUID不能为空")
 	}
-	if strings.TrimSpace(req.Company) == "" {
-		return gerror.New("公司不能为空")
+	if strings.TrimSpace(req.CompanyAbbr) == "" {
+		return gerror.New("公司缩写不能为空")
 	}
 	if strings.TrimSpace(req.Customer) == "" {
 		return gerror.New("客户不能为空")

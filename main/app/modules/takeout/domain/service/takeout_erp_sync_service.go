@@ -256,7 +256,7 @@ func buildSalesInvoiceRequest(
 		SiteCode:          companySetting.ErpnextSiteCode,
 		OrderNo:           strconv.FormatUint(takeoutOrder.Uuid, 10),
 		SaleOrderUuid:     strconv.FormatUint(takeoutOrder.Uuid, 10),
-		Company:           companySetting.ErpnextCompanyAbbr,
+		CompanyAbbr:       companySetting.ErpnextCompanyAbbr,
 		Customer:          "Default",
 		Currency:          "THB",
 		PriceListCurrency: "THB",

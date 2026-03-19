@@ -1983,7 +1983,7 @@ type SaveSalesInvoiceReq struct {
 	SaleOrderUuid     string                 `protobuf:"bytes,2,opt,name=sale_order_uuid,json=saleOrderUuid,proto3" json:"sale_order_uuid,omitempty" dc:"TTPOS 订单 UUID（幂等键）"`     // TTPOS 订单 UUID（幂等键）
 	SaleBillUuid      string                 `protobuf:"bytes,3,opt,name=sale_bill_uuid,json=saleBillUuid,proto3" json:"sale_bill_uuid,omitempty" dc:"TTPOS 账单 UUID"`             // TTPOS 账单 UUID
 	PosProfile        string                 `protobuf:"bytes,4,opt,name=pos_profile,json=posProfile,proto3" json:"pos_profile,omitempty" dc:"POS Profile 名称"`                    // POS Profile 名称
-	Company           string                 `protobuf:"bytes,5,opt,name=company,proto3" json:"company,omitempty" dc:"公司"`                                                        // 公司
+	CompanyAbbr       string                 `protobuf:"bytes,5,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写"`                            // 公司缩写（如 CFG）
 	Customer          string                 `protobuf:"bytes,6,opt,name=customer,proto3" json:"customer,omitempty" dc:"客户（默认客户或会员）"`                                             // 客户（默认客户或会员）
 	Currency          string                 `protobuf:"bytes,7,opt,name=currency,proto3" json:"currency,omitempty" dc:"货币 THB/CNY"`                                              // 货币 THB/CNY
 	PriceListCurrency string                 `protobuf:"bytes,8,opt,name=price_list_currency,json=priceListCurrency,proto3" json:"price_list_currency,omitempty" dc:"价格表货币"`      // 价格表货币
@@ -2065,9 +2065,9 @@ func (x *SaveSalesInvoiceReq) GetPosProfile() string {
 	return ""
 }
 
-func (x *SaveSalesInvoiceReq) GetCompany() string {
+func (x *SaveSalesInvoiceReq) GetCompanyAbbr() string {
 	if x != nil {
-		return x.Company
+		return x.CompanyAbbr
 	}
 	return ""
 }
@@ -2403,7 +2403,7 @@ type ReturnSalesInvoiceReq struct {
 	SaleOrderUuid    string                 `protobuf:"bytes,2,opt,name=sale_order_uuid,json=saleOrderUuid,proto3" json:"sale_order_uuid,omitempty"`
 	SalesInvoiceName string                 `protobuf:"bytes,3,opt,name=sales_invoice_name,json=salesInvoiceName,proto3" json:"sales_invoice_name,omitempty" dc:"原 SI 名称"` // 原 SI 名称
 	PostingDatetime  int64                  `protobuf:"varint,4,opt,name=posting_datetime,json=postingDatetime,proto3" json:"posting_datetime,omitempty"`
-	Company          string                 `protobuf:"bytes,5,opt,name=company,proto3" json:"company,omitempty"`
+	CompanyAbbr      string                 `protobuf:"bytes,5,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty"` // 公司缩写（如 CFG）
 	Customer         string                 `protobuf:"bytes,6,opt,name=customer,proto3" json:"customer,omitempty"`
 	Items            []*PosInvoiceItem      `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty" dc:"退款商品"`                                      // 退款商品
 	MaterialItems    []*PosInvoiceItem      `protobuf:"bytes,8,rep,name=material_items,json=materialItems,proto3" json:"material_items,omitempty" dc:"退款物品"` // 退款物品
@@ -2473,9 +2473,9 @@ func (x *ReturnSalesInvoiceReq) GetPostingDatetime() int64 {
 	return 0
 }
 
-func (x *ReturnSalesInvoiceReq) GetCompany() string {
+func (x *ReturnSalesInvoiceReq) GetCompanyAbbr() string {
 	if x != nil {
-		return x.Company
+		return x.CompanyAbbr
 	}
 	return ""
 }
