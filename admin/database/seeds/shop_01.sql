@@ -400,6 +400,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     `is_show_assistant` INT(10) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-点餐助手结账显示',
     `is_show_kiosk` INT(10) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-自助点餐机结账显示',
     `is_show_member_recharge` INT(10) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-收银机会员充值显示',
+    `is_show_member` INT(10) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-会员端显示（堂食、外送订单）',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态 0-禁用 1-启用',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
     `default_img` TEXT COMMENT '默认图片',
