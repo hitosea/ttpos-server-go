@@ -119,6 +119,11 @@ func (t *AutoReceiptTask) Execute() {
 // processShop 处理单个门店的自动收货
 func (t *AutoReceiptTask) processShop(shopUuid uint64, rules []shopRuleInfo, settingSrv *setting.Srv, saasDB *gorm.DB, hqWarehouseCache map[uint64]map[string]bool) {
 	shopDB := t.dbm.GetDB(shopUuid)
+	if shopDB == nil {
+		logger.Logger.Error("自动收货任务: 门店数据库连接不存在",
+			zap.Uint64("company_uuid", shopUuid))
+		return
+	}
 	// 1. 获取门店 Company 信息（含 CompanySetting）
 	companyRepo := repository.NewCompanyRepo(shopDB)
 	companyPtr, err := companyRepo.GetCompanyInfoByUuid(shopUuid)
@@ -454,6 +459,13 @@ func (t *AutoReceiptTask) filterRulesByEnabledWarehouses(rules []shopRuleInfo, s
 			continue
 		}
 		headquarterDB := t.dbm.GetDB(rule.HeadquarterUuid)
+		if headquarterDB == nil {
+			logger.Logger.Error("自动收货任务: 总部数据库连接不存在",
+				zap.Uint64("company_uuid", shopUuid),
+				zap.Uint64("headquarter_uuid", rule.HeadquarterUuid))
+			hqWarehouseCache[rule.HeadquarterUuid] = make(map[string]bool)
+			continue
+		}
 		warehouseRepo := repository.NewWarehouseRepo(headquarterDB)
 		warehouses, err := warehouseRepo.Get(warehouseRepo.WhereErpCodeNotEmpty(), warehouseRepo.WhereStatus(1))
 		if err != nil {

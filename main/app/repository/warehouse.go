@@ -24,6 +24,7 @@ type IWarehouseRepo interface {
 	GetNormalWarehouse() ([]model.Warehouse, error)
 	GetByCode(code string, opts ...DBOption) (*model.Warehouse, error)
 	GetByErpCode(erpCode string, opts ...DBOption) (*model.Warehouse, error)
+	GetByErpCodes(erpCodes []string) (map[string]*model.Warehouse, error)
 	Get(opts ...DBOption) ([]model.Warehouse, error)
 
 	// 条件查询选项
@@ -211,6 +212,23 @@ func (r *WarehouseRepoImpl) GetByErpCode(erpCode string, opts ...DBOption) (*mod
 		return nil, err
 	}
 	return &warehouse, nil
+}
+
+// GetByErpCodes 根据ERP编码批量获取仓库，返回 erpCode -> Warehouse 映射
+func (r *WarehouseRepoImpl) GetByErpCodes(erpCodes []string) (map[string]*model.Warehouse, error) {
+	result := make(map[string]*model.Warehouse, len(erpCodes))
+	if len(erpCodes) == 0 {
+		return result, nil
+	}
+	var warehouses []model.Warehouse
+	err := r.db.Where("erp_code IN ?", erpCodes).Scopes(NotDeleted).Find(&warehouses).Error
+	if err != nil {
+		return nil, err
+	}
+	for i := range warehouses {
+		result[warehouses[i].ErpCode] = &warehouses[i]
+	}
+	return result, nil
 }
 
 // 以下是查询选项方法
