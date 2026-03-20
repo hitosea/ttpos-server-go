@@ -273,14 +273,21 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 					warehouseErpCodes[whErpCode] = true
 				}
 			}
-			// 查询各仓库 ErpCode 对应的本地仓库 UUID
+			// 批量查询各仓库 ErpCode 对应的本地仓库 UUID
 			warehouseRepo := repository.NewWarehouseRepo(hqDb)
-			erpCodeToUuid := make(map[string]uint64)
-			for erpCode := range warehouseErpCodes {
-				wh, err := warehouseRepo.GetByErpCode(erpCode)
-				if err == nil && wh != nil {
-					erpCodeToUuid[erpCode] = wh.Uuid
-				}
+			codes := make([]string, 0, len(warehouseErpCodes))
+			for code := range warehouseErpCodes {
+				codes = append(codes, code)
+			}
+			whMap, whErr := warehouseRepo.GetByErpCodes(codes)
+			if whErr != nil {
+				logger.Logger.Warn("批量查询仓库ERP编码失败",
+					zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+					zap.Error(whErr))
+			}
+			erpCodeToUuid := make(map[string]uint64, len(whMap))
+			for code, wh := range whMap {
+				erpCodeToUuid[code] = wh.Uuid
 			}
 			// 构建 materialUuid -> warehouseUuid 映射
 			materialWarehouseMap := make(map[uint64]uint64)
@@ -1755,11 +1762,26 @@ func (s *purchaseOrderSrv) doAutoApproveHeadquarter(
 			return errors.WithMessage(errors.New("更新总部采购申请状态失败"), err.Error())
 		}
 
-		// 构造简易 context 用于 ERP 调用和操作日志
+		// 查询总部公司信息（预加载 CompanySetting）
+		hqCompany, companyErr := repository.NewCompanyRepo(hqTx).GetCompanyInfoByUuid(headquarterUuid)
+		if companyErr != nil {
+			return errors.WithMessage(errors.New("查询总部公司信息失败"), companyErr.Error())
+		}
+		if hqCompany == nil {
+			return errors.New("查询总部公司信息失败: company not found")
+		}
+		if hqCompany.CompanySetting == nil {
+			return errors.New("总部公司设置不存在")
+		}
+		hqCompanySetting := *hqCompany.CompanySetting
+
+		// 构造 context 用于 ERP 调用和操作日志（含 Company + CompanySetting，确保下游 ctx.GetCompanySetting() 正确）
 		ctx := context.NewContext(
 			context.WithCompanyUuid(headquarterUuid),
 			context.WithLanguage(lang),
 			context.WithStaff(model.Staff{RealName: "系统自动审批"}),
+			context.WithCompany(*hqCompany),
+			context.WithCompanySetting(hqCompanySetting),
 		)
 
 		// 记录自动审批操作日志
@@ -1767,7 +1789,6 @@ func (s *purchaseOrderSrv) doAutoApproveHeadquarter(
 			constant.PurchaseOrderStatusPending, constant.PurchaseOrderStatusApproved, "品牌采购自动审批", "{}")
 
 		// 调用 ERP 审核流程
-		hqCompanySetting := repository.NewCompanySettingRepo(hqTx).Get()
 		err = s.handleErpApproval(ctx, hqTx, &hqCompanySetting, hqPO, true)
 		if err != nil {
 			return err
@@ -1900,14 +1921,27 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 				zap.Error(erpErr),
 			)
 		} else {
-			// 将 warehouse_erp_code 映射为本地仓库 UUID
-			warehouseRepo := repository.NewWarehouseRepo(tx)
-			for itemCode, whErpCode := range erpItemWarehouses {
-				if whErpCode == "" {
-					continue
+			// 批量将 warehouse_erp_code 映射为本地仓库 UUID
+			warehouseErpCodes := make(map[string]bool)
+			for _, whErpCode := range erpItemWarehouses {
+				if whErpCode != "" {
+					warehouseErpCodes[whErpCode] = true
 				}
-				wh, err := warehouseRepo.GetByErpCode(whErpCode)
-				if err == nil && wh != nil {
+			}
+			codes := make([]string, 0, len(warehouseErpCodes))
+			for code := range warehouseErpCodes {
+				codes = append(codes, code)
+			}
+			warehouseRepo := repository.NewWarehouseRepo(tx)
+			whMap, whErr := warehouseRepo.GetByErpCodes(codes)
+			if whErr != nil {
+				// 非致命：查询失败时跳过按物品默认仓库减库存，依赖订单级仓库兜底
+				logger.Logger.Warn("批量查询仓库ERP编码失败",
+					zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+					zap.Error(whErr))
+			}
+			for itemCode, whErpCode := range erpItemWarehouses {
+				if wh, ok := whMap[whErpCode]; ok {
 					itemDefaultWarehouseMap[itemCode] = wh.Uuid
 				}
 			}

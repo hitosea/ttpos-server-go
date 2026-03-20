@@ -246,7 +246,7 @@ func (r *paymentMethodRepo) GetPaymentMethodsByCtx(ctx context.Context) []*model
 
 func (r *paymentMethodRepo) GetLianLianPayPaymentMethodList() ([]*model.PaymentMethod, error) {
 	opts := []DBOption{
-		// CommonRepo.WhereByStatus(constant.PaymentMethodStatusEnable),
+		CommonRepo.WhereByStatus(constant.PaymentMethodStatusEnable),
 		CommonRepo.WhereBySource(constant.PaymentMethodSourceLianLianPay),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.Preload(

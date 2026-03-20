@@ -783,7 +783,9 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			if record.Source == constant.SourceMember || record.Action == constant.OrderCancelMemberSaleOrder {
 				actionText = actionText + actionDescription.Desc
 			} else {
-				actionText = actionText + ": " + actionDescription.Desc
+				if strings.TrimSpace(actionDescription.Desc) != "" { // actionDescription.Desc不知道为什么是空格,但前端显示整单退款时不希望加这个:号
+					actionText = actionText + ": " + actionDescription.Desc
+				}
 			}
 		}
 		realName := record.Operator.RealName

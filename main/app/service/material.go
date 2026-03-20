@@ -261,12 +261,19 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 			}
 			warehouseRepo := repository.NewWarehouseRepo(hqDb)
-			erpCodeToUuid := make(map[string]uint64)
-			for erpCode := range warehouseErpCodes {
-				wh, whErr := warehouseRepo.GetByErpCode(erpCode)
-				if whErr == nil && wh != nil {
-					erpCodeToUuid[erpCode] = wh.Uuid
-				}
+			codes := make([]string, 0, len(warehouseErpCodes))
+			for code := range warehouseErpCodes {
+				codes = append(codes, code)
+			}
+			whMap, whErr := warehouseRepo.GetByErpCodes(codes)
+			if whErr != nil {
+				logger.Logger.Warn("批量查询仓库ERP编码失败",
+					zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+					zap.Error(whErr))
+			}
+			erpCodeToUuid := make(map[string]uint64, len(whMap))
+			for code, wh := range whMap {
+				erpCodeToUuid[code] = wh.Uuid
 			}
 			materialWarehouseMap := make(map[uint64]uint64)
 			for itemCode, whErpCode := range itemWarehouses {
