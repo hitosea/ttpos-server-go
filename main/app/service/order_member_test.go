@@ -1036,5 +1036,193 @@ func Test_diffDineInProducts_AttributeOrderIndependent(t *testing.T) {
 	}
 }
 
+// Test_diffDineInProducts_NormalToPackageToNormal 三步场景：普通→套餐→普通
+// 步骤1: 空订单 + 提交普通商品 → 全部新增
+// 步骤2: 订单中有普通商品 + 提交套餐商品 → 普通删除、套餐新增
+// 步骤3: 订单中有套餐商品(+子商品) + 提交普通商品 → 套餐删除、普通新增
+func Test_diffDineInProducts_NormalToPackageToNormal(t *testing.T) {
+	dbm, db := setupDiffDineInTestDB(t)
+	ctx := createDiffDineInTestContext(t, dbm)
+	srv := newTestOrderSrv(dbm)
+
+	// ===== 步骤1: 空订单 + 提交普通商品 =====
+	step1Products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0},
+		{FlavorProductBomUuid: 1002, Num: 2, ProductType: 0},
+	}
+	step1SaleBill := makeSaleBill(nil)
+
+	add1, del1, upd1, _, err := srv.diffDineInProducts(ctx, db, step1Products, step1SaleBill)
+	if err != nil {
+		t.Fatalf("step1: unexpected error: %v", err)
+	}
+	if len(add1) != 2 {
+		t.Errorf("step1: expected 2 addProducts, got %d", len(add1))
+	}
+	if len(del1) != 0 {
+		t.Errorf("step1: expected 0 deleteProducts, got %d", len(del1))
+	}
+	if len(upd1) != 0 {
+		t.Errorf("step1: expected 0 updateProducts, got %d", len(upd1))
+	}
+
+	// ===== 步骤2: 订单中有普通商品 + 提交套餐商品 =====
+	// 模拟步骤1后的数据库状态：订单中有 2 个普通商品
+	step2SaleBill := makeSaleBill([]*model.SaleOrderProduct{
+		makeSaleOrderProduct(1, 1001, constant.ProductTypeProduct, 0, nil, nil),
+		makeSaleOrderProduct(2, 1002, constant.ProductTypeProduct, 0, nil, nil),
+	})
+	step2Products := []req.ProductParams{
+		{
+			ProductPackageUuid: 2001,
+			Num:                1,
+			ProductType:        constant.ProductTypePackage,
+			Products: []req.ProductRequest{
+				{
+					ProductPackageGroupUuid: 3001,
+					EditProductReq:          req.EditProductReq{FlavorUuid: 4001},
+					Num:                     1,
+					UnitNum:                 1,
+				},
+			},
+		},
+	}
+
+	add2, del2, upd2, _, err := srv.diffDineInProducts(ctx, db, step2Products, step2SaleBill)
+	if err != nil {
+		t.Fatalf("step2: unexpected error: %v", err)
+	}
+	if len(add2) != 1 {
+		t.Errorf("step2: expected 1 addProducts (package), got %d", len(add2))
+	}
+	if len(del2) != 2 {
+		t.Errorf("step2: expected 2 deleteProducts (normal products), got %d", len(del2))
+	}
+	if len(upd2) != 0 {
+		t.Errorf("step2: expected 0 updateProducts, got %d", len(upd2))
+	}
+
+	// ===== 步骤3: 订单中有套餐商品 + 提交普通商品 =====
+	// 模拟步骤2后的数据库状态：普通商品已删除，套餐商品存在（含子商品）
+	subProductParamsJSON := `[{"flavor_uuid":4001,"attribute_uuid":null,"product_package_group_uuid":3001,"num":1,"unit_num":1}]`
+	step3SaleBill := makeSaleBill([]*model.SaleOrderProduct{
+		// 普通商品已软删除（delete_time != 0），GetSaleBillAllInfo 会过滤掉
+		// 但这里也测试 diffDineInProducts 内部的 delete_time 过滤
+		makeSaleOrderProduct(1, 1001, constant.ProductTypeProduct, 1000, nil, nil),
+		makeSaleOrderProduct(2, 1002, constant.ProductTypeProduct, 1000, nil, nil),
+		// 套餐主商品
+		makePackageSaleOrderProduct(3, 9001, 2001, subProductParamsJSON, 0),
+		// 套餐子商品（应被跳过）
+		func() *model.SaleOrderProduct {
+			p := makeSaleOrderProduct(4, 4001, constant.ProductTypePackageSubProduct, 0, nil, nil)
+			p.PackageUuid = 3 // 关联套餐主商品 UUID=3
+			return p
+		}(),
+	})
+
+	step3Products := []req.ProductParams{
+		{FlavorProductBomUuid: 5001, Num: 1, ProductType: 0},
+		{FlavorProductBomUuid: 5002, Num: 3, ProductType: 0},
+	}
+
+	add3, del3, upd3, _, err := srv.diffDineInProducts(ctx, db, step3Products, step3SaleBill)
+	if err != nil {
+		t.Fatalf("step3: unexpected error: %v", err)
+	}
+	// 普通商品 5001、5002 应为新增
+	if len(add3) != 2 {
+		t.Errorf("step3: expected 2 addProducts (normal products), got %d", len(add3))
+	}
+	// 套餐商品应为删除（已删除的普通商品不算）
+	if len(del3) != 1 {
+		t.Errorf("step3: expected 1 deleteProducts (package), got %d", len(del3))
+	}
+	if len(upd3) != 0 {
+		t.Errorf("step3: expected 0 updateProducts, got %d", len(upd3))
+	}
+}
+
+// Test_diffDineInProducts_ReplaceNormalWithPackage 普通商品替换为套餐商品
+func Test_diffDineInProducts_ReplaceNormalWithPackage(t *testing.T) {
+	dbm, db := setupDiffDineInTestDB(t)
+	ctx := createDiffDineInTestContext(t, dbm)
+	srv := newTestOrderSrv(dbm)
+
+	// 已有：2 个普通商品
+	saleBill := makeSaleBill([]*model.SaleOrderProduct{
+		makeSaleOrderProduct(1, 1001, constant.ProductTypeProduct, 0, nil, nil),
+		makeSaleOrderProduct(2, 1002, constant.ProductTypeProduct, 0, nil, nil),
+	})
+
+	// 提交：1 个套餐商品（完全替换所有普通商品）
+	products := []req.ProductParams{
+		{
+			ProductPackageUuid: 2001,
+			Num:                2,
+			ProductType:        constant.ProductTypePackage,
+			Products: []req.ProductRequest{
+				{
+					ProductPackageGroupUuid: 3001,
+					EditProductReq:          req.EditProductReq{FlavorUuid: 4001},
+					Num:                     1,
+					UnitNum:                 1,
+				},
+			},
+		},
+	}
+
+	add, del, upd, _, err := srv.diffDineInProducts(ctx, db, products, saleBill)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(add) != 1 {
+		t.Errorf("expected 1 addProducts (package), got %d", len(add))
+	}
+	if len(del) != 2 {
+		t.Errorf("expected 2 deleteProducts (normal products), got %d", len(del))
+	}
+	if len(upd) != 0 {
+		t.Errorf("expected 0 updateProducts, got %d", len(upd))
+	}
+}
+
+// Test_diffDineInProducts_ReplacePackageWithNormal 套餐商品替换为普通商品
+func Test_diffDineInProducts_ReplacePackageWithNormal(t *testing.T) {
+	dbm, db := setupDiffDineInTestDB(t)
+	ctx := createDiffDineInTestContext(t, dbm)
+	srv := newTestOrderSrv(dbm)
+
+	// 已有：1 个套餐商品 + 1 个套餐子商品
+	subProductParamsJSON := `[{"flavor_uuid":4001,"attribute_uuid":null,"product_package_group_uuid":3001,"num":1,"unit_num":1}]`
+	saleBill := makeSaleBill([]*model.SaleOrderProduct{
+		makePackageSaleOrderProduct(3, 9001, 2001, subProductParamsJSON, 0),
+		func() *model.SaleOrderProduct {
+			p := makeSaleOrderProduct(4, 4001, constant.ProductTypePackageSubProduct, 0, nil, nil)
+			p.PackageUuid = 3
+			return p
+		}(),
+	})
+
+	// 提交：2 个普通商品（完全替换套餐商品）
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 5001, Num: 1, ProductType: 0},
+		{FlavorProductBomUuid: 5002, Num: 3, ProductType: 0},
+	}
+
+	add, del, upd, _, err := srv.diffDineInProducts(ctx, db, products, saleBill)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(add) != 2 {
+		t.Errorf("expected 2 addProducts (normal products), got %d", len(add))
+	}
+	if len(del) != 1 {
+		t.Errorf("expected 1 deleteProducts (package), got %d", len(del))
+	}
+	if len(upd) != 0 {
+		t.Errorf("expected 0 updateProducts, got %d", len(upd))
+	}
+}
+
 // suppress unused import warning
 var _ = fmt.Sprintf

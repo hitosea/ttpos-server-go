@@ -349,11 +349,11 @@ func (s *orderSrv) GetDineInOrderFormInfo(ctx context.Context, request req.GetDi
 	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	products := make([]resp.DineInProduct, 0)
 	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-		// 跳过已删除的商品
-		if saleOrderProduct.DeleteTime != 0 {
+		// 跳过已删除的商品和套餐子商品（套餐子商品挂在套餐主商品下）
+		if saleOrderProduct.DeleteTime != 0 || saleOrderProduct.IsPackageSubProduct() {
 			continue
 		}
-		products = append(products, resp.DineInProduct{
+		product := resp.DineInProduct{
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			LocaleName:           saleOrderProduct.GetLocaleName(),
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(), // 包含规格+小料+属性
@@ -366,7 +366,27 @@ func (s *orderSrv) GetDineInOrderFormInfo(ctx context.Context, request req.GetDi
 				}
 				return ""
 			}(),
-		})
+			ProductType:        uint(saleOrderProduct.ProductType),
+			PackageProductList: resp.PackageProductList{List: make([]resp.PackageProduct, 0)},
+		}
+		// 套餐商品：挂载子商品列表
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, sub := range subProducts {
+				if sub.DeleteTime != 0 {
+					continue
+				}
+				product.PackageProductList.List = append(product.PackageProductList.List, resp.PackageProduct{
+					Uuid:                sub.Uuid,
+					LocaleName:          sub.GetLocaleName(),
+					LocaleAttributeName: sub.GetAttributeName(), // 包含规格+小料+属性
+					Num:                 sub.Num,
+					UnitNum:             sub.GetProductNum(),
+					AddPrice:            sub.AddPrice,
+				})
+			}
+		}
+		products = append(products, product)
 	}
 
 	// 构建金额信息
@@ -3381,10 +3401,11 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	isProductionFinished, _ := productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
 
 	// 获取商品列表（包含退款信息）
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	productList := make([]resp.MemberDineInOrderProduct, 0)
 	for _, product := range saleOrder.SaleOrderProducts {
 		if product.IsPackageSubProduct() {
-			continue // 跳过套餐子商品
+			continue // 跳过套餐子商品（套餐子商品挂在套餐主商品下）
 		}
 
 		// 计算商品退款金额
@@ -3393,7 +3414,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 			productRefundAmount += returnOrderProduct.ProductTotalAmount
 		}
 
-		productList = append(productList, resp.MemberDineInOrderProduct{
+		memberProduct := resp.MemberDineInOrderProduct{
 			LocaleName:          product.GetLocaleName(),
 			LocaleAttributeName: product.GetAttributeName(),
 			Num:                 product.Num,
@@ -3403,10 +3424,32 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 				if product.ImageFile == nil {
 					return ""
 				}
-				return product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+				return product.ImageFile.GetUrl(baseUrl)
 			}(),
-			RefundAmount: productRefundAmount,
-		})
+			RefundAmount:       productRefundAmount,
+			ProductType:        uint(product.ProductType),
+			PackageProductList: resp.PackageProductList{List: make([]resp.PackageProduct, 0)},
+		}
+
+		// 套餐商品：挂载子商品列表
+		if product.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(product.Uuid)
+			for _, sub := range subProducts {
+				if sub.DeleteTime != 0 {
+					continue
+				}
+				memberProduct.PackageProductList.List = append(memberProduct.PackageProductList.List, resp.PackageProduct{
+					Uuid:                sub.Uuid,
+					LocaleName:          sub.GetLocaleName(),
+					LocaleAttributeName: sub.GetAttributeName(),
+					Num:                 sub.Num,
+					UnitNum:             sub.GetProductNum(),
+					AddPrice:            sub.AddPrice,
+				})
+			}
+		}
+
+		productList = append(productList, memberProduct)
 	}
 
 	// 计算订单总退款金额
@@ -3457,7 +3500,6 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	}
 
 	// 待支付状态下获取支付方式列表（用于发起支付）
-	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	paymentMethodList := resp.PaymentMethodList{List: make([]resp.PaymentMethodItem, 0)}
 	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() {
 		paymentMethods, _ := repository.NewPaymentMethodRepo(db).GetLianLianPayPaymentMethodList()
