@@ -263,9 +263,9 @@ func (r *paymentMethodRepo) GetLianLianPayPaymentMethodList() ([]*model.PaymentM
 	result := make([]*model.PaymentMethod, 0)
 	if len(paymentMethods) > 0 {
 		for _, paymentMethod := range paymentMethods {
-			if paymentMethod.Code != constant.PaymentMethodCodeLianLianQRPromptPay {
-				result = append(result, paymentMethod)
-			}
+			// if paymentMethod.Code != constant.PaymentMethodCodeLianLianQRPromptPay {
+			result = append(result, paymentMethod)
+			// }
 		}
 	}
 	return result, nil
