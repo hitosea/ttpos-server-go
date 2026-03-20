@@ -2,11 +2,11 @@
   <div class="basic-setting-content">
     <!--基本信息-->
     <div class="common-form">{{ $t('基本信息') }}</div>
-    <el-form-item :label="$t('类型：')" v-if="baseSale == '1'">
+    <el-form-item :label="$t('类型：')">
       <el-radio-group v-model="form.model.type" :disabled="disableChangeType" @change="changeType">
         <el-radio :value="10">{{ $t('成品') }}</el-radio>
         <el-radio :value="30">{{ $t('套餐') }}</el-radio>
-        <el-radio :value="20">{{ $t('材料') }}</el-radio>
+        <el-radio v-if="baseSale == '1'" :value="20">{{ $t('材料') }}</el-radio>
       </el-radio-group>
     </el-form-item>
     <UniqueNameForm
