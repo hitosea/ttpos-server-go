@@ -469,16 +469,16 @@ func (t Timezone) OpeningHoursStartEndUnix(openingHours string, opts ...func(o *
 		// 如果未跨天内，默认显示昨天的营业时间
 		yesterday := today.AddDate(0, 0, -1)
 		startTime = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), startHour, startMin, 0, 0, loc)
-		endTime = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), endHour, endMin, 0, 0, loc)
+		endTime = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), endHour, endMin, 59, 0, loc)
 		// 如果类型为1，则显示今天的营业时间
 		if option.Type == 1 {
 			startTime = time.Date(today.Year(), today.Month(), today.Day(), startHour, startMin, 0, 0, loc)
-			endTime = time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 0, 0, loc)
+			endTime = time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 59, 0, loc)
 		}
 	} else {
 		yesterday := today.AddDate(0, 0, -1)
 		startTime = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), startHour, startMin, 0, 0, loc)
-		endTime = time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 0, 0, loc)
+		endTime = time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 59, 0, loc)
 	}
 
 	return startTime.Unix(), endTime.Unix()
