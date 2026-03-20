@@ -391,11 +391,11 @@ func (s *orderSrv) GetDineInOrderFormInfo(ctx context.Context, request req.GetDi
 
 	// 构建金额信息
 	amountInfo := resp.DineInAmountInfo{
-		ProductAmount:  saleOrder.ProductAmount,     // 商品金额
-		TaxAmount:      saleOrder.TaxFee,            // 消费税
-		ServiceAmount:  saleOrder.ServiceFee,        // 服务费
-		MemberDiscount: saleOrder.MemberDiscountFee, // 会员折扣
-		TotalAmount:    saleOrder.Amount,            // 应付金额（已包含税费和服务费）
+		ProductAmount:  saleOrder.ProductOriginalAmount, // 商品金额
+		TaxAmount:      saleOrder.TaxFee,                // 消费税
+		ServiceAmount:  saleOrder.ServiceFee,            // 服务费
+		MemberDiscount: saleOrder.MemberDiscountFee,     // 会员折扣
+		TotalAmount:    saleOrder.Amount,                // 应付金额（已包含税费和服务费）
 	}
 
 	// 获取支付方式列表
