@@ -727,6 +727,15 @@ func (s *materialSrv) doGetMaterialDetail(
 	defaultSalesUnitUuid, defaultSalesUnitLocaleName := s.getDefaultSalesUnitInfo(materialUnitRepo, material.DefaultSalesUnitUuid)
 
 	lang := ctx.GetLanguage()
+
+	// HQ 控制字段可编辑性
+	isNegativeStockEditable := true
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsSubShop() && material.HeadquarterUuid > 0 {
+		hqControlMap := repository.GetHqControlMap(nil, companySetting.HeadquarterUuid)
+		isNegativeStockEditable = !isUnifiedFromMap(hqControlMap, constant.HqFieldNegativeStock)
+	}
+
 	return material_resp.MaterialDetailResp{
 		Uuid:                       material.Uuid,
 		LocaleName:                 material.MultiLanguageName.GetNames(),
@@ -756,6 +765,7 @@ func (s *materialSrv) doGetMaterialDetail(
 		DefaultSalesUnitLocaleName: defaultSalesUnitLocaleName,
 		OriginCountry:              getOriginCountry(material.OriginCountryCode),
 		IsEditable:                 !material.IsHeadquarter(),
+		IsNegativeStockEditable:    isNegativeStockEditable,
 	}, nil
 }
 
@@ -3702,17 +3712,17 @@ func (s *materialSrv) SyncHeadquarterMaterials(hqDb *gorm.DB, subDb *gorm.DB, hq
 				if overrideRepo.IsOverridden(material.Uuid, constant.HqFieldSafetyStock) {
 					material.SafetyStock = subShopSafetyStock // 已 override：保留子店值
 				}
+				// 无 override：使用 HQ 值（默认行为）
 			}
 
 			// 确定负库存设置：根据控制模式 + override 决定
 			if subNegStock, ok := subShopMaterialNegativeStockMap[material.Uuid]; ok {
 				if repository.IsHqUnifiedControl(hqDb, hqUuid, constant.HqFieldNegativeStock) {
 					// 统一控制：强制用 HQ 值（默认行为）
-				} else {
-					if overrideRepo.IsOverridden(material.Uuid, constant.HqFieldNegativeStock) {
-						material.AllowNegativeStock = subNegStock // 已 override：保留子店值
-					}
+				} else if overrideRepo.IsOverridden(material.Uuid, constant.HqFieldNegativeStock) {
+					material.AllowNegativeStock = subNegStock // 分开控制+已修改：保留子店值
 				}
+				// 分开控制+无 override：使用 HQ 值
 			}
 
 			addMaterialList = append(addMaterialList, model.Material{
@@ -4421,11 +4431,20 @@ func (s *materialSrv) UpdateMaterialSafetyStock(ctx context.Context, req req.Mat
 		return errors.WithMessage(err, "更新安全库存失败")
 	}
 
-	// 子店修改总部物品安全库存 → 标记 override
+	// 子店修改总部物品安全库存 → 与 HQ 值不一致时标记 override
 	material, _ := materialRepo.GetMaterialDetailByUuid(req.Uuid)
 	if material != nil && material.HeadquarterUuid > 0 {
-		hqPushSrv := NewHqPushSrv(s.dbm)
-		_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityMaterial, req.Uuid, constant.HqFieldSafetyStock)
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		hqMaterialRepo := repository.NewMaterialRepo(hqDb)
+		hqMaterial, hqErr := hqMaterialRepo.GetMaterialDetailByUuid(req.Uuid)
+		if hqErr == nil && hqMaterial != nil {
+			safetyStockDiff := (req.SafetyStock == nil) != (hqMaterial.SafetyStock == nil) ||
+				(req.SafetyStock != nil && hqMaterial.SafetyStock != nil && *req.SafetyStock != *hqMaterial.SafetyStock)
+			if safetyStockDiff {
+				hqPushSrv := NewHqPushSrv(s.dbm)
+				_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityMaterial, req.Uuid, constant.HqFieldSafetyStock)
+			}
+		}
 	}
 
 	return nil

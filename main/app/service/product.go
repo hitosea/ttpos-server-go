@@ -6037,8 +6037,23 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 		return errors.WithMessage(err, "修改商品状态失败")
 	}
 
-	// HQ 修改商品状态 → 自动推送到子店
 	companySetting := ctx.GetCompanySetting()
+
+	// 子店修改总部商品状态 → 与 HQ 值不一致时标记 override
+	if companySetting.IsSubShop() && productPackage.HeadquarterUuid > 0 {
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		hqProductRepo := repository.NewProductPackageRepo(hqDb)
+		hqProduct, hqErr := hqProductRepo.GetProductPackage(
+			repository.CommonRepo.WhereBySoftDelete(),
+			repository.CommonRepo.WhereByUuid(productPackage.Uuid),
+		)
+		if hqErr == nil && hqProduct != nil && hqProduct.ID > 0 && uint(*req.Status) != hqProduct.Status {
+			hqPushSrv := NewHqPushSrv(s.dbm)
+			_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProduct, productPackage.Uuid, constant.HqFieldDineShelf)
+		}
+	}
+
+	// HQ 修改商品状态 → 自动推送到子店
 	if companySetting.IsHeadquarter() {
 		hqPushSrv := NewHqPushSrv(s.dbm)
 		utils.Go(func() {
@@ -6105,11 +6120,19 @@ func (s *productSrv) UpdateHeadquartersProduct(ctx context.Context, req req.Upda
 		return errors.WithMessage(err, "修改总部商品失败")
 	}
 
-	// 子店修改总部商品状态 → 标记 override
+	// 子店修改总部商品状态 → 与 HQ 值不一致时标记 override
 	companySetting := ctx.GetCompanySetting()
 	if companySetting.IsSubShop() && product.HeadquarterUuid > 0 {
-		hqPushSrv := NewHqPushSrv(s.dbm)
-		_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProduct, product.Uuid, constant.HqFieldDineShelf)
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		hqProductRepo := repository.NewProductPackageRepo(hqDb)
+		hqProduct, hqErr := hqProductRepo.GetProductPackage(
+			repository.CommonRepo.WhereBySoftDelete(),
+			repository.CommonRepo.WhereByUuid(product.Uuid),
+		)
+		if hqErr == nil && hqProduct != nil && hqProduct.ID > 0 && uint(*req.Status) != hqProduct.Status {
+			hqPushSrv := NewHqPushSrv(s.dbm)
+			_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProduct, product.Uuid, constant.HqFieldDineShelf)
+		}
 	}
 
 	return nil
@@ -8488,7 +8511,7 @@ func (s *productSrv) SyncHeadquarterProducts(hqDb *gorm.DB, subDb *gorm.DB, hqUu
 				if overrideRepo.IsOverridden(productPackage.Uuid, constant.HqFieldDineShelf) {
 					status = existsProductPackage.Status // 分开控制+已修改：保留子店值
 				}
-				// 无 override：使用 HQ 值
+				// 分开控制+无 override：使用 HQ 值
 			}
 		}
 		// 创建商品包
@@ -8899,15 +8922,19 @@ func (s *productSrv) updateSubTakeoutProduct(
 	// 外卖上下架
 	if repository.IsHqUnifiedControl(headquarterDb, companySetting.HeadquarterUuid, constant.HqFieldTakeoutShelf) {
 		updateData["status"] = headTakeout.Status
-	} else if !overrideRepo.IsOverridden(subTakeout.Uuid, constant.HqFieldTakeoutShelf) {
-		updateData["status"] = headTakeout.Status // 无 override：使用 HQ 值
+	} else if overrideRepo.IsOverridden(subTakeout.Uuid, constant.HqFieldTakeoutShelf) {
+		// 分开控制+已修改：保留子店值（不写入 updateData）
+	} else {
+		updateData["status"] = headTakeout.Status // 分开控制+无 override：使用 HQ 值
 	}
 
 	// 外卖价格
 	if repository.IsHqUnifiedControl(headquarterDb, companySetting.HeadquarterUuid, constant.HqFieldTakeoutPrice) {
 		updateData["price"] = headTakeout.Price
-	} else if !overrideRepo.IsOverridden(subTakeout.Uuid, constant.HqFieldTakeoutPrice) {
-		updateData["price"] = headTakeout.Price // 无 override：使用 HQ 值
+	} else if overrideRepo.IsOverridden(subTakeout.Uuid, constant.HqFieldTakeoutPrice) {
+		// 分开控制+已修改：保留子店值（不写入 updateData）
+	} else {
+		updateData["price"] = headTakeout.Price // 分开控制+无 override：使用 HQ 值
 	}
 
 	err := takeoutRepo.UpdateProductPackageTakeout(updateData, commonRepo.WhereByUuid(subTakeout.Uuid))
