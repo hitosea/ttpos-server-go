@@ -325,7 +325,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			BatchRange string                       `json:"batch_range"` // 批次范围 (如: "1-100", "101-200")
 			Products   []business_data_resp.Product `json:"products"`    // 该批次的商品列表
 		}
-		var batches []ProductBatch
+		batches := make([]ProductBatch, 0)
 		for i := 0; i < len(productList); i += batchSize {
 			end := i + batchSize
 			if end > len(productList) {
@@ -351,23 +351,42 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 				Products:   batchProducts,
 			})
 		}
-		for i, v := range batches {
+
+		// 处理空列表情况：确保即使没有商品也能生成打印数据
+		if len(batches) == 0 {
 			reqPrinterData.Product = &business_data_resp.BusinessDataProduct{
-				Products:   v.Products,
-				BatchRange: utils.IfString(len(batches) > 1, v.BatchRange, ""),
+				Products:   make([]business_data_resp.Product, 0),
+				BatchRange: "",
 			}
 			// 打印
-			printerContent, err := printer.NewPrinterRepo(ctx).PrintingBusinessData(
+			printerData, err = printer.NewPrinterRepo(ctx).PrintingBusinessData(
 				reqPrinterData,
 				int64(printerParam.QueryStartTime),
 				int64(printerParam.QueryEndTime),
-				utils.IfInt(i == 0, 1, 0),
+				1,
 			)
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
-			if i == 0 {
-				printerData = printerContent
+		} else {
+			for i, v := range batches {
+				reqPrinterData.Product = &business_data_resp.BusinessDataProduct{
+					Products:   v.Products,
+					BatchRange: utils.IfString(len(batches) > 1, v.BatchRange, ""),
+				}
+				// 打印
+				printerContent, err := printer.NewPrinterRepo(ctx).PrintingBusinessData(
+					reqPrinterData,
+					int64(printerParam.QueryStartTime),
+					int64(printerParam.QueryEndTime),
+					utils.IfInt(i == 0, 1, 0),
+				)
+				if err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				if i == 0 {
+					printerData = printerContent
+				}
 			}
 		}
 	} else {
