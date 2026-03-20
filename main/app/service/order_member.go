@@ -4,6 +4,7 @@ import (
 	contexts "context"
 	builtinerrors "errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -2738,6 +2739,7 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 // 2. sale_bill_uuid 不为0时，更新已有订单（识别新增、修改、删除的商品）
 // 与外送订单的核心差异：BillType=Instant, DiningMethod=DineIn, 商品价格与收银机一致
 func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error) {
+	request.ApplyCompatibleFields()
 	if err := request.Validate(); err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -2860,7 +2862,7 @@ func (s *orderSrv) updateDineInOrder(ctx context.Context, request req.CreateMemb
 	}
 
 	// 执行新增
-	if err := s.addDineInProducts(ctx, saleBillUuid, saleOrderUuid, s.toOrderProductAddReqSlice(addProducts), targetSaleBill); err != nil {
+	if err := s.addDineInProducts(ctx, saleBillUuid, saleOrderUuid, s.toProductParamsSlice(addProducts), targetSaleBill); err != nil {
 		return nil, err
 	}
 
@@ -2872,26 +2874,22 @@ func (s *orderSrv) updateDineInOrder(ctx context.Context, request req.CreateMemb
 
 // diffDineInProducts 计算堂食订单商品差异
 // 返回：新增商品、删除商品、修改商品、修改前商品
-func (s *orderSrv) diffDineInProducts(ctx context.Context, db *gorm.DB, products []req.OrderProductAddReq, saleBill *model.SaleBill) (
-	addProducts map[string]req.OrderProductAddReq,
+func (s *orderSrv) diffDineInProducts(ctx context.Context, db *gorm.DB, products []req.ProductParams, saleBill *model.SaleBill) (
+	addProducts map[string]req.ProductParams,
 	deleteProducts map[string]*model.SaleOrderProduct,
-	updateProducts map[string]req.OrderProductAddReq,
+	updateProducts map[string]req.ProductParams,
 	updateOlderProducts map[string]*model.SaleOrderProduct,
 	err error,
 ) {
 	// 构建提交商品映射
-	commitProductMap := make(map[string]req.OrderProductAddReq)
+	commitProductMap := make(map[string]req.ProductParams)
 	for index := range products {
 		product := products[index]
-		productPackageAttributes, err := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(ctx.GetCompanyUuid(), product.AttributeUuidList)
-		if err != nil {
-			return nil, nil, nil, nil, errors.WithMessage(err)
+		key, keyErr := dineInProductKey(ctx, db, product)
+		if keyErr != nil {
+			err = errors.WithMessage(keyErr)
+			return
 		}
-		attributeUuids := make([]uint64, 0)
-		for _, attribute := range productPackageAttributes {
-			attributeUuids = append(attributeUuids, attribute.AttributeUuid)
-		}
-		key := product.ProductKey(attributeUuids)
 		commitProductMap[key] = product
 	}
 
@@ -2909,17 +2907,17 @@ func (s *orderSrv) diffDineInProducts(ctx context.Context, db *gorm.DB, products
 				continue
 			}
 			key := product.ProductKey()
-			// 套餐主商品加 pkg: 前缀，与请求侧的 ProductKey 格式对齐
+			// 套餐主商品用 product_package_uuid + 子商品签名生成 key，与请求侧格式对齐
 			if product.ProductType == constant.ProductTypePackage {
-				key = "pkg:" + key
+				key = fmt.Sprintf("pkg:%d-%s", product.ProductPackageUuid, packageSubProductSignFromModel(product))
 			}
 			olderProductMap[key] = product
 		}
 	}
 
-	addProducts = make(map[string]req.OrderProductAddReq)
+	addProducts = make(map[string]req.ProductParams)
 	deleteProducts = make(map[string]*model.SaleOrderProduct)
-	updateProducts = make(map[string]req.OrderProductAddReq)
+	updateProducts = make(map[string]req.ProductParams)
 	updateOlderProducts = make(map[string]*model.SaleOrderProduct)
 
 	// 提交中存在，订单中不存在 → 新增
@@ -2949,34 +2947,51 @@ func (s *orderSrv) diffDineInProducts(ctx context.Context, db *gorm.DB, products
 
 // addDineInProducts 添加堂食订单商品
 // 注意：即使 products 为空，也需要调用 ActionAdd 来保存 targetSaleBill 中已标记为更新的对象（删除、修改）
-func (s *orderSrv) addDineInProducts(ctx context.Context, saleBillUuid, saleOrderUuid uint64, products []req.OrderProductAddReq, targetSaleBill *model.SaleBill) error {
+func (s *orderSrv) addDineInProducts(ctx context.Context, saleBillUuid, saleOrderUuid uint64, products []req.ProductParams, targetSaleBill *model.SaleBill) error {
+	db := s.dbm.GetDBWithContext(ctx)
 	productParams := make([]req.ProductParams, 0, len(products))
 	for _, product := range products {
-		param := req.ProductParams{
-			FlavorProductBomUuid:            product.FlavorUuid,
-			Num:                             product.Num,
-			SauceProductBomUuidList:         product.SauceUuidList,
-			ProductPackageAttributeUuidList: product.AttributeUuidList,
-			ProductType:                     product.ProductType,
-		}
-		// 套餐商品：转换子商品并标记为套餐
+		product.Operation = "add"
+		// 套餐商品：通过 product_package_uuid 查 DB 获取套餐的 BOM UUID
 		if product.ProductType == constant.ProductTypePackage {
+			productPackage, err := repository.NewProductPackageRepo(db).GetProductPackage(
+				repository.CommonRepo.WhereByUuid(product.ProductPackageUuid),
+				repository.CommonRepo.WhereBySoftDelete(),
+				repository.NewProductPackageRepo(db).WithProductBoms(
+					repository.CommonRepo.WhereBySoftDelete(),
+				),
+			)
+			if err != nil {
+				return errors.WithMessage(err, "查询套餐信息失败")
+			}
+			productPackageFlavorBomUuid := func() uint64 {
+				if len(productPackage.ProductBoms) == 0 {
+					return 0
+				}
+				return productPackage.ProductBoms[0].Uuid
+			}()
+			if productPackageFlavorBomUuid == 0 {
+				return errors.WithMessage(errors.New("套餐商品规格不存在"), "套餐商品规格不存在")
+			}
+			product.FlavorProductBomUuid = productPackageFlavorBomUuid
+
+			// 转换子商品参数
 			subProductParams := make([]req.ProductParams, 0, len(product.Products))
 			for _, sub := range product.Products {
 				subParam := req.ProductParams{
-					FlavorProductBomUuid:            sub.EditProductReq.FlavorUuid,
+					FlavorProductBomUuid:            sub.FlavorUuid,
 					Num:                             sub.Num,
 					UnitNum:                         sub.UnitNum,
-					ProductPackageAttributeUuidList: sub.EditProductReq.AttributeUuidList,
+					ProductPackageAttributeUuidList: sub.AttributeUuidList,
 					ProductPackageGroupUuid:         sub.ProductPackageGroupUuid,
 					Operation:                       "add",
 					AddPrice:                        sub.AddPrice,
 				}
 				subProductParams = append(subProductParams, subParam)
 			}
-			param.SetIsPackageProduct(subProductParams)
+			product.SetIsPackageProduct(subProductParams)
 		}
-		productParams = append(productParams, param)
+		productParams = append(productParams, product)
 	}
 
 	params := req.ProductAddReq{
@@ -2989,13 +3004,103 @@ func (s *orderSrv) addDineInProducts(ctx context.Context, saleBillUuid, saleOrde
 	return s.ActionAdd(ctx, params, targetSaleBill)
 }
 
-// toOrderProductAddReqSlice 将 map 转换为 slice
-func (s *orderSrv) toOrderProductAddReqSlice(products map[string]req.OrderProductAddReq) []req.OrderProductAddReq {
-	result := make([]req.OrderProductAddReq, 0, len(products))
+// toProductParamsSlice 将 map 转换为 slice
+func (s *orderSrv) toProductParamsSlice(products map[string]req.ProductParams) []req.ProductParams {
+	result := make([]req.ProductParams, 0, len(products))
 	for _, product := range products {
 		result = append(result, product)
 	}
 	return result
+}
+
+// packageSubProductSignFromModel 从已有的 SaleOrderProduct 生成套餐子商品签名
+// 格式与 dineInProductKey() 套餐分支一致，用于 diffDineInProducts key 对齐
+func packageSubProductSignFromModel(product *model.SaleOrderProduct) string {
+	type subProduct struct {
+		FlavorUuid              uint64   `json:"flavor_uuid"`
+		AttributeUuid           []uint64 `json:"attribute_uuid"`
+		ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"`
+		Num                     float64  `json:"num"`
+		UnitNum                 float64  `json:"unit_num"`
+	}
+	subProducts := make([]subProduct, 0)
+	utils.FromJson(product.PackageSubProductParams, &subProducts)
+	sort.Slice(subProducts, func(i, j int) bool {
+		if subProducts[i].ProductPackageGroupUuid != subProducts[j].ProductPackageGroupUuid {
+			return subProducts[i].ProductPackageGroupUuid < subProducts[j].ProductPackageGroupUuid
+		}
+		return subProducts[i].FlavorUuid < subProducts[j].FlavorUuid
+	})
+	parts := make([]string, 0, len(subProducts))
+	for _, sp := range subProducts {
+		parts = append(parts, fmt.Sprintf("%d:%d:%.2f:%.2f", sp.ProductPackageGroupUuid, sp.FlavorUuid, sp.Num, sp.UnitNum))
+	}
+	return strings.Join(parts, "|")
+}
+
+// dineInProductKey 生成堂食订单商品的 diff key
+// 普通商品：FlavorProductBomUuid-属性-加料
+// 套餐商品：pkg:ProductPackageUuid-子商品签名
+func dineInProductKey(ctx context.Context, db *gorm.DB, product req.ProductParams) (string, error) {
+	if product.ProductType == constant.ProductTypePackage {
+		// 套餐：用 product_package_uuid + 子商品签名
+		type subKey struct {
+			FlavorUuid              uint64
+			ProductPackageGroupUuid uint64
+			Num                     float64
+			UnitNum                 float64
+		}
+		subKeys := make([]subKey, 0, len(product.Products))
+		for _, sub := range product.Products {
+			subKeys = append(subKeys, subKey{
+				FlavorUuid:              sub.FlavorUuid,
+				ProductPackageGroupUuid: sub.ProductPackageGroupUuid,
+				Num:                     sub.Num,
+				UnitNum:                 sub.UnitNum,
+			})
+		}
+		sort.Slice(subKeys, func(i, j int) bool {
+			if subKeys[i].ProductPackageGroupUuid != subKeys[j].ProductPackageGroupUuid {
+				return subKeys[i].ProductPackageGroupUuid < subKeys[j].ProductPackageGroupUuid
+			}
+			return subKeys[i].FlavorUuid < subKeys[j].FlavorUuid
+		})
+		parts := make([]string, 0, len(subKeys))
+		for _, sk := range subKeys {
+			parts = append(parts, fmt.Sprintf("%d:%d:%.2f:%.2f", sk.ProductPackageGroupUuid, sk.FlavorUuid, sk.Num, sk.UnitNum))
+		}
+		return fmt.Sprintf("pkg:%d-%s", product.ProductPackageUuid, strings.Join(parts, "|")), nil
+	}
+
+	// 普通商品：FlavorProductBomUuid-属性-加料
+	attributeUuidList := make([]uint64, 0)
+	if len(product.ProductPackageAttributeUuidList) > 0 {
+		productPackageAttributes, err := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(ctx.GetCompanyUuid(), product.ProductPackageAttributeUuidList)
+		if err != nil {
+			return "", errors.WithMessage(err)
+		}
+		for _, attribute := range productPackageAttributes {
+			attributeUuidList = append(attributeUuidList, attribute.AttributeUuid)
+		}
+	}
+	sort.Slice(attributeUuidList, func(i, j int) bool {
+		return attributeUuidList[i] < attributeUuidList[j]
+	})
+	sauceList := make([]uint64, 0, len(product.SauceProductBomUuidList))
+	sauceList = append(sauceList, product.SauceProductBomUuidList...)
+	sort.Slice(sauceList, func(i, j int) bool {
+		return sauceList[i] < sauceList[j]
+	})
+
+	attrStrs := make([]string, 0, len(attributeUuidList))
+	for _, a := range attributeUuidList {
+		attrStrs = append(attrStrs, fmt.Sprintf("%d", a))
+	}
+	sauceStrs := make([]string, 0, len(sauceList))
+	for _, s := range sauceList {
+		sauceStrs = append(sauceStrs, fmt.Sprintf("%d", s))
+	}
+	return fmt.Sprintf("%d-%s-%s", product.FlavorProductBomUuid, strings.Join(attrStrs, ","), strings.Join(sauceStrs, ",")), nil
 }
 
 // ==================== 会员端堂食订单管理 ====================

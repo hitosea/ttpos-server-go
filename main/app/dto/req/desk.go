@@ -151,9 +151,9 @@ type CheckDineInOrderReq struct {
 
 // 创建会员端堂食订单请求参数
 type CreateMemberDineInOrderReq struct {
-	SaleBillUuid  uint64               `json:"sale_bill_uuid"`  // 销售账单UUID. 值为0时，表示创建新订单。值不为0时，表示向已有订单添加商品。
-	SaleOrderUuid uint64               `json:"sale_order_uuid"` // 销售订单UUID. 更新订单时必填。
-	Products      []OrderProductAddReq `json:"products"`        // 商品列表
+	SaleBillUuid  uint64          `json:"sale_bill_uuid"`  // 销售账单UUID. 值为0时，表示创建新订单。值不为0时，表示向已有订单添加商品。
+	SaleOrderUuid uint64          `json:"sale_order_uuid"` // 销售订单UUID. 更新订单时必填。
+	Products      []ProductParams `json:"products"`        // 商品列表
 }
 
 func (req *CreateMemberDineInOrderReq) Validate() error {
@@ -164,11 +164,17 @@ func (req *CreateMemberDineInOrderReq) Validate() error {
 		if product.Num <= 0 {
 			return errors.New("商品数量不能为0")
 		}
-		if product.FlavorUuid <= 0 {
-			return errors.New("商品规格ID不能为0")
+		// 普通商品校验
+		if product.ProductType == 0 {
+			if product.FlavorProductBomUuid <= 0 {
+				return errors.New("商品规格ID不能为0")
+			}
 		}
 		// 套餐校验
 		if product.ProductType == 1 {
+			if product.ProductPackageUuid <= 0 {
+				return errors.New("套餐UUID不能为0")
+			}
 			if len(product.Products) == 0 {
 				return errors.New("套餐子商品不能为空")
 			}
@@ -186,6 +192,13 @@ func (req *CreateMemberDineInOrderReq) Validate() error {
 		}
 	}
 	return nil
+}
+
+// ApplyCompatibleFields 将请求中的兼容字段赋值到标准字段
+func (req *CreateMemberDineInOrderReq) ApplyCompatibleFields() {
+	for index := range req.Products {
+		req.Products[index].ApplyCompatibleFields()
+	}
 }
 
 type OrderProductAddReq struct {

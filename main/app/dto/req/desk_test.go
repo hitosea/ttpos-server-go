@@ -18,16 +18,16 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 			errMsg:  "未选购商品",
 		},
 		{
-			name: "空切片商品列表_应报错",
-			req:  CreateMemberDineInOrderReq{Products: []OrderProductAddReq{}},
+			name:    "空切片商品列表_应报错",
+			req:     CreateMemberDineInOrderReq{Products: []ProductParams{}},
 			wantErr: true,
 			errMsg:  "未选购商品",
 		},
 		{
 			name: "商品数量为0_应报错",
 			req: CreateMemberDineInOrderReq{
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 1, Num: 0, ProductType: 0},
+				Products: []ProductParams{
+					{FlavorflavUuid: 1, Num: 0, ProductType: 0},
 				},
 			},
 			wantErr: true,
@@ -36,8 +36,8 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 		{
 			name: "商品数量为负数_应报错",
 			req: CreateMemberDineInOrderReq{
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 1, Num: -1, ProductType: 0},
+				Products: []ProductParams{
+					{FlavorflavUuid: 1, Num: -1, ProductType: 0},
 				},
 			},
 			wantErr: true,
@@ -46,8 +46,8 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 		{
 			name: "商品规格ID为0_应报错",
 			req: CreateMemberDineInOrderReq{
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 0, Num: 1, ProductType: 0},
+				Products: []ProductParams{
+					{FlavorflavUuid: 0, Num: 1, ProductType: 0},
 				},
 			},
 			wantErr: true,
@@ -56,8 +56,8 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 		{
 			name: "普通商品_参数正确_应通过",
 			req: CreateMemberDineInOrderReq{
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 100, Num: 2, ProductType: 0},
+				Products: []ProductParams{
+					{FlavorflavUuid: 100, Num: 2, ProductType: 0},
 				},
 			},
 			wantErr: false,
@@ -65,18 +65,30 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 		{
 			name: "多个普通商品_参数正确_应通过",
 			req: CreateMemberDineInOrderReq{
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 100, Num: 1, ProductType: 0},
-					{FlavorUuid: 200, Num: 3, ProductType: 0},
+				Products: []ProductParams{
+					{FlavorflavUuid: 100, Num: 1, ProductType: 0},
+					{FlavorflavUuid: 200, Num: 3, ProductType: 0},
 				},
 			},
 			wantErr: false,
 		},
 		{
+			name: "套餐_ProductPackageUuid为0_应报错",
+			req: CreateMemberDineInOrderReq{
+				Products: []ProductParams{
+					{ProductPackageUuid: 0, Num: 1, ProductType: 1, Products: []ProductRequest{
+						{EditProductReq: EditProductReq{FlavorUuid: 50}, Num: 1, ProductPackageGroupUuid: 10},
+					}},
+				},
+			},
+			wantErr: true,
+			errMsg:  "套餐UUID不能为0",
+		},
+		{
 			name: "套餐_子商品为空_应报错",
 			req: CreateMemberDineInOrderReq{
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 100, Num: 1, ProductType: 1, Products: nil},
+				Products: []ProductParams{
+					{ProductPackageUuid: 100, Num: 1, ProductType: 1, Products: nil},
 				},
 			},
 			wantErr: true,
@@ -85,8 +97,8 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 		{
 			name: "套餐_子商品规格ID为0_应报错",
 			req: CreateMemberDineInOrderReq{
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 100, Num: 1, ProductType: 1, Products: []ProductRequest{
+				Products: []ProductParams{
+					{ProductPackageUuid: 100, Num: 1, ProductType: 1, Products: []ProductRequest{
 						{EditProductReq: EditProductReq{FlavorUuid: 0}, Num: 1, ProductPackageGroupUuid: 10},
 					}},
 				},
@@ -97,8 +109,8 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 		{
 			name: "套餐_子商品数量为0_应报错",
 			req: CreateMemberDineInOrderReq{
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 100, Num: 1, ProductType: 1, Products: []ProductRequest{
+				Products: []ProductParams{
+					{ProductPackageUuid: 100, Num: 1, ProductType: 1, Products: []ProductRequest{
 						{EditProductReq: EditProductReq{FlavorUuid: 50}, Num: 0, ProductPackageGroupUuid: 10},
 					}},
 				},
@@ -109,8 +121,8 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 		{
 			name: "套餐_子商品分组ID为0_应报错",
 			req: CreateMemberDineInOrderReq{
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 100, Num: 1, ProductType: 1, Products: []ProductRequest{
+				Products: []ProductParams{
+					{ProductPackageUuid: 100, Num: 1, ProductType: 1, Products: []ProductRequest{
 						{EditProductReq: EditProductReq{FlavorUuid: 50}, Num: 1, ProductPackageGroupUuid: 0},
 					}},
 				},
@@ -121,8 +133,8 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 		{
 			name: "套餐_参数正确_应通过",
 			req: CreateMemberDineInOrderReq{
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 100, Num: 1, ProductType: 1, Products: []ProductRequest{
+				Products: []ProductParams{
+					{ProductPackageUuid: 100, Num: 1, ProductType: 1, Products: []ProductRequest{
 						{EditProductReq: EditProductReq{FlavorUuid: 50}, Num: 1, ProductPackageGroupUuid: 10},
 						{EditProductReq: EditProductReq{FlavorUuid: 60}, Num: 2, ProductPackageGroupUuid: 20},
 					}},
@@ -134,9 +146,9 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 			name: "混合_普通商品和套餐_参数正确_应通过",
 			req: CreateMemberDineInOrderReq{
 				SaleBillUuid: 0,
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 100, Num: 1, ProductType: 0},
-					{FlavorUuid: 200, Num: 1, ProductType: 1, Products: []ProductRequest{
+				Products: []ProductParams{
+					{FlavorflavUuid: 100, Num: 1, ProductType: 0},
+					{ProductPackageUuid: 200, Num: 1, ProductType: 1, Products: []ProductRequest{
 						{EditProductReq: EditProductReq{FlavorUuid: 50}, Num: 1, ProductPackageGroupUuid: 10},
 					}},
 				},
@@ -146,9 +158,9 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 		{
 			name: "第二个商品无效_应报错",
 			req: CreateMemberDineInOrderReq{
-				Products: []OrderProductAddReq{
-					{FlavorUuid: 100, Num: 1, ProductType: 0},
-					{FlavorUuid: 0, Num: 1, ProductType: 0},
+				Products: []ProductParams{
+					{FlavorflavUuid: 100, Num: 1, ProductType: 0},
+					{FlavorflavUuid: 0, Num: 1, ProductType: 0},
 				},
 			},
 			wantErr: true,
@@ -158,6 +170,7 @@ func TestCreateMemberDineInOrderReq_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.req.ApplyCompatibleFields()
 			err := tt.req.Validate()
 			if tt.wantErr {
 				if err == nil {
