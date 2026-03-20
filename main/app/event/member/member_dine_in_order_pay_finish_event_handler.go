@@ -70,6 +70,22 @@ func createH5OrderForMemberDineIn(payload event.PayFinishMemberDineInOrderPayloa
 		return
 	}
 
+	// 获取公司设置（优先从 ctx 获取）
+	companySetting := payload.Ctx.GetCompanySetting()
+	if companySetting.Uuid == 0 {
+		settingSrv := setting.NewSrv(dbm, cache.Global)
+		cs, err := settingSrv.GetCompanySetting(payload.Ctx)
+		if err != nil {
+			logger.Logger.Error("createH5OrderForMemberDineIn, GetCompanySetting failed",
+				zap.Uint64("company_uuid", payload.CompanyUuid),
+				zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+				zap.Error(err))
+			return
+		}
+		companySetting = cs
+		payload.Ctx.SetCompanySetting(companySetting)
+	}
+
 	// 创建 h5_order 记录
 	h5OrderUuid, _ := utils.GetID()
 	now := time.Now().Unix()
@@ -110,7 +126,7 @@ func createH5OrderForMemberDineIn(payload event.PayFinishMemberDineInOrderPayloa
 		Status:          constant.H5OrderStatusOrder,      // 状态：待接单
 		OrderType:       constant.H5OrderTypeMemberDineIn, // 订单类型：会员端堂食订单
 		IsAutoAccept:    0,                                // 非自动接单
-		IsNeedAudit:     1,                                // 需要审核
+		IsNeedAudit:     companySetting.IsOpenH5Order,      // 关闭扫码点餐接单则不需要审核，直接送厨
 		OrderTime:       now,                              // 下单时间
 		H5OrderProducts: h5OrderProductList,
 	}
@@ -191,31 +207,54 @@ func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload
 		return
 	}
 
-	// 获取接单设置
 	settingSrv := setting.NewSrv(dbm, cache.Global)
-	acceptOrderSetting, err := settingSrv.GetAcceptOrderSetting(payload.Ctx)
-	if err != nil {
-		logger.Logger.Error("autoAcceptMemberDineInOrder, GetAcceptOrderSetting failed",
-			zap.Uint64("company_uuid", payload.CompanyUuid),
-			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
-			zap.Error(err))
-		return
+
+	// 确保上下文中有 CompanySetting（支付回调路由无 JWT 中间件，ctx 中可能缺失）
+	companySetting := payload.Ctx.GetCompanySetting()
+	if companySetting.Uuid == 0 {
+		cs, err := settingSrv.GetCompanySetting(payload.Ctx)
+		if err != nil {
+			logger.Logger.Error("autoAcceptMemberDineInOrder, GetCompanySetting failed",
+				zap.Uint64("company_uuid", payload.CompanyUuid),
+				zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+				zap.Error(err))
+			return
+		}
+		companySetting = cs
+		payload.Ctx.SetCompanySetting(companySetting)
 	}
 
-	// 获取未接单商品的总金额
-	saleOrder := saleBill.GetFirstSaleOrder()
-	if saleOrder == nil {
-		return
-	}
-	totalPrice := saleBill.GetUnAcceptH5OrderProductTotalPrice(saleOrder.SaleOrderProducts)
-
-	// 判断是否可以自动接单（是否开启 + 金额是否在限额内）
-	if !acceptOrderSetting.CanAutoOrder(totalPrice) {
-		logger.Logger.Info("autoAcceptMemberDineInOrder, auto accept not allowed",
+	// 关闭h5接单功能时，直接自动接单，无需检查接单设置
+	if !companySetting.GetIsOpenH5Order() {
+		logger.Logger.Info("autoAcceptMemberDineInOrder, h5 order disabled, auto accept directly",
 			zap.Uint64("company_uuid", payload.CompanyUuid),
-			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
-			zap.Float64("totalPrice", totalPrice))
-		return
+			zap.Uint64("saleBillUuid", payload.SaleBillUuid))
+	} else {
+		// 开启h5接单功能时，根据接单设置（金额限额）判断是否自动接单
+		acceptOrderSetting, err := settingSrv.GetAcceptOrderSetting(payload.Ctx)
+		if err != nil {
+			logger.Logger.Error("autoAcceptMemberDineInOrder, GetAcceptOrderSetting failed",
+				zap.Uint64("company_uuid", payload.CompanyUuid),
+				zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+				zap.Error(err))
+			return
+		}
+
+		// 获取未接单商品的总金额
+		saleOrder := saleBill.GetFirstSaleOrder()
+		if saleOrder == nil {
+			return
+		}
+		totalPrice := saleBill.GetUnAcceptH5OrderProductTotalPrice(saleOrder.SaleOrderProducts)
+
+		// 判断是否可以自动接单（是否开启 + 金额是否在限额内）
+		if !acceptOrderSetting.CanAutoOrder(totalPrice) {
+			logger.Logger.Info("autoAcceptMemberDineInOrder, auto accept not allowed",
+				zap.Uint64("company_uuid", payload.CompanyUuid),
+				zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+				zap.Float64("totalPrice", totalPrice))
+			return
+		}
 	}
 
 	// 获取 H5 订单 UUID（由 createH5OrderForMemberDineIn 创建）
@@ -268,19 +307,6 @@ func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload
 		}
 	}
 
-	// 确保上下文中有 CompanySetting（支付回调路由无 JWT 中间件，ctx 中可能缺失）
-	if payload.Ctx.GetCompanySetting().Uuid == 0 {
-		companySetting, err := settingSrv.GetCompanySetting(payload.Ctx)
-		if err != nil {
-			logger.Logger.Error("autoAcceptMemberDineInOrder, GetCompanySetting failed",
-				zap.Uint64("company_uuid", payload.CompanyUuid),
-				zap.Uint64("saleBillUuid", payload.SaleBillUuid),
-				zap.Error(err))
-			return
-		}
-		payload.Ctx.SetCompanySetting(companySetting)
-	}
-
 	// 执行自动接单（同时完成接单和送厨）
 	result, err := orderSrv.AcceptH5Order(payload.Ctx, h5Order.Uuid, true)
 	if err != nil {
@@ -301,8 +327,7 @@ func autoAcceptMemberDineInOrder(payload event.PayFinishMemberDineInOrderPayload
 	logger.Logger.Info("autoAcceptMemberDineInOrder, auto accept success",
 		zap.Uint64("company_uuid", payload.CompanyUuid),
 		zap.Uint64("saleBillUuid", payload.SaleBillUuid),
-		zap.Uint64("h5OrderUuid", h5Order.Uuid),
-		zap.Float64("totalPrice", totalPrice))
+		zap.Uint64("h5OrderUuid", h5Order.Uuid))
 }
 
 // markMemberDineInOrderComplete 支付完成后将订单标记为已完成
