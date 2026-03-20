@@ -1407,8 +1407,10 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 		}
 
 		limitedMaterialUuids := make([]uint64, 0)
+		itemCountedQuantityMap := make(map[uint64]decimal.Decimal)
 		for _, item := range checkReq.Items {
 			limitedMaterialUuids = append(limitedMaterialUuids, item.MaterialUuid)
+			itemCountedQuantityMap[item.MaterialUuid] = item.CountedQuantity
 		}
 		for _, item := range stockReconciliation.StockReconciliationItems {
 			if item.DeleteTime > 0 || (len(limitedMaterialUuids) > 0 && !slices.Contains(limitedMaterialUuids, item.MaterialUuid)) {
@@ -1421,6 +1423,12 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 				bookedQuantity = bookedQuantityMap[item.MaterialUuid]
 			}
 
+			// 优先使用前端传入的实盘数量（用户可能修改了草稿中的盘点数量但尚未保存）
+			countedQuantity := item.CountedQuantity
+			if qty, ok := itemCountedQuantityMap[item.MaterialUuid]; ok {
+				countedQuantity = qty
+			}
+
 			var unitCount uint
 			for _, unit := range item.StockReconciliationItemUnits {
 				if unit.Quantity != nil {
@@ -1430,7 +1438,7 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 
 			itemResp = append(itemResp, resp.StockReconciliationCheckMaterialsResp{
 				LocaleName:                 item.Material.MultiLanguageName.GetNames(),
-				IsInventoryStatusException: unitCount > 0 && s.getIsInventoryStatusException(bookedQuantity, item.CountedQuantity),
+				IsInventoryStatusException: unitCount > 0 && s.getIsInventoryStatusException(bookedQuantity, countedQuantity),
 				Status:                     item.Material.Status,
 				IsDeleted:                  item.Material.DeleteTime > 0,
 				UnitCount:                  unitCount,
