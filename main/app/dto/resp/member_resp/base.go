@@ -20,6 +20,8 @@ type MemberResp struct {
 	IsMemberShowSoldOut  bool               `json:"is_member_show_sold_out"`  // 是否显示售罄商品
 	IsOpenRider          bool               `json:"is_open_rider"`            // 是否开启外送
 	IsOpenStoreScanOrder bool               `json:"is_open_store_scan_order"` // 是否开启门店扫码点餐
+	DeliveryAvailable    bool               `json:"delivery_available"`       // 外送服务是否可用（云平台是否开启）
+	SelfPickupAvailable  bool               `json:"self_pickup_available"`    // 到店自取是否可用（云平台是否开启）
 	IsStoreResting       bool               `json:"is_store_resting"`         // 商家是否休息中
 	AreaCode             []string           `json:"area_code"`                // 区号列表
 	Language             []string           `json:"language"`                 // 常用语言

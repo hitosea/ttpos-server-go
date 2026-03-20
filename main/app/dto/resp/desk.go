@@ -248,6 +248,8 @@ type DineInProduct struct {
 	UnitPrice            float64            `json:"unit_price"`              // 单价（折前）,含税费
 	Amount               float64            `json:"amount"`                  // 商品金额（折前）
 	Image                string             `json:"image"`                   // 商品图片URL
+	ProductType          uint               `json:"product_type"`            // 商品类型 0-商品 1-套餐
+	PackageProductList   PackageProductList `json:"package_product_list"`    // 套餐子商品列表（仅套餐商品有值）
 }
 
 // DineInAmountInfo 堂食订单金额信息

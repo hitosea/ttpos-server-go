@@ -125,6 +125,7 @@ func CheckoutSaleOrderEventHandler() {
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
+			saleOrder := payload.SaleBill.GetSaleOrder(payload.SaleOrderUuid)
 			record := model.SaleOrderOperationRecord{
 				Source:        payload.Source,
 				Action:        constant.OrderSettle,
@@ -132,6 +133,12 @@ func CheckoutSaleOrderEventHandler() {
 				SaleBillUuid:  payload.SaleBillUuid,
 				SaleOrderUuid: payload.SaleOrderUuid,
 				OperatorUuid:  payload.GetOperatorUuid(),
+				MemberUuid: func() uint64 {
+					if saleOrder != nil {
+						return saleOrder.ConsumerUuid
+					}
+					return 0
+				}(),
 			}
 			payload.IsSplitOrder = payload.SaleBill.IsSplit()
 			for i, saleOrder := range payload.SaleBill.SaleOrders {
