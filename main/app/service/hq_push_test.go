@@ -449,6 +449,12 @@ func getStoreMaterialNegStock(storeDB *gorm.DB, uuid uint64) int {
 
 func floatPtr(v float64) *float64 { return &v }
 
+func getStoreMaterialSafetyStock(storeDB *gorm.DB, uuid uint64) *float64 {
+	var val *float64
+	storeDB.Raw("SELECT safety_stock FROM ttpos_material WHERE uuid = ? AND delete_time = 0", uuid).Scan(&val)
+	return val
+}
+
 // ========== Section A: Pure Function Tests ==========
 
 func TestHqPush_GetControlModeWithDefault(t *testing.T) {
@@ -978,6 +984,139 @@ func TestHqPush_NegativeStock_Separate_NoOverride_Differ_Syncs(t *testing.T) {
 	// No override created
 	if hasOverride(storeDB, matUuid, constant.HqFieldNegativeStock) {
 		t.Error("no override should be created — sub-store hasn't modified")
+	}
+}
+
+// ========== Section F1: Batch Push Safety Stock (pushNegativeStockToStore) ==========
+
+func TestHqPush_BatchSafetyStock_Force_NoOverride_Syncs(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(6101)
+	seedHqMaterial(t, hqDB, matUuid, 0, floatPtr(20.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, floatPtr(5.0))
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, true)
+
+	got := getStoreMaterialSafetyStock(storeDB, matUuid)
+	if got == nil || *got != 20.0 {
+		t.Errorf("safety_stock: want 20.0, got %v", got)
+	}
+	if hasOverride(storeDB, matUuid, constant.HqFieldSafetyStock) {
+		t.Error("safety_stock override should be cleared after force push")
+	}
+}
+
+func TestHqPush_BatchSafetyStock_Force_HasOverride_OverwriteAndClear(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(6102)
+	seedHqMaterial(t, hqDB, matUuid, 0, floatPtr(30.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, floatPtr(10.0))
+	seedOverride(t, storeDB, matUuid, constant.HqEntityMaterial, constant.HqFieldSafetyStock)
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, true)
+
+	got := getStoreMaterialSafetyStock(storeDB, matUuid)
+	if got == nil || *got != 30.0 {
+		t.Errorf("safety_stock: want 30.0 (overwritten), got %v", got)
+	}
+	if hasOverride(storeDB, matUuid, constant.HqFieldSafetyStock) {
+		t.Error("safety_stock override should be cleared after force push")
+	}
+}
+
+func TestHqPush_BatchSafetyStock_NoForce_NoOverride_Syncs(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(6103)
+	seedHqMaterial(t, hqDB, matUuid, 0, floatPtr(15.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, floatPtr(8.0))
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, false)
+
+	got := getStoreMaterialSafetyStock(storeDB, matUuid)
+	if got == nil || *got != 15.0 {
+		t.Errorf("safety_stock: want 15.0 (synced), got %v", got)
+	}
+}
+
+func TestHqPush_BatchSafetyStock_NoForce_HasOverride_Skip(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(6104)
+	seedHqMaterial(t, hqDB, matUuid, 0, floatPtr(25.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, floatPtr(12.0))
+	seedOverride(t, storeDB, matUuid, constant.HqEntityMaterial, constant.HqFieldSafetyStock)
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, false)
+
+	got := getStoreMaterialSafetyStock(storeDB, matUuid)
+	if got == nil || *got != 12.0 {
+		t.Errorf("safety_stock: want 12.0 (preserved), got %v", got)
+	}
+	if !hasOverride(storeDB, matUuid, constant.HqFieldSafetyStock) {
+		t.Error("safety_stock override should be preserved")
+	}
+}
+
+func TestHqPush_BatchSafetyStock_NilToValue_Syncs(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(6105)
+	seedHqMaterial(t, hqDB, matUuid, 0, floatPtr(10.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, nil)
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, false)
+
+	got := getStoreMaterialSafetyStock(storeDB, matUuid)
+	if got == nil || *got != 10.0 {
+		t.Errorf("safety_stock: want 10.0, got %v", got)
+	}
+}
+
+func TestHqPush_BatchPush_NegAndSafety_Combined(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	mat1 := uint64(6110) // both fields differ, no overrides
+	mat2 := uint64(6111) // neg overridden, safety not
+	mat3 := uint64(6112) // neg not overridden, safety overridden
+
+	seedHqMaterial(t, hqDB, mat1, 1, floatPtr(50.0))
+	seedStoreMaterial(t, storeDB, mat1, 0, floatPtr(10.0))
+
+	seedHqMaterial(t, hqDB, mat2, 1, floatPtr(60.0))
+	seedStoreMaterial(t, storeDB, mat2, 0, floatPtr(20.0))
+	seedOverride(t, storeDB, mat2, constant.HqEntityMaterial, constant.HqFieldNegativeStock)
+
+	seedHqMaterial(t, hqDB, mat3, 1, floatPtr(70.0))
+	seedStoreMaterial(t, storeDB, mat3, 0, floatPtr(30.0))
+	seedOverride(t, storeDB, mat3, constant.HqEntityMaterial, constant.HqFieldSafetyStock)
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, false)
+
+	// mat1: both synced
+	if got := getStoreMaterialNegStock(storeDB, mat1); got != 1 {
+		t.Errorf("mat1 neg_stock: want 1, got %d", got)
+	}
+	if got := getStoreMaterialSafetyStock(storeDB, mat1); got == nil || *got != 50.0 {
+		t.Errorf("mat1 safety_stock: want 50.0, got %v", got)
+	}
+
+	// mat2: neg skipped (overridden), safety synced
+	if got := getStoreMaterialNegStock(storeDB, mat2); got != 0 {
+		t.Errorf("mat2 neg_stock: want 0 (skipped), got %d", got)
+	}
+	if got := getStoreMaterialSafetyStock(storeDB, mat2); got == nil || *got != 60.0 {
+		t.Errorf("mat2 safety_stock: want 60.0, got %v", got)
+	}
+
+	// mat3: neg synced, safety skipped (overridden)
+	if got := getStoreMaterialNegStock(storeDB, mat3); got != 1 {
+		t.Errorf("mat3 neg_stock: want 1, got %d", got)
+	}
+	if got := getStoreMaterialSafetyStock(storeDB, mat3); got == nil || *got != 30.0 {
+		t.Errorf("mat3 safety_stock: want 30.0 (preserved), got %v", got)
 	}
 }
 
