@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/dto/resp/member_resp"
 	"ttpos-server-go/app/repository"
@@ -95,7 +96,6 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 
 	// 获取语言列表
 	ctx.SetCompanyUuid(ctx.GetCompanyUuid())
-	// languageList, _ := settingSrv.GetStoreLanguageList(ctx)
 
 	// 获取门店业务设置
 	businessSetting, err := settingSrv.GetBusinessSetting(ctx)
@@ -137,6 +137,32 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		logger.Logger.Error("获取模板样式设置失败", zap.Error(err))
 	}
 
+	// 获取会员端语言设置
+	// 云平台开启H5扫码时，优先跟随H5扫码语言设置；关闭时，跟随商家语言设置
+	var (
+		memberLanguageList []dto.LanguageItem
+		memberLanguage     []string
+		memberDefaultLang  string
+	)
+	if company.CompanySetting.IsOpenH5 == 1 {
+		memberLanguageList = h5Setting.LanguageList
+		memberLanguage = h5Setting.Language
+		memberDefaultLang = h5Setting.DefaultLanguage
+	} else {
+		storeLanguageList, _ := settingSrv.GetStoreLanguageList(ctx)
+		if len(storeLanguageList) == 0 {
+			storeLanguageList = make([]dto.LanguageItem, 0)
+		}
+		memberLanguageList = storeLanguageList
+		memberLanguage = make([]string, 0, len(storeLanguageList))
+		for _, item := range storeLanguageList {
+			memberLanguage = append(memberLanguage, item.Name)
+		}
+		if len(memberLanguage) > 0 {
+			memberDefaultLang = memberLanguage[0]
+		}
+	}
+
 	// 返回
 	member := ctx.GetMember()
 	return member_resp.MemberBaseInfoResp{
@@ -151,9 +177,9 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		},
 		Member: member_resp.MemberResp{
 			IsMemberShowSoldOut:  cashierSetting.MemberShowSoldOut == "1",
-			LanguageList:         h5Setting.LanguageList,
-			Language:             h5Setting.Language,
-			DefaultLanguage:      h5Setting.DefaultLanguage,
+			LanguageList:         memberLanguageList,
+			Language:             memberLanguage,
+			DefaultLanguage:      memberDefaultLang,
 			IsOpenRider:          storeScanOrderSetting.EnableDelivery == 1,
 			IsOpenStoreScanOrder: storeScanOrderSetting.EnableSelfPickup == 1,
 			DeliveryAvailable:    company.CompanySetting.IsOpenRider(),
