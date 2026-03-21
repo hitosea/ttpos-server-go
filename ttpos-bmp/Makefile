@@ -15,6 +15,8 @@ help:
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "conf" "生成所有模块配置文件（依赖上级目录的 .env 文件）"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "cli" "安装/更新最新版本的 GoFrame CLI 工具"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "cli.install" "检查并自动安装 GoFrame CLI 工具（如果未安装）"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "protobuf.install" "安装 Protobuf 工具链（protoc v3.21.12, protoc-gen-go-grpc v1.6.0）"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "protobuf.version" "检查 Protobuf 工具链版本"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "envsubst.install" "安装 envsubst 环境变量替换工具（macOS 使用 gettext）"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "migrate.install" "安装 golang-migrate 数据库迁移工具"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "update-ip" "更新本地开发环境的 IP 地址配置"

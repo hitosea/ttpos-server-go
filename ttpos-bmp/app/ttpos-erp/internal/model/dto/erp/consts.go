@@ -107,6 +107,23 @@ const (
 	SpareGoodsItemName = "Spare goods"
 )
 
+// Webhook 事件类型
+const (
+	EventOnCancel = "on_cancel"
+)
+
+// SI 同步状态（BMP → Main 回调）
+const (
+	SyncStatusSuccess        = 3 // 同步成功
+	SyncStatusFailed         = 4 // 同步失败
+	SyncStatusExternalCancel = 5 // ERPNext 端外部取消
+)
+
+// SI 最大重试次数
+const (
+	MaxRetryCount = 5
+)
+
 // 税费模板文档类型
 const (
 	// DocTypePurchaseTaxesTemplate 采购税费模板
