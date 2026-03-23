@@ -339,11 +339,20 @@ func (s *hqPushSrv) forcePushToAllSubStores(hqUuid uint64, fieldTypes []string) 
 	}
 }
 
-// pushFieldToStores 推送指定字段类型到多个子店（并行）
+// pushFieldToStores 推送指定字段类型到多个子店（并行，最大并发 10）
 func (s *hqPushSrv) pushFieldToStores(hqUuid uint64, storeUuids []uint64, fieldType string, isForce bool) {
+	logger.Logger.Info("开始批量推送字段到子店",
+		zap.Uint64("company_uuid", hqUuid),
+		zap.String("field_type", fieldType),
+		zap.Int("store_count", len(storeUuids)),
+		zap.Bool("is_force", isForce),
+	)
+	sem := make(chan struct{}, 10)
 	for _, storeUuid := range storeUuids {
 		su := storeUuid
 		utils.Go(func() {
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			s.pushFieldToSingleStore(hqUuid, su, fieldType, isForce)
 		})
 	}
@@ -351,17 +360,6 @@ func (s *hqPushSrv) pushFieldToStores(hqUuid uint64, storeUuids []uint64, fieldT
 
 // pushFieldToSingleStore 推送指定字段类型到单个子店
 func (s *hqPushSrv) pushFieldToSingleStore(hqUuid, storeUuid uint64, fieldType string, isForce bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Logger.Error("推送字段到子店 panic",
-				zap.Uint64("company_uuid", hqUuid),
-				zap.Uint64("store_uuid", storeUuid),
-				zap.String("field_type", fieldType),
-				zap.Any("panic", r),
-			)
-		}
-	}()
-
 	controlRepo := s.getHqControlRepo(hqUuid)
 
 	// 非强制模式下，分开控制的字段由 override 逻辑处理
@@ -376,6 +374,12 @@ func (s *hqPushSrv) pushFieldToSingleStore(hqUuid, storeUuid uint64, fieldType s
 		s.pushTakeoutPriceToStore(hqUuid, storeUuid, isForce || isUnified)
 	case constant.HqFieldNegativeStock:
 		s.pushNegativeStockToStore(hqUuid, storeUuid, isForce || isUnified)
+	default:
+		logger.Logger.Warn("未知的推送字段类型",
+			zap.Uint64("company_uuid", hqUuid),
+			zap.Uint64("store_uuid", storeUuid),
+			zap.String("field_type", fieldType),
+		)
 	}
 }
 
@@ -421,29 +425,44 @@ func (s *hqPushSrv) pushDineShelfToStore(hqUuid, storeUuid uint64, forceOverwrit
 		storeProductSet[sp.Uuid] = true
 	}
 
-	// 逐个商品更新
+	// 逐个商品更新（每个商品一个事务，互不影响）
 	for _, productUuid := range productUuids {
 		hqStatus := hqStatusMap[productUuid]
 
 		if !storeProductSet[productUuid] {
-			continue // 子店不存在该商品，跳过
+			continue
+		}
+		if !forceOverwrite && overriddenMap[productUuid] {
+			continue
 		}
 
-		if forceOverwrite {
-			// 强制推送：更新并清除 override
-			storeProductRepo.UpdateProductPackage(
+		if err := repository.CommonRepo.Transaction(storeDB, func(tx *gorm.DB) error {
+			txProductRepo := repository.NewProductPackageRepo(tx)
+			txBomRepo := repository.NewProductBomRepo(tx)
+
+			if err := txProductRepo.UpdateProductPackage(
 				map[string]any{"status": hqStatus},
 				commonRepo.WhereByUuid(productUuid),
-			)
-			overrideRepo.ClearOverride(productUuid, constant.HqFieldDineShelf)
-		} else if overriddenMap[productUuid] {
-			// 已 override：不覆盖
-			continue
-		} else {
-			// 无 override → 直接同步总部值
-			storeProductRepo.UpdateProductPackage(
+			); err != nil {
+				return err
+			}
+			if err := txBomRepo.UpdateProductBom(
 				map[string]any{"status": hqStatus},
-				commonRepo.WhereByUuid(productUuid),
+				commonRepo.WhereByProductPackageUuid(productUuid),
+			); err != nil {
+				return err
+			}
+			if forceOverwrite {
+				txOverrideRepo := repository.NewHqFieldOverrideRepo(tx)
+				txOverrideRepo.ClearOverride(productUuid, constant.HqFieldDineShelf)
+			}
+			return nil
+		}); err != nil {
+			logger.Logger.Error("推送店内上下架失败",
+				zap.Uint64("company_uuid", hqUuid),
+				zap.Uint64("store_uuid", storeUuid),
+				zap.Uint64("product_uuid", productUuid),
+				zap.Error(err),
 			)
 		}
 	}
@@ -497,19 +516,29 @@ func (s *hqPushSrv) pushTakeoutShelfToStore(hqUuid, storeUuid uint64, forceOverw
 		if !ok {
 			continue
 		}
-
-		if forceOverwrite {
-			storeTakeoutRepo.UpdateProductPackageTakeout(
-				map[string]any{"status": hqStatus},
-				commonRepo.WhereByUuid(storeTakeout.Uuid),
-			)
-			overrideRepo.ClearOverride(storeTakeout.Uuid, constant.HqFieldTakeoutShelf)
-		} else if overriddenMap[storeTakeout.Uuid] {
+		if !forceOverwrite && overriddenMap[storeTakeout.Uuid] {
 			continue
-		} else {
-			storeTakeoutRepo.UpdateProductPackageTakeout(
+		}
+
+		if err := repository.CommonRepo.Transaction(storeDB, func(tx *gorm.DB) error {
+			txTakeoutRepo := repository.NewProductPackageTakeoutRepo(tx)
+			if err := txTakeoutRepo.UpdateProductPackageTakeout(
 				map[string]any{"status": hqStatus},
 				commonRepo.WhereByUuid(storeTakeout.Uuid),
+			); err != nil {
+				return err
+			}
+			if forceOverwrite {
+				txOverrideRepo := repository.NewHqFieldOverrideRepo(tx)
+				txOverrideRepo.ClearOverride(storeTakeout.Uuid, constant.HqFieldTakeoutShelf)
+			}
+			return nil
+		}); err != nil {
+			logger.Logger.Error("推送外卖上下架失败",
+				zap.Uint64("company_uuid", hqUuid),
+				zap.Uint64("store_uuid", storeUuid),
+				zap.Uint64("takeout_uuid", storeTakeout.Uuid),
+				zap.Error(err),
 			)
 		}
 	}
@@ -590,42 +619,43 @@ func (s *hqPushSrv) pushTakeoutPriceToStore(hqUuid, storeUuid uint64, forceOverw
 		if !ok {
 			continue
 		}
-
-		if forceOverwrite {
-			// 强制推送：更新主表价格并清除 override
-			storeTakeoutRepo.UpdateProductPackageTakeout(
-				map[string]any{"price": hqTakeout.Price},
-				commonRepo.WhereByUuid(storeTakeout.Uuid),
-			)
-			overrideRepo.ClearOverride(storeTakeout.Uuid, constant.HqFieldTakeoutPrice)
-			// 同步规格价格
-			hqBoms := hqBomPriceMap[hqTakeout.Uuid]
-			for _, storeBom := range storeBomByTakeout[storeTakeout.Uuid] {
-				if hqPrice, exists := hqBoms[storeBom.ProductBomUuid]; exists {
-					storeBomTakeoutRepo.UpdateProductBomTakeout(
-						map[string]any{"price": hqPrice},
-						commonRepo.WhereByUuid(storeBom.Uuid),
-					)
-				}
-			}
-		} else if overriddenMap[storeTakeout.Uuid] {
+		if !forceOverwrite && overriddenMap[storeTakeout.Uuid] {
 			continue
-		} else {
-			// 无 override → 同步总部值
-			storeTakeoutRepo.UpdateProductPackageTakeout(
+		}
+
+		if err := repository.CommonRepo.Transaction(storeDB, func(tx *gorm.DB) error {
+			txTakeoutRepo := repository.NewProductPackageTakeoutRepo(tx)
+			if err := txTakeoutRepo.UpdateProductPackageTakeout(
 				map[string]any{"price": hqTakeout.Price},
 				commonRepo.WhereByUuid(storeTakeout.Uuid),
-			)
+			); err != nil {
+				return err
+			}
+			if forceOverwrite {
+				txOverrideRepo := repository.NewHqFieldOverrideRepo(tx)
+				txOverrideRepo.ClearOverride(storeTakeout.Uuid, constant.HqFieldTakeoutPrice)
+			}
 			// 同步规格价格
+			txBomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
 			hqBoms := hqBomPriceMap[hqTakeout.Uuid]
 			for _, storeBom := range storeBomByTakeout[storeTakeout.Uuid] {
 				if hqPrice, exists := hqBoms[storeBom.ProductBomUuid]; exists {
-					storeBomTakeoutRepo.UpdateProductBomTakeout(
+					if err := txBomTakeoutRepo.UpdateProductBomTakeout(
 						map[string]any{"price": hqPrice},
 						commonRepo.WhereByUuid(storeBom.Uuid),
-					)
+					); err != nil {
+						return err
+					}
 				}
 			}
+			return nil
+		}); err != nil {
+			logger.Logger.Error("推送外卖价格失败",
+				zap.Uint64("company_uuid", hqUuid),
+				zap.Uint64("store_uuid", storeUuid),
+				zap.Uint64("takeout_uuid", storeTakeout.Uuid),
+				zap.Error(err),
+			)
 		}
 	}
 }
@@ -685,21 +715,40 @@ func (s *hqPushSrv) pushNegativeStockToStore(hqUuid, storeUuid uint64, forceOver
 		hqNegVal := hqNegStockMap[uuid]
 		if forceOverwrite {
 			updateData["allow_negative_stock"] = hqNegVal
-			overrideRepo.ClearOverride(uuid, constant.HqFieldNegativeStock)
 		} else if !negOverriddenMap[uuid] {
 			updateData["allow_negative_stock"] = hqNegVal
 		}
 
-		// 安全库存：跟随负库存的 forceOverwrite 逻辑
+		// 安全库存
 		if forceOverwrite {
 			updateData["safety_stock"] = hqSafetyStockMap[uuid]
-			overrideRepo.ClearOverride(uuid, constant.HqFieldSafetyStock)
 		} else if !safetyOverriddenMap[uuid] {
 			updateData["safety_stock"] = hqSafetyStockMap[uuid]
 		}
 
-		if len(updateData) > 0 {
-			storeMaterialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(uuid))
+		if len(updateData) == 0 {
+			continue
+		}
+
+		materialUuid := uuid
+		if err := repository.CommonRepo.Transaction(storeDB, func(tx *gorm.DB) error {
+			txMaterialRepo := repository.NewMaterialRepo(tx)
+			if err := txMaterialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(materialUuid)); err != nil {
+				return err
+			}
+			if forceOverwrite {
+				txOverrideRepo := repository.NewHqFieldOverrideRepo(tx)
+				txOverrideRepo.ClearOverride(materialUuid, constant.HqFieldNegativeStock)
+				txOverrideRepo.ClearOverride(materialUuid, constant.HqFieldSafetyStock)
+			}
+			return nil
+		}); err != nil {
+			logger.Logger.Error("推送负库存失败",
+				zap.Uint64("company_uuid", hqUuid),
+				zap.Uint64("store_uuid", storeUuid),
+				zap.Uint64("material_uuid", uuid),
+				zap.Error(err),
+			)
 		}
 	}
 }
@@ -831,12 +880,15 @@ func (s *hqPushSrv) pushSingleProductToStore(hqUuid, storeUuid uint64, productUu
 	}
 	// 已 override 则不设置 status，保留子店值
 
-	// 执行更新（主表）
-	storeProductRepo.UpdateProductPackage(updateData, commonRepo.WhereByUuid(productUuid))
-
-	// 同步关联表（BOM/属性组/属性/套餐组/套餐子项）
-	if err := s.syncSingleProductAssociations(storeDB, hqUuid, productUuid, hqProduct); err != nil {
-		logger.Logger.Error("同步商品关联表失败",
+	// 在事务中执行主表更新和关联表同步
+	if err := commonRepo.Transaction(storeDB, func(tx *gorm.DB) error {
+		txProductRepo := repository.NewProductPackageRepo(tx)
+		if err := txProductRepo.UpdateProductPackage(updateData, commonRepo.WhereByUuid(productUuid)); err != nil {
+			return err
+		}
+		return s.syncSingleProductAssociations(tx, hqUuid, productUuid, hqProduct)
+	}); err != nil {
+		logger.Logger.Error("推送商品到子店事务失败",
 			zap.Uint64("company_uuid", hqUuid),
 			zap.Uint64("store_uuid", storeUuid),
 			zap.Uint64("product_uuid", productUuid),
@@ -846,127 +898,125 @@ func (s *hqPushSrv) pushSingleProductToStore(hqUuid, storeUuid uint64, productUu
 }
 
 // syncSingleProductAssociations 同步单个商品的关联表到子店（delete+recreate，保留子店本地字段）
-func (s *hqPushSrv) syncSingleProductAssociations(storeDB *gorm.DB, hqUuid, productUuid uint64, hqProduct *model.ProductPackage) error {
+// 注意：调用方需确保 db 是事务连接（tx）
+func (s *hqPushSrv) syncSingleProductAssociations(db *gorm.DB, hqUuid, productUuid uint64, hqProduct *model.ProductPackage) error {
 	commonRepo := repository.NewCommonRepo()
 
-	return repository.NewCommonRepo().Transaction(storeDB, func(tx *gorm.DB) error {
-		productBomRepo := repository.NewProductBomRepo(tx)
-		attrGroupRepo := repository.NewProductPackageAttributeGroupRepo(tx)
-		attrRepo := repository.NewProductPackageAttributeRepo(tx)
-		pkgGroupRepo := repository.NewProductPackageGroupRepo(tx)
+	productBomRepo := repository.NewProductBomRepo(db)
+	attrGroupRepo := repository.NewProductPackageAttributeGroupRepo(db)
+	attrRepo := repository.NewProductPackageAttributeRepo(db)
+	pkgGroupRepo := repository.NewProductPackageGroupRepo(db)
 
-		// 1. 读取子店现有 BOM 的本地字段（库存/销量/状态等）
-		existingBoms := make(map[uint64]model.ProductBom)
-		storeProductBomRepo := repository.NewProductBomRepo(storeDB)
-		storeBomList, _ := storeProductBomRepo.GetProductBoms(
-			commonRepo.WhereByProductPackageUuid(productUuid),
-		)
-		for _, bom := range storeBomList {
-			existingBoms[bom.Uuid] = *bom
-		}
+	// 1. 读取子店现有 BOM 的本地字段（库存/销量/状态等）
+	existingBoms := make(map[uint64]model.ProductBom)
+	storeBomList, _ := productBomRepo.GetProductBoms(
+		commonRepo.WhereByProductPackageUuid(productUuid),
+	)
+	for _, bom := range storeBomList {
+		existingBoms[bom.Uuid] = *bom
+	}
 
-		// 2. 收集子店需删除的关联 UUID
-		storeProductRepo := repository.NewProductPackageRepo(storeDB)
-		storeProduct, err := storeProductRepo.GetProductPackage(
-			commonRepo.WhereByUuid(productUuid),
-			commonRepo.WhereByHeadquarterUuid(hqUuid),
-			storeProductRepo.WithProductBoms(),
-			storeProductRepo.WithProductPackageAttributeGroups(),
-			storeProductRepo.WithProductPackageAttributeGroupAttributes(),
-			storeProductRepo.WithProductPackageGroups(),
-			storeProductRepo.WithProductPackageGroupItems(),
-		)
-		if err != nil || storeProduct == nil {
-			return nil
-		}
-
-		delBomUuids := make([]uint64, 0)
-		delAttrGroupUuids := make([]uint64, 0)
-		delAttrUuids := make([]uint64, 0)
-		delPkgGroupUuids := make([]uint64, 0)
-		delPkgGroupItemUuids := make([]uint64, 0)
-
-		for _, bom := range storeProduct.ProductBoms {
-			delBomUuids = append(delBomUuids, bom.Uuid)
-		}
-		for _, ag := range storeProduct.ProductPackageAttributeGroups {
-			delAttrGroupUuids = append(delAttrGroupUuids, ag.Uuid)
-			for _, attr := range ag.ProductPackageAttributes {
-				delAttrUuids = append(delAttrUuids, attr.Uuid)
-			}
-		}
-		for _, pg := range storeProduct.ProductPackageGroups {
-			delPkgGroupUuids = append(delPkgGroupUuids, pg.Uuid)
-			for _, item := range pg.ProductPackageGroupItems {
-				delPkgGroupItemUuids = append(delPkgGroupItemUuids, item.Uuid)
-			}
-		}
-
-		// 3. 删除子店关联数据
-		if len(delBomUuids) > 0 {
-			if err := productBomRepo.DestroyProductBom(commonRepo.WhereInUuids(delBomUuids)); err != nil {
-				return err
-			}
-		}
-		if len(delAttrGroupUuids) > 0 {
-			if err := attrGroupRepo.DestroyProductPackageAttributeGroup(commonRepo.WhereInUuids(delAttrGroupUuids)); err != nil {
-				return err
-			}
-		}
-		if len(delAttrUuids) > 0 {
-			if err := attrRepo.DestroyProductPackageAttribute(commonRepo.WhereInUuids(delAttrUuids)); err != nil {
-				return err
-			}
-		}
-		if len(delPkgGroupUuids) > 0 {
-			if err := pkgGroupRepo.DestroyProductPackageGroup(commonRepo.WhereInUuids(delPkgGroupUuids)); err != nil {
-				return err
-			}
-		}
-		if len(delPkgGroupItemUuids) > 0 {
-			if err := pkgGroupRepo.DestroyProductPackageGroupItem(commonRepo.WhereInUuids(delPkgGroupItemUuids)); err != nil {
-				return err
-			}
-		}
-
-		// 4. 从 HQ 数据重建 BOM（保留子店本地字段）
-		for _, hqBom := range hqProduct.ProductBoms {
-			var existing *model.ProductBom
-			if e, ok := existingBoms[hqBom.Uuid]; ok {
-				existing = &e
-			}
-			newBom := buildSubStoreBom(hqBom, existing)
-			if _, err := productBomRepo.CreateProductBom(newBom); err != nil {
-				logger.Logger.Error("重建商品BOM失败", zap.Uint64("bom_uuid", hqBom.Uuid), zap.Error(err))
-			}
-		}
-
-		// 5. 重建属性组和属性
-		for _, hqAttrGroup := range hqProduct.ProductPackageAttributeGroups {
-			if err := attrGroupRepo.CreateProductPackageAttributeGroups([]model.ProductPackageAttributeGroup{buildSubStoreAttrGroup(hqAttrGroup)}); err != nil {
-				logger.Logger.Error("重建商品属性组失败", zap.Uint64("attr_group_uuid", hqAttrGroup.Uuid), zap.Error(err))
-			}
-			for _, hqAttr := range hqAttrGroup.ProductPackageAttributes {
-				if err := attrRepo.CreateProductPackageAttributes([]model.ProductPackageAttribute{buildSubStoreAttr(hqAttr)}); err != nil {
-					logger.Logger.Error("重建商品属性失败", zap.Uint64("attr_uuid", hqAttr.Uuid), zap.Error(err))
-				}
-			}
-		}
-
-		// 6. 重建套餐组和套餐子项
-		for _, hqPkgGroup := range hqProduct.ProductPackageGroups {
-			if err := pkgGroupRepo.CreateProductPackageGroups([]model.ProductPackageGroup{buildSubStorePkgGroup(hqPkgGroup)}); err != nil {
-				logger.Logger.Error("重建商品套餐组失败", zap.Uint64("pkg_group_uuid", hqPkgGroup.Uuid), zap.Error(err))
-			}
-			for _, hqItem := range hqPkgGroup.ProductPackageGroupItems {
-				if err := pkgGroupRepo.CreateProductPackageGroupItems([]model.ProductPackageGroupItem{buildSubStorePkgGroupItem(hqItem)}); err != nil {
-					logger.Logger.Error("重建商品套餐子项失败", zap.Uint64("item_uuid", hqItem.Uuid), zap.Error(err))
-				}
-			}
-		}
-
+	// 2. 收集子店需删除的关联 UUID
+	storeProductRepo := repository.NewProductPackageRepo(db)
+	storeProduct, err := storeProductRepo.GetProductPackage(
+		commonRepo.WhereByUuid(productUuid),
+		commonRepo.WhereByHeadquarterUuid(hqUuid),
+		storeProductRepo.WithProductBoms(),
+		storeProductRepo.WithProductPackageAttributeGroups(),
+		storeProductRepo.WithProductPackageAttributeGroupAttributes(),
+		storeProductRepo.WithProductPackageGroups(),
+		storeProductRepo.WithProductPackageGroupItems(),
+	)
+	if err != nil || storeProduct == nil {
 		return nil
-	})
+	}
+
+	delBomUuids := make([]uint64, 0)
+	delAttrGroupUuids := make([]uint64, 0)
+	delAttrUuids := make([]uint64, 0)
+	delPkgGroupUuids := make([]uint64, 0)
+	delPkgGroupItemUuids := make([]uint64, 0)
+
+	for _, bom := range storeProduct.ProductBoms {
+		delBomUuids = append(delBomUuids, bom.Uuid)
+	}
+	for _, ag := range storeProduct.ProductPackageAttributeGroups {
+		delAttrGroupUuids = append(delAttrGroupUuids, ag.Uuid)
+		for _, attr := range ag.ProductPackageAttributes {
+			delAttrUuids = append(delAttrUuids, attr.Uuid)
+		}
+	}
+	for _, pg := range storeProduct.ProductPackageGroups {
+		delPkgGroupUuids = append(delPkgGroupUuids, pg.Uuid)
+		for _, item := range pg.ProductPackageGroupItems {
+			delPkgGroupItemUuids = append(delPkgGroupItemUuids, item.Uuid)
+		}
+	}
+
+	// 3. 删除子店关联数据
+	if len(delBomUuids) > 0 {
+		if err := productBomRepo.DestroyProductBom(commonRepo.WhereInUuids(delBomUuids)); err != nil {
+			return err
+		}
+	}
+	if len(delAttrGroupUuids) > 0 {
+		if err := attrGroupRepo.DestroyProductPackageAttributeGroup(commonRepo.WhereInUuids(delAttrGroupUuids)); err != nil {
+			return err
+		}
+	}
+	if len(delAttrUuids) > 0 {
+		if err := attrRepo.DestroyProductPackageAttribute(commonRepo.WhereInUuids(delAttrUuids)); err != nil {
+			return err
+		}
+	}
+	if len(delPkgGroupUuids) > 0 {
+		if err := pkgGroupRepo.DestroyProductPackageGroup(commonRepo.WhereInUuids(delPkgGroupUuids)); err != nil {
+			return err
+		}
+	}
+	if len(delPkgGroupItemUuids) > 0 {
+		if err := pkgGroupRepo.DestroyProductPackageGroupItem(commonRepo.WhereInUuids(delPkgGroupItemUuids)); err != nil {
+			return err
+		}
+	}
+
+	// 4. 从 HQ 数据重建 BOM（保留子店本地字段）
+	for _, hqBom := range hqProduct.ProductBoms {
+		var existing *model.ProductBom
+		if e, ok := existingBoms[hqBom.Uuid]; ok {
+			existing = &e
+		}
+		newBom := buildSubStoreBom(hqBom, existing)
+		if _, err := productBomRepo.CreateProductBom(newBom); err != nil {
+			logger.Logger.Error("重建商品BOM失败", zap.Uint64("bom_uuid", hqBom.Uuid), zap.Error(err))
+		}
+	}
+
+	// 5. 重建属性组和属性
+	for _, hqAttrGroup := range hqProduct.ProductPackageAttributeGroups {
+		if err := attrGroupRepo.CreateProductPackageAttributeGroups([]model.ProductPackageAttributeGroup{buildSubStoreAttrGroup(hqAttrGroup)}); err != nil {
+			logger.Logger.Error("重建商品属性组失败", zap.Uint64("attr_group_uuid", hqAttrGroup.Uuid), zap.Error(err))
+		}
+		for _, hqAttr := range hqAttrGroup.ProductPackageAttributes {
+			if err := attrRepo.CreateProductPackageAttributes([]model.ProductPackageAttribute{buildSubStoreAttr(hqAttr)}); err != nil {
+				logger.Logger.Error("重建商品属性失败", zap.Uint64("attr_uuid", hqAttr.Uuid), zap.Error(err))
+			}
+		}
+	}
+
+	// 6. 重建套餐组和套餐子项
+	for _, hqPkgGroup := range hqProduct.ProductPackageGroups {
+		if err := pkgGroupRepo.CreateProductPackageGroups([]model.ProductPackageGroup{buildSubStorePkgGroup(hqPkgGroup)}); err != nil {
+			logger.Logger.Error("重建商品套餐组失败", zap.Uint64("pkg_group_uuid", hqPkgGroup.Uuid), zap.Error(err))
+		}
+		for _, hqItem := range hqPkgGroup.ProductPackageGroupItems {
+			if err := pkgGroupRepo.CreateProductPackageGroupItems([]model.ProductPackageGroupItem{buildSubStorePkgGroupItem(hqItem)}); err != nil {
+				logger.Logger.Error("重建商品套餐子项失败", zap.Uint64("item_uuid", hqItem.Uuid), zap.Error(err))
+			}
+		}
+	}
+
+	return nil
 }
 
 // pushProductTakeoutToStores 推送外卖商品变更到多个子店
@@ -1082,17 +1132,19 @@ func (s *hqPushSrv) pushSingleTakeoutToStore(hqUuid, storeUuid uint64, hqTakeout
 		updateData["price"] = hqTakeout.Price
 	}
 
-	storeTakeoutRepo.UpdateProductPackageTakeout(updateData, commonRepo.WhereByUuid(storeTakeout.Uuid))
-
-	// 同步关联表（BomTakeout / AttributeTakeout / GroupItemTakeout）
+	// 在事务中执行主表更新和关联表同步
 	syncBomPrice := false
 	if _, ok := updateData["price"]; ok {
 		syncBomPrice = true
 	}
 	if err := commonRepo.Transaction(storeDB, func(tx *gorm.DB) error {
+		txTakeoutRepo := repository.NewProductPackageTakeoutRepo(tx)
+		if err := txTakeoutRepo.UpdateProductPackageTakeout(updateData, commonRepo.WhereByUuid(storeTakeout.Uuid)); err != nil {
+			return err
+		}
 		return syncTakeoutAssociations(tx, hqTakeout, storeTakeout, hqUuid, syncBomPrice)
 	}); err != nil {
-		logger.Logger.Error("同步外卖商品关联表失败",
+		logger.Logger.Error("推送外卖商品到子店事务失败",
 			zap.Uint64("company_uuid", hqUuid),
 			zap.Uint64("store_uuid", storeUuid),
 			zap.Uint64("takeout_uuid", hqTakeout.Uuid),
@@ -1271,16 +1323,18 @@ func (s *hqPushSrv) pushSingleMaterialToStore(hqUuid, storeUuid uint64, hqMateri
 		updateData["allow_negative_stock"] = hqMaterial.AllowNegativeStock
 	}
 
-	storeMaterialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(hqMaterial.Uuid))
-
-	// 同步非基准单位（delete+recreate，无子店本地字段需保留）
+	// 在事务中执行主表更新和非基准单位同步
 	if err := commonRepo.Transaction(storeDB, func(tx *gorm.DB) error {
+		txMaterialRepo := repository.NewMaterialRepo(tx)
+		if err := txMaterialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(hqMaterial.Uuid)); err != nil {
+			return err
+		}
+
+		// 同步非基准单位（delete+recreate，无子店本地字段需保留）
 		materialUnitRepo := repository.NewMaterialUnitRepo(tx)
-		// 删除子店该物品的所有非基准单位
 		if err := materialUnitRepo.DestroyMaterialUnit(commonRepo.WhereByMaterialUuid(hqMaterial.Uuid)); err != nil {
 			return err
 		}
-		// 从 HQ 重建
 		if len(hqMaterial.NotBaseUnitList) > 0 {
 			units := make([]model.MaterialUnit, 0, len(hqMaterial.NotBaseUnitList))
 			for _, u := range hqMaterial.NotBaseUnitList {
@@ -1298,7 +1352,7 @@ func (s *hqPushSrv) pushSingleMaterialToStore(hqUuid, storeUuid uint64, hqMateri
 		}
 		return nil
 	}); err != nil {
-		logger.Logger.Error("同步物品非基准单位失败",
+		logger.Logger.Error("推送物品到子店事务失败",
 			zap.Uint64("company_uuid", hqUuid),
 			zap.Uint64("store_uuid", storeUuid),
 			zap.Uint64("material_uuid", hqMaterial.Uuid),
