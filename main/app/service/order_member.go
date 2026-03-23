@@ -3759,7 +3759,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		RemainingPaymentTime: remainingPaymentTime,
 		RefundAmount:         refundAmount,
 		AmountInfo: resp.MemberDineInOrderAmountInfo{
-			DiscountAmount:    saleBill.CustomDiscountFee + saleBill.MemberDiscountFee, // 折扣金额 = 自定义折扣 + 会员折扣
+			DiscountAmount:    saleBill.CustomDiscountFee,
 			ServiceFee:        saleBill.ServiceFee,
 			TaxFee:            saleBill.TaxFee,
 			Amount:            amount,
