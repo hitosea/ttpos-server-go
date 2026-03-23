@@ -574,7 +574,11 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 	saleBillRepo := repository.NewSaleBillRepo(db)
 
 	// 查询所有已挂单的点餐销售账单
-	saleBills, total, err := saleBillRepo.GetHideSaleBillList(req.PageNo, req.PageSize, ctx.GetDeviceUuid())
+	var opts []repository.DBOption
+	if req.Keyword != "" {
+		opts = append(opts, saleBillRepo.WhereBySerialNo(req.Keyword))
+	}
+	saleBills, total, err := saleBillRepo.GetHideSaleBillList(req.PageNo, req.PageSize, ctx.GetDeviceUuid(), opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
