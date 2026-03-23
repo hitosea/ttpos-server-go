@@ -8015,7 +8015,7 @@
   "龙": "Drake",
   "只有总店可以操作自动收货配置": "Endast huvudkontoret kan hantera konfiguration för automatiskt mottagande",
   "规则不存在": "Regeln finns inte",
-  "门店 %d 已在该仓库的其他规则中配置": "Butik %d är redan konfigurerad i en annan regel för detta lager",
+  "门店 %s 已在该仓库的其他规则中配置": "Butik %s är redan konfigurerad i en annan regel för detta lager",
   "创建规则门店失败": "Det gick inte att skapa regelbutiksassociation",
   "更新规则失败": "Det gick inte att uppdatera regeln",
   "删除规则门店失败": "Det gick inte att ta bort regelbutiksassociation",

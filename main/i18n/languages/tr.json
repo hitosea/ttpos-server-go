@@ -8015,7 +8015,7 @@
   "龙": "Ejderha",
   "只有总店可以操作自动收货配置": "Yalnızca merkez ofis otomatik teslim alma yapılandırmasını yönetebilir",
   "规则不存在": "Kural mevcut değil",
-  "门店 %d 已在该仓库的其他规则中配置": "Mağaza %d bu depo için başka bir kuralda zaten yapılandırılmış",
+  "门店 %s 已在该仓库的其他规则中配置": "Mağaza %s bu depo için başka bir kuralda zaten yapılandırılmış",
   "创建规则门店失败": "Kural mağaza ilişkilendirmesi oluşturulamadı",
   "更新规则失败": "Kural güncellenemedi",
   "删除规则门店失败": "Kural mağaza ilişkilendirmesi silinemedi",

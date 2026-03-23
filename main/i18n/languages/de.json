@@ -8015,7 +8015,7 @@
   "龙": "Drache",
   "只有总店可以操作自动收货配置": "Nur die Zentrale kann die automatische Empfangskonfiguration verwalten",
   "规则不存在": "Regel existiert nicht",
-  "门店 %d 已在该仓库的其他规则中配置": "Filiale %d ist bereits in einer anderen Regel für dieses Lager konfiguriert",
+  "门店 %s 已在该仓库的其他规则中配置": "Filiale %s ist bereits in einer anderen Regel für dieses Lager konfiguriert",
   "创建规则门店失败": "Filialzuordnung konnte nicht erstellt werden",
   "更新规则失败": "Regel konnte nicht aktualisiert werden",
   "删除规则门店失败": "Filialzuordnung konnte nicht gelöscht werden",

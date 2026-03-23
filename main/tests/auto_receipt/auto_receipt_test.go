@@ -824,6 +824,113 @@ func Test_P1_Shop_AutoReceipt_CRUD_FullFlow(t *testing.T) {
 	}
 }
 
+// Test_P1_Shop_AutoReceipt_RuleCreate_StatusZero verifies that creating a rule
+// with status=0 (disabled) persists correctly — the database must store 0, not
+// fall back to the column default (1).
+// Route: POST /shop/auto_receipt/rule/create
+func Test_P1_Shop_AutoReceipt_RuleCreate_StatusZero(t *testing.T) {
+	env := setupHeadquarterEnv(t)
+
+	body := map[string]any{
+		"locale_name":        map[string]string{"zh": "禁用规则"},
+		"warehouse_erp_code": "WH-STATUS0-001",
+		"shop_uuids":         []int64{env.shopCompanyUUID1},
+		"delay_days":         1,
+		"status":             0,
+	}
+	env.client.Post(t, pathRuleCreate, body).AssertOK(t).AssertSuccess(t)
+
+	// Verify via list that the persisted status is 0
+	listResp := env.client.Get(t, pathRuleList)
+	listResp.AssertOK(t).AssertSuccess(t)
+	apiResp := listResp.ParseAPIResponse(t)
+	var listData ruleListData
+	if err := json.Unmarshal(apiResp.Data, &listData); err != nil {
+		t.Fatalf("failed to parse list response: %v", err)
+	}
+	for _, rule := range listData.List {
+		if rule.WarehouseErpCode == "WH-STATUS0-001" {
+			if rule.Status != 0 {
+				t.Errorf("expected status=0 (disabled), got %d", rule.Status)
+			}
+			return
+		}
+	}
+	t.Error("created rule with warehouse_erp_code=WH-STATUS0-001 not found in list")
+}
+
+// Test_P1_Shop_AutoReceipt_RuleCreate_MissingStatus verifies that omitting the
+// status field triggers a validation error (the field is required).
+// Route: POST /shop/auto_receipt/rule/create
+func Test_P1_Shop_AutoReceipt_RuleCreate_MissingStatus(t *testing.T) {
+	env := setupHeadquarterEnv(t)
+
+	body := map[string]any{
+		"locale_name":        map[string]string{"zh": "缺少状态"},
+		"warehouse_erp_code": "WH-NOSTATUS-001",
+		"shop_uuids":         []int64{env.shopCompanyUUID1},
+		"delay_days":         0,
+		// status intentionally omitted
+	}
+	resp := env.client.Post(t, pathRuleCreate, body)
+	resp.AssertOK(t)
+	apiResp := resp.ParseAPIResponse(t)
+	if apiResp.Code == 0 {
+		t.Error("expected validation error when status is missing, got success")
+	}
+}
+
+// Test_P1_Shop_AutoReceipt_RuleUpdate_StatusZero verifies that updating a rule's
+// status from 1 to 0 persists correctly.
+// Route: POST /shop/auto_receipt/rule/update
+func Test_P1_Shop_AutoReceipt_RuleUpdate_StatusZero(t *testing.T) {
+	env := setupHeadquarterEnv(t)
+
+	// Create a rule with status=1
+	createBody := map[string]any{
+		"locale_name":        map[string]string{"zh": "待禁用规则"},
+		"warehouse_erp_code": "WH-UPDST0-001",
+		"shop_uuids":         []int64{env.shopCompanyUUID1},
+		"delay_days":         2,
+		"status":             1,
+	}
+	env.client.Post(t, pathRuleCreate, createBody).AssertOK(t).AssertSuccess(t)
+
+	ruleUuid := getRuleUuidByWarehouse(t, env.client, "WH-UPDST0-001")
+	if ruleUuid == 0 {
+		t.Fatal("failed to find created rule")
+	}
+
+	// Update status to 0
+	updateBody := map[string]any{
+		"uuid":               ruleUuid,
+		"locale_name":        map[string]string{"zh": "待禁用规则"},
+		"warehouse_erp_code": "WH-UPDST0-001",
+		"shop_uuids":         []int64{env.shopCompanyUUID1},
+		"delay_days":         2,
+		"status":             0,
+	}
+	env.client.Post(t, pathRuleUpdate, updateBody).AssertOK(t).AssertSuccess(t)
+
+	// Verify via list
+	listResp := env.client.Get(t, pathRuleList)
+	listResp.AssertOK(t).AssertSuccess(t)
+	apiResp := listResp.ParseAPIResponse(t)
+	var listData ruleListData
+	if err := json.Unmarshal(apiResp.Data, &listData); err != nil {
+		t.Fatalf("failed to parse list response: %v", err)
+	}
+	for _, rule := range listData.List {
+		if rule.Uuid == ruleUuid {
+			if rule.Status != 0 {
+				t.Errorf("expected status=0 after update, got %d", rule.Status)
+			}
+			return
+		}
+	}
+	t.Error("updated rule not found in list")
+}
+
 // --- Helpers ---
 
 // testEnv holds the test environment for auto-receipt tests.

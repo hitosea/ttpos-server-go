@@ -8015,7 +8015,7 @@
   "龙": "Dragon",
   "只有总店可以操作自动收货配置": "Only the head office can manage auto-receipt configuration",
   "规则不存在": "Rule does not exist",
-  "门店 %d 已在该仓库的其他规则中配置": "Shop %d is already configured in another rule for this warehouse",
+  "门店 %s 已在该仓库的其他规则中配置": "Shop %s is already configured in another rule for this warehouse",
   "创建规则门店失败": "Failed to create rule shop association",
   "更新规则失败": "Failed to update rule",
   "删除规则门店失败": "Failed to delete rule shop association",
