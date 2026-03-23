@@ -339,6 +339,12 @@ type ChangeDeskReq struct {
 	DeskUuid      uint64 `json:"desk_uuid" binding:"required"`       // 新桌台UUID
 }
 
+// SubmitMemberDineInOrderReq 先下单后付模式：提交堂食订单请求
+type SubmitMemberDineInOrderReq struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
+	SaleOrderUuid uint64 `json:"sale_order_uuid" binding:"required"` // 销售订单UUID
+}
+
 type MergeDeskReq struct {
 	SaleBillUuid uint64   `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
 	DeskUuids    []uint64 `json:"desk_uuids"`                        // 桌台UUID列表

@@ -40,6 +40,7 @@ type IMemberOrderSrv interface {
 	// 会员端
 	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)    // 创建会员端外送订单
 	CreateMemberDineInOrder(ctx context.Context, req req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error)                   // 创建会员端堂食订单
+	SubmitMemberDineInOrder(ctx context.Context, req req.SubmitMemberDineInOrderReq) error                                                   // 先下单后付模式：提交堂食订单到收银机
 	GetDineInOrderFormInfo(ctx context.Context, req req.GetDineInOrderFormInfoReq) (*resp.DineInOrderFormResp, error)                        // 获取堂食订单提交表单信息
 	SetDineInOrderDiningMethod(ctx context.Context, req req.SetDineInOrderDiningMethodReq) error                                             // 设置堂食订单用餐方式
 	PayDineInOrder(ctx context.Context, req req.PayDineInOrderReq) error                                                                     // 堂食订单提交支付
@@ -2786,25 +2787,36 @@ func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.Crea
 		return nil, err
 	}
 
-	// 检查"先下单后付"模式：如果开启，直接创建 H5 订单，不需要支付
-	storeScanOrderSetting, settingErr := s.settingSrv.GetStoreScanOrderSetting(ctx)
-	if settingErr != nil {
-		// 获取配置失败时使用默认模式（先付后下单），不影响正常流程
-		ctx.Log().Warn("CreateMemberDineInOrder, GetStoreScanOrderSetting failed, fallback to default mode",
-			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
-			zap.Error(settingErr))
-	} else if storeScanOrderSetting.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes {
-		// "先下单后付"模式：创建 H5 订单并设置 submit_pay_time
-		if err := s.createH5OrderForOrderFirst(ctx, result.SaleBillUuid, result.SaleOrderUuid); err != nil {
-			ctx.Log().Error("CreateMemberDineInOrder, createH5OrderForOrderFirst failed",
-				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
-				zap.Uint64("sale_bill_uuid", result.SaleBillUuid),
-				zap.Error(err))
-			return nil, errors.WithMessage(err, "创建订单失败")
-		}
+	return result, nil
+}
+
+// SubmitMemberDineInOrder 先下单后付模式：提交堂食订单到收银机
+// 会员端调用 create 后可多次加购，最终通过 submit 提交生成 H5 订单
+func (s *orderSrv) SubmitMemberDineInOrder(ctx context.Context, request req.SubmitMemberDineInOrderReq) error {
+	// 1. 检查配置：必须启用"先下单后付"模式
+	storeScanOrderSetting, err := s.settingSrv.GetStoreScanOrderSetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "获取门店配置失败")
+	}
+	if storeScanOrderSetting.IsOrderFirstPayLater != constant.OrderFirstPayLaterYes {
+		return errors.New("当前模式不支持此操作")
 	}
 
-	return result, nil
+	// 2. 校验订单状态：必须是 Pending 且尚未提交（无 H5 订单）
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取订单信息失败")
+	}
+	if saleBill.Status != constant.SaleBillStatusPending {
+		return errors.New("订单状态不允许提交")
+	}
+	if saleBill.SubmitPayTime > 0 {
+		return errors.New("订单已提交，请勿重复操作")
+	}
+
+	// 3. 调用已有方法创建 H5 订单
+	return s.createH5OrderForOrderFirst(ctx, request.SaleBillUuid, request.SaleOrderUuid)
 }
 
 // createH5OrderForOrderFirst 为"先下单后付"模式创建 H5 订单
@@ -2813,7 +2825,7 @@ func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.Crea
 // 2. 不执行自动接单（等待收银端手动接单）
 // 3. 设置 submit_pay_time 使订单在列表中可见
 func (s *orderSrv) createH5OrderForOrderFirst(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error {
-	db := s.dbm.GetDBWithContext(ctx)
+	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 获取销售账单信息（包含商品列表）
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
@@ -2929,9 +2941,9 @@ func (s *orderSrv) createH5OrderForOrderFirst(ctx context.Context, saleBillUuid 
 
 	ctx.Log().Info("createH5OrderForOrderFirst, h5_order created",
 		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
-		zap.Uint64("h5OrderUuid", h5OrderUuid),
-		zap.Uint64("saleBillUuid", saleBillUuid),
-		zap.String("deskNo", saleBill.SerialNo))
+		zap.Uint64("h5_order_uuid", h5OrderUuid),
+		zap.Uint64("sale_bill_uuid", saleBillUuid),
+		zap.String("desk_no", saleBill.SerialNo))
 
 	return nil
 }
@@ -3418,11 +3430,15 @@ func (s *orderSrv) buildDineInOrderListQueryOptions(ctx context.Context, billSta
 }
 
 // getH5OrderForMemberDineIn 获取会员端堂食订单的 H5 订单
+// 如果没有找到，返回 nil（区分未 submit 的订单）
 func (s *orderSrv) getH5OrderForMemberDineIn(h5OrderRepo repository.IH5OrderRepo, saleBillUuid uint64) *model.H5Order {
-	h5Order, _ := h5OrderRepo.GetH5Order(
+	h5Order, err := h5OrderRepo.GetH5Order(
 		h5OrderRepo.WhereSaleBillUuid(saleBillUuid),
 		h5OrderRepo.WhereOrderType(constant.H5OrderTypeMemberDineIn),
 	)
+	if err != nil || h5Order.Uuid == 0 {
+		return nil
+	}
 	return h5Order
 }
 
@@ -3585,7 +3601,15 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	)
 
 	// 获取生产单完成状态
+	// 注意：当没有生产单时（如先下单后付的订单尚未送厨），IsProductionFinishedBySaleBillUuid 返回 true（count==0）
+	// 但此时订单并非真正完成，需要检查是否存在生产单来区分"从未送厨"和"全部完成"
 	isProductionFinished, _ := productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+	if isProductionFinished {
+		hasProduction, _ := productionRepo.HasProductionOrderBySaleBillUuid(saleBill.Uuid)
+		if !hasProduction {
+			isProductionFinished = false
+		}
+	}
 
 	// 获取商品列表（包含退款信息）
 	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)

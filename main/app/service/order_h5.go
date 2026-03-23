@@ -318,45 +318,50 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		storeScanOrderSetting, err := s.settingSrv.GetStoreScanOrderSetting(ctx)
 		if err != nil {
 			ctx.Log().Warn("获取门店点餐配置失败，按默认流程处理",
-				zap.String("company_uuid", strconv.FormatUint(ctx.GetCompanyUuid(), 10)),
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
 				zap.Error(err),
 			)
 		}
 		if storeScanOrderSetting.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && saleBill.Status == constant.SaleBillStatusPending {
 			// 将h5订单商品插入到销售订单中（不送厨）
 			saleOrder := saleBill.GetFirstSaleOrder()
+			if saleOrder == nil {
+				return nil, errors.New("销售订单不存在")
+			}
 			saleOrder.InsertSaleOrderProduct(h5Order.SaleOrderProducts)
 
 			// 重新计算账单金额
 			saleBill.CalcAll()
 
 			// 设置挂单状态，让订单出现在即时点餐挂单列表中
+			// 同时设置 DeviceUuid，挂单列表按设备过滤
 			saleBill.SetHideSaleBill()
+			saleBill.DeviceUuid = ctx.GetDeviceUuid()
 
 			ctx.Log().Info("先下单后付：接单后转为挂单",
-				zap.String("company_uuid", strconv.FormatUint(ctx.GetCompanyUuid(), 10)),
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
 				zap.Uint64("h5_order_uuid", h5OrderUuid),
 				zap.Uint64("sale_bill_uuid", saleBillUuid),
 			)
 
-			if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+			if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 				// 更新h5订单
-				if err := repository.NewH5OrderRepo(db).UpdateH5OrderRecord(*h5Order); err != nil {
+				if err := repository.NewH5OrderRepo(tx).UpdateH5OrderRecord(*h5Order); err != nil {
 					return errors.WithMessage(err, "更新h5订单失败")
 				}
 				// 更新h5订单商品列表
 				for _, h5OrderProduct := range h5Order.H5OrderProducts {
-					if err := repository.NewH5OrderRepo(db).UpdateH5OrderProductRecord(*h5OrderProduct); err != nil {
+					if err := repository.NewH5OrderRepo(tx).UpdateH5OrderProductRecord(*h5OrderProduct); err != nil {
 						return errors.WithMessage(err, "更新h5订单商品失败")
 					}
 				}
 				// 保存账单挂单状态和重新计算的金额
-				if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
+				if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
 					return errors.WithMessage(err, "更新账单失败")
 				}
 				// 保存 SaleOrder
 				for _, so := range saleBill.SaleOrders {
-					if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*so); err != nil {
+					if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*so); err != nil {
 						return errors.WithMessage(err, "更新销售订单失败")
 					}
 				}
@@ -612,22 +617,20 @@ func (s *orderSrv) refundMemberDineInOrder(ctx context.Context, h5Order *model.H
 
 	saleOrder := saleBill.GetFirstSaleOrder()
 
-	// 检查是否存在支付订单
-	if len(saleOrder.PaymentOrders) == 0 {
-		logger.Logger.Warn("refundMemberDineInOrder, no payment orders to refund",
+	// 如果存在支付订单，发起退款（原路退回）
+	if len(saleOrder.PaymentOrders) > 0 {
+		// MemberSaleOrderRefund 内部通过 ctx.GetDB() 获取数据库连接，
+		// 遍历所有 PaymentOrders 创建退款记录并调用连连支付 Refund API
+		_, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
+			CancelReason: "拒单退款",
+		})
+		if err != nil {
+			return errors.WithMessage(err, "发起退款失败")
+		}
+	} else {
+		logger.Logger.Warn("refundMemberDineInOrder, no payment orders to refund, cancelling order directly",
 			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
-			zap.Uint64("saleBillUuid", h5Order.SaleBillUuid))
-		return nil
-	}
-
-	// 调用 MemberSaleOrderRefund 发起退款（原路退回）
-	// MemberSaleOrderRefund 内部通过 ctx.GetDB() 获取数据库连接，
-	// 遍历所有 PaymentOrders 创建退款记录并调用连连支付 Refund API
-	_, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
-		CancelReason: "拒单退款",
-	})
-	if err != nil {
-		return errors.WithMessage(err, "发起退款失败")
+			zap.Uint64("sale_bill_uuid", h5Order.SaleBillUuid))
 	}
 
 	// 更新 SaleBill 和 SaleOrder 状态为已取消
