@@ -46,7 +46,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName('idx_product_package_uuid')) {
                 $table->addIndex('product_package_uuid', [
                     'name' => 'idx_product_package_uuid',
-                    'comment' => '商品包装UUID索引，优化统计报表JOIN查询'
                 ]);
             }
 
@@ -54,7 +53,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName('idx_create_time')) {
                 $table->addIndex('create_time', [
                     'name' => 'idx_create_time',
-                    'comment' => '创建时间索引，支持时间范围查询'
                 ]);
             }
 
@@ -62,7 +60,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName("idx_package_time")) {
                 $table->addIndex(['product_package_uuid', 'create_time'], [
                     'name' => 'idx_package_time',
-                    'comment' => '复合索引，优化按商品分组+时间过滤的统计查询'
                 ]);
             }
 
@@ -79,7 +76,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName('idx_takeout_reduce_delete')) {
                 $table->addIndex(['takeout_order_uuid', 'reduce_stock', 'delete_time'], [
                     'name' => 'idx_takeout_reduce_delete',
-                    'comment' => '外卖订单出库查询复合索引，覆盖所有WHERE条件'
                 ]);
             }
 
@@ -87,7 +83,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName('idx_salebill_reduce_delete')) {
                 $table->addIndex(['sale_bill_uuid', 'reduce_stock', 'delete_time'], [
                     'name' => 'idx_salebill_reduce_delete',
-                    'comment' => '销售账单出库查询复合索引，覆盖所有WHERE条件'
                 ]);
             }
 
@@ -104,7 +99,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName('idx_status_package')) {
                 $table->addIndex(['status', 'product_package_uuid'], [
                     'name' => 'idx_status_package',
-                    'comment' => '厨房打印机查询复合索引，优化 status + product_package_uuid IN 查询'
                 ]);
             }
 
@@ -112,7 +106,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName('idx_status_salebill')) {
                 $table->addIndex(['status', 'sale_bill_uuid'], [
                     'name' => 'idx_status_salebill',
-                    'comment' => '销售账单生产单查询复合索引'
                 ]);
             }
 
@@ -120,7 +113,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName('idx_status_takeout')) {
                 $table->addIndex(['status', 'takeout_order_uuid'], [
                     'name' => 'idx_status_takeout',
-                    'comment' => '外卖订单生产单查询复合索引'
                 ]);
             }
 
@@ -136,7 +128,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName('idx_category_uuid')) {
                 $table->addIndex('category_uuid', [
                     'name' => 'idx_category_uuid',
-                    'comment' => '分类UUID索引，优化与分类表的JOIN'
                 ]);
             }
 
@@ -144,7 +135,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName('idx_show_kitchen_delete')) {
                 $table->addIndex(['is_show_kitchen', 'delete_time'], [
                     'name' => 'idx_show_kitchen_delete',
-                    'comment' => '厨显+删除标记复合索引，优化厨房打印机查询中的 NOT IN 子查询'
                 ]);
             }
 
@@ -160,7 +150,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName('idx_parent_uuid')) {
                 $table->addIndex('parent_uuid', [
                     'name' => 'idx_parent_uuid',
-                    'comment' => '父分类UUID索引，优化父子分类的JOIN查询'
                 ]);
             }
 
@@ -176,7 +165,6 @@ class AddSlowqueryOptimizationIndexes extends Migrator
             if (!$table->hasIndexByName('idx_printer_package')) {
                 $table->addIndex(['product_printer_uuid', 'product_package_uuid'], [
                     'name' => 'idx_printer_package',
-                    'comment' => '打印机商品关联复合索引，优化打印机商品列表查询'
                 ]);
             }
 
