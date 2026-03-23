@@ -133,8 +133,8 @@ func TestDelete7DaysAgo_KeepsRecentRecords(t *testing.T) {
 	}
 }
 
-// TestDelete7DaysAgo_EmptyTable 验证空表不报错
-func TestDelete7DaysAgo_EmptyTable(t *testing.T) {
+// TestDeleteOperationDuration7DaysAgo_EmptyTable 验证空表不报错
+func TestDeleteOperationDuration7DaysAgo_EmptyTable(t *testing.T) {
 	db := setupOperationDurationTestDB(t)
 
 	deadline := time.Now().Add(-7 * 24 * time.Hour).Unix()
