@@ -240,8 +240,26 @@ class SeedHqFieldOverrideLegacyData extends Migrator
      */
     private function collectMaterialOverrides($hqPdo, $hqDbName)
     {
+        // 检查 ttpos_material 表中可选字段是否存在（部分商户库可能缺少 safety_stock）
+        $materialTable = $this->table('material');
+        $hasSafetyStock = $materialTable->hasColumn('safety_stock');
+        $hasNegativeStock = $materialTable->hasColumn('allow_negative_stock');
+
+        if (!$hasSafetyStock && !$hasNegativeStock) {
+            return;
+        }
+
+        $columns = ['uuid'];
+        if ($hasSafetyStock) {
+            $columns[] = 'safety_stock';
+        }
+        if ($hasNegativeStock) {
+            $columns[] = 'allow_negative_stock';
+        }
+
+        $columnStr = implode(', ', $columns);
         $subMaterials = $this->fetchAll(
-            "SELECT uuid, safety_stock, allow_negative_stock FROM ttpos_material WHERE headquarter_uuid > 0 AND delete_time = 0"
+            "SELECT {$columnStr} FROM ttpos_material WHERE headquarter_uuid > 0 AND delete_time = 0"
         );
         if (empty($subMaterials)) {
             return;
@@ -253,12 +271,10 @@ class SeedHqFieldOverrideLegacyData extends Migrator
             $subMap[$row['uuid']] = $row;
         }
 
-        $existingSafetyOverrides = $this->getExistingOverrides($uuids, 'safety_stock');
-        $existingNegativeOverrides = $this->getExistingOverrides($uuids, 'negative_stock');
+        $existingSafetyOverrides = $hasSafetyStock ? $this->getExistingOverrides($uuids, 'safety_stock') : [];
+        $existingNegativeOverrides = $hasNegativeStock ? $this->getExistingOverrides($uuids, 'negative_stock') : [];
 
-        $hqMaterials = $this->fetchFromHq($hqPdo, $hqDbName, 'material',
-            ['uuid', 'safety_stock', 'allow_negative_stock'], $uuids
-        );
+        $hqMaterials = $this->fetchFromHq($hqPdo, $hqDbName, 'material', $columns, $uuids);
         $hqMap = [];
         foreach ($hqMaterials as $row) {
             $hqMap[$row['uuid']] = $row;
@@ -270,11 +286,11 @@ class SeedHqFieldOverrideLegacyData extends Migrator
             }
             $hqRow = $hqMap[$uuid];
 
-            if (!isset($existingSafetyOverrides[$uuid]) && $subRow['safety_stock'] != $hqRow['safety_stock']) {
+            if ($hasSafetyStock && !isset($existingSafetyOverrides[$uuid]) && $subRow['safety_stock'] != $hqRow['safety_stock']) {
                 $this->pendingOverrides[] = ['material', $uuid, 'safety_stock'];
             }
 
-            if (!isset($existingNegativeOverrides[$uuid]) && $subRow['allow_negative_stock'] != $hqRow['allow_negative_stock']) {
+            if ($hasNegativeStock && !isset($existingNegativeOverrides[$uuid]) && $subRow['allow_negative_stock'] != $hqRow['allow_negative_stock']) {
                 $this->pendingOverrides[] = ['material', $uuid, 'negative_stock'];
             }
         }
