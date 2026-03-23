@@ -2005,6 +2005,7 @@
   "呼叫骑手成功": "Fahrer erfolgreich gerufen",
   "品牌参数": "Markenparameter",
   "品牌采购(内部)": "Markenbeschaffung (intern)",
+  "品牌采购自动审批": "Automatische Genehmigung der Markenbeschaffung",
   "品采收货(内部)": "Wareneingang für Einkauf (intern)",
   "哈萨克斯坦": "Kasachstan",
   "响应包含队列数据和配置信息，配置字段为必返字段，缺失时使用默认值": "Die Antwort enthält Warteschlangendaten und Konfigurationsinformationen. Das Konfigurationsfeld ist ein verpflichtend zurückzugebendes Feld; fehlt es, wird der Standardwert verwendet",

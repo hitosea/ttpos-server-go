@@ -2005,6 +2005,7 @@
   "呼叫骑手成功": "Ryttare (bud) har kallats framgångsrikt",
   "品牌参数": "Varumärkesparametrar",
   "品牌采购(内部)": "Varumärkesupphandling (intern)",
+  "品牌采购自动审批": "Automatiskt godkännande av varumärkesupphandling",
   "品采收货(内部)": "Mottagning av inköpta varor (intern)",
   "哈萨克斯坦": "Kazakstan",
   "响应包含队列数据和配置信息，配置字段为必返字段，缺失时使用默认值": "Svaret innehåller ködata och konfigurationsinformation. Konfigurationsfältet är ett obligatoriskt fält som ska returneras; saknas det används standardvärdet",
