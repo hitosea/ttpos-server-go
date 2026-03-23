@@ -864,6 +864,11 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 		return nil, errSaleBill
 	}
 
+	// 会员端堂食订单不允许拆单
+	if saleBill.Source == constant.SaleBillSourceMember && saleBill.BillType == constant.SaleBillTypeInstant {
+		return nil, errors.New("会员端堂食订单不支持拆单")
+	}
+
 	// 最大只能创建10个
 	if len(saleBill.SaleOrders) == 10 {
 		return nil, errors.New("销售账单最多只能创建10个销售订单")
@@ -974,6 +979,12 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
+
+	// 会员端堂食订单不允许拆单操作
+	if saleBill.Source == constant.SaleBillSourceMember && saleBill.BillType == constant.SaleBillTypeInstant {
+		return nil, errors.New("会员端堂食订单不支持拆单")
+	}
+
 	// 获取销售订单信息
 	saleOrderFrom := saleBill.GetSaleOrder(req.From)
 	saleOrderTo := saleBill.GetSaleOrder(req.To)
