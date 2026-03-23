@@ -238,6 +238,28 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 	}
 
 	operationLogs, _ := s.orderSrv.GetRecordList(ctx, h5Order.SaleBillUuid, h5OrderUuid)
+
+	// 查询支付方式列表（仅会员端堂食订单）
+	paymentMethodItems := make([]resp.H5OrderPaymentMethodItem, 0)
+	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn && h5Order.SaleOrderUuid > 0 {
+		paymentOrderRepo := repository.NewPaymentOrderRepo(ctx.GetDB())
+		paymentOrders, _ := paymentOrderRepo.GetPaymentOrderList(
+			repository.CommonRepo.WhereByRelatedUuid(h5Order.SaleOrderUuid),
+			repository.CommonRepo.WhereByRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
+			repository.CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid),
+			repository.CommonRepo.WhereBySoftDelete(),
+			paymentOrderRepo.WithPaymentMethod(),
+		)
+		for _, po := range paymentOrders {
+			if po.PaymentMethod != nil {
+				paymentMethodItems = append(paymentMethodItems, resp.H5OrderPaymentMethodItem{
+					Name: po.PaymentMethod.Name,
+					Code: po.PaymentMethod.Code,
+				})
+			}
+		}
+	}
+
 	return &resp.H5OrderDetailResp{
 		H5OrderDetail: resp.H5OrderDetail{
 			H5OrderInfo: resp.H5OrderInfo{
@@ -262,6 +284,9 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 		},
 		OperationLog: resp.OperationLog{
 			List: operationLogs,
+		},
+		PaymentMethod: resp.H5OrderPaymentMethodList{
+			List: paymentMethodItems,
 		},
 	}, nil
 }
