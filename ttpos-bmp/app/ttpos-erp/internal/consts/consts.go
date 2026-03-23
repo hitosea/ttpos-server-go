@@ -88,3 +88,14 @@ const (
 	//重做的备注
 	RemarkBatchRedo = "batch redo"
 )
+
+// Sales Invoice Retry 相关常量
+const (
+	// MaxWaitForSISeconds SI 创建后最大等待时间（秒），超过则不等待 docstatus=Submitted
+	MaxWaitForSISeconds = 120
+
+	// SI Retry 错误消息格式
+	ErrMsgSaveSIRetry   = "SaveSalesInvoice失败(retry=%d): %v"
+	ErrMsgCancelSIRetry = "取消SI失败(retry=%d): %v"
+	ErrMsgReturnSIRetry = "退款SI失败(retry=%d): %v"
+)

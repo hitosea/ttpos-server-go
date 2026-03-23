@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
@@ -52,6 +53,7 @@ func getRpcUrlWithName(req *erp.ErpReq) (url string) {
 
 func GetClient(ctx context.Context) *gclient.Client {
 	var c = g.Client()
+	c.SetTimeout(60 * time.Second)
 	m := grpcx.Ctx.IncomingMap(ctx)
 	if m.Contains(consts.ContextSiteCode) {
 		serviceAuthorization, err := Rpc.GetAndProcessSiteAuthorization(ctx, m.GetVar(consts.ContextSiteCode).String())

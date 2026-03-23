@@ -26,4 +26,9 @@ const (
 
 	// SI 异步回调（BMP → Main）
 	TopicErpSalesInvoiceCallback = Topic("erp-sales-invoice-callback")
+
+	// SI 自定义 DLQ（应用层重试耗尽后投入）
+	TopicSaveSalesInvoiceDLQ   = Topic("save-sales-invoice-dlq")
+	TopicCancelSalesInvoiceDLQ = Topic("cancel-sales-invoice-dlq")
+	TopicReturnSalesInvoiceDLQ = Topic("return-sales-invoice-dlq")
 )

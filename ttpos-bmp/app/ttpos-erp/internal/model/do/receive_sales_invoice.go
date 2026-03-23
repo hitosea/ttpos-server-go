@@ -25,6 +25,7 @@ type ReceiveSalesInvoice struct {
 	ReqBody           any // 请求文本
 	RespBody          any // 响应文本
 	RetryCount        any // 重试次数
+	MqMsgId           any // 最后一次MQ消息ID
 	CreatedAt         any // 创建时间
 	UpdatedAt         any // 更新时间
 }

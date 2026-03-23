@@ -24,7 +24,7 @@ class Index extends BaseController
         $type = $request->param('type');
         //
         if ($type == 'JobScheduler') {
-            $appIds = Db::name('company')->column('uuid');
+            $appIds = Db::name('company')->where('is_enable_erp', 0)->column('uuid');
             foreach ($appIds as $appId) {
                request()->appId = $appId;
                event('JobScheduler');
