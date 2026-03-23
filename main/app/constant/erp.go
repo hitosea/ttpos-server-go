@@ -39,7 +39,8 @@ const (
 	ErpSyncStatusQueued     = 1
 	ErpSyncStatusInProgress = 2
 	ErpSyncStatusSuccess    = 3
-	ErpSyncStatusFailed     = 4
+	ErpSyncStatusFailed         = 4
+	ErpSyncStatusExternalCancel = 5 // ERPNext 端外部取消（Webhook on_cancel）
 )
 
 // ErpPosInvoiceErrorScene 保存POS发票错误场景

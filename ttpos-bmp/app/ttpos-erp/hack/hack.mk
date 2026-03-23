@@ -90,6 +90,18 @@ db_up: migrate.install
 	fi && \
 	migrate -path ./manifest/sql -database "$$DB_DSN" up
 
+.PHONY: test
+test:
+	@# 为依赖 GoFrame config 的包创建临时 symlink
+	@mkdir -p $(ROOT_DIR)/internal/consumer/selling/manifest/config
+	@mkdir -p $(ROOT_DIR)/internal/consumer/manifest/config
+	@ln -sf $(ROOT_DIR)/manifest/config/config.yaml $(ROOT_DIR)/internal/consumer/selling/manifest/config/config.yaml
+	@ln -sf $(ROOT_DIR)/manifest/config/config.yaml $(ROOT_DIR)/internal/consumer/manifest/config/config.yaml
+	@cd $(ROOT_DIR)/../../ && go test -tags unit -count=1 -v ./app/ttpos-erp/... ; \
+	EXIT=$$?; \
+	rm -rf $(ROOT_DIR)/internal/consumer/selling/manifest $(ROOT_DIR)/internal/consumer/manifest; \
+	exit $$EXIT
+
 .PHONY: run
 run: cli.install
 	@gf run $(ROOT_DIR)/main.go

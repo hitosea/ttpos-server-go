@@ -34,6 +34,8 @@ const (
 	SellingService_GetModeOfPaymentList_FullMethodName = "/selling.SellingService/GetModeOfPaymentList"
 	SellingService_GetModeOfPayment_FullMethodName     = "/selling.SellingService/GetModeOfPayment"
 	SellingService_SaveModeOfPayment_FullMethodName    = "/selling.SellingService/SaveModeOfPayment"
+	SellingService_GetFailedSIStats_FullMethodName     = "/selling.SellingService/GetFailedSIStats"
+	SellingService_RetryFailedSI_FullMethodName        = "/selling.SellingService/RetryFailedSI"
 )
 
 // SellingServiceClient is the client API for SellingService service.
@@ -68,6 +70,10 @@ type SellingServiceClient interface {
 	GetModeOfPayment(ctx context.Context, in *GetModeOfPaymentReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 保存支付方式
 	SaveModeOfPayment(ctx context.Context, in *SaveModeOfPaymentReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 获取 SI 失败统计（死信队列）
+	GetFailedSIStats(ctx context.Context, in *GetFailedSIStatsReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 重试失败的 SI 记录
+	RetryFailedSI(ctx context.Context, in *RetryFailedSIReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type sellingServiceClient struct {
@@ -208,6 +214,26 @@ func (c *sellingServiceClient) SaveModeOfPayment(ctx context.Context, in *SaveMo
 	return out, nil
 }
 
+func (c *sellingServiceClient) GetFailedSIStats(ctx context.Context, in *GetFailedSIStatsReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, SellingService_GetFailedSIStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sellingServiceClient) RetryFailedSI(ctx context.Context, in *RetryFailedSIReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, SellingService_RetryFailedSI_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SellingServiceServer is the server API for SellingService service.
 // All implementations must embed UnimplementedSellingServiceServer
 // for forward compatibility.
@@ -240,6 +266,10 @@ type SellingServiceServer interface {
 	GetModeOfPayment(context.Context, *GetModeOfPaymentReq) (*api.ResponseInfo, error)
 	// 保存支付方式
 	SaveModeOfPayment(context.Context, *SaveModeOfPaymentReq) (*api.ResponseInfo, error)
+	// 获取 SI 失败统计（死信队列）
+	GetFailedSIStats(context.Context, *GetFailedSIStatsReq) (*api.ResponseInfo, error)
+	// 重试失败的 SI 记录
+	RetryFailedSI(context.Context, *RetryFailedSIReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedSellingServiceServer()
 }
 
@@ -288,6 +318,12 @@ func (UnimplementedSellingServiceServer) GetModeOfPayment(context.Context, *GetM
 }
 func (UnimplementedSellingServiceServer) SaveModeOfPayment(context.Context, *SaveModeOfPaymentReq) (*api.ResponseInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method SaveModeOfPayment not implemented")
+}
+func (UnimplementedSellingServiceServer) GetFailedSIStats(context.Context, *GetFailedSIStatsReq) (*api.ResponseInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetFailedSIStats not implemented")
+}
+func (UnimplementedSellingServiceServer) RetryFailedSI(context.Context, *RetryFailedSIReq) (*api.ResponseInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method RetryFailedSI not implemented")
 }
 func (UnimplementedSellingServiceServer) mustEmbedUnimplementedSellingServiceServer() {}
 func (UnimplementedSellingServiceServer) testEmbeddedByValue()                        {}
@@ -544,6 +580,42 @@ func _SellingService_SaveModeOfPayment_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SellingService_GetFailedSIStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFailedSIStatsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SellingServiceServer).GetFailedSIStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SellingService_GetFailedSIStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SellingServiceServer).GetFailedSIStats(ctx, req.(*GetFailedSIStatsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SellingService_RetryFailedSI_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RetryFailedSIReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SellingServiceServer).RetryFailedSI(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SellingService_RetryFailedSI_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SellingServiceServer).RetryFailedSI(ctx, req.(*RetryFailedSIReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SellingService_ServiceDesc is the grpc.ServiceDesc for SellingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -602,6 +674,14 @@ var SellingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SaveModeOfPayment",
 			Handler:    _SellingService_SaveModeOfPayment_Handler,
+		},
+		{
+			MethodName: "GetFailedSIStats",
+			Handler:    _SellingService_GetFailedSIStats_Handler,
+		},
+		{
+			MethodName: "RetryFailedSI",
+			Handler:    _SellingService_RetryFailedSI_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

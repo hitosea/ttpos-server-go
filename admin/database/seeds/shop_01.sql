@@ -2012,6 +2012,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse` (
   `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
   PRIMARY KEY (`id`),
   INDEX `idx_headquarter_uuid` (`headquarter_uuid`),
+  INDEX `idx_erp_code` (`erp_code`),
   UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库';
 
@@ -2061,6 +2062,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_erp_code` (`erp_code`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '供应商表';
 

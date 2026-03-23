@@ -234,7 +234,7 @@ message SaveSalesInvoiceReq {
   string sale_order_uuid = 2;                       // TTPOS 订单 UUID（幂等键）
   string sale_bill_uuid = 3;                        // TTPOS 账单 UUID
   string pos_profile = 4;                           // POS Profile 名称
-  string company = 5;                               // 公司
+  string company_abbr = 5;                           // 公司缩写（如 CFG），BMP 通过缩写查询公司全名
   string customer = 6;                              // 客户（默认客户或会员）
   string currency = 7;                              // 货币 THB/CNY
   string price_list_currency = 8;                   // 价格表货币
@@ -284,7 +284,7 @@ message ReturnSalesInvoiceReq {
   string sale_order_uuid = 2;
   string sales_invoice_name = 3;                    // 原 SI 名称
   int64 posting_datetime = 4;
-  string company = 5;
+  string company_abbr = 5;                            // 公司缩写（如 CFG）
   string customer = 6;
   repeated PosInvoiceItem items = 7;                // 退款商品
   repeated PosInvoiceItem material_items = 8;       // 退款物品
@@ -339,4 +339,41 @@ service SellingService {
 
   // 保存支付方式
   rpc SaveModeOfPayment (SaveModeOfPaymentReq) returns (erp.ResponseInfo);
+
+  // 获取 SI 失败统计（死信队列）
+  rpc GetFailedSIStats (GetFailedSIStatsReq) returns (erp.ResponseInfo);
+
+  // 重试失败的 SI 记录
+  rpc RetryFailedSI (RetryFailedSIReq) returns (erp.ResponseInfo);
+}
+
+// GetFailedSIStatsReq 查询失败 SI 统计请求
+message GetFailedSIStatsReq {
+  string site_code = 1; // 站点编码，可选（为空查所有站点）
+}
+
+// FailedSIStats 失败 SI 统计响应
+message FailedSIStats {
+  int32 save_failed_count = 1;   // SaveSI 失败数
+  int32 cancel_failed_count = 2; // CancelSI 失败数
+  int32 return_failed_count = 3; // ReturnSI 失败数
+  int32 total_failed_count = 4;  // 总失败数
+  int32 save_pending_count = 5;   // SaveSI 进行中数量
+  int32 cancel_pending_count = 6; // CancelSI 进行中数量
+  int32 return_pending_count = 7; // ReturnSI 进行中数量
+  int32 total_pending_count = 8;  // 总进行中数量
+}
+
+// RetryFailedSIReq 重试/跳过失败 SI 请求
+message RetryFailedSIReq {
+  string site_code = 1;       // 站点编码，可选
+  int64 record_id = 2;        // 指定记录ID，可选
+  string sale_order_uuid = 3; // 指定订单UUID，可选
+  string msg_type = 4;        // 消息类型，可选（save-sales-invoice/cancel-sales-invoice/return-sales-invoice，为空重试所有）
+  string action = 5;          // 操作类型: 空/"retry"=重试, "skip"=标记跳过
+}
+
+// RetryFailedSIResult 重试结果
+message RetryFailedSIResult {
+  int32 retry_count = 1; // 成功重新入队的记录数
 }

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -190,6 +191,98 @@ func (h *Handler) AddPaymentMethod(c *gin.Context) {
 	helper.Success(c, gin.H{}, "添加成功")
 }
 
+// GetFailedSIStats 获取 SI 失败统计
+func (h *Handler) GetFailedSIStats(c *gin.Context) {
+	siteCode := c.Query("site_code")
+	client, conn, err := erp.NewErpSellingClient()
+	if err != nil {
+		helper.ErrorWithMessage(c, constant.CodeFail, err)
+		return
+	}
+	defer conn.Close()
+
+	result, err := client.GetFailedSIStats(c.Request.Context(), &selling.GetFailedSIStatsReq{
+		SiteCode: siteCode,
+	})
+	if err != nil {
+		helper.ErrorWithMessage(c, constant.CodeFail, err)
+		return
+	}
+	if result.GetCode() != "0" {
+		helper.Fail(c, constant.CodeFail, result.GetMessage())
+		return
+	}
+
+	var stats selling.FailedSIStats
+	if result.Data != nil {
+		if err := result.Data.UnmarshalTo(&stats); err != nil {
+			helper.ErrorWithMessage(c, constant.CodeFail, err)
+			return
+		}
+	}
+
+	helper.Success(c, gin.H{
+		"save_failed_count":    stats.SaveFailedCount,
+		"cancel_failed_count":  stats.CancelFailedCount,
+		"return_failed_count":  stats.ReturnFailedCount,
+		"total_failed_count":   stats.TotalFailedCount,
+		"save_pending_count":   stats.SavePendingCount,
+		"cancel_pending_count": stats.CancelPendingCount,
+		"return_pending_count": stats.ReturnPendingCount,
+		"total_pending_count":  stats.TotalPendingCount,
+	})
+}
+
+// RetryFailedSI 重试失败的 SI
+func (h *Handler) RetryFailedSI(c *gin.Context) {
+	var reqBody struct {
+		SiteCode      string `json:"site_code"`
+		RecordId      int64  `json:"record_id"`
+		SaleOrderUuid string `json:"sale_order_uuid"`
+		MsgType       string `json:"msg_type"`
+		Action        string `json:"action"` // "retry"(default) or "skip"
+	}
+	if err := c.ShouldBindJSON(&reqBody); err != nil {
+		helper.HandleValidationError(c, err, reqBody, nil)
+		return
+	}
+
+	client, conn, err := erp.NewErpSellingClient()
+	if err != nil {
+		helper.ErrorWithMessage(c, constant.CodeFail, err)
+		return
+	}
+	defer conn.Close()
+
+	result, err := client.RetryFailedSI(c.Request.Context(), &selling.RetryFailedSIReq{
+		SiteCode:      reqBody.SiteCode,
+		RecordId:      reqBody.RecordId,
+		SaleOrderUuid: reqBody.SaleOrderUuid,
+		MsgType:       reqBody.MsgType,
+		Action:        reqBody.Action,
+	})
+	if err != nil {
+		helper.ErrorWithMessage(c, constant.CodeFail, err)
+		return
+	}
+	if result.GetCode() != "0" {
+		helper.Fail(c, constant.CodeFail, result.GetMessage())
+		return
+	}
+
+	var retryResult selling.RetryFailedSIResult
+	if result.Data != nil {
+		if err := result.Data.UnmarshalTo(&retryResult); err != nil {
+			helper.ErrorWithMessage(c, constant.CodeFail, err)
+			return
+		}
+	}
+
+	helper.Success(c, gin.H{
+		"retry_count": retryResult.RetryCount,
+	})
+}
+
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	settingSrv := setting.NewSrv(dbm, cache)
 	translateSrv := service.NewTranslateSrv(dbm, cache)
@@ -205,4 +298,7 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	router.POST("/erpnext/lianlian/payment/add", middleware.Internal(), wrapper.AddLianLianPayment)
 	router.GET("/erpnext/payment_method/list", middleware.Internal(), wrapper.GetPaymentMethodList)
 	router.POST("/erpnext/payment_method/add", middleware.Internal(), wrapper.AddPaymentMethod)
+	// SI 死信管理
+	router.GET("/erpnext/si/failed_stats", middleware.Internal(), wrapper.GetFailedSIStats)
+	router.POST("/erpnext/si/retry", middleware.Internal(), wrapper.RetryFailedSI)
 }

@@ -240,4 +240,59 @@ class Erpnext extends Controller
         }
         return $this->renderSuccess('添加成功');
     }
+
+    /**
+     * @Apidoc\Title("SI死信统计")
+     * @Apidoc\Desc("获取 Sales Invoice 失败记录统计")
+     * @Apidoc\Method("GET")
+     * @Apidoc\Url("/api/admin/erpnext/siFailedStats")
+     * @Apidoc\Param("site_code", type="string", require=false, desc="站点编码，为空则查全部")
+     * @Apidoc\Returned("save_failed_count", type="int", desc="保存失败数")
+     * @Apidoc\Returned("cancel_failed_count", type="int", desc="取消失败数")
+     * @Apidoc\Returned("return_failed_count", type="int", desc="退货失败数")
+     * @Apidoc\Returned("total_failed_count", type="int", desc="总失败数")
+     */
+    public function siFailedStats()
+    {
+        $res = HttpHelp::getRequest('http://nginx/api/v1/admin/erpnext/si/failed_stats', $this->getData(), [
+            'X-API-KEY: ' . env('JWT_SECRET'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $res = json_decode($res, true);
+        if ($res['code'] != 0) {
+            return $this->renderError($res['message']);
+        }
+        return $this->renderSuccess('', $res['data']);
+    }
+
+    /**
+     * @Apidoc\Title("SI死信重试")
+     * @Apidoc\Desc("重试失败的 Sales Invoice 记录")
+     * @Apidoc\Method("POST")
+     * @Apidoc\Url("/api/admin/erpnext/siRetry")
+     * @Apidoc\Param("site_code", type="string", require=false, desc="站点编码")
+     * @Apidoc\Param("record_id", type="int", require=false, desc="记录ID")
+     * @Apidoc\Param("sale_order_uuid", type="string", require=false, desc="订单UUID")
+     * @Apidoc\Param("msg_type", type="string", require=false, desc="消息类型: save/cancel/return")
+     * @Apidoc\Returned("retry_count", type="int", desc="重试记录数")
+     */
+    public function siRetry()
+    {
+        $param = $this->postData();
+        $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/si/retry', json_encode($param), [
+            'X-API-KEY: ' . env('JWT_SECRET'),
+            'Accept-Language: ' . request()->header('language'),
+        ], 60);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $res = json_decode($res, true);
+        if ($res['code'] != 0) {
+            return $this->renderError($res['message']);
+        }
+        return $this->renderSuccess('重试已触发', $res['data']);
+    }
 }

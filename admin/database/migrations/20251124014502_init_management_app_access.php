@@ -373,8 +373,6 @@ class InitManagementAppAccess extends Migrator
             ['uuid' => 2859361898496000, 'name' => '优惠设置', 'path' => 'discount_setting', 'api_path' => '', 'parent_uuid' => 2859345121280000, 'sort' => 1, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 优惠计入设置
             ['uuid' => 2859387064320000, 'name' => '优惠计入设置', 'path' => 'discount_count_setting', 'api_path' => '', 'parent_uuid' => 2859345121280000, 'sort' => 2, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
-            // 二维码
-            ['uuid' => 2859412230144000, 'name' => '二维码', 'path' => 'qr_code', 'api_path' => '', 'parent_uuid' => 2859345121280000, 'sort' => 3, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 基础设置
             ['uuid' => 2859433201664000, 'name' => '基础设置', 'path' => 'basic_setting', 'api_path' => '', 'parent_uuid' => 2859345121280000, 'sort' => 4, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 敏感操作设置
@@ -570,7 +568,6 @@ class InitManagementAppAccess extends Migrator
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859345121280000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859361898496000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859387064320000', 'create_time' => time()],
-                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859412230144000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859433201664000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859441589952000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859449978880000', 'create_time' => time()],

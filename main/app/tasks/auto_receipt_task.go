@@ -98,6 +98,8 @@ func (t *AutoReceiptTask) Execute() {
 	shopRulesMap := groupRulesByShop(ruleShops)
 
 	settingSrv := setting.NewSrvImpl(t.dbm, t.cache)
+	// 总部启用仓库 ErpCode 缓存（跨门店共享，避免同一总部重复查询）
+	hqWarehouseCache := make(map[uint64]map[string]bool)
 
 	for shopUuid, rules := range shopRulesMap {
 		func() {
@@ -107,7 +109,7 @@ func (t *AutoReceiptTask) Execute() {
 						zap.Uint64("company_uuid", shopUuid), zap.Any("error", r), zap.Stack("stack_trace"))
 				}
 			}()
-			t.processShop(shopUuid, rules, settingSrv, saasDB)
+			t.processShop(shopUuid, rules, settingSrv, saasDB, hqWarehouseCache)
 		}()
 	}
 
@@ -115,8 +117,13 @@ func (t *AutoReceiptTask) Execute() {
 }
 
 // processShop 处理单个门店的自动收货
-func (t *AutoReceiptTask) processShop(shopUuid uint64, rules []shopRuleInfo, settingSrv *setting.Srv, saasDB *gorm.DB) {
+func (t *AutoReceiptTask) processShop(shopUuid uint64, rules []shopRuleInfo, settingSrv *setting.Srv, saasDB *gorm.DB, hqWarehouseCache map[uint64]map[string]bool) {
 	shopDB := t.dbm.GetDB(shopUuid)
+	if shopDB == nil {
+		logger.Logger.Error("自动收货任务: 门店数据库连接不存在",
+			zap.Uint64("company_uuid", shopUuid))
+		return
+	}
 	// 1. 获取门店 Company 信息（含 CompanySetting）
 	companyRepo := repository.NewCompanyRepo(shopDB)
 	companyPtr, err := companyRepo.GetCompanyInfoByUuid(shopUuid)
@@ -138,6 +145,12 @@ func (t *AutoReceiptTask) processShop(shopUuid uint64, rules []shopRuleInfo, set
 
 	logger.Logger.Info("自动收货任务: 门店到达本地午夜",
 		zap.Uint64("company_uuid", shopUuid), zap.String("timezone", timezone))
+
+	// 2.5 过滤掉总店中已禁用仓库对应的规则
+	rules = t.filterRulesByEnabledWarehouses(rules, shopUuid, hqWarehouseCache)
+	if len(rules) == 0 {
+		return
+	}
 
 	// 3. 获取门店采购订单（status=2 已通过），预加载明细+单位
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(shopDB)
@@ -436,4 +449,45 @@ func findMatchingUnitUuid(orderItem *model.PurchaseOrderItem, erpnextUom string)
 		return orderItem.UnitUuid, true
 	}
 	return 0, false
+}
+
+// filterRulesByEnabledWarehouses 过滤掉总店中已禁用仓库对应的规则
+// hqWarehouseCache 跨门店共享，避免同一总部重复查询
+func (t *AutoReceiptTask) filterRulesByEnabledWarehouses(rules []shopRuleInfo, shopUuid uint64, hqWarehouseCache map[uint64]map[string]bool) []shopRuleInfo {
+	for _, rule := range rules {
+		if _, ok := hqWarehouseCache[rule.HeadquarterUuid]; ok {
+			continue
+		}
+		headquarterDB := t.dbm.GetDB(rule.HeadquarterUuid)
+		if headquarterDB == nil {
+			logger.Logger.Error("自动收货任务: 总部数据库连接不存在",
+				zap.Uint64("company_uuid", shopUuid),
+				zap.Uint64("headquarter_uuid", rule.HeadquarterUuid))
+			hqWarehouseCache[rule.HeadquarterUuid] = make(map[string]bool)
+			continue
+		}
+		warehouseRepo := repository.NewWarehouseRepo(headquarterDB)
+		warehouses, err := warehouseRepo.Get(warehouseRepo.WhereErpCodeNotEmpty(), warehouseRepo.WhereStatus(1))
+		if err != nil {
+			logger.Logger.Error("自动收货任务: 查询总店启用仓库失败",
+				zap.Uint64("company_uuid", shopUuid),
+				zap.Uint64("headquarter_uuid", rule.HeadquarterUuid),
+				zap.Error(err))
+			hqWarehouseCache[rule.HeadquarterUuid] = make(map[string]bool)
+			continue
+		}
+		codes := make(map[string]bool, len(warehouses))
+		for _, w := range warehouses {
+			codes[w.ErpCode] = true
+		}
+		hqWarehouseCache[rule.HeadquarterUuid] = codes
+	}
+
+	filtered := make([]shopRuleInfo, 0, len(rules))
+	for _, rule := range rules {
+		if hqWarehouseCache[rule.HeadquarterUuid][rule.WarehouseErpCode] {
+			filtered = append(filtered, rule)
+		}
+	}
+	return filtered
 }

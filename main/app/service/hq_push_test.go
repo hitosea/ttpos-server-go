@@ -449,6 +449,12 @@ func getStoreMaterialNegStock(storeDB *gorm.DB, uuid uint64) int {
 
 func floatPtr(v float64) *float64 { return &v }
 
+func getStoreMaterialSafetyStock(storeDB *gorm.DB, uuid uint64) *float64 {
+	var val *float64
+	storeDB.Raw("SELECT safety_stock FROM ttpos_material WHERE uuid = ? AND delete_time = 0", uuid).Scan(&val)
+	return val
+}
+
 // ========== Section A: Pure Function Tests ==========
 
 func TestHqPush_GetControlModeWithDefault(t *testing.T) {
@@ -981,6 +987,139 @@ func TestHqPush_NegativeStock_Separate_NoOverride_Differ_Syncs(t *testing.T) {
 	}
 }
 
+// ========== Section F1: Batch Push Safety Stock (pushNegativeStockToStore) ==========
+
+func TestHqPush_BatchSafetyStock_Force_NoOverride_Syncs(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(6101)
+	seedHqMaterial(t, hqDB, matUuid, 0, floatPtr(20.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, floatPtr(5.0))
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, true)
+
+	got := getStoreMaterialSafetyStock(storeDB, matUuid)
+	if got == nil || *got != 20.0 {
+		t.Errorf("safety_stock: want 20.0, got %v", got)
+	}
+	if hasOverride(storeDB, matUuid, constant.HqFieldSafetyStock) {
+		t.Error("safety_stock override should be cleared after force push")
+	}
+}
+
+func TestHqPush_BatchSafetyStock_Force_HasOverride_OverwriteAndClear(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(6102)
+	seedHqMaterial(t, hqDB, matUuid, 0, floatPtr(30.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, floatPtr(10.0))
+	seedOverride(t, storeDB, matUuid, constant.HqEntityMaterial, constant.HqFieldSafetyStock)
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, true)
+
+	got := getStoreMaterialSafetyStock(storeDB, matUuid)
+	if got == nil || *got != 30.0 {
+		t.Errorf("safety_stock: want 30.0 (overwritten), got %v", got)
+	}
+	if hasOverride(storeDB, matUuid, constant.HqFieldSafetyStock) {
+		t.Error("safety_stock override should be cleared after force push")
+	}
+}
+
+func TestHqPush_BatchSafetyStock_NoForce_NoOverride_Syncs(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(6103)
+	seedHqMaterial(t, hqDB, matUuid, 0, floatPtr(15.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, floatPtr(8.0))
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, false)
+
+	got := getStoreMaterialSafetyStock(storeDB, matUuid)
+	if got == nil || *got != 15.0 {
+		t.Errorf("safety_stock: want 15.0 (synced), got %v", got)
+	}
+}
+
+func TestHqPush_BatchSafetyStock_NoForce_HasOverride_Skip(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(6104)
+	seedHqMaterial(t, hqDB, matUuid, 0, floatPtr(25.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, floatPtr(12.0))
+	seedOverride(t, storeDB, matUuid, constant.HqEntityMaterial, constant.HqFieldSafetyStock)
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, false)
+
+	got := getStoreMaterialSafetyStock(storeDB, matUuid)
+	if got == nil || *got != 12.0 {
+		t.Errorf("safety_stock: want 12.0 (preserved), got %v", got)
+	}
+	if !hasOverride(storeDB, matUuid, constant.HqFieldSafetyStock) {
+		t.Error("safety_stock override should be preserved")
+	}
+}
+
+func TestHqPush_BatchSafetyStock_NilToValue_Syncs(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(6105)
+	seedHqMaterial(t, hqDB, matUuid, 0, floatPtr(10.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, nil)
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, false)
+
+	got := getStoreMaterialSafetyStock(storeDB, matUuid)
+	if got == nil || *got != 10.0 {
+		t.Errorf("safety_stock: want 10.0, got %v", got)
+	}
+}
+
+func TestHqPush_BatchPush_NegAndSafety_Combined(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	mat1 := uint64(6110) // both fields differ, no overrides
+	mat2 := uint64(6111) // neg overridden, safety not
+	mat3 := uint64(6112) // neg not overridden, safety overridden
+
+	seedHqMaterial(t, hqDB, mat1, 1, floatPtr(50.0))
+	seedStoreMaterial(t, storeDB, mat1, 0, floatPtr(10.0))
+
+	seedHqMaterial(t, hqDB, mat2, 1, floatPtr(60.0))
+	seedStoreMaterial(t, storeDB, mat2, 0, floatPtr(20.0))
+	seedOverride(t, storeDB, mat2, constant.HqEntityMaterial, constant.HqFieldNegativeStock)
+
+	seedHqMaterial(t, hqDB, mat3, 1, floatPtr(70.0))
+	seedStoreMaterial(t, storeDB, mat3, 0, floatPtr(30.0))
+	seedOverride(t, storeDB, mat3, constant.HqEntityMaterial, constant.HqFieldSafetyStock)
+
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, false)
+
+	// mat1: both synced
+	if got := getStoreMaterialNegStock(storeDB, mat1); got != 1 {
+		t.Errorf("mat1 neg_stock: want 1, got %d", got)
+	}
+	if got := getStoreMaterialSafetyStock(storeDB, mat1); got == nil || *got != 50.0 {
+		t.Errorf("mat1 safety_stock: want 50.0, got %v", got)
+	}
+
+	// mat2: neg skipped (overridden), safety synced
+	if got := getStoreMaterialNegStock(storeDB, mat2); got != 0 {
+		t.Errorf("mat2 neg_stock: want 0 (skipped), got %d", got)
+	}
+	if got := getStoreMaterialSafetyStock(storeDB, mat2); got == nil || *got != 60.0 {
+		t.Errorf("mat2 safety_stock: want 60.0, got %v", got)
+	}
+
+	// mat3: neg synced, safety skipped (overridden)
+	if got := getStoreMaterialNegStock(storeDB, mat3); got != 1 {
+		t.Errorf("mat3 neg_stock: want 1, got %d", got)
+	}
+	if got := getStoreMaterialSafetyStock(storeDB, mat3); got == nil || *got != 30.0 {
+		t.Errorf("mat3 safety_stock: want 30.0 (preserved), got %v", got)
+	}
+}
+
 func TestHqPush_SafetyStock_NoOverride_Differ_Syncs(t *testing.T) {
 	srv, hqDB, storeDB, _ := setupHqPushTest(t)
 
@@ -1234,5 +1373,575 @@ func TestHqPush_GetStoreList_ExcludesHqSelf(t *testing.T) {
 	}
 	if !found {
 		t.Error("store list should include sub-store")
+	}
+}
+
+// ========== Takeout Push Create Mode Tests ==========
+
+// Helper: seed HQ takeout with product_package_uuid and takeout_type
+func seedHqTakeoutFull(t *testing.T, hqDB *gorm.DB, uuid, productPackageUuid uint64, takeoutType uint, status uint, price float64) {
+	t.Helper()
+	hqDB.Exec("INSERT INTO ttpos_product_package_takeout (uuid, product_package_uuid, takeout_type, status, price, headquarter_uuid, delete_time) VALUES (?, ?, ?, ?, ?, 0, 0)",
+		uuid, productPackageUuid, takeoutType, status, price)
+}
+
+// Helper: seed store takeout with product_package_uuid, takeout_type, and a different UUID
+func seedStoreTakeoutFull(t *testing.T, storeDB *gorm.DB, uuid, productPackageUuid uint64, takeoutType uint, status uint, price float64) {
+	t.Helper()
+	storeDB.Exec("INSERT INTO ttpos_product_package_takeout (uuid, product_package_uuid, takeout_type, status, price, headquarter_uuid, delete_time) VALUES (?, ?, ?, ?, ?, ?, 0)",
+		uuid, productPackageUuid, takeoutType, status, price, testHqUuid)
+}
+
+// Test: store has no takeout but has product → creates takeout with default status=0
+func TestHqPush_TakeoutPush_CreatesWhenStoreHasProduct(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(9001)
+	takeoutUuid := uint64(9101)
+	takeoutType := uint(1) // Grab
+
+	// Seed: HQ has product + takeout; store has product but no takeout
+	seedHqProduct(t, hqDB, productUuid, 1)
+	seedStoreProduct(t, storeDB, productUuid, 1)
+	seedHqTakeoutFull(t, hqDB, takeoutUuid, productUuid, takeoutType, 1, 88.0)
+	seedHqBomTakeout(t, hqDB, 9201, takeoutUuid, 66.0)
+
+	controlRepo := srv.(*hqPushSrv).getHqControlRepo(testHqUuid)
+	hqDB2 := srv.(*hqPushSrv).dbm.GetDB(testHqUuid)
+	hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDB2)
+	hqTakeout, _ := hqTakeoutRepo.GetProductPackageTakeout(
+		repository.NewCommonRepo().WhereByUuid(takeoutUuid),
+		repository.NewCommonRepo().WhereByHeadquarterUuid(0),
+		hqTakeoutRepo.WithProductBomTakeouts(),
+		hqTakeoutRepo.WithProductPackageAttributeTakeouts(),
+		hqTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+	)
+	srv.(*hqPushSrv).pushSingleTakeoutToStore(testHqUuid, testStoreUuid, hqTakeout, controlRepo)
+
+	// Verify: store should now have a takeout record
+	var count int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND takeout_type = ? AND headquarter_uuid = ?",
+		productUuid, takeoutType, testHqUuid).Scan(&count)
+	if count != 1 {
+		t.Fatalf("expected 1 store takeout record, got %d", count)
+	}
+
+	// Verify: default status=0 (offline)
+	var status uint
+	storeDB.Raw("SELECT status FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND takeout_type = ? AND headquarter_uuid = ?",
+		productUuid, takeoutType, testHqUuid).Scan(&status)
+	if status != 0 {
+		t.Errorf("new takeout status: want 0 (offline), got %d", status)
+	}
+
+	// Verify: price copied from HQ
+	var price float64
+	storeDB.Raw("SELECT price FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND takeout_type = ? AND headquarter_uuid = ?",
+		productUuid, takeoutType, testHqUuid).Scan(&price)
+	if price != 88.0 {
+		t.Errorf("new takeout price: want 88.0, got %f", price)
+	}
+
+	// Verify: BOM association created
+	var storeTakeoutUuid uint64
+	storeDB.Raw("SELECT uuid FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND takeout_type = ? AND headquarter_uuid = ?",
+		productUuid, takeoutType, testHqUuid).Scan(&storeTakeoutUuid)
+	var bomCount int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_bom_takeout WHERE product_package_takeout_uuid = ?", storeTakeoutUuid).Scan(&bomCount)
+	if bomCount != 1 {
+		t.Errorf("expected 1 BOM takeout record, got %d", bomCount)
+	}
+	var bomPrice float64
+	storeDB.Raw("SELECT price FROM ttpos_product_bom_takeout WHERE product_package_takeout_uuid = ?", storeTakeoutUuid).Scan(&bomPrice)
+	if bomPrice != 66.0 {
+		t.Errorf("bom price: want 66.0, got %f", bomPrice)
+	}
+}
+
+// Test: store has no takeout AND no product → skips creation
+func TestHqPush_TakeoutPush_SkipsWhenStoreHasNoProduct(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(9002)
+	takeoutUuid := uint64(9102)
+	takeoutType := uint(1)
+
+	// Seed: HQ has product + takeout; store has NEITHER
+	seedHqProduct(t, hqDB, productUuid, 1)
+	seedHqTakeoutFull(t, hqDB, takeoutUuid, productUuid, takeoutType, 1, 50.0)
+
+	controlRepo := srv.(*hqPushSrv).getHqControlRepo(testHqUuid)
+	hqDB2 := srv.(*hqPushSrv).dbm.GetDB(testHqUuid)
+	hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDB2)
+	hqTakeout, _ := hqTakeoutRepo.GetProductPackageTakeout(
+		repository.NewCommonRepo().WhereByUuid(takeoutUuid),
+		repository.NewCommonRepo().WhereByHeadquarterUuid(0),
+		hqTakeoutRepo.WithProductBomTakeouts(),
+		hqTakeoutRepo.WithProductPackageAttributeTakeouts(),
+		hqTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+	)
+	srv.(*hqPushSrv).pushSingleTakeoutToStore(testHqUuid, testStoreUuid, hqTakeout, controlRepo)
+
+	// Verify: store should NOT have a takeout record
+	var count int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND headquarter_uuid = ?",
+		productUuid, testHqUuid).Scan(&count)
+	if count != 0 {
+		t.Errorf("expected 0 store takeout records (no product), got %d", count)
+	}
+}
+
+// Test: store has takeout with different UUID than HQ → still finds and updates (UUID mismatch fix)
+func TestHqPush_TakeoutPush_FindsByProductUuidNotTakeoutUuid(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(9003)
+	hqTakeoutUuid := uint64(9103)
+	storeTakeoutUuid := uint64(9903) // different UUID!
+	takeoutType := uint(1)
+
+	// Seed: HQ takeout uuid=9103, store takeout uuid=9903 (different, like after full sync)
+	seedHqProduct(t, hqDB, productUuid, 1)
+	seedStoreProduct(t, storeDB, productUuid, 1)
+	seedHqTakeoutFull(t, hqDB, hqTakeoutUuid, productUuid, takeoutType, 1, 99.0)
+	seedStoreTakeoutFull(t, storeDB, storeTakeoutUuid, productUuid, takeoutType, 0, 50.0)
+
+	controlRepo := srv.(*hqPushSrv).getHqControlRepo(testHqUuid)
+	hqDB2 := srv.(*hqPushSrv).dbm.GetDB(testHqUuid)
+	hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDB2)
+	hqTakeout, _ := hqTakeoutRepo.GetProductPackageTakeout(
+		repository.NewCommonRepo().WhereByUuid(hqTakeoutUuid),
+		repository.NewCommonRepo().WhereByHeadquarterUuid(0),
+		hqTakeoutRepo.WithProductBomTakeouts(),
+		hqTakeoutRepo.WithProductPackageAttributeTakeouts(),
+		hqTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+	)
+	srv.(*hqPushSrv).pushSingleTakeoutToStore(testHqUuid, testStoreUuid, hqTakeout, controlRepo)
+
+	// Verify: store takeout should be updated (found by product_package_uuid, not uuid)
+	var price float64
+	storeDB.Raw("SELECT price FROM ttpos_product_package_takeout WHERE uuid = ?", storeTakeoutUuid).Scan(&price)
+	if price != 99.0 {
+		t.Errorf("store takeout price: want 99.0 (updated), got %f", price)
+	}
+
+	// Verify: no duplicate record created
+	var count int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND headquarter_uuid = ?",
+		productUuid, testHqUuid).Scan(&count)
+	if count != 1 {
+		t.Errorf("expected exactly 1 takeout record, got %d", count)
+	}
+}
+
+// Test: created takeout syncs all association types (BOM + Attr + GroupItem)
+func TestHqPush_TakeoutPush_CreatesWithAllAssociations(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(9004)
+	takeoutUuid := uint64(9104)
+	takeoutType := uint(1)
+
+	// Seed product in both
+	seedHqProduct(t, hqDB, productUuid, 1)
+	seedStoreProduct(t, storeDB, productUuid, 1)
+
+	// Seed HQ takeout with all association types
+	seedHqTakeoutFull(t, hqDB, takeoutUuid, productUuid, takeoutType, 1, 100.0)
+	seedHqBomTakeout(t, hqDB, 9301, takeoutUuid, 55.0)
+	seedHqAttrTakeout(t, hqDB, 9401, takeoutUuid, 8501, 10.0)
+	seedHqGroupItemTakeout(t, hqDB, 9501, takeoutUuid, 8601, 8701, 15.0)
+
+	controlRepo := srv.(*hqPushSrv).getHqControlRepo(testHqUuid)
+	hqDB2 := srv.(*hqPushSrv).dbm.GetDB(testHqUuid)
+	hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDB2)
+	hqTakeout, _ := hqTakeoutRepo.GetProductPackageTakeout(
+		repository.NewCommonRepo().WhereByUuid(takeoutUuid),
+		repository.NewCommonRepo().WhereByHeadquarterUuid(0),
+		hqTakeoutRepo.WithProductBomTakeouts(),
+		hqTakeoutRepo.WithProductPackageAttributeTakeouts(),
+		hqTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+	)
+	srv.(*hqPushSrv).pushSingleTakeoutToStore(testHqUuid, testStoreUuid, hqTakeout, controlRepo)
+
+	// Get store takeout UUID
+	var storeTakeoutUuid uint64
+	storeDB.Raw("SELECT uuid FROM ttpos_product_package_takeout WHERE product_package_uuid = ? AND takeout_type = ? AND headquarter_uuid = ?",
+		productUuid, takeoutType, testHqUuid).Scan(&storeTakeoutUuid)
+	if storeTakeoutUuid == 0 {
+		t.Fatal("store takeout not created")
+	}
+
+	// Verify BOM
+	var bomCount int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_bom_takeout WHERE product_package_takeout_uuid = ?", storeTakeoutUuid).Scan(&bomCount)
+	if bomCount != 1 {
+		t.Errorf("BOM count: want 1, got %d", bomCount)
+	}
+
+	// Verify Attribute
+	var attrCount int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_package_attribute_takeout WHERE product_package_takeout_uuid = ?", storeTakeoutUuid).Scan(&attrCount)
+	if attrCount != 1 {
+		t.Errorf("Attribute count: want 1, got %d", attrCount)
+	}
+
+	// Verify GroupItem
+	var giCount int64
+	storeDB.Raw("SELECT COUNT(*) FROM ttpos_product_package_group_item_takeout WHERE product_package_takeout_uuid = ?", storeTakeoutUuid).Scan(&giCount)
+	if giCount != 1 {
+		t.Errorf("GroupItem count: want 1, got %d", giCount)
+	}
+}
+
+// ========== Test Plan 1: 分开→统一强制覆盖（负库存+安全库存联合） ==========
+
+// 模拟 forcePushToAllSubStores 的行为：negative_stock 分开→统一时触发 forceOverwrite=true，
+// 验证两个字段的 override 均被清除、值均被覆盖
+func TestHqPush_ForceOverwrite_NegAndSafety_BothOverridden_AllCleared(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	mat1 := uint64(7001)
+	mat2 := uint64(7002)
+
+	// HQ 值
+	seedHqMaterial(t, hqDB, mat1, 1, floatPtr(100.0))
+	seedHqMaterial(t, hqDB, mat2, 0, floatPtr(200.0))
+	// 子店值（不同）+ 两个字段都有 override
+	seedStoreMaterial(t, storeDB, mat1, 0, floatPtr(10.0))
+	seedOverride(t, storeDB, mat1, constant.HqEntityMaterial, constant.HqFieldNegativeStock)
+	seedOverride(t, storeDB, mat1, constant.HqEntityMaterial, constant.HqFieldSafetyStock)
+	seedStoreMaterial(t, storeDB, mat2, 1, floatPtr(20.0))
+	seedOverride(t, storeDB, mat2, constant.HqEntityMaterial, constant.HqFieldNegativeStock)
+	seedOverride(t, storeDB, mat2, constant.HqEntityMaterial, constant.HqFieldSafetyStock)
+
+	// forceOverwrite=true，模拟 negative_stock 从分开→统一
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, true)
+
+	// mat1: 两个字段都被覆盖
+	if got := getStoreMaterialNegStock(storeDB, mat1); got != 1 {
+		t.Errorf("mat1 neg_stock: want 1 (forced), got %d", got)
+	}
+	if got := getStoreMaterialSafetyStock(storeDB, mat1); got == nil || *got != 100.0 {
+		t.Errorf("mat1 safety_stock: want 100.0 (forced), got %v", got)
+	}
+	// mat1: 两个 override 均被清除
+	if hasOverride(storeDB, mat1, constant.HqFieldNegativeStock) {
+		t.Error("mat1 neg_stock override should be cleared")
+	}
+	if hasOverride(storeDB, mat1, constant.HqFieldSafetyStock) {
+		t.Error("mat1 safety_stock override should be cleared")
+	}
+
+	// mat2
+	if got := getStoreMaterialNegStock(storeDB, mat2); got != 0 {
+		t.Errorf("mat2 neg_stock: want 0 (forced), got %d", got)
+	}
+	if got := getStoreMaterialSafetyStock(storeDB, mat2); got == nil || *got != 200.0 {
+		t.Errorf("mat2 safety_stock: want 200.0 (forced), got %v", got)
+	}
+	if hasOverride(storeDB, mat2, constant.HqFieldNegativeStock) {
+		t.Error("mat2 neg_stock override should be cleared")
+	}
+	if hasOverride(storeDB, mat2, constant.HqFieldSafetyStock) {
+		t.Error("mat2 safety_stock override should be cleared")
+	}
+}
+
+// 验证 UpdateControlSetting 检测到分开→统一后触发 forcePushToAllSubStores
+func TestHqPush_UpdateControlSetting_SeparateToUnified_TriggersForcePush(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(7010)
+	seedHqMaterial(t, hqDB, matUuid, 1, floatPtr(50.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, floatPtr(5.0))
+	seedOverride(t, storeDB, matUuid, constant.HqEntityMaterial, constant.HqFieldNegativeStock)
+	seedOverride(t, storeDB, matUuid, constant.HqEntityMaterial, constant.HqFieldSafetyStock)
+
+	// 先设置为分开控制
+	ctrlRepo := repository.NewHqControlSettingRepo(hqDB)
+	ctrlRepo.Upsert(constant.HqFieldNegativeStock, constant.HqControlSeparate)
+	ctrlRepo.InvalidateCache(testHqUuid)
+
+	// 切换到统一控制
+	ctx := createHqTestContext(testHqUuid, true, hqDB)
+	unified := constant.HqControlUnified
+	err := srv.UpdateControlSetting(ctx, req.HqControlSettingUpdateReq{
+		HqControlNegativeStock: &unified,
+	})
+	if err != nil {
+		t.Fatalf("UpdateControlSetting: %v", err)
+	}
+
+	// forcePushToAllSubStores 在 goroutine 中执行，同步调用验证
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, true)
+
+	if got := getStoreMaterialNegStock(storeDB, matUuid); got != 1 {
+		t.Errorf("neg_stock: want 1 (forced), got %d", got)
+	}
+	if got := getStoreMaterialSafetyStock(storeDB, matUuid); got == nil || *got != 50.0 {
+		t.Errorf("safety_stock: want 50.0 (forced), got %v", got)
+	}
+	if hasOverride(storeDB, matUuid, constant.HqFieldNegativeStock) {
+		t.Error("neg_stock override should be cleared after force push")
+	}
+	if hasOverride(storeDB, matUuid, constant.HqFieldSafetyStock) {
+		t.Error("safety_stock override should be cleared after force push")
+	}
+}
+
+// ========== Test Plan 2: 子店修改写入 override 记录 ==========
+
+func TestHqPush_MarkFieldOverridden_AllFieldTypes(t *testing.T) {
+	srv, _, storeDB, _ := setupHqPushTest(t)
+	ctx := createHqTestContext(testStoreUuid, false, storeDB)
+
+	tests := []struct {
+		name       string
+		entityType string
+		entityUuid uint64
+		fieldType  string
+	}{
+		{"dine_shelf", constant.HqEntityProduct, 8001, constant.HqFieldDineShelf},
+		{"takeout_shelf", constant.HqEntityProductTakeout, 8002, constant.HqFieldTakeoutShelf},
+		{"takeout_price", constant.HqEntityProductTakeout, 8003, constant.HqFieldTakeoutPrice},
+		{"safety_stock", constant.HqEntityMaterial, 8004, constant.HqFieldSafetyStock},
+		{"negative_stock", constant.HqEntityMaterial, 8005, constant.HqFieldNegativeStock},
+	}
+
+	hqPushSrv := srv.(*hqPushSrv)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := hqPushSrv.MarkFieldOverridden(ctx, tt.entityType, tt.entityUuid, tt.fieldType)
+			if err != nil {
+				t.Fatalf("MarkFieldOverridden: %v", err)
+			}
+			if !hasOverride(storeDB, tt.entityUuid, tt.fieldType) {
+				t.Errorf("override not created for %s", tt.fieldType)
+			}
+		})
+	}
+}
+
+func TestHqPush_MarkFieldOverridden_Idempotent(t *testing.T) {
+	srv, _, storeDB, _ := setupHqPushTest(t)
+	ctx := createHqTestContext(testStoreUuid, false, storeDB)
+
+	entityUuid := uint64(8010)
+	hqPushSrv := srv.(*hqPushSrv)
+
+	// 连续标记两次不报错
+	err := hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProduct, entityUuid, constant.HqFieldDineShelf)
+	if err != nil {
+		t.Fatalf("first MarkFieldOverridden: %v", err)
+	}
+	err = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProduct, entityUuid, constant.HqFieldDineShelf)
+	if err != nil {
+		t.Fatalf("second MarkFieldOverridden: %v", err)
+	}
+	if !hasOverride(storeDB, entityUuid, constant.HqFieldDineShelf) {
+		t.Error("override should exist after idempotent calls")
+	}
+}
+
+// Roundtrip: 子店标记 override → HQ 推送 → 子店值被保留
+func TestHqPush_Roundtrip_DineShelf_MarkThenPush_Preserved(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(8020)
+	seedHqProduct(t, hqDB, productUuid, 1) // HQ status=1
+	seedStoreProduct(t, storeDB, productUuid, 0) // sub-store status=0
+
+	// 子店标记 dine_shelf override
+	ctx := createHqTestContext(testStoreUuid, false, storeDB)
+	srv.(*hqPushSrv).MarkFieldOverridden(ctx, constant.HqEntityProduct, productUuid, constant.HqFieldDineShelf)
+
+	// 分开控制模式
+	ctrlRepo := repository.NewHqControlSettingRepo(hqDB)
+	ctrlRepo.Upsert(constant.HqFieldDineShelf, constant.HqControlSeparate)
+	ctrlRepo.InvalidateCache(testHqUuid)
+
+	// HQ 推送
+	srv.(*hqPushSrv).pushDineShelfToStore(testHqUuid, testStoreUuid, false)
+
+	// 子店值保留
+	if got := getStoreProductStatus(storeDB, productUuid); got != 0 {
+		t.Errorf("store status: want 0 (preserved), got %d", got)
+	}
+}
+
+func TestHqPush_Roundtrip_SafetyStock_MarkThenPush_Preserved(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	matUuid := uint64(8030)
+	seedHqMaterial(t, hqDB, matUuid, 0, floatPtr(100.0))
+	seedStoreMaterial(t, storeDB, matUuid, 0, floatPtr(25.0)) // 子店不同
+
+	// 子店标记 safety_stock override
+	ctx := createHqTestContext(testStoreUuid, false, storeDB)
+	srv.(*hqPushSrv).MarkFieldOverridden(ctx, constant.HqEntityMaterial, matUuid, constant.HqFieldSafetyStock)
+
+	// 批量推送（非强制）
+	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, false)
+
+	// 子店值保留
+	got := getStoreMaterialSafetyStock(storeDB, matUuid)
+	if got == nil || *got != 25.0 {
+		t.Errorf("safety_stock: want 25.0 (preserved), got %v", got)
+	}
+}
+
+func TestHqPush_Roundtrip_TakeoutShelf_MarkThenPush_Preserved(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(8040)
+	hqTakeoutUuid := uint64(8041)
+	storeTakeoutUuid := uint64(8042)
+	takeoutType := uint(1)
+
+	seedHqTakeoutFull(t, hqDB, hqTakeoutUuid, productUuid, takeoutType, 1, 50.0)
+	seedStoreTakeoutFull(t, storeDB, storeTakeoutUuid, productUuid, takeoutType, 0, 50.0) // status=0
+
+	// 子店标记 takeout_shelf override（使用子店 UUID）
+	ctx := createHqTestContext(testStoreUuid, false, storeDB)
+	srv.(*hqPushSrv).MarkFieldOverridden(ctx, constant.HqEntityProductTakeout, storeTakeoutUuid, constant.HqFieldTakeoutShelf)
+
+	// 推送
+	srv.(*hqPushSrv).pushTakeoutShelfToStore(testHqUuid, testStoreUuid, false)
+
+	// 子店值保留
+	if got := getStoreTakeoutStatus(storeDB, storeTakeoutUuid); got != 0 {
+		t.Errorf("takeout status: want 0 (preserved), got %d", got)
+	}
+}
+
+func TestHqPush_Roundtrip_TakeoutPrice_MarkThenPush_Preserved(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(8050)
+	hqTakeoutUuid := uint64(8051)
+	storeTakeoutUuid := uint64(8052)
+	takeoutType := uint(1)
+
+	seedHqTakeoutFull(t, hqDB, hqTakeoutUuid, productUuid, takeoutType, 1, 99.0)
+	seedStoreTakeoutFull(t, storeDB, storeTakeoutUuid, productUuid, takeoutType, 1, 50.0) // price=50
+
+	// 子店标记 takeout_price override
+	ctx := createHqTestContext(testStoreUuid, false, storeDB)
+	srv.(*hqPushSrv).MarkFieldOverridden(ctx, constant.HqEntityProductTakeout, storeTakeoutUuid, constant.HqFieldTakeoutPrice)
+
+	// 推送
+	srv.(*hqPushSrv).pushTakeoutPriceToStore(testHqUuid, testStoreUuid, false)
+
+	// 子店价格保留
+	if got := getStoreTakeoutPrice(storeDB, storeTakeoutUuid); got != 50.0 {
+		t.Errorf("takeout price: want 50.0 (preserved), got %f", got)
+	}
+}
+
+// ========== Test Plan 3: 推送时保留 override 字段（补充外卖批量推送场景） ==========
+
+func TestHqPush_TakeoutShelf_Separate_Overridden_Skip(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(8060)
+	hqTakeoutUuid := uint64(8061)
+	storeTakeoutUuid := uint64(8062)
+	takeoutType := uint(1)
+
+	// HQ status=1, 子店 status=0
+	seedHqTakeoutFull(t, hqDB, hqTakeoutUuid, productUuid, takeoutType, 1, 50.0)
+	seedStoreTakeoutFull(t, storeDB, storeTakeoutUuid, productUuid, takeoutType, 0, 50.0)
+	seedOverride(t, storeDB, storeTakeoutUuid, constant.HqEntityProductTakeout, constant.HqFieldTakeoutShelf)
+
+	srv.(*hqPushSrv).pushTakeoutShelfToStore(testHqUuid, testStoreUuid, false)
+
+	// 子店值保留
+	if got := getStoreTakeoutStatus(storeDB, storeTakeoutUuid); got != 0 {
+		t.Errorf("takeout status: want 0 (overridden, preserved), got %d", got)
+	}
+	if !hasOverride(storeDB, storeTakeoutUuid, constant.HqFieldTakeoutShelf) {
+		t.Error("override should be preserved")
+	}
+}
+
+func TestHqPush_TakeoutShelf_Separate_NoOverride_Syncs(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(8070)
+	hqTakeoutUuid := uint64(8071)
+	storeTakeoutUuid := uint64(8072)
+	takeoutType := uint(1)
+
+	seedHqTakeoutFull(t, hqDB, hqTakeoutUuid, productUuid, takeoutType, 1, 50.0)
+	seedStoreTakeoutFull(t, storeDB, storeTakeoutUuid, productUuid, takeoutType, 0, 50.0)
+	// 无 override
+
+	srv.(*hqPushSrv).pushTakeoutShelfToStore(testHqUuid, testStoreUuid, false)
+
+	// 无 override → 同步 HQ 值
+	if got := getStoreTakeoutStatus(storeDB, storeTakeoutUuid); got != 1 {
+		t.Errorf("takeout status: want 1 (synced), got %d", got)
+	}
+}
+
+func TestHqPush_TakeoutPrice_Separate_Overridden_Skip(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(8080)
+	hqTakeoutUuid := uint64(8081)
+	storeTakeoutUuid := uint64(8082)
+	bomUuid := uint64(8083)
+	takeoutType := uint(1)
+
+	// HQ price=99.0, 子店 price=50.0
+	seedHqTakeoutFull(t, hqDB, hqTakeoutUuid, productUuid, takeoutType, 1, 99.0)
+	seedStoreTakeoutFull(t, storeDB, storeTakeoutUuid, productUuid, takeoutType, 1, 50.0)
+	// BOM 价格也不同
+	seedHqBomTakeout(t, hqDB, bomUuid, hqTakeoutUuid, 80.0)
+	seedStoreBomTakeout(t, storeDB, bomUuid, storeTakeoutUuid, 30.0)
+	seedOverride(t, storeDB, storeTakeoutUuid, constant.HqEntityProductTakeout, constant.HqFieldTakeoutPrice)
+
+	srv.(*hqPushSrv).pushTakeoutPriceToStore(testHqUuid, testStoreUuid, false)
+
+	// 主表价格和 BOM 价格均保留
+	if got := getStoreTakeoutPrice(storeDB, storeTakeoutUuid); got != 50.0 {
+		t.Errorf("takeout price: want 50.0 (preserved), got %f", got)
+	}
+	var bomPrice float64
+	storeDB.Raw("SELECT price FROM ttpos_product_bom_takeout WHERE uuid = ?", bomUuid).Scan(&bomPrice)
+	if bomPrice != 30.0 {
+		t.Errorf("bom price: want 30.0 (preserved), got %f", bomPrice)
+	}
+	if !hasOverride(storeDB, storeTakeoutUuid, constant.HqFieldTakeoutPrice) {
+		t.Error("override should be preserved")
+	}
+}
+
+func TestHqPush_TakeoutPrice_Separate_NoOverride_Syncs(t *testing.T) {
+	srv, hqDB, storeDB, _ := setupHqPushTest(t)
+
+	productUuid := uint64(8090)
+	hqTakeoutUuid := uint64(8091)
+	storeTakeoutUuid := uint64(8092)
+	bomUuid := uint64(8093)
+	takeoutType := uint(1)
+
+	seedHqTakeoutFull(t, hqDB, hqTakeoutUuid, productUuid, takeoutType, 1, 99.0)
+	seedStoreTakeoutFull(t, storeDB, storeTakeoutUuid, productUuid, takeoutType, 1, 50.0)
+	seedHqBomTakeout(t, hqDB, bomUuid, hqTakeoutUuid, 80.0)
+	seedStoreBomTakeout(t, storeDB, bomUuid, storeTakeoutUuid, 30.0)
+	// 无 override
+
+	srv.(*hqPushSrv).pushTakeoutPriceToStore(testHqUuid, testStoreUuid, false)
+
+	// 无 override → 同步 HQ 值
+	if got := getStoreTakeoutPrice(storeDB, storeTakeoutUuid); got != 99.0 {
+		t.Errorf("takeout price: want 99.0 (synced), got %f", got)
+	}
+	var bomPrice float64
+	storeDB.Raw("SELECT price FROM ttpos_product_bom_takeout WHERE uuid = ?", bomUuid).Scan(&bomPrice)
+	if bomPrice != 80.0 {
+		t.Errorf("bom price: want 80.0 (synced), got %f", bomPrice)
 	}
 }

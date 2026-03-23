@@ -72,6 +72,13 @@ export const asyncRoutes: RouteRecordRaw[] = [
         },
       },
       {
+        path: '/erp-dlq',
+        component: () => import('@/pages/erp-dlq/index.vue'),
+        meta: {
+          title: $t('ERP 死信管理'),
+        },
+      },
+      {
         path: '/user',
         redirect: { path: '/user/admin' }, // 重定向
         meta: {

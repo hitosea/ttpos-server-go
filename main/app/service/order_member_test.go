@@ -4,6 +4,7 @@ package service
 
 import (
 	stdcontext "context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -204,6 +205,25 @@ func makeSaleOrderProduct(uuid uint64, flavorBomUuid uint64, productType uint8, 
 	}
 }
 
+// makePackageSaleOrderProduct 构建一个用于测试的套餐 SaleOrderProduct
+// packageUuid: 套餐UUID, subProductParamsJSON: PackageSubProductParams 的 JSON 字符串
+func makePackageSaleOrderProduct(uuid uint64, flavorBomUuid uint64, packageUuid uint64, subProductParamsJSON string, deleteTime int64) *model.SaleOrderProduct {
+	boms := make([]*model.SaleOrderProductBom, 0)
+	boms = append(boms, &model.SaleOrderProductBom{
+		BaseModel:      model.BaseModel{Uuid: flavorBomUuid},
+		IsFlavorBom:    constant.ProductBomTypeFlavor,
+		ProductBomUuid: flavorBomUuid,
+	})
+
+	return &model.SaleOrderProduct{
+		BaseModel:              model.BaseModel{Uuid: uuid, DeleteTime: deleteTime},
+		ProductType:            constant.ProductTypePackage,
+		ProductPackageUuid:     packageUuid,
+		PackageSubProductParams: subProductParamsJSON,
+		SaleOrderProductBoms:   boms,
+	}
+}
+
 // makeSaleBill 构建一个用于测试的 SaleBill，包含一个 SaleOrder 和指定的 SaleOrderProducts
 func makeSaleBill(products []*model.SaleOrderProduct) *model.SaleBill {
 	return &model.SaleBill{
@@ -222,9 +242,9 @@ func Test_diffDineInProducts_AllNew(t *testing.T) {
 	srv := newTestOrderSrv(dbm)
 
 	// 提交 2 个新商品
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0},
-		{FlavorUuid: 1002, Num: 2, ProductType: 0},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0},
+		{FlavorProductBomUuid: 1002, Num: 2, ProductType: 0},
 	}
 	// 空订单（无已有商品）
 	saleBill := makeSaleBill(nil)
@@ -255,7 +275,7 @@ func Test_diffDineInProducts_AllDelete(t *testing.T) {
 	srv := newTestOrderSrv(dbm)
 
 	// 空提交
-	products := []req.OrderProductAddReq{}
+	products := []req.ProductParams{}
 	// 已有 2 个商品
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
 		makeSaleOrderProduct(1, 1001, constant.ProductTypeProduct, 0, nil, nil),
@@ -287,10 +307,10 @@ func Test_diffDineInProducts_AllUpdate(t *testing.T) {
 	ctx := createDiffDineInTestContext(t, dbm)
 	srv := newTestOrderSrv(dbm)
 
-	// 提交和已有商品 key 一致（同 flavorUuid）
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 3, ProductType: 0},
-		{FlavorUuid: 1002, Num: 5, ProductType: 0},
+	// 提交和已有商品 key 一致（同 FlavorProductBomUuid）
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 3, ProductType: 0},
+		{FlavorProductBomUuid: 1002, Num: 5, ProductType: 0},
 	}
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
 		makeSaleOrderProduct(1, 1001, constant.ProductTypeProduct, 0, nil, nil),
@@ -317,10 +337,10 @@ func Test_diffDineInProducts_AllUpdate(t *testing.T) {
 
 	// 验证 updateProducts 的数量是新值
 	for _, p := range updateProducts {
-		if p.FlavorUuid == 1001 && p.Num != 3 {
+		if p.FlavorProductBomUuid == 1001 && p.Num != 3 {
 			t.Errorf("expected updated num=3 for flavor 1001, got %.0f", p.Num)
 		}
-		if p.FlavorUuid == 1002 && p.Num != 5 {
+		if p.FlavorProductBomUuid == 1002 && p.Num != 5 {
 			t.Errorf("expected updated num=5 for flavor 1002, got %.0f", p.Num)
 		}
 	}
@@ -333,9 +353,9 @@ func Test_diffDineInProducts_Mixed(t *testing.T) {
 	srv := newTestOrderSrv(dbm)
 
 	// 提交: flavor 1001（修改）, 1003（新增）
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 5, ProductType: 0},
-		{FlavorUuid: 1003, Num: 1, ProductType: 0},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 5, ProductType: 0},
+		{FlavorProductBomUuid: 1003, Num: 1, ProductType: 0},
 	}
 	// 已有: flavor 1001（修改）, 1002（删除）
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
@@ -363,8 +383,8 @@ func Test_diffDineInProducts_Mixed(t *testing.T) {
 
 	// 验证新增的是 flavor 1003
 	for _, p := range addProducts {
-		if p.FlavorUuid != 1003 {
-			t.Errorf("expected add product flavor 1003, got %d", p.FlavorUuid)
+		if p.FlavorProductBomUuid != 1003 {
+			t.Errorf("expected add product flavor 1003, got %d", p.FlavorProductBomUuid)
 		}
 	}
 
@@ -388,8 +408,8 @@ func Test_diffDineInProducts_SkipDeleted(t *testing.T) {
 	ctx := createDiffDineInTestContext(t, dbm)
 	srv := newTestOrderSrv(dbm)
 
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0},
 	}
 	// 已有 1001 已软删除，1002 正常
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
@@ -421,8 +441,8 @@ func Test_diffDineInProducts_SkipPackageSubProduct(t *testing.T) {
 	ctx := createDiffDineInTestContext(t, dbm)
 	srv := newTestOrderSrv(dbm)
 
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0},
 	}
 	// 已有：1001 普通商品 + 1002 套餐子商品（product_type=2）
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
@@ -447,18 +467,18 @@ func Test_diffDineInProducts_SkipPackageSubProduct(t *testing.T) {
 	}
 }
 
-// Test_diffDineInProducts_PackageProduct 套餐商品的 key 带 pkg: 前缀
+// Test_diffDineInProducts_PackageProduct 套餐商品匹配：ProductPackageUuid + 子商品签名一致时应为更新
 func Test_diffDineInProducts_PackageProduct(t *testing.T) {
 	dbm, db := setupDiffDineInTestDB(t)
 	ctx := createDiffDineInTestContext(t, dbm)
 	srv := newTestOrderSrv(dbm)
 
 	// 提交一个套餐商品
-	products := []req.OrderProductAddReq{
+	products := []req.ProductParams{
 		{
-			FlavorUuid:  2001,
-			Num:         1,
-			ProductType: constant.ProductTypePackage, // 套餐
+			ProductPackageUuid: 2001,
+			Num:                1,
+			ProductType:        constant.ProductTypePackage,
 			Products: []req.ProductRequest{
 				{
 					ProductPackageGroupUuid: 3001,
@@ -469,10 +489,11 @@ func Test_diffDineInProducts_PackageProduct(t *testing.T) {
 			},
 		},
 	}
-	// 已有一个相同配置的套餐商品
-	// 套餐主商品的 ProductKey() 返回 "flavorUuid--" 格式，然后被加上 "pkg:" 前缀
+	// 已有一个相同配置的套餐商品（ProductPackageUuid 一致，子商品签名一致）
+	// 子商品签名 = "3001:4001:1.00:1.00"
+	subProductParams := `[{"flavor_uuid":4001,"product_package_group_uuid":3001,"num":1,"unit_num":1}]`
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
-		makeSaleOrderProduct(1, 2001, constant.ProductTypePackage, 0, nil, nil),
+		makePackageSaleOrderProduct(1, 2001, 2001, subProductParams, 0),
 	})
 
 	addProducts, deleteProducts, updateProducts, _, err := srv.diffDineInProducts(ctx, db, products, saleBill)
@@ -480,18 +501,15 @@ func Test_diffDineInProducts_PackageProduct(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// 提交的套餐 key = "pkg:2001---3001:4001:1.00:1.00"
-	// 已有的套餐 key = "pkg:2001--"
-	// key 不一致，所以提交的套餐为新增，已有的套餐为删除
-	// （这是因为已有的套餐没有子商品签名，而提交的有子商品签名）
-	if len(addProducts) != 1 {
-		t.Errorf("expected 1 addProducts, got %d", len(addProducts))
+	// key 一致，应为修改
+	if len(addProducts) != 0 {
+		t.Errorf("expected 0 addProducts, got %d", len(addProducts))
 	}
-	if len(deleteProducts) != 1 {
-		t.Errorf("expected 1 deleteProducts, got %d", len(deleteProducts))
+	if len(deleteProducts) != 0 {
+		t.Errorf("expected 0 deleteProducts, got %d", len(deleteProducts))
 	}
-	if len(updateProducts) != 0 {
-		t.Errorf("expected 0 updateProducts, got %d", len(updateProducts))
+	if len(updateProducts) != 1 {
+		t.Errorf("expected 1 updateProducts, got %d", len(updateProducts))
 	}
 }
 
@@ -501,7 +519,7 @@ func Test_diffDineInProducts_EmptyBoth(t *testing.T) {
 	ctx := createDiffDineInTestContext(t, dbm)
 	srv := newTestOrderSrv(dbm)
 
-	products := []req.OrderProductAddReq{}
+	products := []req.ProductParams{}
 	saleBill := makeSaleBill(nil)
 
 	addProducts, deleteProducts, updateProducts, updateOlderProducts, err := srv.diffDineInProducts(ctx, db, products, saleBill)
@@ -529,8 +547,8 @@ func Test_diffDineInProducts_EmptySaleOrders(t *testing.T) {
 	ctx := createDiffDineInTestContext(t, dbm)
 	srv := newTestOrderSrv(dbm)
 
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0},
 	}
 	saleBill := &model.SaleBill{} // 无 SaleOrders
 
@@ -558,8 +576,8 @@ func Test_diffDineInProducts_WithSauce(t *testing.T) {
 	srv := newTestOrderSrv(dbm)
 
 	// 提交：flavor 1001 + sauce [5001, 5002]
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0, SauceUuidList: []uint64{5001, 5002}},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0, SauceProductBomUuidList: []uint64{5001, 5002}},
 	}
 	// 已有：flavor 1001 + sauce [5001, 5002]（相同小料）
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
@@ -590,8 +608,8 @@ func Test_diffDineInProducts_DifferentSauce(t *testing.T) {
 	srv := newTestOrderSrv(dbm)
 
 	// 提交：flavor 1001 + sauce [5001]
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0, SauceUuidList: []uint64{5001}},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0, SauceProductBomUuidList: []uint64{5001}},
 	}
 	// 已有：flavor 1001 + sauce [5002]（不同小料）
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
@@ -622,8 +640,6 @@ func Test_diffDineInProducts_WithAttribute(t *testing.T) {
 	srv := newTestOrderSrv(dbm)
 
 	// 在数据库中插入 product_package_attribute 记录
-	// attribute_uuid_list 中的 UUID 是 product_package_attribute 的 UUID
-	// 实际的属性 UUID 通过查询获取
 	err := db.Exec(`INSERT INTO ttpos_product_package_attribute (uuid, attribute_uuid, delete_time) VALUES (6001, 7001, 0)`).Error
 	if err != nil {
 		t.Fatalf("failed to insert product_package_attribute: %v", err)
@@ -635,8 +651,8 @@ func Test_diffDineInProducts_WithAttribute(t *testing.T) {
 
 	// 提交：flavor 1001 + attribute [6001, 6002]（product_package_attribute UUID）
 	// 查询后解析为 attribute_uuid [7001, 7002]
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0, AttributeUuidList: []uint64{6001, 6002}},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0, ProductPackageAttributeUuidList: []uint64{6001, 6002}},
 	}
 	// 已有：flavor 1001 + product_attribute_uuid [7001, 7002]（与解析后一致）
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
@@ -673,8 +689,8 @@ func Test_diffDineInProducts_DifferentAttribute(t *testing.T) {
 	}
 
 	// 提交：flavor 1001 + attribute [6001] → 解析为 [7001]
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0, AttributeUuidList: []uint64{6001}},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0, ProductPackageAttributeUuidList: []uint64{6001}},
 	}
 	// 已有：flavor 1001 + attribute [7002]（不同属性）
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
@@ -705,9 +721,9 @@ func Test_diffDineInProducts_DuplicateSubmit(t *testing.T) {
 	srv := newTestOrderSrv(dbm)
 
 	// 提交 2 个相同 flavor 的商品，num 不同
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0},
-		{FlavorUuid: 1001, Num: 3, ProductType: 0}, // key 相同，会覆盖上面
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0},
+		{FlavorProductBomUuid: 1001, Num: 3, ProductType: 0}, // key 相同，会覆盖上面
 	}
 	saleBill := makeSaleBill(nil)
 
@@ -736,8 +752,8 @@ func Test_diffDineInProducts_SauceOrderIndependent(t *testing.T) {
 	srv := newTestOrderSrv(dbm)
 
 	// 提交：sauce 顺序 [5002, 5001]（逆序）
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0, SauceUuidList: []uint64{5002, 5001}},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0, SauceProductBomUuidList: []uint64{5002, 5001}},
 	}
 	// 已有：sauce 顺序 [5001, 5002]（正序）
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
@@ -768,12 +784,12 @@ func Test_diffDineInProducts_MixedNormalAndPackage(t *testing.T) {
 	srv := newTestOrderSrv(dbm)
 
 	// 提交：1 个普通商品 + 1 个套餐商品
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 2, ProductType: 0},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 2, ProductType: 0},
 		{
-			FlavorUuid:  2001,
-			Num:         1,
-			ProductType: constant.ProductTypePackage,
+			ProductPackageUuid: 2001,
+			Num:                1,
+			ProductType:        constant.ProductTypePackage,
 			Products: []req.ProductRequest{
 				{
 					ProductPackageGroupUuid: 3001,
@@ -814,8 +830,8 @@ func Test_diffDineInProducts_DeletedBomSkipped(t *testing.T) {
 	srv := newTestOrderSrv(dbm)
 
 	// 提交：flavor 1001 + sauce [5001]
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0, SauceUuidList: []uint64{5001}},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0, SauceProductBomUuidList: []uint64{5001}},
 	}
 
 	// 已有：flavor 1001 + sauce [5001]（正常）+ sauce [5002]（已删除）
@@ -866,8 +882,8 @@ func Test_diffDineInProducts_UpdateOlderProductsMatch(t *testing.T) {
 	ctx := createDiffDineInTestContext(t, dbm)
 	srv := newTestOrderSrv(dbm)
 
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 10, ProductType: 0},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 10, ProductType: 0},
 	}
 	olderProduct := makeSaleOrderProduct(99, 1001, constant.ProductTypeProduct, 0, nil, nil)
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{olderProduct})
@@ -900,26 +916,33 @@ func Test_diffDineInProducts_UpdateOlderProductsMatch(t *testing.T) {
 	}
 }
 
-// Test_diffDineInProducts_PackageAlwaysDiffDueToKeyFormat 套餐商品 key 格式差异导致永远不匹配
-// 提交侧 key = "pkg:flavorUuid-attrs-sauces-subSign"，已有侧 key = "pkg:flavorUuid-attrs-sauces"
-// 因为已有侧 ProductKey() 不含子商品签名，套餐总是走删除+新增路径
-func Test_diffDineInProducts_PackageAlwaysDiffDueToKeyFormat(t *testing.T) {
+// Test_diffDineInProducts_PackageDiffSubProducts 套餐商品子商品不同时，应为新增+删除
+func Test_diffDineInProducts_PackageDiffSubProducts(t *testing.T) {
 	dbm, db := setupDiffDineInTestDB(t)
 	ctx := createDiffDineInTestContext(t, dbm)
 	srv := newTestOrderSrv(dbm)
 
-	// 提交一个空子商品的套餐
-	products := []req.OrderProductAddReq{
+	// 提交一个套餐商品（子商品: group=3001, flavor=4001）
+	products := []req.ProductParams{
 		{
-			FlavorUuid:  2001,
-			Num:         1,
-			ProductType: constant.ProductTypePackage,
-			Products:    []req.ProductRequest{},
+			ProductPackageUuid: 2001,
+			Num:                1,
+			ProductType:        constant.ProductTypePackage,
+			Products: []req.ProductRequest{
+				{
+					ProductPackageGroupUuid: 3001,
+					EditProductReq:          req.EditProductReq{FlavorUuid: 4001},
+					Num:                     1,
+					UnitNum:                 1,
+				},
+			},
 		},
 	}
 
+	// 已有套餐：相同 PackageUuid 但不同子商品（group=3001, flavor=4002）
+	subProductParams := `[{"flavor_uuid":4002,"product_package_group_uuid":3001,"num":1,"unit_num":1}]`
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
-		makeSaleOrderProduct(1, 2001, constant.ProductTypePackage, 0, nil, nil),
+		makePackageSaleOrderProduct(1, 2001, 2001, subProductParams, 0),
 	})
 
 	addProducts, deleteProducts, updateProducts, _, err := srv.diffDineInProducts(ctx, db, products, saleBill)
@@ -927,7 +950,7 @@ func Test_diffDineInProducts_PackageAlwaysDiffDueToKeyFormat(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// 提交 key = "pkg:2001---" vs 已有 key = "pkg:2001--"，不匹配
+	// 子商品签名不同，key 不匹配 → 1 新增 + 1 删除
 	if len(addProducts) != 1 {
 		t.Errorf("expected 1 addProducts, got %d", len(addProducts))
 	}
@@ -936,6 +959,44 @@ func Test_diffDineInProducts_PackageAlwaysDiffDueToKeyFormat(t *testing.T) {
 	}
 	if len(updateProducts) != 0 {
 		t.Errorf("expected 0 updateProducts, got %d", len(updateProducts))
+	}
+}
+
+// Test_diffDineInProducts_PackageEmptySubProducts 空子商品的套餐匹配
+func Test_diffDineInProducts_PackageEmptySubProducts(t *testing.T) {
+	dbm, db := setupDiffDineInTestDB(t)
+	ctx := createDiffDineInTestContext(t, dbm)
+	srv := newTestOrderSrv(dbm)
+
+	// 提交一个空子商品的套餐
+	products := []req.ProductParams{
+		{
+			ProductPackageUuid: 2001,
+			Num:                1,
+			ProductType:        constant.ProductTypePackage,
+			Products:           []req.ProductRequest{},
+		},
+	}
+
+	// 已有套餐也是空子商品
+	saleBill := makeSaleBill([]*model.SaleOrderProduct{
+		makePackageSaleOrderProduct(1, 2001, 2001, "[]", 0),
+	})
+
+	addProducts, deleteProducts, updateProducts, _, err := srv.diffDineInProducts(ctx, db, products, saleBill)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// 都是空子商品，key 一致 "pkg:2001-"，应为修改
+	if len(addProducts) != 0 {
+		t.Errorf("expected 0 addProducts, got %d", len(addProducts))
+	}
+	if len(deleteProducts) != 0 {
+		t.Errorf("expected 0 deleteProducts, got %d", len(deleteProducts))
+	}
+	if len(updateProducts) != 1 {
+		t.Errorf("expected 1 updateProducts, got %d", len(updateProducts))
 	}
 }
 
@@ -950,8 +1011,8 @@ func Test_diffDineInProducts_AttributeOrderIndependent(t *testing.T) {
 	db.Exec(`INSERT INTO ttpos_product_package_attribute (uuid, attribute_uuid, delete_time) VALUES (16002, 17002, 0)`)
 
 	// 提交：attribute 逆序 [16002, 16001] → 解析为 [17002, 17001]，排序后 [17001, 17002]
-	products := []req.OrderProductAddReq{
-		{FlavorUuid: 1001, Num: 1, ProductType: 0, AttributeUuidList: []uint64{16002, 16001}},
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0, ProductPackageAttributeUuidList: []uint64{16002, 16001}},
 	}
 	// 已有：attribute 正序 [17001, 17002]
 	saleBill := makeSaleBill([]*model.SaleOrderProduct{
@@ -974,3 +1035,194 @@ func Test_diffDineInProducts_AttributeOrderIndependent(t *testing.T) {
 		t.Errorf("expected 1 updateProducts, got %d", len(updateProducts))
 	}
 }
+
+// Test_diffDineInProducts_NormalToPackageToNormal 三步场景：普通→套餐→普通
+// 步骤1: 空订单 + 提交普通商品 → 全部新增
+// 步骤2: 订单中有普通商品 + 提交套餐商品 → 普通删除、套餐新增
+// 步骤3: 订单中有套餐商品(+子商品) + 提交普通商品 → 套餐删除、普通新增
+func Test_diffDineInProducts_NormalToPackageToNormal(t *testing.T) {
+	dbm, db := setupDiffDineInTestDB(t)
+	ctx := createDiffDineInTestContext(t, dbm)
+	srv := newTestOrderSrv(dbm)
+
+	// ===== 步骤1: 空订单 + 提交普通商品 =====
+	step1Products := []req.ProductParams{
+		{FlavorProductBomUuid: 1001, Num: 1, ProductType: 0},
+		{FlavorProductBomUuid: 1002, Num: 2, ProductType: 0},
+	}
+	step1SaleBill := makeSaleBill(nil)
+
+	add1, del1, upd1, _, err := srv.diffDineInProducts(ctx, db, step1Products, step1SaleBill)
+	if err != nil {
+		t.Fatalf("step1: unexpected error: %v", err)
+	}
+	if len(add1) != 2 {
+		t.Errorf("step1: expected 2 addProducts, got %d", len(add1))
+	}
+	if len(del1) != 0 {
+		t.Errorf("step1: expected 0 deleteProducts, got %d", len(del1))
+	}
+	if len(upd1) != 0 {
+		t.Errorf("step1: expected 0 updateProducts, got %d", len(upd1))
+	}
+
+	// ===== 步骤2: 订单中有普通商品 + 提交套餐商品 =====
+	// 模拟步骤1后的数据库状态：订单中有 2 个普通商品
+	step2SaleBill := makeSaleBill([]*model.SaleOrderProduct{
+		makeSaleOrderProduct(1, 1001, constant.ProductTypeProduct, 0, nil, nil),
+		makeSaleOrderProduct(2, 1002, constant.ProductTypeProduct, 0, nil, nil),
+	})
+	step2Products := []req.ProductParams{
+		{
+			ProductPackageUuid: 2001,
+			Num:                1,
+			ProductType:        constant.ProductTypePackage,
+			Products: []req.ProductRequest{
+				{
+					ProductPackageGroupUuid: 3001,
+					EditProductReq:          req.EditProductReq{FlavorUuid: 4001},
+					Num:                     1,
+					UnitNum:                 1,
+				},
+			},
+		},
+	}
+
+	add2, del2, upd2, _, err := srv.diffDineInProducts(ctx, db, step2Products, step2SaleBill)
+	if err != nil {
+		t.Fatalf("step2: unexpected error: %v", err)
+	}
+	if len(add2) != 1 {
+		t.Errorf("step2: expected 1 addProducts (package), got %d", len(add2))
+	}
+	if len(del2) != 2 {
+		t.Errorf("step2: expected 2 deleteProducts (normal products), got %d", len(del2))
+	}
+	if len(upd2) != 0 {
+		t.Errorf("step2: expected 0 updateProducts, got %d", len(upd2))
+	}
+
+	// ===== 步骤3: 订单中有套餐商品 + 提交普通商品 =====
+	// 模拟步骤2后的数据库状态：普通商品已删除，套餐商品存在（含子商品）
+	subProductParamsJSON := `[{"flavor_uuid":4001,"attribute_uuid":null,"product_package_group_uuid":3001,"num":1,"unit_num":1}]`
+	step3SaleBill := makeSaleBill([]*model.SaleOrderProduct{
+		// 普通商品已软删除（delete_time != 0），GetSaleBillAllInfo 会过滤掉
+		// 但这里也测试 diffDineInProducts 内部的 delete_time 过滤
+		makeSaleOrderProduct(1, 1001, constant.ProductTypeProduct, 1000, nil, nil),
+		makeSaleOrderProduct(2, 1002, constant.ProductTypeProduct, 1000, nil, nil),
+		// 套餐主商品
+		makePackageSaleOrderProduct(3, 9001, 2001, subProductParamsJSON, 0),
+		// 套餐子商品（应被跳过）
+		func() *model.SaleOrderProduct {
+			p := makeSaleOrderProduct(4, 4001, constant.ProductTypePackageSubProduct, 0, nil, nil)
+			p.PackageUuid = 3 // 关联套餐主商品 UUID=3
+			return p
+		}(),
+	})
+
+	step3Products := []req.ProductParams{
+		{FlavorProductBomUuid: 5001, Num: 1, ProductType: 0},
+		{FlavorProductBomUuid: 5002, Num: 3, ProductType: 0},
+	}
+
+	add3, del3, upd3, _, err := srv.diffDineInProducts(ctx, db, step3Products, step3SaleBill)
+	if err != nil {
+		t.Fatalf("step3: unexpected error: %v", err)
+	}
+	// 普通商品 5001、5002 应为新增
+	if len(add3) != 2 {
+		t.Errorf("step3: expected 2 addProducts (normal products), got %d", len(add3))
+	}
+	// 套餐商品应为删除（已删除的普通商品不算）
+	if len(del3) != 1 {
+		t.Errorf("step3: expected 1 deleteProducts (package), got %d", len(del3))
+	}
+	if len(upd3) != 0 {
+		t.Errorf("step3: expected 0 updateProducts, got %d", len(upd3))
+	}
+}
+
+// Test_diffDineInProducts_ReplaceNormalWithPackage 普通商品替换为套餐商品
+func Test_diffDineInProducts_ReplaceNormalWithPackage(t *testing.T) {
+	dbm, db := setupDiffDineInTestDB(t)
+	ctx := createDiffDineInTestContext(t, dbm)
+	srv := newTestOrderSrv(dbm)
+
+	// 已有：2 个普通商品
+	saleBill := makeSaleBill([]*model.SaleOrderProduct{
+		makeSaleOrderProduct(1, 1001, constant.ProductTypeProduct, 0, nil, nil),
+		makeSaleOrderProduct(2, 1002, constant.ProductTypeProduct, 0, nil, nil),
+	})
+
+	// 提交：1 个套餐商品（完全替换所有普通商品）
+	products := []req.ProductParams{
+		{
+			ProductPackageUuid: 2001,
+			Num:                2,
+			ProductType:        constant.ProductTypePackage,
+			Products: []req.ProductRequest{
+				{
+					ProductPackageGroupUuid: 3001,
+					EditProductReq:          req.EditProductReq{FlavorUuid: 4001},
+					Num:                     1,
+					UnitNum:                 1,
+				},
+			},
+		},
+	}
+
+	add, del, upd, _, err := srv.diffDineInProducts(ctx, db, products, saleBill)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(add) != 1 {
+		t.Errorf("expected 1 addProducts (package), got %d", len(add))
+	}
+	if len(del) != 2 {
+		t.Errorf("expected 2 deleteProducts (normal products), got %d", len(del))
+	}
+	if len(upd) != 0 {
+		t.Errorf("expected 0 updateProducts, got %d", len(upd))
+	}
+}
+
+// Test_diffDineInProducts_ReplacePackageWithNormal 套餐商品替换为普通商品
+func Test_diffDineInProducts_ReplacePackageWithNormal(t *testing.T) {
+	dbm, db := setupDiffDineInTestDB(t)
+	ctx := createDiffDineInTestContext(t, dbm)
+	srv := newTestOrderSrv(dbm)
+
+	// 已有：1 个套餐商品 + 1 个套餐子商品
+	subProductParamsJSON := `[{"flavor_uuid":4001,"attribute_uuid":null,"product_package_group_uuid":3001,"num":1,"unit_num":1}]`
+	saleBill := makeSaleBill([]*model.SaleOrderProduct{
+		makePackageSaleOrderProduct(3, 9001, 2001, subProductParamsJSON, 0),
+		func() *model.SaleOrderProduct {
+			p := makeSaleOrderProduct(4, 4001, constant.ProductTypePackageSubProduct, 0, nil, nil)
+			p.PackageUuid = 3
+			return p
+		}(),
+	})
+
+	// 提交：2 个普通商品（完全替换套餐商品）
+	products := []req.ProductParams{
+		{FlavorProductBomUuid: 5001, Num: 1, ProductType: 0},
+		{FlavorProductBomUuid: 5002, Num: 3, ProductType: 0},
+	}
+
+	add, del, upd, _, err := srv.diffDineInProducts(ctx, db, products, saleBill)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(add) != 2 {
+		t.Errorf("expected 2 addProducts (normal products), got %d", len(add))
+	}
+	if len(del) != 1 {
+		t.Errorf("expected 1 deleteProducts (package), got %d", len(del))
+	}
+	if len(upd) != 0 {
+		t.Errorf("expected 0 updateProducts, got %d", len(upd))
+	}
+}
+
+// suppress unused import warning
+var _ = fmt.Sprintf

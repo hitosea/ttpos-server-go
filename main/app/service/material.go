@@ -261,12 +261,19 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 			}
 			warehouseRepo := repository.NewWarehouseRepo(hqDb)
-			erpCodeToUuid := make(map[string]uint64)
-			for erpCode := range warehouseErpCodes {
-				wh, whErr := warehouseRepo.GetByErpCode(erpCode)
-				if whErr == nil && wh != nil {
-					erpCodeToUuid[erpCode] = wh.Uuid
-				}
+			codes := make([]string, 0, len(warehouseErpCodes))
+			for code := range warehouseErpCodes {
+				codes = append(codes, code)
+			}
+			whMap, whErr := warehouseRepo.GetByErpCodes(codes)
+			if whErr != nil {
+				logger.Logger.Warn("批量查询仓库ERP编码失败",
+					zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+					zap.Error(whErr))
+			}
+			erpCodeToUuid := make(map[string]uint64, len(whMap))
+			for code, wh := range whMap {
+				erpCodeToUuid[code] = wh.Uuid
 			}
 			materialWarehouseMap := make(map[uint64]uint64)
 			for itemCode, whErpCode := range itemWarehouses {
@@ -335,8 +342,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		}
 	}
 
-	// 品牌采购：查询上次完成的品牌采购基准单位数量
-	lastPurchaseBaseQtyMap := make(map[uint64]float64)
+	// 品牌采购：查询上次完成的品牌采购基准单位数量和采购单位名称
+	lastPurchaseInfoMap := make(map[uint64]repository.LastBrandPurchaseInfo)
 	if req.PurchaseType == 2 && len(materials) > 0 {
 		matUuids := make([]uint64, 0, len(materials))
 		for _, material := range materials {
@@ -344,7 +351,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		}
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(s.dbm.GetDB(dbId))
 		var lpErr error
-		lastPurchaseBaseQtyMap, lpErr = purchaseOrderItemRepo.GetLastCompletedBrandPurchaseBaseQty(matUuids)
+		lastPurchaseInfoMap, lpErr = purchaseOrderItemRepo.GetLastCompletedBrandPurchaseInfo(matUuids)
 		if lpErr != nil {
 			logger.Logger.Warn("查询上次品牌采购数量失败", zap.Error(lpErr))
 		}
@@ -459,6 +466,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			})
 		}
 
+		// 上次采购信息
+		lastPurchaseInfo := lastPurchaseInfoMap[material.Uuid]
+
 		// 响应格式
 		respMaterial := material_resp.Material{
 			Uuid:               material.Uuid,
@@ -537,7 +547,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			AllowNegativeStock:         material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
 			AvailableQuantity:          decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
 			StoreQuantity:              stockNum,
-			LastPurchaseQuantity:       decimal.NewFromFloat(lastPurchaseBaseQtyMap[material.Uuid]).Round(3).InexactFloat64(),
+			LastPurchaseQuantity:       decimal.NewFromFloat(lastPurchaseInfo.BaseQty).Round(3).InexactFloat64(),
+			LastPurchaseLocaleUnitName: *language.JsonToLocaleResponse(lastPurchaseInfo.UnitName),
 			QuotaConfig: func() material_resp.MaterialQuotaConfig {
 				if req.PurchaseType != 2 {
 					return material_resp.MaterialQuotaConfig{
@@ -606,7 +617,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				if unit.ConversionRate != 0 {
 					respMaterial.AvailableQuantity = decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 					respMaterial.StoreQuantity = decimal.NewFromFloat(stockNum).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
-					respMaterial.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseBaseQtyMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+					respMaterial.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseInfo.BaseQty).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 				}
 			}
 		}
@@ -716,6 +727,15 @@ func (s *materialSrv) doGetMaterialDetail(
 	defaultSalesUnitUuid, defaultSalesUnitLocaleName := s.getDefaultSalesUnitInfo(materialUnitRepo, material.DefaultSalesUnitUuid)
 
 	lang := ctx.GetLanguage()
+
+	// HQ 控制字段可编辑性
+	isNegativeStockEditable := true
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsSubShop() && material.HeadquarterUuid > 0 {
+		hqControlMap := repository.GetHqControlMap(nil, companySetting.HeadquarterUuid)
+		isNegativeStockEditable = !isUnifiedFromMap(hqControlMap, constant.HqFieldNegativeStock)
+	}
+
 	return material_resp.MaterialDetailResp{
 		Uuid:                       material.Uuid,
 		LocaleName:                 material.MultiLanguageName.GetNames(),
@@ -745,6 +765,7 @@ func (s *materialSrv) doGetMaterialDetail(
 		DefaultSalesUnitLocaleName: defaultSalesUnitLocaleName,
 		OriginCountry:              getOriginCountry(material.OriginCountryCode),
 		IsEditable:                 !material.IsHeadquarter(),
+		IsNegativeStockEditable:    isNegativeStockEditable,
 	}, nil
 }
 
@@ -3691,17 +3712,17 @@ func (s *materialSrv) SyncHeadquarterMaterials(hqDb *gorm.DB, subDb *gorm.DB, hq
 				if overrideRepo.IsOverridden(material.Uuid, constant.HqFieldSafetyStock) {
 					material.SafetyStock = subShopSafetyStock // 已 override：保留子店值
 				}
+				// 无 override：使用 HQ 值（默认行为）
 			}
 
 			// 确定负库存设置：根据控制模式 + override 决定
 			if subNegStock, ok := subShopMaterialNegativeStockMap[material.Uuid]; ok {
 				if repository.IsHqUnifiedControl(hqDb, hqUuid, constant.HqFieldNegativeStock) {
 					// 统一控制：强制用 HQ 值（默认行为）
-				} else {
-					if overrideRepo.IsOverridden(material.Uuid, constant.HqFieldNegativeStock) {
-						material.AllowNegativeStock = subNegStock // 已 override：保留子店值
-					}
+				} else if overrideRepo.IsOverridden(material.Uuid, constant.HqFieldNegativeStock) {
+					material.AllowNegativeStock = subNegStock // 分开控制+已修改：保留子店值
 				}
+				// 分开控制+无 override：使用 HQ 值
 			}
 
 			addMaterialList = append(addMaterialList, model.Material{
@@ -4410,11 +4431,20 @@ func (s *materialSrv) UpdateMaterialSafetyStock(ctx context.Context, req req.Mat
 		return errors.WithMessage(err, "更新安全库存失败")
 	}
 
-	// 子店修改总部物品安全库存 → 标记 override
+	// 子店修改总部物品安全库存 → 与 HQ 值不一致时标记 override
 	material, _ := materialRepo.GetMaterialDetailByUuid(req.Uuid)
 	if material != nil && material.HeadquarterUuid > 0 {
-		hqPushSrv := NewHqPushSrv(s.dbm)
-		_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityMaterial, req.Uuid, constant.HqFieldSafetyStock)
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		hqMaterialRepo := repository.NewMaterialRepo(hqDb)
+		hqMaterial, hqErr := hqMaterialRepo.GetMaterialDetailByUuid(req.Uuid)
+		if hqErr == nil && hqMaterial != nil {
+			safetyStockDiff := (req.SafetyStock == nil) != (hqMaterial.SafetyStock == nil) ||
+				(req.SafetyStock != nil && hqMaterial.SafetyStock != nil && *req.SafetyStock != *hqMaterial.SafetyStock)
+			if safetyStockDiff {
+				hqPushSrv := NewHqPushSrv(s.dbm)
+				_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityMaterial, req.Uuid, constant.HqFieldSafetyStock)
+			}
+		}
 	}
 
 	return nil

@@ -126,6 +126,7 @@ func (req *TabletOrderCartProductAddReq) FormatPackageSubProductParams() {
 // ProductParams 商品参数
 type ProductParams struct {
 	FlavorProductBomUuid            uint64           `json:"flavor_product_bom_uuid"`             // 商品规格uuid
+	FlavorflavUuid                  uint64           `json:"flavor_uuid"`                         // 商品规格uuid,FlavorProductBomUuid的别名,只有会员端堂食订单创建使用
 	Num                             float64          `json:"num"  binding:"required"`             // 商品份数
 	UnitNum                         float64          `json:"unit_num"`                            // 单位数量. 目前只有平板的加购并送厨使用该字段
 	Price                           *float64         `json:"price"`                               // 商品价格，商品单价。当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格。可选，不传时，不进行价格校验
@@ -149,6 +150,12 @@ type ProductParams struct {
 	isPackageSubProduct bool            // 是否是套餐子商品
 	packageUuid         uint64          // 套餐uuid,用于标注套餐子商品的套餐商品（sale_order_product）的uuid
 	BatchTagUuid        uint64          `json:"batch_tag_uuid"` // 分批类型UUID, 可选（前置模式时使用）
+}
+
+// ApplyCompatibleFields 将兼容字段赋值到标准字段
+// 会员端堂食订单创建时,客户端传 flavor_uuid(FlavorflavUuid),需要赋值到 FlavorProductBomUuid
+func (req *ProductParams) ApplyCompatibleFields() {
+	req.FlavorProductBomUuid = req.FlavorflavUuid
 }
 
 func (req *ProductParams) SetIsPackageProduct(subProducts []ProductParams) {

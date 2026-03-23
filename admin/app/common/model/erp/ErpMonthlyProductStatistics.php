@@ -4,8 +4,7 @@ namespace app\common\model\erp;
 
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
-use app\common\model\product\Material;
-use app\common\model\product\ProductBom;
+use think\facade\Db;
 
 /**
  * 月度商品记录模型
@@ -32,107 +31,83 @@ class ErpMonthlyProductStatistics extends BaseModel
     const MONTH_END = 1;
 
     /**
-     * 记录月初库存
+     * 记录月初库存（批量）
      */
     public function recordStart()
     {
         $year = date("Y");
         $month = date("m");
-        // 商品规格
-        ProductBom::where('product_flavor_uuid', '>', 0)
-            ->chunk(500, function($list) use ($year, $month) {
-                foreach ($list as $item) {
-                    $record = self::where('year', $year)
-                        ->where('month', $month)
-                        ->where('scene', self::MONTH_START)
-                        ->where('product_bom_uuid', $item['uuid'])
-                        ->find();
-                    if (!$record) {
-                        self::create([
-                            'year' => $year,
-                            'month' => $month,
-                            'scene' => self::MONTH_START,
-                            'product_bom_uuid' => $item['uuid'],
-                            'stock' => $item['stock_num'],
-                        ]);
-                    }
-                }
-            });
-        
-        // 材料
-        Material::chunk(500, function($list) use ($year, $month) {
-            foreach ($list as $item) {
-                $record = ErpMonthlyMaterialStatistics::where('year', $year)
-                    ->where('month', $month)
-                    ->where('scene', self::MONTH_START)
-                    ->where('material_uuid', $item['uuid'])
-                    ->find();
-                if (!$record) {
-                    ErpMonthlyMaterialStatistics::create([
-                        'year' => $year,
-                        'month' => $month,
-                        'scene' => self::MONTH_START,
-                        'material_uuid' => $item['uuid'],
-                        'stock' => $item['stock_num'],
-                    ]);
-                }
-            }
-        });
+        $now = time();
+
+        $this->batchInsertProductBom($year, $month, self::MONTH_START, $now);
+        $this->batchInsertMaterial($year, $month, self::MONTH_START, $now);
     }
 
     /**
-     * 记录月末库存
+     * 记录月末库存（批量）
      */
     public function recordEnd()
     {
+        // 仅月末最后一天执行
+        if (date('Y-m-d') !== date('Y-m-t')) {
+            return;
+        }
+
         $year = date("Y");
         $month = date("m");
+        $now = time();
 
-        // 判断当前日期是否是月末最后一小时
-        $lastDayOfMonth = date('Y-m-t');
-        $currentDate = date('Y-m-d');
-        if ($currentDate === $lastDayOfMonth) {
-            // 商品规格
-            ProductBom::where('product_flavor_uuid', '>', 0)
-                ->chunk(500, function($list) use ($year, $month) {
-                    foreach ($list as $item) {
-                        $record = self::where('year', $year)
-                            ->where('month', $month)
-                            ->where('scene', self::MONTH_END)
-                            ->where('product_bom_uuid', $item['uuid'])
-                            ->find();
-                        if (!$record) {
-                            self::create([
-                                'year' => $year,
-                                'month' => $month,
-                                'scene' => self::MONTH_END,
-                                'product_bom_uuid' => $item['uuid'],
-                                'stock' => $item['stock_num'],
-                            ]);
-                        }
-                    }
-                });
+        $this->batchInsertProductBom($year, $month, self::MONTH_END, $now);
+        $this->batchInsertMaterial($year, $month, self::MONTH_END, $now);
+    }
 
-            // 材料
-            Material::chunk(500, function($list) use ($year, $month) {
-                foreach ($list as $item) {
-                    $record = ErpMonthlyMaterialStatistics::where('year', $year)
-                        ->where('month', $month)
-                        ->where('scene', self::MONTH_END)
-                        ->where('material_uuid', $item['uuid'])
-                        ->find();
-                    if (!$record) {
-                        ErpMonthlyMaterialStatistics::create([
-                            'year' => $year,
-                            'month' => $month,
-                            'scene' => self::MONTH_END,
-                            'material_uuid' => $item['uuid'],
-                            'stock' => $item['stock_num'],
-                        ]);
-                    }
-                }
-            });
-        }
+    /**
+     * 批量插入商品规格库存记录
+     */
+    private function batchInsertProductBom(string $year, string $month, int $scene, int $now): void
+    {
+        $db = Db::connect($this->connection);
+        $db->execute(
+            "INSERT INTO ttpos_warehouse_monthly_product_bom_form
+                (year, month, scene, product_bom_uuid, stock, create_time, update_time, delete_time)
+            SELECT ?, ?, ?, pb.uuid, pb.stock_num, ?, ?, 0
+            FROM ttpos_product_bom pb
+            WHERE pb.product_flavor_uuid > 0
+              AND pb.delete_time = 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM ttpos_warehouse_monthly_product_bom_form wmpf
+                  WHERE wmpf.year = ?
+                    AND wmpf.month = ?
+                    AND wmpf.scene = ?
+                    AND wmpf.product_bom_uuid = pb.uuid
+                    AND wmpf.delete_time = 0
+              )",
+            [$year, $month, $scene, $now, $now, $year, $month, $scene]
+        );
+    }
+
+    /**
+     * 批量插入材料库存记录
+     */
+    private function batchInsertMaterial(string $year, string $month, int $scene, int $now): void
+    {
+        $db = Db::connect($this->connection);
+        $db->execute(
+            "INSERT INTO ttpos_warehouse_monthly_material_form
+                (year, month, scene, material_uuid, stock, create_time, update_time, delete_time)
+            SELECT ?, ?, ?, m.uuid, m.stock_num, ?, ?, 0
+            FROM ttpos_material m
+            WHERE m.delete_time = 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM ttpos_warehouse_monthly_material_form wmf
+                  WHERE wmf.year = ?
+                    AND wmf.month = ?
+                    AND wmf.scene = ?
+                    AND wmf.material_uuid = m.uuid
+                    AND wmf.delete_time = 0
+              )",
+            [$year, $month, $scene, $now, $now, $year, $month, $scene]
+        );
     }
 
     // 新商品记录

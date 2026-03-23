@@ -1065,12 +1065,12 @@ INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `crea
 INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1167, 1167, 2, 1704885081, 1761133410, 1761133410, 0);
 INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1168, 1168, 2, 1704886020, 1761133410, 1761133410, 0);
 INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1169, 1169, 2, 1724220613, 1761133410, 1761133410, 0);
-INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1170, 1170, 1, 2860200000000000, 1741744970, 1741744970, 0);
-INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1171, 1171, 1, 2860200000001000, 1741744970, 1741744970, 0);
-INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1172, 1172, 1, 2860200000002000, 1741744970, 1741744970, 0);
-INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1173, 1173, 2, 2860200000000000, 1741744970, 1741744970, 0);
-INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1174, 1174, 2, 2860200000001000, 1741744970, 1741744970, 0);
-INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1175, 1175, 2, 2860200000002000, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1170, 1170, 1, 1724220614, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1171, 1171, 1, 1724220615, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1172, 1172, 1, 1724220616, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1173, 1173, 2, 1724220614, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1174, 1174, 2, 1724220615, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1175, 1175, 2, 1724220616, 1741744970, 1741744970, 0);
 COMMIT;
 
 -- ----------------------------

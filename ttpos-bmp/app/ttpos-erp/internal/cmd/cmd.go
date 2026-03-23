@@ -9,6 +9,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/callback"
 	"ttpos-bmp/app/ttpos-erp/internal/logic/erpnext"
+	"ttpos-bmp/app/ttpos-erp/internal/middleware"
 	"ttpos-bmp/internal/pkg/otlp"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
@@ -38,7 +39,11 @@ var (
 				group.Bind(
 					hello.NewV1(),
 				)
-				group.ALL("/callback", callback.NewV1())
+				// callback 路由（API path 已含 /callback 前缀，此处不重复）
+				group.Group("/", func(group *ghttp.RouterGroup) {
+					group.Middleware(middleware.WebhookAuth)
+					group.Bind(callback.NewV1())
+				})
 			})
 
 			s.Run()

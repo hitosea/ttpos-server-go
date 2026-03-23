@@ -1983,7 +1983,7 @@ type SaveSalesInvoiceReq struct {
 	SaleOrderUuid     string                 `protobuf:"bytes,2,opt,name=sale_order_uuid,json=saleOrderUuid,proto3" json:"sale_order_uuid,omitempty" dc:"TTPOS 订单 UUID（幂等键）"`     // TTPOS 订单 UUID（幂等键）
 	SaleBillUuid      string                 `protobuf:"bytes,3,opt,name=sale_bill_uuid,json=saleBillUuid,proto3" json:"sale_bill_uuid,omitempty" dc:"TTPOS 账单 UUID"`             // TTPOS 账单 UUID
 	PosProfile        string                 `protobuf:"bytes,4,opt,name=pos_profile,json=posProfile,proto3" json:"pos_profile,omitempty" dc:"POS Profile 名称"`                    // POS Profile 名称
-	Company           string                 `protobuf:"bytes,5,opt,name=company,proto3" json:"company,omitempty" dc:"公司"`                                                        // 公司
+	CompanyAbbr       string                 `protobuf:"bytes,5,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写（如 CFG），BMP 通过缩写查询公司全名"`     // 公司缩写（如 CFG），BMP 通过缩写查询公司全名
 	Customer          string                 `protobuf:"bytes,6,opt,name=customer,proto3" json:"customer,omitempty" dc:"客户（默认客户或会员）"`                                             // 客户（默认客户或会员）
 	Currency          string                 `protobuf:"bytes,7,opt,name=currency,proto3" json:"currency,omitempty" dc:"货币 THB/CNY"`                                              // 货币 THB/CNY
 	PriceListCurrency string                 `protobuf:"bytes,8,opt,name=price_list_currency,json=priceListCurrency,proto3" json:"price_list_currency,omitempty" dc:"价格表货币"`      // 价格表货币
@@ -2065,9 +2065,9 @@ func (x *SaveSalesInvoiceReq) GetPosProfile() string {
 	return ""
 }
 
-func (x *SaveSalesInvoiceReq) GetCompany() string {
+func (x *SaveSalesInvoiceReq) GetCompanyAbbr() string {
 	if x != nil {
-		return x.Company
+		return x.CompanyAbbr
 	}
 	return ""
 }
@@ -2403,7 +2403,7 @@ type ReturnSalesInvoiceReq struct {
 	SaleOrderUuid    string                 `protobuf:"bytes,2,opt,name=sale_order_uuid,json=saleOrderUuid,proto3" json:"sale_order_uuid,omitempty"`
 	SalesInvoiceName string                 `protobuf:"bytes,3,opt,name=sales_invoice_name,json=salesInvoiceName,proto3" json:"sales_invoice_name,omitempty" dc:"原 SI 名称"` // 原 SI 名称
 	PostingDatetime  int64                  `protobuf:"varint,4,opt,name=posting_datetime,json=postingDatetime,proto3" json:"posting_datetime,omitempty"`
-	Company          string                 `protobuf:"bytes,5,opt,name=company,proto3" json:"company,omitempty"`
+	CompanyAbbr      string                 `protobuf:"bytes,5,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写（如 CFG）"` // 公司缩写（如 CFG）
 	Customer         string                 `protobuf:"bytes,6,opt,name=customer,proto3" json:"customer,omitempty"`
 	Items            []*PosInvoiceItem      `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty" dc:"退款商品"`                                      // 退款商品
 	MaterialItems    []*PosInvoiceItem      `protobuf:"bytes,8,rep,name=material_items,json=materialItems,proto3" json:"material_items,omitempty" dc:"退款物品"` // 退款物品
@@ -2473,9 +2473,9 @@ func (x *ReturnSalesInvoiceReq) GetPostingDatetime() int64 {
 	return 0
 }
 
-func (x *ReturnSalesInvoiceReq) GetCompany() string {
+func (x *ReturnSalesInvoiceReq) GetCompanyAbbr() string {
 	if x != nil {
-		return x.Company
+		return x.CompanyAbbr
 	}
 	return ""
 }
@@ -2588,6 +2588,274 @@ func (x *ReturnSalesInvoiceResp) GetAsyncRecordId() string {
 		return x.AsyncRecordId
 	}
 	return ""
+}
+
+// GetFailedSIStatsReq 查询失败 SI 统计请求
+type GetFailedSIStatsReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SiteCode      string                 `protobuf:"bytes,1,opt,name=site_code,json=siteCode,proto3" json:"site_code,omitempty" dc:"站点编码，可选（为空查所有站点）"` // 站点编码，可选（为空查所有站点）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFailedSIStatsReq) Reset() {
+	*x = GetFailedSIStatsReq{}
+	mi := &file_selling_selling_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFailedSIStatsReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFailedSIStatsReq) ProtoMessage() {}
+
+func (x *GetFailedSIStatsReq) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFailedSIStatsReq.ProtoReflect.Descriptor instead.
+func (*GetFailedSIStatsReq) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *GetFailedSIStatsReq) GetSiteCode() string {
+	if x != nil {
+		return x.SiteCode
+	}
+	return ""
+}
+
+// FailedSIStats 失败 SI 统计响应
+type FailedSIStats struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	SaveFailedCount    int32                  `protobuf:"varint,1,opt,name=save_failed_count,json=saveFailedCount,proto3" json:"save_failed_count,omitempty" dc:"SaveSI 失败数"`              // SaveSI 失败数
+	CancelFailedCount  int32                  `protobuf:"varint,2,opt,name=cancel_failed_count,json=cancelFailedCount,proto3" json:"cancel_failed_count,omitempty" dc:"CancelSI 失败数"`      // CancelSI 失败数
+	ReturnFailedCount  int32                  `protobuf:"varint,3,opt,name=return_failed_count,json=returnFailedCount,proto3" json:"return_failed_count,omitempty" dc:"ReturnSI 失败数"`      // ReturnSI 失败数
+	TotalFailedCount   int32                  `protobuf:"varint,4,opt,name=total_failed_count,json=totalFailedCount,proto3" json:"total_failed_count,omitempty" dc:"总失败数"`                 // 总失败数
+	SavePendingCount   int32                  `protobuf:"varint,5,opt,name=save_pending_count,json=savePendingCount,proto3" json:"save_pending_count,omitempty" dc:"SaveSI 进行中数量"`         // SaveSI 进行中数量
+	CancelPendingCount int32                  `protobuf:"varint,6,opt,name=cancel_pending_count,json=cancelPendingCount,proto3" json:"cancel_pending_count,omitempty" dc:"CancelSI 进行中数量"` // CancelSI 进行中数量
+	ReturnPendingCount int32                  `protobuf:"varint,7,opt,name=return_pending_count,json=returnPendingCount,proto3" json:"return_pending_count,omitempty" dc:"ReturnSI 进行中数量"` // ReturnSI 进行中数量
+	TotalPendingCount  int32                  `protobuf:"varint,8,opt,name=total_pending_count,json=totalPendingCount,proto3" json:"total_pending_count,omitempty" dc:"总进行中数量"`            // 总进行中数量
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *FailedSIStats) Reset() {
+	*x = FailedSIStats{}
+	mi := &file_selling_selling_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FailedSIStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FailedSIStats) ProtoMessage() {}
+
+func (x *FailedSIStats) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FailedSIStats.ProtoReflect.Descriptor instead.
+func (*FailedSIStats) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *FailedSIStats) GetSaveFailedCount() int32 {
+	if x != nil {
+		return x.SaveFailedCount
+	}
+	return 0
+}
+
+func (x *FailedSIStats) GetCancelFailedCount() int32 {
+	if x != nil {
+		return x.CancelFailedCount
+	}
+	return 0
+}
+
+func (x *FailedSIStats) GetReturnFailedCount() int32 {
+	if x != nil {
+		return x.ReturnFailedCount
+	}
+	return 0
+}
+
+func (x *FailedSIStats) GetTotalFailedCount() int32 {
+	if x != nil {
+		return x.TotalFailedCount
+	}
+	return 0
+}
+
+func (x *FailedSIStats) GetSavePendingCount() int32 {
+	if x != nil {
+		return x.SavePendingCount
+	}
+	return 0
+}
+
+func (x *FailedSIStats) GetCancelPendingCount() int32 {
+	if x != nil {
+		return x.CancelPendingCount
+	}
+	return 0
+}
+
+func (x *FailedSIStats) GetReturnPendingCount() int32 {
+	if x != nil {
+		return x.ReturnPendingCount
+	}
+	return 0
+}
+
+func (x *FailedSIStats) GetTotalPendingCount() int32 {
+	if x != nil {
+		return x.TotalPendingCount
+	}
+	return 0
+}
+
+// RetryFailedSIReq 重试/跳过失败 SI 请求
+type RetryFailedSIReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SiteCode      string                 `protobuf:"bytes,1,opt,name=site_code,json=siteCode,proto3" json:"site_code,omitempty" dc:"站点编码，可选"`                                                                   // 站点编码，可选
+	RecordId      int64                  `protobuf:"varint,2,opt,name=record_id,json=recordId,proto3" json:"record_id,omitempty" dc:"指定记录ID，可选"`                                                                // 指定记录ID，可选
+	SaleOrderUuid string                 `protobuf:"bytes,3,opt,name=sale_order_uuid,json=saleOrderUuid,proto3" json:"sale_order_uuid,omitempty" dc:"指定订单UUID，可选"`                                              // 指定订单UUID，可选
+	MsgType       string                 `protobuf:"bytes,4,opt,name=msg_type,json=msgType,proto3" json:"msg_type,omitempty" dc:"消息类型，可选（save-sales-invoice/cancel-sales-invoice/return-sales-invoice，为空重试所有）"` // 消息类型，可选（save-sales-invoice/cancel-sales-invoice/return-sales-invoice，为空重试所有）
+	Action        string                 `protobuf:"bytes,5,opt,name=action,proto3" json:"action,omitempty" dc:"操作类型: 空/'retry'=重试, 'skip'=标记跳过"`                                                               // 操作类型: 空/"retry"=重试, "skip"=标记跳过
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RetryFailedSIReq) Reset() {
+	*x = RetryFailedSIReq{}
+	mi := &file_selling_selling_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryFailedSIReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryFailedSIReq) ProtoMessage() {}
+
+func (x *RetryFailedSIReq) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryFailedSIReq.ProtoReflect.Descriptor instead.
+func (*RetryFailedSIReq) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *RetryFailedSIReq) GetSiteCode() string {
+	if x != nil {
+		return x.SiteCode
+	}
+	return ""
+}
+
+func (x *RetryFailedSIReq) GetRecordId() int64 {
+	if x != nil {
+		return x.RecordId
+	}
+	return 0
+}
+
+func (x *RetryFailedSIReq) GetSaleOrderUuid() string {
+	if x != nil {
+		return x.SaleOrderUuid
+	}
+	return ""
+}
+
+func (x *RetryFailedSIReq) GetMsgType() string {
+	if x != nil {
+		return x.MsgType
+	}
+	return ""
+}
+
+func (x *RetryFailedSIReq) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+// RetryFailedSIResult 重试结果
+type RetryFailedSIResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RetryCount    int32                  `protobuf:"varint,1,opt,name=retry_count,json=retryCount,proto3" json:"retry_count,omitempty" dc:"成功重新入队的记录数"` // 成功重新入队的记录数
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RetryFailedSIResult) Reset() {
+	*x = RetryFailedSIResult{}
+	mi := &file_selling_selling_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryFailedSIResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryFailedSIResult) ProtoMessage() {}
+
+func (x *RetryFailedSIResult) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryFailedSIResult.ProtoReflect.Descriptor instead.
+func (*RetryFailedSIResult) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *RetryFailedSIResult) GetRetryCount() int32 {
+	if x != nil {
+		return x.RetryCount
+	}
+	return 0
 }
 
 var File_selling_selling_proto protoreflect.FileDescriptor
@@ -2763,14 +3031,14 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x05_nameB\r\n" +
 	"\v_payment_id\"V\n" +
 	"\x14GetModeOfPaymentResp\x12>\n" +
-	"\x0fmode_of_payment\x18\x01 \x01(\v2\x16.selling.ModeOfPaymentR\rmodeOfPayment\"\x99\b\n" +
+	"\x0fmode_of_payment\x18\x01 \x01(\v2\x16.selling.ModeOfPaymentR\rmodeOfPayment\"\xa2\b\n" +
 	"\x13SaveSalesInvoiceReq\x12\x19\n" +
 	"\border_no\x18\x01 \x01(\tR\aorderNo\x12&\n" +
 	"\x0fsale_order_uuid\x18\x02 \x01(\tR\rsaleOrderUuid\x12$\n" +
 	"\x0esale_bill_uuid\x18\x03 \x01(\tR\fsaleBillUuid\x12\x1f\n" +
 	"\vpos_profile\x18\x04 \x01(\tR\n" +
-	"posProfile\x12\x18\n" +
-	"\acompany\x18\x05 \x01(\tR\acompany\x12\x1a\n" +
+	"posProfile\x12!\n" +
+	"\fcompany_abbr\x18\x05 \x01(\tR\vcompanyAbbr\x12\x1a\n" +
 	"\bcustomer\x18\x06 \x01(\tR\bcustomer\x12\x1a\n" +
 	"\bcurrency\x18\a \x01(\tR\bcurrency\x12.\n" +
 	"\x13price_list_currency\x18\b \x01(\tR\x11priceListCurrency\x12)\n" +
@@ -2808,13 +3076,13 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x0estock_deducted\x18\x05 \x01(\bR\rstockDeducted\x12\x16\n" +
 	"\x06remark\x18\x06 \x01(\tR\x06remark\"@\n" +
 	"\x16CancelSalesInvoiceResp\x12&\n" +
-	"\x0fasync_record_id\x18\x01 \x01(\tR\rasyncRecordId\"\xf7\x03\n" +
+	"\x0fasync_record_id\x18\x01 \x01(\tR\rasyncRecordId\"\x80\x04\n" +
 	"\x15ReturnSalesInvoiceReq\x12\x19\n" +
 	"\border_no\x18\x01 \x01(\tR\aorderNo\x12&\n" +
 	"\x0fsale_order_uuid\x18\x02 \x01(\tR\rsaleOrderUuid\x12,\n" +
 	"\x12sales_invoice_name\x18\x03 \x01(\tR\x10salesInvoiceName\x12)\n" +
-	"\x10posting_datetime\x18\x04 \x01(\x03R\x0fpostingDatetime\x12\x18\n" +
-	"\acompany\x18\x05 \x01(\tR\acompany\x12\x1a\n" +
+	"\x10posting_datetime\x18\x04 \x01(\x03R\x0fpostingDatetime\x12!\n" +
+	"\fcompany_abbr\x18\x05 \x01(\tR\vcompanyAbbr\x12\x1a\n" +
 	"\bcustomer\x18\x06 \x01(\tR\bcustomer\x12-\n" +
 	"\x05items\x18\a \x03(\v2\x17.selling.PosInvoiceItemR\x05items\x12>\n" +
 	"\x0ematerial_items\x18\b \x03(\v2\x17.selling.PosInvoiceItemR\rmaterialItems\x12,\n" +
@@ -2827,7 +3095,27 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x16ReturnSalesInvoiceResp\x12(\n" +
 	"\x10credit_note_name\x18\x01 \x01(\tR\x0ecreditNoteName\x12.\n" +
 	"\x13payment_entry_names\x18\x02 \x03(\tR\x11paymentEntryNames\x12&\n" +
-	"\x0fasync_record_id\x18\x03 \x01(\tR\rasyncRecordId2\x94\a\n" +
+	"\x0fasync_record_id\x18\x03 \x01(\tR\rasyncRecordId\"2\n" +
+	"\x13GetFailedSIStatsReq\x12\x1b\n" +
+	"\tsite_code\x18\x01 \x01(\tR\bsiteCode\"\x8b\x03\n" +
+	"\rFailedSIStats\x12*\n" +
+	"\x11save_failed_count\x18\x01 \x01(\x05R\x0fsaveFailedCount\x12.\n" +
+	"\x13cancel_failed_count\x18\x02 \x01(\x05R\x11cancelFailedCount\x12.\n" +
+	"\x13return_failed_count\x18\x03 \x01(\x05R\x11returnFailedCount\x12,\n" +
+	"\x12total_failed_count\x18\x04 \x01(\x05R\x10totalFailedCount\x12,\n" +
+	"\x12save_pending_count\x18\x05 \x01(\x05R\x10savePendingCount\x120\n" +
+	"\x14cancel_pending_count\x18\x06 \x01(\x05R\x12cancelPendingCount\x120\n" +
+	"\x14return_pending_count\x18\a \x01(\x05R\x12returnPendingCount\x12.\n" +
+	"\x13total_pending_count\x18\b \x01(\x05R\x11totalPendingCount\"\xa7\x01\n" +
+	"\x10RetryFailedSIReq\x12\x1b\n" +
+	"\tsite_code\x18\x01 \x01(\tR\bsiteCode\x12\x1b\n" +
+	"\trecord_id\x18\x02 \x01(\x03R\brecordId\x12&\n" +
+	"\x0fsale_order_uuid\x18\x03 \x01(\tR\rsaleOrderUuid\x12\x19\n" +
+	"\bmsg_type\x18\x04 \x01(\tR\amsgType\x12\x16\n" +
+	"\x06action\x18\x05 \x01(\tR\x06action\"6\n" +
+	"\x13RetryFailedSIResult\x12\x1f\n" +
+	"\vretry_count\x18\x01 \x01(\x05R\n" +
+	"retryCount2\x98\b\n" +
 	"\x0eSellingService\x12>\n" +
 	"\x11GetPosProfileList\x12\x16.selling.PosProfileReq\x1a\x11.erp.ResponseInfo\x12K\n" +
 	"\x14CreatePaymentAccount\x12 .selling.CreatePaymentAccountReq\x1a\x11.erp.ResponseInfo\x12;\n" +
@@ -2841,7 +3129,9 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x12ReturnSalesInvoice\x12\x1e.selling.ReturnSalesInvoiceReq\x1a\x11.erp.ResponseInfo\x12K\n" +
 	"\x14GetModeOfPaymentList\x12 .selling.GetModeOfPaymentListReq\x1a\x11.erp.ResponseInfo\x12C\n" +
 	"\x10GetModeOfPayment\x12\x1c.selling.GetModeOfPaymentReq\x1a\x11.erp.ResponseInfo\x12E\n" +
-	"\x11SaveModeOfPayment\x12\x1d.selling.SaveModeOfPaymentReq\x1a\x11.erp.ResponseInfoB%Z#ttpos-bmp/app/ttpos-erp/api/sellingb\x06proto3"
+	"\x11SaveModeOfPayment\x12\x1d.selling.SaveModeOfPaymentReq\x1a\x11.erp.ResponseInfo\x12C\n" +
+	"\x10GetFailedSIStats\x12\x1c.selling.GetFailedSIStatsReq\x1a\x11.erp.ResponseInfo\x12=\n" +
+	"\rRetryFailedSI\x12\x19.selling.RetryFailedSIReq\x1a\x11.erp.ResponseInfoB%Z#ttpos-bmp/app/ttpos-erp/api/sellingb\x06proto3"
 
 var (
 	file_selling_selling_proto_rawDescOnce sync.Once
@@ -2855,7 +3145,7 @@ func file_selling_selling_proto_rawDescGZIP() []byte {
 	return file_selling_selling_proto_rawDescData
 }
 
-var file_selling_selling_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_selling_selling_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_selling_selling_proto_goTypes = []any{
 	(*PosProfileReq)(nil),            // 0: selling.PosProfileReq
 	(*PosProfile)(nil),               // 1: selling.PosProfile
@@ -2891,7 +3181,11 @@ var file_selling_selling_proto_goTypes = []any{
 	(*CancelSalesInvoiceResp)(nil),   // 31: selling.CancelSalesInvoiceResp
 	(*ReturnSalesInvoiceReq)(nil),    // 32: selling.ReturnSalesInvoiceReq
 	(*ReturnSalesInvoiceResp)(nil),   // 33: selling.ReturnSalesInvoiceResp
-	(*api.ResponseInfo)(nil),         // 34: erp.ResponseInfo
+	(*GetFailedSIStatsReq)(nil),      // 34: selling.GetFailedSIStatsReq
+	(*FailedSIStats)(nil),            // 35: selling.FailedSIStats
+	(*RetryFailedSIReq)(nil),         // 36: selling.RetryFailedSIReq
+	(*RetryFailedSIResult)(nil),      // 37: selling.RetryFailedSIResult
+	(*api.ResponseInfo)(nil),         // 38: erp.ResponseInfo
 }
 var file_selling_selling_proto_depIdxs = []int32{
 	1,  // 0: selling.PosProfileListResp.profile_list:type_name -> selling.PosProfile
@@ -2931,21 +3225,25 @@ var file_selling_selling_proto_depIdxs = []int32{
 	24, // 34: selling.SellingService.GetModeOfPaymentList:input_type -> selling.GetModeOfPaymentListReq
 	26, // 35: selling.SellingService.GetModeOfPayment:input_type -> selling.GetModeOfPaymentReq
 	22, // 36: selling.SellingService.SaveModeOfPayment:input_type -> selling.SaveModeOfPaymentReq
-	34, // 37: selling.SellingService.GetPosProfileList:output_type -> erp.ResponseInfo
-	34, // 38: selling.SellingService.CreatePaymentAccount:output_type -> erp.ResponseInfo
-	34, // 39: selling.SellingService.OpenPosEntry:output_type -> erp.ResponseInfo
-	34, // 40: selling.SellingService.ClosePosEntry:output_type -> erp.ResponseInfo
-	34, // 41: selling.SellingService.SavePosInvoice:output_type -> erp.ResponseInfo
-	34, // 42: selling.SellingService.ReturnPosInvoice:output_type -> erp.ResponseInfo
-	34, // 43: selling.SellingService.CancelPosInvoice:output_type -> erp.ResponseInfo
-	34, // 44: selling.SellingService.SaveSalesInvoice:output_type -> erp.ResponseInfo
-	34, // 45: selling.SellingService.CancelSalesInvoice:output_type -> erp.ResponseInfo
-	34, // 46: selling.SellingService.ReturnSalesInvoice:output_type -> erp.ResponseInfo
-	34, // 47: selling.SellingService.GetModeOfPaymentList:output_type -> erp.ResponseInfo
-	34, // 48: selling.SellingService.GetModeOfPayment:output_type -> erp.ResponseInfo
-	34, // 49: selling.SellingService.SaveModeOfPayment:output_type -> erp.ResponseInfo
-	37, // [37:50] is the sub-list for method output_type
-	24, // [24:37] is the sub-list for method input_type
+	34, // 37: selling.SellingService.GetFailedSIStats:input_type -> selling.GetFailedSIStatsReq
+	36, // 38: selling.SellingService.RetryFailedSI:input_type -> selling.RetryFailedSIReq
+	38, // 39: selling.SellingService.GetPosProfileList:output_type -> erp.ResponseInfo
+	38, // 40: selling.SellingService.CreatePaymentAccount:output_type -> erp.ResponseInfo
+	38, // 41: selling.SellingService.OpenPosEntry:output_type -> erp.ResponseInfo
+	38, // 42: selling.SellingService.ClosePosEntry:output_type -> erp.ResponseInfo
+	38, // 43: selling.SellingService.SavePosInvoice:output_type -> erp.ResponseInfo
+	38, // 44: selling.SellingService.ReturnPosInvoice:output_type -> erp.ResponseInfo
+	38, // 45: selling.SellingService.CancelPosInvoice:output_type -> erp.ResponseInfo
+	38, // 46: selling.SellingService.SaveSalesInvoice:output_type -> erp.ResponseInfo
+	38, // 47: selling.SellingService.CancelSalesInvoice:output_type -> erp.ResponseInfo
+	38, // 48: selling.SellingService.ReturnSalesInvoice:output_type -> erp.ResponseInfo
+	38, // 49: selling.SellingService.GetModeOfPaymentList:output_type -> erp.ResponseInfo
+	38, // 50: selling.SellingService.GetModeOfPayment:output_type -> erp.ResponseInfo
+	38, // 51: selling.SellingService.SaveModeOfPayment:output_type -> erp.ResponseInfo
+	38, // 52: selling.SellingService.GetFailedSIStats:output_type -> erp.ResponseInfo
+	38, // 53: selling.SellingService.RetryFailedSI:output_type -> erp.ResponseInfo
+	39, // [39:54] is the sub-list for method output_type
+	24, // [24:39] is the sub-list for method input_type
 	24, // [24:24] is the sub-list for extension type_name
 	24, // [24:24] is the sub-list for extension extendee
 	0,  // [0:24] is the sub-list for field type_name
@@ -2969,7 +3267,7 @@ func file_selling_selling_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_selling_selling_proto_rawDesc), len(file_selling_selling_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   34,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

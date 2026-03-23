@@ -181,7 +181,7 @@ type SaveSalesInvoiceReq struct {
 	SaleOrderUuid     string                       `json:"sale_order_uuid"`
 	SaleBillUuid      string                       `json:"sale_bill_uuid"`
 	PosProfile        string                       `json:"pos_profile"`
-	Company           string                       `json:"company"`
+	CompanyAbbr       string                       `json:"company_abbr"`
 	Customer          string                       `json:"customer"`
 	Currency          string                       `json:"currency"`
 	PriceListCurrency string                       `json:"price_list_currency"`
@@ -221,7 +221,7 @@ type ReturnSalesInvoiceReq struct {
 	SaleOrderUuid    string                       `json:"sale_order_uuid"`
 	SalesInvoiceName string                       `json:"sales_invoice_name"`
 	PostingDatetime  int64                        `json:"posting_datetime"`
-	Company          string                       `json:"company"`
+	CompanyAbbr      string                       `json:"company_abbr"`
 	Customer         string                       `json:"customer"`
 	Items            []*selling.PosInvoiceItem    `json:"items"`
 	MaterialItems    []*selling.PosInvoiceItem    `json:"material_items"`

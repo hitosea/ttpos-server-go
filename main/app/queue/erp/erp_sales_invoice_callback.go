@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
@@ -18,7 +19,7 @@ import (
 type ErpSalesInvoiceCallbackMsg struct {
 	CompanyUuid       string `json:"company_uuid"`
 	SaleOrderUuid     string `json:"sale_order_uuid"`
-	SyncStatus        int    `json:"sync_status"`         // 0=未同步 1=已入队 2=进行中 3=成功 4=失败
+	SyncStatus        int    `json:"sync_status"`         // 0=未同步 1=已入队 2=进行中 3=成功 4=失败 5=外部取消
 	SalesInvoiceName  string `json:"sales_invoice_name"`
 	PaymentEntryNames string `json:"payment_entry_names"`
 	ErrorMsg          string `json:"error_msg,omitempty"`
@@ -82,12 +83,24 @@ func ErpSalesInvoiceCallbackHandler(ctx context.Context, msg *primitive.MessageE
 		return nil
 	}
 
+	// ERPNext 端外部取消，需要清空 SI/PE 名称
+	isExternalCancel := callbackMsg.SyncStatus == constant.ErpSyncStatusExternalCancel
+
 	// 根据订单类型路由更新
 	switch callbackMsg.OrderType {
 	case "recharge":
 		// 充值订单：更新 member_recharge_order
 		rechargeRepo := repository.NewMemberRechargeOrderRepo(db)
-		if callbackMsg.SalesInvoiceName != "" {
+		if isExternalCancel {
+			// 外部取消：清空发票信息
+			if err := rechargeRepo.UpdateErpSalesInvoiceInfo(saleOrderUuid, "", ""); err != nil {
+				logger.Logger.Error("清空充值订单 ERP 发票信息失败",
+					zap.Uint64("company_uuid", companyUuid),
+					zap.Uint64("order_uuid", saleOrderUuid),
+					zap.Error(err))
+				return err
+			}
+		} else if callbackMsg.SalesInvoiceName != "" {
 			if err := rechargeRepo.UpdateErpSalesInvoiceInfo(
 				saleOrderUuid,
 				callbackMsg.SalesInvoiceName,
@@ -100,7 +113,7 @@ func ErpSalesInvoiceCallbackHandler(ctx context.Context, msg *primitive.MessageE
 				return err
 			}
 		}
-		// 回写同步状态（成功=3 / 失败=4）
+		// 回写同步状态
 		if err := rechargeRepo.Update(saleOrderUuid, map[string]any{
 			"erp_sync_status": callbackMsg.SyncStatus,
 		}); err != nil {
@@ -114,10 +127,13 @@ func ErpSalesInvoiceCallbackHandler(ctx context.Context, msg *primitive.MessageE
 	case "takeout":
 		// 外卖订单：通过 Repository 更新 takeout_order
 		takeoutRepo := persistence.NewTakeoutOrderRepo(db)
-		updateMap := map[string]interface{}{
+		updateMap := map[string]any{
 			"erp_sync_status": callbackMsg.SyncStatus,
 		}
-		if callbackMsg.SalesInvoiceName != "" {
+		if isExternalCancel {
+			// 外部取消：清空发票信息
+			updateMap["erp_pos_invoice_resp"] = ""
+		} else if callbackMsg.SalesInvoiceName != "" {
 			siResp := map[string]any{
 				"sales_invoice_name":  callbackMsg.SalesInvoiceName,
 				"payment_entry_names": callbackMsg.PaymentEntryNames,
@@ -136,12 +152,18 @@ func ErpSalesInvoiceCallbackHandler(ctx context.Context, msg *primitive.MessageE
 
 	default:
 		// POS 订单（sale_order）
-		err = repository.NewSaleOrderRepo(db).UpdateSaleOrderErpSyncStatus(
-			saleOrderUuid,
-			callbackMsg.SyncStatus,
-			callbackMsg.SalesInvoiceName,
-			callbackMsg.PaymentEntryNames,
-		)
+		saleOrderRepo := repository.NewSaleOrderRepo(db)
+		if isExternalCancel {
+			// 外部取消：清空 SI/PE 名称
+			err = saleOrderRepo.ClearErpSalesInvoiceInfo(saleOrderUuid, callbackMsg.SyncStatus)
+		} else {
+			err = saleOrderRepo.UpdateSaleOrderErpSyncStatus(
+				saleOrderUuid,
+				callbackMsg.SyncStatus,
+				callbackMsg.SalesInvoiceName,
+				callbackMsg.PaymentEntryNames,
+			)
+		}
 		if err != nil {
 			logger.Logger.Error("更新 sale_order ERP 同步状态失败",
 				zap.Uint64("company_uuid", companyUuid),

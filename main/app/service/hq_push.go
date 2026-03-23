@@ -450,164 +450,187 @@ func (s *hqPushSrv) pushDineShelfToStore(hqUuid, storeUuid uint64, forceOverwrit
 }
 
 // pushTakeoutShelfToStore 推送外卖上下架到单个子店
+// 注意：子店外卖商品 UUID 与 HQ 不同，需通过 product_package_uuid + takeout_type 匹配
 func (s *hqPushSrv) pushTakeoutShelfToStore(hqUuid, storeUuid uint64, forceOverwrite bool) {
 	hqDB := s.dbm.GetDB(hqUuid)
 	storeDB := s.dbm.GetDB(storeUuid)
 	commonRepo := repository.NewCommonRepo()
 
-	// 获取 HQ 外卖商品
-	hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDB)
-	hqTakeouts, err := hqTakeoutRepo.GetProductPackageTakeoutList(
+	// 获取 HQ 外卖商品，按 product_package_uuid + takeout_type 建索引
+	hqTakeouts, err := repository.NewProductPackageTakeoutRepo(hqDB).GetProductPackageTakeoutList(
 		commonRepo.WhereByHeadquarterUuid(0),
 	)
 	if err != nil || len(hqTakeouts) == 0 {
 		return
 	}
-
-	overrideRepo := repository.NewHqFieldOverrideRepo(storeDB)
-	uuids := make([]uint64, 0, len(hqTakeouts))
-	hqStatusMap := make(map[uint64]uint)
+	type takeoutKey struct {
+		ProductPackageUuid uint64
+		TakeoutType        uint
+	}
+	hqMap := make(map[takeoutKey]uint, len(hqTakeouts))
 	for _, t := range hqTakeouts {
-		uuids = append(uuids, t.Uuid)
-		hqStatusMap[t.Uuid] = t.Status
+		hqMap[takeoutKey{t.ProductPackageUuid, t.TakeoutType}] = t.Status
 	}
 
-	overriddenMap := make(map[uint64]bool)
-	if !forceOverwrite {
-		overriddenMap, _ = overrideRepo.BatchCheckOverridden(uuids, constant.HqFieldTakeoutShelf)
-	}
-
-	// 获取子店外卖商品 UUID 集合
+	// 获取子店外卖商品（UUID 与 HQ 不同）
 	storeTakeoutRepo := repository.NewProductPackageTakeoutRepo(storeDB)
 	storeTakeouts, _ := storeTakeoutRepo.GetProductPackageTakeoutList(
 		commonRepo.WhereByHeadquarterUuid(hqUuid),
 	)
-	storeTakeoutSet := make(map[uint64]bool, len(storeTakeouts))
-	for _, st := range storeTakeouts {
-		storeTakeoutSet[st.Uuid] = true
+	if len(storeTakeouts) == 0 {
+		return
 	}
 
-	for _, uuid := range uuids {
-		hqStatus := hqStatusMap[uuid]
-		if !storeTakeoutSet[uuid] {
+	// 获取子店 override 状态（使用子店 UUID）
+	overrideRepo := repository.NewHqFieldOverrideRepo(storeDB)
+	storeUuids := make([]uint64, 0, len(storeTakeouts))
+	for _, st := range storeTakeouts {
+		storeUuids = append(storeUuids, st.Uuid)
+	}
+	overriddenMap := make(map[uint64]bool)
+	if !forceOverwrite {
+		overriddenMap, _ = overrideRepo.BatchCheckOverridden(storeUuids, constant.HqFieldTakeoutShelf)
+	}
+
+	for _, storeTakeout := range storeTakeouts {
+		hqStatus, ok := hqMap[takeoutKey{storeTakeout.ProductPackageUuid, storeTakeout.TakeoutType}]
+		if !ok {
 			continue
 		}
 
 		if forceOverwrite {
 			storeTakeoutRepo.UpdateProductPackageTakeout(
 				map[string]any{"status": hqStatus},
-				commonRepo.WhereByUuid(uuid),
+				commonRepo.WhereByUuid(storeTakeout.Uuid),
 			)
-			overrideRepo.ClearOverride(uuid, constant.HqFieldTakeoutShelf)
-		} else if overriddenMap[uuid] {
+			overrideRepo.ClearOverride(storeTakeout.Uuid, constant.HqFieldTakeoutShelf)
+		} else if overriddenMap[storeTakeout.Uuid] {
 			continue
 		} else {
-			// 无 override → 直接同步总部值
 			storeTakeoutRepo.UpdateProductPackageTakeout(
 				map[string]any{"status": hqStatus},
-				commonRepo.WhereByUuid(uuid),
+				commonRepo.WhereByUuid(storeTakeout.Uuid),
 			)
 		}
 	}
 }
 
 // pushTakeoutPriceToStore 推送外卖价格到单个子店
+// 注意：子店外卖商品/规格 UUID 与 HQ 不同，需通过 product_package_uuid + takeout_type 匹配
 func (s *hqPushSrv) pushTakeoutPriceToStore(hqUuid, storeUuid uint64, forceOverwrite bool) {
 	hqDB := s.dbm.GetDB(hqUuid)
 	storeDB := s.dbm.GetDB(storeUuid)
 	commonRepo := repository.NewCommonRepo()
 
-	// 获取 HQ 外卖商品价格
-	hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDB)
-	hqTakeouts, err := hqTakeoutRepo.GetProductPackageTakeoutList(
+	// 获取 HQ 外卖商品，按 product_package_uuid + takeout_type 建索引
+	hqTakeouts, err := repository.NewProductPackageTakeoutRepo(hqDB).GetProductPackageTakeoutList(
 		commonRepo.WhereByHeadquarterUuid(0),
 	)
 	if err != nil || len(hqTakeouts) == 0 {
 		return
 	}
-
-	overrideRepo := repository.NewHqFieldOverrideRepo(storeDB)
-	uuids := make([]uint64, 0, len(hqTakeouts))
-	hqPriceMap := make(map[uint64]float64)
-	for _, t := range hqTakeouts {
-		uuids = append(uuids, t.Uuid)
-		hqPriceMap[t.Uuid] = t.Price
+	type takeoutKey struct {
+		ProductPackageUuid uint64
+		TakeoutType        uint
+	}
+	hqTakeoutMap := make(map[takeoutKey]*model.ProductPackageTakeout, len(hqTakeouts))
+	hqTakeoutUuids := make([]uint64, 0, len(hqTakeouts))
+	for i := range hqTakeouts {
+		hqTakeoutMap[takeoutKey{hqTakeouts[i].ProductPackageUuid, hqTakeouts[i].TakeoutType}] = hqTakeouts[i]
+		hqTakeoutUuids = append(hqTakeoutUuids, hqTakeouts[i].Uuid)
 	}
 
-	overriddenMap := make(map[uint64]bool)
-	if !forceOverwrite {
-		overriddenMap, _ = overrideRepo.BatchCheckOverridden(uuids, constant.HqFieldTakeoutPrice)
+	// 获取 HQ 外卖规格价格，按 product_bom_uuid 建索引（product_bom_uuid 在 HQ 和子店间共享）
+	hqBomTakeouts, _ := repository.NewProductBomTakeoutRepo(hqDB).GetProductBomTakeoutList(
+		commonRepo.WhereByHeadquarterUuid(0),
+	)
+	// HQ takeout UUID → product_bom_uuid → price
+	hqBomPriceMap := make(map[uint64]map[uint64]float64)
+	for _, bt := range hqBomTakeouts {
+		if hqBomPriceMap[bt.ProductPackageTakeoutUuid] == nil {
+			hqBomPriceMap[bt.ProductPackageTakeoutUuid] = make(map[uint64]float64)
+		}
+		hqBomPriceMap[bt.ProductPackageTakeoutUuid][bt.ProductBomUuid] = bt.Price
 	}
 
-	// 获取子店外卖商品 UUID 集合
+	// 获取子店外卖商品
 	storeTakeoutRepo := repository.NewProductPackageTakeoutRepo(storeDB)
 	storeTakeouts, _ := storeTakeoutRepo.GetProductPackageTakeoutList(
 		commonRepo.WhereByHeadquarterUuid(hqUuid),
 	)
-	storeTakeoutSet := make(map[uint64]bool, len(storeTakeouts))
+	if len(storeTakeouts) == 0 {
+		return
+	}
+
+	// 获取子店 override 状态（使用子店 UUID）
+	overrideRepo := repository.NewHqFieldOverrideRepo(storeDB)
+	storeUuids := make([]uint64, 0, len(storeTakeouts))
 	for _, st := range storeTakeouts {
-		storeTakeoutSet[st.Uuid] = true
+		storeUuids = append(storeUuids, st.Uuid)
+	}
+	overriddenMap := make(map[uint64]bool)
+	if !forceOverwrite {
+		overriddenMap, _ = overrideRepo.BatchCheckOverridden(storeUuids, constant.HqFieldTakeoutPrice)
 	}
 
-	// 获取 HQ 外卖规格价格
-	hqBomTakeoutRepo := repository.NewProductBomTakeoutRepo(hqDB)
-	hqBomTakeouts, _ := hqBomTakeoutRepo.GetProductBomTakeoutList(
-		commonRepo.WhereByHeadquarterUuid(0),
-	)
-
-	for _, uuid := range uuids {
-		hqPrice := hqPriceMap[uuid]
-		if !storeTakeoutSet[uuid] {
-			continue
-		}
-
-		if forceOverwrite {
-			storeTakeoutRepo.UpdateProductPackageTakeout(
-				map[string]any{"price": hqPrice},
-				commonRepo.WhereByUuid(uuid),
-			)
-			overrideRepo.ClearOverride(uuid, constant.HqFieldTakeoutPrice)
-		} else if overriddenMap[uuid] {
-			continue
-		} else {
-			// 无 override → 直接同步总部值
-			storeTakeoutRepo.UpdateProductPackageTakeout(
-				map[string]any{"price": hqPrice},
-				commonRepo.WhereByUuid(uuid),
-			)
-		}
-	}
-
-	// 同步推送外卖规格价格
+	// 获取子店外卖规格
 	storeBomTakeoutRepo := repository.NewProductBomTakeoutRepo(storeDB)
-	for _, bt := range hqBomTakeouts {
-		hqBomPrice := bt.Price
+	storeBomTakeouts, _ := storeBomTakeoutRepo.GetProductBomTakeoutList(
+		commonRepo.WhereByHeadquarterUuid(hqUuid),
+	)
+	// 子店 takeout UUID → []*ProductBomTakeout
+	storeBomByTakeout := make(map[uint64][]*model.ProductBomTakeout)
+	for _, bt := range storeBomTakeouts {
+		storeBomByTakeout[bt.ProductPackageTakeoutUuid] = append(storeBomByTakeout[bt.ProductPackageTakeoutUuid], bt)
+	}
+
+	for _, storeTakeout := range storeTakeouts {
+		key := takeoutKey{storeTakeout.ProductPackageUuid, storeTakeout.TakeoutType}
+		hqTakeout, ok := hqTakeoutMap[key]
+		if !ok {
+			continue
+		}
+
 		if forceOverwrite {
-			storeBomTakeoutRepo.UpdateProductBomTakeout(
-				map[string]any{"price": hqBomPrice},
-				commonRepo.WhereByUuid(bt.Uuid),
+			// 强制推送：更新主表价格并清除 override
+			storeTakeoutRepo.UpdateProductPackageTakeout(
+				map[string]any{"price": hqTakeout.Price},
+				commonRepo.WhereByUuid(storeTakeout.Uuid),
 			)
+			overrideRepo.ClearOverride(storeTakeout.Uuid, constant.HqFieldTakeoutPrice)
+			// 同步规格价格
+			hqBoms := hqBomPriceMap[hqTakeout.Uuid]
+			for _, storeBom := range storeBomByTakeout[storeTakeout.Uuid] {
+				if hqPrice, exists := hqBoms[storeBom.ProductBomUuid]; exists {
+					storeBomTakeoutRepo.UpdateProductBomTakeout(
+						map[string]any{"price": hqPrice},
+						commonRepo.WhereByUuid(storeBom.Uuid),
+					)
+				}
+			}
+		} else if overriddenMap[storeTakeout.Uuid] {
+			continue
 		} else {
-			// 规格价格跟随商品的 override 状态
-			storeBomTakeout, err := storeBomTakeoutRepo.GetProductBomTakeout(
-				commonRepo.WhereByUuid(bt.Uuid),
+			// 无 override → 同步总部值
+			storeTakeoutRepo.UpdateProductPackageTakeout(
+				map[string]any{"price": hqTakeout.Price},
+				commonRepo.WhereByUuid(storeTakeout.Uuid),
 			)
-			if err != nil || storeBomTakeout == nil {
-				continue
+			// 同步规格价格
+			hqBoms := hqBomPriceMap[hqTakeout.Uuid]
+			for _, storeBom := range storeBomByTakeout[storeTakeout.Uuid] {
+				if hqPrice, exists := hqBoms[storeBom.ProductBomUuid]; exists {
+					storeBomTakeoutRepo.UpdateProductBomTakeout(
+						map[string]any{"price": hqPrice},
+						commonRepo.WhereByUuid(storeBom.Uuid),
+					)
+				}
 			}
-			// 检查对应外卖商品是否 override
-			if overriddenMap[storeBomTakeout.ProductPackageTakeoutUuid] {
-				continue
-			}
-			storeBomTakeoutRepo.UpdateProductBomTakeout(
-				map[string]any{"price": hqBomPrice},
-				commonRepo.WhereByUuid(bt.Uuid),
-			)
 		}
 	}
 }
 
-// pushNegativeStockToStore 推送负库存到单个子店
+// pushNegativeStockToStore 推送负库存和安全库存到单个子店
 func (s *hqPushSrv) pushNegativeStockToStore(hqUuid, storeUuid uint64, forceOverwrite bool) {
 	hqDB := s.dbm.GetDB(hqUuid)
 	storeDB := s.dbm.GetDB(storeUuid)
@@ -625,14 +648,20 @@ func (s *hqPushSrv) pushNegativeStockToStore(hqUuid, storeUuid uint64, forceOver
 	overrideRepo := repository.NewHqFieldOverrideRepo(storeDB)
 	uuids := make([]uint64, 0, len(hqMaterials))
 	hqNegStockMap := make(map[uint64]int)
+	hqSafetyStockMap := make(map[uint64]*float64)
 	for _, m := range hqMaterials {
 		uuids = append(uuids, m.Uuid)
 		hqNegStockMap[m.Uuid] = m.AllowNegativeStock
+		hqSafetyStockMap[m.Uuid] = m.SafetyStock
 	}
 
-	overriddenMap := make(map[uint64]bool)
+	negOverriddenMap := make(map[uint64]bool)
 	if !forceOverwrite {
-		overriddenMap, _ = overrideRepo.BatchCheckOverridden(uuids, constant.HqFieldNegativeStock)
+		negOverriddenMap, _ = overrideRepo.BatchCheckOverridden(uuids, constant.HqFieldNegativeStock)
+	}
+	safetyOverriddenMap := make(map[uint64]bool)
+	if !forceOverwrite {
+		safetyOverriddenMap, _ = overrideRepo.BatchCheckOverridden(uuids, constant.HqFieldSafetyStock)
 	}
 
 	// 获取子店当前值
@@ -646,25 +675,31 @@ func (s *hqPushSrv) pushNegativeStockToStore(hqUuid, storeUuid uint64, forceOver
 	}
 
 	for _, uuid := range uuids {
-		hqVal := hqNegStockMap[uuid]
 		if !storeMaterialSet[uuid] {
 			continue
 		}
 
+		updateData := make(map[string]any)
+
+		// 负库存
+		hqNegVal := hqNegStockMap[uuid]
 		if forceOverwrite {
-			storeMaterialRepo.UpdateMaterialData(
-				map[string]any{"allow_negative_stock": hqVal},
-				commonRepo.WhereByUuid(uuid),
-			)
+			updateData["allow_negative_stock"] = hqNegVal
 			overrideRepo.ClearOverride(uuid, constant.HqFieldNegativeStock)
-		} else if overriddenMap[uuid] {
-			continue
-		} else {
-			// 无 override → 直接同步总部值
-			storeMaterialRepo.UpdateMaterialData(
-				map[string]any{"allow_negative_stock": hqVal},
-				commonRepo.WhereByUuid(uuid),
-			)
+		} else if !negOverriddenMap[uuid] {
+			updateData["allow_negative_stock"] = hqNegVal
+		}
+
+		// 安全库存：跟随负库存的 forceOverwrite 逻辑
+		if forceOverwrite {
+			updateData["safety_stock"] = hqSafetyStockMap[uuid]
+			overrideRepo.ClearOverride(uuid, constant.HqFieldSafetyStock)
+		} else if !safetyOverriddenMap[uuid] {
+			updateData["safety_stock"] = hqSafetyStockMap[uuid]
+		}
+
+		if len(updateData) > 0 {
+			storeMaterialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(uuid))
 		}
 	}
 }
@@ -946,6 +981,8 @@ func (s *hqPushSrv) pushProductTakeoutToStores(hqUuid uint64, storeUuids []uint6
 		hqTakeoutRepo.WithProductBomTakeouts(),
 		hqTakeoutRepo.WithProductPackageAttributeTakeouts(),
 		hqTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+		hqTakeoutRepo.WithMultiLanguageName(),
+		hqTakeoutRepo.WithDescribeMultiLanguageName(),
 	)
 	if err != nil || hqTakeout == nil {
 		return
@@ -978,27 +1015,49 @@ func (s *hqPushSrv) pushSingleTakeoutToStore(hqUuid, storeUuid uint64, hqTakeout
 	storeTakeoutRepo := repository.NewProductPackageTakeoutRepo(storeDB)
 	overrideRepo := repository.NewHqFieldOverrideRepo(storeDB)
 
-	// 检查子店是否存在该外卖商品（预加载关联表用于后续同步）
+	// 查找子店外卖商品（用 ProductPackageUuid+TakeoutType+HeadquarterUuid 匹配，与全量同步一致）
 	storeTakeout, err := storeTakeoutRepo.GetProductPackageTakeout(
-		commonRepo.WhereByUuid(hqTakeout.Uuid),
+		storeTakeoutRepo.WhereByProductPackageUuid(hqTakeout.ProductPackageUuid),
+		storeTakeoutRepo.WhereByTakeoutType(hqTakeout.TakeoutType),
 		commonRepo.WhereByHeadquarterUuid(hqUuid),
 		storeTakeoutRepo.WithProductBomTakeouts(),
 		storeTakeoutRepo.WithProductPackageAttributeTakeouts(),
 		storeTakeoutRepo.WithProductPackageGroupItemTakeouts(),
 	)
 	if err != nil || storeTakeout == nil {
+		// 子店不存在该外卖商品 → 创建（默认下架）
+		storeTakeout = s.createTakeoutInStore(storeDB, hqTakeout, hqUuid)
+		if storeTakeout == nil {
+			return
+		}
+		// 新创建的记录只需同步关联表
+		if err := commonRepo.Transaction(storeDB, func(tx *gorm.DB) error {
+			return syncTakeoutAssociations(tx, hqTakeout, storeTakeout, hqUuid, true)
+		}); err != nil {
+			logger.Logger.Error("同步新创建外卖商品关联表失败",
+				zap.Uint64("company_uuid", hqUuid),
+				zap.Uint64("store_uuid", storeUuid),
+				zap.Uint64("takeout_uuid", storeTakeout.Uuid),
+				zap.Error(err),
+			)
+		}
 		return
 	}
+
+	// 同步多语言名称到子店数据库（更新已有记录或创建新记录）
+	multiLangRepo := repository.NewMultiLanguageNameRepo(storeDB)
+	nameUuid := s.syncMultiLanguageName(multiLangRepo, storeTakeout.MultiLanguageNameUuid, &hqTakeout.MultiLanguageName)
+	descUuid := s.syncMultiLanguageName(multiLangRepo, storeTakeout.DescribeMultiLanguageNameUuid, &hqTakeout.DescribeMultiLanguageName)
 
 	// 构建不可覆盖字段更新数据
 	updateData := map[string]any{
 		"name":                              hqTakeout.Name,
-		"multi_language_name_uuid":          hqTakeout.MultiLanguageNameUuid,
+		"multi_language_name_uuid":          nameUuid,
 		"category_uuid":                     hqTakeout.CategoryUuid,
 		"special_category_uuid":             hqTakeout.SpecialCategoryUuid,
 		"image_file_uuid":                   hqTakeout.ImageFileUuid,
 		"describe":                          hqTakeout.Describe,
-		"describe_multi_language_name_uuid": hqTakeout.DescribeMultiLanguageNameUuid,
+		"describe_multi_language_name_uuid": descUuid,
 		"product_type":                      hqTakeout.ProductType,
 		"takeout_type":                      hqTakeout.TakeoutType,
 		"source":                            hqTakeout.Source,
@@ -1010,20 +1069,20 @@ func (s *hqPushSrv) pushSingleTakeoutToStore(hqUuid, storeUuid uint64, hqTakeout
 	// 处理外卖上下架（可覆盖字段，始终参与推送）
 	if controlRepo.IsUnifiedControl(hqUuid, constant.HqFieldTakeoutShelf) {
 		updateData["status"] = hqTakeout.Status
-		overrideRepo.ClearOverride(hqTakeout.Uuid, constant.HqFieldTakeoutShelf)
-	} else if !overrideRepo.IsOverridden(hqTakeout.Uuid, constant.HqFieldTakeoutShelf) {
+		overrideRepo.ClearOverride(storeTakeout.Uuid, constant.HqFieldTakeoutShelf)
+	} else if !overrideRepo.IsOverridden(storeTakeout.Uuid, constant.HqFieldTakeoutShelf) {
 		updateData["status"] = hqTakeout.Status
 	}
 
 	// 处理外卖价格（可覆盖字段，始终参与推送）
 	if controlRepo.IsUnifiedControl(hqUuid, constant.HqFieldTakeoutPrice) {
 		updateData["price"] = hqTakeout.Price
-		overrideRepo.ClearOverride(hqTakeout.Uuid, constant.HqFieldTakeoutPrice)
-	} else if !overrideRepo.IsOverridden(hqTakeout.Uuid, constant.HqFieldTakeoutPrice) {
+		overrideRepo.ClearOverride(storeTakeout.Uuid, constant.HqFieldTakeoutPrice)
+	} else if !overrideRepo.IsOverridden(storeTakeout.Uuid, constant.HqFieldTakeoutPrice) {
 		updateData["price"] = hqTakeout.Price
 	}
 
-	storeTakeoutRepo.UpdateProductPackageTakeout(updateData, commonRepo.WhereByUuid(hqTakeout.Uuid))
+	storeTakeoutRepo.UpdateProductPackageTakeout(updateData, commonRepo.WhereByUuid(storeTakeout.Uuid))
 
 	// 同步关联表（BomTakeout / AttributeTakeout / GroupItemTakeout）
 	syncBomPrice := false
@@ -1040,6 +1099,90 @@ func (s *hqPushSrv) pushSingleTakeoutToStore(hqUuid, storeUuid uint64, hqTakeout
 			zap.Error(err),
 		)
 	}
+}
+
+// createTakeoutInStore 在子店创建外卖商品主记录
+// 前置条件：子店必须已有对应的 ProductPackage（店内商品），否则跳过
+func (s *hqPushSrv) createTakeoutInStore(storeDB *gorm.DB, hqTakeout *model.ProductPackageTakeout, hqUuid uint64) *model.ProductPackageTakeout {
+	commonRepo := repository.NewCommonRepo()
+
+	// 检查子店是否存在对应的店内商品，不存在则跳过
+	_, err := repository.NewProductPackageRepo(storeDB).GetProductPackage(
+		commonRepo.WhereByUuid(hqTakeout.ProductPackageUuid),
+		commonRepo.WhereByHeadquarterUuid(hqUuid),
+		commonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		logger.Logger.Warn("子店不存在对应店内商品，跳过创建外卖商品",
+			zap.Uint64("product_package_uuid", hqTakeout.ProductPackageUuid),
+			zap.Uint64("headquarter_uuid", hqUuid),
+		)
+		return nil
+	}
+
+	// 在子店数据库创建多语言名称记录（名称 + 卖点）
+	// 注意：Name/Describe 字段可能为空，实际多语言数据存储在 MultiLanguageName 关联表中
+	multiLangRepo := repository.NewMultiLanguageNameRepo(storeDB)
+	var multiLanguageNameUuid uint64
+	if !hqTakeout.MultiLanguageName.IsNullName() {
+		mlName := hqTakeout.MultiLanguageName
+		mlName.ID = 0
+		mlName.Uuid = 0
+		multiLanguageNameUuid, _ = multiLangRepo.CreateMultiLanguageName(mlName)
+	}
+	var describeMultiLanguageNameUuid uint64
+	if !hqTakeout.DescribeMultiLanguageName.IsNullName() {
+		mlDescribe := hqTakeout.DescribeMultiLanguageName
+		mlDescribe.ID = 0
+		mlDescribe.Uuid = 0
+		describeMultiLanguageNameUuid, _ = multiLangRepo.CreateMultiLanguageName(mlDescribe)
+	}
+
+	newTakeout := &model.ProductPackageTakeout{
+		ProductPackageUuid:            hqTakeout.ProductPackageUuid,
+		MultiLanguageNameUuid:         multiLanguageNameUuid,
+		HeadquarterUuid:               hqUuid,
+		Name:                          hqTakeout.Name,
+		Describe:                      hqTakeout.Describe,
+		DescribeMultiLanguageNameUuid: describeMultiLanguageNameUuid,
+		ProductType:                   hqTakeout.ProductType,
+		Price:                         hqTakeout.Price,
+		TakeoutType:                   hqTakeout.TakeoutType,
+		Status:                        0, // 默认下架，子店需手动上架
+		CategoryUuid:                  hqTakeout.CategoryUuid,
+		SpecialCategoryUuid:           hqTakeout.SpecialCategoryUuid,
+		ImageFileUuid:                 hqTakeout.ImageFileUuid,
+		Source:                        hqTakeout.Source,
+		SourceProductId:               hqTakeout.SourceProductId,
+	}
+	// Uuid 由 BaseModel.BeforeCreate 自动生成
+	if err := repository.NewProductPackageTakeoutRepo(storeDB).CreateProductPackageTakeout(newTakeout); err != nil {
+		logger.Logger.Error("在子店创建外卖商品失败",
+			zap.Uint64("product_package_uuid", hqTakeout.ProductPackageUuid),
+			zap.Uint64("headquarter_uuid", hqUuid),
+			zap.Error(err),
+		)
+		return nil
+	}
+
+	return newTakeout
+}
+
+// syncMultiLanguageName 同步多语言名称到子店数据库
+// 如果子店已有记录（existingUuid > 0）则更新，否则创建新记录
+func (s *hqPushSrv) syncMultiLanguageName(repo repository.IMultiLanguageNameRepo, existingUuid uint64, hqLang *model.MultiLanguageName) uint64 {
+	if hqLang == nil || hqLang.IsNullName() {
+		return existingUuid
+	}
+	if existingUuid > 0 {
+		_ = repo.UpdateMultiLanguageName(existingUuid, *hqLang)
+		return existingUuid
+	}
+	newLang := *hqLang
+	newLang.ID = 0
+	newLang.Uuid = 0
+	uuid, _ := repo.CreateMultiLanguageName(newLang)
+	return uuid
 }
 
 // pushMaterialToStores 推送物品变更到多个子店
@@ -1112,7 +1255,9 @@ func (s *hqPushSrv) pushSingleMaterialToStore(hqUuid, storeUuid uint64, hqMateri
 	}
 
 	// 安全库存（可覆盖字段，无控制模式，始终使用 override 逻辑）
-	if !overrideRepo.IsOverridden(hqMaterial.Uuid, constant.HqFieldSafetyStock) {
+	if overrideRepo.IsOverridden(hqMaterial.Uuid, constant.HqFieldSafetyStock) {
+		// 已 override：保留子店值
+	} else {
 		updateData["safety_stock"] = hqMaterial.SafetyStock
 	}
 
@@ -1120,7 +1265,9 @@ func (s *hqPushSrv) pushSingleMaterialToStore(hqUuid, storeUuid uint64, hqMateri
 	if controlRepo.IsUnifiedControl(hqUuid, constant.HqFieldNegativeStock) {
 		updateData["allow_negative_stock"] = hqMaterial.AllowNegativeStock
 		overrideRepo.ClearOverride(hqMaterial.Uuid, constant.HqFieldNegativeStock)
-	} else if !overrideRepo.IsOverridden(hqMaterial.Uuid, constant.HqFieldNegativeStock) {
+	} else if overrideRepo.IsOverridden(hqMaterial.Uuid, constant.HqFieldNegativeStock) {
+		// 分开控制+已修改：保留子店值
+	} else {
 		updateData["allow_negative_stock"] = hqMaterial.AllowNegativeStock
 	}
 
@@ -1253,8 +1400,8 @@ func buildSubStorePkgGroup(hq model.ProductPackageGroup) model.ProductPackageGro
 		ProductPackageUuid:    hq.ProductPackageUuid,
 		MultiLanguageNameUuid: hq.MultiLanguageName.Uuid,
 		GroupType:             hq.GroupType,
-		OptionalCount:        hq.OptionalCount,
-		OptionalMinCount:     hq.OptionalMinCount,
+		OptionalCount:         hq.OptionalCount,
+		OptionalMinCount:      hq.OptionalMinCount,
 	}
 }
 
