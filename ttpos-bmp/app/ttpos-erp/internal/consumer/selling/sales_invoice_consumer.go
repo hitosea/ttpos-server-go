@@ -22,17 +22,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const (
-	maxRetryCount = 5 // 最大重试次数
-)
+const maxRetryCount = erp.MaxRetryCount
 
 // retryDelay 根据重试次数计算延迟时间（指数退避：5s, 10s, 20s, 40s, 80s）
 func retryDelay(retryCount int) time.Duration {
-	d := 5 * time.Second
-	for range retryCount {
-		d *= 2
-	}
-	return d
+	return time.Duration(5*(1<<retryCount)) * time.Second
 }
 
 // ========== SaveSalesInvoiceConsumer ==========
@@ -64,9 +58,16 @@ func (*SaveSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) 
 		return gerror.Wrap(err, "查询SI异步记录失败")
 	}
 
-	// 已成功则跳过（幂等）
+	// 幂等性检查1：已成功提交则跳过
 	if cachedRecord.Docstatus == erp.DocstatusSubmitted {
 		g.Log().Infof(ctx, "SI已提交，跳过: record_id=%d", msg.RecordId)
+		return nil
+	}
+
+	// 幂等性检查2：基于 mq_msg_id 避免重复处理（MQ 重试场景）
+	// 如果当前消息 ID 与数据库记录的 mq_msg_id 相同，且状态为 Draft（处理中），说明正在处理中或已处理
+	if cachedRecord.MqMsgId == mqMsg.MsgId && cachedRecord.Docstatus == erp.DocstatusDraft {
+		g.Log().Infof(ctx, "检测到重复消息（MQ重试），跳过: record_id=%d, mq_msg_id=%s", msg.RecordId, mqMsg.MsgId)
 		return nil
 	}
 
@@ -86,16 +87,20 @@ func (*SaveSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) 
 
 	resp, err := service.Selling().SaveSalesInvoice(ctx, req)
 	if err != nil {
+		// 应用层重试：使用数据库 retry_count 字段追踪重试次数
 		retryCount := cachedRecord.RetryCount + 1
 		g.Log().Errorf(ctx, "SaveSalesInvoice失败 (retry=%d/%d): %v", retryCount, maxRetryCount, err)
+
+		// 更新数据库重试计数和错误信息
 		siDao.Data(do.ReceiveSalesInvoice{
 			RetryCount: retryCount,
-			RespBody:   fmt.Sprintf("SaveSalesInvoice失败(retry=%d): %v", retryCount, err),
+			MqMsgId:    mqMsg.MsgId,
+			RespBody:   fmt.Sprintf(consts.ErrMsgSaveSIRetry, retryCount, err),
 			UpdatedAt:  int(time.Now().Unix()),
 		}).Update()
 
 		if retryCount < maxRetryCount {
-			// 延迟重试
+			// 延迟重试：使用指数退避策略重新推入队列
 			queue.DelayPush(string(consts.TopicSaveSalesInvoice), &mq.AsyncSalesInvoiceMsg{
 				RecordId: msg.RecordId,
 				MsgType:  mq.MsgTypeSaveSalesInvoice,
@@ -103,9 +108,15 @@ func (*SaveSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) 
 			}, retryDelay(retryCount))
 			return nil // 不返回 error，避免 RocketMQ 自身重试
 		}
-		// 重试耗尽，发送失败回调到 Main
-		sendSalesInvoiceCallback(ctx, req.CompanyUuid, req.SaleOrderUuid, 4, "", "", err.Error(), req.OrderType)
-		return nil
+
+		// 重试耗尽：1. 发送失败回调到 Main，2. 推送到 DLQ 作为兜底
+		SendSalesInvoiceCallback(ctx, req.CompanyUuid, req.SaleOrderUuid, erp.SyncStatusFailed, "", "", err.Error(), req.OrderType)
+		PushToDLQ(ctx, consts.TopicSaveSalesInvoiceDLQ, &mq.AsyncSalesInvoiceMsg{
+			RecordId: msg.RecordId,
+			MsgType:  mq.MsgTypeSaveSalesInvoice,
+			SiteCode: msg.SiteCode,
+		}, retryCount, err.Error(), mqMsg.MsgId, req.CompanyUuid, req.OrderType, req.SaleOrderUuid)
+		return nil // 已处理失败，不需要 MQ 重试
 	}
 
 	if resp != nil {
@@ -120,21 +131,22 @@ func (*SaveSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) 
 			PaymentEntryNames: string(peNamesJson),
 			RespMessage:       gbase64.EncodeToString(respBuf),
 			RespBody:          resp.String(),
+			MqMsgId:           mqMsg.MsgId,
 			UpdatedAt:         int(time.Now().Unix()),
 		}).Update(); err != nil {
 			return gerror.Wrapf(err, "更新SI日志记录失败")
 		}
 
 		// 发送成功回调到 Main
-		sendSalesInvoiceCallback(ctx, req.CompanyUuid, req.SaleOrderUuid, 3, resp.SalesInvoiceName, string(peNamesJson), "", req.OrderType)
+		SendSalesInvoiceCallback(ctx, req.CompanyUuid, req.SaleOrderUuid, erp.SyncStatusSuccess, resp.SalesInvoiceName, string(peNamesJson), "", req.OrderType)
 	}
 
 	return nil
 }
 
-// sendSalesInvoiceCallback 通过 MQ 发送 SI 回调消息到 Main
-// syncStatus: 0=未同步 1=已入队 2=进行中 3=成功 4=失败
-func sendSalesInvoiceCallback(ctx context.Context, companyUuid, saleOrderUuid string, syncStatus int, siName, peNamesJson, errMsg, orderType string) {
+// SendSalesInvoiceCallback 通过 MQ 发送 SI 回调消息到 Main
+// syncStatus: 0=未同步 1=已入队 2=进行中 3=成功 4=失败 5=外部取消
+func SendSalesInvoiceCallback(ctx context.Context, companyUuid, saleOrderUuid string, syncStatus int, siName, peNamesJson, errMsg, orderType string) {
 	if companyUuid == "" {
 		g.Log().Warningf(ctx, "SI回调跳过: company_uuid为空, sale_order_uuid=%s", saleOrderUuid)
 		return
@@ -155,8 +167,30 @@ func sendSalesInvoiceCallback(ctx context.Context, companyUuid, saleOrderUuid st
 	}
 }
 
-// extractReqMetadata 从 ReceiveSalesInvoice 的 ReqMessage 中提取 CompanyUuid 和 OrderType
-func extractReqMetadata(record *entity.ReceiveSalesInvoice) (companyUuid, orderType string) {
+// PushToDLQ 推送失败消息到自定义 DLQ Topic
+// 应用层重试耗尽后调用，作为最后的兜底保障
+func PushToDLQ(ctx context.Context, dlqTopic consts.Topic, originalMsg *mq.AsyncSalesInvoiceMsg, retryCount int, lastError string, lastMqMsgId string, companyUuid, orderType, orderUuid string) {
+	dlqMsg := &mq.SalesInvoiceDLQMsg{
+		OriginalMsg: *originalMsg,
+		RetryCount:  retryCount,
+		LastError:   lastError,
+		LastMqMsgId: lastMqMsgId,
+		FailedAt:    time.Now().Unix(),
+		CompanyUuid: companyUuid,
+		OrderType:   orderType,
+		OrderUuid:   orderUuid,
+	}
+
+	if err := queue.PushWithContext(ctx, string(dlqTopic), dlqMsg); err != nil {
+		g.Log().Errorf(ctx, "推送到DLQ失败 [%s]: record_id=%d, err=%v", dlqTopic, originalMsg.RecordId, err)
+	} else {
+		g.Log().Warningf(ctx, "已推送到DLQ [%s]: record_id=%d, retry_count=%d, company=%s, order=%s",
+			dlqTopic, originalMsg.RecordId, retryCount, companyUuid, orderUuid)
+	}
+}
+
+// ExtractReqMetadata 从 ReceiveSalesInvoice 的 ReqMessage 中提取 CompanyUuid 和 OrderType
+func ExtractReqMetadata(record *entity.ReceiveSalesInvoice) (companyUuid, orderType string) {
 	if record == nil || record.ReqMessage == "" {
 		return "", ""
 	}
@@ -209,9 +243,16 @@ func (*CancelSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg
 		consts.ContextSiteCode: originalRecord.SiteCode,
 	})
 
-	// 检查原 SI 状态
+	// 幂等性检查1：已取消则跳过
 	if originalRecord.Docstatus == erp.DocstatusCancelled {
 		g.Log().Infof(ctx, "原SI已取消，跳过: sale_order_uuid=%s", originalRecord.SaleOrderUuid)
+		return nil
+	}
+
+	// 幂等性检查2：基于 mq_msg_id 避免重复处理（MQ 重试场景）
+	// 如果当前消息 ID 与数据库记录的 mq_msg_id 相同，且状态为 Cancelled，说明已处理
+	if originalRecord.MqMsgId == mqMsg.MsgId && originalRecord.Docstatus == erp.DocstatusCancelled {
+		g.Log().Infof(ctx, "检测到重复消息（MQ重试），跳过: record_id=%d, mq_msg_id=%s", msg.RecordId, mqMsg.MsgId)
 		return nil
 	}
 	if originalRecord.Docstatus == erp.DocstatusDraft {
@@ -220,9 +261,9 @@ func (*CancelSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg
 			g.Log().Infof(ctx, "原SI已失败，无需取消: sale_order_uuid=%s", originalRecord.SaleOrderUuid)
 			return nil
 		}
-		// SI 还在处理中，延迟重试
+		// SI 还在处理中，延迟重试（业务等待，非失败重试）
 		elapsed := time.Now().Unix() - int64(originalRecord.CreatedAt)
-		if elapsed > 120 {
+		if elapsed > consts.MaxWaitForSISeconds {
 			g.Log().Errorf(ctx, "取消SI超时，原SI未完成: sale_order_uuid=%s, elapsed=%ds", originalRecord.SaleOrderUuid, elapsed)
 			return nil
 		}
@@ -248,33 +289,47 @@ func (*CancelSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg
 	}
 
 	if err := service.Selling().CancelSalesInvoice(ctx, cancelReq); err != nil {
+		// 应用层重试：使用数据库 retry_count 字段追踪重试次数
 		retryCount := originalRecord.RetryCount + 1
 		g.Log().Errorf(ctx, "取消SI失败 (retry=%d/%d): %v", retryCount, maxRetryCount, err)
+
+		// 更新数据库重试计数和错误信息
 		siDao.Data(do.ReceiveSalesInvoice{
 			RetryCount: retryCount,
-			RespBody:   fmt.Sprintf("取消SI失败(retry=%d): %v", retryCount, err),
+			MqMsgId:    mqMsg.MsgId,
+			RespBody:   fmt.Sprintf(consts.ErrMsgCancelSIRetry, retryCount, err),
 			UpdatedAt:  int(time.Now().Unix()),
 		}).Update()
 
 		if retryCount < maxRetryCount {
+			// 延迟重试：使用指数退避策略重新推入队列
 			queue.DelayPush(string(consts.TopicCancelSalesInvoice), &mq.AsyncSalesInvoiceMsg{
 				RecordId: msg.RecordId,
 				MsgType:  mq.MsgTypeCancelSalesInvoice,
 				SiteCode: msg.SiteCode,
 			}, retryDelay(retryCount))
-			return nil
+			return nil // 不返回 error，避免 RocketMQ 自身重试
 		}
-		// 重试耗尽，发送失败回调
-		companyUuid, orderType := extractReqMetadata(originalRecord)
-		sendSalesInvoiceCallback(ctx, companyUuid, originalRecord.SaleOrderUuid, 4, "", "", err.Error(), orderType)
-		return nil
+
+		// 重试耗尽：1. 发送失败回调到 Main，2. 推送到 DLQ 作为兜底
+		companyUuid, orderType := ExtractReqMetadata(originalRecord)
+		SendSalesInvoiceCallback(ctx, companyUuid, originalRecord.SaleOrderUuid, erp.SyncStatusFailed, "", "", err.Error(), orderType)
+		PushToDLQ(ctx, consts.TopicCancelSalesInvoiceDLQ, &mq.AsyncSalesInvoiceMsg{
+			RecordId: msg.RecordId,
+			MsgType:  mq.MsgTypeCancelSalesInvoice,
+			SiteCode: msg.SiteCode,
+		}, retryCount, err.Error(), mqMsg.MsgId, companyUuid, orderType, originalRecord.SaleOrderUuid)
+		return nil // 已处理失败，不需要 MQ 重试
 	}
 
 	// 更新原记录状态为 Cancelled
-	siDao.Data(do.ReceiveSalesInvoice{
+	if _, updateErr := siDao.Data(do.ReceiveSalesInvoice{
 		Docstatus: erp.DocstatusCancelled,
+		MqMsgId:   mqMsg.MsgId,
 		UpdatedAt: int(time.Now().Unix()),
-	}).Update()
+	}).Update(); updateErr != nil {
+		g.Log().Errorf(ctx, "更新取消SI状态失败: record_id=%d, err=%v", msg.RecordId, updateErr)
+	}
 
 	return nil
 }
@@ -309,6 +364,12 @@ func (*ReturnSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg
 		return gerror.Wrap(err, "查询退款SI异步记录失败")
 	}
 
+	// 幂等性检查：基于 mq_msg_id 避免重复处理（MQ 重试场景）
+	if cachedRecord.MqMsgId == mqMsg.MsgId && cachedRecord.Docstatus == erp.DocstatusSubmitted {
+		g.Log().Infof(ctx, "检测到重复消息（MQ重试），跳过: record_id=%d, mq_msg_id=%s", msg.RecordId, mqMsg.MsgId)
+		return nil
+	}
+
 	reqBuf, err := gbase64.DecodeString(cachedRecord.ReqMessage)
 	if err != nil {
 		return gerror.Wrap(err, "解码请求参数失败")
@@ -337,9 +398,9 @@ func (*ReturnSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg
 			}).Update()
 			return nil
 		}
-		// SI 尚未完成，延迟重试
+		// SI 尚未完成，延迟重试（业务等待，非失败重试）
 		elapsed := time.Now().Unix() - int64(cachedRecord.CreatedAt)
-		if elapsed > 120 {
+		if elapsed > consts.MaxWaitForSISeconds {
 			g.Log().Errorf(ctx, "退款SI超时: sale_order_uuid=%s", req.SaleOrderUuid)
 			returnDao.Data(do.ReceiveReturnSalesInvoice{
 				RespBody:  fmt.Sprintf("退款SI超时，原SI未完成: elapsed=%ds", elapsed),
@@ -363,39 +424,53 @@ func (*ReturnSalesInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg
 
 	resp, err := service.Selling().ReturnSalesInvoice(ctx, req)
 	if err != nil {
+		// 应用层重试：使用数据库 retry_count 字段追踪重试次数
 		retryCount := cachedRecord.RetryCount + 1
 		g.Log().Errorf(ctx, "退款SI失败 (retry=%d/%d): %v", retryCount, maxRetryCount, err)
+
+		// 更新数据库重试计数和错误信息
 		returnDao.Data(do.ReceiveReturnSalesInvoice{
 			RetryCount: retryCount,
-			RespBody:   fmt.Sprintf("退款SI失败(retry=%d): %v", retryCount, err),
+			MqMsgId:    mqMsg.MsgId,
+			RespBody:   fmt.Sprintf(consts.ErrMsgReturnSIRetry, retryCount, err),
 			UpdatedAt:  int(time.Now().Unix()),
 		}).Update()
 
 		if retryCount < maxRetryCount {
+			// 延迟重试：使用指数退避策略重新推入队列
 			queue.DelayPush(string(consts.TopicReturnSalesInvoice), &mq.AsyncSalesInvoiceMsg{
 				RecordId: msg.RecordId,
 				MsgType:  mq.MsgTypeReturnSalesInvoice,
 				SiteCode: msg.SiteCode,
 			}, retryDelay(retryCount))
-			return nil
+			return nil // 不返回 error，避免 RocketMQ 自身重试
 		}
-		// 重试耗尽，发送失败回调
-		companyUuid, orderType := extractReqMetadata(originalRecord)
-		sendSalesInvoiceCallback(ctx, companyUuid, req.SaleOrderUuid, 4, "", "", err.Error(), orderType)
-		return nil
+
+		// 重试耗尽：1. 发送失败回调到 Main，2. 推送到 DLQ 作为兜底
+		companyUuid, orderType := ExtractReqMetadata(originalRecord)
+		SendSalesInvoiceCallback(ctx, companyUuid, req.SaleOrderUuid, erp.SyncStatusFailed, "", "", err.Error(), orderType)
+		PushToDLQ(ctx, consts.TopicReturnSalesInvoiceDLQ, &mq.AsyncSalesInvoiceMsg{
+			RecordId: msg.RecordId,
+			MsgType:  mq.MsgTypeReturnSalesInvoice,
+			SiteCode: msg.SiteCode,
+		}, retryCount, err.Error(), mqMsg.MsgId, companyUuid, orderType, req.SaleOrderUuid)
+		return nil // 已处理失败，不需要 MQ 重试
 	}
 
 	if resp != nil {
 		respBuf, _ := proto.Marshal(resp)
 		peNamesJson, _ := gjson.Encode(resp.PaymentEntryNames)
-		returnDao.Data(do.ReceiveReturnSalesInvoice{
+		if _, updateErr := returnDao.Data(do.ReceiveReturnSalesInvoice{
 			Docstatus:         erp.DocstatusSubmitted,
 			SalesInvoiceName:  resp.CreditNoteName,
 			PaymentEntryNames: string(peNamesJson),
 			RespMessage:       gbase64.EncodeToString(respBuf),
 			RespBody:          resp.String(),
+			MqMsgId:           mqMsg.MsgId,
 			UpdatedAt:         int(time.Now().Unix()),
-		}).Update()
+		}).Update(); updateErr != nil {
+			return gerror.Wrapf(updateErr, "更新退款SI日志记录失败")
+		}
 	}
 
 	return nil

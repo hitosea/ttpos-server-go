@@ -180,7 +180,7 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime
 		return nil, errors.WithMessage(err)
 	}
 	//
-	var peakHours []business_data_resp.PeakHour
+	peakHours := make([]business_data_resp.PeakHour, 0, len(results))
 	for _, v := range results {
 		startHour := fmt.Sprintf("%02d", v.Hour) // 将整点数补齐为两位数作为起始小时
 		endHour := fmt.Sprintf("%02d", v.Hour+1) // 结束小时为起始小时加1

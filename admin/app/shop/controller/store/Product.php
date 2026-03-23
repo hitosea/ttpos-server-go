@@ -51,6 +51,7 @@ class Product extends Controller
      */
     public function index()
     {
+        return $this->renderError('This API service is currently under maintenance. Please download and use the TTPOS Shop client.');
         $data = $this->postData() ?: [];
         $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?? 0;
         $model = new OrderModel();

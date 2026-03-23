@@ -150,7 +150,7 @@ func (*ReturnPosInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) 
 	if invoiceNotExistOrDraft {
 		// 检查是否超时（超过2分钟不再重试）
 		elapsed := time.Now().Unix() - int64(cachedRecord.CreatedAt)
-		if elapsed > 120 {
+		if elapsed > consts.MaxWaitForSISeconds {
 			respMessage := fmt.Sprintf("退款发票超时，发票记录不存在或创建未完成: OrderNo=%s, elapsed=%ds", req.OrderNo, elapsed)
 			g.Log().Errorf(ctx, respMessage)
 			if _, err := returnDao.Data(do.ReceiveReturnPosInvoice{
@@ -299,7 +299,7 @@ func (*CancelPosInvoice) Handle(ctx context.Context, mqMsg queue.MqMsg) (err err
 	if invoiceNotExistOrDraft {
 		// 检查是否超时（超过2分钟不再重试）
 		elapsed := time.Now().Unix() - int64(cachedRecord.CreatedAt)
-		if elapsed > 120 {
+		if elapsed > consts.MaxWaitForSISeconds {
 			respMessage := fmt.Sprintf("取消发票超时，发票记录不存在或创建未完成: OrderNo=%s, elapsed=%ds", req.OrderNo, elapsed)
 			g.Log().Errorf(ctx, respMessage)
 			if _, err := cancelDao.Data(do.ReceiveCancelPosInvoice{

@@ -339,4 +339,41 @@ service SellingService {
 
   // 保存支付方式
   rpc SaveModeOfPayment (SaveModeOfPaymentReq) returns (erp.ResponseInfo);
+
+  // 获取 SI 失败统计（死信队列）
+  rpc GetFailedSIStats (GetFailedSIStatsReq) returns (erp.ResponseInfo);
+
+  // 重试失败的 SI 记录
+  rpc RetryFailedSI (RetryFailedSIReq) returns (erp.ResponseInfo);
+}
+
+// GetFailedSIStatsReq 查询失败 SI 统计请求
+message GetFailedSIStatsReq {
+  string site_code = 1; // 站点编码，可选（为空查所有站点）
+}
+
+// FailedSIStats 失败 SI 统计响应
+message FailedSIStats {
+  int32 save_failed_count = 1;   // SaveSI 失败数
+  int32 cancel_failed_count = 2; // CancelSI 失败数
+  int32 return_failed_count = 3; // ReturnSI 失败数
+  int32 total_failed_count = 4;  // 总失败数
+  int32 save_pending_count = 5;   // SaveSI 进行中数量
+  int32 cancel_pending_count = 6; // CancelSI 进行中数量
+  int32 return_pending_count = 7; // ReturnSI 进行中数量
+  int32 total_pending_count = 8;  // 总进行中数量
+}
+
+// RetryFailedSIReq 重试/跳过失败 SI 请求
+message RetryFailedSIReq {
+  string site_code = 1;       // 站点编码，可选
+  int64 record_id = 2;        // 指定记录ID，可选
+  string sale_order_uuid = 3; // 指定订单UUID，可选
+  string msg_type = 4;        // 消息类型，可选（save-sales-invoice/cancel-sales-invoice/return-sales-invoice，为空重试所有）
+  string action = 5;          // 操作类型: 空/"retry"=重试, "skip"=标记跳过
+}
+
+// RetryFailedSIResult 重试结果
+message RetryFailedSIResult {
+  int32 retry_count = 1; // 成功重新入队的记录数
 }

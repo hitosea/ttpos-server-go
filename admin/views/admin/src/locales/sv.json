@@ -484,5 +484,18 @@
     "请至少添加一个门店": "Vänligen lägg till minst en butik",
     "邮箱/手机号/员工ID": "E-post/Mobilnummer/Anställd ID",
     "添加账号": "Lägg till konto",
-    "导入日志": "Importera loggar"
+    "导入日志": "Importera loggar",
+    "站点编码": "Webbplatskod",
+    "留空查询全部": "Lämna tomt för att fråga alla",
+    "失败数": "Antal misslyckade",
+    "进行中": "Pågående",
+    "总进行中": "Totalt pågående",
+    "重试": "Försök igen",
+    "跳过": "Hoppa över",
+    "总失败数": "Totalt misslyckade",
+    "全部重试": "Försök alla igen",
+    "全部跳过": "Hoppa över alla",
+    "Save Sales Invoice": "Spara försäljningsfaktura",
+    "Cancel Sales Invoice": "Avbryt försäljningsfaktura",
+    "Return Sales Invoice": "Returnera försäljningsfaktura"
 }

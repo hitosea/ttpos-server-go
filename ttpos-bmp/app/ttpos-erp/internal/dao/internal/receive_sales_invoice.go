@@ -13,10 +13,10 @@ import (
 
 // ReceiveSalesInvoiceDao is the data access object for the table erp_receive_sales_invoice.
 type ReceiveSalesInvoiceDao struct {
-	table    string                       // table is the underlying table name of the DAO.
-	group    string                       // group is the database configuration group name of the current DAO.
-	columns  ReceiveSalesInvoiceColumns   // columns contains all the column names of Table for convenient usage.
-	handlers []gdb.ModelHandler           // handlers for customized model modification.
+	table    string                     // table is the underlying table name of the DAO.
+	group    string                     // group is the database configuration group name of the current DAO.
+	columns  ReceiveSalesInvoiceColumns // columns contains all the column names of Table for convenient usage.
+	handlers []gdb.ModelHandler         // handlers for customized model modification.
 }
 
 // ReceiveSalesInvoiceColumns defines and stores column names for the table erp_receive_sales_invoice.
@@ -35,6 +35,7 @@ type ReceiveSalesInvoiceColumns struct {
 	ReqBody           string // 请求文本
 	RespBody          string // 响应文本
 	RetryCount        string // 重试次数
+	MqMsgId           string // 最后一次MQ消息ID
 	CreatedAt         string // 创建时间
 	UpdatedAt         string // 更新时间
 }
@@ -55,6 +56,7 @@ var receiveSalesInvoiceColumns = ReceiveSalesInvoiceColumns{
 	ReqBody:           "req_body",
 	RespBody:          "resp_body",
 	RetryCount:        "retry_count",
+	MqMsgId:           "mq_msg_id",
 	CreatedAt:         "created_at",
 	UpdatedAt:         "updated_at",
 }
@@ -99,6 +101,11 @@ func (dao *ReceiveSalesInvoiceDao) Ctx(ctx context.Context) *gdb.Model {
 }
 
 // Transaction wraps the transaction logic using function f.
+// It rolls back the transaction and returns the error if function f returns a non-nil error.
+// It commits the transaction and returns nil if function f returns nil.
+//
+// Note: Do not commit or roll back the transaction in function f,
+// as it is automatically handled by this function.
 func (dao *ReceiveSalesInvoiceDao) Transaction(ctx context.Context, f func(ctx context.Context, tx gdb.TX) error) (err error) {
 	return dao.Ctx(ctx).Transaction(ctx, f)
 }

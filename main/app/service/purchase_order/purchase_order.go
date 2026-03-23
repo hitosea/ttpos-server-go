@@ -603,7 +603,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 				remarks = append(remarks, resp.PurchaseOrderRemark{
 					Source:     "store",
 					Status:     log.NewStatus,
-					Remark:     log.Remark,
+					Remark:     translatePurchaseOrderLogRemark(lang, log.Remark),
 					CreateTime: log.CreateTime,
 				})
 			}
@@ -623,7 +623,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 				remarks = append(remarks, resp.PurchaseOrderRemark{
 					Source:     "headquarters",
 					Status:     log.NewStatus,
-					Remark:     log.Remark,
+					Remark:     translatePurchaseOrderLogRemark(lang, log.Remark),
 					CreateTime: log.CreateTime,
 				})
 			}

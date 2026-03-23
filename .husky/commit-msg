@@ -12,7 +12,7 @@ BRANCH_NAME="$(git branch --show-current)"
 
 # 检查分支命名是否符合 git flow 约定
 case "$BRANCH_NAME" in
-  feature/*|feat/*|hotfix/*|release/*|develop|dev|main|master) ;;
+  feature/*|feat/*|bugfix/*|hotfix/*|release/*|develop|dev|main|master) ;;
   *) 
     echo "❌ 分支命名不符合 git flow 约定：$BRANCH_NAME"
     echo ""

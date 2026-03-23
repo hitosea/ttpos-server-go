@@ -22,6 +22,7 @@ type ISaleOrderRepo interface {
 	DeleteSaleOrder(saleOrderUuid uint64) error
 	UpdateSaleOrderErpSalesInvoice(saleOrderUuid uint64, salesInvoiceName string, paymentEntryNames string) error
 	UpdateSaleOrderErpSyncStatus(saleOrderUuid uint64, syncStatus int, salesInvoiceName string, paymentEntryNames string) error
+	ClearErpSalesInvoiceInfo(saleOrderUuid uint64, syncStatus int) error
 	UpdateSaleOrderActivity(saleOrderUuid uint64, fullReductionActivityUuid uint64, fullReductionActivityMessage string, activityAmount float64, autoPointsExchange uint) error // 更新销售订单的满减活动信息
 	BatchMarkErpStockDeducted(orderUuids []uint64) error                                                                                                                      // 批量标记订单ERP库存已扣减
 }
@@ -159,6 +160,15 @@ func (r *saleOrderRepo) UpdateSaleOrderErpSyncStatus(saleOrderUuid uint64, syncS
 		data["erp_payment_entry_names"] = paymentEntryNames
 	}
 	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(data).Error
+}
+
+// ClearErpSalesInvoiceInfo 清空 ERP 发票信息并更新同步状态（外部取消时使用）
+func (r *saleOrderRepo) ClearErpSalesInvoiceInfo(saleOrderUuid uint64, syncStatus int) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]any{
+		"erp_sync_status":        syncStatus,
+		"erp_sales_invoice_name":  "",
+		"erp_payment_entry_names": "",
+	}).Error
 }
 
 // GetSaleOrderList 查询销售订单列表
