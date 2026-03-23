@@ -759,10 +759,12 @@ func (s *hqPushSrv) pushProductToStores(hqUuid uint64, storeUuids []uint64, prod
 	commonRepo := repository.NewCommonRepo()
 	hqProductRepo := repository.NewProductPackageRepo(hqDB)
 
-	// 读取 HQ 商品（含关联表：BOM/属性组/属性/套餐组/套餐子项）
+	// 读取 HQ 商品（含关联表：BOM/属性组/属性/套餐组/套餐子项/多语言名称/卖点多语言）
 	hqProduct, err := hqProductRepo.GetProductPackage(
 		commonRepo.WhereByUuid(productUuid),
 		commonRepo.WhereByHeadquarterUuid(0),
+		hqProductRepo.WithMultiLanguageName(),
+		hqProductRepo.WithDescribeMultiLanguageName(),
 		hqProductRepo.WithProductBoms(),
 		hqProductRepo.WithProductPackageAttributeGroups(),
 		hqProductRepo.WithProductPackageAttributeGroupAttributes(),
@@ -777,13 +779,12 @@ func (s *hqPushSrv) pushProductToStores(hqUuid uint64, storeUuids []uint64, prod
 
 	controlRepo := s.getHqControlRepo(hqUuid)
 
-	// 构建不可覆盖字段的更新 map
-	updateData := s.buildProductUpdateData(hqProduct)
-
 	for _, storeUuid := range storeUuids {
 		su := storeUuid
+		// 每个子店独立构建 updateData，避免多个 goroutine 并发写同一个 map
+		storeUpdateData := s.buildProductUpdateData(hqProduct)
 		utils.Go(func() {
-			s.pushSingleProductToStore(hqUuid, su, productUuid, hqProduct, controlRepo, updateData)
+			s.pushSingleProductToStore(hqUuid, su, productUuid, hqProduct, controlRepo, storeUpdateData)
 		})
 	}
 }
@@ -846,17 +847,6 @@ func (s *hqPushSrv) buildProductUpdateData(hqProduct *model.ProductPackage) map[
 
 // pushSingleProductToStore 推送单个商品到单个子店
 func (s *hqPushSrv) pushSingleProductToStore(hqUuid, storeUuid uint64, productUuid uint64, hqProduct *model.ProductPackage, controlRepo repository.IHqControlSettingRepo, updateData map[string]any) {
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Logger.Error("推送商品到子店 panic",
-				zap.Uint64("company_uuid", hqUuid),
-				zap.Uint64("store_uuid", storeUuid),
-				zap.Uint64("product_uuid", productUuid),
-				zap.Any("panic", r),
-			)
-		}
-	}()
-
 	storeDB := s.dbm.GetDB(storeUuid)
 	commonRepo := repository.NewCommonRepo()
 	storeProductRepo := repository.NewProductPackageRepo(storeDB)
@@ -869,6 +859,19 @@ func (s *hqPushSrv) pushSingleProductToStore(hqUuid, storeUuid uint64, productUu
 	)
 	if err != nil || storeProduct == nil {
 		return // 子店不存在该商品
+	}
+
+	// 同步多语言名称到子店数据库（商品名称 + 卖点描述）
+	multiLangRepo := repository.NewMultiLanguageNameRepo(storeDB)
+	nameUuid := s.syncMultiLanguageName(multiLangRepo, storeProduct.MultiLanguageNameUuid, &hqProduct.MultiLanguageName)
+	descUuid := s.syncMultiLanguageName(multiLangRepo, storeProduct.DescribeMultiLanguageNameUuid, &hqProduct.DescribeMultiLanguageName)
+	updateData["name"] = hqProduct.MultiLanguageName.ToJson()
+	updateData["multi_language_name_uuid"] = nameUuid
+	updateData["describe_multi_language_name_uuid"] = descUuid
+
+	// 同步图片文件记录到子店数据库
+	if hqProduct.ImageFileUuid > 0 && hqProduct.ImageFileUuid != storeProduct.ImageFileUuid {
+		s.syncFileToStore(hqUuid, storeUuid, hqProduct.ImageFileUuid)
 	}
 
 	// 处理店内上下架（可覆盖字段，始终参与推送）
@@ -1050,16 +1053,6 @@ func (s *hqPushSrv) pushProductTakeoutToStores(hqUuid uint64, storeUuids []uint6
 
 // pushSingleTakeoutToStore 推送单个外卖商品到单个子店
 func (s *hqPushSrv) pushSingleTakeoutToStore(hqUuid, storeUuid uint64, hqTakeout *model.ProductPackageTakeout, controlRepo repository.IHqControlSettingRepo) {
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Logger.Error("推送外卖商品到子店 panic",
-				zap.Uint64("company_uuid", hqUuid),
-				zap.Uint64("store_uuid", storeUuid),
-				zap.Any("panic", r),
-			)
-		}
-	}()
-
 	storeDB := s.dbm.GetDB(storeUuid)
 	commonRepo := repository.NewCommonRepo()
 	storeTakeoutRepo := repository.NewProductPackageTakeoutRepo(storeDB)
@@ -1098,6 +1091,11 @@ func (s *hqPushSrv) pushSingleTakeoutToStore(hqUuid, storeUuid uint64, hqTakeout
 	multiLangRepo := repository.NewMultiLanguageNameRepo(storeDB)
 	nameUuid := s.syncMultiLanguageName(multiLangRepo, storeTakeout.MultiLanguageNameUuid, &hqTakeout.MultiLanguageName)
 	descUuid := s.syncMultiLanguageName(multiLangRepo, storeTakeout.DescribeMultiLanguageNameUuid, &hqTakeout.DescribeMultiLanguageName)
+
+	// 同步图片文件记录到子店数据库
+	if hqTakeout.ImageFileUuid > 0 && hqTakeout.ImageFileUuid != storeTakeout.ImageFileUuid {
+		s.syncFileToStore(hqUuid, storeUuid, hqTakeout.ImageFileUuid)
+	}
 
 	// 构建不可覆盖字段更新数据
 	updateData := map[string]any{
@@ -1237,6 +1235,33 @@ func (s *hqPushSrv) syncMultiLanguageName(repo repository.IMultiLanguageNameRepo
 	return uuid
 }
 
+// syncFileToStore 将 HQ 的文件记录复制到子店数据库（如果子店不存在该文件）
+func (s *hqPushSrv) syncFileToStore(hqUuid, storeUuid, fileUuid uint64) {
+	if fileUuid == 0 {
+		return
+	}
+	storeDB := s.dbm.GetDB(storeUuid)
+	storeFileRepo := repository.NewFileRepo(storeDB)
+
+	// 检查子店是否已有该文件
+	if _, err := storeFileRepo.GetFileByUuid(fileUuid); err == nil {
+		return // 已存在，无需同步
+	}
+
+	// 从 HQ 读取文件记录并复制到子店
+	hqDB := s.dbm.GetDB(hqUuid)
+	hqFileRepo := repository.NewFileRepo(hqDB)
+	hqFile, err := hqFileRepo.GetFileByUuid(fileUuid)
+	if err != nil || hqFile == nil {
+		return
+	}
+
+	newFile := *hqFile
+	newFile.ID = 0
+	newFile.HeadquarterUuid = hqUuid
+	_ = storeFileRepo.CreateFile(newFile)
+}
+
 // pushMaterialToStores 推送物品变更到多个子店
 func (s *hqPushSrv) pushMaterialToStores(hqUuid uint64, storeUuids []uint64, materialUuid uint64) {
 	hqDB := s.dbm.GetDB(hqUuid)
@@ -1264,16 +1289,6 @@ func (s *hqPushSrv) pushMaterialToStores(hqUuid uint64, storeUuids []uint64, mat
 
 // pushSingleMaterialToStore 推送单个物品到单个子店
 func (s *hqPushSrv) pushSingleMaterialToStore(hqUuid, storeUuid uint64, hqMaterial *model.Material, controlRepo repository.IHqControlSettingRepo) {
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Logger.Error("推送物品到子店 panic",
-				zap.Uint64("company_uuid", hqUuid),
-				zap.Uint64("store_uuid", storeUuid),
-				zap.Any("panic", r),
-			)
-		}
-	}()
-
 	storeDB := s.dbm.GetDB(storeUuid)
 	commonRepo := repository.NewCommonRepo()
 	storeMaterialRepo := repository.NewMaterialRepo(storeDB)
