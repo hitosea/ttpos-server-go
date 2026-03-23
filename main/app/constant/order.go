@@ -219,6 +219,12 @@ const (
 	H5OrderTypeMemberDineIn = 1 // 会员端堂食订单
 )
 
+// 会员端堂食下单模式
+const (
+	OrderFirstPayLaterNo  = 0 // 先付后下单（默认）
+	OrderFirstPayLaterYes = 1 // 先下单后付
+)
+
 // 会员端堂食订单状态过滤（用于列表查询参数）
 const (
 	MemberDineInOrderStatusAll        = "all"        // 全部

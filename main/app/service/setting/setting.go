@@ -2627,11 +2627,12 @@ func (s *Srv) GetStoreScanOrderSetting(ctx context.Context) (setting.StoreScanOr
 	}
 
 	return setting.StoreScanOrderSettingResp{
-		IsEnabled:           data.IsEnabled,
-		EnableDelivery:      data.EnableDelivery,
-		EnableSelfPickup:    data.EnableSelfPickup,
-		DeliveryAvailable:   deliveryAvailable,
-		SelfPickupAvailable: selfPickupAvailable,
+		IsEnabled:            data.IsEnabled,
+		EnableDelivery:       data.EnableDelivery,
+		EnableSelfPickup:     data.EnableSelfPickup,
+		IsOrderFirstPayLater: data.IsOrderFirstPayLater,
+		DeliveryAvailable:    deliveryAvailable,
+		SelfPickupAvailable:  selfPickupAvailable,
 	}, nil
 }
 
@@ -2654,9 +2655,10 @@ func (s *Srv) SaveStoreScanOrderSetting(ctx context.Context, settingReq req.Save
 
 	// 保存设置
 	data := setting.StoreScanOrderSetting{
-		IsEnabled:        settingReq.IsEnabled,
-		EnableDelivery:   settingReq.EnableDelivery,
-		EnableSelfPickup: settingReq.EnableSelfPickup,
+		IsEnabled:            settingReq.IsEnabled,
+		EnableDelivery:       settingReq.EnableDelivery,
+		EnableSelfPickup:     settingReq.EnableSelfPickup,
+		IsOrderFirstPayLater: settingReq.IsOrderFirstPayLater,
 	}
 
 	if err := s.UpdateSetting(ctx, constant.SettingStoreScanOrder, data); err != nil {
