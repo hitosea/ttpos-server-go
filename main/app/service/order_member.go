@@ -1336,7 +1336,7 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 		memberSaleOrder.RefundAmount = returnOrder.RefundAmount
 	}
 
-	// 设置订单为“已取消”状态
+	// 设置订单为"已取消"状态
 	memberSaleOrder.SetCancel(request.CancelReason)
 
 	// 更新订单状态
@@ -1350,7 +1350,7 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 		return errors.WithMessage(err)
 	}
 
-	// 发布“订单取消”操作事件
+	// 发布"订单取消"操作事件
 	utils.Go(func() {
 		s.bus.PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
 			BasePayload: event.BasePayload{
@@ -1491,7 +1491,7 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 			}
 		}
 
-		// 设置订单为“已取消”状态
+		// 设置订单为"已取消"状态
 		memberSaleOrder.RefundAmount = memberSaleOrder.Amount
 		memberSaleOrder.SetCancelInCashier(request.CancelReason)
 
@@ -1505,7 +1505,7 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 		return errors.WithMessage(err)
 	}
 
-	// 发布“整单取消”操作事件
+	// 发布"整单取消"操作事件
 	utils.Go(func() {
 
 		// 取消订单
@@ -2596,7 +2596,7 @@ func (s *orderSrv) MemberOrderPayTimeoutAutoCancel(ctx context.Context, memberSa
 		}
 	}
 
-	// 发布“订单取消”操作事件
+	// 发布"订单取消"操作事件
 	utils.Go(func() {
 		event.NewSystemBus().PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
 			BasePayload: event.BasePayload{ // 基础信息
@@ -2708,7 +2708,7 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 			return errors.WithMessage(err)
 		}
 
-		// 发布“订单取消”操作事件
+		// 发布"订单取消"操作事件
 		utils.Go(func() {
 			s.bus.PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
 				BasePayload: event.BasePayload{
@@ -3289,16 +3289,16 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 	// 构建查询条件
 	billStatuses, h5OrderStatuses, isPaid := constant.GetMemberDineInOrderStatusFilter(listReq.Status)
 
-	// “先下单后付”模式兼容：
-	// - “进行中”查询需要同时包含 Pending 状态（先下单后付的订单 Status=Pending 但有 H5 订单）
-	// - “待支付”查询也需要内存过滤掉已有 H5 订单的（先下单后付的不是”待支付”）
+	// "先下单后付"模式兼容：
+	// - "进行中"查询需要同时包含 Pending 状态（先下单后付的订单 Status=Pending 但有 H5 订单）
+	// - "待支付"查询也需要内存过滤掉已有 H5 订单的（先下单后付的不是"待支付"）
 	if listReq.Status == constant.MemberDineInOrderStatusInProgress {
 		billStatuses = append(billStatuses, constant.SaleBillStatusPending)
 	}
 
 	dbOptions := s.buildDineInOrderListQueryOptions(ctx, billStatuses)
 
-	if listReq.Keyword != “” {
+	if listReq.Keyword != "" {
 		// 关键字搜索（按菜名或订单号）
 		dbOptions = append(dbOptions, saleBillRepo.WhereKeyword(listReq.Keyword, ctx.GetLanguage()))
 	}
@@ -3314,28 +3314,28 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 	for _, saleBill := range saleBills {
 		// 过滤支付状态
 		if isPaid != nil && *isPaid != saleBill.IsExistPaid() {
-			// 如果需要过滤支付状态时,过滤掉已经支付的或者未支付的. 使用场景: 仅查询”待支付”的订单时需要
+			// 如果需要过滤支付状态时,过滤掉已经支付的或者未支付的. 使用场景: 仅查询"待支付"的订单时需要
 			continue
 		}
 
 		// 获取 H5 订单
 		h5Order := s.getH5OrderForMemberDineIn(h5OrderRepo, saleBill.Uuid)
 
-		// “先下单后付”模式内存过滤：
-		// - “待支付”列表：排除有 H5 订单的（这些是先下单后付的订单，不是待支付）
-		// - “进行中”列表：Pending 状态的订单必须有 H5 订单才能归入进行中
+		// "先下单后付"模式内存过滤：
+		// - "待支付"列表：排除有 H5 订单的（这些是先下单后付的订单，不是待支付）
+		// - "进行中"列表：Pending 状态的订单必须有 H5 订单才能归入进行中
 		if listReq.Status == constant.MemberDineInOrderStatusUnpaid && h5Order != nil && saleBill.Status == constant.SaleBillStatusPending {
-			continue // 先下单后付的订单不显示在”待支付”列表
+			continue // 先下单后付的订单不显示在"待支付"列表
 		}
 		if listReq.Status == constant.MemberDineInOrderStatusInProgress && saleBill.Status == constant.SaleBillStatusPending && h5Order == nil {
-			continue // Pending 状态无 H5 订单的是普通待支付订单，不属于”进行中”
+			continue // Pending 状态无 H5 订单的是普通待支付订单，不属于"进行中"
 		}
 
 		// 获取生产单完成状态
 		isProductionFinished, _ := productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
 
 		// H5 订单状态内存过滤（结合生产单完成状态）
-		// 对于”进行中”+ Pending 状态的先下单后付订单，跳过 h5OrderStatuses 过滤（已在上面过滤）
+		// 对于"进行中"+ Pending 状态的先下单后付订单，跳过 h5OrderStatuses 过滤（已在上面过滤）
 		if saleBill.Status != constant.SaleBillStatusPending {
 			if !s.filterDineInOrderByH5Status(h5Order, h5OrderStatuses, listReq.Status, isProductionFinished) {
 				continue
@@ -3348,7 +3348,7 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 			if h5Order.Status != constant.H5OrderStatusOrder && h5Order.Status != constant.H5OrderStatusAccepted {
 				continue
 			}
-			// 已接单且生产单全部完成的不在”进行中”
+			// 已接单且生产单全部完成的不在"进行中"
 			if h5Order.Status == constant.H5OrderStatusAccepted && isProductionFinished {
 				continue
 			}
@@ -3666,9 +3666,12 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		}
 	}
 
-	// 计算剩余支付时间
+	// 判断是否是"先下单后付"模式的订单（Status=Pending 但有 H5 订单）
+	isOrderFirstPayLater := saleBill.Status == constant.SaleBillStatusPending && h5Order != nil
+
+	// 计算剩余支付时间（"先下单后付"模式的订单不显示支付倒计时）
 	var remainingPaymentTime int64
-	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() && saleBill.SubmitPayTime > 0 {
+	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() && saleBill.SubmitPayTime > 0 && !isOrderFirstPayLater {
 		// 假设支付超时时间为15分钟
 		paymentTimeout := int64(15 * 60)
 		remaining := paymentTimeout - (time.Now().Unix() - saleBill.SubmitPayTime)
@@ -3687,8 +3690,9 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	}
 
 	// 待支付状态下获取支付方式列表（用于发起支付）
+	// "先下单后付"模式的订单不显示支付方式列表（不需要立即支付）
 	paymentMethodList := resp.PaymentMethodList{List: make([]resp.PaymentMethodItem, 0)}
-	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() {
+	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() && !isOrderFirstPayLater {
 		paymentMethods, _ := repository.NewPaymentMethodRepo(db).GetLianLianPayPaymentMethodList()
 		for _, paymentMethod := range paymentMethods {
 			paymentMethodList.List = append(paymentMethodList.List, resp.PaymentMethodItem{
