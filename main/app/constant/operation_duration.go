@@ -119,14 +119,14 @@ const (
 	ActionTabletCall            = "tablet_call"              // 平板呼叫服务
 
 	// Member 会员端操作
-	ActionMemberOrderCreate          = "member_order_create"            // 会员创建订单
-	ActionMemberOrderAddress         = "member_order_address"           // 会员设置地址
-	ActionMemberOrderPay             = "member_order_pay"               // 会员支付
-	ActionMemberOrderCancel          = "member_order_cancel"            // 会员取消订单
+	ActionMemberOrderCreate           = "member_order_create"              // 会员创建订单
+	ActionMemberOrderAddress          = "member_order_address"             // 会员设置地址
+	ActionMemberOrderPay              = "member_order_pay"                 // 会员支付
+	ActionMemberOrderCancel           = "member_order_cancel"              // 会员取消订单
 	ActionMemberDineInSetDiningMethod = "member_dine_in_set_dining_method" // 会员设置堂食用餐方式
-	ActionMemberDineInPay            = "member_dine_in_pay"             // 会员堂食订单支付
-	ActionMemberDineInCancel         = "member_dine_in_cancel"          // 会员取消堂食订单
-	ActionMemberOrderCallback        = "member_order_callback"          // 会员订单回调
+	ActionMemberDineInPay             = "member_dine_in_pay"               // 会员堂食订单支付
+	ActionMemberDineInCancel          = "member_dine_in_cancel"            // 会员取消堂食订单
+	ActionMemberOrderCallback         = "member_order_callback"            // 会员订单回调
 
 	// Shop 商户后台操作
 	ActionShopOrderCancel         = "shop_order_cancel"           // 商户取消订单

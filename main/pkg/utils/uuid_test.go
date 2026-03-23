@@ -70,7 +70,7 @@ func TestConcurrentIdGeneration(t *testing.T) {
 	if testing.Short() {
 		t.Log("并发生成测试（使用 -short 标志）")
 		goroutines = 20
-		idsPerGoroutine = 500  // 20 * 500 = 10,000 IDs in short mode
+		idsPerGoroutine = 500 // 20 * 500 = 10,000 IDs in short mode
 	}
 	viper.Set("SERVER_ID", 1)
 	InitIdGenerator()

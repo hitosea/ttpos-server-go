@@ -51,11 +51,11 @@ type IPurchaseOrderSrv interface {
 	UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error                                           // 更新收货单
 	CancelPurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderCancelReq) error                                           // 取消收货单
 	GetReceiptPendingItems(ctx context.Context, req req.ReceiptPendingItemsReq) (resp.ReceiptPendingItemsResp, error)                      // v2.16.0+ 获取待收货物品
-	GetPurchaseReceiptNewList(ctx context.Context, req req.PurchaseReceiptNewListReq) (resp.PurchaseReceiptNewListResp, error) // 新收货单列表（按采购单维度）
+	GetPurchaseReceiptNewList(ctx context.Context, req req.PurchaseReceiptNewListReq) (resp.PurchaseReceiptNewListResp, error)             // 新收货单列表（按采购单维度）
 
 	// 品牌采购自动审批设置
-	GetBrandPurchaseAutoApprove(ctx context.Context) (int, error)                 // 获取品牌采购自动审批开关
-	SetBrandPurchaseAutoApprove(ctx context.Context, value int) error             // 设置品牌采购自动审批开关
+	GetBrandPurchaseAutoApprove(ctx context.Context) (int, error)     // 获取品牌采购自动审批开关
+	SetBrandPurchaseAutoApprove(ctx context.Context, value int) error // 设置品牌采购自动审批开关
 }
 
 // purchaseOrderSrv 采购申请服务实现

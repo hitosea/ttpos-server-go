@@ -902,13 +902,13 @@ func TestSortByStoreCode(t *testing.T) {
 			wantCode: []string{"", "", "1", "No.3", "10", "Branch-A"},
 		},
 		{
-			name: "空列表",
-			input: []mockShop{},
+			name:     "空列表",
+			input:    []mockShop{},
 			wantCode: []string{},
 		},
 		{
-			name: "单个元素",
-			input: []mockShop{{uuid: 1, storeCode: "42"}},
+			name:     "单个元素",
+			input:    []mockShop{{uuid: 1, storeCode: "42"}},
 			wantCode: []string{"42"},
 		},
 	}

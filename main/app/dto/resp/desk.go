@@ -263,15 +263,15 @@ type DineInAmountInfo struct {
 
 // DineInOrderPaymentInfoResp 堂食订单支付信息响应
 type DineInOrderPaymentInfoResp struct {
-	SaleBillUuid      uint64  `json:"sale_bill_uuid"`       // 销售账单UUID
-	SaleOrderUuid     uint64  `json:"sale_order_uuid"`      // 销售订单UUID
-	PaymentOrderUuid  uint64  `json:"payment_order_uuid"`   // 支付单UUID
-	PaymentMethodName string  `json:"payment_method_name"`  // 支付方式名称
-	IsWechatPay       bool    `json:"is_wechat_pay"`        // 是否是微信支付
-	QrCode            string  `json:"qr_code"`              // 支付单二维码 (返回base64图片)
-	LinkUrl           string  `json:"link_url"`             // 支付单链接 (返回跳转地址)
-	Status            int     `json:"status"`               // 支付单状态 0-未支付 1-已支付
-	PaymentAmount     float64 `json:"payment_amount"`       // 支付金额
+	SaleBillUuid      uint64  `json:"sale_bill_uuid"`      // 销售账单UUID
+	SaleOrderUuid     uint64  `json:"sale_order_uuid"`     // 销售订单UUID
+	PaymentOrderUuid  uint64  `json:"payment_order_uuid"`  // 支付单UUID
+	PaymentMethodName string  `json:"payment_method_name"` // 支付方式名称
+	IsWechatPay       bool    `json:"is_wechat_pay"`       // 是否是微信支付
+	QrCode            string  `json:"qr_code"`             // 支付单二维码 (返回base64图片)
+	LinkUrl           string  `json:"link_url"`            // 支付单链接 (返回跳转地址)
+	Status            int     `json:"status"`              // 支付单状态 0-未支付 1-已支付
+	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额
 }
 
 // DineInOrderPaymentStatusResp 堂食订单支付状态响应
@@ -280,4 +280,3 @@ type DineInOrderPaymentStatusResp struct {
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID
 	Status        uint   `json:"status"`          // 支付状态 0-未支付 1-已支付 2-支付失败
 }
-

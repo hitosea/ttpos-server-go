@@ -26,6 +26,7 @@ type CompanyInfoRespWithStoreCode struct {
 
 func (c CompanyInfoRespWithStoreCode) GetStoreCode() string { return c.StoreCode }
 func (c CompanyInfoRespWithStoreCode) GetUuid() uint64      { return c.Uuid }
+
 type SaasCompanyListWithStoreCodeResp struct {
 	List []CompanyInfoRespWithStoreCode `json:"list"`
 }

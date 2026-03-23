@@ -313,6 +313,62 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		return nil, errors.WithMessage(errSaleBill, "repository.NewOrderRepo(db).GetSaleBillAllInfo")
 	}
 
+	// 先下单后付模式：会员端堂食订单接单后转为即时点餐挂单，不送厨
+	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
+		storeScanOrderSetting, err := s.settingSrv.GetStoreScanOrderSetting(ctx)
+		if err != nil {
+			ctx.Log().Warn("获取门店点餐配置失败，按默认流程处理",
+				zap.String("company_uuid", strconv.FormatUint(ctx.GetCompanyUuid(), 10)),
+				zap.Error(err),
+			)
+		}
+		if storeScanOrderSetting.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && saleBill.Status == constant.SaleBillStatusPending {
+			// 将h5订单商品插入到销售订单中（不送厨）
+			saleOrder := saleBill.GetFirstSaleOrder()
+			saleOrder.InsertSaleOrderProduct(h5Order.SaleOrderProducts)
+
+			// 重新计算账单金额
+			saleBill.CalcAll()
+
+			// 设置挂单状态，让订单出现在即时点餐挂单列表中
+			saleBill.SetHideSaleBill()
+
+			ctx.Log().Info("先下单后付：接单后转为挂单",
+				zap.String("company_uuid", strconv.FormatUint(ctx.GetCompanyUuid(), 10)),
+				zap.Uint64("h5_order_uuid", h5OrderUuid),
+				zap.Uint64("sale_bill_uuid", saleBillUuid),
+			)
+
+			if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+				// 更新h5订单
+				if err := repository.NewH5OrderRepo(db).UpdateH5OrderRecord(*h5Order); err != nil {
+					return errors.WithMessage(err, "更新h5订单失败")
+				}
+				// 更新h5订单商品列表
+				for _, h5OrderProduct := range h5Order.H5OrderProducts {
+					if err := repository.NewH5OrderRepo(db).UpdateH5OrderProductRecord(*h5OrderProduct); err != nil {
+						return errors.WithMessage(err, "更新h5订单商品失败")
+					}
+				}
+				// 保存账单挂单状态和重新计算的金额
+				if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
+					return errors.WithMessage(err, "更新账单失败")
+				}
+				// 保存 SaleOrder
+				for _, so := range saleBill.SaleOrders {
+					if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*so); err != nil {
+						return errors.WithMessage(err, "更新销售订单失败")
+					}
+				}
+				return nil
+			}); err != nil {
+				return nil, errors.WithMessage(err, "接单失败")
+			}
+
+			return nil, nil
+		}
+	}
+
 	{
 		ignoreMust := true // 接单，送厨忽略必点方案
 

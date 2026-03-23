@@ -42,8 +42,8 @@ type ITakeoutOrderRepo interface {
 	FindAll(options ...DBOption) ([]*model.TakeoutOrder, error) // 轻量查询，无 COUNT、无默认预加载
 
 	// 选项方法
-	WherePendingStockEntry() DBOption                          // 待 Stock Entry 扣减的已完成外卖订单 scope
-	WhereCompletedWithInvoice() DBOption                       // 已同步 ERPNext 的已完成订单 scope（不区分 erp_stock_deducted）
+	WherePendingStockEntry() DBOption    // 待 Stock Entry 扣减的已完成外卖订单 scope
+	WhereCompletedWithInvoice() DBOption // 已同步 ERPNext 的已完成订单 scope（不区分 erp_stock_deducted）
 	WithPreload(options ...DBOption) DBOption
 	WithTakeoutOrderItems() DBOption
 	WithTakeoutOrderItemModifiers() DBOption

@@ -170,16 +170,16 @@ type IProductSrv interface {
 	GetBatchTagColorUsage(ctx context.Context) (*product_resp.BatchTagColorUsageList, error)          // 获取色块被选择情况
 	SaveBatchProduct(ctx context.Context, req req.SaveBatchProductReq) error                          // 保存分批商品
 
-	SyncProductShopCategory(ctx context.Context, syncHeadquarterData bool) error // 同步产品分类
-	SyncProductTax(ctx context.Context, syncHeadquarterData bool) error          // 同步商品税类
-	SyncUnit(ctx context.Context, syncHeadquarterData bool) error                // 获取总部最新单位数据
-	SyncProductFlavor(ctx context.Context, syncHeadquarterData bool) error       // 同步商品规格
-	SyncSauce(ctx context.Context, syncHeadquarterData bool) error               // 获取总部最新加料数据
-	SyncAttributeGroup(ctx context.Context, syncHeadquarterData bool) error      // 获取总部最新属性组数据
-	SyncProduct(ctx context.Context, syncHeadquarterData bool) error                                   // 同步商品
+	SyncProductShopCategory(ctx context.Context, syncHeadquarterData bool) error                                      // 同步产品分类
+	SyncProductTax(ctx context.Context, syncHeadquarterData bool) error                                               // 同步商品税类
+	SyncUnit(ctx context.Context, syncHeadquarterData bool) error                                                     // 获取总部最新单位数据
+	SyncProductFlavor(ctx context.Context, syncHeadquarterData bool) error                                            // 同步商品规格
+	SyncSauce(ctx context.Context, syncHeadquarterData bool) error                                                    // 获取总部最新加料数据
+	SyncAttributeGroup(ctx context.Context, syncHeadquarterData bool) error                                           // 获取总部最新属性组数据
+	SyncProduct(ctx context.Context, syncHeadquarterData bool) error                                                  // 同步商品
 	SyncHeadquarterProducts(hqDb *gorm.DB, subDb *gorm.DB, hqUuid uint64, companySetting *model.CompanySetting) error // 同步总部商品到子店
-	SyncProductStockByBomCard(ctx context.Context) error                         // 计算所有关联成本卡的商品的库存
-	SyncProductPackageImage(ctx context.Context, syncHeadquarterData bool) error // 同步商品包图片
+	SyncProductStockByBomCard(ctx context.Context) error                                                              // 计算所有关联成本卡的商品的库存
+	SyncProductPackageImage(ctx context.Context, syncHeadquarterData bool) error                                      // 同步商品包图片
 
 	// ========== 总店删除资源时检查子店使用情况 ==========
 	// 删除前检查接口

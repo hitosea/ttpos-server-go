@@ -36,19 +36,19 @@ func TestScanOrderAmount_Source5Only(t *testing.T) {
 
 	// 插入测试数据
 	// 1. source=5（会员扫码），desk_uuid=0，is_takeout=0 → 应计入 scan_order_amount
-	db.Exec(`INSERT INTO `+prefix+`statistics_sale (source, desk_uuid, order_source_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (5, 0, 0, 0, 0, 100.00, 0.00, 0.00, 1000)`)
+	db.Exec(`INSERT INTO ` + prefix + `statistics_sale (source, desk_uuid, order_source_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (5, 0, 0, 0, 0, 100.00, 0.00, 0.00, 1000)`)
 
 	// 2. source=5（会员扫码），有桌台 → 不应计入（desk_uuid > 0）
-	db.Exec(`INSERT INTO `+prefix+`statistics_sale (source, desk_uuid, order_source_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (5, 1001, 0, 0, 0, 200.00, 0.00, 0.00, 1000)`)
+	db.Exec(`INSERT INTO ` + prefix + `statistics_sale (source, desk_uuid, order_source_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (5, 1001, 0, 0, 0, 200.00, 0.00, 0.00, 1000)`)
 
 	// 3. source=5（会员扫码），外卖 → 不应计入（is_takeout=1）
-	db.Exec(`INSERT INTO `+prefix+`statistics_sale (source, desk_uuid, order_source_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (5, 0, 0, 1, 0, 300.00, 0.00, 0.00, 1000)`)
+	db.Exec(`INSERT INTO ` + prefix + `statistics_sale (source, desk_uuid, order_source_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (5, 0, 0, 1, 0, 300.00, 0.00, 0.00, 1000)`)
 
 	// 4. source=1（收银端），desk_uuid=0，is_takeout=0 → 不应计入（source != 5）
-	db.Exec(`INSERT INTO `+prefix+`statistics_sale (source, desk_uuid, order_source_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (1, 0, 0, 0, 0, 400.00, 0.00, 0.00, 1000)`)
+	db.Exec(`INSERT INTO ` + prefix + `statistics_sale (source, desk_uuid, order_source_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (1, 0, 0, 0, 0, 400.00, 0.00, 0.00, 1000)`)
 
 	// 5. source=4（H5），desk_uuid=0，is_takeout=0 → 不应计入（source != 5，修复后去掉了 source=4）
-	db.Exec(`INSERT INTO `+prefix+`statistics_sale (source, desk_uuid, order_source_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (4, 0, 0, 0, 0, 500.00, 0.00, 0.00, 1000)`)
+	db.Exec(`INSERT INTO ` + prefix + `statistics_sale (source, desk_uuid, order_source_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (4, 0, 0, 0, 0, 500.00, 0.00, 0.00, 1000)`)
 
 	// 使用修复后的 SQL 逻辑：source = 5 AND desk_uuid = 0 AND is_takeout = 0
 	var result struct {
@@ -105,7 +105,7 @@ func TestScanOrderAmount_WithRefund(t *testing.T) {
 	}
 
 	// 扫码订单有退款
-	db.Exec(`INSERT INTO `+prefix+`statistics_sale (source, desk_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (5, 0, 0, 0, 200.00, 50.00, 10.00, 1000)`)
+	db.Exec(`INSERT INTO ` + prefix + `statistics_sale (source, desk_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (5, 0, 0, 0, 200.00, 50.00, 10.00, 1000)`)
 
 	var result struct {
 		ScanOrderAmount float64
@@ -155,10 +155,10 @@ func TestScanOrderAmount_OldSource4Excluded(t *testing.T) {
 	}
 
 	// source=4 的订单
-	db.Exec(`INSERT INTO `+prefix+`statistics_sale (source, desk_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (4, 0, 0, 0, 500.00, 0.00, 0.00, 1000)`)
+	db.Exec(`INSERT INTO ` + prefix + `statistics_sale (source, desk_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (4, 0, 0, 0, 500.00, 0.00, 0.00, 1000)`)
 
 	// source=5 的订单
-	db.Exec(`INSERT INTO `+prefix+`statistics_sale (source, desk_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (5, 0, 0, 0, 100.00, 0.00, 0.00, 1000)`)
+	db.Exec(`INSERT INTO ` + prefix + `statistics_sale (source, desk_uuid, is_takeout, is_meger, payment_amount, refund_amount, refund_payment_balance, complete_time) VALUES (5, 0, 0, 0, 100.00, 0.00, 0.00, 1000)`)
 
 	var result struct {
 		ScanOrderAmount float64
