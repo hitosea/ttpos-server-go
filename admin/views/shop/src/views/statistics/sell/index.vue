@@ -190,13 +190,12 @@
   const getData = () => {
     let self = this;
     loading.value = true;
-    let params = searchForm.value;
+    let params = { ...searchForm.value };
     if (typeof params.category_id == 'object' && params.category_id) {
       params.category_id = Number(params.category_id[params.category_id.length - 1]);
     }
     if (params.date && params.date[0] && params.date[1]) {
-      params.date[0] = `${params.date[0]}:00`
-      params.date[1] = `${params.date[1]}:59`
+      params.date = [`${params.date[0]}:00`, `${params.date[1]}:59`];
     }
     params.list_rows = pageSize.value;
     params.page = curPage.value;

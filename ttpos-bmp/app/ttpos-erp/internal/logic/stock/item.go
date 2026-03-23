@@ -3,6 +3,7 @@ package stock
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-bmp/app/ttpos-erp/api/item"
@@ -20,6 +21,12 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gconv"
+)
+
+const (
+	// erpMaxItemCodesPerBatch ERPNext API 单次查询的最大物品编码数量
+	// ERPNext (gunicorn) 默认请求行长度限制为 4094 字节，按平均每个编码约 20 字符估算
+	erpMaxItemCodesPerBatch = 100
 )
 
 var (
@@ -1024,34 +1031,34 @@ func (s *sItem) GetItemDefaultWarehouses(ctx context.Context, itemCodes []string
 	// ── 优先级 1：通过 Item 主文档 JOIN 子表查询 default_warehouse ──
 	// 注意：直接查询 Child DocType "Item Default" 会触发 Frappe 的 check_parent_permission 权限校验
 	// 改为查询 Item 主文档并通过子表过滤格式自动 JOIN，权限检查走 Item 主文档
-	itemDefaultResp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: "Item",
-	}, &erp.RequestParams{
-		Fields: g.ArrayStr{"name", "`tabItem Default`.default_warehouse"},
-		Filters: [][]string{
-			{"name", "in", gstr.Join(itemCodes, ",")},
-			{"Item Default", "company", "=", companyName},
-			{"Item Default", "default_warehouse", "!=", ""},
-		},
-		Limit: consts.Limit999,
-	})
-	if err != nil {
-		g.Log().Warningf(ctx, "GetItemDefaultWarehouses-批量查询Item Default失败: %v", err)
-		pendingItemCodes = append(pendingItemCodes, itemCodes...)
-	} else {
-		foundSet := make(map[string]bool, len(itemCodes))
+	// 分批查询以避免 ERPNext URL 长度限制（gunicorn 默认 4094 字节）
+	for batch := range slices.Chunk(itemCodes, erpMaxItemCodesPerBatch) {
+		itemDefaultResp, batchErr := service.Document().List(ctx, &erp.ErpReq{
+			DocType: "Item",
+		}, &erp.RequestParams{
+			Fields: g.ArrayStr{"name", "`tabItem Default`.default_warehouse"},
+			Filters: [][]string{
+				{"name", "in", gstr.Join(batch, ",")},
+				{"Item Default", "company", "=", companyName},
+				{"Item Default", "default_warehouse", "!=", ""},
+			},
+			Limit: consts.Limit999,
+		})
+		if batchErr != nil {
+			g.Log().Warningf(ctx, "GetItemDefaultWarehouses-批量查询Item Default失败(batch size=%d): %v", len(batch), batchErr)
+			continue
+		}
 		for _, row := range itemDefaultResp.GetJsons("data") {
 			itemCode := row.Get("name").String()
 			warehouse := row.Get("default_warehouse").String()
 			if itemCode != "" && warehouse != "" {
 				result[itemCode] = warehouse
-				foundSet[itemCode] = true
 			}
 		}
-		for _, itemCode := range itemCodes {
-			if !foundSet[itemCode] {
-				pendingItemCodes = append(pendingItemCodes, itemCode)
-			}
+	}
+	for _, itemCode := range itemCodes {
+		if _, found := result[itemCode]; !found {
+			pendingItemCodes = append(pendingItemCodes, itemCode)
 		}
 	}
 
@@ -1120,75 +1127,41 @@ func (s *sItem) getCompanyWarehouseNames(ctx context.Context, companyName string
 	return names, nil
 }
 
-// getMaxStockWarehouse 从 Bin 表查询物品在指定仓库列表中库存最多的仓库
-func (s *sItem) getMaxStockWarehouse(ctx context.Context, itemCode string, warehouses []string) string {
-	// 查询该物品在所有仓库的库存
-	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: erp.DocTypeBin,
-	}, &erp.RequestParams{
-		Fields: g.ArrayStr{"warehouse", "actual_qty"},
-		Filters: [][]string{
-			{"item_code", "=", itemCode},
-			{"actual_qty", ">", "0"},
-		},
-		Limit: consts.Limit999,
-	})
-	if err != nil {
-		return ""
-	}
-
-	// 构建公司仓库集合，用于过滤
-	warehouseSet := make(map[string]bool, len(warehouses))
-	for _, wh := range warehouses {
-		warehouseSet[wh] = true
-	}
-
-	// 在公司仓库中找库存最多的
-	var maxWarehouse string
-	var maxQty float64
-	for _, binData := range resp.GetJsons("data") {
-		wh := binData.Get("warehouse").String()
-		qty := binData.Get("actual_qty").Float64()
-		if warehouseSet[wh] && qty > maxQty {
-			maxQty = qty
-			maxWarehouse = wh
-		}
-	}
-	return maxWarehouse
-}
-
 // batchResolveMaxStockWarehouses 批量查询 Bin 表，为每个物品找到库存最多的公司仓库
 // 返回仍未解析的物品编码列表，已解析的结果写入 result
 func (s *sItem) batchResolveMaxStockWarehouses(ctx context.Context, itemCodes []string, companyWarehouses []string, result map[string]string) []string {
-	// 批量查询 Bin 表：所有待处理物品在公司仓库中的库存
-	binResp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: erp.DocTypeBin,
-	}, &erp.RequestParams{
-		Fields: g.ArrayStr{"item_code", "warehouse", "actual_qty"},
-		Filters: [][]string{
-			{"item_code", "in", gstr.Join(itemCodes, ",")},
-			{"warehouse", "in", gstr.Join(companyWarehouses, ",")},
-			{"actual_qty", ">", "0"},
-		},
-		Limit: consts.Limit999,
-	})
-	if err != nil {
-		g.Log().Warningf(ctx, "batchResolveMaxStockWarehouses-批量查询Bin失败: %v", err)
-		return itemCodes
-	}
-
 	// 按物品分组，找每个物品库存最大的仓库
 	type binEntry struct {
 		warehouse string
 		qty       float64
 	}
 	maxByItem := make(map[string]binEntry, len(itemCodes))
-	for _, row := range binResp.GetJsons("data") {
-		ic := row.Get("item_code").String()
-		wh := row.Get("warehouse").String()
-		qty := row.Get("actual_qty").Float64()
-		if existing, ok := maxByItem[ic]; !ok || qty > existing.qty {
-			maxByItem[ic] = binEntry{warehouse: wh, qty: qty}
+
+	// 分批查询 Bin 表以避免 ERPNext URL 长度限制
+	warehouseFilter := gstr.Join(companyWarehouses, ",")
+	for batch := range slices.Chunk(itemCodes, erpMaxItemCodesPerBatch) {
+		binResp, err := service.Document().List(ctx, &erp.ErpReq{
+			DocType: erp.DocTypeBin,
+		}, &erp.RequestParams{
+			Fields: g.ArrayStr{"item_code", "warehouse", "actual_qty"},
+			Filters: [][]string{
+				{"item_code", "in", gstr.Join(batch, ",")},
+				{"warehouse", "in", warehouseFilter},
+				{"actual_qty", ">", "0"},
+			},
+			Limit: consts.Limit999,
+		})
+		if err != nil {
+			g.Log().Warningf(ctx, "batchResolveMaxStockWarehouses-批量查询Bin失败(batch size=%d): %v", len(batch), err)
+			continue
+		}
+		for _, row := range binResp.GetJsons("data") {
+			ic := row.Get("item_code").String()
+			wh := row.Get("warehouse").String()
+			qty := row.Get("actual_qty").Float64()
+			if existing, ok := maxByItem[ic]; !ok || qty > existing.qty {
+				maxByItem[ic] = binEntry{warehouse: wh, qty: qty}
+			}
 		}
 	}
 

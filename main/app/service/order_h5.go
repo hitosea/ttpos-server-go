@@ -458,6 +458,26 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 		return errors.WithMessage(errors.New("当前状态不可操作"))
 	}
 
+	// QR PromptPay 支付方式不允许拒单（仅会员端堂食订单）
+	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn && h5Order.SaleOrderUuid > 0 {
+		paymentOrderRepo := repository.NewPaymentOrderRepo(db)
+		paymentOrders, _ := paymentOrderRepo.GetPaymentOrderList(
+			repository.CommonRepo.WhereByRelatedUuid(h5Order.SaleOrderUuid),
+			repository.CommonRepo.WhereByRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
+			repository.CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid),
+			repository.CommonRepo.WhereBySoftDelete(),
+			paymentOrderRepo.WithPaymentMethod(),
+		)
+		for _, po := range paymentOrders {
+			if po.PaymentMethod != nil &&
+				(po.PaymentMethod.Code == constant.PaymentMethodCodeQRPromptPay ||
+					po.PaymentMethod.Code == constant.PaymentMethodCodeLianLianQRPromptPay ||
+					po.PaymentMethod.Code == constant.PaymentMethodCodeKbankThaiQR) {
+				return errors.WithMessage(errors.New("QR PromptPay支付方式不允许拒单"))
+			}
+		}
+	}
+
 	// 会员端堂食订单需要加锁，防止与接单等操作并发
 	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn && h5Order.SaleBillUuid != 0 && ctx.NoLock() {
 		s.lock.LockUuid(h5Order.SaleBillUuid)
