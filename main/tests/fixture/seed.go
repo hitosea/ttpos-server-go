@@ -724,6 +724,11 @@ func generateSnowflakeID() int64 {
 	return time.Now().UnixMilli()<<16 | (snowflakeCounter.Add(1) & 0xFFFF)
 }
 
+// GenerateSnowflakeID generates a unique snowflake-style ID for testing.
+func GenerateSnowflakeID() int64 {
+	return generateSnowflakeID()
+}
+
 // GenerateUUID generates a UUID string for testing.
 func GenerateUUID() string {
 	return uuid.New().String()
@@ -987,10 +992,11 @@ func WithProductBomPackageUUID(uuid int64) func(*ProductBomOptions) {
 
 // ProductPackageOptions contains options for seeding a product package.
 type ProductPackageOptions struct {
-	UUID        int64
-	Name        string
-	Status      int
-	ProductType int // 0=普通商品, 1=套餐
+	UUID             int64
+	Name             string
+	Status           int
+	ProductType      int   // 0=普通商品, 1=套餐
+	HeadquarterUuid  int64 // 总部UUID, 0=总部原生商品
 }
 
 // SeedProductPackage creates a product_package record.
@@ -998,10 +1004,11 @@ func SeedProductPackage(tb testing.TB, db *sql.DB, opts ...func(*ProductPackageO
 	tb.Helper()
 
 	opt := ProductPackageOptions{
-		UUID:        generateSnowflakeID(),
-		Name:        `{"zh_name":"测试商品包","en_name":"Test Package"}`,
-		Status:      1,
-		ProductType: 0,
+		UUID:            generateSnowflakeID(),
+		Name:            `{"zh_name":"测试商品包","en_name":"Test Package"}`,
+		Status:          1,
+		ProductType:     0,
+		HeadquarterUuid: 0,
 	}
 
 	for _, o := range opts {
@@ -1010,9 +1017,9 @@ func SeedProductPackage(tb testing.TB, db *sql.DB, opts ...func(*ProductPackageO
 
 	now := time.Now().Unix()
 	_, err := db.Exec(`
-		INSERT INTO ttpos_product_package (uuid, name, multi_language_name_uuid, status, product_type, create_time, update_time, delete_time)
-		VALUES (?, ?, 0, ?, ?, ?, ?, 0)
-	`, opt.UUID, opt.Name, opt.Status, opt.ProductType, now, now)
+		INSERT INTO ttpos_product_package (uuid, name, multi_language_name_uuid, status, product_type, headquarter_uuid, create_time, update_time, delete_time)
+		VALUES (?, ?, 0, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.Name, opt.Status, opt.ProductType, opt.HeadquarterUuid, now, now)
 
 	if err != nil {
 		tb.Fatalf("failed to seed product_package: %v", err)
@@ -1032,6 +1039,27 @@ func WithProductPackageUUID(uuid int64) func(*ProductPackageOptions) {
 func WithProductPackageProductType(productType int) func(*ProductPackageOptions) {
 	return func(o *ProductPackageOptions) {
 		o.ProductType = productType
+	}
+}
+
+// WithProductPackageStatus sets the status for the product package (0=下架, 1=上架).
+func WithProductPackageStatus(status int) func(*ProductPackageOptions) {
+	return func(o *ProductPackageOptions) {
+		o.Status = status
+	}
+}
+
+// WithProductPackageHeadquarterUuid sets the headquarter_uuid for the product package.
+func WithProductPackageHeadquarterUuid(uuid int64) func(*ProductPackageOptions) {
+	return func(o *ProductPackageOptions) {
+		o.HeadquarterUuid = uuid
+	}
+}
+
+// WithProductBomStatus sets the status for the product BOM (0=下架, 1=上架).
+func WithProductBomStatus(status int) func(*ProductBomOptions) {
+	return func(o *ProductBomOptions) {
+		o.Status = status
 	}
 }
 
