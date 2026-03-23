@@ -2005,6 +2005,7 @@
   "呼叫骑手成功": "Successfully called the rider",
   "品牌参数": "Brand parameter",
   "品牌采购(内部)": "Brand Procurement (Internal)",
+  "品牌采购自动审批": "Brand purchase auto approval",
   "品采收货(内部)": "Purchase receiving (internal)",
   "哈萨克斯坦": "Kazakhstan",
   "响应包含队列数据和配置信息，配置字段为必返字段，缺失时使用默认值": "The response includes queue data and configuration information. The configuration field is a required return field; if missing, the default value is used",

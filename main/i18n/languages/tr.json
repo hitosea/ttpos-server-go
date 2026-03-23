@@ -2005,6 +2005,7 @@
   "呼叫骑手成功": "Kurye çağrıldı, başarılı",
   "品牌参数": "Marka parametresi",
   "品牌采购(内部)": "品牌采购(内部)",
+  "品牌采购自动审批": "Marka satın alma otomatik onay",
   "品采收货(内部)": "品采收货(内部)",
   "哈萨克斯坦": "Kazakistan",
   "响应包含队列数据和配置信息，配置字段为必返字段，缺失时使用默认值": "Yanıt, kuyruk verileri ve yapılandırma bilgileri içerir; yapılandırma alanı zorunlu döndürülen alandır, eksikse varsayılan değer kullanılır",

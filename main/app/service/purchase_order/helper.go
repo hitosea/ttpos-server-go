@@ -88,6 +88,14 @@ func (h *purchaseOrderHelper) generateReceiptNo(
 	return receiptNo, nil
 }
 
+// translatePurchaseOrderLogRemark 仅翻译特定的采购订单日志备注
+func translatePurchaseOrderLogRemark(lang, remark string) string {
+	if remark == "品牌采购自动审批" {
+		return i18n.Translate(lang, remark)
+	}
+	return remark
+}
+
 // createPurchaseOrderLog 创建采购订单操作日志
 func (h *purchaseOrderHelper) createPurchaseOrderLog(
 	db *gorm.DB,
