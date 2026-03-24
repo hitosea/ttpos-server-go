@@ -497,7 +497,8 @@ func Test_P2_Shop_HqBatchPush_NegativeStock_SafetyStockSync(t *testing.T) {
 	})
 }
 
-// Test_P2_Shop_HqBatchPush_NegativeStock_OverrideCleared verifies both negative_stock and safety_stock overrides are cleared.
+// Test_P2_Shop_HqBatchPush_NegativeStock_OverrideCleared verifies negative_stock override is cleared
+// but safety_stock override is preserved (safety_stock has no control mode, always uses override logic).
 // Route: POST /api/v1/shop/product/hq_batch_push
 func Test_P2_Shop_HqBatchPush_NegativeStock_OverrideCleared(t *testing.T) {
 	env := setupHqEnv(t)
@@ -518,10 +519,15 @@ func Test_P2_Shop_HqBatchPush_NegativeStock_OverrideCleared(t *testing.T) {
 	})
 	resp.AssertOK(t).AssertSuccess(t)
 
+	// negative_stock override should be cleared (force push / unified control)
 	waitForAsync(t, 5*time.Second, func() bool {
-		return !queryOverrideExists(t, env.storeDB1, materialUuid, "negative_stock") &&
-			!queryOverrideExists(t, env.storeDB1, materialUuid, "safety_stock")
+		return !queryOverrideExists(t, env.storeDB1, materialUuid, "negative_stock")
 	})
+
+	// safety_stock override should be preserved (no control mode, not affected by force push)
+	if !queryOverrideExists(t, env.storeDB1, materialUuid, "safety_stock") {
+		t.Fatal("expected safety_stock override to be preserved")
+	}
 }
 
 // --- P2: Data Validation (cross-store) ---
