@@ -10197,6 +10197,12 @@ const docTemplate = `{
                 "summary": "显示点餐订单列表（取单列表）",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "搜索关键词（按流水号搜索）",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
                         "minimum": 1,
                         "type": "integer",
                         "description": "页码",
@@ -21676,6 +21682,45 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/resp.DineInOrderPaymentStatusResp"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/dine_in/submit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "先下单后付模式下，会员端创建订单后可多次加购，最终通过此接口提交生成 H5 订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-堂食订单"
+                ],
+                "summary": "提交堂食订单到收银机",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SubmitMemberDineInOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -44462,6 +44507,10 @@ const docTemplate = `{
                     "description": "是否开启门店扫码点餐",
                     "type": "boolean"
                 },
+                "is_order_first_pay_later": {
+                    "description": "堂食是否开启先下单后付款",
+                    "type": "boolean"
+                },
                 "is_store_resting": {
                     "description": "商家是否休息中",
                     "type": "boolean"
@@ -48736,42 +48785,11 @@ const docTemplate = `{
         "req.GetDataManageOrderSelectStatsReq": {
             "type": "object",
             "properties": {
-                "bill_type": {
-                    "description": "订单类型,-1=全部、0=餐单、1=外卖",
-                    "type": "integer"
-                },
-                "date_type": {
-                    "description": "时间类型,-1=全部、0=今天、1=昨天、2=本周",
-                    "type": "integer"
-                },
-                "deselected_uuids": {
-                    "description": "取消/移除的UUID（select_all=true时排除，select_all=false时移除）",
+                "filters": {
+                    "description": "筛选条件数组，每组独立处理后合并统计",
                     "type": "array",
                     "items": {
-                        "type": "integer"
-                    }
-                },
-                "order_no": {
-                    "description": "订单编号搜索",
-                    "type": "string"
-                },
-                "query_end_date": {
-                    "description": "查询结束日期",
-                    "type": "string"
-                },
-                "query_start_date": {
-                    "description": "查询开始日期",
-                    "type": "string"
-                },
-                "select_all": {
-                    "description": "是否全选当前筛选范围",
-                    "type": "boolean"
-                },
-                "selected_uuids": {
-                    "description": "手动新增的UUID（select_all=false时使用）",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
+                        "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
                     }
                 }
             }
@@ -54467,6 +54485,10 @@ const docTemplate = `{
                 "is_enabled": {
                     "description": "启用状态：0-关闭，1-开启",
                     "type": "integer"
+                },
+                "is_order_first_pay_later": {
+                    "description": "先下单后付：0-先付后下单(默认)，1-先下单后付",
+                    "type": "integer"
                 }
             }
         },
@@ -55109,6 +55131,23 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
                     }
+                }
+            }
+        },
+        "req.SubmitMemberDineInOrderReq": {
+            "type": "object",
+            "required": [
+                "sale_bill_uuid",
+                "sale_order_uuid"
+            ],
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -59983,6 +60022,10 @@ const docTemplate = `{
                     "description": "用餐方式 0:堂食 1:打包",
                     "type": "integer"
                 },
+                "is_order_first_pay_later": {
+                    "description": "是否先下单后付款（true调submit，false调pay）",
+                    "type": "boolean"
+                },
                 "payment_methods": {
                     "description": "支付方式列表",
                     "allOf": [
@@ -60544,6 +60587,10 @@ const docTemplate = `{
                 "dining_method": {
                     "description": "用餐方式：0-堂食 1-打包",
                     "type": "integer"
+                },
+                "is_order_first_pay_later": {
+                    "description": "是否先下单后付款（true时前端调submit，false时调pay）",
+                    "type": "boolean"
                 },
                 "order_no": {
                     "description": "订单编号",
@@ -61479,6 +61526,10 @@ const docTemplate = `{
                     "description": "挂单时间",
                     "type": "integer"
                 },
+                "order_no": {
+                    "description": "销售账单编号",
+                    "type": "string"
+                },
                 "products": {
                     "description": "商品列表",
                     "allOf": [
@@ -62169,7 +62220,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "discount_amount": {
-                    "description": "优惠金额",
+                    "description": "优惠折扣金额（整单打折），与收银机购物车 discount_amount 一致",
                     "type": "number"
                 },
                 "payment_method_name": {
@@ -68520,6 +68571,10 @@ const docTemplate = `{
                     "description": "购物车是否锁定 true:锁定 false:未锁定",
                     "type": "boolean"
                 },
+                "is_split_disabled": {
+                    "description": "是否禁止拆单（会员端堂食订单为true）",
+                    "type": "boolean"
+                },
                 "must_plans": {
                     "description": "必点方案列表信息",
                     "allOf": [
@@ -73685,6 +73740,10 @@ const docTemplate = `{
                 },
                 "is_enabled": {
                     "description": "启用状态：0-关闭，1-开启",
+                    "type": "integer"
+                },
+                "is_order_first_pay_later": {
+                    "description": "先下单后付：0-先付后下单(默认)，1-先下单后付",
                     "type": "integer"
                 },
                 "self_pickup_available": {
