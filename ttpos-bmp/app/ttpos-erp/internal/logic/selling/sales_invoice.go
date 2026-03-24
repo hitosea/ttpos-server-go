@@ -274,14 +274,19 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 func (s *sSelling) buildCreditNote(ctx context.Context, req *selling.ReturnSalesInvoiceReq, companyName, postingDate string) *erp.CreditNote {
 	items := make([]erp.SalesInvoiceItem, 0, len(req.Items))
 	for _, item := range req.Items {
-		items = append(items, erp.SalesInvoiceItem{
+		siItem := erp.SalesInvoiceItem{
 			ItemCode:    item.ItemCode,
 			Qty:         item.Qty, // Main 端已传负数
 			Rate:        item.Rate,
 			Amount:      item.Amount,
 			Uom:         item.Uom,
 			Description: item.Description,
-		})
+		}
+		if item.IsFreeItem {
+			siItem.IsFreeItem = 1
+			siItem.DiscountPercentage = 100
+		}
+		items = append(items, siItem)
 	}
 	// 物品明细
 	for _, item := range req.MaterialItems {
