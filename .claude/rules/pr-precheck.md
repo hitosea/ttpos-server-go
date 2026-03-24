@@ -77,8 +77,8 @@ NEW=$(echo "$BASE" | awk -F. '{printf "%s.%s.%d", $1, $2, $3+1}')
 
 PR 创建成功后，**必须继续处理 PR 描述中的 Test Plan 检查项**：
 
-1. 读取刚创建的 PR 描述：`gh pr view --json body --jq '.body'`
+1. 读取刚创建的 PR 描述：`gh pr view --json body,number --jq '{body,number}'`
 2. 解析 `Test plan` 部分中的所有检查项
-3. 逐项执行验证（API 测试、数据库查询、日志检查等）
-4. 将验证结果更新回 PR 描述，勾选已通过的项
+3. **并行验证**：为每个检查项派发独立 Agent 并行执行（API 测试、数据库查询、日志检查等），在同一消息中发出所有 Agent 调用
+4. 汇总所有 Agent 结果，将验证结果更新回 PR 描述，勾选已通过的项
 5. 未通过的项标注原因，必要时修复代码并追加 commit
