@@ -313,7 +313,8 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		return nil, errors.WithMessage(errSaleBill, "repository.NewOrderRepo(db).GetSaleBillAllInfo")
 	}
 
-	// 先下单后付模式：会员端堂食订单接单后转为即时点餐挂单，不送厨
+	// 先下单后付模式：判断是否走"接单送厨+转挂单"流程
+	isOrderFirstPayLater := false
 	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
 		storeScanOrderSetting, err := s.settingSrv.GetStoreScanOrderSetting(ctx)
 		if err != nil {
@@ -323,59 +324,7 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 			)
 		}
 		if storeScanOrderSetting.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && saleBill.Status == constant.SaleBillStatusPending {
-			// 将h5订单商品插入到销售订单中（不送厨）
-			saleOrder := saleBill.GetFirstSaleOrder()
-			if saleOrder == nil {
-				return nil, errors.New("销售订单不存在")
-			}
-			saleOrder.InsertSaleOrderProduct(h5Order.SaleOrderProducts)
-
-			// 重新计算账单金额
-			saleBill.CalcAll()
-
-			// 设置挂单状态，让订单出现在即时点餐挂单列表中
-			// 同时设置 DeviceUuid，挂单列表按设备过滤
-			saleBill.SetHideSaleBill()
-			saleBill.DeviceUuid = ctx.GetDeviceUuid()
-
-			ctx.Log().Info("先下单后付：接单后转为挂单",
-				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
-				zap.Uint64("h5_order_uuid", h5OrderUuid),
-				zap.Uint64("sale_bill_uuid", saleBillUuid),
-			)
-
-			if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-				// 更新h5订单
-				if err := repository.NewH5OrderRepo(tx).UpdateH5OrderRecord(*h5Order); err != nil {
-					return errors.WithMessage(err, "更新h5订单失败")
-				}
-				// 更新h5订单商品列表
-				for _, h5OrderProduct := range h5Order.H5OrderProducts {
-					if err := repository.NewH5OrderRepo(tx).UpdateH5OrderProductRecord(*h5OrderProduct); err != nil {
-						return errors.WithMessage(err, "更新h5订单商品失败")
-					}
-				}
-				// 保存账单挂单状态和重新计算的金额
-				if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
-					return errors.WithMessage(err, "更新账单失败")
-				}
-				// 保存 SaleOrder 及其 SaleOrderProduct（CalcAll 会重算行金额）
-				for _, so := range saleBill.SaleOrders {
-					if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*so); err != nil {
-						return errors.WithMessage(err, "更新销售订单失败")
-					}
-					for _, sop := range so.SaleOrderProducts {
-						if err := repository.NewSaleOrderProductRepo(tx).UpdateOrCreateSaleOrderProductRecord(*sop); err != nil {
-							return errors.WithMessage(err, "更新销售订单商品金额失败")
-						}
-					}
-				}
-				return nil
-			}); err != nil {
-				return nil, errors.WithMessage(err, "接单失败")
-			}
-
-			return nil, nil
+			isOrderFirstPayLater = true
 		}
 	}
 
@@ -398,7 +347,18 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		saleOrder := saleBill.GetFirstSaleOrder()
 		saleOrder.InsertSaleOrderProduct(unCookingSaleOrderProducts)
 
-		// 送厨
+		// 先下单后付：送厨前设置挂单状态，ActionCooking 的 withCalcAndSaveSaleBill 会一并持久化
+		if isOrderFirstPayLater {
+			saleBill.SetHideSaleBill()
+			saleBill.DeviceUuid = ctx.GetDeviceUuid()
+			ctx.Log().Info("先下单后付：接单送厨并转为挂单",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("h5_order_uuid", h5OrderUuid),
+				zap.Uint64("sale_bill_uuid", saleBillUuid),
+			)
+		}
+
+		// 送厨（先下单后付和普通订单都走此逻辑）
 		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, h5OrderUuid, isAutoOrder, withCalcAndSaveSaleBill()) // 接单
 		if err != nil {
 			return nil, errors.WithMessage(err, "ActionCooking")
@@ -408,8 +368,12 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		}
 	}
 
-	// 会员端堂食订单：接单后标记账单完成并重新计算价格
-	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
+	// 先下单后付：送厨+挂单后直接进入 H5 订单更新，不标记完成（后续取单继续操作）
+	if isOrderFirstPayLater {
+		// 跳过 SetFinishSaleBill，订单保持在即时点餐挂单列表中
+		// submit_pay_time 已在 SubmitMemberDineInOrder 中设置，前端用它作为首次送厨时间
+	} else if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
+		// 普通会员端堂食订单（先付后下单）：接单后标记账单完成
 		staff := ctx.GetStaff()
 		saleBill.SetFinishSaleBill(staff.DutyNo, staff.Uuid, staff.GetUserName())
 		saleBill.CalcAll()
@@ -435,8 +399,9 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 			}
 		}
 
-		// 会员端堂食订单：保存账单完成状态和重新计算的价格
-		if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
+		// 普通会员端堂食订单（先付后下单）：保存账单完成状态和重新计算的价格
+		// 先下单后付的订单已在 ActionCooking(withCalcAndSaveSaleBill) 中保存，此处跳过
+		if h5Order.OrderType == constant.H5OrderTypeMemberDineIn && !isOrderFirstPayLater {
 			if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
 				return errors.WithMessage(err, "更新账单失败")
 			}

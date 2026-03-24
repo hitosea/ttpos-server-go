@@ -2837,14 +2837,124 @@ func (s *orderSrv) SubmitMemberDineInOrder(ctx context.Context, request req.Subm
 	}
 
 	// 4. 创建 H5 订单
-	return s.createH5OrderForOrderFirst(ctx, request.SaleBillUuid, request.SaleOrderUuid)
+	if err := s.createH5OrderForOrderFirst(ctx, request.SaleBillUuid, request.SaleOrderUuid); err != nil {
+		return err
+	}
+
+	// 5. 尝试自动接单（失败不影响 submit 结果）
+	s.autoAcceptOrderFirst(ctx, request.SaleBillUuid)
+
+	return nil
+}
+
+// autoAcceptOrderFirst 先下单后付模式：尝试自动接单
+// 复用与支付完成事件中 autoAcceptMemberDineInOrder 相同的判断逻辑：
+// - 关闭 H5 接单功能时直接自动接单
+// - 开启时根据接单设置（金额限额）判断
+// 自动接单失败不影响 submit 结果，订单保持待接单状态等待手动处理
+func (s *orderSrv) autoAcceptOrderFirst(ctx context.Context, saleBillUuid uint64) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	companySetting := ctx.GetCompanySetting()
+
+	// 判断是否允许自动接单
+	if !companySetting.GetIsOpenH5Order() {
+		// 关闭 H5 接单功能：直接自动接单
+		ctx.Log().Info("autoAcceptOrderFirst, h5 order disabled, auto accept directly",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid))
+	} else {
+		// 开启 H5 接单功能：检查接单设置和金额限额
+		acceptOrderSetting, err := s.settingSrv.GetAcceptOrderSetting(ctx)
+		if err != nil {
+			ctx.Log().Error("autoAcceptOrderFirst, GetAcceptOrderSetting failed",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("sale_bill_uuid", saleBillUuid),
+				zap.Error(err))
+			return
+		}
+
+		saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+		if err != nil {
+			ctx.Log().Error("autoAcceptOrderFirst, GetSaleBillAllInfo failed",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("sale_bill_uuid", saleBillUuid),
+				zap.Error(err))
+			return
+		}
+
+		saleOrder := saleBill.GetFirstSaleOrder()
+		if saleOrder == nil {
+			return
+		}
+		totalPrice := saleBill.GetUnAcceptH5OrderProductTotalPrice(saleOrder.SaleOrderProducts)
+
+		if !acceptOrderSetting.CanAutoOrder(totalPrice) {
+			ctx.Log().Info("autoAcceptOrderFirst, auto accept not allowed",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("sale_bill_uuid", saleBillUuid),
+				zap.Float64("totalPrice", totalPrice))
+			return
+		}
+	}
+
+	// 获取 H5 订单
+	h5OrderRepo := repository.NewH5OrderRepo(db)
+	h5Order, err := h5OrderRepo.GetH5Order(
+		h5OrderRepo.WhereSaleBillUuid(saleBillUuid),
+		h5OrderRepo.WhereOrderType(constant.H5OrderTypeMemberDineIn),
+	)
+	if err != nil || h5Order.Status != constant.H5OrderStatusOrder {
+		ctx.Log().Warn("autoAcceptOrderFirst, h5 order not found or not pending",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid),
+			zap.Error(err))
+		return
+	}
+
+	// 获取门店主收银设备 UUID，用于挂单归属
+	deviceRepo := repository.NewDeviceRepo(db)
+	mainDevice, err := deviceRepo.GetDevice(deviceRepo.WhereSource(constant.SourceCashier), deviceRepo.WhereMain())
+	if err != nil {
+		// 主设备不存在时尝试获取任意收银设备
+		mainDevice, err = deviceRepo.GetDevice(deviceRepo.WhereSource(constant.SourceCashier))
+		if err != nil {
+			ctx.Log().Warn("autoAcceptOrderFirst, no cashier device found, skip auto accept",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("sale_bill_uuid", saleBillUuid))
+			return
+		}
+	}
+	ctx.SetDeviceUuid(mainDevice.Uuid)
+
+	// 执行自动接单
+	result, err := s.AcceptH5Order(ctx, h5Order.Uuid, true)
+	if err != nil {
+		ctx.Log().Error("autoAcceptOrderFirst, AcceptH5Order failed",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("h5_order_uuid", h5Order.Uuid),
+			zap.Error(err))
+		return
+	}
+	if result != nil {
+		ctx.Log().Warn("autoAcceptOrderFirst, AcceptH5Order check failed",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("h5_order_uuid", h5Order.Uuid),
+			zap.Any("result", result))
+		return
+	}
+
+	ctx.Log().Info("autoAcceptOrderFirst, auto accept success",
+		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+		zap.Uint64("sale_bill_uuid", saleBillUuid),
+		zap.Uint64("h5_order_uuid", h5Order.Uuid),
+		zap.Uint64("device_uuid", mainDevice.Uuid))
 }
 
 // createH5OrderForOrderFirst 为"先下单后付"模式创建 H5 订单
 // 复用支付完成事件中 createH5OrderForMemberDineIn 的核心逻辑，区别在于：
 // 1. 不标记订单为已完成（SaleBill.Status 保持 Pending，因为还没付款）
-// 2. 不执行自动接单（等待收银端手动接单）
-// 3. 设置 submit_pay_time 使订单在列表中可见
+// 2. 设置 submit_pay_time 使订单在列表中可见
+// 自动接单由 autoAcceptOrderFirst 在外部处理
 func (s *orderSrv) createH5OrderForOrderFirst(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 
@@ -3354,14 +3464,14 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 		// 获取 H5 订单
 		h5Order := s.getH5OrderForMemberDineIn(h5OrderRepo, saleBill.Uuid)
 
-		// "先下单后付"模式内存过滤：
-		// - "待支付"列表：排除有 H5 订单的（这些是先下单后付的订单，不是待支付）
-		// - "进行中"列表：Pending 状态的订单必须有 H5 订单才能归入进行中
-		if listReq.Status == constant.MemberDineInOrderStatusUnpaid && h5Order != nil && saleBill.Status == constant.SaleBillStatusPending {
+		// "先下单后付"模式内存过滤：通过 IsOrderFirstPayLater 标记区分
+		// - "待支付"列表：排除先下单后付的订单（它们属于"进行中"）
+		// - "进行中"列表：Pending 状态必须是先下单后付的订单才能归入进行中
+		if listReq.Status == constant.MemberDineInOrderStatusUnpaid && saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && saleBill.Status == constant.SaleBillStatusPending {
 			continue // 先下单后付的订单不显示在"待支付"列表
 		}
-		if listReq.Status == constant.MemberDineInOrderStatusInProgress && saleBill.Status == constant.SaleBillStatusPending && h5Order == nil {
-			continue // Pending 状态无 H5 订单的是普通待支付订单，不属于"进行中"
+		if listReq.Status == constant.MemberDineInOrderStatusInProgress && saleBill.Status == constant.SaleBillStatusPending && saleBill.IsOrderFirstPayLater != constant.OrderFirstPayLaterYes {
+			continue // Pending 状态非先下单后付的是普通待支付订单，不属于"进行中"
 		}
 
 		// 获取生产单完成状态
@@ -3942,9 +4052,10 @@ func (s *orderSrv) getMemberDineInOrderStatusInfo(saleBill *model.SaleBill, h5Or
 			}
 		}
 	case constant.SaleBillStatusPending:
-		// 待处理状态：需要区分"先下单后付"模式和普通模式
-		if h5Order != nil {
-			// "先下单后付"模式：有 H5 订单，根据 H5 订单状态判断
+		// 待处理状态：通过 IsOrderFirstPayLater 标记区分两种模式
+		// 不能仅依赖 h5Order != nil，因为普通模式支付过程中也可能创建 H5 订单
+		if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && h5Order != nil {
+			// "先下单后付"模式：submit 时已标记 IsOrderFirstPayLater=1，根据 H5 订单状态判断
 			switch h5Order.Status {
 			case constant.H5OrderStatusOrder:
 				status = constant.MemberDineInDetailStatusPending
