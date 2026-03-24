@@ -58,6 +58,15 @@ admin/public/shop
 .spec-workflow/session.json
 certificate
 
+# Dev Server
+.dev-server-bin
+.dev-server.pid
+.dev-server.port
+.dev-server.log
+
+# Task Orchestrator
+.task-orchestrator/
+
 # Agent 相关
 .agents
 /ttpos-scripts/find-order-database.js

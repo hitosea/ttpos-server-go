@@ -1,8 +1,7 @@
 ---
 name: run-tasks
-description: "通用任务编排器。将复合任务拆解为子任务，派发给专门的子 agent 并行/串行执行，汇总结果。当用户描述需要多步骤协作完成的复杂任务、提到 '编排'、'拆解任务'、'并行处理'、'批量执行' 时触发。"
+description: "任务编排器。将任务拆解为子任务，派发给子 agent 并行执行并汇总。当用户说'编排'、'帮我编排'、'拆解任务'、'并行处理'、'批量执行'时触发。也在任务涉及 3+ 个独立模块需要同时分析/实现时触发。不在用户仅说'修复'、'改一下'等简单指令时触发。"
 allowed-tools: Agent, AskUserQuestion, Read, Write, Bash, Glob, Grep, TodoWrite
-disable-model-invocation: true
 ---
 
 # Task Orchestrator
@@ -15,33 +14,59 @@ disable-model-invocation: true
 User Task Description
         │
         ▼
-┌─ Phase 1: Decompose ─────────────────┐
-│  分析任务 → 拆解子任务 → 依赖分析     │
-│  输出: task-plan.json                 │
-└───────────────────────────────────────┘
+┌─ Phase 0: Preflight ────────────────┐
+│  检查工作区状态，处理未提交的改动     │
+└──────────────────────────────────────┘
+        │
+        ▼
+┌─ Phase 1: Decompose ────────────────┐
+│  分析任务 → 拆解子任务 → 依赖分析    │
+│  输出: task-plan.json                │
+└──────────────────────────────────────┘
         │
         ▼  用户确认
-┌─ Phase 2: Execute ────────────────────┐
-│  按依赖拓扑分波次(wave)执行            │
-│  同波次内并行, 波次间串行              │
-│  写代码的 agent 在独立 worktree 中执行  │
-│  只读 agent 共享主分支                 │
-└───────────────────────────────────────┘
+┌─ Phase 2: Execute ──────────────────┐
+│  按依赖拓扑分波次(wave)执行           │
+│  只读 agent: 结果通过返回值传递       │
+│  写代码 agent: worktree 隔离执行      │
+└──────────────────────────────────────┘
         │
         ▼
-┌─ Phase 2.5: Merge ───────────────────┐
-│  每个 wave 结束后合并 worktree 分支    │
-│  冲突时暂停并报告给用户               │
-└───────────────────────────────────────┘
+┌─ Phase 2.5: Merge ──────────────────┐
+│  每个 wave 结束后合并 worktree 分支   │
+│  冲突时暂停并报告给用户              │
+└──────────────────────────────────────┘
         │
         ▼
-┌─ Phase 3: Consolidate ───────────────┐
-│  读取所有产出 → 汇总报告              │
-│  输出: orchestration-report.md        │
-└───────────────────────────────────────┘
+┌─ Phase 3: Consolidate ─────────────┐
+│  读取所有产出 → 汇总报告             │
+│  输出: orchestration-report.md       │
+└──────────────────────────────────────┘
 ```
 
 ## Execution Flow
+
+### Phase 0: Preflight (编排前检查)
+
+在拆解任务之前，**必须**检查工作区状态：
+
+```javascript
+// 1. 记录当前分支名
+const originalBranch = Bash('git branch --show-current');
+
+// 2. 检查是否有未提交的改动
+const status = Bash('git status --porcelain');
+if (status) {
+  // 有改动 → 先 stash 保存
+  Bash('git stash push -m "orchestrator: auto-stash before execution"');
+  // 记录需要在 Phase 3 结束后恢复
+}
+
+// 3. 创建输出目录
+Bash(`mkdir -p ${output_dir}`);
+```
+
+**为什么需要 Preflight**: 试跑中发现，未提交的改动会导致 worktree 合并时产生冲突，或 agent 切换分支导致丢失工作区状态。
 
 ### Phase 1: Decompose
 
@@ -157,32 +182,79 @@ for (const wave of plan.waves) {
 }
 ```
 
-#### 子 agent Prompt 构建规则
+#### Explore Agent Prompt 模板
+
+Explore agent **没有 Write 权限**，不能写文件。分析结果通过返回值传递，由 manager 写入文件。
+
+```
+[CONTEXT]
+工作目录: {project_root}
+你的任务ID: {task.id}
+
+{如果有依赖，告知依赖任务的输出文件路径，指示 agent 先读取}
+
+[TASK]
+{task.detailed_prompt}
+
+[RETURN]
+将分析结果作为返回值输出，格式:
+
+## {task.name}
+
+### 关键发现
+- ...
+
+### 相关文件
+- file_path:line_number — 说明
+
+### 建议
+- ...
+```
+
+Manager 接收 Explore 返回后，将内容写入 `{output_dir}/{task.output_file}`。
+
+#### Worktree Agent (general-purpose) Prompt 模板
+
+Worktree agent 在隔离的仓库副本中工作。**必须包含以下约束**：
 
 ```
 [CONTEXT]
 工作目录: {project_root}
 输出目录: {output_dir}
 你的任务ID: {task.id}
+你正在一个独立的 git worktree 中工作。
 
 {如果有依赖，告知依赖任务的输出文件路径}
 
 [TASK]
 {task.detailed_prompt}
 
+[BOUNDARY] ← 关键：防止 agent 超出范围
+- 只修改任务要求的文件，不要重构或修改任务范围外的代码
+- 不要切换分支（git checkout / git switch）
+- 不要修改 .git 配置
+- 修改前列出计划修改的文件清单
+
+[VERIFY]
+完成后执行验证:
+1. go fmt ./... && go vet ./...
+2. go test {相关包} -count=1
+
 [OUTPUT]
 将变更说明写入: {output_dir}/{task.output_file}
 
 [RETURN]
 完成后返回简要 JSON:
-{"status":"completed|failed","output_file":"{task.output_file}","summary":"一句话总结","branch":"worktree分支名(仅worktree模式)"}
+{"status":"completed|failed","output_file":"{task.output_file}","summary":"一句话总结","files_changed":["file1.go","file2.go"]}
 ```
 
 #### 关键规则
 
-- **依赖传递靠文件**：子 agent 通过读取前序任务的输出文件获取上下文，不通过 prompt 传递完整内容
-- **最小返回**：子 agent 只返回 status + output_file + summary，不返回完整内容
-- **Worktree 隔离**：写代码的 agent 自动在独立 worktree 中工作，变更不会互相干扰
+- **Explore agent 无 Write 权限**：分析结果通过返回值传递，manager 负责写入输出文件
+- **Worktree agent 有边界约束**：prompt 中必须包含 `[BOUNDARY]` 块，防止修改范围外的文件
+- **依赖传递靠文件**：后续 agent 读取前序任务的输出文件获取上下文
+- **最小返回**：agent 只返回 JSON 摘要，不返回完整分析内容
+- **Worktree 隔离**：写代码的 agent 在独立 worktree 中工作，变更互不干扰
 - **失败处理**：如果某任务失败，暂停后续依赖它的任务，向用户报告
 
 ### Phase 2.5: Merge (Worktree 合并)

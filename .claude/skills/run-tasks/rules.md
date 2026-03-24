@@ -128,6 +128,8 @@
 
 ### 给 Explore agent 的 prompt
 
+> **试跑教训**: Explore agent 没有 Write 权限。不要在 prompt 中要求它写文件，改为让它把结果作为返回值输出，由 manager 写入。
+
 ```
 你是一个代码分析专家。
 
@@ -135,29 +137,41 @@
 **目标**: {task.detailed_goal}
 **范围**: {task.scope}
 
-请分析后将结果写入: {output_dir}/{task.output_file}
+{如果有依赖}
+**前置分析**: 请先读取以下文件了解上下文:
+- {output_dir}/{dep.output_file}
+{/如果}
 
-结果应包含:
-- 关键发现
-- 相关文件路径和行号
-- 建议
+请直接输出分析结果（不需要写文件），格式:
 
-完成后返回:
-{"status":"completed","output_file":"{task.output_file}","summary":"一句话总结"}
+## {task.name}
+
+### 关键发现
+- ...
+
+### 相关文件
+- file_path:line_number — 说明
+
+### 建议
+- ...
 ```
+
+Manager 接收返回后执行: `Write({output_dir}/{task.output_file}, agent_result)`
 
 ### 给 general-purpose agent 的 prompt (worktree 隔离)
 
+> **试跑教训**: agent 会"好心"重构任务范围外的代码，或切换分支导致主仓库脱离原始分支。必须用 [BOUNDARY] 块显式约束。
+
 ```
 你是一个开发专家，负责在 TTPOS 项目中完成以下任务。
-你正在一个独立的 git worktree 中工作，可以自由修改代码，不会影响其他 agent。
+你正在一个独立的 git worktree 中工作。
 
 **任务**: {task.name}
 **目标**: {task.detailed_goal}
 
 {如果有依赖}
 **前置分析**: 请先读取以下文件了解上下文:
-- {dep.output_file}: {dep.summary}
+- {output_dir}/{dep.output_file}: {dep.summary}
 {/如果}
 
 **项目约束** (必须遵守):
@@ -166,23 +180,42 @@
 - 多表操作使用事务
 - 协程使用 utils.Go
 
+[BOUNDARY] ← 必须包含
+- 只修改与任务直接相关的文件，禁止重构或"改进"其他代码
+- 禁止 git checkout / git switch / git branch 切换分支
+- 禁止修改 .git 目录或 git 配置
+- 开始前先列出你计划创建或修改的文件清单
+
 **完成后**:
-1. 确保代码通过 `go fmt` 和 `go vet`
+1. 确保代码通过 `go fmt ./... && go vet ./...`
 2. 将变更说明写入 {output_dir}/{task.output_file}
-3. 提交你的修改: `git add -A && git commit -m "task({task.id}): {task.name}"`
+3. 提交修改: `git add -A && git commit -m "task({task.id}): {task.name}"`
 
 完成后返回:
-{"status":"completed","output_file":"{task.output_file}","summary":"一句话总结"}
+{"status":"completed","output_file":"{task.output_file}","summary":"一句话总结","files_changed":["file1.go"]}
 ```
 
 ## Worktree 合并规则
 
-### 合并顺序
+### 合并方式
 
-同一 wave 内多个 worktree 分支按**任务 ID 升序**合并：
+> **试跑教训**: Worktree 可能基于不同的 base commit（如 main），导致 `git merge` 引入大量无关变更。优先使用 `cherry-pick`。
+
+```javascript
+// 1. 找到 agent 的提交（通常是 worktree 分支的最新 commit）
+const agentCommit = Bash(`git log --oneline ${worktreeBranch} -1 --format=%H`);
+
+// 2. 检查该 commit 修改了哪些文件
+const changedFiles = Bash(`git diff --name-only ${agentCommit}^..${agentCommit}`);
+
+// 3. cherry-pick 而非 merge（只取 agent 自己的提交）
+Bash(`git cherry-pick ${agentCommit} --no-edit`);
+```
+
+同一 wave 内多个 worktree 按**任务 ID 升序** cherry-pick：
 
 ```
-t1 分支 merge → t2 分支 merge → t3 分支 merge → ...
+t1 commit cherry-pick → t2 commit cherry-pick → ...
 ```
 
 ### 降低冲突概率的拆解原则
@@ -196,15 +229,48 @@ t1 分支 merge → t2 分支 merge → t3 分支 merge → ...
 
 如果无法避免同文件修改，应将这些任务放在**不同 wave**（串行执行）。
 
+### 合并前 diff 检查
+
+> **试跑教训**: agent 可能修改任务范围外的文件（如重构源码、修改配置）。合并前必须检查。
+
+```javascript
+// 合并前检查 agent 修改了哪些文件
+const changedFiles = Bash(`git diff --name-only ${originalBranch}...${worktreeBranch}`);
+
+// 与 task plan 中声明的 files_changed 对比
+const unexpected = changedFiles.filter(f => !task.expected_files.includes(f));
+
+if (unexpected.length > 0) {
+  // 发现意外修改，向用户报告
+  AskUserQuestion(`任务 ${task.id} 修改了范围外的文件: ${unexpected.join(', ')}，是否继续合并？`);
+}
+```
+
 ### 合并后验证
 
 每次 wave 合并完成后，manager 应执行验证：
 
 ```bash
-cd main && go fmt ./... && go vet ./...
+go fmt ./... && go vet ./...
 ```
 
 如果验证失败，向用户报告问题。
+
+### 合并后清理
+
+```javascript
+// 1. 清理 worktree
+Bash(`git worktree remove ${worktreePath}`);
+
+// 2. 删除临时分支
+Bash(`git branch -D ${worktreeBranch}`);
+
+// 3. 如果 Phase 0 做了 stash，在 Phase 3 结束后恢复
+if (stashed) {
+  Bash('git stash pop');
+  // 如果 stash pop 冲突，向用户报告
+}
+```
 
 ## 失败处理策略
 
