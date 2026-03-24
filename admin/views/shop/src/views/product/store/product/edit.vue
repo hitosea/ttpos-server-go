@@ -523,8 +523,6 @@
         });
         // 删除sku
         params.sku = [];
-        // 套餐类型不显示外送
-        params.is_show_delivery = 0;
       }
 
       // 处理商品卖点
