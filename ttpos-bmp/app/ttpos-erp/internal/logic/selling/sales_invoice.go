@@ -210,6 +210,7 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 		}
 		if item.IsFreeItem {
 			siItem.IsFreeItem = 1
+			siItem.DiscountPercentage = 100 // ERPNext SI 不自动处理 is_free_item，需显式打折
 		}
 		items = append(items, siItem)
 	}

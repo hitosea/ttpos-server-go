@@ -38,14 +38,15 @@ type SalesInvoice struct {
 
 // SalesInvoiceItem Sales Invoice 明细行
 type SalesInvoiceItem struct {
-	ItemCode    string  `json:"item_code"`
-	Qty         float64 `json:"qty"`
-	Rate        float64 `json:"rate"`
-	Amount      float64 `json:"amount"`
-	Uom         string  `json:"uom,omitempty"`
-	Description string  `json:"description,omitempty"`
-	IsFreeItem  int     `json:"is_free_item,omitempty"`
-	Warehouse   string  `json:"warehouse,omitempty"` // 行级仓库
+	ItemCode           string  `json:"item_code"`
+	Qty                float64 `json:"qty"`
+	Rate               float64 `json:"rate"`
+	Amount             float64 `json:"amount"`
+	Uom                string  `json:"uom,omitempty"`
+	Description        string  `json:"description,omitempty"`
+	IsFreeItem         int     `json:"is_free_item,omitempty"`
+	DiscountPercentage float64 `json:"discount_percentage,omitempty"` // 行级折扣百分比，free item 需设为 100
+	Warehouse          string  `json:"warehouse,omitempty"`           // 行级仓库
 }
 
 // SalesInvoiceTax Sales Invoice 税费
