@@ -899,7 +899,6 @@ func TestGetOrderSelectStats_SelectAll(t *testing.T) {
 	}
 }
 
-
 // TestGetOrderSelectStats_SelectAllWithDeselect 案例1：全选后排除部分
 func TestGetOrderSelectStats_SelectAllWithDeselect(t *testing.T) {
 	dbm := setupDataManageTestDBWithOrders(t)
