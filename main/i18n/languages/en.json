@@ -8027,5 +8027,7 @@
   "查询规则列表失败": "Failed to query rule list",
   "查询规则门店失败": "Failed to query rule shops",
   "查询自动收货记录失败": "Failed to query auto-receipt records",
-  "查询门店信息失败": "Failed to query shop information"
+  "查询门店信息失败": "Failed to query shop information",
+  "发货仓库已禁用或已删除，请重新选择": "The shipping warehouse has been disabled or deleted, please reselect",
+  "查询发货仓库失败": "Failed to query shipping warehouse"
 }

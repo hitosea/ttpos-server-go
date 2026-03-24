@@ -8027,5 +8027,7 @@
   "查询规则列表失败": "Kural listesi sorgulanamadı",
   "查询规则门店失败": "Kural mağazaları sorgulanamadı",
   "查询自动收货记录失败": "Otomatik teslim alma kayıtları sorgulanamadı",
-  "查询门店信息失败": "Mağaza bilgileri sorgulanamadı"
+  "查询门店信息失败": "Mağaza bilgileri sorgulanamadı",
+  "发货仓库已禁用或已删除，请重新选择": "Sevkiyat deposu devre dışı bırakıldı veya silindi, lütfen tekrar seçin",
+  "查询发货仓库失败": "Sevkiyat deposu sorgulanamadı"
 }

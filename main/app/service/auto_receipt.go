@@ -65,6 +65,19 @@ func (s *autoReceiptSrv) getHeadquarterUuid(ctx context.Context) uint64 {
 	return ctx.GetCompanyUuid()
 }
 
+// validateWarehouseEnabled 校验发货仓库是否存在且启用
+func (s *autoReceiptSrv) validateWarehouseEnabled(ctx context.Context, warehouseErpCode string) error {
+	warehouseRepo := repository.NewWarehouseRepo(ctx.GetDB())
+	_, err := warehouseRepo.GetByErpCode(warehouseErpCode, warehouseRepo.WhereStatus(1))
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.NewWithCode(constant.CodeWarehouseDisabled, i18n.Translate(ctx.GetLanguage(), "发货仓库已禁用或已删除，请重新选择"))
+		}
+		return errors.WithMessage(err, "查询发货仓库失败")
+	}
+	return nil
+}
+
 // CreateRule 创建自动收货规则
 func (s *autoReceiptSrv) CreateRule(ctx context.Context, r req.CreateAutoReceiptRuleReq) error {
 	if err := s.checkHeadquarter(ctx); err != nil {
@@ -75,6 +88,10 @@ func (s *autoReceiptSrv) CreateRule(ctx context.Context, r req.CreateAutoReceipt
 
 	if !r.LocaleName.CheckLen(100) {
 		return errors.New("规则名称长度不能超过100个字符")
+	}
+
+	if err := s.validateWarehouseEnabled(ctx, r.WarehouseErpCode); err != nil {
+		return err
 	}
 
 	// 事务内校验 + 创建（避免 TOCTOU 竞态）
@@ -128,6 +145,10 @@ func (s *autoReceiptSrv) UpdateRule(ctx context.Context, r req.UpdateAutoReceipt
 
 	if !r.LocaleName.CheckLen(100) {
 		return errors.New("规则名称长度不能超过100个字符")
+	}
+
+	if err := s.validateWarehouseEnabled(ctx, r.WarehouseErpCode); err != nil {
+		return err
 	}
 
 	err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
