@@ -4017,10 +4017,9 @@ func (s *orderSrv) getMemberDineInOrderStatusInfo(saleBill *model.SaleBill, h5Or
 			statusText = i18n.Translate(language, "已取消")
 		}
 	case constant.SaleBillStatusComplete:
-		// 已完成：需要区分 待接单、备餐中、已完成、部分退款、全部退款
+		// 已完成/已付款：先检查退款，再按模式区分
 		refundAmount := saleBill.GetTotalRefundAmount()
 		if refundAmount > 0 {
-			// 有退款
 			if refundAmount >= saleBill.Amount {
 				status = constant.MemberDineInDetailStatusFullRefund
 				statusText = i18n.Translate(language, "全部退款")
@@ -4028,14 +4027,18 @@ func (s *orderSrv) getMemberDineInOrderStatusInfo(saleBill *model.SaleBill, h5Or
 				status = constant.MemberDineInDetailStatusPartialRefund
 				statusText = i18n.Translate(language, "部分退款")
 			}
+		} else if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes {
+			// 先下单后付：COMPLETE 意味着已结账 → 已完成
+			status = constant.MemberDineInDetailStatusCompleted
+			statusText = i18n.Translate(language, "已完成")
 		} else if h5Order != nil {
-			// 有 H5 订单，根据 H5 订单状态和生产单状态判断
+			// 先付后下单：付款后有 H5 订单，根据 H5 状态判断
 			switch h5Order.Status {
 			case constant.H5OrderStatusOrder:
+				// 已付款，等待收银接单 → 待接单
 				status = constant.MemberDineInDetailStatusPending
 				statusText = i18n.Translate(language, "待接单")
 			case constant.H5OrderStatusAccepted:
-				// 已接单：根据生产单状态判断是备餐中还是已完成
 				if isProductionFinished {
 					status = constant.MemberDineInDetailStatusCompleted
 					statusText = i18n.Translate(language, "已完成")
@@ -4050,21 +4053,28 @@ func (s *orderSrv) getMemberDineInOrderStatusInfo(saleBill *model.SaleBill, h5Or
 				status = constant.MemberDineInDetailStatusCompleted
 				statusText = i18n.Translate(language, "已完成")
 			}
+		} else {
+			// 先付后下单：无 H5 订单（自动接单场景），按生产状态判断
+			if isProductionFinished {
+				status = constant.MemberDineInDetailStatusCompleted
+				statusText = i18n.Translate(language, "已完成")
+			} else {
+				status = constant.MemberDineInDetailStatusPreparing
+				statusText = i18n.Translate(language, "备餐中")
+			}
 		}
 	case constant.SaleBillStatusPending:
-		// 待处理状态：通过 IsOrderFirstPayLater 标记区分两种模式
-		// 不能仅依赖 h5Order != nil，因为普通模式支付过程中也可能创建 H5 订单
 		if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && h5Order != nil {
-			// "先下单后付"模式：submit 时已标记 IsOrderFirstPayLater=1，根据 H5 订单状态判断
+			// 先下单后付模式：根据 H5 订单状态 + 生产状态判断
 			switch h5Order.Status {
 			case constant.H5OrderStatusOrder:
 				status = constant.MemberDineInDetailStatusPending
 				statusText = i18n.Translate(language, "待接单")
 			case constant.H5OrderStatusAccepted:
-				// 已接单：根据生产单状态判断是备餐中还是已完成
 				if isProductionFinished {
-					status = constant.MemberDineInDetailStatusCompleted
-					statusText = i18n.Translate(language, "已完成")
+					// 备餐完成但未付款 → 待付款
+					status = constant.MemberDineInDetailStatusUnpaid
+					statusText = i18n.Translate(language, "待付款")
 				} else {
 					status = constant.MemberDineInDetailStatusPreparing
 					statusText = i18n.Translate(language, "备餐中")
