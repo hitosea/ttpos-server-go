@@ -433,7 +433,7 @@ func (s *autoReceiptSrv) GetWarehouseList(ctx context.Context) (resp.AutoReceipt
 	}
 
 	warehouseRepo := repository.NewWarehouseRepo(ctx.GetDB())
-	warehouses, err := warehouseRepo.Get(warehouseRepo.WhereErpCodeNotEmpty(), warehouseRepo.WhereStatus(1))
+	warehouses, err := warehouseRepo.Get(warehouseRepo.WhereErpCodeNotEmpty(), warehouseRepo.WhereStatus(1), warehouseRepo.WhereType("normal"))
 	if err != nil {
 		return resp.AutoReceiptWarehouseListResp{}, errors.WithMessage(err, "查询仓库列表失败")
 	}
