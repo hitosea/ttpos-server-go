@@ -60,6 +60,8 @@ certificate
 
 # Agent 相关
 .agents
+docs/task/
+docs/plan/
 /ttpos-scripts/find-order-database.js
 /main/1.json
 coverage

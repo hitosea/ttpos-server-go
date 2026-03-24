@@ -845,9 +845,10 @@ func (s *rechargeOrderSrv) SaveSalesInvoice(ctx context.Context, memberRechargeO
 		} else {
 			return nil, errors.WithMessage(errors.New("不支持的支付方式"))
 		}
+		// 使用应付金额（不含找零），避免现金找零场景下 AllocatedAmount 超过 SI outstanding
 		payments = append(payments, &selling.PosInvoicePayment{
 			ModeOfPayment: modeOfPayment,
-			Amount:        payment.Amount,
+			Amount:        utils.DecimalAdd(payment.PaymentAmount, payment.PaymentCommissionFee),
 		})
 	}
 
