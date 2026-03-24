@@ -4676,7 +4676,7 @@
   "未配置PAY_SERVICE_LIANLIAN_CALLBACK_URL": "未配置PAY_SERVICE_LIANLIAN_CALLBACK_URL",
   "未配置PAY_SERVICE_SIGN_SALT": "未配置PAY_SERVICE_SIGN_SALT",
   "未配置PAY_SERVICE_URL": "未配置PAY_SERVICE_URL",
-  "未配置外送渠道，无法选择在外送显示": "未配置外送渠道，无法选择在外送显示",
+  "未配置扫码点餐渠道，无法选择在扫码点餐显示": "未配置扫码点餐渠道，无法选择在扫码点餐显示",
   "未配置库存预警邮箱，跳过发送": "未配置库存预警邮箱，跳过发送",
   "未配置打印机, 请联系管理员": "未配置打印机, 请联系管理员",
   "未配置支付信息": "未配置支付信息",

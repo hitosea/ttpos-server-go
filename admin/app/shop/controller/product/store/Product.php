@@ -484,9 +484,9 @@ class Product extends Controller
                     if ($val['num_type'] == 2 && ($val['is_show_tablet'] != 2 ||  $val['is_show_assistant'] != 2 ||  $val['is_show_h5'] != 2 ||  $val['is_show_delivery'] != 2)) {
                         return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('按小数计价只能显示到收银机和厨显'), $val);
                     }
-                    // 
-                    if ($this->store['supplier']['delivery_status'] != 1 && $val['is_show_delivery'] != 2) {
-                        return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('未配置外送渠道，无法选择在外送显示'), $val);
+                    // 未开启扫码点餐到店自取且未配置外送渠道，无法选择在扫码点餐显示
+                    if ($this->store['supplier']['delivery_status'] != 1 && $this->store['supplier']['is_open_store_scan_order'] != 1 && $val['is_show_delivery'] != 2) {
+                        return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('未配置扫码点餐渠道，无法选择在扫码点餐显示'), $val);
                     }
                     //
                     $productName = [];

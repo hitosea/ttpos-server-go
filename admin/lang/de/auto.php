@@ -520,7 +520,7 @@ return [
     "繁體中文" => "Traditionelles Chinesisch",
     "日本語" => "Japanisch",
     "按小数计价只能显示到收银机和厨显" => "Dezimalpreisangaben werden nur an der Kasse und auf dem Küchendisplay angezeigt",
-    "未配置外送渠道，无法选择在外送显示" => "Lieferkanal nicht konfiguriert, Anzeige bei Lieferung nicht möglich",
+    "未配置扫码点餐渠道，无法选择在扫码点餐显示" => "Scan-Bestellkanal nicht konfiguriert, Anzeige für Scan-Bestellung nicht möglich",
     "商品名称格式错误" => "Fehler im Produktnamenformat",
     "商品名称对应语言不存在" => "Entsprechende Sprache für den Produktnamen existiert nicht",
     "图片名称已存在" => "Bildname existiert bereits",
