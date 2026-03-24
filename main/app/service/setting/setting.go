@@ -2646,20 +2646,20 @@ func (s *Srv) GetStoreScanOrderSetting(ctx context.Context) (setting.StoreScanOr
 
 // SaveStoreScanOrderSetting 保存门店点餐配置
 func (s *Srv) SaveStoreScanOrderSetting(ctx context.Context, settingReq req.SaveStoreScanOrderSettingReq) error {
-	companySetting, err := s.GetCompanySetting(ctx)
-	if err != nil {
-		return errors.WithMessage(err, "获取公司设置失败")
-	}
+	// companySetting, err := s.GetCompanySetting(ctx)
+	// if err != nil {
+	// 	return errors.WithMessage(err, "获取公司设置失败")
+	// }
 
-	// 校验：如果要开启外送服务，云平台必须已开启外送功能（与 is_open_rider 保持一致）
-	if settingReq.EnableDelivery == 1 && !companySetting.IsOpenRider() {
-		return errors.New("暂未开启，请联系销售代表")
-	}
+	// // 校验：如果要开启外送服务，云平台必须已开启外送功能（与 is_open_rider 保持一致）
+	// if settingReq.EnableDelivery == 1 && !companySetting.IsOpenRider() {
+	// 	return errors.New("暂未开启，请联系销售代表")
+	// }
 
-	// 校验：如果要开启到店自取，云平台必须已开启会员端即时点餐功能
-	if settingReq.EnableSelfPickup == 1 && companySetting.IsOpenMemberInstant != 1 {
-		return errors.New("暂未开启，请联系销售代表")
-	}
+	// // 校验：如果要开启到店自取，云平台必须已开启会员端即时点餐功能
+	// if settingReq.EnableSelfPickup == 1 && companySetting.IsOpenMemberInstant != 1 {
+	// 	return errors.New("暂未开启，请联系销售代表")
+	// }
 
 	// 保存设置
 	data := setting.StoreScanOrderSetting{
