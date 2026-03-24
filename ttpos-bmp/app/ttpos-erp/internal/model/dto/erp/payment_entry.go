@@ -18,8 +18,6 @@ type PaymentEntry struct {
 	References              []PaymentReference `json:"references"`
 	PostingDate             string             `json:"posting_date,omitempty"`
 	Docstatus               int                `json:"docstatus,omitempty"`
-	// 自定义字段
-	TtposSaleOrderUuid string `json:"custom_ttpos_sale_order_uuid,omitempty"`
 }
 
 // PaymentReference Payment Entry 关联单据
@@ -48,6 +46,5 @@ type CreditNote struct {
 	Items         []SalesInvoiceItem `json:"items"`
 	Taxes         []SalesInvoiceTax  `json:"taxes,omitempty"`
 	// 自定义字段
-	TtposSaleOrderUuid string `json:"custom_ttpos_sale_order_uuid,omitempty"`
-	TtposRefundType    string `json:"custom_ttpos_refund_type,omitempty"` // full_refund/partial_refund
+	TtposRefundType string `json:"custom_ttpos_refund_type,omitempty"` // full_refund/partial_refund
 }
