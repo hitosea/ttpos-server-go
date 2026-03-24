@@ -8015,7 +8015,7 @@
   "龙": "Ejderha",
   "只有总店可以操作自动收货配置": "Yalnızca merkez ofis otomatik teslim alma yapılandırmasını yönetebilir",
   "规则不存在": "Kural mevcut değil",
-  "门店 %d 已在该仓库的其他规则中配置": "Mağaza %d bu depo için başka bir kuralda zaten yapılandırılmış",
+  "门店 %s 已在该仓库的其他规则中配置": "Mağaza %s bu depo için başka bir kuralda zaten yapılandırılmış",
   "创建规则门店失败": "Kural mağaza ilişkilendirmesi oluşturulamadı",
   "更新规则失败": "Kural güncellenemedi",
   "删除规则门店失败": "Kural mağaza ilişkilendirmesi silinemedi",
@@ -8027,5 +8027,7 @@
   "查询规则列表失败": "Kural listesi sorgulanamadı",
   "查询规则门店失败": "Kural mağazaları sorgulanamadı",
   "查询自动收货记录失败": "Otomatik teslim alma kayıtları sorgulanamadı",
-  "查询门店信息失败": "Mağaza bilgileri sorgulanamadı"
+  "查询门店信息失败": "Mağaza bilgileri sorgulanamadı",
+  "发货仓库已禁用或已删除，请重新选择": "Sevkiyat deposu devre dışı bırakıldı veya silindi, lütfen tekrar seçin",
+  "查询发货仓库失败": "Sevkiyat deposu sorgulanamadı"
 }
