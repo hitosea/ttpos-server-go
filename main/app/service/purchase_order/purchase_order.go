@@ -1628,6 +1628,8 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 			headquarterItem.BaseModel.Uuid = 0
 			headquarterItem.PurchaseOrderUuid = headquarterPurchaseOrder.Uuid
 			headquarterItem.MaterialUuid = material.Uuid
+			headquarterItem.DeliveredBySupplier = material.DeliveredBySupplier
+			headquarterItem.SupplierErpCode = material.SupplierErpCode
 			headquarterItem.Material = nil
 			headquarterItem.Units = make([]model.PurchaseOrderItemUnit, 0)
 			// 复制单位列表
@@ -1902,48 +1904,50 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 		}
 	}
 
-	// 查询物品在 ERP 中的默认仓库映射（新流程：采购单无指定仓库时使用）
+	// 查询物品在 ERP 中的默认仓库映射（统一使用物品默认仓库）
 	itemDefaultWarehouseMap := make(map[string]uint64)
-	if purchaseOrder.WarehouseErpCode == "" {
-		itemCodes := make([]string, 0, len(purchaseOrder.Items))
-		for _, item := range purchaseOrder.Items {
-			if item.MaterialCode != "" {
-				itemCodes = append(itemCodes, item.MaterialCode)
+	itemCodes := make([]string, 0, len(purchaseOrder.Items))
+	for _, item := range purchaseOrder.Items {
+		if item.MaterialCode != "" {
+			itemCodes = append(itemCodes, item.MaterialCode)
+		}
+	}
+	companySetting := ctx.GetCompanySetting()
+	hqCompanyAbbr := companySetting.ErpnextCompanyAbbr // 此处是总部审核，companySetting 为总部
+	erpSrv := erp.NewIErpSrv(s.dbm)
+	var erpItemWarehouses map[string]string
+	var erpErr error
+	if len(itemCodes) > 0 {
+		erpItemWarehouses, erpErr = erpSrv.GetItemDefaultWarehouses(ctx, itemCodes, hqCompanyAbbr, false)
+	}
+	if erpErr != nil {
+		logger.Logger.Warn("handleInternalPurchaseErp-查询ERP物品默认仓库失败",
+			zap.Uint64("company_uuid", companySetting.CompanyUuid),
+			zap.Error(erpErr),
+		)
+	} else {
+		// 批量将 warehouse_erp_code 映射为本地仓库 UUID
+		warehouseErpCodes := make(map[string]bool)
+		for _, whErpCode := range erpItemWarehouses {
+			if whErpCode != "" {
+				warehouseErpCodes[whErpCode] = true
 			}
 		}
-		companySetting := ctx.GetCompanySetting()
-		hqCompanyAbbr := companySetting.ErpnextCompanyAbbr // 此处是总部审核，companySetting 为总部
-		erpSrv := erp.NewIErpSrv(s.dbm)
-		erpItemWarehouses, erpErr := erpSrv.GetItemDefaultWarehouses(ctx, itemCodes, hqCompanyAbbr, false)
-		if erpErr != nil {
-			logger.Logger.Warn("handleInternalPurchaseErp-查询ERP物品默认仓库失败",
-				zap.Uint64("company_uuid", companySetting.CompanyUuid),
-				zap.Error(erpErr),
-			)
-		} else {
-			// 批量将 warehouse_erp_code 映射为本地仓库 UUID
-			warehouseErpCodes := make(map[string]bool)
-			for _, whErpCode := range erpItemWarehouses {
-				if whErpCode != "" {
-					warehouseErpCodes[whErpCode] = true
-				}
-			}
-			codes := make([]string, 0, len(warehouseErpCodes))
-			for code := range warehouseErpCodes {
-				codes = append(codes, code)
-			}
-			warehouseRepo := repository.NewWarehouseRepo(tx)
-			whMap, whErr := warehouseRepo.GetByErpCodes(codes)
-			if whErr != nil {
-				// 非致命：查询失败时跳过按物品默认仓库减库存，依赖订单级仓库兜底
-				logger.Logger.Warn("批量查询仓库ERP编码失败",
-					zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
-					zap.Error(whErr))
-			}
-			for itemCode, whErpCode := range erpItemWarehouses {
-				if wh, ok := whMap[whErpCode]; ok {
-					itemDefaultWarehouseMap[itemCode] = wh.Uuid
-				}
+		codes := make([]string, 0, len(warehouseErpCodes))
+		for code := range warehouseErpCodes {
+			codes = append(codes, code)
+		}
+		warehouseRepo := repository.NewWarehouseRepo(tx)
+		whMap, whErr := warehouseRepo.GetByErpCodes(codes)
+		if whErr != nil {
+			// 非致命：查询失败时跳过按物品默认仓库减库存，依赖订单级仓库兜底
+			logger.Logger.Warn("批量查询仓库ERP编码失败",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Error(whErr))
+		}
+		for itemCode, whErpCode := range erpItemWarehouses {
+			if wh, ok := whMap[whErpCode]; ok {
+				itemDefaultWarehouseMap[itemCode] = wh.Uuid
 			}
 		}
 	}
@@ -1959,7 +1963,7 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 
 	// 调用erp接口
 	hqCompanySetting := ctx.GetCompanySetting() // 审核时为总部
-	stockResp, err := erp.NewIErpSrv(s.dbm).SaveMaterialRequest(ctx, subCompanySetting, &stock.SaveMaterialRequestReq{
+	stockResp, err := erpSrv.SaveMaterialRequest(ctx, subCompanySetting, &stock.SaveMaterialRequestReq{
 		TransactionDate: purchaseOrder.OrderTime,
 		RequiredBy:      purchaseOrder.ExpectArrivalTime,
 		Supplier: func() string {
@@ -1968,7 +1972,6 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 			}
 			return purchaseOrder.SupplierName
 		}(),
-		SourceWarehouse:   purchaseOrder.WarehouseErpCode,
 		TargetWarehouse:   purchaseOrder.DefaultWarehouseErpCode,
 		Items:             stockItems,
 		RefNo:             purchaseOrder.OrderNo, // 来源单据号，用于跟踪ttpos原始订单号
