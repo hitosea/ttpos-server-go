@@ -343,6 +343,7 @@ type ChangeDeskReq struct {
 type SubmitMemberDineInOrderReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
 	SaleOrderUuid uint64 `json:"sale_order_uuid" binding:"required"` // 销售订单UUID
+	Remark        string `json:"remark"`                             // 订单备注（同步到收银端整单备注）
 }
 
 type MergeDeskReq struct {
