@@ -25771,6 +25771,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/material/update_negative_stock": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "子店修改总店同步物品的负库存设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "修改物品负库存设置",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MaterialUpdateNegativeStockReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/material/update_safety_stock": {
             "post": {
                 "security": [
@@ -44407,6 +44446,10 @@ const docTemplate = `{
                     "description": "默认语言",
                     "type": "string"
                 },
+                "delivery_available": {
+                    "description": "外送服务是否可用（云平台是否开启）",
+                    "type": "boolean"
+                },
                 "is_member_show_sold_out": {
                     "description": "是否显示售罄商品",
                     "type": "boolean"
@@ -44436,6 +44479,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/dto.LanguageItem"
                     }
+                },
+                "self_pickup_available": {
+                    "description": "到店自取是否可用（云平台是否开启）",
+                    "type": "boolean"
                 }
             }
         },
@@ -47786,7 +47833,7 @@ const docTemplate = `{
                     "description": "商品列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/req.OrderProductAddReq"
+                        "$ref": "#/definitions/req.ProductParams"
                     }
                 },
                 "sale_bill_uuid": {
@@ -49733,6 +49780,22 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.MaterialUpdateNegativeStockReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "allow_negative_stock": {
+                    "description": "是否允许负库存",
+                    "type": "boolean"
+                },
+                "uuid": {
+                    "description": "物品UUID",
                     "type": "integer"
                 }
             }
@@ -51953,6 +52016,10 @@ const docTemplate = `{
                 },
                 "flavor_product_bom_uuid": {
                     "description": "商品规格uuid",
+                    "type": "integer"
+                },
+                "flavor_uuid": {
+                    "description": "商品规格uuid,FlavorProductBomUuid的别名,只有会员端堂食订单创建使用",
                     "type": "integer"
                 },
                 "is_buffet": {
@@ -60033,6 +60100,18 @@ const docTemplate = `{
                     "description": "数量",
                     "type": "number"
                 },
+                "package_product_list": {
+                    "description": "套餐子商品列表（仅套餐商品有值）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PackageProductList"
+                        }
+                    ]
+                },
+                "product_type": {
+                    "description": "商品类型 0-商品 1-套餐",
+                    "type": "integer"
+                },
                 "sale_order_product_uuid": {
                     "description": "销售订单商品UUID",
                     "type": "integer"
@@ -61181,6 +61260,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.OperationLog"
                         }
                     ]
+                },
+                "payment_method": {
+                    "description": "支付方式列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.H5OrderPaymentMethodList"
+                        }
+                    ]
                 }
             }
         },
@@ -61260,6 +61347,31 @@ const docTemplate = `{
                 "unhandled_count": {
                     "description": "未处理的接单数量",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.H5OrderPaymentMethodItem": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "支付方式代号",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.H5OrderPaymentMethodList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "支付方式列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.H5OrderPaymentMethodItem"
+                    }
                 }
             }
         },
@@ -62099,9 +62211,21 @@ const docTemplate = `{
                     "description": "数量",
                     "type": "number"
                 },
+                "package_product_list": {
+                    "description": "套餐子商品列表（仅套餐商品有值）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PackageProductList"
+                        }
+                    ]
+                },
                 "price": {
                     "description": "单价（折前）",
                     "type": "number"
+                },
+                "product_type": {
+                    "description": "商品类型 0-商品 1-套餐",
+                    "type": "integer"
                 },
                 "refund_amount": {
                     "description": "退款金额（0表示未退款）",
@@ -70752,6 +70876,10 @@ const docTemplate = `{
         "resp.UnprocessedH5OrderItem": {
             "type": "object",
             "properties": {
+                "can_reject": {
+                    "description": "是否可以拒单",
+                    "type": "boolean"
+                },
                 "desk_no": {
                     "description": "桌台编号",
                     "type": "string"

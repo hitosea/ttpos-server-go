@@ -92,6 +92,12 @@ type MaterialUpdateSafetyStockReq struct {
 	SafetyStock *float64 `json:"safety_stock"`            // 安全库存值（可为 null）
 }
 
+// MaterialUpdateNegativeStockReq 修改物品负库存设置请求
+type MaterialUpdateNegativeStockReq struct {
+	Uuid               uint64 `json:"uuid" binding:"required"`        // 物品UUID
+	AllowNegativeStock bool   `json:"allow_negative_stock"`           // 是否允许负库存
+}
+
 // MaterialCategoryDeleteReq 删除物品类别请求
 type MaterialCategoryDeleteReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 物品类别UUID

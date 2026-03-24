@@ -1934,6 +1934,9 @@ definitions:
       default_language:
         description: 默认语言
         type: string
+      delivery_available:
+        description: 外送服务是否可用（云平台是否开启）
+        type: boolean
       is_member_show_sold_out:
         description: 是否显示售罄商品
         type: boolean
@@ -1956,6 +1959,9 @@ definitions:
         items:
           $ref: '#/definitions/dto.LanguageItem'
         type: array
+      self_pickup_available:
+        description: 到店自取是否可用（云平台是否开启）
+        type: boolean
     type: object
   member_resp.PointsRecord:
     properties:
@@ -4222,7 +4228,7 @@ definitions:
       products:
         description: 商品列表
         items:
-          $ref: '#/definitions/req.OrderProductAddReq'
+          $ref: '#/definitions/req.ProductParams'
         type: array
       sale_bill_uuid:
         description: 销售账单UUID. 值为0时，表示创建新订单。值不为0时，表示向已有订单添加商品。
@@ -5583,6 +5589,17 @@ definitions:
         type: integer
     required:
     - conversion_rate
+    - uuid
+    type: object
+  req.MaterialUpdateNegativeStockReq:
+    properties:
+      allow_negative_stock:
+        description: 是否允许负库存
+        type: boolean
+      uuid:
+        description: 物品UUID
+        type: integer
+    required:
     - uuid
     type: object
   req.MaterialUpdateSafetyStockReq:
@@ -7137,6 +7154,9 @@ definitions:
         type: integer
       flavor_product_bom_uuid:
         description: 商品规格uuid
+        type: integer
+      flavor_uuid:
+        description: 商品规格uuid,FlavorProductBomUuid的别名,只有会员端堂食订单创建使用
         type: integer
       is_buffet:
         description: 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
@@ -12746,6 +12766,13 @@ definitions:
       num:
         description: 数量
         type: number
+      package_product_list:
+        allOf:
+        - $ref: '#/definitions/resp.PackageProductList'
+        description: 套餐子商品列表（仅套餐商品有值）
+      product_type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
       sale_order_product_uuid:
         description: 销售订单商品UUID
         type: integer
@@ -13492,6 +13519,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.OperationLog'
         description: 操作日志列表
+      payment_method:
+        allOf:
+        - $ref: '#/definitions/resp.H5OrderPaymentMethodList'
+        description: 支付方式列表
     type: object
   resp.H5OrderItem:
     properties:
@@ -13548,6 +13579,23 @@ definitions:
       unhandled_count:
         description: 未处理的接单数量
         type: integer
+    type: object
+  resp.H5OrderPaymentMethodItem:
+    properties:
+      code:
+        description: 支付方式代号
+        type: integer
+      name:
+        description: 支付方式名称
+        type: string
+    type: object
+  resp.H5OrderPaymentMethodList:
+    properties:
+      list:
+        description: 支付方式列表
+        items:
+          $ref: '#/definitions/resp.H5OrderPaymentMethodItem'
+        type: array
     type: object
   resp.HeadquartersDataListResp:
     properties:
@@ -14089,9 +14137,16 @@ definitions:
       num:
         description: 数量
         type: number
+      package_product_list:
+        allOf:
+        - $ref: '#/definitions/resp.PackageProductList'
+        description: 套餐子商品列表（仅套餐商品有值）
       price:
         description: 单价（折前）
         type: number
+      product_type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
       refund_amount:
         description: 退款金额（0表示未退款）
         type: number
@@ -19988,6 +20043,9 @@ definitions:
     type: object
   resp.UnprocessedH5OrderItem:
     properties:
+      can_reject:
+        description: 是否可以拒单
+        type: boolean
       desk_no:
         description: 桌台编号
         type: string
@@ -37297,6 +37355,30 @@ paths:
       security:
       - JwtToken: []
       summary: 获取物品的单位列表
+      tags:
+      - 商家端.物品管理
+  /shop/material/update_negative_stock:
+    post:
+      consumes:
+      - application/json
+      description: 子店修改总店同步物品的负库存设置
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialUpdateNegativeStockReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 修改物品负库存设置
       tags:
       - 商家端.物品管理
   /shop/material/update_safety_stock:

@@ -142,6 +142,34 @@ func (h *MaterialHandler) UpdateSafetyStock(c *gin.Context) {
 	helper.Success(c, gin.H{}, "保存成功")
 }
 
+// UpdateNegativeStock 修改物品负库存设置
+// @Summary 修改物品负库存设置
+// @Description 子店修改总店同步物品的负库存设置
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param request body req.MaterialUpdateNegativeStockReq true "请求参数"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/update_negative_stock [post]
+func (h *MaterialHandler) UpdateNegativeStock(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var req req.MaterialUpdateNegativeStockReq
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
+		return
+	}
+
+	if err := h.materialSrv.UpdateMaterialNegativeStock(ctx, req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, gin.H{}, "保存成功")
+}
+
 // AddMaterialCategory 创建物品类别
 // @Summary 创建物品类别
 // @Description 创建物品类别
@@ -716,6 +744,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)                         // 获取物品详情
 		privateApi.GET("/material/stock/detail", wrapper.GetMaterialStockDetail)              // 查询物品库存详情
 		privateApi.POST("/material/update_safety_stock", wrapper.UpdateSafetyStock)           // 修改物品安全库存
+		privateApi.POST("/material/update_negative_stock", wrapper.UpdateNegativeStock)     // 修改物品负库存设置
 		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)                // 创建物品类别
 		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)            // 获取物品类别列表
 		privateApi.GET("/material/category/detail", wrapper.GetMaterialCategoryDetail)        // 获取物品类别详情

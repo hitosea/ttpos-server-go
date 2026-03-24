@@ -100,7 +100,8 @@ type IMaterialSrv interface {
 
 	CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error // 检查物品安全库存
 
-	UpdateMaterialSafetyStock(ctx context.Context, req req.MaterialUpdateSafetyStockReq) error // 修改物品安全库存
+	UpdateMaterialSafetyStock(ctx context.Context, req req.MaterialUpdateSafetyStockReq) error       // 修改物品安全库存
+	UpdateMaterialNegativeStock(ctx context.Context, req req.MaterialUpdateNegativeStockReq) error // 修改物品负库存设置
 }
 
 type materialSrv struct {
@@ -4443,6 +4444,70 @@ func (s *materialSrv) UpdateMaterialSafetyStock(ctx context.Context, req req.Mat
 			if safetyStockDiff {
 				hqPushSrv := NewHqPushSrv(s.dbm)
 				_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityMaterial, req.Uuid, constant.HqFieldSafetyStock)
+			}
+		}
+	}
+
+	return nil
+}
+
+// UpdateMaterialNegativeStock 修改物品负库存设置（子店专用）
+func (s *materialSrv) UpdateMaterialNegativeStock(ctx context.Context, req req.MaterialUpdateNegativeStockReq) error {
+	companySetting := ctx.GetCompanySetting()
+
+	// 权限校验：只有子店账号才能通过此接口修改
+	if !companySetting.IsSubShop() {
+		return errors.New("非子店账号无法修改")
+	}
+
+	// 检查负库存字段是否处于"分开控制"模式
+	hqPushSrv := NewHqPushSrv(s.dbm)
+	if !hqPushSrv.IsFieldEditable(companySetting.HeadquarterUuid, constant.HqFieldNegativeStock) {
+		return errors.New("负库存字段当前为统一控制，子店无法修改")
+	}
+
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+	materialRepo := repository.NewMaterialRepo(db)
+	commonRepo := repository.NewCommonRepo()
+
+	// 查询物品，确保物品存在
+	material, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "物品不存在")
+	}
+
+	// 检查是否从允许负库存改为不允许负库存
+	if material.AllowNegativeStock == constant.Yes && !req.AllowNegativeStock {
+		for _, warehouseItem := range material.WarehouseItems {
+			if warehouseItem.Stock < 0 {
+				return errors.WithMessage(errors.New("物品已产生负库存，请修正库存后再关闭负库存设置"))
+			}
+		}
+	}
+
+	// 更新负库存设置
+	negativeStockValue := 0
+	if req.AllowNegativeStock {
+		negativeStockValue = 1
+	}
+	updateData := map[string]any{
+		"allow_negative_stock": negativeStockValue,
+		"update_time":          time.Now().Unix(),
+	}
+
+	if err := materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(req.Uuid)); err != nil {
+		return errors.WithMessage(err, "更新物品负库存设置失败")
+	}
+
+	// 子店修改总部物品负库存 → 与 HQ 值不一致时标记 override
+	if material.HeadquarterUuid > 0 {
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		hqMaterialRepo := repository.NewMaterialRepo(hqDb)
+		hqMaterial, hqErr := hqMaterialRepo.GetMaterialDetailByUuid(req.Uuid)
+		if hqErr == nil && hqMaterial != nil {
+			if negativeStockValue != hqMaterial.AllowNegativeStock {
+				_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityMaterial, req.Uuid, constant.HqFieldNegativeStock)
 			}
 		}
 	}

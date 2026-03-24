@@ -689,10 +689,8 @@ func (s *hqPushSrv) pushNegativeStockToStore(hqUuid, storeUuid uint64, forceOver
 	if !forceOverwrite {
 		negOverriddenMap, _ = overrideRepo.BatchCheckOverridden(uuids, constant.HqFieldNegativeStock)
 	}
-	safetyOverriddenMap := make(map[uint64]bool)
-	if !forceOverwrite {
-		safetyOverriddenMap, _ = overrideRepo.BatchCheckOverridden(uuids, constant.HqFieldSafetyStock)
-	}
+	// 安全库存无控制模式，始终使用 override 逻辑保护，不受强制推送影响
+	safetyOverriddenMap, _ := overrideRepo.BatchCheckOverridden(uuids, constant.HqFieldSafetyStock)
 
 	// 获取子店当前值
 	storeMaterialRepo := repository.NewMaterialRepo(storeDB)
@@ -719,10 +717,8 @@ func (s *hqPushSrv) pushNegativeStockToStore(hqUuid, storeUuid uint64, forceOver
 			updateData["allow_negative_stock"] = hqNegVal
 		}
 
-		// 安全库存
-		if forceOverwrite {
-			updateData["safety_stock"] = hqSafetyStockMap[uuid]
-		} else if !safetyOverriddenMap[uuid] {
+		// 安全库存（无控制模式，始终使用 override 逻辑，不受强制推送影响）
+		if !safetyOverriddenMap[uuid] {
 			updateData["safety_stock"] = hqSafetyStockMap[uuid]
 		}
 
@@ -739,7 +735,7 @@ func (s *hqPushSrv) pushNegativeStockToStore(hqUuid, storeUuid uint64, forceOver
 			if forceOverwrite {
 				txOverrideRepo := repository.NewHqFieldOverrideRepo(tx)
 				txOverrideRepo.ClearOverride(materialUuid, constant.HqFieldNegativeStock)
-				txOverrideRepo.ClearOverride(materialUuid, constant.HqFieldSafetyStock)
+				// 安全库存无控制模式，不清除其 override 标记
 			}
 			return nil
 		}); err != nil {
@@ -1272,6 +1268,7 @@ func (s *hqPushSrv) pushMaterialToStores(hqUuid uint64, storeUuids []uint64, mat
 		commonRepo.WhereByUuid(materialUuid),
 		commonRepo.WhereByHeadquarterUuid(0),
 		hqMaterialRepo.WithNotBaseUnitList(commonRepo.WhereBySoftDelete()),
+		hqMaterialRepo.WithMultiLanguageName(),
 	)
 	if hqMaterial.Uuid == 0 {
 		return
@@ -1279,9 +1276,12 @@ func (s *hqPushSrv) pushMaterialToStores(hqUuid uint64, storeUuids []uint64, mat
 
 	controlRepo := s.getHqControlRepo(hqUuid)
 
+	sem := make(chan struct{}, 10)
 	for _, storeUuid := range storeUuids {
 		su := storeUuid
 		utils.Go(func() {
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			s.pushSingleMaterialToStore(hqUuid, su, &hqMaterial, controlRepo)
 		})
 	}
@@ -1302,20 +1302,36 @@ func (s *hqPushSrv) pushSingleMaterialToStore(hqUuid, storeUuid uint64, hqMateri
 		return
 	}
 
-	// 不可覆盖字段
+	// 检查分类是否存在于子店，不存在则默认为 0
+	categoryUuid := hqMaterial.CategoryUuid
+	if categoryUuid > 0 {
+		if _, err := storeMaterialRepo.GetMaterialCategoryByUuid(categoryUuid); err != nil {
+			categoryUuid = 0
+		}
+	}
+
+	// 检查单位 ProductUnit 是否存在于子店，过滤有效单位
+	storeProductUnitRepo := repository.NewProductUnitRepo(storeDB)
+	validUnits, validUnitUuidSet := resolveValidMaterialUnits(storeProductUnitRepo, hqMaterial.NotBaseUnitList)
+
+	// 解析单位字段（参考 doUpdateMaterialByErpItem 处理不存在的引用）
+	unitUuid, purchaseUnitUuid, costUnitUuid, defaultSalesUnitUuid := resolvePushMaterialUnitFields(
+		hqMaterial, validUnitUuidSet,
+	)
+
+	// 不可覆盖字段（multi_language_name_uuid 保留子店自有值，仅更新内容）
 	updateData := map[string]any{
-		"name":                     hqMaterial.Name,
-		"code":                     hqMaterial.Code,
-		"multi_language_name_uuid": hqMaterial.MultiLanguageNameUuid,
-		"category_uuid":            hqMaterial.CategoryUuid,
+		"name":                    hqMaterial.Name,
+		"code":                    hqMaterial.Code,
+		"category_uuid":           categoryUuid,
 		"status":                   hqMaterial.Status,
 		"barcode_value":            hqMaterial.BarcodeValue,
 		"internal_code":            hqMaterial.InternalCode,
 		"origin_country_code":      hqMaterial.OriginCountryCode,
-		"unit_uuid":                hqMaterial.UnitUuid,
-		"purchase_unit_uuid":       hqMaterial.PurchaseUnitUuid,
-		"cost_unit_uuid":           hqMaterial.CostUnitUuid,
-		"default_sales_unit_uuid":  hqMaterial.DefaultSalesUnitUuid,
+		"unit_uuid":                unitUuid,
+		"purchase_unit_uuid":       purchaseUnitUuid,
+		"cost_unit_uuid":           costUnitUuid,
+		"default_sales_unit_uuid":  defaultSalesUnitUuid,
 		"allow_substore_visible":   hqMaterial.AllowSubstoreVisible,
 		"delete_time":              hqMaterial.DeleteTime,
 		"update_time":              hqMaterial.UpdateTime,
@@ -1338,32 +1354,28 @@ func (s *hqPushSrv) pushSingleMaterialToStore(hqUuid, storeUuid uint64, hqMateri
 		updateData["allow_negative_stock"] = hqMaterial.AllowNegativeStock
 	}
 
-	// 在事务中执行主表更新和非基准单位同步
+	// 在事务中执行主表更新、多语言名称同步和非基准单位同步
 	if err := commonRepo.Transaction(storeDB, func(tx *gorm.DB) error {
 		txMaterialRepo := repository.NewMaterialRepo(tx)
 		if err := txMaterialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(hqMaterial.Uuid)); err != nil {
 			return err
 		}
 
-		// 同步非基准单位（delete+recreate，无子店本地字段需保留）
+		// 同步多语言名称记录到子店（使用子店自己的 multi_language_name_uuid 更新内容）
+		if storeMaterial.MultiLanguageNameUuid > 0 && !hqMaterial.MultiLanguageName.IsNullName() {
+			multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
+			if err := multiLanguageNameRepo.UpdateMultiLanguageName(storeMaterial.MultiLanguageNameUuid, hqMaterial.MultiLanguageName); err != nil {
+				return err
+			}
+		}
+
+		// 同步单位（delete+recreate，跳过子店不存在 ProductUnit 的单位）
 		materialUnitRepo := repository.NewMaterialUnitRepo(tx)
 		if err := materialUnitRepo.DestroyMaterialUnit(commonRepo.WhereByMaterialUuid(hqMaterial.Uuid)); err != nil {
 			return err
 		}
-		if len(hqMaterial.NotBaseUnitList) > 0 {
-			units := make([]model.MaterialUnit, 0, len(hqMaterial.NotBaseUnitList))
-			for _, u := range hqMaterial.NotBaseUnitList {
-				units = append(units, model.MaterialUnit{
-					BaseModel:      model.BaseModel{Uuid: u.Uuid, CreateTime: u.CreateTime, UpdateTime: u.UpdateTime, DeleteTime: u.DeleteTime},
-					Name:           u.Name,
-					UnitUuid:       u.UnitUuid,
-					ConversionRate: u.ConversionRate,
-					FromUnitUuid:   u.FromUnitUuid,
-					IsDefault:      u.IsDefault,
-					MaterialUuid:   u.MaterialUuid,
-				})
-			}
-			return materialUnitRepo.CreateMaterialUnitList(units)
+		if len(validUnits) > 0 {
+			return materialUnitRepo.CreateMaterialUnitList(validUnits)
 		}
 		return nil
 	}); err != nil {
@@ -1374,6 +1386,84 @@ func (s *hqPushSrv) pushSingleMaterialToStore(hqUuid, storeUuid uint64, hqMateri
 			zap.Error(err),
 		)
 	}
+}
+
+// resolveValidMaterialUnits 检查子店 ProductUnit 存在性，过滤有效的 MaterialUnit 列表
+func resolveValidMaterialUnits(productUnitRepo repository.IProductUnitRepo, hqUnits []*model.MaterialUnit) ([]model.MaterialUnit, map[uint64]bool) {
+	validUnitUuidSet := make(map[uint64]bool)
+	if len(hqUnits) == 0 {
+		return nil, validUnitUuidSet
+	}
+
+	// 收集 HQ 单位引用的 ProductUnit UUID
+	productUnitUuids := make([]uint64, 0, len(hqUnits))
+	for _, u := range hqUnits {
+		if u.UnitUuid > 0 {
+			productUnitUuids = append(productUnitUuids, u.UnitUuid)
+		}
+	}
+
+	// 批量查询子店中存在的 ProductUnit
+	existingProductUnitSet := make(map[uint64]bool)
+	if len(productUnitUuids) > 0 {
+		existingUnits, err := productUnitRepo.GetProductUnitList(productUnitRepo.WhereByUuids(productUnitUuids))
+		if err == nil {
+			for _, pu := range existingUnits {
+				existingProductUnitSet[pu.Uuid] = true
+			}
+		}
+	}
+
+	// 过滤出 ProductUnit 存在于子店的有效单位
+	validUnits := make([]model.MaterialUnit, 0, len(hqUnits))
+	for _, u := range hqUnits {
+		if u.UnitUuid > 0 && !existingProductUnitSet[u.UnitUuid] {
+			logger.Logger.Warn("推送物品-ProductUnit在子店不存在，跳过单位",
+				zap.Uint64("material_unit_uuid", u.Uuid),
+				zap.Uint64("product_unit_uuid", u.UnitUuid),
+			)
+			continue
+		}
+		validUnits = append(validUnits, model.MaterialUnit{
+			BaseModel:      model.BaseModel{Uuid: u.Uuid, CreateTime: u.CreateTime, UpdateTime: u.UpdateTime, DeleteTime: u.DeleteTime},
+			Name:           u.Name,
+			UnitUuid:       u.UnitUuid,
+			ConversionRate: u.ConversionRate,
+			FromUnitUuid:   u.FromUnitUuid,
+			IsDefault:      u.IsDefault,
+			MaterialUuid:   u.MaterialUuid,
+		})
+		validUnitUuidSet[u.Uuid] = true
+	}
+	return validUnits, validUnitUuidSet
+}
+
+// resolvePushMaterialUnitFields 解析推送物品的单位字段，参考 doUpdateMaterialByErpItem 处理不存在的引用
+func resolvePushMaterialUnitFields(hqMaterial *model.Material, validUnitUuidSet map[uint64]bool) (unitUuid, purchaseUnitUuid, costUnitUuid, defaultSalesUnitUuid uint64) {
+	// 基准单位：不存在则清零
+	unitUuid = hqMaterial.UnitUuid
+	if unitUuid > 0 && !validUnitUuidSet[unitUuid] {
+		unitUuid = 0
+	}
+
+	// 采购单位：不存在则清零
+	purchaseUnitUuid = hqMaterial.PurchaseUnitUuid
+	if purchaseUnitUuid > 0 && !validUnitUuidSet[purchaseUnitUuid] {
+		purchaseUnitUuid = 0
+	}
+
+	// 成本单位：不存在则回退到基准单位（参考 handleDanglingUnitRefs）
+	costUnitUuid = hqMaterial.CostUnitUuid
+	if costUnitUuid > 0 && !validUnitUuidSet[costUnitUuid] {
+		costUnitUuid = unitUuid
+	}
+
+	// 默认销售单位：不存在则清零
+	defaultSalesUnitUuid = hqMaterial.DefaultSalesUnitUuid
+	if defaultSalesUnitUuid > 0 && !validUnitUuidSet[defaultSalesUnitUuid] {
+		defaultSalesUnitUuid = 0
+	}
+	return
 }
 
 // ========== 关联表构建 Helper（product.go 全量同步 和 hq_push.go 实时推送 共用） ==========
