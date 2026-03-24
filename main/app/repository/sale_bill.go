@@ -203,7 +203,7 @@ func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint
 		CommonRepo.WhereByIsHide(true),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByStatus(constant.SaleBillStatusPending),
-		CommonRepo.WhereByDeviceUuid(deviceUuid),
+		// CommonRepo.WhereByDeviceUuid(deviceUuid), 产品定义会员端堂食订单先下单后付款时需要在挂单列表中显示
 	}
 	queryOpts = append(queryOpts, opts...)
 	queryOpts = append(queryOpts, CommonRepo.Preload(
