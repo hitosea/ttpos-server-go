@@ -27,9 +27,6 @@ type SalesInvoice struct {
 	// 自定义字段
 	TtposTakeoutOrderNo  string `json:"custom_takeout_order_no,omitempty"`
 	TtposTakeoutProvider string `json:"custom_takeout_provider,omitempty"`
-	// 订单来源
-	TtposOrderSourceUuid string `json:"custom_ttpos_order_source_uuid,omitempty"`
-	TtposOrderSourceName string `json:"custom_ttpos_order_source_name,omitempty"`
 	// 反结账
 	AmendedFrom string `json:"amended_from,omitempty"`
 }

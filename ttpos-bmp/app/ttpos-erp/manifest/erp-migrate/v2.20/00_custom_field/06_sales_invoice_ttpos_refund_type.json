@@ -3,6 +3,6 @@
   "label": "TTPOS Refund Type",
   "fieldname": "custom_ttpos_refund_type",
   "fieldtype": "Data",
-  "insert_after": "custom_ttpos_order_source_name",
+  "insert_after": "custom_takeout_provider",
   "dt": "Sales Invoice"
 }

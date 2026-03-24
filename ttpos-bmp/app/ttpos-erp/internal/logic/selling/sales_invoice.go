@@ -248,12 +248,6 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 		PoNo: req.OrderNo,
 	}
 
-	if req.OrderSourceUuid != nil && *req.OrderSourceUuid != "" {
-		si.TtposOrderSourceUuid = *req.OrderSourceUuid
-	}
-	if req.OrderSourceName != nil && *req.OrderSourceName != "" {
-		si.TtposOrderSourceName = *req.OrderSourceName
-	}
 	if req.TakeoutOrderNo != nil {
 		si.TtposTakeoutOrderNo = *req.TakeoutOrderNo
 	}
