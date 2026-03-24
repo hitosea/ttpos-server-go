@@ -247,10 +247,11 @@ type MemberDineInOrderProduct struct {
 
 // MemberDineInOrderAmountInfo 堂食订单金额信息
 type MemberDineInOrderAmountInfo struct {
-	ProductAmount     float64 `json:"product_amount"`      // 商品金额（合计）
-	DiscountAmount    float64 `json:"discount_amount"`     // 优惠折扣金额（整单打折），与收银机购物车 discount_amount 一致
-	ServiceFee        float64 `json:"service_fee"`         // 服务费
-	TaxFee            float64 `json:"tax_fee"`             // 税费
-	Amount            float64 `json:"amount"`              // 应付金额
-	PaymentMethodName string  `json:"payment_method_name"` // 支付方式名称
+	ProductAmount        float64 `json:"product_amount"`         // 商品金额（合计）
+	DiscountAmount       float64 `json:"discount_amount"`        // 优惠折扣金额（整单打折），与收银机购物车 discount_amount 一致
+	MemberDiscountAmount float64 `json:"member_discount_amount"` // 会员优惠折扣金额，与收银机购物车 member_discount_amount 一致
+	ServiceFee           float64 `json:"service_fee"`            // 服务费
+	TaxFee               float64 `json:"tax_fee"`                // 税费
+	Amount               float64 `json:"amount"`                 // 应付金额
+	PaymentMethodName    string  `json:"payment_method_name"`    // 支付方式名称
 }
