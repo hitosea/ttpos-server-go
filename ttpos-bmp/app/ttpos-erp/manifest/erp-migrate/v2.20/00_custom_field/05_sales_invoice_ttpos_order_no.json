@@ -1,8 +1,0 @@
-{
-  "doctype": "DocType",
-  "label": "TTPOS Order No",
-  "fieldname": "custom_ttpos_order_no",
-  "fieldtype": "Data",
-  "insert_after": "custom_ttpos_sale_order_uuid",
-  "dt": "Sales Invoice"
-}

@@ -3,6 +3,6 @@
   "label": "Takeout Order No",
   "fieldname": "custom_takeout_order_no",
   "fieldtype": "Data",
-  "insert_after": "custom_ttpos_order_no",
+  "insert_after": "po_date",
   "dt": "Sales Invoice"
 }

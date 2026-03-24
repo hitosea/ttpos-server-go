@@ -25,8 +25,6 @@ type SalesInvoice struct {
 	// Customer's Purchase Order（在 ERPNext 中显示为订单号）
 	PoNo string `json:"po_no,omitempty"`
 	// 自定义字段
-	TtposSaleOrderUuid   string `json:"custom_ttpos_sale_order_uuid,omitempty"`
-	TtposOrderNo         string `json:"custom_ttpos_order_no,omitempty"`
 	TtposTakeoutOrderNo  string `json:"custom_takeout_order_no,omitempty"`
 	TtposTakeoutProvider string `json:"custom_takeout_provider,omitempty"`
 	// 订单来源

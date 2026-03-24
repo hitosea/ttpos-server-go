@@ -245,9 +245,7 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 		Taxes:              taxes,
 		DiscountAmount:     req.DiscountAmount,
 		Docstatus:          0,
-		TtposSaleOrderUuid: req.SaleOrderUuid,
-		TtposOrderNo:       req.OrderNo,
-		PoNo:               req.OrderNo,
+		PoNo: req.OrderNo,
 	}
 
 	if req.OrderSourceUuid != nil && *req.OrderSourceUuid != "" {
@@ -319,8 +317,7 @@ func (s *sSelling) buildCreditNote(ctx context.Context, req *selling.ReturnSales
 		UpdateStock:        0,
 		Items:              items,
 		Taxes:              taxes,
-		TtposSaleOrderUuid: req.SaleOrderUuid,
-		TtposRefundType:    req.RefundType,
+		TtposRefundType: req.RefundType,
 	}
 }
 
@@ -350,7 +347,6 @@ func (s *sSelling) createPaymentEntry(ctx context.Context, req *selling.SaveSale
 				AllocatedAmount:  payment.Amount,
 			},
 		},
-		TtposSaleOrderUuid: req.SaleOrderUuid,
 	}
 
 	// 记录到 receive_payment_entry
@@ -421,7 +417,6 @@ func (s *sSelling) createRefundPaymentEntry(ctx context.Context, req *selling.Re
 				AllocatedAmount:  -payment.Amount, // Credit Note outstanding 为负数，allocated 需匹配
 			},
 		},
-		TtposSaleOrderUuid: req.SaleOrderUuid,
 	}
 
 	resp, err := service.Document().Create(ctx, erp.DocTypePaymentEntry, pe)
