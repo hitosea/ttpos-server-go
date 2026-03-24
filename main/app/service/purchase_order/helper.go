@@ -383,22 +383,6 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
 		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
 		materialRepo := repository.NewMaterialRepo(tx)
-		warehouseRepo := repository.NewWarehouseRepo(tx)
-
-		// 按物品默认仓库或采购单指定仓库确定出库仓库
-		// 新流程：每个物品使用 ERP item_defaults 中的默认仓库；旧流程：使用采购单上指定的仓库
-		usePerItemWarehouse := purchaseOrder.WarehouseErpCode == ""
-
-		// 旧流程：获取采购单指定的单一仓库
-		var singleWarehouse *model.Warehouse
-		if !usePerItemWarehouse {
-			var err error
-			singleWarehouse, err = warehouseRepo.GetByErpCode(purchaseOrder.WarehouseErpCode)
-			if err != nil {
-				logger.Logger.Error("reduceHeadquarterStockAndLog-GetByErpCode", zap.Any("warehouseErpCode", purchaseOrder.WarehouseErpCode), zap.Any("err", err))
-				return errors.WithMessage(errors.New("获取总部出库仓库信息失败"), err.Error())
-			}
-		}
 
 		// 获取在途仓库
 		transitWarehouse, _ := repository.NewWarehouseRepo(subDb).GetTransitWarehouse()
@@ -433,23 +417,18 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			}
 			item.Material = &material
 
-			// 确定出库仓库
+			// 确定出库仓库：使用 ERP item_defaults 中物品的默认仓库
 			var targetWarehouseUuid uint64
-			if usePerItemWarehouse {
-				// 新流程：使用 ERP item_defaults 中物品的默认仓库
-				if whUuid, ok := itemDefaultWarehouseMap[item.MaterialCode]; ok && whUuid != 0 {
-					targetWarehouseUuid = whUuid
-				} else {
-					// 物品在 ERP 未配置默认仓库，跳过库存扣减（ERP侧会走保底方案）
-					logger.Logger.Warn("reduceHeadquarterStockAndLog-物品未配置默认仓库，跳过库存扣减",
-						zap.Uint64("material_uuid", item.MaterialUuid),
-						zap.String("material_code", item.MaterialCode),
-						zap.Uint64("company_uuid", purchaseOrder.CompanyUuid),
-					)
-					continue
-				}
+			if whUuid, ok := itemDefaultWarehouseMap[item.MaterialCode]; ok && whUuid != 0 {
+				targetWarehouseUuid = whUuid
 			} else {
-				targetWarehouseUuid = singleWarehouse.Uuid
+				// 物品在 ERP 未配置默认仓库，跳过库存扣减（ERP侧会走保底方案）
+				logger.Logger.Warn("reduceHeadquarterStockAndLog-物品未配置默认仓库，跳过库存扣减",
+					zap.Uint64("material_uuid", item.MaterialUuid),
+					zap.String("material_code", item.MaterialCode),
+					zap.Uint64("company_uuid", purchaseOrder.CompanyUuid),
+				)
+				continue
 			}
 
 			// 查找仓库商品库存记录
