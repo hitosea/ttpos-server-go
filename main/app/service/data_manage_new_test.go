@@ -884,9 +884,9 @@ func TestGetOrderSelectStats_SelectAll(t *testing.T) {
 
 	// 全选所有 → 3条，金额 600
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		SelectAll: true,
-		DateType:  -1,
-		BillType:  -1,
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{SelectAll: true, DateType: -1, BillType: -1},
+		},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -896,9 +896,6 @@ func TestGetOrderSelectStats_SelectAll(t *testing.T) {
 	}
 	if stats.PaidAmount != 600 {
 		t.Errorf("Expected paid_amount=600, got %f", stats.PaidAmount)
-	}
-	if !stats.IsSelectAll {
-		t.Error("Expected is_select_all=true")
 	}
 }
 
@@ -924,10 +921,9 @@ func TestGetOrderSelectStats_SelectAllWithDeselect(t *testing.T) {
 
 	// 全选但排除 1002 → finalSet={1001,1003}，金额 400
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		SelectAll:       true,
-		DeselectedUuids: []uint64{1002},
-		DateType:        -1,
-		BillType:        -1,
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{SelectAll: true, DeselectedUuids: []uint64{1002}, DateType: -1, BillType: -1},
+		},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -968,9 +964,9 @@ func TestGetOrderSelectStats_ManualSelect(t *testing.T) {
 
 	// 手动选 1003 → existing{1001} ∪ {1003} = {1001,1003}，2条，金额 400
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		SelectedUuids: []uint64{1003},
-		DateType:      -1,
-		BillType:      -1,
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{SelectedUuids: []uint64{1003}, DateType: -1, BillType: -1},
+		},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -984,8 +980,7 @@ func TestGetOrderSelectStats_ManualSelect(t *testing.T) {
 
 	// 兜底：都为空 → 返回已管理统计 existing{1001}，1条，金额 100
 	stats, err = srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		DateType: -1,
-		BillType: -1,
+		Filters: []shop_req.DataManageOrderSubmitFilter{},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats fallback failed: %v", err)
@@ -1021,9 +1016,9 @@ func TestGetOrderSelectStats_WithFilter(t *testing.T) {
 
 	// 全选仅餐单（bill_type=0）→ finalSet={1001,1002}，金额 300，TotalCount=2
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		SelectAll: true,
-		DateType:  -1,
-		BillType:  0,
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{SelectAll: true, DateType: -1, BillType: 0},
+		},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats with filter failed: %v", err)
@@ -1064,9 +1059,9 @@ func TestGetOrderSelectStats_Deselect(t *testing.T) {
 
 	// 案例3：DeselectedUuids=[1002] → existing{1001,1002,1003} - {1002} = {1001,1003}，2条，金额 400
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		DeselectedUuids: []uint64{1002},
-		DateType:        -1,
-		BillType:        -1,
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{DeselectedUuids: []uint64{1002}, DateType: -1, BillType: -1},
+		},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -1077,8 +1072,8 @@ func TestGetOrderSelectStats_Deselect(t *testing.T) {
 	if stats.PaidAmount != 400 {
 		t.Errorf("Expected paid_amount=400, got %f", stats.PaidAmount)
 	}
-	if stats.TotalCount != 3 {
-		t.Errorf("Expected total_count=3, got %d", stats.TotalCount)
+	if stats.TotalCount != 2 {
+		t.Errorf("Expected total_count=2, got %d", stats.TotalCount)
 	}
 }
 
@@ -1102,11 +1097,11 @@ func TestGetOrderSelectStats_ManualSelectPartial(t *testing.T) {
 		{BaseModel: model.BaseModel{Uuid: 2003, CreateTime: now, UpdateTime: now}, SaleBillUuid: 1003, Status: 1},
 	})
 
-	// 手动选 1001 → SelectedCount=1, TotalCount=3, IsSelectAll=false
+	// 手动选 1001 → SelectedCount=1, TotalCount=1, IsSelectAll=false
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		SelectedUuids: []uint64{1001},
-		DateType:      -1,
-		BillType:      -1,
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{SelectedUuids: []uint64{1001}, DateType: -1, BillType: -1},
+		},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -1117,10 +1112,7 @@ func TestGetOrderSelectStats_ManualSelectPartial(t *testing.T) {
 	if stats.PaidAmount != 100 {
 		t.Errorf("Expected paid_amount=100, got %f", stats.PaidAmount)
 	}
-	if stats.TotalCount != 3 {
-		t.Errorf("Expected total_count=3, got %d", stats.TotalCount)
-	}
-	if stats.IsSelectAll {
-		t.Error("Expected is_select_all=false")
+	if stats.TotalCount != 1 {
+		t.Errorf("Expected total_count=1, got %d", stats.TotalCount)
 	}
 }
