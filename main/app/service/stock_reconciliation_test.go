@@ -1406,4 +1406,3 @@ func TestRejectStockReconciliation_Success(t *testing.T) {
 	assert.Equal(t, "数量有误，请重新核对", annotation.Content)
 	assert.Equal(t, constant.StockReconciliationAnnotationTypeReject, annotation.AnnotationType)
 }
-

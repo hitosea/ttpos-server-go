@@ -98,11 +98,11 @@ type PurchaseOrderItemInfo struct {
 	UnitList           []PurchaseOrderItemMaterialUnit `json:"unit_list"`             // 基准单位列表
 	Units              []PurchaseOrderItemUnit         `json:"units"`                 // 已经选中的采购单位列表
 
-	AvailableQuantity              float64            `json:"available_quantity"`                // 可采购数量
-	StoreQuantity                  float64            `json:"store_quantity"`                    // 当前实时门店库存
-	LastPurchaseQuantity           float64            `json:"last_purchase_quantity"`            // 上次采购数量（默认销售单位）
-	LastPurchaseLocaleUnitName     dto.LocaleResponse `json:"last_purchase_locale_unit_name"`    // 上次采购时的单位名称
-	StoreSnapshotQuantity          float64            `json:"store_snapshot_quantity"`            // 申请时门店库存（默认销售单位）
+	AvailableQuantity          float64            `json:"available_quantity"`             // 可采购数量
+	StoreQuantity              float64            `json:"store_quantity"`                 // 当前实时门店库存
+	LastPurchaseQuantity       float64            `json:"last_purchase_quantity"`         // 上次采购数量（默认销售单位）
+	LastPurchaseLocaleUnitName dto.LocaleResponse `json:"last_purchase_locale_unit_name"` // 上次采购时的单位名称
+	StoreSnapshotQuantity      float64            `json:"store_snapshot_quantity"`        // 申请时门店库存（默认销售单位）
 
 	DefaultSalesUnitUuid       uint64             `json:"default_sales_unit_uuid"`        // 默认销售单位UUID
 	DefaultSalesUnitLocaleName dto.LocaleResponse `json:"default_sales_unit_locale_name"` // 默认销售单位名称
@@ -279,11 +279,11 @@ type ReceiptListItem struct {
 
 // ReceiptListOrderInfo 收货单简要信息
 type ReceiptListOrderInfo struct {
-	Uuid        uint64 `json:"uuid"`         // 收货单UUID
-	DisplayNo   string `json:"display_no"`   // 显示单号（已收货显示erp_order_no，草稿显示"草稿（时间）"）
-	Status      int    `json:"status"`       // 状态
-	ErpOrderNo  string `json:"erp_order_no"` // ERP收货单号
-	CreateTime  int64  `json:"create_time"`  // 创建时间
+	Uuid          uint64 `json:"uuid"`            // 收货单UUID
+	DisplayNo     string `json:"display_no"`      // 显示单号（已收货显示erp_order_no，草稿显示"草稿（时间）"）
+	Status        int    `json:"status"`          // 状态
+	ErpOrderNo    string `json:"erp_order_no"`    // ERP收货单号
+	CreateTime    int64  `json:"create_time"`     // 创建时间
 	IsConfirmed   bool   `json:"is_confirmed"`    // 是否已确认
 	IsAutoReceipt bool   `json:"is_auto_receipt"` // 是否自动收货
 }

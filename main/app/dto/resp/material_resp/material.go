@@ -39,10 +39,10 @@ type Material struct {
 	PurchaseUnitLocaleName     dto.LocaleResponse `json:"purchase_unit_locale_name"`      // 采购单位名称
 	DefaultSalesUnitLocaleName dto.LocaleResponse `json:"default_sales_unit_locale_name"` // 默认销售单位名称
 
-	AvailableQuantity              float64            `json:"available_quantity"`              // 可采购数量
-	StoreQuantity                  float64            `json:"store_quantity"`                  // 门店数量
-	LastPurchaseQuantity           float64            `json:"last_purchase_quantity"`           // 上次采购数量（默认销售单位）
-	LastPurchaseLocaleUnitName     dto.LocaleResponse `json:"last_purchase_locale_unit_name"`   // 上次采购时的单位名称
+	AvailableQuantity          float64            `json:"available_quantity"`             // 可采购数量
+	StoreQuantity              float64            `json:"store_quantity"`                 // 门店数量
+	LastPurchaseQuantity       float64            `json:"last_purchase_quantity"`         // 上次采购数量（默认销售单位）
+	LastPurchaseLocaleUnitName dto.LocaleResponse `json:"last_purchase_locale_unit_name"` // 上次采购时的单位名称
 
 	// 限购配置
 	QuotaConfig MaterialQuotaConfig `json:"quota_config"` // 限购配置

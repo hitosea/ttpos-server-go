@@ -23,7 +23,7 @@ type ErpSalesInvoiceCallbackMsg struct {
 	SalesInvoiceName  string `json:"sales_invoice_name"`
 	PaymentEntryNames string `json:"payment_entry_names"`
 	ErrorMsg          string `json:"error_msg,omitempty"`
-	OrderType         string `json:"order_type"`          // 订单类型: sale_order/recharge/takeout
+	OrderType         string `json:"order_type"` // 订单类型: sale_order/recharge/takeout
 }
 
 // ErpSalesInvoiceCallbackHandler 处理 BMP 的 Sales Invoice 异步回调

@@ -185,6 +185,7 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 			DeliveryAvailable:    company.CompanySetting.IsOpenRider(),
 			SelfPickupAvailable:  company.CompanySetting.IsOpenMemberInstant == 1,
 			IsStoreResting:       storeScanOrderSetting.IsStoreResting(company.CompanySetting.Timezone, businessSetting.OpeningHours),
+			IsOrderFirstPayLater: storeScanOrderSetting.IsOrderFirstPayLater == 1,
 			AreaCode:             areaCodes,
 		},
 		Company: member_resp.CompanyResp{

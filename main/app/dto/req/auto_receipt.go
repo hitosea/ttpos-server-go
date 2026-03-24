@@ -37,7 +37,7 @@ type AutoReceiptShopListReq struct {
 // AutoReceiptLogListReq 自动收货记录列表查询
 type AutoReceiptLogListReq struct {
 	dto.PageReq
-	ShopCompanyUuid uint64 `form:"shop_company_uuid"`                          // 门店筛选
+	ShopCompanyUuid uint64 `form:"shop_company_uuid"`                                           // 门店筛选
 	StartTime       string `form:"start_time" binding:"omitempty,datetime=2006-01-02 15:04:05"` // 收货时间范围-开始（格式: 2006-01-02 15:04:05）
 	EndTime         string `form:"end_time" binding:"omitempty,datetime=2006-01-02 15:04:05"`   // 收货时间范围-结束（格式: 2006-01-02 15:04:05）
 }

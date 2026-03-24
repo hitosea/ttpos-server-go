@@ -35,11 +35,12 @@ type ISaleBillQueryRepo interface {
 	WhereKeyword(keyword string, language string) DBOption
 	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
-	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error)                       // 获取销售订单的拆单序号。用于操作日志展示
-	GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
-	GetInstantSaleBillLatest() (*model.SaleBill, error)                                            // 获取最新的一条点餐销售账单
-	GetMemberSaleBillLatest() (*model.SaleBill, error)                                             // 获取最新的一条会员端销售账单
-	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
+	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error)                                         // 获取销售订单的拆单序号。用于操作日志展示
+	GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64, opts ...DBOption) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
+	WhereBySerialNo(keyword string) DBOption                                                                         // 根据流水号模糊搜索
+	GetInstantSaleBillLatest() (*model.SaleBill, error)                                                              // 获取最新的一条点餐销售账单
+	GetMemberSaleBillLatest() (*model.SaleBill, error)                                                               // 获取最新的一条会员端销售账单
+	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                                       // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
 	GetDeskSaleBillUnPay() ([]*model.SaleBill, error)                               // 获取所有未付款的桌台账单
 	GetCompleteTotal() (int64, error)                                               // 获取总数量
@@ -196,32 +197,34 @@ func (r *saleBillRepo) UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) err
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("auto_add_must_product", 0).Error
 }
 
-func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) {
+func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64, opts ...DBOption) ([]*model.SaleBill, int64, error) {
 	var saleBills []*model.SaleBill
-	saleBills, total, err := r.GetSaleBillListPage(pageNo, pageSize,
+	queryOpts := []DBOption{
 		CommonRepo.WhereByIsHide(true),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByStatus(constant.SaleBillStatusPending),
 		CommonRepo.WhereByDeviceUuid(deviceUuid),
-		CommonRepo.Preload(
-			WithPreload{
-				Query: "SaleOrders",
-				Args: []interface{}{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
+	}
+	queryOpts = append(queryOpts, opts...)
+	queryOpts = append(queryOpts, CommonRepo.Preload(
+		WithPreload{
+			Query: "SaleOrders",
+			Args: []any{
+				CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts",
-				Args: []interface{}{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-					CommonRepo.DBOption(CommonRepo.WhereByProductIsAccept()),
-				},
+		},
+		WithPreload{
+			Query: "SaleOrders.SaleOrderProducts",
+			Args: []any{
+				CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				CommonRepo.DBOption(CommonRepo.WhereByProductIsAccept()),
 			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
-			},
-		),
-	)
+		},
+		WithPreload{
+			Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
+		},
+	))
+	saleBills, total, err := r.GetSaleBillListPage(pageNo, pageSize, queryOpts...)
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
@@ -472,5 +475,15 @@ func (r *saleBillRepo) WhereKeyword(keyword string, language string) DBOption {
 			Where("mln."+columnName+" LIKE ?", "%"+keyword+"%")
 
 		return db.Where("(uuid IN (?) OR order_no LIKE ?)", subQuery, "%"+keyword+"%")
+	}
+}
+
+// WhereBySerialNo 根据流水号模糊搜索
+func (r *saleBillRepo) WhereBySerialNo(keyword string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if keyword == "" {
+			return db
+		}
+		return db.Where("serial_no LIKE ?", Like(keyword))
 	}
 }

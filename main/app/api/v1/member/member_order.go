@@ -100,6 +100,37 @@ func (h *OrderHandler) CreateDineInOrder(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// SubmitDineInOrder 先下单后付模式：提交堂食订单到收银机
+// @Summary 提交堂食订单到收银机
+// @Description 先下单后付模式下，会员端创建订单后可多次加购，最终通过此接口提交生成 H5 订单
+// @Tags 会员端-堂食订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.SubmitMemberDineInOrderReq true "详情参数"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/dine_in/submit [post]
+func (h *OrderHandler) SubmitDineInOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.SubmitMemberDineInOrderReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	ctx.Log().Debug("先下单后付模式：提交堂食订单", zap.Any("params", params))
+
+	// 提交堂食订单
+	err := h.orderSrv.SubmitMemberDineInOrder(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, nil)
+}
+
 // GetMemberOrderFormInfo 获取订单提交表单信息
 // @Summary 获取订单提交表单信息
 // @Description 获取订单提交表单信息
@@ -782,6 +813,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	{
 		privateApi.POST("/order/create", wrapper.CreateOrder)                                   // 创建外送订单
 		privateApi.POST("/order/dine_in/create", wrapper.CreateDineInOrder)                     // 创建堂食订单
+		privateApi.POST("/order/dine_in/submit", wrapper.SubmitDineInOrder)                     // 先下单后付模式：提交堂食订单
 		privateApi.GET("/order/form/info", wrapper.GetMemberOrderFormInfo)                      // 获取外送订单提交表单信息
 		privateApi.GET("/order/dine_in/check", wrapper.CheckDineInOrder)                        // 堂食订单结算前检查
 		privateApi.GET("/order/dine_in/form_info", wrapper.GetDineInOrderFormInfo)              // 获取堂食订单提交表单信息

@@ -27,11 +27,11 @@ func TestDelPrintCronExpression(t *testing.T) {
 
 	// 对比：其他生产任务的表达式（都是6位，应该都成功）
 	otherExprs := map[string]string{
-		"0 0 * * * *":   "每小时整点",
+		"0 0 * * * *":    "每小时整点",
 		"0 */15 * * * *": "每15分钟",
-		"15 * * * * *":  "每分钟第15秒",
-		"30 * * * * *":  "每分钟第30秒",
-		"0 0 0 * * *":  "每天凌晨0点",
+		"15 * * * * *":   "每分钟第15秒",
+		"30 * * * * *":   "每分钟第30秒",
+		"0 0 0 * * *":    "每天凌晨0点",
 	}
 	for expr, desc := range otherExprs {
 		_, err = c.AddFunc(expr, func() {})

@@ -91,10 +91,10 @@ type IMaterialSrv interface {
 	ImportMaterialList(ctx context.Context, req req.MaterialImportListReq) (material_resp.MaterialImportResp, error)
 	ImportMaterial(ctx context.Context, req req.MaterialImportReq) error
 	GetWarehouseItemsByErpCode(ctx context.Context, warehouseErpCode string, pageNo, pageSize int) ([]model.WarehouseItem, int64, error)
-	SyncMaterialCategory(ctx context.Context, syncHeadquarterData bool) error // 同步物品分类
-	SyncMaterial(ctx context.Context, syncHeadquarterData bool) error                       // 同步物品
+	SyncMaterialCategory(ctx context.Context, syncHeadquarterData bool) error    // 同步物品分类
+	SyncMaterial(ctx context.Context, syncHeadquarterData bool) error            // 同步物品
 	SyncHeadquarterMaterials(hqDb *gorm.DB, subDb *gorm.DB, hqUuid uint64) error // 同步总部物品到子店
-	SyncProductBomCard(ctx context.Context, syncHeadquarterData bool) error   // 同步成本卡
+	SyncProductBomCard(ctx context.Context, syncHeadquarterData bool) error      // 同步成本卡
 
 	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64, extraOpts ...repository.DBOption) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
 

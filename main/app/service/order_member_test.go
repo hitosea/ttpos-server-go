@@ -216,11 +216,11 @@ func makePackageSaleOrderProduct(uuid uint64, flavorBomUuid uint64, packageUuid 
 	})
 
 	return &model.SaleOrderProduct{
-		BaseModel:              model.BaseModel{Uuid: uuid, DeleteTime: deleteTime},
-		ProductType:            constant.ProductTypePackage,
-		ProductPackageUuid:     packageUuid,
+		BaseModel:               model.BaseModel{Uuid: uuid, DeleteTime: deleteTime},
+		ProductType:             constant.ProductTypePackage,
+		ProductPackageUuid:      packageUuid,
 		PackageSubProductParams: subProductParamsJSON,
-		SaleOrderProductBoms:   boms,
+		SaleOrderProductBoms:    boms,
 	}
 }
 
