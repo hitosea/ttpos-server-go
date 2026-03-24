@@ -2087,6 +2087,8 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 
 	storeSetting.LogoURL = storeSettingReq.LogoUrl
 	storeSetting.Company = storeSettingReq.CompanyName
+	storeSetting.Address = storeSettingReq.Address
+	storeSetting.Phone = storeSettingReq.Phone
 	storeSetting.StoreCode = storeSettingReq.StoreCode
 	storeSetting.TaxNumber = storeSettingReq.TaxNumber
 	storeSetting.Coordinates = storeSettingReq.Coordinates
