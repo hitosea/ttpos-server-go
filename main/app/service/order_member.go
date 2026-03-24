@@ -429,14 +429,22 @@ func (s *orderSrv) GetDineInOrderFormInfo(ctx context.Context, request req.GetDi
 		})
 	}
 
+	// 读取门店配置判断先下单后付模式
+	isOrderFirstPayLater := false
+	storeScanOrderSetting, settingErr := s.settingSrv.GetStoreScanOrderSetting(ctx)
+	if settingErr == nil && storeScanOrderSetting.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes {
+		isOrderFirstPayLater = true
+	}
+
 	return &resp.DineInOrderFormResp{
-		SaleBillUuid:   saleBill.Uuid,
-		SaleOrderUuid:  saleOrder.Uuid,
-		DiningMethod:   saleBill.DiningMethod,
-		ProductList:    resp.DineInProductList{List: products},
-		AmountInfo:     amountInfo,
-		PaymentMethods: resp.PaymentMethodList{List: payList},
-		Remark:         saleBill.Remark,
+		SaleBillUuid:         saleBill.Uuid,
+		SaleOrderUuid:        saleOrder.Uuid,
+		DiningMethod:         saleBill.DiningMethod,
+		ProductList:          resp.DineInProductList{List: products},
+		AmountInfo:           amountInfo,
+		PaymentMethods:       resp.PaymentMethodList{List: payList},
+		Remark:               saleBill.Remark,
+		IsOrderFirstPayLater: isOrderFirstPayLater,
 	}, nil
 }
 
@@ -2793,7 +2801,14 @@ func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.Crea
 // SubmitMemberDineInOrder 先下单后付模式：提交堂食订单到收银机
 // 会员端调用 create 后可多次加购，最终通过 submit 提交生成 H5 订单
 func (s *orderSrv) SubmitMemberDineInOrder(ctx context.Context, request req.SubmitMemberDineInOrderReq) error {
-	// 1. 检查配置：必须启用"先下单后付"模式
+	// 分布式锁：防止并发双击创建重复 H5 订单
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	// 1. 检查门店配置：必须启用"先下单后付"模式
 	storeScanOrderSetting, err := s.settingSrv.GetStoreScanOrderSetting(ctx)
 	if err != nil {
 		return errors.WithMessage(err, "获取门店配置失败")
@@ -2802,7 +2817,7 @@ func (s *orderSrv) SubmitMemberDineInOrder(ctx context.Context, request req.Subm
 		return errors.New("当前模式不支持此操作")
 	}
 
-	// 2. 校验订单状态：必须是 Pending 且尚未提交（无 H5 订单）
+	// 2. 获取订单并校验状态
 	db := s.dbm.GetDB(ctx.GetDbId())
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if err != nil {
@@ -2815,7 +2830,13 @@ func (s *orderSrv) SubmitMemberDineInOrder(ctx context.Context, request req.Subm
 		return errors.New("订单已提交，请勿重复操作")
 	}
 
-	// 3. 调用已有方法创建 H5 订单
+	// 3. 标记 sale_bill 为先下单后付款
+	saleBill.IsOrderFirstPayLater = 1
+	if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
+		return errors.WithMessage(err, "更新订单标记失败")
+	}
+
+	// 4. 创建 H5 订单
 	return s.createH5OrderForOrderFirst(ctx, request.SaleBillUuid, request.SaleOrderUuid)
 }
 
@@ -3758,6 +3779,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		CancelTime:           cancelTime,
 		RemainingPaymentTime: remainingPaymentTime,
 		RefundAmount:         refundAmount,
+		IsOrderFirstPayLater: saleBill.IsOrderFirstPayLater == 1,
 		AmountInfo: resp.MemberDineInOrderAmountInfo{
 			DiscountAmount:    saleBill.CustomDiscountFee,
 			ServiceFee:        saleBill.ServiceFee,

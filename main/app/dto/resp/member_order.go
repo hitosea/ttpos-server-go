@@ -219,6 +219,7 @@ type GetMemberDineInOrderDetailResp struct {
 	CancelTime           int64                        `json:"cancel_time"`            // 取消时间
 	RemainingPaymentTime int64                        `json:"remaining_payment_time"` // 剩余支付时间（秒）
 	RefundAmount         float64                      `json:"refund_amount"`          // 退款金额（用于显示"已退款 ¥xx"）
+	IsOrderFirstPayLater bool                         `json:"is_order_first_pay_later"` // 是否先下单后付款（true时前端调submit，false时调pay）
 	AmountInfo           MemberDineInOrderAmountInfo  `json:"amount_info"`            // 金额信息
 	ProductList          MemberDineInOrderProductList `json:"product_list"`           // 商品列表
 	PaymentMethods       PaymentMethodList            `json:"payment_methods"`        // 支付方式列表（待支付时返回）

@@ -359,10 +359,15 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 				if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
 					return errors.WithMessage(err, "更新账单失败")
 				}
-				// 保存 SaleOrder
+				// 保存 SaleOrder 及其 SaleOrderProduct（CalcAll 会重算行金额）
 				for _, so := range saleBill.SaleOrders {
 					if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*so); err != nil {
 						return errors.WithMessage(err, "更新销售订单失败")
+					}
+					for _, sop := range so.SaleOrderProducts {
+						if err := repository.NewSaleOrderProductRepo(tx).UpdateOrCreateSaleOrderProductRecord(*sop); err != nil {
+							return errors.WithMessage(err, "更新销售订单商品金额失败")
+						}
 					}
 				}
 				return nil
@@ -568,6 +573,24 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 			return errors.WithMessage(err, "删除销售订单商品失败")
 		}
 
+		// 会员端堂食订单：将 SaleBill/SaleOrder 取消状态与 H5 拒单原子化
+		if h5Order.OrderType == constant.H5OrderTypeMemberDineIn && h5Order.SaleBillUuid != 0 {
+			saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(h5Order.SaleBillUuid)
+			if err != nil {
+				return errors.WithMessage(err, "获取销售账单失败")
+			}
+			saleBill.Status = constant.SaleBillStatusCanceled
+			if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
+				return errors.WithMessage(err, "更新销售账单状态失败")
+			}
+			for _, order := range saleBill.SaleOrders {
+				order.Status = constant.SaleOrderStatusCanceled
+				if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*order); err != nil {
+					return errors.WithMessage(err, "更新销售订单状态失败")
+				}
+			}
+		}
+
 		// 发布"拒单"操作事件
 		utils.Go(func() {
 			s.bus.PublishRejectH5OrderEvent(event.RejectH5OrderPayload{
@@ -586,7 +609,7 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 		return errors.WithMessage(err, "拒单失败")
 	}
 
-	// 会员端堂食订单：拒单后执行退款（原路退回）并取消订单
+	// 会员端堂食订单：事务成功后发起退款（外部 API 调用，不在事务内）
 	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
 		if err := s.refundMemberDineInOrder(ctx, h5Order); err != nil {
 			logger.Logger.Error("RejectH5Order, refundMemberDineInOrder failed",
@@ -601,7 +624,8 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 	return nil
 }
 
-// refundMemberDineInOrder 会员端堂食订单拒单后退款（原路退回）并取消订单
+// refundMemberDineInOrder 会员端堂食订单拒单后退款（原路退回）
+// 注意：SaleBill/SaleOrder 状态取消已在 RejectH5Order 事务中完成，此处只处理退款
 func (s *orderSrv) refundMemberDineInOrder(ctx context.Context, h5Order *model.H5Order) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	ctx.SetDB(db)
@@ -612,7 +636,7 @@ func (s *orderSrv) refundMemberDineInOrder(ctx context.Context, h5Order *model.H
 		return errors.WithMessage(err, "获取销售账单失败")
 	}
 	if len(saleBill.SaleOrders) == 0 {
-		return errors.New("销售账单无关联订单")
+		return nil // 无关联订单，无需退款
 	}
 
 	saleOrder := saleBill.GetFirstSaleOrder()
@@ -628,26 +652,9 @@ func (s *orderSrv) refundMemberDineInOrder(ctx context.Context, h5Order *model.H
 			return errors.WithMessage(err, "发起退款失败")
 		}
 	} else {
-		logger.Logger.Warn("refundMemberDineInOrder, no payment orders to refund, cancelling order directly",
+		logger.Logger.Warn("refundMemberDineInOrder, no payment orders to refund",
 			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
 			zap.Uint64("sale_bill_uuid", h5Order.SaleBillUuid))
-	}
-
-	// 更新 SaleBill 和 SaleOrder 状态为已取消
-	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		saleBill.Status = constant.SaleBillStatusCanceled
-		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
-			return errors.WithMessage(err, "更新销售账单状态失败")
-		}
-		for _, order := range saleBill.SaleOrders {
-			order.Status = constant.SaleOrderStatusCanceled
-			if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*order); err != nil {
-				return errors.WithMessage(err, "更新销售订单状态失败")
-			}
-		}
-		return nil
-	}); err != nil {
-		return errors.WithMessage(err, "取消订单失败")
 	}
 
 	logger.Logger.Info("refundMemberDineInOrder, refund and cancel success",

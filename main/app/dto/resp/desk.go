@@ -230,8 +230,9 @@ type DineInOrderFormResp struct {
 	DiningMethod   uint              `json:"dining_method"`   // 用餐方式 0:堂食 1:打包
 	ProductList    DineInProductList `json:"product_list"`    // 商品列表
 	AmountInfo     DineInAmountInfo  `json:"amount_info"`     // 金额信息
-	PaymentMethods PaymentMethodList `json:"payment_methods"` // 支付方式列表
-	Remark         string            `json:"remark"`          // 订单备注
+	PaymentMethods       PaymentMethodList `json:"payment_methods"`        // 支付方式列表
+	Remark               string            `json:"remark"`                 // 订单备注
+	IsOrderFirstPayLater bool              `json:"is_order_first_pay_later"` // 是否先下单后付款（true调submit，false调pay）
 }
 
 // DineInProductList 堂食订单商品列表

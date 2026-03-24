@@ -23,6 +23,7 @@ type MemberResp struct {
 	DeliveryAvailable    bool               `json:"delivery_available"`       // 外送服务是否可用（云平台是否开启）
 	SelfPickupAvailable  bool               `json:"self_pickup_available"`    // 到店自取是否可用（云平台是否开启）
 	IsStoreResting       bool               `json:"is_store_resting"`         // 商家是否休息中
+	IsOrderFirstPayLater bool               `json:"is_order_first_pay_later"` // 堂食是否开启先下单后付款
 	AreaCode             []string           `json:"area_code"`                // 区号列表
 	Language             []string           `json:"language"`                 // 常用语言
 	DefaultLanguage      string             `json:"default_language"`         // 默认语言
