@@ -25,27 +25,23 @@ type SalesInvoice struct {
 	// Customer's Purchase Order（在 ERPNext 中显示为订单号）
 	PoNo string `json:"po_no,omitempty"`
 	// 自定义字段
-	TtposSaleOrderUuid   string `json:"custom_ttpos_sale_order_uuid,omitempty"`
-	TtposOrderNo         string `json:"custom_ttpos_order_no,omitempty"`
-	TtposTakeoutOrderNo  string `json:"custom_ttpos_takeout_order_no,omitempty"`
-	TtposTakeoutProvider string `json:"custom_ttpos_takeout_provider,omitempty"`
-	// 订单来源
-	TtposOrderSourceUuid string `json:"custom_ttpos_order_source_uuid,omitempty"`
-	TtposOrderSourceName string `json:"custom_ttpos_order_source_name,omitempty"`
+	TtposTakeoutOrderNo  string `json:"custom_takeout_order_no,omitempty"`
+	TtposTakeoutProvider string `json:"custom_takeout_provider,omitempty"`
 	// 反结账
 	AmendedFrom string `json:"amended_from,omitempty"`
 }
 
 // SalesInvoiceItem Sales Invoice 明细行
 type SalesInvoiceItem struct {
-	ItemCode    string  `json:"item_code"`
-	Qty         float64 `json:"qty"`
-	Rate        float64 `json:"rate"`
-	Amount      float64 `json:"amount"`
-	Uom         string  `json:"uom,omitempty"`
-	Description string  `json:"description,omitempty"`
-	IsFreeItem  int     `json:"is_free_item,omitempty"`
-	Warehouse   string  `json:"warehouse,omitempty"` // 行级仓库
+	ItemCode           string  `json:"item_code"`
+	Qty                float64 `json:"qty"`
+	Rate               float64 `json:"rate"`
+	Amount             float64 `json:"amount"`
+	Uom                string  `json:"uom,omitempty"`
+	Description        string  `json:"description,omitempty"`
+	IsFreeItem         int     `json:"is_free_item,omitempty"`
+	DiscountPercentage float64 `json:"discount_percentage,omitempty"` // 行级折扣百分比，free item 需设为 100
+	Warehouse          string  `json:"warehouse,omitempty"`           // 行级仓库
 }
 
 // SalesInvoiceTax Sales Invoice 税费
