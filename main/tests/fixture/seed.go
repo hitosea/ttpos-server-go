@@ -309,6 +309,9 @@ type CompanySettingOptions struct {
 	ErpnextBranchName        string
 	HeadquarterUuid          int64
 	EnableDataManagement     int
+	DeliveryStatus           int // 外送状态: 0-关闭 1-开启
+	EnableKiosk              int // 自助点餐机: 0-关闭 1-开启
+	IsOpenMemberInstant      int // 扫码点餐到店自取: 0-关闭 1-开启
 }
 
 // SeedCompanySetting creates a company_setting record in the tenant database.
@@ -327,9 +330,9 @@ func SeedCompanySetting(tb testing.TB, db *sql.DB, opts ...func(*CompanySettingO
 
 	now := time.Now().Unix()
 	_, err := db.Exec(`
-		INSERT INTO ttpos_company_setting (uuid, company_uuid, erpnext_site_code, erpnext_pos_profile_name, erpnext_admin_email, erpnext_company_abbr, erpnext_headquarter_abbr, headquarter_uuid, erpnext_branch_name, enable_data_management, create_time, update_time, delete_time)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-	`, opt.UUID, opt.CompanyUUID, opt.ErpnextSiteCode, opt.ErpnextPosProfileName, opt.ErpnextAdminEmail, opt.ErpnextCompanyAbbr, opt.ErpnextHeadquarterAbbr, opt.HeadquarterUuid, opt.ErpnextBranchName, opt.EnableDataManagement, now, now)
+		INSERT INTO ttpos_company_setting (uuid, company_uuid, erpnext_site_code, erpnext_pos_profile_name, erpnext_admin_email, erpnext_company_abbr, erpnext_headquarter_abbr, headquarter_uuid, erpnext_branch_name, enable_data_management, delivery_status, enable_kiosk, is_open_member_instant, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.CompanyUUID, opt.ErpnextSiteCode, opt.ErpnextPosProfileName, opt.ErpnextAdminEmail, opt.ErpnextCompanyAbbr, opt.ErpnextHeadquarterAbbr, opt.HeadquarterUuid, opt.ErpnextBranchName, opt.EnableDataManagement, opt.DeliveryStatus, opt.EnableKiosk, opt.IsOpenMemberInstant, now, now)
 
 	if err != nil {
 		tb.Fatalf("failed to seed company_setting: %v", err)
@@ -380,6 +383,30 @@ func WithCompanySettingHeadquarterUuid(uuid int64) func(*CompanySettingOptions) 
 func WithCompanySettingEnableDataManagement(v int) func(*CompanySettingOptions) {
 	return func(o *CompanySettingOptions) {
 		o.EnableDataManagement = v
+	}
+}
+
+// WithCompanySettingDeliveryStatus sets the delivery_status (0=off, 1=on).
+// Controls IsOpenRider() which gates is_show_delivery on products.
+func WithCompanySettingDeliveryStatus(v int) func(*CompanySettingOptions) {
+	return func(o *CompanySettingOptions) {
+		o.DeliveryStatus = v
+	}
+}
+
+// WithCompanySettingEnableKiosk sets the enable_kiosk flag (0=off, 1=on).
+// Controls IsOpenKiosk() which gates is_show_kiosk on products.
+func WithCompanySettingEnableKiosk(v int) func(*CompanySettingOptions) {
+	return func(o *CompanySettingOptions) {
+		o.EnableKiosk = v
+	}
+}
+
+// WithCompanySettingIsOpenMemberInstant sets the is_open_member_instant flag (0=off, 1=on).
+// Controls IsOpenScanOrder() — scan-to-order self-pickup for delivery display.
+func WithCompanySettingIsOpenMemberInstant(v int) func(*CompanySettingOptions) {
+	return func(o *CompanySettingOptions) {
+		o.IsOpenMemberInstant = v
 	}
 }
 

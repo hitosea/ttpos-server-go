@@ -147,7 +147,7 @@ func TestDecimalPricingKioskValidation(t *testing.T) {
 	}
 }
 
-// TestDeliveryValidation 验证外送显示校验：开启扫码点餐到店自取或外送均可通过
+// TestDeliveryValidation 验证外送显示校验（预览阶段）：开启扫码点餐到店自取或外送均可通过
 func TestDeliveryValidation(t *testing.T) {
 	tests := []struct {
 		name                string
@@ -189,10 +189,75 @@ func TestDeliveryValidation(t *testing.T) {
 				DeliveryStatus:      tt.deliveryStatus,
 				IsOpenMemberInstant: tt.isOpenMemberInstant,
 			}
-			// 模拟 product.go 的验证逻辑
-			hasError := companySetting.DeliveryStatus != 1 && companySetting.IsOpenMemberInstant != 1 && tt.isShowDelivery
+			// 模拟 ImportProductList 预览阶段的验证逻辑 (product.go:5128)
+			hasError := !companySetting.IsOpenRider() && !companySetting.IsOpenScanOrder() && tt.isShowDelivery
 			if hasError != tt.wantError {
 				t.Errorf("delivery validation = %v, want error = %v", hasError, tt.wantError)
+			}
+		})
+	}
+}
+
+// TestDeliverySaveValidation 验证保存阶段外送显示：外送或扫码点餐到店自取任一开启则保留用户选择
+func TestDeliverySaveValidation(t *testing.T) {
+	tests := []struct {
+		name                string
+		deliveryStatus      int
+		isOpenMemberInstant int
+		numType             int // 0=整数 1=小数
+		isShowDelivery      int
+		wantDelivery        uint
+	}{
+		{
+			name:           "外送已开+整数计价+选择外送=保留",
+			deliveryStatus: 1, isOpenMemberInstant: 0, numType: 0,
+			isShowDelivery: 1, wantDelivery: 1,
+		},
+		{
+			name:           "外送未开+自取已开+整数计价+选择外送=保留",
+			deliveryStatus: 0, isOpenMemberInstant: 1, numType: 0,
+			isShowDelivery: 1, wantDelivery: 1,
+		},
+		{
+			name:           "外送未开+自取未开+整数计价+选择外送=归零",
+			deliveryStatus: 0, isOpenMemberInstant: 0, numType: 0,
+			isShowDelivery: 1, wantDelivery: 0,
+		},
+		{
+			name:           "外送已开+小数计价+选择外送=归零",
+			deliveryStatus: 1, isOpenMemberInstant: 0, numType: 1,
+			isShowDelivery: 1, wantDelivery: 0,
+		},
+		{
+			name:           "外送未开+自取已开+小数计价+选择外送=归零",
+			deliveryStatus: 0, isOpenMemberInstant: 1, numType: 1,
+			isShowDelivery: 1, wantDelivery: 0,
+		},
+		{
+			name:           "外送已开+自取已开+整数计价+选择外送=保留",
+			deliveryStatus: 1, isOpenMemberInstant: 1, numType: 0,
+			isShowDelivery: 1, wantDelivery: 1,
+		},
+		{
+			name:           "外送已开+整数计价+不选外送=不显示",
+			deliveryStatus: 1, isOpenMemberInstant: 0, numType: 0,
+			isShowDelivery: 0, wantDelivery: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			companySetting := model.CompanySetting{
+				DeliveryStatus:      tt.deliveryStatus,
+				IsOpenMemberInstant: tt.isOpenMemberInstant,
+			}
+			// 模拟 AddProductPackage / EditProductPackage 保存阶段逻辑 (product.go:7079-7082)
+			isShowDelivery := uint(tt.isShowDelivery)
+			if (!companySetting.IsOpenRider() && !companySetting.IsOpenScanOrder()) || tt.numType == 1 {
+				isShowDelivery = 0
+			}
+			if isShowDelivery != tt.wantDelivery {
+				t.Errorf("isShowDelivery = %v, want %v", isShowDelivery, tt.wantDelivery)
 			}
 		})
 	}
