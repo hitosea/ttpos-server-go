@@ -47792,6 +47792,7 @@ const docTemplate = `{
             "required": [
                 "locale_name",
                 "shop_uuids",
+                "status",
                 "warehouse_erp_code"
             ],
             "properties": {
@@ -55690,6 +55691,7 @@ const docTemplate = `{
             "required": [
                 "locale_name",
                 "shop_uuids",
+                "status",
                 "uuid",
                 "warehouse_erp_code"
             ],

@@ -176,8 +176,8 @@ type MemberOrderCoordinates struct {
 
 // GetMemberDineInOrderListResp 会员端堂食订单列表响应
 type GetMemberDineInOrderListResp struct {
-	Meta dto.PageResponse       `json:"meta"`
-	List []MemberDineInOrder    `json:"list"` // 订单列表
+	Meta dto.PageResponse    `json:"meta"`
+	List []MemberDineInOrder `json:"list"` // 订单列表
 }
 
 // MemberDineInOrderStatusInfo 堂食订单状态信息
@@ -205,23 +205,24 @@ type MemberDineInOrder struct {
 
 // GetMemberDineInOrderDetailResp 会员端堂食订单详情响应
 type GetMemberDineInOrderDetailResp struct {
-	SaleBillUuid         uint64                         `json:"sale_bill_uuid"`          // 销售账单UUID
-	SaleOrderUuid        uint64                         `json:"sale_order_uuid"`         // 销售订单UUID
-	CompanyName          string                         `json:"company_name"`            // 商家名称
-	SerialNo             string                         `json:"serial_no"`               // 取餐号
-	OrderNo              string                         `json:"order_no"`                // 订单编号
-	StatusInfo           MemberDineInOrderStatusInfo    `json:"status_info"`             // 状态信息
-	DiningMethod         uint                           `json:"dining_method"`           // 用餐方式：0-堂食 1-打包
-	Remark               string                         `json:"remark"`                  // 订单备注
-	CreateTime           int64                          `json:"create_time"`             // 下单时间
-	SubmitPayTime        int64                          `json:"submit_pay_time"`         // 提交支付时间
-	PayTime              int64                          `json:"pay_time"`                // 支付时间
-	CancelTime           int64                          `json:"cancel_time"`             // 取消时间
-	RemainingPaymentTime int64                          `json:"remaining_payment_time"`  // 剩余支付时间（秒）
-	RefundAmount         float64                        `json:"refund_amount"`           // 退款金额（用于显示"已退款 ¥xx"）
-	AmountInfo           MemberDineInOrderAmountInfo    `json:"amount_info"`             // 金额信息
-	ProductList          MemberDineInOrderProductList   `json:"product_list"`            // 商品列表
-	PaymentMethods       PaymentMethodList              `json:"payment_methods"`         // 支付方式列表（待支付时返回）
+	SaleBillUuid         uint64                       `json:"sale_bill_uuid"`         // 销售账单UUID
+	SaleOrderUuid        uint64                       `json:"sale_order_uuid"`        // 销售订单UUID
+	CompanyName          string                       `json:"company_name"`           // 商家名称
+	SerialNo             string                       `json:"serial_no"`              // 取餐号
+	OrderNo              string                       `json:"order_no"`               // 订单编号
+	StatusInfo           MemberDineInOrderStatusInfo  `json:"status_info"`            // 状态信息
+	DiningMethod         uint                         `json:"dining_method"`          // 用餐方式：0-堂食 1-打包
+	Remark               string                       `json:"remark"`                 // 订单备注
+	CreateTime           int64                        `json:"create_time"`            // 下单时间
+	SubmitPayTime        int64                        `json:"submit_pay_time"`        // 提交支付时间
+	PayTime              int64                        `json:"pay_time"`               // 支付时间
+	CancelTime           int64                        `json:"cancel_time"`            // 取消时间
+	RemainingPaymentTime int64                        `json:"remaining_payment_time"` // 剩余支付时间（秒）
+	RefundAmount         float64                      `json:"refund_amount"`          // 退款金额（用于显示"已退款 ¥xx"）
+	IsOrderFirstPayLater bool                         `json:"is_order_first_pay_later"` // 是否先下单后付款（true时前端调submit，false时调pay）
+	AmountInfo           MemberDineInOrderAmountInfo  `json:"amount_info"`            // 金额信息
+	ProductList          MemberDineInOrderProductList `json:"product_list"`           // 商品列表
+	PaymentMethods       PaymentMethodList            `json:"payment_methods"`        // 支付方式列表（待支付时返回）
 }
 
 // MemberDineInOrderProductList 堂食订单商品列表
@@ -239,12 +240,12 @@ type MemberDineInOrderProduct struct {
 	Image               string             `json:"image"`                 // 商品图片
 	RefundAmount        float64            `json:"refund_amount"`         // 退款金额（0表示未退款）
 	ProductType         uint               `json:"product_type"`          // 商品类型 0-商品 1-套餐
-	PackageProductList  PackageProductList  `json:"package_product_list"` // 套餐子商品列表（仅套餐商品有值）
+	PackageProductList  PackageProductList `json:"package_product_list"`  // 套餐子商品列表（仅套餐商品有值）
 }
 
 // MemberDineInOrderAmountInfo 堂食订单金额信息
 type MemberDineInOrderAmountInfo struct {
-	DiscountAmount    float64 `json:"discount_amount"`     // 优惠金额
+	DiscountAmount    float64 `json:"discount_amount"`     // 优惠折扣金额（整单打折），与收银机购物车 discount_amount 一致
 	ServiceFee        float64 `json:"service_fee"`         // 服务费
 	TaxFee            float64 `json:"tax_fee"`             // 税费
 	Amount            float64 `json:"amount"`              // 应付金额

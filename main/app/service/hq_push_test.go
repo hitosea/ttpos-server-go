@@ -1749,7 +1749,7 @@ func TestHqPush_Roundtrip_DineShelf_MarkThenPush_Preserved(t *testing.T) {
 	srv, hqDB, storeDB, _ := setupHqPushTest(t)
 
 	productUuid := uint64(8020)
-	seedHqProduct(t, hqDB, productUuid, 1) // HQ status=1
+	seedHqProduct(t, hqDB, productUuid, 1)       // HQ status=1
 	seedStoreProduct(t, storeDB, productUuid, 0) // sub-store status=0
 
 	// 子店标记 dine_shelf override

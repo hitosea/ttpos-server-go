@@ -2166,6 +2166,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		UpdateTime:       shopCart.SaleBill.UpdateTime,
 		OrderRemark:      orderRemark,
 		BatchCookingMode: batchCookingMode,
+		IsSplitDisabled:  shopCart.SaleBill.Source == constant.SaleBillSourceMember && shopCart.SaleBill.BillType == constant.SaleBillTypeInstant,
 	}
 	// 如果是桌台购物车
 	if shopCart.IsDeskShopCart() {

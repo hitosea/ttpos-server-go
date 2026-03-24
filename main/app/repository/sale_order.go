@@ -24,7 +24,7 @@ type ISaleOrderRepo interface {
 	UpdateSaleOrderErpSyncStatus(saleOrderUuid uint64, syncStatus int, salesInvoiceName string, paymentEntryNames string) error
 	ClearErpSalesInvoiceInfo(saleOrderUuid uint64, syncStatus int) error
 	UpdateSaleOrderActivity(saleOrderUuid uint64, fullReductionActivityUuid uint64, fullReductionActivityMessage string, activityAmount float64, autoPointsExchange uint) error // 更新销售订单的满减活动信息
-	BatchMarkErpStockDeducted(orderUuids []uint64) error                                                                                                                      // 批量标记订单ERP库存已扣减
+	BatchMarkErpStockDeducted(orderUuids []uint64) error                                                                                                                        // 批量标记订单ERP库存已扣减
 }
 
 // ISaleOrderQueryRepo 销售账单查询

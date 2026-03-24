@@ -330,14 +330,14 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 		InstantOrderTakeawayNumForAvg    int64
 		TakeoutOrderNumForAvg            int64
 		// 扫码订单统计
-		TotalScanOrderAmount    decimal.Decimal
-		TotalScanOrderNum       int64
-		MinScanOrderAmount      decimal.Decimal
-		MaxScanOrderAmount      decimal.Decimal
-		AvgScanOrderAmount      decimal.Decimal
-		ScanOrderAmounts        []decimal.Decimal
-		AvgScanOrderAmountSum   decimal.Decimal
-		ScanOrderNumForAvg      int64
+		TotalScanOrderAmount  decimal.Decimal
+		TotalScanOrderNum     int64
+		MinScanOrderAmount    decimal.Decimal
+		MaxScanOrderAmount    decimal.Decimal
+		AvgScanOrderAmount    decimal.Decimal
+		ScanOrderAmounts      []decimal.Decimal
+		AvgScanOrderAmountSum decimal.Decimal
+		ScanOrderNumForAvg    int64
 	}
 
 	groupedData := make(map[string]*groupData)

@@ -24,7 +24,8 @@ type SaleBill struct {
 	// 状态相关字段
 	Status       uint `gorm:"column:status;type:tinyint(1);default:0;comment:订单状态, 0-待付款、1-已完成、2-已取消" json:"status"`
 	IsLock       uint `gorm:"column:is_lock;type:tinyint(1);default:0;comment:是否锁单, 0-否 1-是" json:"is_lock"`
-	IsSplitOrder uint `gorm:"column:is_split_order;type:tinyint(1);default:0;comment:是否拆单, 0-否 1-是" json:"is_split_order"`
+	IsSplitOrder         uint `gorm:"column:is_split_order;type:tinyint(1);default:0;comment:是否拆单, 0-否 1-是" json:"is_split_order"`
+	IsOrderFirstPayLater uint `gorm:"column:is_order_first_pay_later;type:tinyint(1);default:0;comment:是否先下单后付款, 0-否 1-是" json:"is_order_first_pay_later"`
 
 	// 订单类型字段
 	BillType        uint   `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单(包括会员端的堂食订单)、2-会员端订单(仅外送)" json:"bill_type"`

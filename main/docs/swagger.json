@@ -47786,6 +47786,7 @@
             "required": [
                 "locale_name",
                 "shop_uuids",
+                "status",
                 "warehouse_erp_code"
             ],
             "properties": {
@@ -55684,6 +55685,7 @@
             "required": [
                 "locale_name",
                 "shop_uuids",
+                "status",
                 "uuid",
                 "warehouse_erp_code"
             ],
