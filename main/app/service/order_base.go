@@ -648,6 +648,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 		productList := resp.InstantHideSaleProductList{List: list}
 		hideSaleBill := resp.InstantHideSaleBill{
 			SaleBillUuid: saleBill.Uuid,
+			OrderNo:      saleBill.OrderNo,
 			SerialNo:     saleBill.SerialNo,
 			Amount:       saleBill.Amount,
 			HideBillTime: saleBill.HideBillTime,
