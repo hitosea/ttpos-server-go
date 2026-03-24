@@ -2,6 +2,9 @@ name: Dispatch CI
 
 on:
   pull_request:
+    # GitHub 默认只触发 opened / synchronize / reopened；
+    # 显式补上 edited，确保修改 PR base 分支后会重新 dispatch。
+    types: [opened, synchronize, reopened, edited]
     branches: [main, develop, dev, release, test, 'release/*']
     paths-ignore:
       - '*.md'
@@ -22,7 +25,7 @@ concurrency:
 
 jobs:
   dispatch:
-    if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-ci') }}
+    if: ${{ github.event_name != 'pull_request' || (!contains(github.event.pull_request.labels.*.name, 'skip-ci') && (github.event.action != 'edited' || contains(toJson(github.event.changes), '"base"'))) }}
     runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - name: Determine event type
@@ -51,5 +54,6 @@ jobs:
               "ref": "${{ github.ref }}",
               "ref_name": "${{ github.ref_name }}",
               "event_name": "${{ github.event_name }}",
+              "event_action": "${{ github.event.action || '' }}",
               "source_repo": "${{ github.repository }}"
             }
