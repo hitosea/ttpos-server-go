@@ -636,9 +636,10 @@ func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.Ge
 		delete(toAddSet, uid)
 	}
 
-	// 2. 查询所有已持久化的数据管理订单 UUID
+	// 2. 查询所有已持久化的数据管理订单 UUID（排除软删除）
 	existingUuids := dataManageRepo.GetDataUuids(
 		dataManageRepo.WhereByType(model.DataManageTypeOrder),
+		commonRepo.WhereBySoftDelete(),
 	)
 	existingSet := make(map[uint64]struct{}, len(existingUuids))
 	for _, uid := range existingUuids {
@@ -677,8 +678,8 @@ func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.Ge
 	const statsBatchSize = 1000
 	for i := 0; i < len(finalUuids); i += statsBatchSize {
 		end := min(i+statsBatchSize, len(finalUuids))
-		count, paidAmount := orderRepo.CountAndSumSaleBill(commonRepo.WhereInUuids(finalUuids[i:end]))
-		refundAmount := orderRepo.SumSaleBillRefundAmount(commonRepo.WhereInUuids(finalUuids[i:end]))
+		count, paidAmount := orderRepo.CountAndSumSaleBill(commonRepo.WhereInUuids(finalUuids[i:end]), commonRepo.WhereBySoftDelete(), commonRepo.WhereByCooking())
+		refundAmount := orderRepo.SumSaleBillRefundAmount(commonRepo.WhereInUuids(finalUuids[i:end]), commonRepo.WhereByCooking())
 		selectedCount += count
 		totalPaidAmountDec = totalPaidAmountDec.Add(decimal.NewFromFloat(paidAmount).Sub(decimal.NewFromFloat(refundAmount)))
 	}
