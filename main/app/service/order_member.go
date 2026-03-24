@@ -3896,6 +3896,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		RefundAmount:         refundAmount,
 		IsOrderFirstPayLater: saleBill.IsOrderFirstPayLater == 1,
 		AmountInfo: resp.MemberDineInOrderAmountInfo{
+			ProductAmount:     saleOrder.ProductOriginalAmount,
 			DiscountAmount:    saleBill.CustomDiscountFee,
 			ServiceFee:        saleBill.ServiceFee,
 			TaxFee:            saleBill.TaxFee,
