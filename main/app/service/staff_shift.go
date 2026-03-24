@@ -86,7 +86,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 
 	var erpnextOpenPosEntryName string
 	var openingPaymentMethodsStr string
-	shiftVersion := constant.ShiftVersionNew
+
 	// 调用rpc接口生成PosEntry
 	companySetting := ctx.GetCompanySetting()
 	company := ctx.GetCompany()
@@ -171,7 +171,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 
 		ErpnextOpenPosEntryName: erpnextOpenPosEntryName,
 		OpeningPaymentMethods:   openingPaymentMethodsStr,
-		ShiftVersion:            shiftVersion,
+		ShiftVersion:            constant.ShiftVersionNew,
 	})
 	if err != nil {
 		return model.StaffShiftLog{}, errors.WithMessage(err, "创建交班记录失败")

@@ -83,5 +83,5 @@ description: 读取 DooTask 任务详情。当用户使用 /dootask 命令或需
 
 ## 相关命令
 
-- `/proposal:create` - 基于任务创建需求提案
-- `/spec:create` - 创建功能规格文档
+- `/devhq` - 开发指挥部
+- `/commit` - 生成提交消息

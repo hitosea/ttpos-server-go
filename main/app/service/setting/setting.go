@@ -544,8 +544,11 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		printSpeed             int = 2  // 打印速度 1-流畅(不分片打印) 2-稳定(分片大包打印) 3-兼容(分片小包打印)
 	)
 
+	// 来源设备品牌
+	deviceSource := ctx.GetSource()
+
 	// 收银机开启
-	if isCashierOpen {
+	if isCashierOpen || deviceSource == constant.SourceKiosk {
 
 		// 收银机机绑定的打印机key
 		for _, cashierPrinter := range printerSetting.CashierPrinter {
@@ -588,12 +591,17 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			enableStatusCheck = printer.EnableStatusCheck
 			enableSound = printer.EnableSound
 			printSpeed = printer.PrintSpeed
-		} else if printerId != "0" && printerId != "" {
+		} else if (printerId != "0" && printerId != "") || deviceSource == constant.SourceKiosk {
 			// 收银机内置的打印机
-			printerCashierDeviceSn = printerId
+			brand := ""
 			isCashierPrinter = true
 			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-			brand := deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(printerId))
+			if deviceSource == constant.SourceKiosk {
+				brand = deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(deviceSn))
+			} else {
+				printerCashierDeviceSn = printerId
+				brand = deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(printerId))
+			}
 			if slices.Contains(constant.SunmiAllPrints, brand) {
 				// 商米打印机
 				printerType = printerConstant.PrinterTypeCashierSunmi
