@@ -226,6 +226,11 @@ func (model *CompanySetting) IsOpenRider() bool {
 	return model.DeliveryStatus == 1
 }
 
+// IsOpenScanOrder 是否开启扫码点餐到店自取
+func (model *CompanySetting) IsOpenScanOrder() bool {
+	return model.IsOpenMemberInstant == 1
+}
+
 func (model *CompanySetting) IsOpenKiosk() bool {
 	return model.EnableKiosk == 1
 }

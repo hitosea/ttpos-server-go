@@ -5125,7 +5125,7 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "按小数计价只能显示到收银机和厨显"))
 		}
 		// 未开启扫码点餐到店自取且未配置外送渠道，无法选择在外送显示
-		if companySetting.DeliveryStatus != 1 && companySetting.IsOpenMemberInstant != 1 && products.IsShowDelivery {
+		if companySetting.DeliveryStatus != 1 && !companySetting.IsOpenScanOrder() && products.IsShowDelivery {
 			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置外送渠道，无法选择在外送显示"))
 		}
 		// 未开启自助点餐机，无法选择在自助点餐机显示
@@ -6906,9 +6906,9 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	}
 
 	companySetting := ctx.GetCompanySetting()
-	// 处理外送端,如果外送端未开启, 或者小数计价,则不显示外送端
+	// 处理外送端,如果外送端或扫码点餐到店自取均未开启, 或者小数计价,则不显示外送端
 	isShowDelivery := uint(req.Show.IsShowDelivery)
-	if !companySetting.IsOpenRider() || req.NumType == constant.ProductNumTypeDecimal {
+	if (!companySetting.IsOpenRider() && !companySetting.IsOpenScanOrder()) || req.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
 	}
 
@@ -7075,9 +7075,9 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 		}
 	}
 	companySetting := ctx.GetCompanySetting()
-	// 处理外送端,如果外送端未开启, 或者小数计价,则不显示外送端
+	// 处理外送端,如果外送端或扫码点餐到店自取均未开启, 或者小数计价,则不显示外送端
 	isShowDelivery := uint(request.Show.IsShowDelivery)
-	if !companySetting.IsOpenRider() || request.NumType == constant.ProductNumTypeDecimal {
+	if (!companySetting.IsOpenRider() && !companySetting.IsOpenScanOrder()) || request.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
 	}
 
