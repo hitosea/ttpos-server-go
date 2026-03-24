@@ -853,9 +853,6 @@ func (s *rechargeOrderSrv) SaveSalesInvoice(ctx context.Context, memberRechargeO
 		})
 	}
 
-	// ERPNext Customer 统一使用 "Default"（会员 UUID 在 ERPNext 中不一定存在）
-	customerUuid := "Default"
-
 	// 根据反结账次数生成 OrderNo
 	orderNo := memberRechargeOrder.OrderNo
 	if memberRechargeOrder.ReverseSettleCount > 0 {
@@ -869,7 +866,7 @@ func (s *rechargeOrderSrv) SaveSalesInvoice(ctx context.Context, memberRechargeO
 		SaleOrderUuid:     fmt.Sprintf("%d", memberRechargeOrder.Uuid),
 		PosProfile:        companySetting.ErpnextPosProfileName,
 		CompanyAbbr:       companySetting.ErpnextCompanyAbbr,
-		Customer:          customerUuid,
+		Customer:          "Member",
 		Currency:          "THB",
 		PriceListCurrency: "THB",
 		PostingDatetime:   memberRechargeOrder.PaymentTime,
@@ -951,9 +948,6 @@ func (s *rechargeOrderSrv) ReturnSalesInvoice(ctx context.Context, memberRecharg
 		})
 	}
 
-	// ERPNext Customer 统一使用 "Default"
-	customerUuid := "Default"
-
 	// 退款类型：充值退款一律为全部退款
 	refundType := "full_refund"
 
@@ -971,7 +965,7 @@ func (s *rechargeOrderSrv) ReturnSalesInvoice(ctx context.Context, memberRecharg
 		SalesInvoiceName: memberRechargeOrder.ErpProductsInvoiceName,
 		PostingDatetime:  int64(returnOrder.CreateTime),
 		CompanyAbbr:      companySetting.ErpnextCompanyAbbr,
-		Customer:         customerUuid,
+		Customer:         "Member",
 		Items:            items,
 		Payments:         payments,
 		RefundType:       refundType,
