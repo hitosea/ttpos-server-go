@@ -28,7 +28,7 @@ class AddShiftVersionToStaffShiftLog extends Migrator
             $table->addColumn('shift_version', 'integer', [
                 'limit' => \Phinx\Db\Adapter\MysqlAdapter::INT_TINY,
                 'null' => false,
-                'default' => 2,
+                'default' => 1,
                 'comment' => '班次版本: 1=旧版(有ERP开关帐) 2=新版(无ERP开关帐)',
                 'after' => 'opening_payment_methods',
             ])->update();
