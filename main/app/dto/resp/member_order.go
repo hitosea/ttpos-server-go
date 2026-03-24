@@ -241,6 +241,8 @@ type MemberDineInOrderProduct struct {
 	RefundAmount        float64            `json:"refund_amount"`         // 退款金额（0表示未退款）
 	ProductType         uint               `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	PackageProductList  PackageProductList `json:"package_product_list"`  // 套餐子商品列表（仅套餐商品有值）
+	IsGift              bool               `json:"is_gift"`               // 是否赠菜
+	IsCancel            bool               `json:"is_cancel"`             // 是否退菜
 }
 
 // MemberDineInOrderAmountInfo 堂食订单金额信息

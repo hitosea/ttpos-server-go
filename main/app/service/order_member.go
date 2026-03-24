@@ -3776,6 +3776,8 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 			RefundAmount:       productRefundAmount,
 			ProductType:        uint(product.ProductType),
 			PackageProductList: resp.PackageProductList{List: make([]resp.PackageProduct, 0)},
+			IsGift:             product.IsGiftProduct(),
+			IsCancel:           product.IsCancelProduct(),
 		}
 
 		// 套餐商品：挂载子商品列表
