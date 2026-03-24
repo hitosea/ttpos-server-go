@@ -7,22 +7,27 @@ alwaysApply: true
 
 执行 `gh pr create` 或用户要求创建 PR 前，**必须先完成以下检查**。在同一消息中并行启动所有检查：
 
-## 版本号更新（阻塞）
+## 版本号自动更新（阻塞）
 
-创建 PR 前**必须确认版本号已更新**。检查 `main/config/version.go` 中的 `Version` 是否与目标分支不同：
+创建 PR 前**必须确认版本号已更新**。如果未更新，**自动递增 patch 版本（第三段）**：
 
 ```bash
-# 获取当前版本和目标分支版本
+# 1. 获取当前版本和目标分支版本
 CURRENT=$(grep 'Version' main/config/version.go | sed 's/.*"\(.*\)".*/\1/')
 BASE=$(git show origin/main:main/config/version.go 2>/dev/null | grep 'Version' | sed 's/.*"\(.*\)".*/\1/')
+
+# 2. 如果版本号未更新（CURRENT == BASE），自动递增 patch
+#    例如: 2.20.0 → 2.20.1, 2.20.3 → 2.20.4
+#    只改第三段，保留前两段不变
+NEW=$(echo "$BASE" | awk -F. '{printf "%s.%s.%d", $1, $2, $3+1}')
 ```
 
-- 如果版本号**未更新**（`CURRENT == BASE`），提示用户并协助更新
-- 版本号需同步更新 3 个文件（参考 `make add-ver`）：
+- 版本号需同步更新 3 个文件：
   1. `main/config/version.go` — `Version = "{new_version}"`
   2. `admin/version.json` — `"version": "{new_version}"`
   3. `admin/views/shop/.env.production` — `VITE_BASIC_VERSION={new_version}`
 - 同时更新 commit 和 build-time：`cd main && go run ./main.go version --version={new} --commit=$(git rev-parse --short HEAD) --build-time=$(date +%Y-%m-%d)`
+- **无需询问用户**，直接自动完成版本号递增和文件更新
 
 ## 检查项
 
