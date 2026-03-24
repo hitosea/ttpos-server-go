@@ -28,6 +28,12 @@ NEW=$(echo "$BASE" | awk -F. '{printf "%s.%s.%d", $1, $2, $3+1}')
   3. `admin/views/shop/.env.production` — `VITE_BASIC_VERSION={new_version}`
 - 同时更新 commit 和 build-time：`cd main && go run ./main.go version --version={new} --commit=$(git rev-parse --short HEAD) --build-time=$(date +%Y-%m-%d)`
 - **无需询问用户**，直接自动完成版本号递增和文件更新
+- 更新完成后，**立即提交并推送版本文件**：
+  ```bash
+  git add main/config/version.go admin/version.json admin/views/shop/.env.production
+  git commit -m "build: bump version to {new_version}"
+  git push
+  ```
 
 ## 检查项
 
