@@ -51,12 +51,19 @@ func NewHqPushSrv(dbm *database.DBManager) IHqPushSrv {
 // GetControlSetting 获取总部控制设置
 func (s *hqPushSrv) GetControlSetting(ctx context.Context) (resp.HqControlSettingResp, error) {
 	companySetting := ctx.GetCompanySetting()
-	if !companySetting.IsHeadquarter() {
-		return resp.HqControlSettingResp{}, errors.New("仅总部可查看控制设置")
+
+	// 确定总部 UUID：总部直接用自己，子店查对应总部
+	var hqUuid uint64
+	if companySetting.IsHeadquarter() {
+		hqUuid = ctx.GetCompanyUuid()
+	} else if companySetting.IsSubShop() && companySetting.HeadquarterUuid > 0 {
+		hqUuid = companySetting.HeadquarterUuid
+	} else {
+		return resp.HqControlSettingResp{}, errors.New("仅总部或子店可查看控制设置")
 	}
 
-	controlRepo := s.getHqControlRepo(ctx.GetCompanyUuid())
-	controlMap := controlRepo.GetControlMap(ctx.GetCompanyUuid())
+	controlRepo := s.getHqControlRepo(hqUuid)
+	controlMap := controlRepo.GetControlMap(hqUuid)
 
 	return resp.HqControlSettingResp{
 		HqControlDineShelf:     getControlModeWithDefault(controlMap, constant.HqFieldDineShelf),
@@ -1064,8 +1071,8 @@ func (s *hqPushSrv) pushSingleTakeoutToStore(hqUuid, storeUuid uint64, hqTakeout
 		storeTakeoutRepo.WithProductPackageGroupItemTakeouts(),
 	)
 	if err != nil || storeTakeout == nil {
-		// 子店不存在该外卖商品 → 创建（默认下架）
-		storeTakeout = s.createTakeoutInStore(storeDB, hqTakeout, hqUuid)
+		// 子店不存在该外卖商品 → 创建
+		storeTakeout = s.createTakeoutInStore(storeDB, hqTakeout, hqUuid, controlRepo)
 		if storeTakeout == nil {
 			return
 		}
@@ -1149,7 +1156,7 @@ func (s *hqPushSrv) pushSingleTakeoutToStore(hqUuid, storeUuid uint64, hqTakeout
 
 // createTakeoutInStore 在子店创建外卖商品主记录
 // 前置条件：子店必须已有对应的 ProductPackage（店内商品），否则跳过
-func (s *hqPushSrv) createTakeoutInStore(storeDB *gorm.DB, hqTakeout *model.ProductPackageTakeout, hqUuid uint64) *model.ProductPackageTakeout {
+func (s *hqPushSrv) createTakeoutInStore(storeDB *gorm.DB, hqTakeout *model.ProductPackageTakeout, hqUuid uint64, controlRepo repository.IHqControlSettingRepo) *model.ProductPackageTakeout {
 	commonRepo := repository.NewCommonRepo()
 
 	// 检查子店是否存在对应的店内商品，不存在则跳过
@@ -1184,6 +1191,12 @@ func (s *hqPushSrv) createTakeoutInStore(storeDB *gorm.DB, hqTakeout *model.Prod
 		describeMultiLanguageNameUuid, _ = multiLangRepo.CreateMultiLanguageName(mlDescribe)
 	}
 
+	// 统一控制模式：跟随总部状态；分开控制模式：默认下架
+	takeoutStatus := uint(0)
+	if controlRepo != nil && controlRepo.IsUnifiedControl(hqUuid, constant.HqFieldTakeoutShelf) {
+		takeoutStatus = hqTakeout.Status
+	}
+
 	newTakeout := &model.ProductPackageTakeout{
 		ProductPackageUuid:            hqTakeout.ProductPackageUuid,
 		MultiLanguageNameUuid:         multiLanguageNameUuid,
@@ -1194,7 +1207,7 @@ func (s *hqPushSrv) createTakeoutInStore(storeDB *gorm.DB, hqTakeout *model.Prod
 		ProductType:                   hqTakeout.ProductType,
 		Price:                         hqTakeout.Price,
 		TakeoutType:                   hqTakeout.TakeoutType,
-		Status:                        0, // 默认下架，子店需手动上架
+		Status:                        takeoutStatus,
 		CategoryUuid:                  hqTakeout.CategoryUuid,
 		SpecialCategoryUuid:           hqTakeout.SpecialCategoryUuid,
 		ImageFileUuid:                 hqTakeout.ImageFileUuid,

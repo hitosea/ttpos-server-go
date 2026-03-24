@@ -8960,7 +8960,14 @@ func (s *productSrv) createSubTakeoutProduct(
 	attrTakeoutRepo repository.IProductPackageAttributeTakeoutRepo,
 	groupItemTakeoutRepo *repository.ProductPackageGroupItemTakeoutRepo,
 ) error {
-	// 创建外卖商品主表（使用总部的 UUID，首次同步默认下架）
+	// 创建外卖商品主表（使用总部的 UUID）
+	// 统一控制模式：跟随总部状态；分开控制模式：默认下架，子店需手动上架
+	headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	takeoutStatus := uint(0)
+	if repository.IsHqUnifiedControl(headquarterDb, companySetting.HeadquarterUuid, constant.HqFieldTakeoutShelf) {
+		takeoutStatus = headTakeout.Status
+	}
+
 	newTakeout := model.ProductPackageTakeout{
 		ProductPackageUuid:            headTakeout.ProductPackageUuid,
 		MultiLanguageNameUuid:         headTakeout.MultiLanguageNameUuid,
@@ -8969,7 +8976,7 @@ func (s *productSrv) createSubTakeoutProduct(
 		ProductType:                   headTakeout.ProductType,
 		Price:                         headTakeout.Price, // 首次同步使用总部价格
 		TakeoutType:                   headTakeout.TakeoutType,
-		Status:                        0, // 默认下架
+		Status:                        takeoutStatus,
 		CategoryUuid:                  headTakeout.CategoryUuid,
 		SpecialCategoryUuid:           headTakeout.SpecialCategoryUuid,
 		ImageFileUuid:                 headTakeout.ImageFileUuid,
