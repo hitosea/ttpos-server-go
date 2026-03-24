@@ -29,4 +29,5 @@ WORKDIR /app/main/tests
 # them briefly after the test returns.
 CMD ["sh", "-c", \
   "export TEST_DROP_TENANT_DB=${TEST_DROP_TENANT_DB:-0}; \
+   export TEST_ENABLE_RESOURCE_BUDGET=${TEST_ENABLE_RESOURCE_BUDGET:-1}; \
    go test -p ${GO_TEST_P:-4} -tags=integration -v -count=1 -timeout=10m ./..."]
