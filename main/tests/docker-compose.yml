@@ -21,15 +21,15 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
       --innodb-buffer-pool-size=64M
-      --innodb-log-file-size=16M
+      --innodb-redo-log-capacity=256M
       --innodb-flush-log-at-trx-commit=0
       --sync-binlog=0
       --skip-log-bin
-    # tmpfs for MySQL data dir: keeps all test data in RAM, making DDL (CREATE/DROP TABLE)
-    # near-instant. Safe because test data is always ephemeral.
-    # 1536m supports ~60 tenant databases with tuned InnoDB settings above.
+    # tmpfs keeps MySQL DDL fast for integration tests. We cap package-level
+    # concurrency in the test runner so this larger RAM-backed datadir can hold
+    # the in-flight tenant DBs without falling back to very slow disk I/O.
     tmpfs:
-      - /var/lib/mysql:size=1536m
+      - /var/lib/mysql:size=4096m
     volumes:
       - ../../admin/database/seeds/saas.sql:/docker-entrypoint-initdb.d/saas.sql:ro
     healthcheck:

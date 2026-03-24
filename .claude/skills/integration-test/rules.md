@@ -173,6 +173,14 @@ func Test_P1_Cashier_InstantOrder_GetCart_AccessDenied(t *testing.T) {
 
 ## Rules
 
+### Preflight contract check (mandatory before writing assertions)
+
+1. Read the handler/controller, request DTO, and at least one service/usecase layer.
+2. Open one neighboring integration test in the same directory and follow its fixture style.
+3. Write down every request UUID field and map it to the seeded source object.
+4. If a fixture helper does not expose a needed UUID, extend the helper result in test code instead of guessing or hardcoding.
+5. Check whether the API path triggers async work after the response returns; if yes, avoid manual teardown in the test body.
+
 ### Mandatory
 1. `//go:build integration` must be the first line
 2. Package must be `{directory}_test` — external (blackbox)
@@ -182,11 +190,20 @@ func Test_P1_Cashier_InstantOrder_GetCart_AccessDenied(t *testing.T) {
 6. No shared state between tests — each test is fully self-contained
 7. Cleanup via `t.Cleanup()` in fixture functions only
 
+### Known traps
+
+- **Package requests**: when the product is a package (`product_type = 1`), verify whether the top-level item also needs `product_package_uuid`. Do not assume `flavor_uuid` alone is enough.
+- **UUID semantics**: `product_package_uuid` (parent package) and `flavor_uuid` / BOM UUID (spec) are different values. Never reuse one as the other.
+- **Main integration module root**: `main/tests` has its own `go.mod`; run focused checks from `main/tests` or via `make test-main-local`.
+- **Async cleanup**: do not manually drop tenant DBs / add force cleanup in test bodies for async scenarios such as HQ push.
+
 ### Forbidden
 - ❌ Importing any `ttpos-bmp/` or `ttpos-server-go/app/` packages (blackbox only)
 - ❌ Inline API path strings (use named constants)
 - ❌ Shared mutable state across tests (no `var` at package level)
 - ❌ Manual `t.Cleanup()` calls — fixtures handle this
+- ❌ Hardcoding `0` / guessed UUIDs just to satisfy request fields
+- ❌ Changing production code first when the failure can be fixed by correcting test seed data or request construction
 
 ### Fixture availability
 

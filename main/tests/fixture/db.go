@@ -291,6 +291,12 @@ func NewTestTenant(tb testing.TB, tenantUUID string) *sql.DB {
 
 	// Cleanup: drop the database when test is done
 	tb.Cleanup(func() {
+		_ = db.Close()
+
+		if !shouldDropTenantDBImmediately() {
+			return
+		}
+
 		rootConfig := RootDBConfig()
 		dropDB, err := sql.Open("mysql", rootConfig.DSNWithoutDB())
 		if err != nil {
@@ -345,6 +351,12 @@ func NewTestTenantFull(tb testing.TB, tenantUUID string) *sql.DB {
 	// Cleanup: drop the test database after the test completes.
 	// With MySQL data on tmpfs, DROP DATABASE (195 tables) takes ~0.3s instead of ~25s.
 	tb.Cleanup(func() {
+		_ = db.Close()
+
+		if !shouldDropTenantDBImmediately() {
+			return
+		}
+
 		dropConfig := RootDBConfig()
 		dropDB, err := sql.Open("mysql", dropConfig.DSNWithoutDB())
 		if err != nil {
@@ -556,4 +568,8 @@ func TruncateTable(tb testing.TB, db *sql.DB, tableName string) {
 	if err != nil {
 		tb.Fatalf("failed to truncate table %s: %v", tableName, err)
 	}
+}
+
+func shouldDropTenantDBImmediately() bool {
+	return getEnv("TEST_DROP_TENANT_DB", "1") != "0"
 }

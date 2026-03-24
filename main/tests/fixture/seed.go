@@ -1166,8 +1166,9 @@ type PackageSubItem struct {
 
 // SeedPackageProductResult holds the result of SeedPackageProductWithSubItems.
 type SeedPackageProductResult struct {
-	PackageBomUUID int64 // The parent package's product_bom UUID (used as flavor_uuid in API)
-	GroupUUID      int64 // The package group UUID (used as product_package_group_uuid in API)
+	PackageUUID    int64   // The parent package's product_package UUID (used as product_package_uuid in API)
+	PackageBomUUID int64   // The parent package's product_bom UUID (used as flavor_uuid in API)
+	GroupUUID      int64   // The package group UUID (used as product_package_group_uuid in API)
 	SubBomUUIDs    []int64 // Each sub-product's product_bom UUID (used as flavor_uuid in API)
 }
 
@@ -1177,7 +1178,7 @@ type SeedPackageProductResult struct {
 //   - A product_package_group linked to the parent
 //   - For each sub-item: product_package + product_flavor + product_bom + product_package_group_item
 //
-// Returns the parent BOM UUID, group UUID, and sub-item BOM UUIDs.
+// Returns the parent package UUID, parent BOM UUID, group UUID, and sub-item BOM UUIDs.
 func SeedPackageProductWithSubItems(tb testing.TB, db *sql.DB, packageName string, packagePrice float64, subItems []PackageSubItem) SeedPackageProductResult {
 	tb.Helper()
 
@@ -1226,6 +1227,7 @@ func SeedPackageProductWithSubItems(tb testing.TB, db *sql.DB, packageName strin
 	}
 
 	return SeedPackageProductResult{
+		PackageUUID:    parentPkg.UUID,
 		PackageBomUUID: parentBom.UUID,
 		GroupUUID:      group.UUID,
 		SubBomUUIDs:    subBomUUIDs,

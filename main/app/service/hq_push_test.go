@@ -197,6 +197,15 @@ func createShopDB(t *testing.T) *gorm.DB {
 		source TEXT DEFAULT '',
 		source_product_id TEXT DEFAULT ''
 	)`)
+	db.Exec(`CREATE TABLE ttpos_product_bom (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		uuid INTEGER DEFAULT 0,
+		create_time INTEGER DEFAULT 0,
+		update_time INTEGER DEFAULT 0,
+		delete_time INTEGER DEFAULT 0,
+		product_package_uuid INTEGER DEFAULT 0,
+		status INTEGER DEFAULT 0
+	)`)
 	db.Exec(`CREATE TABLE ttpos_product_bom_takeout (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		uuid INTEGER DEFAULT 0,
@@ -1749,7 +1758,7 @@ func TestHqPush_Roundtrip_DineShelf_MarkThenPush_Preserved(t *testing.T) {
 	srv, hqDB, storeDB, _ := setupHqPushTest(t)
 
 	productUuid := uint64(8020)
-	seedHqProduct(t, hqDB, productUuid, 1) // HQ status=1
+	seedHqProduct(t, hqDB, productUuid, 1)       // HQ status=1
 	seedStoreProduct(t, storeDB, productUuid, 0) // sub-store status=0
 
 	// 子店标记 dine_shelf override
