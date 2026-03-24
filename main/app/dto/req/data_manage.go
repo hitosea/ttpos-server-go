@@ -47,19 +47,11 @@ type SubmitDataManageOrderReq struct {
 }
 
 // GetDataManageOrderSelectStatsReq 获取可选订单统计预览（不持久化）
-// 处理单个筛选条件，预览当前操作后的统计结果：
-//   - SelectAll=true：预览全选（可排除 DeselectedUuids）后的统计
-//   - SelectAll=false + SelectedUuids：预览手动新增后的统计
-//   - SelectAll=false + DeselectedUuids：预览移除后的统计
+// 支持多组筛选条件，与 SubmitDataManageOrderReq 对齐：
+//   - 每组 Filter 独立处理后合并统计
+//   - 支持跨筛选上下文累积选择的预览
 type GetDataManageOrderSelectStatsReq struct {
-	SelectAll       bool     `json:"select_all"`       // 是否全选当前筛选范围
-	SelectedUuids   []uint64 `json:"selected_uuids"`   // 手动新增的UUID（select_all=false时使用）
-	DeselectedUuids []uint64 `json:"deselected_uuids"` // 取消/移除的UUID（select_all=true时排除，select_all=false时移除）
-	OrderNo         string   `json:"order_no"`         // 订单编号搜索
-	DateType        int      `json:"date_type"`        // 时间类型,-1=全部、0=今天、1=昨天、2=本周
-	QueryStartDate  string   `json:"query_start_date"` // 查询开始日期
-	QueryEndDate    string   `json:"query_end_date"`   // 查询结束日期
-	BillType        int      `json:"bill_type"`        // 订单类型,-1=全部、0=餐单、1=外卖
+	Filters []DataManageOrderSubmitFilter `json:"filters"` // 筛选条件数组，每组独立处理后合并统计
 }
 
 // DataManageOrderSubmitFilter 提交/预览时的筛选条件（含选择操作）

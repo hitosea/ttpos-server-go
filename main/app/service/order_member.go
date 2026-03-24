@@ -507,6 +507,11 @@ func (s *orderSrv) PayDineInOrder(ctx context.Context, request req.PayDineInOrde
 		return errors.New("订单已完成")
 	}
 
+	// 先下单后付款订单不允许调用pay接口，应使用submit接口
+	if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes {
+		return errors.New("请前往收银机支付")
+	}
+
 	// 获取指定的销售订单
 	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
@@ -3891,6 +3896,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		RefundAmount:         refundAmount,
 		IsOrderFirstPayLater: saleBill.IsOrderFirstPayLater == 1,
 		AmountInfo: resp.MemberDineInOrderAmountInfo{
+			ProductAmount:     saleOrder.ProductOriginalAmount,
 			DiscountAmount:    saleBill.CustomDiscountFee,
 			ServiceFee:        saleBill.ServiceFee,
 			TaxFee:            saleBill.TaxFee,
@@ -3940,6 +3946,11 @@ func (s *orderSrv) CancelMemberDineInOrder(ctx context.Context, cancelReq req.Ca
 	}
 	if billInfo.IsExistPaid() {
 		return errors.New("订单已支付，不可取消")
+	}
+
+	// 先下单后付款订单不允许调用cancel接口，应使用cancel_order接口
+	if billInfo.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes {
+		return errors.New("无法在会员端取消该订单")
 	}
 
 	// 检查是否是"先下单后付"模式的订单（有 H5 订单）

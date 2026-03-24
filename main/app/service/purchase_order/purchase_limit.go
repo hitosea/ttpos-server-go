@@ -362,10 +362,10 @@ func (s *purchaseOrderSrv) checkItemDefaultWarehouse(ctx context.Context, purcha
 	companySetting := ctx.GetCompanySetting()
 	companyAbbr := companySetting.ErpnextCompanyAbbr
 
-	// 收集物品编码（跳过直采物品）
+	// 收集物品编码（跳过物品已删除或供应商直发的物品，以物品主表为准）
 	itemCodes := make([]string, 0, len(purchaseOrder.Items))
 	for _, item := range purchaseOrder.Items {
-		if item.MaterialCode != "" && item.DeliveredBySupplier != 1 {
+		if item.MaterialCode != "" && item.Material != nil && item.Material.DeliveredBySupplier != 1 {
 			itemCodes = append(itemCodes, item.MaterialCode)
 		}
 	}
@@ -385,17 +385,17 @@ func (s *purchaseOrderSrv) checkItemDefaultWarehouse(ctx context.Context, purcha
 	lang := ctx.GetLanguage()
 	var noWarehouseItems []string
 	for _, item := range purchaseOrder.Items {
-		if item.DeliveredBySupplier == 1 {
+		if item.Material == nil || item.Material.DeliveredBySupplier == 1 {
 			continue
 		}
 		if warehouse, ok := itemWarehouses[item.MaterialCode]; !ok || warehouse == "" {
 			materialName := language.JsonToLocaleResponse(item.MaterialName).GetLocale(lang)
-			// 优先显示内部编码，没有则显示 ERPNext 物品编码
-			code := item.MaterialCode
-			if item.Material != nil && item.Material.InternalCode != "" {
-				code = item.Material.InternalCode
+			code := item.Material.InternalCode
+			desc := materialName
+			if code != "" {
+				desc += "（" + code + "）"
 			}
-			noWarehouseItems = append(noWarehouseItems, fmt.Sprintf("%s%s", materialName, "（"+code+"）"))
+			noWarehouseItems = append(noWarehouseItems, desc)
 		}
 	}
 
