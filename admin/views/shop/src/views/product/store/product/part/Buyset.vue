@@ -83,7 +83,7 @@
         :disabled="form.model.num_type == 1 || erp_is_open == 1"
       />
       <el-checkbox
-        v-if="is_open_assistant || is_open_store_scan_order"
+        v-if="is_open_assistant"
         v-model="form.model.is_show_h5"
         :true-value="1"
         :false-value="2"
@@ -92,7 +92,7 @@
         :disabled="form.model.num_type == 1 || erp_is_open == 1"
       />
       <el-checkbox
-        v-if="is_open_delivery"
+        v-if="is_open_delivery || is_open_store_scan_order"
         v-model="form.model.is_show_delivery"
         :true-value="1"
         :false-value="2"
