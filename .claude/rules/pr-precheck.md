@@ -75,7 +75,24 @@ NEW=$(echo "$BASE" | awk -F. '{printf "%s.%s.%d", $1, $2, $3+1}')
 
 ## PR 后置处理
 
-PR 创建成功后，**必须继续处理 PR 描述中的 Test Plan 检查项**：
+PR 创建成功后，**必须按顺序完成以下步骤**：
+
+### 步骤 1：冲突检查（阻塞）
+
+检查 PR 是否存在合并冲突：
+
+```bash
+gh pr view {PR_NUMBER} --json mergeable,mergeStateStatus --jq '{mergeable,mergeStateStatus}'
+```
+
+- 如果 `mergeable: "CONFLICTING"`，**必须立即解决冲突**：
+  1. `git fetch origin {base_branch} && git merge origin/{base_branch}`
+  2. 解决冲突文件，优先保留当前分支的业务变更，版本号冲突保留较新值
+  3. 提交合并：`git commit -m "merge: 合并 {base_branch} 分支，解决冲突"`
+  4. 推送：`git push`
+- 冲突解决后再继续后续步骤
+
+### 步骤 2：Test Plan 验证
 
 1. 读取刚创建的 PR 描述：`gh pr view --json body,number --jq '{body,number}'`
 2. 解析 `Test plan` 部分中的所有检查项
