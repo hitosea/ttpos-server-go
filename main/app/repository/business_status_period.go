@@ -11,6 +11,7 @@ import (
 type IBusinessStatusPeriodRepo interface {
 	GetOpenPeriod() (*model.BusinessStatusPeriod, error)
 	GetBusinessStatus() int
+	IsInTestPeriod(timestamp int64) bool
 	Create(period *model.BusinessStatusPeriod) error
 	CloseOpenPeriod(endTime int64) error
 }
@@ -46,6 +47,17 @@ func (r *businessStatusPeriodRepo) GetBusinessStatus() int {
 		return constant.BusinessStatusTest
 	}
 	return constant.BusinessStatusNormal
+}
+
+// IsInTestPeriod 检查指定时间戳是否落在任意测试营业时段内
+func (r *businessStatusPeriodRepo) IsInTestPeriod(timestamp int64) bool {
+	var count int64
+	r.db.Model(&model.BusinessStatusPeriod{}).
+		Where("delete_time = 0").
+		Where("? >= start_time", timestamp).
+		Where("end_time = 0 OR ? <= end_time", timestamp).
+		Count(&count)
+	return count > 0
 }
 
 // Create 创建时段记录
