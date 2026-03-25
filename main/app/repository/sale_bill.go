@@ -25,6 +25,8 @@ type ISaleBillRepo interface {
 	UpdateSaleBillBatchTagUuid(saleBillUuid uint64, batchTagUuid uint64) error // 更新销售账单的分批类型UUID
 	UpdateOrderSource(saleBillUuid uint64, orderSourceUuid uint64) error
 	UpdateNationality(saleBillUuid uint64, nationalityUuid uint64) error
+	// BatchAssignShiftToMemberDineInOrders 批量为无班次的会员端堂食订单分配班次
+	BatchAssignShiftToMemberDineInOrders(dutyNo string, cashierUuid uint64, cashierName string) (int64, error)
 }
 
 // ISaleBillQueryRepo 销售账单的查询接口。
@@ -494,4 +496,27 @@ func (r *saleBillRepo) WhereBySerialNo(keyword string) DBOption {
 		}
 		return db.Where("serial_no LIKE ?", Like(keyword))
 	}
+}
+
+// BatchAssignShiftToMemberDineInOrders 批量为无班次的会员端堂食订单分配班次
+// 查找条件：会员端(source=5) + 即时点餐(bill_type=1) + 已完成(status=1) + 无班次(duty_no='')
+// 这些订单是先付后下单模式下，自动接单时因无可用班次而留空的订单
+func (r *saleBillRepo) BatchAssignShiftToMemberDineInOrders(dutyNo string, cashierUuid uint64, cashierName string) (int64, error) {
+	result := r.db.Model(&model.SaleBill{}).
+		Where("source = ?", constant.SaleBillSourceMember).
+		Where("bill_type = ?", constant.SaleBillTypeInstant).
+		Where("status = ?", constant.SaleBillStatusComplete).
+		Where("duty_no = ?", "").
+		Where("delete_time = ?", 0).
+		Updates(map[string]any{
+			"duty_no":      dutyNo,
+			"cashier_uuid": cashierUuid,
+			"cashier_name": cashierName,
+		})
+
+	if result.Error != nil {
+		return 0, result.Error
+	}
+
+	return result.RowsAffected, nil
 }
