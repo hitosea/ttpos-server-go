@@ -2816,6 +2816,13 @@ func (s *orderSrv) DineInOrderPayTimeoutAutoCancel(ctx context.Context, saleBill
 		return nil
 	}
 
+	// 3.5 先下单后付模式：检查 H5 订单是否已被收银端接单，已接单的订单不能自动取消
+	// if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes {
+	// 	logger.Logger.Info("先下单后付堂食订单已被接单，跳过自动取消",
+	// 		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+	// 		zap.Uint64("sale_bill_uuid", saleBillUuid))
+	// }
+
 	// 4. 检查支付超时剩余时间（防止误触发）- 堂食订单超时时间为15分钟
 	dineInPaymentTimeout := int64(15 * 60) // 15分钟
 	if saleBill.SubmitPayTime > 0 {
@@ -2898,32 +2905,33 @@ func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.Crea
 		return nil, err
 	}
 
+	// 未充分测试,下期再上
 	// 仅新建订单时添加支付超时自动取消任务
-	if isNewOrder && result != nil && Queue.MemberOrderCancelQueue != nil {
-		saleBillUuid := result.SaleBillUuid
-		companyUuid := ctx.GetCompanyUuid()
-		utils.Go(func() {
-			// 构建队列消息参数
-			paramsJson := utils.ToJson(map[string]any{
-				"sale_bill_uuid": saleBillUuid,
-				"company_uuid":   companyUuid,
-				"cancel_scene":   constant.MemberSaleOrderSceneDineInPaymentTimeout,
-			})
+	// if isNewOrder && result != nil && Queue.MemberOrderCancelQueue != nil {
+	// 	saleBillUuid := result.SaleBillUuid
+	// 	companyUuid := ctx.GetCompanyUuid()
+	// 	utils.Go(func() {
+	// 		// 构建队列消息参数
+	// 		paramsJson := utils.ToJson(map[string]any{
+	// 			"sale_bill_uuid": saleBillUuid,
+	// 			"company_uuid":   companyUuid,
+	// 			"cancel_scene":   constant.MemberSaleOrderSceneDineInPaymentTimeout,
+	// 		})
 
-			// 发送延时消息：15分钟后执行自动取消
-			_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
-				paramsJson,
-				15*time.Minute,
-				delayqueue.WithRetryCount(3),
-			)
-			if err != nil {
-				logger.Logger.Error("添加堂食订单支付超时自动取消任务失败",
-					zap.Uint64("company_uuid", companyUuid),
-					zap.Uint64("sale_bill_uuid", saleBillUuid),
-					zap.Error(err))
-			}
-		})
-	}
+	// 		// 发送延时消息：15分钟后执行自动取消
+	// 		_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
+	// 			paramsJson,
+	// 			15*time.Minute,
+	// 			delayqueue.WithRetryCount(3),
+	// 		)
+	// 		if err != nil {
+	// 			logger.Logger.Error("添加堂食订单支付超时自动取消任务失败",
+	// 				zap.Uint64("company_uuid", companyUuid),
+	// 				zap.Uint64("sale_bill_uuid", saleBillUuid),
+	// 				zap.Error(err))
+	// 		}
+	// 	})
+	// }
 
 	return result, nil
 }
