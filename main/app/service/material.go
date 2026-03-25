@@ -99,7 +99,7 @@ type IMaterialSrv interface {
 
 	CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error // 检查物品安全库存
 
-	UpdateMaterialSafetyStock(ctx context.Context, req req.MaterialUpdateSafetyStockReq) error       // 修改物品安全库存
+	UpdateMaterialSafetyStock(ctx context.Context, req req.MaterialUpdateSafetyStockReq) error     // 修改物品安全库存
 	UpdateMaterialNegativeStock(ctx context.Context, req req.MaterialUpdateNegativeStockReq) error // 修改物品负库存设置
 }
 
@@ -1287,9 +1287,9 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 			}
 			return false
 		}(),
-		NotBaseUnitList: notBaseUnitList,
-		Unit:            &unit,
-		InternalCode:    request.InternalCode,
+		NotBaseUnitList:   notBaseUnitList,
+		Unit:              &unit,
+		InternalCode:      request.InternalCode,
 		OriginCountryCode: request.OriginCountryCode,
 		AllowNegativeStock: func() int {
 			if request.AllowNegativeStock != nil && *request.AllowNegativeStock {
@@ -3243,14 +3243,14 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 
 			// 添加物品
 			tmp := req.MaterialAddReq{
-				LocaleName:           item.LocaleName,
-				CategoryUuid:         item.CategoryUuid,
-				UnitUuid:             item.UnitUuid,
-				Status:               item.Status,
-				InitStock:            item.InitStock,
-				BarcodeValue:         item.BarcodeValue,
-				PurchaseUnitUuid:     item.UnitUuid,
-				CostUnitUuid:         item.UnitUuid,
+				LocaleName:       item.LocaleName,
+				CategoryUuid:     item.CategoryUuid,
+				UnitUuid:         item.UnitUuid,
+				Status:           item.Status,
+				InitStock:        item.InitStock,
+				BarcodeValue:     item.BarcodeValue,
+				PurchaseUnitUuid: item.UnitUuid,
+				CostUnitUuid:     item.UnitUuid,
 			}
 			err := s.AddMaterial(ctx, tmp)
 			if err != nil {
@@ -3543,11 +3543,11 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 						}
 						return ""
 					}(),
-					NotForSale:           itemInfo.NotForSale,
-					AllowNegativeStock:   itemInfo.AllowNegativeStock, // 是否允许负库存：true-允许，false-不允许
-					DeliveredBySupplier:  deliveredBySupplier,
-					SupplierErpCode:      supplierErpCode,
-					Specification:        itemInfo.CustomSpecification,
+					NotForSale:          itemInfo.NotForSale,
+					AllowNegativeStock:  itemInfo.AllowNegativeStock, // 是否允许负库存：true-允许，false-不允许
+					DeliveredBySupplier: deliveredBySupplier,
+					SupplierErpCode:     supplierErpCode,
+					Specification:       itemInfo.CustomSpecification,
 				})
 				if err != nil {
 					logger.Logger.Error("同步erp物品列表失败-02", zap.Error(err))

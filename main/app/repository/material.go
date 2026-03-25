@@ -34,10 +34,10 @@ type IMaterialRepo interface {
 	UpdateMaterial(material model.Material) error
 	UpdateMaterialData(data map[string]any, opts ...DBOption) error
 	UpdateMaterialStatus(uuid uint64, status bool) error
-	UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error    // 更新物品负库存设置
-	ClearMaterialBarcodeValue(uuid uint64) error                                    // 清空物品条形码值
-	ClearMaterialInternalCode(uuid uint64) error                                    // 清空物品内部编码
-	ClearMaterialSafetyStock(uuid uint64) error                                     // 清空物品安全库存
+	UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error // 更新物品负库存设置
+	ClearMaterialBarcodeValue(uuid uint64) error                                 // 清空物品条形码值
+	ClearMaterialInternalCode(uuid uint64) error                                 // 清空物品内部编码
+	ClearMaterialSafetyStock(uuid uint64) error                                  // 清空物品安全库存
 	DeleteMaterial(uuid uint64) error
 	GetMaterialCategory(opts ...DBOption) (*model.MaterialCategory, error)
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)

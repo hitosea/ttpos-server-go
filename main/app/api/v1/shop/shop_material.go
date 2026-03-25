@@ -724,7 +724,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)                         // 获取物品详情
 		privateApi.GET("/material/stock/detail", wrapper.GetMaterialStockDetail)              // 查询物品库存详情
 		privateApi.POST("/material/update_safety_stock", wrapper.UpdateSafetyStock)           // 修改物品安全库存
-		privateApi.POST("/material/update_negative_stock", wrapper.UpdateNegativeStock)     // 修改物品负库存设置
+		privateApi.POST("/material/update_negative_stock", wrapper.UpdateNegativeStock)       // 修改物品负库存设置
 		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)                // 创建物品类别
 		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)            // 获取物品类别列表
 		privateApi.GET("/material/category/detail", wrapper.GetMaterialCategoryDetail)        // 获取物品类别详情
