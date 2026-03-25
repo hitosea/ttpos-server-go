@@ -2275,4 +2275,5 @@ return [
     "超管" => "Süper Yönetici",
     "商户UUID不能为空" => "Tüccar UUID boş olamaz",
     "缓存失效任务执行失败: " => "Önbellek geçersizleme görevi başarısız oldu:",
+    "确认超管密码与超管密码不一致" => "Yönetici şifresinin onayı yönetici şifresiyle eşleşmiyor",
 ];
