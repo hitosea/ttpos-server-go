@@ -1478,6 +1478,92 @@ func WithDeskRegionRecordUUID(uuid int64) func(*DeskRegionOptions) {
 	return func(o *DeskRegionOptions) { o.UUID = uuid }
 }
 
+// StatisticsSaleOptions contains options for seeding a statistics_sale record.
+type StatisticsSaleOptions struct {
+	UUID                 int64
+	SaleBillUUID         int64
+	DeskUUID             int64
+	OrderSourceUUID      int64
+	Source               int // 0=default, 1=cashier, 5=scan
+	IsMeger              int
+	IsSpecial            int
+	IsTakeout            int
+	PaymentAmount        float64
+	RefundAmount         float64
+	RefundPaymentBalance float64
+	CompleteTime         int64
+	MealNum              int
+}
+
+// SeedStatisticsSale creates a statistics_sale record in the tenant database.
+func SeedStatisticsSale(tb testing.TB, db *sql.DB, opts ...func(*StatisticsSaleOptions)) StatisticsSaleOptions {
+	tb.Helper()
+
+	opt := StatisticsSaleOptions{
+		UUID:         generateSnowflakeID(),
+		SaleBillUUID: generateSnowflakeID(),
+		CompleteTime: 1750000000,
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_statistics_sale (
+			uuid, sale_bill_uuid, desk_uuid, order_source_uuid, source,
+			is_meger, is_special, is_takeout, payment_amount, refund_amount,
+			refund_payment_balance, complete_time, meal_num,
+			create_time, update_time, delete_time
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.SaleBillUUID, opt.DeskUUID, opt.OrderSourceUUID, opt.Source,
+		opt.IsMeger, opt.IsSpecial, opt.IsTakeout, opt.PaymentAmount, opt.RefundAmount,
+		opt.RefundPaymentBalance, opt.CompleteTime, opt.MealNum,
+		now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed statistics sale: %v", err)
+	}
+
+	return opt
+}
+
+// WithStatisticsSaleBillUUID sets the sale_bill_uuid for the statistics_sale record.
+func WithStatisticsSaleBillUUID(uuid int64) func(*StatisticsSaleOptions) {
+	return func(o *StatisticsSaleOptions) {
+		o.SaleBillUUID = uuid
+	}
+}
+
+// WithStatisticsSaleSource sets the source for the statistics_sale record.
+func WithStatisticsSaleSource(source int) func(*StatisticsSaleOptions) {
+	return func(o *StatisticsSaleOptions) {
+		o.Source = source
+	}
+}
+
+// WithStatisticsSalePaymentAmount sets the payment_amount.
+func WithStatisticsSalePaymentAmount(amount float64) func(*StatisticsSaleOptions) {
+	return func(o *StatisticsSaleOptions) {
+		o.PaymentAmount = amount
+	}
+}
+
+// WithStatisticsSaleRefundAmount sets the refund_amount.
+func WithStatisticsSaleRefundAmount(amount float64) func(*StatisticsSaleOptions) {
+	return func(o *StatisticsSaleOptions) {
+		o.RefundAmount = amount
+	}
+}
+
+// WithStatisticsSaleCompleteTime sets the complete_time.
+func WithStatisticsSaleCompleteTime(ts int64) func(*StatisticsSaleOptions) {
+	return func(o *StatisticsSaleOptions) {
+		o.CompleteTime = ts
+	}
+}
+
 // SeedCashierPermissions seeds the ttpos_access table with all cashier permissions
 // required by constant.CashierPermissions. This is needed for super-admin staff
 // because getDbPermissions returns ALL access records (no filter) for is_super=1,

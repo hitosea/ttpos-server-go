@@ -280,6 +280,25 @@ func Test_P1_Shop_Statistics_ChannelSales_HappyPath(t *testing.T) {
 		fixture.WithStaffIsSuper(1),
 	)
 
+	// Seed a scan order (source=5) with payment_amount=100, no refund
+	bill1 := fixture.SeedSaleBill(t, db, fixture.WithSaleBillFinishTime(1750000000))
+	fixture.SeedStatisticsSale(t, db,
+		fixture.WithStatisticsSaleBillUUID(bill1.UUID),
+		fixture.WithStatisticsSaleSource(5), // scan
+		fixture.WithStatisticsSalePaymentAmount(100),
+		fixture.WithStatisticsSaleCompleteTime(1750000000),
+	)
+
+	// Seed a fully refunded scan order (source=5): payment=50, refund=50 → net amount = 0
+	bill2 := fixture.SeedSaleBill(t, db, fixture.WithSaleBillFinishTime(1750000001))
+	fixture.SeedStatisticsSale(t, db,
+		fixture.WithStatisticsSaleBillUUID(bill2.UUID),
+		fixture.WithStatisticsSaleSource(5), // scan
+		fixture.WithStatisticsSalePaymentAmount(50),
+		fixture.WithStatisticsSaleRefundAmount(50),
+		fixture.WithStatisticsSaleCompleteTime(1750000001),
+	)
+
 	fixture.SetupWireMock(t)
 
 	token := fixture.GenerateShopToken(t, companyUUID, mustParseString(staff.UUID))
@@ -293,11 +312,26 @@ func Test_P1_Shop_Statistics_ChannelSales_HappyPath(t *testing.T) {
 
 	// Verify "store_scan" field exists (renamed from "scan")
 	if _, ok := data["store_scan"]; !ok {
-		t.Errorf("expected 'store_scan' field in response data, got keys: %v", mapKeys(data))
+		t.Fatalf("expected 'store_scan' field in response data, got keys: %v", mapKeys(data))
 	}
 	// Verify old "scan" field does NOT exist
 	if _, ok := data["scan"]; ok {
 		t.Errorf("unexpected 'scan' field in response data; should have been renamed to 'store_scan'")
+	}
+
+	// Verify store_scan.min_order_amount = 0 (the fully refunded order)
+	var storeScan struct {
+		MinOrderAmount float64 `json:"min_order_amount"`
+		TotalOrderNum  int64   `json:"total_order_num"`
+	}
+	if err := json.Unmarshal(data["store_scan"], &storeScan); err != nil {
+		t.Fatalf("failed to parse store_scan: %v", err)
+	}
+	if storeScan.TotalOrderNum != 2 {
+		t.Errorf("expected store_scan.total_order_num=2, got %d", storeScan.TotalOrderNum)
+	}
+	if storeScan.MinOrderAmount != 0 {
+		t.Errorf("expected store_scan.min_order_amount=0 (fully refunded order), got %f", storeScan.MinOrderAmount)
 	}
 }
 
