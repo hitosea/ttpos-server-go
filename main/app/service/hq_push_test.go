@@ -254,8 +254,7 @@ func createShopDB(t *testing.T) *gorm.DB {
 		safety_stock REAL,
 		allow_negative_stock INTEGER DEFAULT 0,
 		headquarter_uuid INTEGER DEFAULT 0,
-		warehouse_uuid INTEGER DEFAULT 0,
-		allow_substore_visible INTEGER DEFAULT 0
+		warehouse_uuid INTEGER DEFAULT 0
 	)`)
 	db.Exec(`CREATE TABLE ttpos_material_unit (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
