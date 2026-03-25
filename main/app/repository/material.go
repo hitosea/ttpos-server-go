@@ -34,11 +34,10 @@ type IMaterialRepo interface {
 	UpdateMaterial(material model.Material) error
 	UpdateMaterialData(data map[string]any, opts ...DBOption) error
 	UpdateMaterialStatus(uuid uint64, status bool) error
-	UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error // 更新物品子店可见性
-	UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error    // 更新物品负库存设置
-	ClearMaterialBarcodeValue(uuid uint64) error                                    // 清空物品条形码值
-	ClearMaterialInternalCode(uuid uint64) error                                    // 清空物品内部编码
-	ClearMaterialSafetyStock(uuid uint64) error                                     // 清空物品安全库存
+	UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error // 更新物品负库存设置
+	ClearMaterialBarcodeValue(uuid uint64) error                                 // 清空物品条形码值
+	ClearMaterialInternalCode(uuid uint64) error                                 // 清空物品内部编码
+	ClearMaterialSafetyStock(uuid uint64) error                                  // 清空物品安全库存
 	DeleteMaterial(uuid uint64) error
 	GetMaterialCategory(opts ...DBOption) (*model.MaterialCategory, error)
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
@@ -51,7 +50,6 @@ type IMaterialRepo interface {
 	GetMaterialCategoryList(opts ...DBOption) ([]model.MaterialCategory, error)
 	GetMaterialCategoryListWithDeleted(opts ...DBOption) ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error                       // 批量修改物品状态
-	UpdateMaterialVisibleBatch(uuids []uint64, visible int) error                     // 批量更新物品可见性
 	UpdateMaterialStockNum(materials []*model.Material) error                         // 更新物品库存数量
 	AddActualSaleNum(materialUuid uint64, saleNum float64) error                      // 增加材料销量
 	SubActualSaleNum(materialUuid uint64, saleNum float64) error                      // 减少材料销量
@@ -78,7 +76,6 @@ type IMaterialRepo interface {
 	WithUnit() DBOption
 	WithMultiLanguageName(opts ...DBOption) DBOption
 	WithNotBaseUnitList(opts ...DBOption) DBOption
-	WhereAllowSubstoreVisible(visible int) DBOption         // 可见性过滤选项方法
 	WhereUuidInWarehouseItem(warehouseUuid uint64) DBOption // 物品UUID必须在仓库物品列表中
 }
 
@@ -127,13 +124,6 @@ func (r *MaterialRepoImpl) WithNotBaseUnitList(opts ...DBOption) DBOption {
 			}
 			return db
 		}).Preload("NotBaseUnitList.Unit")
-	}
-}
-
-// WhereAllowSubstoreVisible 可见性过滤选项方法
-func (r *MaterialRepoImpl) WhereAllowSubstoreVisible(visible int) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("(allow_substore_visible = ? or headquarter_uuid = ?)", visible, 0)
 	}
 }
 
@@ -494,14 +484,6 @@ func (r *MaterialRepoImpl) UpdateMaterialStatus(uuid uint64, status bool) error 
 	return nil
 }
 
-// UpdateMaterialAllowSubstoreVisible 更新物品子店可见性
-func (r *MaterialRepoImpl) UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error {
-	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("allow_substore_visible", allowSubstoreVisible).Error; err != nil {
-		return errors.WithMessage(err, "更新物品子店可见性失败")
-	}
-	return nil
-}
-
 // UpdateMaterialAllowNegativeStock 更新物品负库存设置
 func (r *MaterialRepoImpl) UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error {
 	value := 0
@@ -572,14 +554,6 @@ func (r *MaterialRepoImpl) GetMaterialCategoryListWithDeleted(opts ...DBOption) 
 func (r *MaterialRepoImpl) UpdateMaterialStatusBatch(uuids []uint64, status int) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid IN (?)", uuids).Update("status", status).Error; err != nil {
 		return errors.WithMessage(err, "批量修改物品状态失败")
-	}
-	return nil
-}
-
-// UpdateMaterialVisibleBatch 批量更新物品可见性
-func (r *MaterialRepoImpl) UpdateMaterialVisibleBatch(uuids []uint64, visible int) error {
-	if err := r.db.Model(&model.Material{}).Where("uuid IN (?)", uuids).Update("allow_substore_visible", visible).Error; err != nil {
-		return errors.WithMessage(err, "批量更新物品可见性失败")
 	}
 	return nil
 }
