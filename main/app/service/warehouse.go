@@ -297,7 +297,7 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 	}
 	exists = checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   warehouse.Uuid,
-		Source: constant.CheckNameSourceCategory,
+		Source: constant.CheckNameSourceWarehouse,
 		Names:  names,
 	})
 	if exists {
