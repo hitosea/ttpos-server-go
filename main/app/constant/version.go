@@ -21,5 +21,6 @@ const (
 	// 统计模块最低版本号
 	ClientVersionV2196 = "2.19.6"
 	// 数据管理订单列表优化版本
-	ClientVersionV2200 = "2.20.0"
+	ClientVersionV2200  = "2.20.0"
+	ClientVersionV22014 = "2.20.14"
 )

@@ -335,7 +335,7 @@ func RegisterStockReconciliationHandlers(router gin.IRouter, dbm *database.DBMan
 		stockReconciliationSrv: stockReconciliationSrv,
 	}
 
-	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
+	privateApi := router.Group("", middleware.MinVersionCheck(settingSrv, middleware.TypeStockReconciliation), middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/stock_reconciliation/list", wrapper.GetStockReconciliationList)         // 获取盘点单列表
 		privateApi.GET("/stock_reconciliation/detail", wrapper.GetStockReconciliationDetail)     // 获取盘点单详情（包含批注列表）

@@ -125,16 +125,18 @@ type shopAppSetting struct {
 
 // 版本检查模块名称常量，与 middleware.VersionCheckType 值一致
 const (
-	ModulePurchaseOrder = "purchase_order"
-	ModuleTransferOrder = "transfer_order"
-	ModuleStatistics    = "statistics"
+	ModulePurchaseOrder       = "purchase_order"
+	ModuleTransferOrder       = "transfer_order"
+	ModuleStatistics          = "statistics"
+	ModuleStockReconciliation = "stock_reconciliation"
 )
 
 // defaultModuleMinVersions 各模块默认最小版本号
 var defaultModuleMinVersions = map[string]string{
-	ModulePurchaseOrder: constant.ClientVersionV2160,
-	ModuleTransferOrder: constant.ClientVersionV2090,
-	ModuleStatistics:    constant.ClientVersionV2196,
+	ModulePurchaseOrder:       constant.ClientVersionV2160,
+	ModuleTransferOrder:       constant.ClientVersionV2090,
+	ModuleStatistics:          constant.ClientVersionV2196,
+	ModuleStockReconciliation: constant.ClientVersionV22014,
 }
 
 // GetShopAppMinVersion 获取指定模块的最小版本号
