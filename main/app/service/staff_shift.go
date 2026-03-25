@@ -24,6 +24,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
@@ -199,17 +200,37 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 	// 先付后下单模式下，自动接单时可能因无可用班次而留空，此时补充班次信息
 	utils.Go(func() {
 		saleBillRepo := repository.NewSaleBillRepo(db)
-		count, err := saleBillRepo.BatchAssignShiftToMemberDineInOrders(shiftLog.ShiftNo, staff.Uuid, staff.GetUserName())
+		saleBillUuids, err := saleBillRepo.BatchAssignShiftToMemberDineInOrders(shiftLog.ShiftNo, staff.Uuid, staff.GetUserName())
 		if err != nil {
 			logger.Logger.Warn("批量分配会员端堂食订单班次失败",
 				zap.Error(err),
+				zap.Uint64("company_uuid", company.Uuid),
 				zap.String("shiftNo", shiftLog.ShiftNo),
 				zap.Uint64("staffUuid", staff.Uuid))
-		} else if count > 0 {
-			logger.Logger.Info("批量分配会员端堂食订单班次成功",
-				zap.Int64("count", count),
-				zap.String("shiftNo", shiftLog.ShiftNo),
-				zap.Uint64("staffUuid", staff.Uuid))
+			return
+		}
+		if len(saleBillUuids) == 0 {
+			return
+		}
+		logger.Logger.Info("批量分配会员端堂食订单班次成功",
+			zap.Int("count", len(saleBillUuids)),
+			zap.Uint64("company_uuid", company.Uuid),
+			zap.String("shiftNo", shiftLog.ShiftNo),
+			zap.Uint64("staffUuid", staff.Uuid))
+
+		// 为每个被更新的订单发布统计事件，刷新营业数据
+		for _, saleBillUuid := range saleBillUuids {
+			utils.Go(func() {
+				ctxCopy := ctx.Copy()
+				ctxCopy.SetDB(db)
+				ctxCopy.SetCompanyUuid(company.Uuid)
+				event.NewSystemBus().PublishStatisticsSaleEvent(event.StatisticsSalePayload{
+					BasePayload: event.BasePayload{
+						Ctx: ctxCopy,
+					},
+					SaleBillUuid: saleBillUuid,
+				})
+			})
 		}
 	})
 

@@ -454,15 +454,17 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 				PayType:     payTypes,
 			})
 		})
-		// 外送订单完结时, 发布"统计"事件
-		utils.Go(func() {
-			event.NewSystemBus().PublishStatisticsSaleEvent(event.StatisticsSalePayload{
-				BasePayload: event.BasePayload{ // 统计
-					Ctx: ctx,
-				},
-				SaleBillUuid: saleBillUuid,
+		if saleBill.DutyNo != "" {
+			// DutyNo 非空时发布统计事件；为空时跳过，待班次分配后由 CreateWorkingLog 触发
+			utils.Go(func() {
+				event.NewSystemBus().PublishStatisticsSaleEvent(event.StatisticsSalePayload{
+					BasePayload: event.BasePayload{ // 统计
+						Ctx: ctx,
+					},
+					SaleBillUuid: saleBillUuid,
+				})
 			})
-		})
+		}
 	}
 
 	// 会员订单接单成功后，同步到 ERP（有接单场景）
