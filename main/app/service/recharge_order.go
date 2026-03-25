@@ -591,12 +591,8 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 				}
 			} else {
 				// POS Invoice 模式：旧班次（有ERP开关帐）继续走 POS Invoice
-				invoiceResp, err := s.SavePosInvoice(ctx, &order, tx)
+				_, err := s.SavePosInvoice(ctx, &order, tx)
 				if err != nil {
-					return errors.WithMessage(err)
-				}
-				order.ErpProductsInvoiceName = invoiceResp.ProductsInvoiceName
-				if err := repository.NewMemberRechargeOrderRepo(tx).UpdateErpProductsInvoiceName(order.Uuid, order.ErpProductsInvoiceName); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
@@ -778,11 +774,13 @@ func (s *rechargeOrderSrv) SavePosInvoice(ctx context.Context, memberRechargeOrd
 	if customerUuid == "0" {
 		customerUuid = ""
 	}
-	// 根据反结账次数生成OrderNo
+
+	// 根据反结账次数生成 OrderNo
 	orderNo := memberRechargeOrder.OrderNo
-	// if memberRechargeOrder.ReverseSettleCount > 0 {
-	// 	orderNo = fmt.Sprintf("%s-%d", memberRechargeOrder.OrderNo, memberRechargeOrder.ReverseSettleCount)
-	// }
+	if memberRechargeOrder.ReverseSettleCount > 0 {
+		orderNo = fmt.Sprintf("%s-%d", memberRechargeOrder.OrderNo, memberRechargeOrder.ReverseSettleCount)
+	}
+
 	erpSrv := erp.NewIErpSrv(s.dbm)
 	param := req.SavePosInvoiceReq{
 		SiteCode:         companySetting.ErpnextSiteCode,
@@ -1750,12 +1748,12 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
 			erpSrv := erp.NewIErpSrv(s.dbm)
-			if companySetting.IsErpSalesInvoiceMode() {
+			cancelOrderNo := order.OrderNo
+			if order.ReverseSettleCount > 0 {
+				cancelOrderNo = fmt.Sprintf("%s-%d", order.OrderNo, order.ReverseSettleCount)
+			}
+			if order.ErpProductsInvoiceName != "" {
 				// Sales Invoice 模式: 异步取消 SI + PE
-				cancelOrderNo := order.OrderNo
-				if order.ReverseSettleCount > 0 {
-					cancelOrderNo = fmt.Sprintf("%s-%d", order.OrderNo, order.ReverseSettleCount)
-				}
 				var peNames []string
 				if order.ErpPaymentEntryNames != "" {
 					_ = json.Unmarshal([]byte(order.ErpPaymentEntryNames), &peNames)
@@ -1784,7 +1782,6 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				if shiftLog.IsHandedOver() {
 					return errors.New("当前班次已交班，无法保存发票")
 				}
-				cancelOrderNo := order.OrderNo
 				err = erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
 					ProductsInvoiceName: order.ErpProductsInvoiceName,
 					OpenPosEntryName:    shiftLog.ErpnextOpenPosEntryName,
