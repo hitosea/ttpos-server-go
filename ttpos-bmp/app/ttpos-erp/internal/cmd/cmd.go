@@ -9,6 +9,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/callback"
 	"ttpos-bmp/app/ttpos-erp/internal/logic/erpnext"
+	"ttpos-bmp/app/ttpos-erp/internal/middleware"
 	"ttpos-bmp/internal/pkg/otlp"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
@@ -18,8 +19,32 @@ import (
 	"github.com/gogf/gf/v2/os/gcmd"
 
 	"ttpos-bmp/app/ttpos-erp/internal/controller/hello"
+	"ttpos-bmp/app/ttpos-erp/internal/dao"
+	"ttpos-bmp/app/ttpos-erp/internal/model/entity"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 )
+
+// resolveSiteCodes 解析 siteCode 参数，"all" 时查库返回所有站点编码
+func resolveSiteCodes(ctx context.Context, siteCodeOpt string) ([]string, error) {
+	if siteCodeOpt != "all" {
+		return []string{siteCodeOpt}, nil
+	}
+	var sites []*entity.Site
+	if err := dao.Site.Ctx(ctx).Scan(&sites); err != nil {
+		return nil, gerror.Wrap(err, "查询所有站点失败")
+	}
+	codes := make([]string, 0, len(sites))
+	for _, s := range sites {
+		if s.SiteCode != "" {
+			codes = append(codes, s.SiteCode)
+		}
+	}
+	if len(codes) == 0 {
+		return nil, gerror.New("erp_site 表中无可用站点")
+	}
+	g.Log().Infof(ctx, "共发现 %d 个站点: %v", len(codes), codes)
+	return codes, nil
+}
 
 var (
 	Main = &gcmd.Command{
@@ -38,7 +63,11 @@ var (
 				group.Bind(
 					hello.NewV1(),
 				)
-				group.ALL("/callback", callback.NewV1())
+				// callback 路由（API path 已含 /callback 前缀，此处不重复）
+				group.Group("/", func(group *ghttp.RouterGroup) {
+					group.Middleware(middleware.WebhookAuth)
+					group.Bind(callback.NewV1())
+				})
 			})
 
 			s.Run()
@@ -48,26 +77,32 @@ var (
 
 	ErpMigrate = &gcmd.Command{
 		Name:  "migrate",
-		Usage: "migrate --siteCode 1 --dirBase ./manifest/erp-migrate/v2.5",
-		Brief: "执行ERP数据迁移，初始化自定义字段、客户和支付方式",
+		Usage: "migrate --siteCode all --dirBase ./manifest/erp-migrate/v2.5",
+		Brief: "执行ERP数据迁移，支持 --siteCode all 对所有站点执行",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			g.Log().Info(ctx, "开始执行ERP数据迁移...")
 
-			// 初始化自定义字段
-			g.Log().Infof(ctx, "正在初始化自定义字段... %v", parser)
-			siteCode := parser.GetOpt("siteCode", "1").String()
+			siteCodeOpt := parser.GetOpt("siteCode", "all").String()
 			dirBase := parser.GetOpt("dirBase", "./manifest/erp-migrate/v2.5").String()
-			ctx = grpcx.Ctx.NewIncoming(ctx, g.Map{
-				consts.ContextSiteCode: siteCode,
-			})
 
-			if err := service.Setup().InitErpDocTypeWithDirname(ctx, dirBase); err != nil {
-				g.Log().Error(ctx, "初始化DocType失败", err)
+			siteCodes, err := resolveSiteCodes(ctx, siteCodeOpt)
+			if err != nil {
 				return err
 			}
 
+			for _, sc := range siteCodes {
+				g.Log().Infof(ctx, "========== 站点 [%s] 开始迁移 ==========", sc)
+				siteCtx := grpcx.Ctx.NewIncoming(ctx, g.Map{
+					consts.ContextSiteCode: sc,
+				})
+				if err := service.Setup().InitErpDocTypeWithDirname(siteCtx, dirBase); err != nil {
+					g.Log().Errorf(ctx, "站点 [%s] 迁移失败: %v", sc, err)
+					return err
+				}
+				g.Log().Infof(ctx, "========== 站点 [%s] 迁移完成 ==========", sc)
+			}
+
 			g.Log().Info(ctx, "ERP数据迁移执行完成!")
-			// 操作完成后退出
 			os.Exit(0)
 			return nil
 		},
@@ -75,16 +110,18 @@ var (
 
 	ErpAllMigrate = &gcmd.Command{
 		Name:  "migrate-all",
-		Usage: "migrate-all --siteCode 1 --dirBase ./manifest/erp-migrate",
-		Brief: "遍历所有版本目录并执行ERP数据迁移",
+		Usage: "migrate-all --siteCode all --dirBase ./manifest/erp-migrate",
+		Brief: "遍历所有版本目录并执行ERP数据迁移，支持 --siteCode all",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			g.Log().Info(ctx, "开始执行ERP全量迁移...")
 
-			siteCode := parser.GetOpt("siteCode", "1").String()
+			siteCodeOpt := parser.GetOpt("siteCode", "all").String()
 			baseDir := parser.GetOpt("dirBase", "./manifest/erp-migrate").String()
-			ctx = grpcx.Ctx.NewIncoming(ctx, g.Map{
-				consts.ContextSiteCode: siteCode,
-			})
+
+			siteCodes, err := resolveSiteCodes(ctx, siteCodeOpt)
+			if err != nil {
+				return err
+			}
 
 			entries, readErr := os.ReadDir(baseDir)
 			if readErr != nil {
@@ -100,13 +137,20 @@ var (
 			}
 			sort.Strings(dirs)
 
-			for _, d := range dirs {
-				dirPath := fmt.Sprintf("%s/%s", baseDir, d)
-				g.Log().Infof(ctx, "执行版本目录: %s", dirPath)
-				if err := service.Setup().InitErpDocTypeWithDirname(ctx, dirPath); err != nil {
-					g.Log().Errorf(ctx, "迁移失败: %s", err)
-					return err
+			for _, sc := range siteCodes {
+				g.Log().Infof(ctx, "========== 站点 [%s] 开始全量迁移 ==========", sc)
+				siteCtx := grpcx.Ctx.NewIncoming(ctx, g.Map{
+					consts.ContextSiteCode: sc,
+				})
+				for _, d := range dirs {
+					dirPath := fmt.Sprintf("%s/%s", baseDir, d)
+					g.Log().Infof(ctx, "站点 [%s] 执行版本目录: %s", sc, dirPath)
+					if err := service.Setup().InitErpDocTypeWithDirname(siteCtx, dirPath); err != nil {
+						g.Log().Errorf(ctx, "站点 [%s] 迁移失败: %s", sc, err)
+						return err
+					}
 				}
+				g.Log().Infof(ctx, "========== 站点 [%s] 全量迁移完成 ==========", sc)
 			}
 
 			g.Log().Info(ctx, "ERP全量迁移执行完成!")

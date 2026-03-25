@@ -520,6 +520,34 @@ func (h *OrderHandler) OrderInvoiceInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderProductQuotation 订单商品报价
+// @Summary 订单商品报价
+// @Description 计算商品的价格明细（不校验库存、不写数据库），用于在下单前展示报价信息
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderProductQuotationReq true "报价参数"
+// @Success 200 {object} dto.Response{data=resp.OrderProductQuotationResp} "报价结果"
+// @Failure 400 {object} nil "错误请求"
+// @Router /cashier/order/product_quotation [post]
+func (h *OrderHandler) OrderProductQuotation(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	request := req.OrderProductQuotationReq{}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		helper.HandleValidationError(c, err, request, nil)
+		return
+	}
+	// 报价计算
+	res, err := h.orderSrv.OrderProductQuotation(ctx, request)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // RegisterOrderHandlers 注册收银订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -546,21 +574,22 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/order/list", wrapper.GetCashierOrderList)                // 获取订单列表
-		privateApi.GET("/order/info", wrapper.GetOrderInfo)                       // 获取订单详情
-		privateApi.POST("/order/cancel", wrapper.CancelOrder)                     // 取消订单
-		privateApi.GET("/order/return", wrapper.ReturnOrderInfo)                  // 获取退款弹窗信息
-		privateApi.POST("/order/return", wrapper.ReturnOrder)                     // 整单退款或部分退款
-		privateApi.POST("/order/re_return", wrapper.ReReturnOrder)                // 重新退款
-		privateApi.GET("/order/reverse_settle", wrapper.ReverseSettleInfo)        // 获取反结账弹窗信息
-		privateApi.POST("/order/reverse_settle", wrapper.ReverseSettle)           // 反结账
-		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)                   // 删除订单
-		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)               // 判断订单是否可关闭
-		privateApi.POST("/order/print", wrapper.OrderPrint)                       // 打印
-		privateApi.POST("/order/print/invoice", wrapper.OrderPrintInvoice)        // 打印发票
-		privateApi.GET("/order/invoice", wrapper.OrderInvoiceInfo)                // 获取发票信息
-		privateApi.POST("/order/check_authorization", wrapper.CheckAuthorization) // 检查授权
-		privateApi.POST("/order/verify_password", wrapper.VerifyPassword)         // 密码验证
-		privateApi.GET("/order/query_staff", wrapper.QueryStaffByContact)         // 根据邮箱或手机号查询员工
+		privateApi.GET("/order/list", wrapper.GetCashierOrderList)                 // 获取订单列表
+		privateApi.GET("/order/info", wrapper.GetOrderInfo)                        // 获取订单详情
+		privateApi.POST("/order/cancel", wrapper.CancelOrder)                      // 取消订单
+		privateApi.GET("/order/return", wrapper.ReturnOrderInfo)                   // 获取退款弹窗信息
+		privateApi.POST("/order/return", wrapper.ReturnOrder)                      // 整单退款或部分退款
+		privateApi.POST("/order/re_return", wrapper.ReReturnOrder)                 // 重新退款
+		privateApi.GET("/order/reverse_settle", wrapper.ReverseSettleInfo)         // 获取反结账弹窗信息
+		privateApi.POST("/order/reverse_settle", wrapper.ReverseSettle)            // 反结账
+		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)                    // 删除订单
+		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)                // 判断订单是否可关闭
+		privateApi.POST("/order/print", wrapper.OrderPrint)                        // 打印
+		privateApi.POST("/order/print/invoice", wrapper.OrderPrintInvoice)         // 打印发票
+		privateApi.GET("/order/invoice", wrapper.OrderInvoiceInfo)                 // 获取发票信息
+		privateApi.POST("/order/check_authorization", wrapper.CheckAuthorization)  // 检查授权
+		privateApi.POST("/order/verify_password", wrapper.VerifyPassword)          // 密码验证
+		privateApi.GET("/order/query_staff", wrapper.QueryStaffByContact)          // 根据邮箱或手机号查询员工
+		privateApi.POST("/order/product_quotation", wrapper.OrderProductQuotation) // 订单商品报价
 	}
 }

@@ -18,3 +18,25 @@ cli.install:
   		echo "GoFame CLI is not installed, start proceeding auto installation..."; \
 		make cli; \
 	fi;
+
+
+# Install protobuf tools with fixed versions.
+.PHONY: protobuf.install
+protobuf.install:
+	@echo "Installing protobuf tools with fixed versions..."
+	@bash hack/install-protobuf-tools.sh
+
+
+# Check protobuf tools versions.
+.PHONY: protobuf.version
+protobuf.version:
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "Protobuf Tools Version Check"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo -n "protoc:             "
+	@protoc --version 2>/dev/null || echo "NOT INSTALLED"
+	@echo -n "protoc-gen-go:      "
+	@protoc-gen-go --version 2>/dev/null || echo "NOT INSTALLED"
+	@echo -n "protoc-gen-go-grpc: "
+	@protoc-gen-go-grpc --version 2>/dev/null || echo "NOT INSTALLED"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

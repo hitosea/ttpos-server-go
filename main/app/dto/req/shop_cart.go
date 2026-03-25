@@ -84,13 +84,21 @@ func (req *OrderCartProductAddReq) IsH5Product() bool {
 	return req.isH5Product
 }
 
+// OrderProductQuotationReq 订单商品报价请求参数
+type OrderProductQuotationReq struct {
+	SaleBillUuid  uint64          `json:"sale_bill_uuid" binding:"required"`      // 销售账单UUID
+	SaleOrderUuid uint64          `json:"sale_order_uuid" binding:"required"`     // 销售订单UUID
+	Products      []ProductParams `json:"products" binding:"required,min=1,dive"` // 商品信息列表
+}
+
 // ProductAddReq 添加商品请求参数
 type ProductAddReq struct {
-	SaleBillUuid  uint64          `json:"sale_bill_uuid"`  // 销售账单ID。
-	SaleOrderUuid uint64          `json:"sale_order_uuid"` // 销售订单ID。
-	Products      []ProductParams `json:"products"`        // 商品信息列表·
-	IsH5Product   bool            `json:"is_h5_product"`   // 是否是H5商品
-	IsMemberAdd   bool            `json:"is_member_add"`   // 是否是会员端加购
+	SaleBillUuid   uint64          `json:"sale_bill_uuid"`    // 销售账单ID。
+	SaleOrderUuid  uint64          `json:"sale_order_uuid"`   // 销售订单ID。
+	Products       []ProductParams `json:"products"`          // 商品信息列表·
+	IsH5Product    bool            `json:"is_h5_product"`     // 是否是H5商品
+	IsMemberAdd    bool            `json:"is_member_add"`     // 是否是会员端加购
+	IsMemberDineIn bool            `json:"is_member_dine_in"` // 是否是会员端堂食下单
 }
 
 type GetProductPackageDetailReq struct {
@@ -118,12 +126,15 @@ func (req *TabletOrderCartProductAddReq) FormatPackageSubProductParams() {
 // ProductParams 商品参数
 type ProductParams struct {
 	FlavorProductBomUuid            uint64           `json:"flavor_product_bom_uuid"`             // 商品规格uuid
+	FlavorflavUuid                  uint64           `json:"flavor_uuid"`                         // 商品规格uuid,FlavorProductBomUuid的别名,只有会员端堂食订单创建使用
 	Num                             float64          `json:"num"  binding:"required"`             // 商品份数
 	UnitNum                         float64          `json:"unit_num"`                            // 单位数量. 目前只有平板的加购并送厨使用该字段
 	Price                           *float64         `json:"price"`                               // 商品价格，商品单价。当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格。可选，不传时，不进行价格校验
 	IsBuffet                        *bool            `json:"is_buffet"`                           // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
 	SauceProductBomUuidList         []uint64         `json:"sauce_product_bom_uuid_list"`         // 加料信息
+	SauceUuidList                   []uint64         `json:"sauce_uuid"`                          // 加料信息,SauceProductBomUuidList的别名,只有会员端堂食订单创建使用
 	ProductPackageAttributeUuidList []uint64         `json:"product_package_attribute_uuid_list"` // 属性信息
+	AttributeUuidList               []uint64         `json:"attribute_uuid"`                      // 属性信息,ProductPackageAttributeUuidList的别名,只有会员端堂食订单创建使用
 	AddPrice                        float64          `json:"add_price"`                           // 加价金额
 	Operation                       string           `json:"operation"`                           // 操作类型。add: 加购，sub: 减购
 	MustPlanUuid                    uint64           `json:"must_plan_uuid"`                      // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
@@ -141,6 +152,21 @@ type ProductParams struct {
 	isPackageSubProduct bool            // 是否是套餐子商品
 	packageUuid         uint64          // 套餐uuid,用于标注套餐子商品的套餐商品（sale_order_product）的uuid
 	BatchTagUuid        uint64          `json:"batch_tag_uuid"` // 分批类型UUID, 可选（前置模式时使用）
+}
+
+// ApplyCompatibleFields 将兼容字段赋值到标准字段
+// 会员端堂食订单创建时,客户端传 flavor_uuid(FlavorflavUuid),需要赋值到 FlavorProductBomUuid
+// 会员端堂食订单创建时,客户端传 sauce_uuid(SauceUuidList),需要赋值到 SauceProductBomUuidList
+func (req *ProductParams) ApplyCompatibleFields() {
+	if req.FlavorflavUuid != 0 {
+		req.FlavorProductBomUuid = req.FlavorflavUuid
+	}
+	if len(req.SauceUuidList) > 0 {
+		req.SauceProductBomUuidList = req.SauceUuidList
+	}
+	if len(req.AttributeUuidList) > 0 {
+		req.ProductPackageAttributeUuidList = req.AttributeUuidList
+	}
 }
 
 func (req *ProductParams) SetIsPackageProduct(subProducts []ProductParams) {

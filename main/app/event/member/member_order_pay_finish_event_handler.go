@@ -109,7 +109,7 @@ func AutoAcceptMemberSaleOrder(payload event.PayFinishMemberSaleOrderPayload) bo
 			if err := orderSrv.AcceptMemberSaleOrder(payload.Ctx, req.AcceptOrderReq{
 				MemberSaleOrderUuid: payload.MemberSaleOrderUuid,
 			}, service.WithIsAutoAccept()); err != nil {
-				logger.Logger.Info("SubscribePayFinishMemberSaleOrderEvent process, AcceptMemberSaleOrder failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
+				logger.Logger.Error("SubscribePayFinishMemberSaleOrderEvent process, AcceptMemberSaleOrder failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
 				return false
 			}
 			return true

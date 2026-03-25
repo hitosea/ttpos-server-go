@@ -3,6 +3,7 @@ package repository
 import (
 	"math/rand"
 	"strconv"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -28,6 +29,7 @@ type IWarehouseFormRepo interface {
 	UpdateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error                        // 更新出库单明细记录
 	GenerateWarehouseFormNo(timezone string) string                                               // 生成入库单编号
 	GenerateWarehouseOutFormNo(timezone string) string                                            // 生成出库单编号
+	SoftDeleteWarehouseOutFormItems(uuids []uint64) (int64, error)                                // 批量软删除出库单明细
 }
 
 type IWarehouseFormQueryRepo interface {
@@ -351,4 +353,15 @@ func (r *warehouseFormRepoImpl) GetValidWarehouseOutFormItem(startTime, endTime 
 		return nil, errors.WithMessage(err)
 	}
 	return warehouseOutFormItems, nil
+}
+
+// SoftDeleteWarehouseOutFormItems 批量软删除出库单明细，返回影响行数
+func (r *warehouseFormRepoImpl) SoftDeleteWarehouseOutFormItems(uuids []uint64) (int64, error) {
+	if len(uuids) == 0 {
+		return 0, nil
+	}
+	result := r.db.Model(&model.WarehouseOutFormItem{}).
+		Where("uuid IN (?)", uuids).
+		Update("delete_time", time.Now().Unix())
+	return result.RowsAffected, result.Error
 }

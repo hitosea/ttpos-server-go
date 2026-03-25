@@ -64,6 +64,7 @@ type UnprocessedH5OrderItem struct {
 	DeskNo       string `json:"desk_no"`        // 桌台编号
 	Status       uint   `json:"status"`         // 订单状态, 0-未下单 1-未接单 2-已接单 3-已拒单
 	IsAutoAccept bool   `json:"is_auto_accept"` // 是否自动接单
+	CanReject    bool   `json:"can_reject"`     // 是否可以拒单
 }
 type UnprocessedMemberSaleOrderItem struct {
 	Uuid         uint64 `json:"uuid"`           // 外送订单Uuid

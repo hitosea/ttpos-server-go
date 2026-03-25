@@ -102,6 +102,11 @@ type CountSaleResp struct {
 	TotalInstantOrderTakeawayAmount float64 `json:"total_instant_order_takeaway_amount"` // 即时订单金额（外卖）
 	TotalTakeoutOrderNum            int64   `json:"total_takeout_order_num"`             // 总外送订单数
 	TotalTakeoutOrderAmount         float64 `json:"total_takeout_order_amount"`          // 总外送订单金额
+	TotalScanOrderNum               int64   `json:"total_scan_order_num"`                // 扫码订单数量
+	TotalScanOrderAmount            float64 `json:"total_scan_order_amount"`             // 扫码订单金额
+	MinScanOrderAmount              float64 `json:"min_scan_order_amount"`               // 最小扫码订单金额
+	MaxScanOrderAmount              float64 `json:"max_scan_order_amount"`               // 最大扫码订单金额
+	AvgScanOrderAmount              float64 `json:"avg_scan_order_amount"`               // 平均扫码订单金额
 	TotalRechargeAmount             float64 `json:"total_recharge_amount"`               // 总充值金额
 	MinOrderAmount                  float64 `json:"min_order_amount"`                    // 最小订单金额
 	MaxOrderAmount                  float64 `json:"max_order_amount"`                    // 最大订单金额
@@ -209,6 +214,11 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		TotalInstantOrderTakeawayAmount: saleData.TotalInstantOrderTakeawayAmount.Float64,
 		TotalTakeoutOrderNum:            saleData.TotalTakeoutOrderNum.Int64,
 		TotalTakeoutOrderAmount:         saleData.TotalTakeoutOrderAmount.Float64,
+		TotalScanOrderNum:               saleData.TotalScanOrderNum.Int64,
+		TotalScanOrderAmount:            saleData.TotalScanOrderAmount.Float64,
+		MinScanOrderAmount:              saleData.MinScanOrderAmount.Float64,
+		MaxScanOrderAmount:              saleData.MaxScanOrderAmount.Float64,
+		AvgScanOrderAmount:              saleData.AvgScanOrderAmount.Float64,
 		MinOrderAmount:                  mergeSaleData.MinOrderAmount,
 		MaxOrderAmount:                  mergeSaleData.MaxOrderAmount,
 		AvgOrderAmount:                  mergeSaleData.AvgOrderAmount,
@@ -295,6 +305,11 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			totalMealNum                    int64
 			totalInstantOrderNum            int64
 			totalTakeoutOrderNum            int64
+			totalScanOrderNum               int64
+			totalScanOrderAmount            decimal.Decimal
+			minScanOrderAmount              decimal.Decimal
+			maxScanOrderAmount              decimal.Decimal
+			avgScanOrderAmount              decimal.Decimal
 			// Grab 统计指标
 			grabOrderNum       int64
 			grabMinOrderAmount decimal.Decimal
@@ -410,6 +425,11 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			totalMealNum = saleResult.TotalMealNum.Int64
 			totalInstantOrderNum = saleResult.TotalInstantOrderNum.Int64
 			totalTakeoutOrderNum = saleResult.TotalTakeoutOrderNum.Int64
+			totalScanOrderNum = saleResult.TotalScanOrderNum.Int64
+			totalScanOrderAmount = decimal.NewFromFloat(saleResult.TotalScanOrderAmount.Float64)
+			minScanOrderAmount = decimal.NewFromFloat(saleResult.MinScanOrderAmount.Float64).Round(2)
+			maxScanOrderAmount = decimal.NewFromFloat(saleResult.MaxScanOrderAmount.Float64).Round(2)
+			avgScanOrderAmount = decimal.NewFromFloat(saleResult.AvgScanOrderAmount.Float64).Round(2)
 		}
 
 		// 累加 Grab 的订单数和金额到总的统计中（参考 MergeTakeoutStatistics 方法）
@@ -581,6 +601,11 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 				MinTakeoutOrderAmount:           minTakeoutOrderAmount.InexactFloat64(),
 				MaxTakeoutOrderAmount:           maxTakeoutOrderAmount.InexactFloat64(),
 				AvgTakeoutOrderAmount:           avgTakeoutOrderAmount.InexactFloat64(),
+				TotalScanOrderNum:               totalScanOrderNum,
+				TotalScanOrderAmount:            totalScanOrderAmount.InexactFloat64(),
+				MinScanOrderAmount:              minScanOrderAmount.InexactFloat64(),
+				MaxScanOrderAmount:              maxScanOrderAmount.InexactFloat64(),
+				AvgScanOrderAmount:              avgScanOrderAmount.InexactFloat64(),
 				// Grab 平台统计指标
 				GrabOrderNum:       grabOrderNum,
 				GrabMinOrderAmount: grabMinOrderAmount.InexactFloat64(),
@@ -1132,6 +1157,7 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 			TimeEnd:           req.QueryEndTime,
 			StaffShiftLogUuid: staffShiftLogUuid,
 			Platform:          "", // 不筛选平台
+
 		},
 		req.CategoryType,
 		ctx.GetLanguage(),
@@ -1144,6 +1170,7 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 			TimeEnd:           req.QueryEndTime,
 			StaffShiftLogUuid: staffShiftLogUuid,
 			Platform:          "", // 不筛选平台
+
 		},
 	)
 	orderNum += takeoutSaleData.TotalOrderNum
@@ -1245,6 +1272,7 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 			TimeEnd:           req.QueryEndTime,
 			StaffShiftLogUuid: staffShiftLogUuid,
 			Platform:          "", // 不筛选平台
+
 		},
 		ctx.GetLanguage(),
 	)
@@ -1473,9 +1501,10 @@ func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7Days
 		}
 	}
 
-	// 查询该时间范围内的所有数据
+	// 查询该时间范围内的所有数据（测试营业时段过滤已在 repo 层处理）
+	commonRepo := repository.NewCommonRepoImpl()
 	rawData := repository.NewStatisticsRepo(ctx.GetDB()).Count7Days(
-		repository.NewCommonRepoImpl().WhereBetweenByCompleteTime(minStartTime, maxEndTime),
+		commonRepo.WhereBetweenByCompleteTime(minStartTime, maxEndTime),
 	)
 
 	// 查询外卖订单实收金额数据
@@ -2301,6 +2330,8 @@ func (s *statisticsSrv) buildCountOpts(ctx context.Context, req CountReq) []repo
 	if req.DutyNo != "" {
 		opts = append(opts, commonRepo.WhereByDutyNo(req.DutyNo))
 	}
+	// 注意：测试营业时段过滤已下沉到各 Repository 方法内部，
+	// 由每个方法根据自身 JOIN 结构使用正确的表别名调用 ExcludeTestBusinessSQL。
 
 	return opts
 }
@@ -2657,6 +2688,10 @@ type CountExportData struct {
 	MinTakeoutOrderAmount      float64                  `json:"min_takeout_order_amount"`
 	MaxTakeoutOrderAmount      float64                  `json:"max_takeout_order_amount"`
 	AvgTakeoutOrderAmount      float64                  `json:"avg_takeout_order_amount"`
+	TotalScanOrderNum          int64                    `json:"total_scan_order_num"`
+	MinScanOrderAmount         float64                  `json:"min_scan_order_amount"`
+	MaxScanOrderAmount         float64                  `json:"max_scan_order_amount"`
+	AvgScanOrderAmount         float64                  `json:"avg_scan_order_amount"`
 	TotalGrabOrderNum          int64                    `json:"total_grab_order_num"`
 	MinGrabOrderAmount         float64                  `json:"min_grab_order_amount"`
 	MaxGrabOrderAmount         float64                  `json:"max_grab_order_amount"`
@@ -2811,6 +2846,10 @@ func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExp
 			MinTakeoutOrderAmount:      sale.MinTakeoutOrderAmount,
 			MaxTakeoutOrderAmount:      sale.MaxTakeoutOrderAmount,
 			AvgTakeoutOrderAmount:      sale.AvgTakeoutOrderAmount,
+			TotalScanOrderNum:          sale.TotalScanOrderNum,
+			MinScanOrderAmount:         sale.MinScanOrderAmount,
+			MaxScanOrderAmount:         sale.MaxScanOrderAmount,
+			AvgScanOrderAmount:         sale.AvgScanOrderAmount,
 			TotalGrabOrderNum:          sale.GrabOrderNum,
 			MinGrabOrderAmount:         sale.GrabMinOrderAmount,
 			MaxGrabOrderAmount:         sale.GrabMaxOrderAmount,
@@ -2841,6 +2880,7 @@ func (s *statisticsSrv) CountShiftRefundAmount(ctx context.Context, req CountReq
 		commonRepo.WhereByDutyNo(req.DutyNo),
 		commonRepo.WhereBySoftDelete(),
 		returnOrderRepo.WhereNotReverseSettlement(),
+		commonRepo.WhereExcludeTestBusinessByRelatedOrder(),
 	}
 	if req.ExcludeDataManage {
 		saleOrderUuids := []uint64{}
@@ -2968,19 +3008,21 @@ func (s *statisticsSrv) CountBusinessTimePeriod(ctx context.Context, req req.Bus
 			repository.CommonRepo.WhereBySoftDelete(),
 		))
 	}
+	// 注意：测试营业时段过滤已下沉到 Repository 方法内部，使用正确的表别名 "sb"
 
 	// 统计总时段数和时段数据
 	total, periodData := statisticsRepo.CountBusinessTimePeriod(repository.CountBusinessTimePeriodReq{
-		StartTime:     req.QueryStartTime,
-		EndTime:       req.QueryEndTime,
-		PeriodSeconds: periodSeconds,
-		IsCreateTime:  req.StatisticsType == 0,
-		PageNo:        utils.IfInt(req.PageNo > 0, req.PageNo, 1),
-		PageSize:      utils.IfInt(req.PageSize > 0, req.PageSize, 10),
-		IsDesk:        req.OrderDesk == 1,
-		IsInstant:     req.OrderInstant == 1,
-		IsDelivery:    req.OrderDelivery == 1,
-		IsTakeout:     req.OrderTakeout == 1,
+		StartTime:         req.QueryStartTime,
+		EndTime:           req.QueryEndTime,
+		PeriodSeconds:     periodSeconds,
+		IsCreateTime:      req.StatisticsType == 0,
+		PageNo:            utils.IfInt(req.PageNo > 0, req.PageNo, 1),
+		PageSize:          utils.IfInt(req.PageSize > 0, req.PageSize, 10),
+		IsDesk:            req.OrderDesk == 1,
+		IsInstant:         req.OrderInstant == 1,
+		IsDelivery:        req.OrderDelivery == 1,
+		IsTakeout:         req.OrderTakeout == 1,
+		ExcludeDataManage: req.ExcludeDataManage,
 	}, opts...)
 
 	// 构建时段列表

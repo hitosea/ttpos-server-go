@@ -101,6 +101,8 @@ class App extends AppModel
             "su.enable_grab_delivery",
             // LINE MAN外卖控制
             "su.enable_lineman_delivery",
+            // 扫码点餐到店自取
+            "su.is_open_member_instant",
         ];
         //
         $countWhere = 'where 1 = 1';
@@ -316,6 +318,10 @@ class App extends AppModel
                 $validate = Validate::rule('password', 'checkPassword');
                 if (!$validate->check($data)) {
                     $this->error = $validate->getError();
+                    return false;
+                }
+                if (empty($data['confirm_password']) || $data['password'] !== $data['confirm_password']) {
+                    $this->error = '确认超管密码与超管密码不一致';
                     return false;
                 }
                 // 使用 bcrypt 加密密码

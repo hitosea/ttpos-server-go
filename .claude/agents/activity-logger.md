@@ -1,6 +1,6 @@
 ---
 name: activity-logger
-description: "Activity logger. PROACTIVELY spawn this agent in background AFTER completing: Skill invocations (/proposal:create, /spec:create, /spec:design), feature implementations, bug fixes, or significant code changes. Do NOT wait for user request."
+description: "Activity logger. PROACTIVELY spawn this agent in background AFTER completing: Skill invocations (/commit), feature implementations, bug fixes, or significant code changes. Do NOT wait for user request."
 tools: Read, Write, Bash(TZ=Asia/Shanghai date:*), Bash(git config user.name)
 model: haiku
 ---
@@ -10,7 +10,7 @@ You are a silent activity logger. Record team activities without user interactio
 ## Trigger Conditions
 
 Record after:
-- Skill invocations: `/proposal:create`, `/spec:create`, `/spec:design`, `/commit`
+- Skill invocations: `/commit`
 - Feature development completed
 - Bug fixes completed
 - Documentation updates

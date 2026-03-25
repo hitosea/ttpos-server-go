@@ -34,11 +34,10 @@ type IMaterialRepo interface {
 	UpdateMaterial(material model.Material) error
 	UpdateMaterialData(data map[string]any, opts ...DBOption) error
 	UpdateMaterialStatus(uuid uint64, status bool) error
-	UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error // 更新物品子店可见性
-	UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error    // 更新物品负库存设置
-	ClearMaterialBarcodeValue(uuid uint64) error                                    // 清空物品条形码值
-	ClearMaterialInternalCode(uuid uint64) error                                    // 清空物品内部编码
-	ClearMaterialSafetyStock(uuid uint64) error                                     // 清空物品安全库存
+	UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error // 更新物品负库存设置
+	ClearMaterialBarcodeValue(uuid uint64) error                                 // 清空物品条形码值
+	ClearMaterialInternalCode(uuid uint64) error                                 // 清空物品内部编码
+	ClearMaterialSafetyStock(uuid uint64) error                                  // 清空物品安全库存
 	DeleteMaterial(uuid uint64) error
 	GetMaterialCategory(opts ...DBOption) (*model.MaterialCategory, error)
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
@@ -51,7 +50,6 @@ type IMaterialRepo interface {
 	GetMaterialCategoryList(opts ...DBOption) ([]model.MaterialCategory, error)
 	GetMaterialCategoryListWithDeleted(opts ...DBOption) ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error                       // 批量修改物品状态
-	UpdateMaterialVisibleBatch(uuids []uint64, visible int) error                     // 批量更新物品可见性
 	UpdateMaterialStockNum(materials []*model.Material) error                         // 更新物品库存数量
 	AddActualSaleNum(materialUuid uint64, saleNum float64) error                      // 增加材料销量
 	SubActualSaleNum(materialUuid uint64, saleNum float64) error                      // 减少材料销量
@@ -71,11 +69,13 @@ type IMaterialRepo interface {
 	DestroyMaterial(opts ...DBOption) error     // 销毁物品
 	DestroyMaterialUnit(opts ...DBOption) error // 销毁物品单位
 
+	WhereCodeNotEmpty() DBOption // 编码非空条件
+	UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error
+
 	WithRelatedMaterialList() DBOption
 	WithUnit() DBOption
 	WithMultiLanguageName(opts ...DBOption) DBOption
 	WithNotBaseUnitList(opts ...DBOption) DBOption
-	WhereAllowSubstoreVisible(visible int) DBOption         // 可见性过滤选项方法
 	WhereUuidInWarehouseItem(warehouseUuid uint64) DBOption // 物品UUID必须在仓库物品列表中
 }
 
@@ -124,13 +124,6 @@ func (r *MaterialRepoImpl) WithNotBaseUnitList(opts ...DBOption) DBOption {
 			}
 			return db
 		}).Preload("NotBaseUnitList.Unit")
-	}
-}
-
-// WhereAllowSubstoreVisible 可见性过滤选项方法
-func (r *MaterialRepoImpl) WhereAllowSubstoreVisible(visible int) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("(allow_substore_visible = ? or headquarter_uuid = ?)", visible, 0)
 	}
 }
 
@@ -465,7 +458,7 @@ func (r *MaterialRepoImpl) UpdateMaterialCode(uuid uint64, code string) error {
 
 // UpdateMaterial 更新物品
 func (r *MaterialRepoImpl) UpdateMaterial(material model.Material) error {
-	if err := r.db.Model(&model.Material{}).Where("uuid = ?", material.Uuid).Updates(material).Error; err != nil {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", material.Uuid).Debug().Updates(material).Error; err != nil {
 		return errors.WithMessage(err, "更新物品失败")
 	}
 	return nil
@@ -487,14 +480,6 @@ func (r *MaterialRepoImpl) UpdateMaterialData(data map[string]any, opts ...DBOpt
 func (r *MaterialRepoImpl) UpdateMaterialStatus(uuid uint64, status bool) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("status", status).Error; err != nil {
 		return errors.WithMessage(err, "更新物品状态失败")
-	}
-	return nil
-}
-
-// UpdateMaterialAllowSubstoreVisible 更新物品子店可见性
-func (r *MaterialRepoImpl) UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error {
-	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("allow_substore_visible", allowSubstoreVisible).Error; err != nil {
-		return errors.WithMessage(err, "更新物品子店可见性失败")
 	}
 	return nil
 }
@@ -573,14 +558,6 @@ func (r *MaterialRepoImpl) UpdateMaterialStatusBatch(uuids []uint64, status int)
 	return nil
 }
 
-// UpdateMaterialVisibleBatch 批量更新物品可见性
-func (r *MaterialRepoImpl) UpdateMaterialVisibleBatch(uuids []uint64, visible int) error {
-	if err := r.db.Model(&model.Material{}).Where("uuid IN (?)", uuids).Update("allow_substore_visible", visible).Error; err != nil {
-		return errors.WithMessage(err, "批量更新物品可见性失败")
-	}
-	return nil
-}
-
 func (r *MaterialRepoImpl) ClearMaterialBarcodeValue(uuid uint64) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("barcode_value", "").Error; err != nil {
 		return errors.WithMessage(err, "清空物品条形码值失败")
@@ -616,8 +593,8 @@ func (r *MaterialRepoImpl) SubActualSaleNum(materialUuid uint64, saleNum float64
 
 func (r *MaterialRepoImpl) CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse {
 	var result dto.LocaleResponse
-	materialTable := r.db.Table("material").Name()
-	multiLanguageNameTable := r.db.Table("multi_language_name").Name()
+	materialTable := resolveTableName(r.db, "material")
+	multiLanguageNameTable := resolveTableName(r.db, "multi_language_name")
 
 	// 定义语言字段映射
 	languageFields := map[string]string{
@@ -899,6 +876,18 @@ func (r *MaterialRepoImpl) DestroyMaterialUnit(opts ...DBOption) error {
 	}
 
 	return db.Delete(&model.MaterialUnit{}).Error
+}
+
+// WhereCodeNotEmpty 编码非空条件
+func (r *MaterialRepoImpl) WhereCodeNotEmpty() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("code != ''")
+	}
+}
+
+// UpdateNameByMultiLanguageNameUuid 根据多语言名称UUID更新name字段
+func (r *MaterialRepoImpl) UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error {
+	return r.db.Model(&model.Material{}).Where("multi_language_name_uuid = ?", multiLanguageNameUuid).Update("name", name).Error
 }
 
 func (r *MaterialRepoImpl) GetMaterialByCode(code string, opts ...DBOption) (model.Material, error) {

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/setting/domain/entity"
@@ -1067,8 +1068,9 @@ func (s *SettingAppServiceImpl) VerifyAdvancedPassword(ctx context.Context, pass
 func (s *SettingAppServiceImpl) UpdateSetting(ctx context.Context, settingKey string, values interface{}) error {
 	valueStr := utils.ToJson(values)
 	setting := &model.Setting{
-		Key:    settingKey,
-		Values: valueStr,
+		Key:      settingKey,
+		Describe: constant.GetSettingDescribe(settingKey),
+		Values:   valueStr,
 	}
 
 	// 先查找是否存在

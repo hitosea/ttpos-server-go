@@ -32,6 +32,7 @@ COMMIT;
 -- ----------------------------
 BEGIN;
 INSERT INTO `ttpos_setting` (`key`, `describe`, `values`, `create_time`, `update_time`) VALUES ('batch_color', '分批类型颜色', '["#FF585B", "#FC0169", "#FF9900", "#BC3BBB", "#7A55D4", "#97B92D", "#006E5E", "#C18000", "#8C5A3F"]', @nowTime, @nowTime);
+INSERT INTO `ttpos_setting` (`key`, `describe`, `values`, `create_time`, `update_time`) VALUES ('store_scan_order', '门店点餐设置', '{"is_enabled":1,"enable_delivery":1,"enable_self_pickup":1}', @nowTime, @nowTime);
 COMMIT;
 
 
@@ -390,6 +391,9 @@ INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uu
 INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (1724220611, 1724220611, '规格/属性', 'cashier_table_spec_attr', '', 1704880828, 17, '', '', 0, 0, 1, 0, '', 0, 1754474438, 1754474438);
 INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (1724220612, 1724220612, '规格/属性', 'spec_attr', '', 1724320508, 2, '', '', 0, 0, 1, 0, '', 0, 1754474438, 1754474438);
 INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (1724220613, 1724220613, '整单备注', 'order_remark', '', 1724320508, 1, '', '', 0, 0, 1, 0, '', 0, 1761133410, 1761133410);
+INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (1724220614, 1724220614, '手机点餐', 'mobile_order_setting', '', 2859064102912000, 5, '', '', 1, 1, 1, 0, '', 0, 1741744970, 1741744970);
+INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (1724220615, 1724220615, '二维码', 'mobile_order_qrcode', '', 1724220614, 1, '', '', 0, 0, 1, 0, '', 0, 1741744970, 1741744970);
+INSERT INTO `ttpos_access` (`id`, `uuid`, `name`, `path`, `api_path`, `parent_uuid`, `sort`, `icon`, `redirect_name`, `is_route`, `is_menu`, `is_show`, `plus_category_uuid`, `remark`, `is_supplier`, `create_time`, `update_time`) VALUES (1724220616, 1724220616, '菜单样式', 'mobile_order_menu_style', '', 1724220614, 2, '', '', 0, 0, 1, 0, '', 0, 1741744970, 1741744970);
 COMMIT;
 
 BEGIN;
@@ -1061,6 +1065,12 @@ INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `crea
 INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1167, 1167, 2, 1704885081, 1761133410, 1761133410, 0);
 INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1168, 1168, 2, 1704886020, 1761133410, 1761133410, 0);
 INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1169, 1169, 2, 1724220613, 1761133410, 1761133410, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1170, 1170, 1, 1724220614, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1171, 1171, 1, 1724220615, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1172, 1172, 1, 1724220616, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1173, 1173, 2, 1724220614, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1174, 1174, 2, 1724220615, 1741744970, 1741744970, 0);
+INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1175, 1175, 2, 1724220616, 1741744970, 1741744970, 0);
 COMMIT;
 
 -- ----------------------------
@@ -1106,6 +1116,13 @@ INSERT INTO `ttpos_nationality` (`uuid`, `multi_language_name_uuid`, `sort`, `st
 (8267304538112206, 8267304538112010, 6, 1, @nowTime, @nowTime, 0),
 (8267304538112207, 8267304538112011, 7, 1, @nowTime, @nowTime, 0),
 (8267304538112208, 8267304538112012, 8, 1, @nowTime, @nowTime, 0);
+COMMIT;
+
+-- ----------------------------
+-- Records of ttpos_business_status_period (新商户默认为测试营业)
+-- ----------------------------
+BEGIN;
+INSERT INTO `ttpos_business_status_period` (`id`, `uuid`, `start_time`, `end_time`, `create_time`, `update_time`, `delete_time`) VALUES (1, 8267304538113000, @nowTime, 0, @nowTime, @nowTime, 0);
 COMMIT;
 
 SET FOREIGN_KEY_CHECKS = 1;

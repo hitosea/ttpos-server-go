@@ -31,6 +31,10 @@ func NewSaleOrderPeakTimeRepo(db *gorm.DB) ISaleOrderPeakTimeRepo {
 // Record 记录销售订单高峰时间
 // recordType: inc - 增加, dec - 减少
 func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBill, refundMoney float64, timezone ...string) error {
+	// 如果订单创建于测试营业时段，跳过高峰时间记录（写入端守卫）
+	if NewBusinessStatusPeriodRepo(r.db).IsInTestPeriod(saleBill.CreateTime) {
+		return nil
+	}
 	tz := string(utils.ZH_TIMEZONE)
 	var finishTime int64 = 0
 	if len(timezone) > 0 {
@@ -106,6 +110,8 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime
 	// 获取开始日期和结束日期的时间戳（0点0分0秒）
 	startDate := time.Date(startTimeObj.Year(), startTimeObj.Month(), startTimeObj.Day(), 0, 0, 0, 0, startTimeObj.Location()).Unix()
 	endDate := time.Date(endTimeObj.Year(), endTimeObj.Month(), endTimeObj.Day(), 0, 0, 0, 0, endTimeObj.Location()).Unix()
+	// 测试营业时段的过滤已在 Record() 写入端完成，此处无需读取端排除
+
 	// 定义一个临时结构体来接收查询结果
 	type PeakTimeResult struct {
 		SumNum int    `gorm:"column:sum_num"`
@@ -175,7 +181,7 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime
 		return nil, errors.WithMessage(err)
 	}
 	//
-	var peakHours []business_data_resp.PeakHour
+	peakHours := make([]business_data_resp.PeakHour, 0, len(results))
 	for _, v := range results {
 		startHour := fmt.Sprintf("%02d", v.Hour) // 将整点数补齐为两位数作为起始小时
 		endHour := fmt.Sprintf("%02d", v.Hour+1) // 结束小时为起始小时加1

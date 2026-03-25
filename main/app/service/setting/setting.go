@@ -23,6 +23,7 @@ import (
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
@@ -91,6 +92,10 @@ type ISrv interface {
 	GetPaymentMethodList(ctx context.Context, opts ...bool) setting.PaymentMethodListResp                                                 // 获取支付方式列表
 	GetDataManageSetting(ctx context.Context) model.DataManageSetting                                                                     // 获取数据管理设置
 	GetShopAppMinVersion(module string) string                                                                                            // 获取指定模块的最小版本号
+	GetStoreScanOrderSetting(ctx context.Context) (setting.StoreScanOrderSettingResp, error)                                              // 获取门店点餐配置
+	SaveStoreScanOrderSetting(ctx context.Context, settingReq req.SaveStoreScanOrderSettingReq) error                                     // 保存门店点餐配置
+	GetTemplateStyleSetting(ctx context.Context) (setting.TemplateStyleSettingResp, error)                                                // 获取模板样式配置
+	SaveTemplateStyleSetting(ctx context.Context, settingReq req.SaveTemplateStyleSettingReq) error                                       // 保存模板样式配置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -120,16 +125,18 @@ type shopAppSetting struct {
 
 // 版本检查模块名称常量，与 middleware.VersionCheckType 值一致
 const (
-	ModulePurchaseOrder = "purchase_order"
-	ModuleTransferOrder = "transfer_order"
-	ModuleStatistics    = "statistics"
+	ModulePurchaseOrder       = "purchase_order"
+	ModuleTransferOrder       = "transfer_order"
+	ModuleStatistics          = "statistics"
+	ModuleStockReconciliation = "stock_reconciliation"
 )
 
 // defaultModuleMinVersions 各模块默认最小版本号
 var defaultModuleMinVersions = map[string]string{
-	ModulePurchaseOrder: constant.ClientVersionV2160,
-	ModuleTransferOrder: constant.ClientVersionV2090,
-	ModuleStatistics:    constant.ClientVersionV2196,
+	ModulePurchaseOrder:       constant.ClientVersionV2160,
+	ModuleTransferOrder:       constant.ClientVersionV2090,
+	ModuleStatistics:          constant.ClientVersionV2196,
+	ModuleStockReconciliation: constant.ClientVersionV22014,
 }
 
 // GetShopAppMinVersion 获取指定模块的最小版本号
@@ -140,10 +147,8 @@ func (s *Srv) GetShopAppMinVersion(module string) string {
 	if saasDB == nil {
 		return defaultVersion
 	}
-	var setting model.Setting
-	if err := saasDB.Table("ttpos_setting").Where("`key` = ? AND delete_time = 0", model.SettingKeyShopApp).First(&setting).Error; err != nil {
-		return defaultVersion
-	}
+	settingRepo := repository.NewSettingRepo(saasDB)
+	setting := settingRepo.GetByKeyNotDeleted(model.SettingKeyShopApp)
 	if setting.Values == "" {
 		return defaultVersion
 	}
@@ -541,8 +546,11 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		printSpeed             int = 2  // 打印速度 1-流畅(不分片打印) 2-稳定(分片大包打印) 3-兼容(分片小包打印)
 	)
 
+	// 来源设备品牌
+	deviceSource := ctx.GetSource()
+
 	// 收银机开启
-	if isCashierOpen {
+	if isCashierOpen || deviceSource == constant.SourceKiosk {
 
 		// 收银机机绑定的打印机key
 		for _, cashierPrinter := range printerSetting.CashierPrinter {
@@ -585,12 +593,17 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			enableStatusCheck = printer.EnableStatusCheck
 			enableSound = printer.EnableSound
 			printSpeed = printer.PrintSpeed
-		} else if printerId != "0" && printerId != "" {
+		} else if (printerId != "0" && printerId != "") || deviceSource == constant.SourceKiosk {
 			// 收银机内置的打印机
-			printerCashierDeviceSn = printerId
+			brand := ""
 			isCashierPrinter = true
 			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-			brand := deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(printerId))
+			if deviceSource == constant.SourceKiosk {
+				brand = deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(deviceSn))
+			} else {
+				printerCashierDeviceSn = printerId
+				brand = deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(printerId))
+			}
 			if slices.Contains(constant.SunmiAllPrints, brand) {
 				// 商米打印机
 				printerType = printerConstant.PrinterTypeCashierSunmi
@@ -1994,8 +2007,9 @@ func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) 
 	set := settingRepo.GetByKey(settingKey)
 	if set.Key == "" {
 		if _, err := settingRepo.Create(model.Setting{
-			Key:    settingKey,
-			Values: value,
+			Key:      settingKey,
+			Describe: constant.GetSettingDescribe(settingKey),
+			Values:   value,
 		}); err != nil {
 			return errors.New("更新设置失败")
 		}
@@ -2075,6 +2089,8 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 
 	storeSetting.LogoURL = storeSettingReq.LogoUrl
 	storeSetting.Company = storeSettingReq.CompanyName
+	storeSetting.Address = storeSettingReq.Address
+	storeSetting.Phone = storeSettingReq.Phone
 	storeSetting.StoreCode = storeSettingReq.StoreCode
 	storeSetting.TaxNumber = storeSettingReq.TaxNumber
 	storeSetting.Coordinates = storeSettingReq.Coordinates
@@ -2268,11 +2284,11 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 
 	err = companyDB.Transaction(func(tx *gorm.DB) error {
 		// 保存到saas.company_setting\saas.company\商家company_setting\商家company表
-		err := saasDB.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Model(&model.Company{}).Where("uuid = ?", companyUuid).Debug().Updates(updateCompany).Error; err != nil {
+		err := saasDB.Transaction(func(saasTx *gorm.DB) error {
+			if err := repository.NewCompanyRepo(saasTx).UpdateCompany(companyUuid, updateCompany); err != nil {
 				return errors.WithMessage(errors.New("保存saas.company设置失败"), err.Error())
 			}
-			if err := tx.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Debug().Updates(updateCompanySetting).Error; err != nil {
+			if err := repository.NewCompanySettingRepo(saasTx).UpdateByCompanyUuid(companyUuid, updateCompanySetting); err != nil {
 				return errors.WithMessage(errors.New("保存saas.company_setting设置失败"), err.Error())
 			}
 			return nil
@@ -2280,10 +2296,10 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		if err != nil {
 			return err
 		}
-		if err := tx.Model(&model.Company{}).Where("uuid = ?", companyUuid).Debug().Updates(updateCompany).Error; err != nil {
+		if err := repository.NewCompanyRepo(tx).UpdateCompany(companyUuid, updateCompany); err != nil {
 			return errors.WithMessage(errors.New("保存商家company设置失败"), err.Error())
 		}
-		if err := tx.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Debug().Updates(updateCompanySetting).Error; err != nil {
+		if err := repository.NewCompanySettingRepo(tx).UpdateByCompanyUuid(companyUuid, updateCompanySetting); err != nil {
 			return errors.WithMessage(errors.New("保存store设置失败"), err.Error())
 		}
 
@@ -2327,7 +2343,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 			if err != nil {
 				return errors.WithMessage(errors.New("更新Headquarters - Supplier供应商名称失败"), err.Error())
 			}
-			if err := tx.Model(&model.Supplier{}).Where("headquarter_uuid = 0 AND erp_code = ?", constant.ErpHeadquartersSupplierCode).Update("name", storeSettingReq.Name).Error; err != nil {
+			if err := repository.NewSupplierRepo(tx).UpdateNameByHeadquarterErpCode(constant.ErpHeadquartersSupplierCode, storeSettingReq.Name); err != nil {
 				return errors.WithMessage(errors.New("更新Headquarters - Supplier供应商名称失败"), err.Error())
 			}
 		}
@@ -2458,8 +2474,8 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 	})
 
 	// 将本店非当前安全库存类型的预警记录删除
-	err = s.dbm.GetDB(companyUuid).Model(&model.MaterialStockAlertLog{}).Where("alert_type != ?", businessSetting.SafetyStockType).Update("delete_time", time.Now().Unix()).Error
-	if err != nil {
+	alertLogRepo := repository.NewMaterialStockAlertLogRepo(s.dbm.GetDB(companyUuid))
+	if err = alertLogRepo.DeleteByAlertTypeNot(businessSetting.SafetyStockType); err != nil {
 		logger.Logger.Error("删除本店非当前安全库存类型的预警记录失败", zap.Error(err))
 	}
 
@@ -2476,27 +2492,27 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 	}
 
 	var freeReasonCount, returnFoodReasonCount, orderRemarkCount, orderItemRemarkCount, orderSourceCount, nationalityCount int64
-	err = db.Model(&model.FreeReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&freeReasonCount).Error
+	freeReasonCount, err = base.NewGiftOrFreeOrderReasonRepo(db).CountFreeReason()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
-	err = db.Model(&model.ReturnFoodReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&returnFoodReasonCount).Error
+	returnFoodReasonCount, err = base.NewReturnFoodReasonRepo(db).CountReturnFoodReason()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
-	err = db.Model(&model.OrderRemark{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderRemarkCount).Error
+	orderRemarkCount, err = base.NewOrderRemarkRepo(db).CountOrderRemark()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
-	err = db.Model(&model.OrderItemRemark{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderItemRemarkCount).Error
+	orderItemRemarkCount, err = base.NewOrderItemRemarkRepo(db).CountOrderItemRemark()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
-	err = db.Model(&model.OrderSource{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderSourceCount).Error
+	orderSourceCount, err = repository.NewOrderSourceRepo(db).Count()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
-	err = db.Model(&model.Nationality{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&nationalityCount).Error
+	nationalityCount, err = repository.NewNationalityRepo(db).Count()
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
@@ -2597,4 +2613,97 @@ func (s *Srv) GetDataManageSetting(ctx context.Context) model.DataManageSetting 
 		}
 	}
 	return dataManageSetting
+}
+
+// GetStoreScanOrderSetting 获取门店点餐配置
+func (s *Srv) GetStoreScanOrderSetting(ctx context.Context) (setting.StoreScanOrderSettingResp, error) {
+	companySetting, err := s.GetCompanySetting(ctx)
+	if err != nil {
+		return setting.StoreScanOrderSettingResp{}, errors.WithMessage(err, "获取公司设置失败")
+	}
+
+	// 从数据库读取配置，解析失败或不存在时使用默认值
+	data := setting.StoreScanOrderSetting{IsEnabled: 1, EnableDelivery: 1, EnableSelfPickup: 1}
+	if raw := s.getSettingByKey(ctx, constant.SettingStoreScanOrder); raw.Key != "" {
+		_ = json.Unmarshal([]byte(raw.Values), &data)
+	}
+
+	// 组装响应，云平台可用状态实时计算
+	deliveryAvailable := 0
+	if companySetting.IsOpenRider() {
+		deliveryAvailable = 1
+	}
+	selfPickupAvailable := 0
+	if companySetting.IsOpenMemberInstant == 1 {
+		selfPickupAvailable = 1
+	}
+
+	return setting.StoreScanOrderSettingResp{
+		IsEnabled:            data.IsEnabled,
+		EnableDelivery:       data.EnableDelivery,
+		EnableSelfPickup:     data.EnableSelfPickup,
+		IsOrderFirstPayLater: data.IsOrderFirstPayLater,
+		DeliveryAvailable:    deliveryAvailable,
+		SelfPickupAvailable:  selfPickupAvailable,
+	}, nil
+}
+
+// SaveStoreScanOrderSetting 保存门店点餐配置
+func (s *Srv) SaveStoreScanOrderSetting(ctx context.Context, settingReq req.SaveStoreScanOrderSettingReq) error {
+	// companySetting, err := s.GetCompanySetting(ctx)
+	// if err != nil {
+	// 	return errors.WithMessage(err, "获取公司设置失败")
+	// }
+
+	// // 校验：如果要开启外送服务，云平台必须已开启外送功能（与 is_open_rider 保持一致）
+	// if settingReq.EnableDelivery == 1 && !companySetting.IsOpenRider() {
+	// 	return errors.New("暂未开启，请联系销售代表")
+	// }
+
+	// // 校验：如果要开启到店自取，云平台必须已开启会员端即时点餐功能
+	// if settingReq.EnableSelfPickup == 1 && companySetting.IsOpenMemberInstant != 1 {
+	// 	return errors.New("暂未开启，请联系销售代表")
+	// }
+
+	// 保存设置
+	data := setting.StoreScanOrderSetting{
+		IsEnabled:            settingReq.IsEnabled,
+		EnableDelivery:       settingReq.EnableDelivery,
+		EnableSelfPickup:     settingReq.EnableSelfPickup,
+		IsOrderFirstPayLater: settingReq.IsOrderFirstPayLater,
+	}
+
+	if err := s.UpdateSetting(ctx, constant.SettingStoreScanOrder, data); err != nil {
+		return errors.WithMessage(err, "保存设置失败")
+	}
+
+	return nil
+}
+
+// GetTemplateStyleSetting 获取模板样式配置
+func (s *Srv) GetTemplateStyleSetting(ctx context.Context) (setting.TemplateStyleSettingResp, error) {
+	templateStyleSetting := s.getSettingByKey(ctx, constant.SettingTemplateStyle)
+	// 默认值：1
+	if templateStyleSetting.Key == "" || templateStyleSetting.Values == "{}" {
+		return setting.TemplateStyleSettingResp{TemplateStyle: 1}, nil
+	}
+	var result setting.TemplateStyleSettingResp
+	if err := json.Unmarshal([]byte(templateStyleSetting.Values), &result); err != nil {
+		return setting.TemplateStyleSettingResp{TemplateStyle: 1}, nil
+	}
+	if result.TemplateStyle == 0 {
+		result.TemplateStyle = 1
+	}
+	return result, nil
+}
+
+// SaveTemplateStyleSetting 保存模板样式配置
+func (s *Srv) SaveTemplateStyleSetting(ctx context.Context, settingReq req.SaveTemplateStyleSettingReq) error {
+	data := setting.TemplateStyleSettingResp{
+		TemplateStyle: settingReq.TemplateStyle,
+	}
+	if err := s.UpdateSetting(ctx, constant.SettingTemplateStyle, data); err != nil {
+		return errors.WithMessage(err, "保存设置失败")
+	}
+	return nil
 }

@@ -185,6 +185,12 @@
       ],
     },
     {
+      icon: 'dashboard',
+      title: $t('ERP 死信管理'),
+      path: '/erp-dlq',
+      permission: ['admin_erpnext_siFailedStats'],
+    },
+    {
       icon: 'log',
       title: $t('日志管理'),
       path: '/log',

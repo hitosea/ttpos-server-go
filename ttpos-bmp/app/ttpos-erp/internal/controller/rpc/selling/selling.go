@@ -3,15 +3,24 @@ package selling
 import (
 	"context"
 	"strings"
+	"sync"
+	"time"
 	"ttpos-bmp/app/ttpos-erp/api"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
+	"ttpos-bmp/app/ttpos-erp/internal/dao"
+	"ttpos-bmp/app/ttpos-erp/internal/model/do"
+	erp "ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
+	"ttpos-bmp/app/ttpos-erp/internal/model/entity"
+	"ttpos-bmp/app/ttpos-erp/internal/model/mq"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
+	"ttpos-bmp/internal/pkg/queue"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 // Controller 销售服务控制器
@@ -536,4 +545,402 @@ func (c *Controller) validateSaveModeOfPaymentReq(req *selling.SaveModeOfPayment
 	}
 
 	return nil
+}
+
+// ========== Sales Invoice 控制器方法 ==========
+
+// SaveSalesInvoice 保存 Sales Invoice（替代 POS Invoice）
+func (c *Controller) SaveSalesInvoice(ctx context.Context, req *selling.SaveSalesInvoiceReq) (*api.ResponseInfo, error) {
+	if err := c.validateSaveSalesInvoiceReq(req); err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	resp, err := service.AsyncSelling().SaveSalesInvoice(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	return rpc.ApiSuccessWithData("保存SI成功", resp), nil
+}
+
+func (c *Controller) validateSaveSalesInvoiceReq(req *selling.SaveSalesInvoiceReq) error {
+	if strings.TrimSpace(req.OrderNo) == "" {
+		return gerror.New("订单号不能为空")
+	}
+	if strings.TrimSpace(req.SaleOrderUuid) == "" {
+		return gerror.New("订单UUID不能为空")
+	}
+	if strings.TrimSpace(req.CompanyAbbr) == "" {
+		return gerror.New("公司缩写不能为空")
+	}
+	if strings.TrimSpace(req.Customer) == "" {
+		return gerror.New("客户不能为空")
+	}
+	if len(req.Items) == 0 {
+		return gerror.New("商品明细不能为空")
+	}
+	return nil
+}
+
+// CancelSalesInvoice 取消 Sales Invoice（反结账时调用）
+func (c *Controller) CancelSalesInvoice(ctx context.Context, req *selling.CancelSalesInvoiceReq) (*api.ResponseInfo, error) {
+	if strings.TrimSpace(req.SaleOrderUuid) == "" {
+		return rpc.ApiError("订单UUID不能为空"), nil
+	}
+
+	resp, err := service.AsyncSelling().CancelSalesInvoice(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	return rpc.ApiSuccessWithData("取消SI成功", resp), nil
+}
+
+// ReturnSalesInvoice 退款 Sales Invoice（Credit Note）
+func (c *Controller) ReturnSalesInvoice(ctx context.Context, req *selling.ReturnSalesInvoiceReq) (*api.ResponseInfo, error) {
+	if strings.TrimSpace(req.SaleOrderUuid) == "" {
+		return rpc.ApiError("订单UUID不能为空"), nil
+	}
+	if strings.TrimSpace(req.SalesInvoiceName) == "" {
+		return rpc.ApiError("原SI名称不能为空"), nil
+	}
+
+	resp, err := service.AsyncSelling().ReturnSalesInvoice(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	return rpc.ApiSuccessWithData("退款SI成功", resp), nil
+}
+
+// ========== DLQ/Retry 管理接口 ==========
+
+// GetFailedSIStats 获取失败 SI 统计（供 Admin 面板展示，仅查最近30天）
+func (c *Controller) GetFailedSIStats(ctx context.Context, req *selling.GetFailedSIStatsReq) (*api.ResponseInfo, error) {
+	siCols := dao.ReceiveSalesInvoice.Columns()
+	returnCols := dao.ReceiveReturnSalesInvoice.Columns()
+
+	// 只查最近 30 天的数据
+	since := int(time.Now().AddDate(0, 0, -30).Unix())
+
+	// 使用并发查询优化性能
+	type countResult struct {
+		count int
+		err   error
+	}
+	results := make([]countResult, 6)
+	var wg sync.WaitGroup
+	wg.Add(6)
+
+	// Save 失败数：docstatus=Draft + 重试耗尽 + 有错误信息 + 排除 Cancel 类型
+	go func() {
+		defer wg.Done()
+		saveQuery := dao.ReceiveSalesInvoice.Ctx(ctx).
+			Where(siCols.Docstatus, erp.DocstatusDraft).
+			WhereGTE(siCols.RetryCount, erp.MaxRetryCount).
+			WhereNot(siCols.RespBody, "").
+			WhereGTE(siCols.CreatedAt, since)
+		if req.SiteCode != "" {
+			saveQuery = saveQuery.Where(siCols.SiteCode, req.SiteCode)
+		}
+		results[0].count, results[0].err = saveQuery.Count()
+	}()
+
+	// Cancel 失败数：docstatus=Submitted + 重试耗尽 + resp_body 含"取消SI失败"
+	go func() {
+		defer wg.Done()
+		cancelQuery := dao.ReceiveSalesInvoice.Ctx(ctx).
+			Where(siCols.Docstatus, erp.DocstatusSubmitted).
+			WhereGTE(siCols.RetryCount, erp.MaxRetryCount).
+			WhereLike(siCols.RespBody, "%取消SI失败%").
+			WhereGTE(siCols.UpdatedAt, since)
+		if req.SiteCode != "" {
+			cancelQuery = cancelQuery.Where(siCols.SiteCode, req.SiteCode)
+		}
+		results[1].count, results[1].err = cancelQuery.Count()
+	}()
+
+	// Return 失败数：docstatus=Draft + 重试耗尽 + 有错误信息
+	go func() {
+		defer wg.Done()
+		returnQuery := dao.ReceiveReturnSalesInvoice.Ctx(ctx).
+			Where(returnCols.Docstatus, erp.DocstatusDraft).
+			WhereGTE(returnCols.RetryCount, erp.MaxRetryCount).
+			WhereNot(returnCols.RespBody, "").
+			WhereGTE(returnCols.CreatedAt, since)
+		if req.SiteCode != "" {
+			returnQuery = returnQuery.Where(returnCols.SiteCode, req.SiteCode)
+		}
+		results[2].count, results[2].err = returnQuery.Count()
+	}()
+
+	// Save 进行中数：docstatus=Draft + 0<重试次数<5
+	go func() {
+		defer wg.Done()
+		savePendingQuery := dao.ReceiveSalesInvoice.Ctx(ctx).
+			Where(siCols.Docstatus, erp.DocstatusDraft).
+			WhereGT(siCols.RetryCount, 0).
+			WhereLT(siCols.RetryCount, erp.MaxRetryCount).
+			WhereGTE(siCols.CreatedAt, since)
+		if req.SiteCode != "" {
+			savePendingQuery = savePendingQuery.Where(siCols.SiteCode, req.SiteCode)
+		}
+		results[3].count, results[3].err = savePendingQuery.Count()
+	}()
+
+	// Cancel 进行中数：docstatus=Submitted + 0<重试次数<5 + resp_body 含"取消SI失败"
+	go func() {
+		defer wg.Done()
+		cancelPendingQuery := dao.ReceiveSalesInvoice.Ctx(ctx).
+			Where(siCols.Docstatus, erp.DocstatusSubmitted).
+			WhereGT(siCols.RetryCount, 0).
+			WhereLT(siCols.RetryCount, erp.MaxRetryCount).
+			WhereLike(siCols.RespBody, "%取消SI失败%").
+			WhereGTE(siCols.UpdatedAt, since)
+		if req.SiteCode != "" {
+			cancelPendingQuery = cancelPendingQuery.Where(siCols.SiteCode, req.SiteCode)
+		}
+		results[4].count, results[4].err = cancelPendingQuery.Count()
+	}()
+
+	// Return 进行中数：docstatus=Draft + 0<重试次数<5
+	go func() {
+		defer wg.Done()
+		returnPendingQuery := dao.ReceiveReturnSalesInvoice.Ctx(ctx).
+			Where(returnCols.Docstatus, erp.DocstatusDraft).
+			WhereGT(returnCols.RetryCount, 0).
+			WhereLT(returnCols.RetryCount, erp.MaxRetryCount).
+			WhereGTE(returnCols.CreatedAt, since)
+		if req.SiteCode != "" {
+			returnPendingQuery = returnPendingQuery.Where(returnCols.SiteCode, req.SiteCode)
+		}
+		results[5].count, results[5].err = returnPendingQuery.Count()
+	}()
+
+	wg.Wait()
+
+	// 检查错误
+	for _, result := range results {
+		if result.err != nil {
+			return rpc.ApiError(result.err.Error()), nil
+		}
+	}
+
+	stats := &selling.FailedSIStats{
+		SaveFailedCount:    int32(results[0].count),
+		CancelFailedCount:  int32(results[1].count),
+		ReturnFailedCount:  int32(results[2].count),
+		TotalFailedCount:   int32(results[0].count + results[1].count + results[2].count),
+		SavePendingCount:   int32(results[3].count),
+		CancelPendingCount: int32(results[4].count),
+		ReturnPendingCount: int32(results[5].count),
+		TotalPendingCount:  int32(results[3].count + results[4].count + results[5].count),
+	}
+
+	return rpc.ApiSuccessWithData("获取失败统计成功", stats), nil
+}
+
+// RetryFailedSI 重试/跳过失败的记录（支持 Save/Cancel/Return + SE）
+// action="" 或 "retry" = 重试（重置计数 + 重新入队）
+// action="skip" = 标记跳过（retry_count=-1，不再计入失败统计）
+func (c *Controller) RetryFailedSI(ctx context.Context, req *selling.RetryFailedSIReq) (*api.ResponseInfo, error) {
+	isSkip := req.Action == "skip"
+	totalCount := 0
+
+	if req.MsgType == "" || req.MsgType == string(mq.MsgTypeSaveSalesInvoice) {
+		totalCount += processSaveRecords(ctx, req, isSkip)
+	}
+	if req.MsgType == "" || req.MsgType == string(mq.MsgTypeCancelSalesInvoice) {
+		totalCount += processCancelRecords(ctx, req, isSkip)
+	}
+	if req.MsgType == "" || req.MsgType == string(mq.MsgTypeReturnSalesInvoice) {
+		totalCount += processReturnRecords(ctx, req, isSkip)
+	}
+
+	action := "重试"
+	if isSkip {
+		action = "跳过"
+	}
+	result := &selling.RetryFailedSIResult{
+		RetryCount: int32(totalCount),
+	}
+	return rpc.ApiSuccessWithData(action+"完成", result), nil
+}
+
+// skipRetryCount 跳过标记值（retry_count=-1 使其不匹配 >=5 的失败查询）
+const skipRetryCount = -1
+
+// processSaveRecords 处理 Save SI 失败记录（重试或跳过）
+func processSaveRecords(ctx context.Context, req *selling.RetryFailedSIReq, isSkip bool) int {
+	cols := dao.ReceiveSalesInvoice.Columns()
+	query := dao.ReceiveSalesInvoice.Ctx(ctx).
+		Where(cols.Docstatus, erp.DocstatusDraft).
+		WhereGTE(cols.RetryCount, erp.MaxRetryCount)
+
+	if req.SiteCode != "" {
+		query = query.Where(cols.SiteCode, req.SiteCode)
+	}
+	if req.RecordId > 0 {
+		query = query.WherePri(req.RecordId)
+	}
+	if req.SaleOrderUuid != "" {
+		query = query.Where(cols.SaleOrderUuid, req.SaleOrderUuid)
+	}
+
+	var records []entity.ReceiveSalesInvoice
+	if err := query.Scan(&records); err != nil {
+		g.Log().Errorf(ctx, "查询Save失败记录出错: %v", err)
+		return 0
+	}
+
+	count := 0
+	for _, r := range records {
+		if isSkip {
+			if _, err := dao.ReceiveSalesInvoice.Ctx(ctx).WherePri(r.Id).Data(do.ReceiveSalesInvoice{
+				RetryCount: skipRetryCount,
+				UpdatedAt:  int(time.Now().Unix()),
+			}).Update(); err != nil {
+				g.Log().Errorf(ctx, "跳过Save记录失败: id=%d, err=%v", r.Id, err)
+				continue
+			}
+			g.Log().Infof(ctx, "Save记录已标记跳过: id=%d, order=%s", r.Id, r.SaleOrderUuid)
+		} else {
+			if _, err := dao.ReceiveSalesInvoice.Ctx(ctx).WherePri(r.Id).Data(do.ReceiveSalesInvoice{
+				RetryCount: 0,
+				RespBody:   "",
+				UpdatedAt:  int(time.Now().Unix()),
+			}).Update(); err != nil {
+				g.Log().Errorf(ctx, "重置Save记录失败: id=%d, err=%v", r.Id, err)
+				continue
+			}
+			if err := queue.PushWithContext(ctx, string(consts.TopicSaveSalesInvoice), &mq.AsyncSalesInvoiceMsg{
+				RecordId: r.Id,
+				MsgType:  mq.MsgTypeSaveSalesInvoice,
+				SiteCode: r.SiteCode,
+			}); err != nil {
+				g.Log().Errorf(ctx, "重新推送Save消息失败: id=%d, err=%v", r.Id, err)
+				continue
+			}
+			g.Log().Infof(ctx, "Save记录已重新入队: id=%d, order=%s", r.Id, r.SaleOrderUuid)
+		}
+		count++
+	}
+	return count
+}
+
+// processCancelRecords 处理 Cancel SI 失败记录（Cancel 复用 SI 表，docstatus=Submitted + resp_body 含"取消SI失败"）
+func processCancelRecords(ctx context.Context, req *selling.RetryFailedSIReq, isSkip bool) int {
+	cols := dao.ReceiveSalesInvoice.Columns()
+	query := dao.ReceiveSalesInvoice.Ctx(ctx).
+		Where(cols.Docstatus, erp.DocstatusSubmitted).
+		WhereGTE(cols.RetryCount, erp.MaxRetryCount).
+		WhereLike(cols.RespBody, "%取消SI失败%")
+
+	if req.SiteCode != "" {
+		query = query.Where(cols.SiteCode, req.SiteCode)
+	}
+	if req.RecordId > 0 {
+		query = query.WherePri(req.RecordId)
+	}
+	if req.SaleOrderUuid != "" {
+		query = query.Where(cols.SaleOrderUuid, req.SaleOrderUuid)
+	}
+
+	var records []entity.ReceiveSalesInvoice
+	if err := query.Scan(&records); err != nil {
+		g.Log().Errorf(ctx, "查询Cancel失败记录出错: %v", err)
+		return 0
+	}
+
+	count := 0
+	for _, r := range records {
+		if isSkip {
+			if _, err := dao.ReceiveSalesInvoice.Ctx(ctx).WherePri(r.Id).Data(do.ReceiveSalesInvoice{
+				RetryCount: skipRetryCount,
+				UpdatedAt:  int(time.Now().Unix()),
+			}).Update(); err != nil {
+				g.Log().Errorf(ctx, "跳过Cancel记录失败: id=%d, err=%v", r.Id, err)
+				continue
+			}
+			g.Log().Infof(ctx, "Cancel记录已标记跳过: id=%d, order=%s", r.Id, r.SaleOrderUuid)
+		} else {
+			if _, err := dao.ReceiveSalesInvoice.Ctx(ctx).WherePri(r.Id).Data(do.ReceiveSalesInvoice{
+				RetryCount: 0,
+				RespBody:   "",
+				UpdatedAt:  int(time.Now().Unix()),
+			}).Update(); err != nil {
+				g.Log().Errorf(ctx, "重置Cancel记录失败: id=%d, err=%v", r.Id, err)
+				continue
+			}
+			if err := queue.PushWithContext(ctx, string(consts.TopicCancelSalesInvoice), &mq.AsyncSalesInvoiceMsg{
+				RecordId: r.Id,
+				MsgType:  mq.MsgTypeCancelSalesInvoice,
+				SiteCode: r.SiteCode,
+			}); err != nil {
+				g.Log().Errorf(ctx, "重新推送Cancel消息失败: id=%d, err=%v", r.Id, err)
+				continue
+			}
+			g.Log().Infof(ctx, "Cancel记录已重新入队: id=%d, order=%s", r.Id, r.SaleOrderUuid)
+		}
+		count++
+	}
+	return count
+}
+
+// processReturnRecords 处理 Return SI 失败记录（重试或跳过）
+func processReturnRecords(ctx context.Context, req *selling.RetryFailedSIReq, isSkip bool) int {
+	cols := dao.ReceiveReturnSalesInvoice.Columns()
+	query := dao.ReceiveReturnSalesInvoice.Ctx(ctx).
+		Where(cols.Docstatus, erp.DocstatusDraft).
+		WhereGTE(cols.RetryCount, erp.MaxRetryCount)
+
+	if req.SiteCode != "" {
+		query = query.Where(cols.SiteCode, req.SiteCode)
+	}
+	if req.RecordId > 0 {
+		query = query.WherePri(req.RecordId)
+	}
+	if req.SaleOrderUuid != "" {
+		query = query.Where(cols.SaleOrderUuid, req.SaleOrderUuid)
+	}
+
+	var records []entity.ReceiveReturnSalesInvoice
+	if err := query.Scan(&records); err != nil {
+		g.Log().Errorf(ctx, "查询Return失败记录出错: %v", err)
+		return 0
+	}
+
+	count := 0
+	for _, r := range records {
+		if isSkip {
+			if _, err := dao.ReceiveReturnSalesInvoice.Ctx(ctx).WherePri(r.Id).Data(do.ReceiveReturnSalesInvoice{
+				RetryCount: skipRetryCount,
+				UpdatedAt:  int(time.Now().Unix()),
+			}).Update(); err != nil {
+				g.Log().Errorf(ctx, "跳过Return记录失败: id=%d, err=%v", r.Id, err)
+				continue
+			}
+			g.Log().Infof(ctx, "Return记录已标记跳过: id=%d, order=%s", r.Id, r.SaleOrderUuid)
+		} else {
+			if _, err := dao.ReceiveReturnSalesInvoice.Ctx(ctx).WherePri(r.Id).Data(do.ReceiveReturnSalesInvoice{
+				RetryCount: 0,
+				RespBody:   "",
+				UpdatedAt:  int(time.Now().Unix()),
+			}).Update(); err != nil {
+				g.Log().Errorf(ctx, "重置Return记录失败: id=%d, err=%v", r.Id, err)
+				continue
+			}
+			if err := queue.PushWithContext(ctx, string(consts.TopicReturnSalesInvoice), &mq.AsyncSalesInvoiceMsg{
+				RecordId: r.Id,
+				MsgType:  mq.MsgTypeReturnSalesInvoice,
+				SiteCode: r.SiteCode,
+			}); err != nil {
+				g.Log().Errorf(ctx, "重新推送Return消息失败: id=%d, err=%v", r.Id, err)
+				continue
+			}
+			g.Log().Infof(ctx, "Return记录已重新入队: id=%d, order=%s", r.Id, r.SaleOrderUuid)
+		}
+		count++
+	}
+	return count
 }

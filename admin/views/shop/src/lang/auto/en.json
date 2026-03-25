@@ -1412,6 +1412,7 @@
     "区域": "Region",
     "总营销额": "Total Sales Revenue",
     "此名称已存在": "This name already exists",
+    "扫码": "Scan",
     "扫码点餐": "Scan to order",
     "免单原因：": "Reason for free:",
     "赠": "Give",
@@ -2267,5 +2268,10 @@
     "安全库存设置": "Safety Stock Setting",
     "点餐设置": "Ordering Settings",
     "扫码接单": "Scan QR to accept orders",
-    "是否显示非自助餐商品": "Show non-buffet items?"
+    "是否显示非自助餐商品": "Show non-buffet items?",
+    "当前门店营业状态为：“测试营业”，门店订单数据不计入汇总统计，仅用于内部测试。若确认正式营业请到“商家档案”板块进行开启。": "The current store operating status is: \"Test Open\". Store order data are not included in aggregated statistics and are used for internal testing only. If you confirm official opening, please enable it in the \"Merchant Profile\" section.",
+    "当前门店营业状态为：“测试营业”，若确认正式营业请到“商家档案”板块进行开启。": "The current store operating status is: “Test Open”. If you confirm official opening, please go to the “Merchant Profile” section to activate it.",
+    "桌码点餐": "Table code ordering",
+    "门店点餐码": "Store ordering code",
+    "支持顾客扫码进入本店点餐下单": "Supports customers scanning a code to enter the store and place orders"
 }

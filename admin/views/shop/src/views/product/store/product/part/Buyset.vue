@@ -87,16 +87,16 @@
         v-model="form.model.is_show_h5"
         :true-value="1"
         :false-value="2"
-        :label="$t('扫码点餐')"
+        :label="$t('桌码点餐')"
         size="large"
         :disabled="form.model.num_type == 1 || erp_is_open == 1"
       />
       <el-checkbox
-        v-if="is_open_delivery && form.model.type != 30"
+        v-if="is_open_delivery || is_open_store_scan_order"
         v-model="form.model.is_show_delivery"
         :true-value="1"
         :false-value="2"
-        :label="$t('外送')"
+        :label="$t('扫码点餐')"
         size="large"
         :disabled="form.model.num_type == 1 || erp_is_open == 1"
       />
@@ -271,6 +271,7 @@
   const is_open_kitchen_kds = supplier.value?.is_open_kitchen_kds || 0;
   const is_open_member = supplier.value?.is_open_member || 0;
   const is_open_delivery = supplier.value?.delivery_status || 0;
+  const is_open_store_scan_order = supplier.value?.is_open_store_scan_order || 0;
 
   // 注入form
   const form = inject('form', {});

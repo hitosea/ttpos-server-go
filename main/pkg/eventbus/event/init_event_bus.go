@@ -18,13 +18,14 @@ const (
 	// =============================================================================
 	// 会员订单事件
 	// =============================================================================
-	EventCreateMemberSaleOrder     EventName = "Event_Create_Member_Sale_Order"      // 创建外送订单事件
-	EventAcceptMemberSaleOrder     EventName = "Event_Accept_Member_Sale_Order"      // 外送订单商家接单事件
-	EventRejectMemberSaleOrder     EventName = "Event_Reject_Member_Sale_Order"      // 拒单会员端销售订单事件
-	EventCancelMemberOrder         EventName = "Event_Cancel_Member_Order"           // 整单取消事件
-	EventCookFinishMemberSaleOrder EventName = "Event_Cook_Finish_Member_Sale_Order" // 外送订单备餐完成事件
-	EventPayFinishMemberSaleOrder  EventName = "Event_Pay_Finish_Member_Sale_Order"  // 支付完成会员端销售订单事件
-	EventPayFinishKioskOrder       EventName = "Event_Pay_Finish_Kiosk_Order"        // 自助点餐机订单支付完成事件
+	EventCreateMemberSaleOrder      EventName = "Event_Create_Member_Sale_Order"       // 创建外送订单事件
+	EventAcceptMemberSaleOrder      EventName = "Event_Accept_Member_Sale_Order"       // 外送订单商家接单事件
+	EventRejectMemberSaleOrder      EventName = "Event_Reject_Member_Sale_Order"       // 拒单会员端销售订单事件
+	EventCancelMemberOrder          EventName = "Event_Cancel_Member_Order"            // 整单取消事件
+	EventCookFinishMemberSaleOrder  EventName = "Event_Cook_Finish_Member_Sale_Order"  // 外送订单备餐完成事件
+	EventPayFinishMemberSaleOrder   EventName = "Event_Pay_Finish_Member_Sale_Order"   // 支付完成会员端销售订单事件（外送）
+	EventPayFinishMemberDineInOrder EventName = "Event_Pay_Finish_Member_DineIn_Order" // 支付完成会员端堂食订单事件
+	EventPayFinishKioskOrder        EventName = "Event_Pay_Finish_Kiosk_Order"         // 自助点餐机订单支付完成事件
 
 	// =============================================================================
 	// 骑手配送事件

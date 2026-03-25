@@ -4,6 +4,7 @@ import (
 	contexts "context"
 	builtinerrors "errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -37,7 +38,14 @@ import (
 
 type IMemberOrderSrv interface {
 	// 会员端
-	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)    // 创建会员端订单
+	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)    // 创建会员端外送订单
+	CreateMemberDineInOrder(ctx context.Context, req req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error)                   // 创建会员端堂食订单
+	SubmitMemberDineInOrder(ctx context.Context, req req.SubmitMemberDineInOrderReq) error                                                   // 先下单后付模式：提交堂食订单到收银机
+	GetDineInOrderFormInfo(ctx context.Context, req req.GetDineInOrderFormInfoReq) (*resp.DineInOrderFormResp, error)                        // 获取堂食订单提交表单信息
+	SetDineInOrderDiningMethod(ctx context.Context, req req.SetDineInOrderDiningMethodReq) error                                             // 设置堂食订单用餐方式
+	PayDineInOrder(ctx context.Context, req req.PayDineInOrderReq) error                                                                     // 堂食订单提交支付
+	GetDineInOrderPayInfo(ctx context.Context, req req.GetDineInOrderPayInfoReq) (*resp.DineInOrderPaymentInfoResp, error)                   // 获取堂食订单支付信息
+	GetDineInOrderPayStatus(ctx context.Context, req req.GetDineInOrderPayStatusReq) (*resp.DineInOrderPaymentStatusResp, error)             // 获取堂食订单支付状态
 	GetMemberOrderFormInfo(ctx context.Context, req req.GetMemberOrderFormInfoReq) (*resp.CreateMemberOrderResp, error)                      // 获取订单提交表单信息
 	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                 // 设置会员端订单地址
 	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                          // 会员端订单提交支付，状态变为待支付
@@ -70,9 +78,19 @@ type IMemberOrderSrv interface {
 	MemberOrderSelectingTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error   // 外送订单选购超时自动取消订单
 	MemberOrderPayTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error         // 外送订单支付超时自动取消订单
 	MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error // 外送订单骑手接单超时自动取消订单
+	DineInOrderPayTimeoutAutoCancel(ctx context.Context, saleBillUuid uint64) error                // 堂食订单支付超时自动取消订单
 
 	// 完成外送订单
 	CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64) error // 完成外送订单
+
+	// 会员端堂食订单管理
+	CheckDineInOrder(ctx context.Context, req req.CheckDineInOrderReq) (*resp.OrderCheckServiceRes, error)                               // 会员端堂食订单结算前检查
+	GetMemberDineInOrderList(ctx context.Context, req req.MemberDineInOrderListReq) (*resp.GetMemberDineInOrderListResp, error)          // 获取会员端堂食订单列表
+	GetMemberDineInOrderDetail(ctx context.Context, req req.GetMemberDineInOrderDetailReq) (*resp.GetMemberDineInOrderDetailResp, error) // 获取会员端堂食订单详情
+	CancelMemberDineInOrder(ctx context.Context, req req.CancelMemberDineInOrderReq) error                                               // 取消会员端堂食订单（仅未付款）
+
+	// 测试用接口
+	MockPayDineInOrderCallback(ctx context.Context, req req.MockPayDineInOrderCallbackReq) error // 模拟堂食订单支付完成回调（仅用于测试）
 }
 
 func (s *orderSrv) CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64) error {
@@ -225,6 +243,485 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 		// 订单未取消，更新订单
 		return s.updateMemberOrder(ctx, req, memberSaleOrder)
 	}
+}
+
+// CheckDineInOrder 会员端堂食订单结算前检查
+// 参考收银机 OrderCheck，在会员端点击"去结算"时校验：
+// 消费税变动、服务费变动、库存、价格变动、规格、商品变动（被删除、下架）、限购等
+func (s *orderSrv) CheckDineInOrder(ctx context.Context, request req.CheckDineInOrderReq) (*resp.OrderCheckServiceRes, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "订单不存在")
+	}
+
+	// 验证订单类型
+	if !saleBill.IsInstantBill() {
+		return nil, errors.New("不是堂食订单")
+	}
+	// 验证订单状态
+	if saleBill.IsCanceled() {
+		return nil, errors.New("订单已取消")
+	}
+	if saleBill.IsFinish() {
+		return nil, errors.New("订单已完成")
+	}
+
+	ctx.Log().Debug("会员端堂食订单结算前检查")
+
+	// 获取所有商品，用于检查限购和商品变动
+	saleOrderProductAll := saleBill.GetSaleOrderProductAll()
+
+	// 对商品进行结账检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购
+	// ignoreMust=true: 会员端堂食订单不检查必点商品
+	checkServiceRes, errCheck := s.checkOrder(ctx, true, db, request.SaleBillUuid, 0, saleOrderProductAll, WithCheckTypeCheckout())
+	if errCheck != nil {
+		return nil, errors.WithMessage(errCheck, "订单检查失败")
+	}
+	if checkServiceRes != nil {
+		return checkServiceRes, nil
+	}
+
+	// 检查含税未含税是否改变、服务费类型是否改变、服务费是否改变、服务费比例是否改变
+	res, newSetting, err := s.checkSaleBillSettingChanged(ctx, saleBill)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if res != nil {
+		// 如果账单快照设置变化，更新销售订单的金额
+		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(request.SaleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		freshSaleBill := shopCartInfo.SaleBill
+		if err := s.CalcAndSaveSaleBill(ctx, db, freshSaleBill, model.WithLatestPrice(), model.WithSaleBillSetting(newSetting)); err != nil {
+			return nil, errors.WithMessage(err, "更新订单金额失败")
+		}
+		return res, nil
+	}
+
+	return nil, nil
+}
+
+// GetDineInOrderFormInfo 获取堂食订单提交表单信息
+// 用于会员端堂食订单的提交页面，显示商品列表、金额信息、支付方式等
+func (s *orderSrv) GetDineInOrderFormInfo(ctx context.Context, request req.GetDineInOrderFormInfoReq) (*resp.DineInOrderFormResp, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "订单不存在")
+	}
+
+	// 验证订单类型
+	if !saleBill.IsInstantBill() {
+		return nil, errors.New("不是堂食订单")
+	}
+
+	// 验证订单状态
+	if saleBill.IsCanceled() {
+		return nil, errors.New("订单已取消")
+	}
+	if saleBill.IsFinish() {
+		return nil, errors.New("订单已完成")
+	}
+
+	// 获取指定的销售订单
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 重新计算金额并保存
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, errors.WithMessage(err, "计算订单金额失败")
+	}
+
+	// 构建商品列表
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+	products := make([]resp.DineInProduct, 0)
+	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+		// 跳过已删除的商品和套餐子商品（套餐子商品挂在套餐主商品下）
+		if saleOrderProduct.DeleteTime != 0 || saleOrderProduct.IsPackageSubProduct() {
+			continue
+		}
+		product := resp.DineInProduct{
+			SaleOrderProductUuid: saleOrderProduct.Uuid,
+			LocaleName:           saleOrderProduct.GetLocaleName(),
+			LocaleAttributeName:  saleOrderProduct.GetAttributeName(), // 包含规格+小料+属性
+			Num:                  saleOrderProduct.Num,
+			UnitPrice:            saleOrderProduct.SalePrice,      // 折前单价（纯商品价格，与订单详情保持一致）
+			Amount:               saleOrderProduct.GetSalePrice(), // 折前总价 = 单价 * 数量
+			Image: func() string {
+				if saleOrderProduct.ImageFileUuid != 0 && saleOrderProduct.ImageFile != nil {
+					return saleOrderProduct.ImageFile.GetUrl(baseUrl)
+				}
+				return ""
+			}(),
+			ProductType:        uint(saleOrderProduct.ProductType),
+			PackageProductList: resp.PackageProductList{List: make([]resp.PackageProduct, 0)},
+		}
+		// 套餐商品：挂载子商品列表
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, sub := range subProducts {
+				if sub.DeleteTime != 0 {
+					continue
+				}
+				product.PackageProductList.List = append(product.PackageProductList.List, resp.PackageProduct{
+					Uuid:                sub.Uuid,
+					LocaleName:          sub.GetLocaleName(),
+					LocaleAttributeName: sub.GetAttributeName(), // 包含规格+小料+属性
+					Num:                 sub.Num,
+					UnitNum:             sub.GetProductNum(),
+					AddPrice:            sub.AddPrice,
+				})
+			}
+		}
+		products = append(products, product)
+	}
+
+	// 构建金额信息
+	amountInfo := resp.DineInAmountInfo{
+		ProductAmount:  saleOrder.ProductOriginalAmount, // 商品金额
+		TaxAmount:      saleOrder.TaxFee,                // 消费税
+		ServiceAmount:  saleOrder.ServiceFee,            // 服务费
+		MemberDiscount: saleOrder.MemberDiscountFee,     // 会员折扣
+		TotalAmount:    saleOrder.Amount,                // 应付金额（已包含税费和服务费）
+	}
+
+	// 获取支付方式列表
+	paymentMethods, err := repository.NewPaymentMethodRepo(db).GetLianLianPayPaymentMethodList()
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取支付方式失败")
+	}
+	payList := make([]resp.PaymentMethodItem, 0)
+	for _, paymentMethod := range paymentMethods {
+		payList = append(payList, resp.PaymentMethodItem{
+			Source:        paymentMethod.Source,
+			SourceText:    constant.PaymentMethodSourceTextMap[paymentMethod.Source],
+			Uuid:          paymentMethod.Uuid,
+			PaymentName:   paymentMethod.GetPaymentName(),
+			PaymentMethod: paymentMethod.GetName(),
+			FeePercent:    paymentMethod.FeePercent,
+			Logo: func() string {
+				if paymentMethod.IsWechatPay() {
+					return baseUrl + "/image/pay/wechat_pay.png"
+				}
+				if paymentMethod.IsAliPay() {
+					return baseUrl + "/image/pay/alipay.png"
+				}
+				if paymentMethod.IsQrPromptPay() {
+					return baseUrl + "/image/pay/qr_prompt_pay.png"
+				}
+				return ""
+			}(),
+			Code: paymentMethod.Code,
+		})
+	}
+
+	// 读取门店配置判断先下单后付模式
+	isOrderFirstPayLater := false
+	storeScanOrderSetting, settingErr := s.settingSrv.GetStoreScanOrderSetting(ctx)
+	if settingErr == nil && storeScanOrderSetting.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes {
+		isOrderFirstPayLater = true
+	}
+
+	return &resp.DineInOrderFormResp{
+		SaleBillUuid:         saleBill.Uuid,
+		SaleOrderUuid:        saleOrder.Uuid,
+		DiningMethod:         saleBill.DiningMethod,
+		ProductList:          resp.DineInProductList{List: products},
+		AmountInfo:           amountInfo,
+		PaymentMethods:       resp.PaymentMethodList{List: payList},
+		Remark:               saleBill.Remark,
+		IsOrderFirstPayLater: isOrderFirstPayLater,
+	}, nil
+}
+
+// SetDineInOrderDiningMethod 设置堂食订单用餐方式
+func (s *orderSrv) SetDineInOrderDiningMethod(ctx context.Context, request req.SetDineInOrderDiningMethodReq) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "订单不存在")
+	}
+
+	// 验证订单类型
+	if !saleBill.IsInstantBill() {
+		return errors.New("不是堂食订单")
+	}
+
+	// 验证订单状态
+	if saleBill.IsCanceled() {
+		return errors.New("订单已取消")
+	}
+	if saleBill.IsFinish() {
+		return errors.New("订单已完成")
+	}
+
+	// 设置用餐方式并更新商品税率
+	saleBill.SetTakeoutSaleBill(request.DiningMethod)
+
+	// 重新计算金额并保存
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return errors.WithMessage(err, "更新订单失败")
+	}
+
+	return nil
+}
+
+// PayDineInOrder 堂食订单提交支付
+func (s *orderSrv) PayDineInOrder(ctx context.Context, request req.PayDineInOrderReq) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "订单不存在")
+	}
+
+	// 验证订单类型
+	if !saleBill.IsInstantBill() {
+		return errors.New("不是堂食订单")
+	}
+
+	// 验证订单状态
+	if saleBill.IsCanceled() {
+		return errors.New("订单已取消")
+	}
+	if saleBill.IsFinish() {
+		return errors.New("订单已完成")
+	}
+
+	// 先下单后付款订单不允许调用pay接口，应使用submit接口
+	if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes {
+		return errors.New("请前往收银机支付")
+	}
+
+	// 获取指定的销售订单
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return errors.New("销售订单不存在")
+	}
+
+	// 验证订单金额
+	if saleOrder.Amount < 1 {
+		return errors.NewWithCode(constant.CodeOrderAmountLessThan1, "订单金额小于1，无法支付")
+	}
+
+	// 验证支付方式
+	if request.PaymentMethodUuid == 0 {
+		return errors.New("请选择支付方式")
+	}
+
+	// 记录提交支付时间（仅首次提交时记录）
+	if saleBill.SubmitPayTime == 0 {
+		saleBill.SubmitPayTime = time.Now().Unix()
+	}
+
+	// 更新订单备注和提交支付时间
+	if request.Remark != "" {
+		// 会员端备注写入 OrderRemark（整单备注），与收银端整单备注统一
+		orderRemarkInfo := resp.OrderRemarkInfo{
+			List: []resp.OrderRemarkItem{
+				{
+					IsLatest:   true,
+					Uuids:      []uint64{},
+					Remarks:    []dto.LocaleResponse{},
+					Remark:     request.Remark,
+					CreateTime: time.Now().Unix(),
+				},
+			},
+		}
+		saleBill.OrderRemark = orderRemarkInfo.ToJson()
+	}
+	if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
+		return errors.WithMessage(err, "更新订单失败")
+	}
+
+	return nil
+}
+
+// GetDineInOrderPayInfo 获取堂食订单支付信息
+func (s *orderSrv) GetDineInOrderPayInfo(ctx context.Context, request req.GetDineInOrderPayInfoReq) (*resp.DineInOrderPaymentInfoResp, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "订单不存在")
+	}
+
+	// 验证订单类型
+	if !saleBill.IsInstantBill() {
+		return nil, errors.New("不是堂食订单")
+	}
+
+	// 获取指定的销售订单
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 验证订单金额
+	if saleOrder.Amount < 1 {
+		return nil, errors.NewWithCode(constant.CodeOrderAmountLessThan1, "订单金额小于1，无法支付")
+	}
+
+	// 获取支付方式
+	var paymentMethod *model.PaymentMethod
+	if request.PaymentMethodUuid != 0 {
+		paymentMethod, err = repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(request.PaymentMethodUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if paymentMethod.Uuid == 0 {
+			return nil, errors.New("支付方式不存在")
+		}
+	} else {
+		return nil, errors.New("请选择支付方式")
+	}
+
+	// 验证支付方式是否可用
+	if !paymentMethod.IsLianLianPay() {
+		return nil, errors.New("支付方式不可用")
+	}
+
+	// 关联UUID使用销售订单UUID
+	relatedUuid := saleOrder.Uuid
+
+	// 查询或创建支付订单
+	paymentOrderRepo := repository.NewPaymentOrderRepo(db)
+	paymentOrder, err := paymentOrderRepo.GetPaymentOrderInfo(
+		repository.CommonRepo.WhereBySoftDelete(),
+		paymentOrderRepo.WhereRelatedUuid(relatedUuid),
+		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
+		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
+	)
+	if err == nil && paymentOrder.Uuid != 0 {
+		// 已有支付订单且已支付
+		if paymentOrder.Status == constant.PaymentOrderStatusPaid {
+			return &resp.DineInOrderPaymentInfoResp{
+				SaleBillUuid:      saleBill.Uuid,
+				SaleOrderUuid:     saleOrder.Uuid,
+				PaymentOrderUuid:  paymentOrder.Uuid,
+				PaymentMethodName: paymentMethod.PaymentName,
+				Status:            paymentOrder.Status,
+				PaymentAmount:     paymentOrder.PaymentAmount,
+			}, nil
+		}
+	} else {
+		// 创建支付订单
+		createPaymentOrder, err := paymentOrderRepo.Create(model.PaymentOrder{
+			PaymentMethodName: paymentMethod.PaymentName,
+			PaymentMethodUuid: paymentMethod.Uuid,
+			PaymentFeePercent: 0,
+			RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
+			RelatedUuid:       relatedUuid,
+			CurrencyUnit: func() string {
+				currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+				if err != nil {
+					return "THB"
+				}
+				return currencySetting.Unit
+			}(),
+			PaymentAmount:        saleOrder.Amount,
+			PaymentCommissionFee: 0,
+			Amount:               saleOrder.Amount,
+			Status:               constant.PaymentOrderStatusUnPay,
+		})
+		if err != nil {
+			return nil, errors.WithMessage(err, "创建支付订单失败")
+		}
+		paymentOrder = &createPaymentOrder
+	}
+
+	// 判断当前是手机端还是PC端
+	isOpenPc := !ctx.IsMobile() && viper.GetString("OPEN_MEMBER_PC_PAY") == "true"
+
+	// 创建连连支付订单
+	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
+		PaymentOrderUuid:  paymentOrder.Uuid,
+		RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
+		RelatedUuid:       relatedUuid,
+		PaymentMethodUuid: paymentMethod.Uuid,
+		PaymentMethodCode: paymentMethod.Code,
+		PaymentAmount:     saleOrder.Amount,
+		CommissionFee:     0,
+		PaymentMethod: func() string {
+			if isOpenPc {
+				return PaymentMethodWechatPay
+			}
+			return PaymentMethodH5Payment
+		}(),
+		RedirectUrl: func() string {
+			if ctx.IsMobile() && paymentMethod.IsWechatPay() {
+				return fmt.Sprintf("%s/company/%d/dine_in/payment_result/%d/", config.Server.MemberBaseUrl, ctx.GetCompanyUuid(), saleBill.Uuid)
+			}
+			return ""
+		}(),
+	})
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &resp.DineInOrderPaymentInfoResp{
+		SaleBillUuid:      saleBill.Uuid,
+		SaleOrderUuid:     saleOrder.Uuid,
+		PaymentOrderUuid:  payment.PaymentOrderUuid,
+		PaymentMethodName: paymentMethod.PaymentName,
+		IsWechatPay:       paymentMethod.IsWechatPay(),
+		QrCode:            utils.IfString(isOpenPc || paymentMethod.IsQrPromptPay(), payment.LinkUrl, ""),
+		LinkUrl:           utils.IfString(isOpenPc || paymentMethod.IsQrPromptPay(), "", payment.LinkUrl),
+		Status:            payment.GetStatus(),
+		PaymentAmount:     payment.OrderAmount,
+	}, nil
+}
+
+// GetDineInOrderPayStatus 获取堂食订单支付状态
+func (s *orderSrv) GetDineInOrderPayStatus(ctx context.Context, request req.GetDineInOrderPayStatusReq) (*resp.DineInOrderPaymentStatusResp, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "订单不存在")
+	}
+
+	// 获取指定的销售订单
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+
+	// 获取支付状态
+	status := uint(0)
+	if saleOrder.Status == constant.SaleOrderStatusFinish {
+		status = 1
+	}
+
+	return &resp.DineInOrderPaymentStatusResp{
+		SaleBillUuid:  saleBill.Uuid,
+		SaleOrderUuid: saleOrder.Uuid,
+		Status:        status,
+	}, nil
 }
 
 // GetMemberOrderFormInfo 获取订单提交表单信息
@@ -866,7 +1363,7 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 		memberSaleOrder.RefundAmount = returnOrder.RefundAmount
 	}
 
-	// 设置订单为“已取消”状态
+	// 设置订单为"已取消"状态
 	memberSaleOrder.SetCancel(request.CancelReason)
 
 	// 更新订单状态
@@ -880,7 +1377,7 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 		return errors.WithMessage(err)
 	}
 
-	// 发布“订单取消”操作事件
+	// 发布"订单取消"操作事件
 	utils.Go(func() {
 		s.bus.PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
 			BasePayload: event.BasePayload{
@@ -1021,7 +1518,7 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 			}
 		}
 
-		// 设置订单为“已取消”状态
+		// 设置订单为"已取消"状态
 		memberSaleOrder.RefundAmount = memberSaleOrder.Amount
 		memberSaleOrder.SetCancelInCashier(request.CancelReason)
 
@@ -1035,7 +1532,7 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 		return errors.WithMessage(err)
 	}
 
-	// 发布“整单取消”操作事件
+	// 发布"整单取消"操作事件
 	utils.Go(func() {
 
 		// 取消订单
@@ -1619,6 +2116,12 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		return errors.WithMessage(err, "更新外送订单失败")
 	}
 
+	// 会员外送订单接单成功后，同步到 ERP（有接单场景）
+	// 异步推送，失败不影响接单结果；通过 ErpSyncStatus 幂等控制避免重复推送
+	utils.Go(func() {
+		s.SyncMemberOrderToErp(ctx, memberSaleOrder.SaleBill, db)
+	})
+
 	// 添加骑手接单超时自动取消订单的延时队列任务
 	if Queue.MemberOrderCancelQueue != nil {
 		utils.Go(func() {
@@ -2120,7 +2623,7 @@ func (s *orderSrv) MemberOrderPayTimeoutAutoCancel(ctx context.Context, memberSa
 		}
 	}
 
-	// 发布“订单取消”操作事件
+	// 发布"订单取消"操作事件
 	utils.Go(func() {
 		event.NewSystemBus().PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
 			BasePayload: event.BasePayload{ // 基础信息
@@ -2232,7 +2735,7 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 			return errors.WithMessage(err)
 		}
 
-		// 发布“订单取消”操作事件
+		// 发布"订单取消"操作事件
 		utils.Go(func() {
 			s.bus.PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
 				BasePayload: event.BasePayload{
@@ -2274,6 +2777,1759 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 		logger.Logger.Error("自动取消订单失败", zap.Uint64("memberSaleOrderUuid", memberSaleOrderUuid), zap.Error(err))
 		return err
 	}
+
+	return nil
+}
+
+// DineInOrderPayTimeoutAutoCancel 堂食订单支付超时自动取消订单
+// 当会员端堂食订单创建后在指定时间内未完成支付，自动取消订单
+func (s *orderSrv) DineInOrderPayTimeoutAutoCancel(ctx context.Context, saleBillUuid uint64) error {
+	// 获取DB
+	db := ctx.GetDB()
+
+	// 1. 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		logger.Logger.Error("获取堂食订单失败",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid),
+			zap.Error(err))
+		return err
+	}
+
+	// 2. 检查订单状态是否可以取消 - 只有待付款状态的订单才能自动取消
+	if saleBill.Status != constant.SaleBillStatusPending {
+		if saleBill.Status == constant.SaleBillStatusCanceled {
+			// 已取消，无需处理
+			return nil
+		}
+		// 已支付或已完成，无需取消
+		return nil
+	}
+
+	// 3. 检查是否为会员端订单（会员端 Source = 5）
+	if saleBill.Source != constant.SaleBillSourceMember {
+		logger.Logger.Warn("非会员端堂食订单，跳过自动取消",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid),
+			zap.Uint("source", uint(saleBill.Source)))
+		return nil
+	}
+
+	// 3.5 先下单后付模式：检查 H5 订单是否已被收银端接单，已接单的订单不能自动取消
+	// if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes {
+	// 	logger.Logger.Info("先下单后付堂食订单已被接单，跳过自动取消",
+	// 		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+	// 		zap.Uint64("sale_bill_uuid", saleBillUuid))
+	// }
+
+	// 4. 检查支付超时剩余时间（防止误触发）- 堂食订单超时时间为15分钟
+	dineInPaymentTimeout := int64(15 * 60) // 15分钟
+	if saleBill.SubmitPayTime > 0 {
+		elapsedTime := time.Now().Unix() - int64(saleBill.SubmitPayTime)
+		remainingTime := dineInPaymentTimeout - elapsedTime
+		if remainingTime > 5 {
+			logger.Logger.Warn("堂食订单支付未超时",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("sale_bill_uuid", saleBillUuid),
+				zap.Int64("remaining_time", remainingTime))
+			return errors.New("订单支付未超时")
+		}
+	}
+
+	// 5. 执行取消操作
+	reason := constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneDineInPaymentTimeout]
+	if err := repository.NewOrderRepo(db).CancelOrderWithoutTx(saleBillUuid); err != nil {
+		logger.Logger.Error("取消堂食订单失败",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid),
+			zap.Error(err))
+		return err
+	}
+
+	// 6. 发布订单取消事件，通知前端
+	utils.Go(func() {
+		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       constant.SourceMember,
+				SaleBillUuid: saleBillUuid,
+			},
+			Data: event.CancelMemberOrderPayloadData{
+				Type:    "timeout_cancel",
+				Refunds: make([]event.CancelMemberOrderPayloadDataRefund, 0),
+			},
+		})
+	})
+
+	_ = reason // Reason is used for logging context
+
+	logger.Logger.Info("堂食订单支付超时自动取消成功",
+		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+		zap.Uint64("sale_bill_uuid", saleBillUuid))
+
+	return nil
+}
+
+// CreateMemberDineInOrder 创建会员端堂食订单
+// 1. sale_bill_uuid 为0时，新建订单并添加商品
+// 2. sale_bill_uuid 不为0时，更新已有订单（识别新增、修改、删除的商品）
+// 与外送订单的核心差异：BillType=Instant, DiningMethod=DineIn, 商品价格与收银机一致
+func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error) {
+	request.ApplyCompatibleFields()
+	if err := request.Validate(); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 检查是否在营业时间内
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取门店业务设置失败")
+	}
+	companySetting := ctx.GetCompanySetting()
+	if !utils.SetTimezone(companySetting.Timezone).IsWithinOpeningHours(businessSetting.OpeningHours) {
+		return nil, errors.New(i18n.Translate(ctx.GetLanguage(), "店铺休息中"))
+	}
+
+	var result *resp.CreateInstantOrderResp
+	isNewOrder := request.SaleBillUuid == 0
+	if isNewOrder {
+		// 新建订单
+		result, err = s.createDineInOrder(ctx, request)
+	} else {
+		// 更新已有订单
+		result, err = s.updateDineInOrder(ctx, request)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// 未充分测试,下期再上
+	// 仅新建订单时添加支付超时自动取消任务
+	// if isNewOrder && result != nil && Queue.MemberOrderCancelQueue != nil {
+	// 	saleBillUuid := result.SaleBillUuid
+	// 	companyUuid := ctx.GetCompanyUuid()
+	// 	utils.Go(func() {
+	// 		// 构建队列消息参数
+	// 		paramsJson := utils.ToJson(map[string]any{
+	// 			"sale_bill_uuid": saleBillUuid,
+	// 			"company_uuid":   companyUuid,
+	// 			"cancel_scene":   constant.MemberSaleOrderSceneDineInPaymentTimeout,
+	// 		})
+
+	// 		// 发送延时消息：15分钟后执行自动取消
+	// 		_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
+	// 			paramsJson,
+	// 			15*time.Minute,
+	// 			delayqueue.WithRetryCount(3),
+	// 		)
+	// 		if err != nil {
+	// 			logger.Logger.Error("添加堂食订单支付超时自动取消任务失败",
+	// 				zap.Uint64("company_uuid", companyUuid),
+	// 				zap.Uint64("sale_bill_uuid", saleBillUuid),
+	// 				zap.Error(err))
+	// 		}
+	// 	})
+	// }
+
+	return result, nil
+}
+
+// SubmitMemberDineInOrder 先下单后付模式：提交堂食订单到收银机
+// 会员端调用 create 后可多次加购，最终通过 submit 提交生成 H5 订单
+func (s *orderSrv) SubmitMemberDineInOrder(ctx context.Context, request req.SubmitMemberDineInOrderReq) error {
+	// 分布式锁：防止并发双击创建重复 H5 订单
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	// 1. 检查门店配置：必须启用"先下单后付"模式
+	storeScanOrderSetting, err := s.settingSrv.GetStoreScanOrderSetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "获取门店配置失败")
+	}
+	if storeScanOrderSetting.IsOrderFirstPayLater != constant.OrderFirstPayLaterYes {
+		return errors.New("当前模式不支持此操作")
+	}
+
+	// 2. 获取订单并校验状态
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取订单信息失败")
+	}
+	if saleBill.Status != constant.SaleBillStatusPending {
+		return errors.New("订单状态不允许提交")
+	}
+	if saleBill.SubmitPayTime > 0 {
+		return errors.New("订单已提交，请勿重复操作")
+	}
+
+	// 3. 标记 sale_bill 为先下单后付款，并保存会员端备注到整单备注
+	saleBill.IsOrderFirstPayLater = 1
+	if request.Remark != "" {
+		// 会员端备注保存到 OrderRemark 字段（整单备注），格式与收银端一致
+		orderRemarkInfo := resp.OrderRemarkInfo{
+			List: []resp.OrderRemarkItem{
+				{
+					IsLatest:   true,
+					Uuids:      []uint64{},
+					Remarks:    []dto.LocaleResponse{},
+					Remark:     request.Remark,
+					CreateTime: time.Now().Unix(),
+				},
+			},
+		}
+		saleBill.OrderRemark = orderRemarkInfo.ToJson()
+	}
+	if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
+		return errors.WithMessage(err, "更新订单标记失败")
+	}
+
+	// 4. 创建 H5 订单
+	if err := s.createH5OrderForOrderFirst(ctx, request.SaleBillUuid, request.SaleOrderUuid); err != nil {
+		return err
+	}
+
+	// 5. 尝试自动接单（失败不影响 submit 结果）
+	s.autoAcceptOrderFirst(ctx, request.SaleBillUuid)
+
+	return nil
+}
+
+// autoAcceptOrderFirst 先下单后付模式：尝试自动接单
+// 复用与支付完成事件中 autoAcceptMemberDineInOrder 相同的判断逻辑：
+// - 关闭 H5 接单功能时直接自动接单
+// - 开启时根据接单设置（金额限额）判断
+// 自动接单失败不影响 submit 结果，订单保持待接单状态等待手动处理
+func (s *orderSrv) autoAcceptOrderFirst(ctx context.Context, saleBillUuid uint64) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	companySetting := ctx.GetCompanySetting()
+
+	// 判断是否允许自动接单
+	if !companySetting.GetIsOpenH5Order() {
+		// 关闭 H5 接单功能：直接自动接单
+		ctx.Log().Info("autoAcceptOrderFirst, h5 order disabled, auto accept directly",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid))
+	} else {
+		// 开启 H5 接单功能：检查接单设置和金额限额
+		acceptOrderSetting, err := s.settingSrv.GetAcceptOrderSetting(ctx)
+		if err != nil {
+			ctx.Log().Error("autoAcceptOrderFirst, GetAcceptOrderSetting failed",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("sale_bill_uuid", saleBillUuid),
+				zap.Error(err))
+			return
+		}
+
+		saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+		if err != nil {
+			ctx.Log().Error("autoAcceptOrderFirst, GetSaleBillAllInfo failed",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("sale_bill_uuid", saleBillUuid),
+				zap.Error(err))
+			return
+		}
+
+		saleOrder := saleBill.GetFirstSaleOrder()
+		if saleOrder == nil {
+			return
+		}
+		totalPrice := saleBill.GetUnAcceptH5OrderProductTotalPrice(saleOrder.SaleOrderProducts)
+
+		if !acceptOrderSetting.CanAutoOrder(totalPrice) {
+			ctx.Log().Info("autoAcceptOrderFirst, auto accept not allowed",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("sale_bill_uuid", saleBillUuid),
+				zap.Float64("totalPrice", totalPrice))
+			return
+		}
+	}
+
+	// 获取 H5 订单
+	h5OrderRepo := repository.NewH5OrderRepo(db)
+	h5Order, err := h5OrderRepo.GetH5Order(
+		h5OrderRepo.WhereSaleBillUuid(saleBillUuid),
+		h5OrderRepo.WhereOrderType(constant.H5OrderTypeMemberDineIn),
+	)
+	if err != nil || h5Order.Status != constant.H5OrderStatusOrder {
+		ctx.Log().Warn("autoAcceptOrderFirst, h5 order not found or not pending",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid),
+			zap.Error(err))
+		return
+	}
+
+	// 获取门店主收银设备 UUID，用于挂单归属
+	deviceRepo := repository.NewDeviceRepo(db)
+	mainDevice, err := deviceRepo.GetDevice(deviceRepo.WhereSource(constant.SourceCashier), deviceRepo.WhereMain())
+	if err != nil {
+		// 主设备不存在时尝试获取任意收银设备
+		mainDevice, err = deviceRepo.GetDevice(deviceRepo.WhereSource(constant.SourceCashier))
+		if err != nil {
+			ctx.Log().Warn("autoAcceptOrderFirst, no cashier device found, skip auto accept",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("sale_bill_uuid", saleBillUuid))
+			return
+		}
+	}
+	ctx.SetDeviceUuid(mainDevice.Uuid)
+
+	// 执行自动接单
+	result, err := s.AcceptH5Order(ctx, h5Order.Uuid, true)
+	if err != nil {
+		ctx.Log().Error("autoAcceptOrderFirst, AcceptH5Order failed",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("h5_order_uuid", h5Order.Uuid),
+			zap.Error(err))
+		return
+	}
+	if result != nil {
+		ctx.Log().Warn("autoAcceptOrderFirst, AcceptH5Order check failed",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("h5_order_uuid", h5Order.Uuid),
+			zap.Any("result", result))
+		return
+	}
+
+	ctx.Log().Info("autoAcceptOrderFirst, auto accept success",
+		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+		zap.Uint64("sale_bill_uuid", saleBillUuid),
+		zap.Uint64("h5_order_uuid", h5Order.Uuid),
+		zap.Uint64("device_uuid", mainDevice.Uuid))
+}
+
+// createH5OrderForOrderFirst 为"先下单后付"模式创建 H5 订单
+// 复用支付完成事件中 createH5OrderForMemberDineIn 的核心逻辑，区别在于：
+// 1. 不标记订单为已完成（SaleBill.Status 保持 Pending，因为还没付款）
+// 2. 设置 submit_pay_time 使订单在列表中可见
+// 自动接单由 autoAcceptOrderFirst 在外部处理
+func (s *orderSrv) createH5OrderForOrderFirst(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取销售账单信息（包含商品列表）
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取订单信息失败")
+	}
+
+	// 获取销售订单
+	var saleOrder *model.SaleOrder
+	for _, order := range saleBill.SaleOrders {
+		if order.Uuid == saleOrderUuid {
+			saleOrder = order
+			break
+		}
+	}
+	if saleOrder == nil {
+		return errors.New("销售订单不存在")
+	}
+
+	// 获取销售订单商品
+	saleOrderProducts := saleOrder.SaleOrderProducts
+	if len(saleOrderProducts) == 0 {
+		return errors.New("订单商品为空")
+	}
+
+	// 获取公司设置
+	companySetting := ctx.GetCompanySetting()
+
+	// 创建 h5_order 记录
+	h5OrderUuid, _ := utils.GetID()
+	now := time.Now().Unix()
+
+	// 构建 h5_order_product 列表（仅包含主商品，套餐子商品随主商品一起处理）
+	lang := ctx.GetLanguage()
+	h5OrderProductList := make([]*model.H5OrderProduct, 0, len(saleOrderProducts))
+	for _, product := range saleOrderProducts {
+		// 跳过套餐子商品
+		if product.PackageUuid > 0 {
+			continue
+		}
+		h5OrderProductList = append(h5OrderProductList, &model.H5OrderProduct{
+			// 快照信息
+			Name:          product.MultiLanguageName.GetNameByLang(lang),
+			Price:         product.GetFinalSalePrice(),
+			SalePrice:     product.SalePrice,
+			Num:           product.Num,
+			AttributeText: product.GetAttributeNamesByLang(lang),
+			Remark:        product.Remark,
+			// 关联uuid
+			SaleOrderProductUuid: product.Uuid,
+			H5OrderUuid:          h5OrderUuid,
+			SaleBillUuid:         saleBill.Uuid,
+		})
+	}
+
+	h5Order := &model.H5Order{
+		BaseModel: model.BaseModel{
+			Uuid:       h5OrderUuid,
+			CreateTime: now,
+			UpdateTime: now,
+		},
+		DeskUuid:        0,                                // 会员端堂食订单无桌台
+		SaleOrderUuid:   saleOrder.Uuid,                   // 销售订单uuid
+		SaleBillUuid:    saleBill.Uuid,                    // 销售账单uuid
+		DeskNo:          saleBill.SerialNo,                // 取餐号（使用 sale_bill.serial_no）
+		Status:          constant.H5OrderStatusOrder,      // 状态：待接单
+		OrderType:       constant.H5OrderTypeMemberDineIn, // 订单类型：会员端堂食订单
+		IsAutoAccept:    0,                                // 非自动接单
+		IsNeedAudit:     companySetting.IsOpenH5Order,     // 关闭扫码点餐接单则不需要审核，直接送厨
+		OrderTime:       now,                              // 下单时间
+		H5OrderProducts: h5OrderProductList,
+	}
+
+	// 保存到数据库：创建 H5 订单 + 更新 sale_order_product + 设置 submit_pay_time
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		h5OrderRepo := repository.NewH5OrderRepo(tx)
+		saleOrderProductRepo := repository.NewSaleOrderProductRepo(tx)
+		saleBillRepo := repository.NewSaleBillRepo(tx)
+
+		// 创建 h5_order
+		if _, err := h5OrderRepo.CreateH5Order(*h5Order); err != nil {
+			return err
+		}
+
+		// 批量创建 h5_order_product
+		for _, h5OrderProduct := range h5Order.H5OrderProducts {
+			if _, err := h5OrderRepo.CreateH5OrderProduct(*h5OrderProduct); err != nil {
+				return err
+			}
+		}
+
+		// 批量更新 sale_order_product 的 h5_order_uuid 和 is_accept_order
+		if err := saleOrderProductRepo.Update(map[string]any{
+			"h5_order_uuid":   h5OrderUuid,
+			"is_accept_order": constant.OrderProductIsAcceptOrderUnAccept,
+		},
+			repository.CommonRepo.WhereBySaleOrderUuid(saleOrder.Uuid),
+			repository.CommonRepo.WhereBySoftDelete(),
+		); err != nil {
+			return err
+		}
+
+		// 设置 submit_pay_time，使订单在列表查询中可见（列表过滤条件：submit_pay_time > 0）
+		saleBill.SubmitPayTime = now
+		if err := saleBillRepo.UpdateSaleBill(saleBill); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err, "创建H5订单失败")
+	}
+
+	ctx.Log().Info("createH5OrderForOrderFirst, h5_order created",
+		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+		zap.Uint64("h5_order_uuid", h5OrderUuid),
+		zap.Uint64("sale_bill_uuid", saleBillUuid),
+		zap.String("desk_no", saleBill.SerialNo))
+
+	return nil
+}
+
+// createDineInOrder 创建堂食订单（内部方法）
+func (s *orderSrv) createDineInOrder(ctx context.Context, request req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error) {
+	// 创建订单
+	instantOrder, err := s.createInstantOrder(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取销售账单信息
+	db := s.dbm.GetDBWithContext(ctx)
+	targetSaleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(instantOrder.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "订单不存在")
+	}
+
+	// 添加所有商品
+	if err := s.addDineInProducts(ctx, instantOrder.SaleBillUuid, instantOrder.SaleOrderUuid, request.Products, targetSaleBill); err != nil {
+		return nil, err
+	}
+
+	return &resp.CreateInstantOrderResp{
+		SaleBillUuid:  instantOrder.SaleBillUuid,
+		SaleOrderUuid: instantOrder.SaleOrderUuid,
+	}, nil
+}
+
+// updateDineInOrder 更新堂食订单（内部方法）
+// 实现增量更新：识别新增、修改、删除的商品
+func (s *orderSrv) updateDineInOrder(ctx context.Context, request req.CreateMemberDineInOrderReq) (*resp.CreateInstantOrderResp, error) {
+	db := s.dbm.GetDBWithContext(ctx)
+	saleBillUuid := request.SaleBillUuid
+	saleOrderUuid := request.SaleOrderUuid
+
+	// 获取销售账单信息
+	targetSaleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		// 订单不存在,则新建新订单
+		// 新建订单
+		return s.createDineInOrder(ctx, request)
+	}
+
+	// 检查订单类型：只能更新堂食订单
+	if !targetSaleBill.IsInstantBill() {
+		return nil, errors.New("只能更新堂食订单")
+	}
+
+	// 检查订单状态：已取消或已完成的订单不允许更新
+	if targetSaleBill.IsCanceled() {
+		return nil, errors.New("订单已取消，无法更新")
+	}
+	if targetSaleBill.IsFinish() {
+		return nil, errors.New("订单已完成，无法更新")
+	}
+
+	// 如果未指定 SaleOrderUuid，使用第一个销售订单
+	if saleOrderUuid == 0 {
+		if len(targetSaleBill.SaleOrders) == 0 {
+			return nil, errors.New("订单数据异常：无销售订单")
+		}
+		saleOrderUuid = targetSaleBill.SaleOrders[0].Uuid
+	}
+
+	// 计算商品差异
+	addProducts, deleteProducts, updateProducts, updateOlderProducts, err := s.diffDineInProducts(ctx, db, request.Products, targetSaleBill)
+	if err != nil {
+		return nil, err
+	}
+
+	// 套餐修改 → 整体替换（删除旧套餐 + 新增新套餐）
+	for key, product := range updateProducts {
+		if product.ProductType == constant.ProductTypePackage {
+			addProducts[key] = product
+			deleteProducts[key] = updateOlderProducts[key]
+			delete(updateProducts, key)
+			delete(updateOlderProducts, key)
+		}
+	}
+
+	// 执行删除
+	for _, saleOrderProduct := range deleteProducts {
+		saleOrderProduct.DeleteProduct()
+		// 套餐主商品删除时，一并删除其子商品
+		if saleOrderProduct.ProductType == constant.ProductTypePackage && len(targetSaleBill.SaleOrders) > 0 {
+			for index := range targetSaleBill.SaleOrders[0].SaleOrderProducts {
+				subProduct := targetSaleBill.SaleOrders[0].SaleOrderProducts[index]
+				if subProduct.PackageUuid == saleOrderProduct.Uuid && subProduct.DeleteTime == 0 {
+					subProduct.DeleteProduct()
+				}
+			}
+		}
+	}
+
+	// 执行修改
+	for key, product := range updateProducts {
+		saleOrderProduct := updateOlderProducts[key]
+		saleOrderProduct.Num = product.Num
+		saleOrderProduct.SetUpdate() // 标记该商品需要更新
+	}
+
+	// 执行新增
+	if err := s.addDineInProducts(ctx, saleBillUuid, saleOrderUuid, s.toProductParamsSlice(addProducts), targetSaleBill); err != nil {
+		return nil, err
+	}
+
+	return &resp.CreateInstantOrderResp{
+		SaleBillUuid:  saleBillUuid,
+		SaleOrderUuid: saleOrderUuid,
+	}, nil
+}
+
+// diffDineInProducts 计算堂食订单商品差异
+// 返回：新增商品、删除商品、修改商品、修改前商品
+func (s *orderSrv) diffDineInProducts(ctx context.Context, db *gorm.DB, products []req.ProductParams, saleBill *model.SaleBill) (
+	addProducts map[string]req.ProductParams,
+	deleteProducts map[string]*model.SaleOrderProduct,
+	updateProducts map[string]req.ProductParams,
+	updateOlderProducts map[string]*model.SaleOrderProduct,
+	err error,
+) {
+	// 构建提交商品映射
+	commitProductMap := make(map[string]req.ProductParams)
+	for index := range products {
+		product := products[index]
+		key, keyErr := dineInProductKey(ctx, db, product)
+		if keyErr != nil {
+			err = errors.WithMessage(keyErr)
+			return
+		}
+		commitProductMap[key] = product
+	}
+
+	// 构建已有商品映射（过滤已软删除的商品和套餐子商品）
+	olderProductMap := make(map[string]*model.SaleOrderProduct)
+	if len(saleBill.SaleOrders) > 0 {
+		for index := range saleBill.SaleOrders[0].SaleOrderProducts {
+			product := saleBill.SaleOrders[0].SaleOrderProducts[index]
+			// 跳过已删除的商品
+			if product.DeleteTime != 0 {
+				continue
+			}
+			// 跳过套餐子商品（子商品由套餐主商品统一管理）
+			if product.ProductType == constant.ProductTypePackageSubProduct {
+				continue
+			}
+			key := product.ProductKey()
+			// 套餐主商品用 product_package_uuid + 子商品签名生成 key，与请求侧格式对齐
+			if product.ProductType == constant.ProductTypePackage {
+				key = fmt.Sprintf("pkg:%d-%s", product.ProductPackageUuid, packageSubProductSignFromModel(product))
+			}
+			olderProductMap[key] = product
+		}
+	}
+
+	addProducts = make(map[string]req.ProductParams)
+	deleteProducts = make(map[string]*model.SaleOrderProduct)
+	updateProducts = make(map[string]req.ProductParams)
+	updateOlderProducts = make(map[string]*model.SaleOrderProduct)
+
+	// 提交中存在，订单中不存在 → 新增
+	for key, product := range commitProductMap {
+		if _, ok := olderProductMap[key]; !ok {
+			addProducts[key] = product
+		}
+	}
+
+	// 提交中不存在，订单中存在 → 删除
+	for key, product := range olderProductMap {
+		if _, ok := commitProductMap[key]; !ok {
+			deleteProducts[key] = product
+		}
+	}
+
+	// 提交和订单都存在 → 修改
+	for key, product := range commitProductMap {
+		if _, ok := olderProductMap[key]; ok {
+			updateProducts[key] = product
+			updateOlderProducts[key] = olderProductMap[key]
+		}
+	}
+
+	return addProducts, deleteProducts, updateProducts, updateOlderProducts, nil
+}
+
+// addDineInProducts 添加堂食订单商品
+// 注意：即使 products 为空，也需要调用 ActionAdd 来保存 targetSaleBill 中已标记为更新的对象（删除、修改）
+func (s *orderSrv) addDineInProducts(ctx context.Context, saleBillUuid, saleOrderUuid uint64, products []req.ProductParams, targetSaleBill *model.SaleBill) error {
+	db := s.dbm.GetDBWithContext(ctx)
+	productParams := make([]req.ProductParams, 0, len(products))
+	for _, product := range products {
+		product.Operation = "add"
+		// 套餐商品：通过 product_package_uuid 查 DB 获取套餐的 BOM UUID
+		if product.ProductType == constant.ProductTypePackage {
+			productPackage, err := repository.NewProductPackageRepo(db).GetProductPackage(
+				repository.CommonRepo.WhereByUuid(product.ProductPackageUuid),
+				repository.CommonRepo.WhereBySoftDelete(),
+				repository.NewProductPackageRepo(db).WithProductBoms(
+					repository.CommonRepo.WhereBySoftDelete(),
+				),
+			)
+			if err != nil {
+				return errors.WithMessage(err, "查询套餐信息失败")
+			}
+			productPackageFlavorBomUuid := func() uint64 {
+				if len(productPackage.ProductBoms) == 0 {
+					return 0
+				}
+				return productPackage.ProductBoms[0].Uuid
+			}()
+			if productPackageFlavorBomUuid == 0 {
+				return errors.WithMessage(errors.New("套餐商品规格不存在"), "套餐商品规格不存在")
+			}
+			product.FlavorProductBomUuid = productPackageFlavorBomUuid
+
+			// 转换子商品参数
+			subProductParams := make([]req.ProductParams, 0, len(product.Products))
+			for _, sub := range product.Products {
+				subParam := req.ProductParams{
+					FlavorProductBomUuid:            sub.FlavorUuid,
+					Num:                             sub.Num,
+					UnitNum:                         sub.UnitNum,
+					ProductPackageAttributeUuidList: sub.AttributeUuidList,
+					ProductPackageGroupUuid:         sub.ProductPackageGroupUuid,
+					Operation:                       "add",
+					AddPrice:                        sub.AddPrice,
+				}
+				subProductParams = append(subProductParams, subParam)
+			}
+			product.SetIsPackageProduct(subProductParams)
+		}
+		productParams = append(productParams, product)
+	}
+
+	params := req.ProductAddReq{
+		SaleBillUuid:   saleBillUuid,
+		SaleOrderUuid:  saleOrderUuid,
+		Products:       productParams,
+		IsMemberAdd:    false, // 堂食订单不应用外送折扣率
+		IsMemberDineIn: true,  // 会员堂食下单. 标记商品都是结账减库存
+	}
+	return s.ActionAdd(ctx, params, targetSaleBill)
+}
+
+// toProductParamsSlice 将 map 转换为 slice
+func (s *orderSrv) toProductParamsSlice(products map[string]req.ProductParams) []req.ProductParams {
+	result := make([]req.ProductParams, 0, len(products))
+	for _, product := range products {
+		result = append(result, product)
+	}
+	return result
+}
+
+// packageSubProductSignFromModel 从已有的 SaleOrderProduct 生成套餐子商品签名
+// 格式与 dineInProductKey() 套餐分支一致，用于 diffDineInProducts key 对齐
+func packageSubProductSignFromModel(product *model.SaleOrderProduct) string {
+	type subProduct struct {
+		FlavorUuid              uint64   `json:"flavor_uuid"`
+		AttributeUuid           []uint64 `json:"attribute_uuid"`
+		ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"`
+		Num                     float64  `json:"num"`
+		UnitNum                 float64  `json:"unit_num"`
+	}
+	subProducts := make([]subProduct, 0)
+	utils.FromJson(product.PackageSubProductParams, &subProducts)
+	sort.Slice(subProducts, func(i, j int) bool {
+		if subProducts[i].ProductPackageGroupUuid != subProducts[j].ProductPackageGroupUuid {
+			return subProducts[i].ProductPackageGroupUuid < subProducts[j].ProductPackageGroupUuid
+		}
+		return subProducts[i].FlavorUuid < subProducts[j].FlavorUuid
+	})
+	parts := make([]string, 0, len(subProducts))
+	for _, sp := range subProducts {
+		parts = append(parts, fmt.Sprintf("%d:%d:%.2f:%.2f", sp.ProductPackageGroupUuid, sp.FlavorUuid, sp.Num, sp.UnitNum))
+	}
+	return strings.Join(parts, "|")
+}
+
+// dineInProductKey 生成堂食订单商品的 diff key
+// 普通商品：FlavorProductBomUuid-属性-加料
+// 套餐商品：pkg:ProductPackageUuid-子商品签名
+func dineInProductKey(ctx context.Context, db *gorm.DB, product req.ProductParams) (string, error) {
+	if product.ProductType == constant.ProductTypePackage {
+		// 套餐：用 product_package_uuid + 子商品签名
+		type subKey struct {
+			FlavorUuid              uint64
+			ProductPackageGroupUuid uint64
+			Num                     float64
+			UnitNum                 float64
+		}
+		subKeys := make([]subKey, 0, len(product.Products))
+		for _, sub := range product.Products {
+			subKeys = append(subKeys, subKey{
+				FlavorUuid:              sub.FlavorUuid,
+				ProductPackageGroupUuid: sub.ProductPackageGroupUuid,
+				Num:                     sub.Num,
+				UnitNum:                 sub.UnitNum,
+			})
+		}
+		sort.Slice(subKeys, func(i, j int) bool {
+			if subKeys[i].ProductPackageGroupUuid != subKeys[j].ProductPackageGroupUuid {
+				return subKeys[i].ProductPackageGroupUuid < subKeys[j].ProductPackageGroupUuid
+			}
+			return subKeys[i].FlavorUuid < subKeys[j].FlavorUuid
+		})
+		parts := make([]string, 0, len(subKeys))
+		for _, sk := range subKeys {
+			parts = append(parts, fmt.Sprintf("%d:%d:%.2f:%.2f", sk.ProductPackageGroupUuid, sk.FlavorUuid, sk.Num, sk.UnitNum))
+		}
+		return fmt.Sprintf("pkg:%d-%s", product.ProductPackageUuid, strings.Join(parts, "|")), nil
+	}
+
+	// 普通商品：FlavorProductBomUuid-属性-加料
+	attributeUuidList := make([]uint64, 0)
+	if len(product.ProductPackageAttributeUuidList) > 0 {
+		productPackageAttributes, err := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(ctx.GetCompanyUuid(), product.ProductPackageAttributeUuidList)
+		if err != nil {
+			return "", errors.WithMessage(err)
+		}
+		for _, attribute := range productPackageAttributes {
+			attributeUuidList = append(attributeUuidList, attribute.AttributeUuid)
+		}
+	}
+	sort.Slice(attributeUuidList, func(i, j int) bool {
+		return attributeUuidList[i] < attributeUuidList[j]
+	})
+	sauceList := make([]uint64, 0, len(product.SauceProductBomUuidList))
+	sauceList = append(sauceList, product.SauceProductBomUuidList...)
+	sort.Slice(sauceList, func(i, j int) bool {
+		return sauceList[i] < sauceList[j]
+	})
+
+	attrStrs := make([]string, 0, len(attributeUuidList))
+	for _, a := range attributeUuidList {
+		attrStrs = append(attrStrs, fmt.Sprintf("%d", a))
+	}
+	sauceStrs := make([]string, 0, len(sauceList))
+	for _, s := range sauceList {
+		sauceStrs = append(sauceStrs, fmt.Sprintf("%d", s))
+	}
+	return fmt.Sprintf("%d-%s-%s", product.FlavorProductBomUuid, strings.Join(attrStrs, ","), strings.Join(sauceStrs, ",")), nil
+}
+
+// ==================== 会员端堂食订单管理 ====================
+
+// GetMemberDineInOrderList 获取会员端堂食订单列表
+func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.MemberDineInOrderListReq) (*resp.GetMemberDineInOrderListResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBillRepo := repository.NewSaleBillRepo(db)
+	h5OrderRepo := repository.NewH5OrderRepo(db)
+	productionRepo := repository.NewProductionRepo(db)
+
+	// 构建查询条件
+	billStatuses, h5OrderStatuses, isPaid := constant.GetMemberDineInOrderStatusFilter(listReq.Status)
+
+	// "先下单后付"模式兼容：
+	// - "进行中"查询需要同时包含 Pending 状态（先下单后付的订单 Status=Pending 但有 H5 订单）
+	// - "待支付"查询也需要内存过滤掉已有 H5 订单的（先下单后付的不是"待支付"）
+	if listReq.Status == constant.MemberDineInOrderStatusInProgress {
+		billStatuses = append(billStatuses, constant.SaleBillStatusPending)
+	}
+
+	dbOptions := s.buildDineInOrderListQueryOptions(ctx, billStatuses)
+
+	if listReq.Keyword != "" {
+		// 关键字搜索（按菜名或订单号）
+		dbOptions = append(dbOptions, saleBillRepo.WhereKeyword(listReq.Keyword, ctx.GetLanguage()))
+	}
+
+	// 分页查询
+	saleBills, total, err := saleBillRepo.GetSaleBillListPage(listReq.PageNo, listReq.PageSize, dbOptions...)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 构建响应
+	list := make([]resp.MemberDineInOrder, 0, len(saleBills))
+	for _, saleBill := range saleBills {
+		// 过滤支付状态
+		if isPaid != nil && *isPaid != saleBill.IsExistPaid() {
+			// 如果需要过滤支付状态时,过滤掉已经支付的或者未支付的. 使用场景: 仅查询"待支付"的订单时需要
+			continue
+		}
+
+		// 获取 H5 订单
+		h5Order := s.getH5OrderForMemberDineIn(h5OrderRepo, saleBill.Uuid)
+
+		// 获取生产单完成状态（提前获取，用于后续过滤判断）
+		// 未开启厨显KDS时，直接视为"已完成"（不存在备餐中状态）
+		var isProductionFinished bool
+		if ctx.GetCompanySetting().IsOpenKitchenKds != 1 {
+			isProductionFinished = true
+		} else {
+			isProductionFinished, _ = productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+			if isProductionFinished {
+				hasProduction, _ := productionRepo.HasProductionOrderBySaleBillUuid(saleBill.Uuid)
+				if !hasProduction {
+					// 开启了厨显但没有生产单（尚未送厨）→ 视为未完成
+					isProductionFinished = false
+				}
+			}
+		}
+
+		// 先下单后付款模式的状态过滤逻辑：
+		// - 待支付：备餐完成后显示在待支付列表（等待用户付款）
+		// - 进行中：备餐未完成时显示在进行中列表
+		isOrderFirstPayLater := saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && saleBill.Status == constant.SaleBillStatusPending
+
+		if listReq.Status == constant.MemberDineInOrderStatusUnpaid {
+			// 待支付列表过滤逻辑：
+			// - 先付款后下单模式：正常显示 Pending 状态的未支付订单
+			// - 先下单后付款模式：仅显示备餐完成的订单（此时需要用户付款）
+			if isOrderFirstPayLater && !isProductionFinished {
+				continue // 先下单后付 + 备餐未完成 → 不在待支付列表（应在进行中）
+			}
+		}
+
+		if listReq.Status == constant.MemberDineInOrderStatusInProgress {
+			// 进行中列表过滤逻辑：
+			if saleBill.Status == constant.SaleBillStatusPending {
+				if !isOrderFirstPayLater {
+					continue // Pending 状态非先下单后付的是普通待支付订单，不属于"进行中"
+				}
+				// 先下单后付订单的进行中过滤
+				if h5Order == nil {
+					continue
+				}
+				if h5Order.Status != constant.H5OrderStatusOrder && h5Order.Status != constant.H5OrderStatusAccepted {
+					continue
+				}
+				// 备餐完成的不在"进行中"（应在待支付列表）
+				if isProductionFinished {
+					continue
+				}
+			}
+		}
+
+		// H5 订单状态内存过滤（结合生产单完成状态）
+		// 仅对非 Pending 状态的订单应用 H5 状态过滤
+		if saleBill.Status != constant.SaleBillStatusPending {
+			// 先下单后付 + 已结账：无论 H5/生产状态如何，都已是最终态（已完成）
+			// 不应再用 H5/生产状态做 tab 归属判断
+			if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && saleBill.Status == constant.SaleBillStatusComplete {
+				if listReq.Status == constant.MemberDineInOrderStatusInProgress {
+					continue // 已结账不应出现在进行中
+				}
+			} else if !s.filterDineInOrderByH5Status(h5Order, h5OrderStatuses, listReq.Status, isProductionFinished) {
+				continue
+			}
+		}
+
+		// 构建订单响应项
+		orderItem := s.buildMemberDineInOrderItem(ctx, *saleBill, h5Order, isProductionFinished)
+		list = append(list, orderItem)
+	}
+
+	return &resp.GetMemberDineInOrderListResp{
+		Meta: dto.PageResponse{
+			PageNo:   listReq.PageNo,
+			PageSize: listReq.PageSize,
+			Total:    total,
+		},
+		List: list,
+	}, nil
+}
+
+// buildDineInOrderListQueryOptions 构建会员端堂食订单列表查询条件
+func (s *orderSrv) buildDineInOrderListQueryOptions(ctx context.Context, billStatuses []uint) []repository.DBOption {
+	dbOptions := []repository.DBOption{
+		repository.CommonRepo.WhereBySoftDelete(),
+		// 使用 consumer_uuid 字段过滤当前会员的订单（sale_bill 表使用 consumer_uuid 而非 member_uuid）
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("consumer_uuid = ?", ctx.GetMemberUuid())
+		},
+		repository.CommonRepo.WhereBySource(constant.SaleBillSourceMember),
+		repository.CommonRepo.WhereByBillType(constant.SaleBillTypeInstant), // 堂食订单 BillType = 1
+		// 只显示已提交支付的订单（调用过 /member/order/dine_in/pay 接口）
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("submit_pay_time > 0")
+		},
+		repository.CommonRepo.SortWithCreateTime("desc"),
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "SaleOrders",
+				Args: []any{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			repository.WithPreload{
+				Query: "SaleOrders.ReturnOrders",
+			},
+			repository.WithPreload{
+				Query: "SaleOrders.SaleOrderProducts",
+				Args: []any{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			repository.WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
+			},
+			repository.WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ImageFile",
+			},
+		),
+	}
+
+	// 状态过滤
+	if billStatuses != nil {
+		dbOptions = append(dbOptions, repository.CommonRepo.WhereByMultipleStatus(billStatuses))
+	}
+
+	return dbOptions
+}
+
+// getH5OrderForMemberDineIn 获取会员端堂食订单的 H5 订单
+// 如果没有找到，返回 nil（区分未 submit 的订单）
+func (s *orderSrv) getH5OrderForMemberDineIn(h5OrderRepo repository.IH5OrderRepo, saleBillUuid uint64) *model.H5Order {
+	h5Order, err := h5OrderRepo.GetH5Order(
+		h5OrderRepo.WhereSaleBillUuid(saleBillUuid),
+		h5OrderRepo.WhereOrderType(constant.H5OrderTypeMemberDineIn),
+		// 预加载 H5OrderProducts（用于拒单后显示商品列表）
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "H5OrderProducts",
+				Args: []any{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			repository.WithPreload{
+				Query: "H5OrderProducts.SaleOrderProduct",
+				Args: []any{
+					func(db *gorm.DB) *gorm.DB {
+						return db.Unscoped() // 包括已软删除的商品
+					},
+				},
+			},
+			repository.WithPreload{
+				Query: "H5OrderProducts.SaleOrderProduct.ImageFile",
+			},
+		),
+	)
+	if err != nil || h5Order.Uuid == 0 {
+		return nil
+	}
+	return h5Order
+}
+
+// filterDineInOrderByH5Status H5 订单状态内存过滤（用于区分"进行中"和"已完成"）
+// 返回 true 表示订单应该包含在结果中，false 表示应该过滤掉
+// h5OrderStatuses: 允许的 H5 订单状态列表（"进行中"状态需要匹配）
+// requestStatus: 请求的状态过滤参数
+// isProductionFinished: 生产单是否全部完成
+func (s *orderSrv) filterDineInOrderByH5Status(h5Order *model.H5Order, h5OrderStatuses []uint, requestStatus string, isProductionFinished bool) bool {
+	// 获取 H5 订单状态
+	var h5Status uint
+	if h5Order != nil {
+		h5Status = h5Order.Status
+	}
+
+	// "进行中"状态查询：需要 H5 订单存在且状态匹配
+	if len(h5OrderStatuses) > 0 {
+		if h5Order == nil {
+			// 没有 H5 订单（未开启厨显），不符合"进行中"条件
+			return false
+		}
+		// 检查 H5 订单状态是否在允许的状态列表中
+		for _, allowedStatus := range h5OrderStatuses {
+			if h5Status == allowedStatus {
+				// 如果是已接单状态（备餐中），还需要检查生产单是否全部完成
+				// 如果生产单全部完成，说明已经出餐，不应该在"进行中"列表中
+				if h5Status == constant.H5OrderStatusAccepted && isProductionFinished {
+					return false // 生产单已完成，不在"进行中"
+				}
+				return true
+			}
+		}
+		return false
+	}
+
+	// "已完成"状态查询：排除"进行中"的订单
+	if requestStatus == constant.MemberDineInOrderStatusCompleted {
+		if h5Order != nil {
+			// 待接单状态：一定是进行中，排除
+			if h5Status == constant.H5OrderStatusOrder {
+				return false
+			}
+			// 已接单状态（备餐中）：需要检查生产单是否完成
+			if h5Status == constant.H5OrderStatusAccepted && !isProductionFinished {
+				return false // 生产单未完成，还在"备餐中"，排除
+			}
+		}
+		// H5 订单不存在或已拒单，属于"已完成"
+	}
+
+	return true
+}
+
+// buildMemberDineInOrderProductList 构建会员端堂食订单商品列表
+// 返回：商品数量、商品金额、商品列表（最多3个）
+func (s *orderSrv) buildMemberDineInOrderProductList(ctx context.Context, saleBill model.SaleBill, h5Order *model.H5Order) (float64, float64, []resp.MemberOrderProduct) {
+	var num float64
+	var productAmount float64
+	productList := make([]resp.MemberOrderProduct, 0)
+	displayCount := 0
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+
+	// 判断是否是已拒单状态
+	isRejected := h5Order != nil && h5Order.Status == constant.H5OrderStatusRejected
+
+	if isRejected && len(h5Order.H5OrderProducts) > 0 {
+		// 已拒单：从 H5OrderProducts 快照获取商品信息
+		for _, h5Product := range h5Order.H5OrderProducts {
+			num += h5Product.Num
+			productAmount += h5Product.SalePrice * h5Product.Num
+
+			// 只返回前3个商品
+			if displayCount < 3 {
+				// 快照名称存储的是单一语言，需要填充到所有语言字段
+				localeName := dto.LocaleResponse{
+					ZH: h5Product.Name, TH: h5Product.Name, EN: h5Product.Name,
+					ZHTW: h5Product.Name, JA: h5Product.Name, KO: h5Product.Name,
+					MY: h5Product.Name, TR: h5Product.Name, SV: h5Product.Name,
+				}
+				productList = append(productList, resp.MemberOrderProduct{
+					LocaleName: localeName,
+					Num:        h5Product.Num,
+					TotalPrice: h5Product.SalePrice * h5Product.Num,
+					Image: func() string {
+						if h5Product.SaleOrderProduct != nil && h5Product.SaleOrderProduct.ImageFile != nil {
+							return h5Product.SaleOrderProduct.ImageFile.GetUrl(baseUrl)
+						}
+						return ""
+					}(),
+				})
+				displayCount++
+			}
+		}
+	} else {
+		// 正常订单：从 SaleOrderProducts 获取商品信息
+		saleOrder := saleBill.GetFirstSaleOrder()
+		if saleOrder == nil {
+			return num, productAmount, productList
+		}
+
+		for _, product := range saleOrder.SaleOrderProducts {
+			if product.IsPackageSubProduct() {
+				continue // 跳过套餐子商品
+			}
+			num += product.Num
+			productAmount += product.GetTotalPrice()
+
+			// 只返回前3个商品
+			if displayCount < 3 {
+				productList = append(productList, resp.MemberOrderProduct{
+					LocaleName: product.GetLocaleName(),
+					Num:        product.Num,
+					TotalPrice: product.GetTotalPrice(),
+					Image: func() string {
+						if product.ImageFile == nil {
+							return ""
+						}
+						return product.ImageFile.GetUrl(baseUrl)
+					}(),
+				})
+				displayCount++
+			}
+		}
+	}
+
+	return num, productAmount, productList
+}
+
+// buildMemberDineInOrderItem 构建单个会员端堂食订单响应项
+func (s *orderSrv) buildMemberDineInOrderItem(ctx context.Context, saleBill model.SaleBill, h5Order *model.H5Order, isProductionFinished bool) resp.MemberDineInOrder {
+	// 构建商品列表
+	num, productAmount, productList := s.buildMemberDineInOrderProductList(ctx, saleBill, h5Order)
+
+	// 计算订单状态
+	statusInfo := s.getMemberDineInOrderStatusInfo(&saleBill, h5Order, isProductionFinished, ctx.GetLanguage())
+
+	// 计算应付金额：全部退款显示0，部分退款显示扣减后金额
+	refundAmount := saleBill.GetTotalRefundAmount()
+	amount := saleBill.Amount - refundAmount
+	if amount < 0 {
+		amount = 0
+	}
+
+	saleOrderUuid := uint64(0)
+	if saleOrder := saleBill.GetFirstSaleOrder(); saleOrder != nil {
+		saleOrderUuid = saleOrder.Uuid
+	}
+
+	return resp.MemberDineInOrder{
+		SaleBillUuid:  saleBill.Uuid,
+		SaleOrderUuid: saleOrderUuid,
+		CompanyName:   ctx.GetCompany().Name,
+		SerialNo:      saleBill.SerialNo,
+		OrderNo:       saleBill.OrderNo,
+		StatusInfo:    statusInfo,
+		DiningMethod:  saleBill.DiningMethod,
+		Num:           num,
+		Amount:        amount,
+		ProductAmount: productAmount,
+		CreateTime:    saleBill.CreateTime,
+		SubmitPayTime: saleBill.SubmitPayTime,
+		ProductList:   productList,
+	}
+}
+
+// GetMemberDineInOrderDetail 获取会员端堂食订单详情
+func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req.GetMemberDineInOrderDetailReq) (*resp.GetMemberDineInOrderDetailResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	orderRepo := repository.NewOrderRepo(db)
+	h5OrderRepo := repository.NewH5OrderRepo(db)
+	paymentOrderRepo := repository.NewPaymentOrderRepo(db)
+	productionRepo := repository.NewProductionRepo(db)
+
+	// 获取销售账单完整信息
+	saleBill, err := orderRepo.GetSaleBillAllInfo(detailReq.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取订单失败")
+	}
+
+	// 验证是否是当前会员的订单（通过 SaleOrder.ConsumerUuid 验证）
+	saleOrder := saleBill.GetFirstSaleOrder()
+	if saleOrder == nil || saleOrder.ConsumerUuid != ctx.GetMemberUuid() {
+		return nil, errors.New("无权查看此订单")
+	}
+
+	// 验证是否是堂食订单
+	if saleBill.Source != constant.SaleBillSourceMember || saleBill.BillType != constant.SaleBillTypeInstant {
+		return nil, errors.New("订单类型错误")
+	}
+
+	// 获取 H5 订单（带商品快照，用于拒单后显示商品）
+	h5Order, _ := h5OrderRepo.GetH5Order(
+		h5OrderRepo.WhereSaleBillUuid(saleBill.Uuid),
+		h5OrderRepo.WhereOrderType(constant.H5OrderTypeMemberDineIn),
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "H5OrderProducts",
+				Args: []any{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			repository.WithPreload{
+				Query: "H5OrderProducts.SaleOrderProduct",
+				Args: []any{
+					func(db *gorm.DB) *gorm.DB {
+						return db.Unscoped() // 包括已软删除的商品
+					},
+				},
+			},
+			repository.WithPreload{
+				Query: "H5OrderProducts.SaleOrderProduct.ImageFile",
+			},
+		),
+	)
+
+	// 获取生产单完成状态
+	// 未开启厨显KDS时，直接视为"已完成"（不存在备餐中状态）
+	// 开启厨显时，需要检查生产单是否全部完成
+	var isProductionFinished bool
+	if ctx.GetCompanySetting().IsOpenKitchenKds != 1 {
+		// 未开启厨显 → 直接视为已完成
+		isProductionFinished = true
+	} else {
+		// 开启厨显 → 检查生产单状态
+		isProductionFinished, _ = productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+		if isProductionFinished {
+			hasProduction, _ := productionRepo.HasProductionOrderBySaleBillUuid(saleBill.Uuid)
+			if !hasProduction {
+				// 开启了厨显但没有生产单（尚未送厨）→ 视为未完成
+				isProductionFinished = false
+			}
+		}
+	}
+
+	// 获取商品列表（包含退款信息）
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+	productList := make([]resp.MemberDineInOrderProduct, 0)
+
+	// 判断是否是已拒单状态
+	isRejected := h5Order != nil && h5Order.Status == constant.H5OrderStatusRejected
+
+	if isRejected && len(h5Order.H5OrderProducts) > 0 {
+		// 已拒单：从 H5OrderProducts 快照获取商品信息
+		for _, h5Product := range h5Order.H5OrderProducts {
+			// 快照名称存储的是单一语言，需要填充到所有语言字段
+			localeName := dto.LocaleResponse{
+				ZH: h5Product.Name, TH: h5Product.Name, EN: h5Product.Name,
+				ZHTW: h5Product.Name, JA: h5Product.Name, KO: h5Product.Name,
+				MY: h5Product.Name, TR: h5Product.Name, SV: h5Product.Name,
+			}
+			localeAttrName := dto.LocaleResponse{
+				ZH: h5Product.AttributeText, TH: h5Product.AttributeText, EN: h5Product.AttributeText,
+				ZHTW: h5Product.AttributeText, JA: h5Product.AttributeText, KO: h5Product.AttributeText,
+				MY: h5Product.AttributeText, TR: h5Product.AttributeText, SV: h5Product.AttributeText,
+			}
+			memberProduct := resp.MemberDineInOrderProduct{
+				LocaleName:          localeName,
+				LocaleAttributeName: localeAttrName,
+				Num:                 h5Product.Num,
+				Price:               h5Product.SalePrice,                 // 折前单价
+				TotalPrice:          h5Product.SalePrice * h5Product.Num, // 折前总价
+				Image: func() string {
+					if h5Product.SaleOrderProduct != nil && h5Product.SaleOrderProduct.ImageFile != nil {
+						return h5Product.SaleOrderProduct.ImageFile.GetUrl(baseUrl)
+					}
+					return ""
+				}(),
+				RefundAmount:       0, // 拒单订单没有退款
+				ProductType:        0, // 快照中没有商品类型，默认为普通商品
+				PackageProductList: resp.PackageProductList{List: make([]resp.PackageProduct, 0)},
+				IsGift:             false,
+				IsCancel:           false,
+			}
+			productList = append(productList, memberProduct)
+		}
+	} else {
+		// 正常订单：从 SaleOrderProducts 获取商品信息
+		for _, product := range saleOrder.SaleOrderProducts {
+			if product.IsPackageSubProduct() {
+				continue // 跳过套餐子商品（套餐子商品挂在套餐主商品下）
+			}
+
+			// 计算商品退款金额
+			var productRefundAmount float64
+			for _, returnOrderProduct := range product.ReturnOrderProducts {
+				productRefundAmount += returnOrderProduct.ProductTotalAmount
+			}
+
+			memberProduct := resp.MemberDineInOrderProduct{
+				LocaleName:          product.GetLocaleName(),
+				LocaleAttributeName: product.GetAttributeName(),
+				Num:                 product.Num,
+				Price:               product.SalePrice,      // 折前单价
+				TotalPrice:          product.GetSalePrice(), // 折前总价 = 单价 * 数量
+				Image: func() string {
+					if product.ImageFile == nil {
+						return ""
+					}
+					return product.ImageFile.GetUrl(baseUrl)
+				}(),
+				RefundAmount:       productRefundAmount,
+				ProductType:        uint(product.ProductType),
+				PackageProductList: resp.PackageProductList{List: make([]resp.PackageProduct, 0)},
+				IsGift:             product.IsGiftProduct(),
+				IsCancel:           product.IsCancelProduct(),
+			}
+
+			// 套餐商品：挂载子商品列表
+			if product.IsPackageProduct() {
+				subProducts := saleOrder.GetPackageSubProductList(product.Uuid)
+				for _, sub := range subProducts {
+					if sub.DeleteTime != 0 {
+						continue
+					}
+					memberProduct.PackageProductList.List = append(memberProduct.PackageProductList.List, resp.PackageProduct{
+						Uuid:                sub.Uuid,
+						LocaleName:          sub.GetLocaleName(),
+						LocaleAttributeName: sub.GetAttributeName(),
+						Num:                 sub.Num,
+						UnitNum:             sub.GetProductNum(),
+						AddPrice:            sub.AddPrice,
+					})
+				}
+			}
+
+			productList = append(productList, memberProduct)
+		}
+	}
+
+	// 计算订单总退款金额
+	refundAmount := saleBill.GetTotalRefundAmount()
+
+	// 计算应付金额：全部退款显示0，部分退款显示扣减后金额
+	amount := saleBill.Amount - refundAmount
+	if amount < 0 {
+		amount = 0
+	}
+
+	// 获取支付信息（通过 SaleOrder 关联的 PaymentOrders 获取）
+	var payTime int64
+	var paymentMethodName string
+	paymentOrders, _ := paymentOrderRepo.GetPaymentOrderList(
+		paymentOrderRepo.WhereRelatedUuid(saleOrder.Uuid),
+		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
+		paymentOrderRepo.WhereStatus(constant.PaymentOrderStatusPaid),
+		paymentOrderRepo.WithPaymentMethod(),
+	)
+	if len(paymentOrders) > 0 {
+		// 获取第一个已支付的支付订单作为支付时间
+		payTime = paymentOrders[0].CreateTime
+		// 拼接所有支付方式名称（多种支付方式用 + 连接）
+		var paymentMethodNames []string
+		for _, po := range paymentOrders {
+			if po.PaymentMethod != nil {
+				paymentMethodNames = append(paymentMethodNames, po.PaymentMethod.GetName())
+			}
+		}
+		paymentMethodName = strings.Join(paymentMethodNames, " , ")
+	}
+
+	// 判断是否是"先下单后付"模式的订单（Status=Pending 但有 H5 订单）
+	isOrderFirstPayLater := saleBill.IsOrderFirstPayLater == 1
+
+	// 计算剩余支付时间（"先下单后付"模式的订单不显示支付倒计时）
+	var remainingPaymentTime int64
+	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() && saleBill.SubmitPayTime > 0 && !isOrderFirstPayLater {
+		// 假设支付超时时间为15分钟
+		paymentTimeout := int64(15 * 60)
+		remaining := paymentTimeout - (time.Now().Unix() - saleBill.SubmitPayTime)
+		if remaining > 0 {
+			remainingPaymentTime = remaining
+		}
+	}
+
+	// 获取商家信息
+	company := ctx.GetCompany()
+
+	// 获取取消时间（从 SaleOrder 获取 DeleteTime 作为取消时间）
+	var cancelTime int64
+	if saleBill.Status == constant.SaleBillStatusCanceled {
+		cancelTime = saleOrder.DeleteTime
+	}
+
+	// 待支付状态下获取支付方式列表（用于发起支付）
+	// "先下单后付"模式的订单不显示支付方式列表（不需要立即支付）
+	paymentMethodList := resp.PaymentMethodList{List: make([]resp.PaymentMethodItem, 0)}
+	if saleBill.Status == constant.SaleBillStatusPending && !saleBill.IsExistPaid() && !isOrderFirstPayLater {
+		paymentMethods, _ := repository.NewPaymentMethodRepo(db).GetLianLianPayPaymentMethodList()
+		for _, paymentMethod := range paymentMethods {
+			paymentMethodList.List = append(paymentMethodList.List, resp.PaymentMethodItem{
+				Source:        paymentMethod.Source,
+				SourceText:    constant.PaymentMethodSourceTextMap[paymentMethod.Source],
+				Uuid:          paymentMethod.Uuid,
+				PaymentName:   paymentMethod.GetPaymentName(),
+				PaymentMethod: paymentMethod.GetName(),
+				FeePercent:    paymentMethod.FeePercent,
+				Logo: func() string {
+					if paymentMethod.IsWechatPay() {
+						return baseUrl + "/image/pay/wechat_pay.png"
+					}
+					if paymentMethod.IsAliPay() {
+						return baseUrl + "/image/pay/alipay.png"
+					}
+					if paymentMethod.IsQrPromptPay() {
+						return baseUrl + "/image/pay/qr_prompt_pay.png"
+					}
+					return ""
+				}(),
+				Code: paymentMethod.Code,
+			})
+		}
+	}
+
+	// 获取订单备注：统一从 OrderRemark（整单备注）读取
+	orderRemark := ""
+	if latestRemark := saleBill.GetLatestOrderRemarkRes(); latestRemark != nil {
+		orderRemark = latestRemark.Remark.GetLocale(ctx.GetLanguage())
+	}
+
+	return &resp.GetMemberDineInOrderDetailResp{
+		SaleBillUuid:         saleBill.Uuid,
+		SaleOrderUuid:        saleOrder.Uuid,
+		CompanyName:          company.Name,
+		SerialNo:             saleBill.SerialNo,
+		OrderNo:              saleBill.OrderNo,
+		StatusInfo:           s.getMemberDineInOrderStatusInfo(saleBill, h5Order, isProductionFinished, ctx.GetLanguage()),
+		DiningMethod:         saleBill.DiningMethod,
+		Remark:               orderRemark,
+		CreateTime:           saleBill.CreateTime,
+		SubmitPayTime:        saleBill.SubmitPayTime,
+		PayTime:              payTime,
+		CancelTime:           cancelTime,
+		RemainingPaymentTime: remainingPaymentTime,
+		RefundAmount:         refundAmount,
+		IsOrderFirstPayLater: saleBill.IsOrderFirstPayLater == 1,
+		AmountInfo: resp.MemberDineInOrderAmountInfo{
+			ProductAmount:        saleOrder.ProductOriginalAmount,
+			DiscountAmount:       saleOrder.CustomDiscountFee,
+			MemberDiscountAmount: saleOrder.MemberDiscountFee,
+			ServiceFee:           saleBill.ServiceFee,
+			TaxFee:               saleBill.TaxFee,
+			Amount:               amount,
+			PaymentMethodName:    paymentMethodName,
+		},
+		ProductList: resp.MemberDineInOrderProductList{
+			List: productList,
+		},
+		PaymentMethods: paymentMethodList,
+	}, nil
+}
+
+// CancelMemberDineInOrder 取消会员端堂食订单（未付款订单或先下单后付的待接单订单可取消）
+func (s *orderSrv) CancelMemberDineInOrder(ctx context.Context, cancelReq req.CancelMemberDineInOrderReq) error {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(cancelReq.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(cancelReq.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	// 获取DB
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取销售账单完整信息
+	orderRepo := repository.NewOrderRepo(db)
+	billInfo, err := orderRepo.GetSaleBillAllInfo(cancelReq.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 验证是否是会员端堂食订单
+	if billInfo.Source != constant.SaleBillSourceMember || billInfo.BillType != constant.SaleBillTypeInstant {
+		return errors.New("订单类型错误")
+	}
+
+	// 验证订单归属
+	saleOrder := billInfo.GetFirstSaleOrder()
+	if saleOrder == nil || saleOrder.ConsumerUuid != ctx.GetMemberUuid() {
+		return errors.New("无权操作此订单")
+	}
+
+	// 验证订单是未付款状态
+	if billInfo.Status != constant.SaleBillStatusPending {
+		return errors.New("订单状态不可取消")
+	}
+	if billInfo.IsExistPaid() {
+		return errors.New("订单已支付，不可取消")
+	}
+
+	// 先下单后付款订单不允许调用cancel接口，应使用cancel_order接口
+	if billInfo.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes {
+		return errors.New("无法在会员端取消该订单")
+	}
+
+	// 检查是否是"先下单后付"模式的订单（有 H5 订单）
+	h5OrderRepo := repository.NewH5OrderRepo(db)
+	h5Order := s.getH5OrderForMemberDineIn(h5OrderRepo, billInfo.Uuid)
+
+	if h5Order != nil {
+		// "先下单后付"模式：只有待接单状态(H5OrderStatusOrder)的订单可以取消
+		if h5Order.Status != constant.H5OrderStatusOrder {
+			return errors.New("订单已被接单，不可取消")
+		}
+
+		// 取消订单并同时软删除关联的 H5 订单
+		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+			// 取消 SaleBill 和 SaleOrder
+			if err := repository.NewOrderRepo(tx).CancelOrderWithoutTx(cancelReq.SaleBillUuid); err != nil {
+				return err
+			}
+			// 软删除 H5 订单
+			if err := repository.NewH5OrderRepo(tx).DeleteH5Order(h5Order.Uuid); err != nil {
+				return err
+			}
+			return nil
+		}); err != nil {
+			return errors.WithMessage(err)
+		}
+	} else {
+		// 普通模式：直接取消订单
+		// 取消订单（SaleBill.Status 0→2, SaleOrder.Status 0→2）
+		// 未付款的堂食订单没有扣库存也没有送厨，无需退库存和删除送厨单
+		err = repository.NewOrderRepo(db).CancelOrderWithoutTx(cancelReq.SaleBillUuid)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
+	// 异步: 发布整单取消事件
+	utils.Go(func() {
+		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: billInfo.Uuid,
+				OperatorUuid: 0,
+				MemberUuid:   ctx.GetMemberUuid(),
+			},
+		})
+	})
+
+	ctx.Log().Info("会员端堂食订单取消成功",
+		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+		zap.Uint64("sale_bill_uuid", cancelReq.SaleBillUuid),
+		zap.Uint64("member_uuid", ctx.GetMemberUuid()),
+	)
+
+	return nil
+}
+
+// getMemberDineInOrderStatusInfo 获取堂食订单状态信息
+// h5Order: H5订单，可为nil
+// isProductionFinished: 生产单是否全部完成
+func (s *orderSrv) getMemberDineInOrderStatusInfo(saleBill *model.SaleBill, h5Order *model.H5Order, isProductionFinished bool, language string) resp.MemberDineInOrderStatusInfo {
+	var status string
+	var statusText string
+
+	switch saleBill.Status {
+	case constant.SaleBillStatusCanceled:
+		// 已取消：需要区分是主动取消还是被拒单
+		if h5Order != nil && h5Order.Status == constant.H5OrderStatusRejected {
+			status = constant.MemberDineInDetailStatusRejected
+			statusText = i18n.Translate(language, "已拒单")
+		} else {
+			status = constant.MemberDineInDetailStatusCancelled
+			statusText = i18n.Translate(language, "已取消")
+		}
+	case constant.SaleBillStatusComplete:
+		// 已完成/已付款：先检查退款，再按模式区分
+		refundAmount := saleBill.GetTotalRefundAmount()
+		if refundAmount > 0 {
+			if refundAmount >= saleBill.Amount {
+				status = constant.MemberDineInDetailStatusFullRefund
+				statusText = i18n.Translate(language, "全部退款")
+			} else {
+				status = constant.MemberDineInDetailStatusPartialRefund
+				statusText = i18n.Translate(language, "部分退款")
+			}
+		} else if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes {
+			// 先下单后付：COMPLETE 意味着已结账 → 已完成
+			status = constant.MemberDineInDetailStatusCompleted
+			statusText = i18n.Translate(language, "已完成")
+		} else if h5Order != nil {
+			// 先付后下单：付款后有 H5 订单，根据 H5 状态判断
+			switch h5Order.Status {
+			case constant.H5OrderStatusOrder:
+				// 已付款，等待收银接单 → 待接单
+				status = constant.MemberDineInDetailStatusPending
+				statusText = i18n.Translate(language, "待接单")
+			case constant.H5OrderStatusAccepted:
+				if isProductionFinished {
+					status = constant.MemberDineInDetailStatusCompleted
+					statusText = i18n.Translate(language, "已完成")
+				} else {
+					status = constant.MemberDineInDetailStatusPreparing
+					statusText = i18n.Translate(language, "备餐中")
+				}
+			case constant.H5OrderStatusRejected:
+				status = constant.MemberDineInDetailStatusRejected
+				statusText = i18n.Translate(language, "已拒单")
+			default:
+				status = constant.MemberDineInDetailStatusCompleted
+				statusText = i18n.Translate(language, "已完成")
+			}
+		} else {
+			// 先付后下单：无 H5 订单（自动接单场景），按生产状态判断
+			if isProductionFinished {
+				status = constant.MemberDineInDetailStatusCompleted
+				statusText = i18n.Translate(language, "已完成")
+			} else {
+				status = constant.MemberDineInDetailStatusPreparing
+				statusText = i18n.Translate(language, "备餐中")
+			}
+		}
+	case constant.SaleBillStatusPending:
+		if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && h5Order != nil {
+			// 先下单后付模式：根据 H5 订单状态 + 生产状态判断
+			switch h5Order.Status {
+			case constant.H5OrderStatusOrder:
+				status = constant.MemberDineInDetailStatusPending
+				statusText = i18n.Translate(language, "待接单")
+			case constant.H5OrderStatusAccepted:
+				if isProductionFinished {
+					// 备餐完成但未付款 → 待付款
+					status = constant.MemberDineInDetailStatusUnpaid
+					statusText = i18n.Translate(language, "待付款")
+				} else {
+					status = constant.MemberDineInDetailStatusPreparing
+					statusText = i18n.Translate(language, "备餐中")
+				}
+			case constant.H5OrderStatusRejected:
+				status = constant.MemberDineInDetailStatusRejected
+				statusText = i18n.Translate(language, "已拒单")
+			default:
+				status = constant.MemberDineInDetailStatusPending
+				statusText = i18n.Translate(language, "待接单")
+			}
+		} else {
+			// 普通模式：待支付
+			status = constant.MemberDineInDetailStatusUnpaid
+			statusText = i18n.Translate(language, "待支付")
+		}
+	}
+
+	return resp.MemberDineInOrderStatusInfo{
+		Status:     status,
+		StatusText: statusText,
+	}
+}
+
+// MockPayDineInOrderCallback 模拟堂食订单支付完成回调（仅用于测试）
+// 该方法用于在支付服务尚未就绪时，手动触发支付完成的后续流程
+func (s *orderSrv) MockPayDineInOrderCallback(ctx context.Context, request req.MockPayDineInOrderCallbackReq) error {
+	// 仅在调试模式下允许使用
+	if config.Server.Mode != "debug" && config.Server.Mode != "test" {
+		return errors.New("该接口仅在调试/测试模式下可用")
+	}
+
+	db := ctx.GetDB()
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取订单信息失败")
+	}
+
+	// 验证订单来源
+	if saleBill.Source != constant.SaleBillSourceMember {
+		return errors.New("该订单不是会员端堂食订单")
+	}
+
+	// 验证订单状态（必须是待支付状态）
+	if saleBill.Status != constant.SaleBillStatusPending {
+		return errors.New("订单状态不是待支付，无法模拟支付回调")
+	}
+
+	// 获取第一个 SaleOrder
+	saleOrder := saleBill.GetFirstSaleOrder()
+	if saleOrder == nil {
+		return errors.New("未找到销售订单")
+	}
+
+	// 模拟更新支付相关字段
+	paymentAmount := saleBill.Amount
+
+	// 查找默认支付方式：优先使用 Cash（code=40），如果没有则使用第一个有 erpnext_payment 的支付方式
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
+	var mockPaymentMethod *model.PaymentMethod
+	for _, pm := range paymentMethods {
+		if pm.Code == 40 { // Cash
+			mockPaymentMethod = pm
+			break
+		}
+	}
+	if mockPaymentMethod == nil {
+		for _, pm := range paymentMethods {
+			if pm.ErpnextPayment != "" {
+				mockPaymentMethod = pm
+				break
+			}
+		}
+	}
+	if mockPaymentMethod == nil {
+		return errors.New("未找到可用的支付方式")
+	}
+
+	// 更新数据库：创建 PaymentOrder + 更新 SaleBill
+	var paymentOrderUuid uint64
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 更新账单支付金额
+		if err := tx.Model(&model.SaleBill{}).Where("uuid = ?", saleBill.Uuid).Updates(map[string]any{
+			"payment_amount": paymentAmount,
+		}).Error; err != nil {
+			return err
+		}
+		// 创建 PaymentOrder（模拟真实支付回调的行为）
+		paymentOrder, err := repository.NewPaymentOrderRepo(tx).Create(model.PaymentOrder{
+			PaymentMethodName: mockPaymentMethod.PaymentName,
+			PaymentMethodUuid: mockPaymentMethod.Uuid,
+			PaymentFeePercent: 0,
+			RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
+			RelatedUuid:       saleOrder.Uuid,
+			CurrencyUnit:      "THB",
+			PaymentAmount:     paymentAmount,
+			Amount:            paymentAmount,
+			TransactionNumber: fmt.Sprintf("MOCK-%d", saleOrder.Uuid),
+			Status:            constant.PaymentOrderStatusPaid,
+		})
+		if err != nil {
+			return err
+		}
+		paymentOrderUuid = paymentOrder.Uuid
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err, "更新订单支付信息失败")
+	}
+
+	// 发布支付完成事件，触发后续流程（创建 h5_order、自动接单、标记完成等）
+	event.NewSystemBus().PublishPayFinishMemberDineInOrderEvent(event.PayFinishMemberDineInOrderPayload{
+		BasePayload: event.BasePayload{
+			Ctx:           ctx,
+			CompanyUuid:   ctx.GetCompanyUuid(),
+			Source:        constant.SourceMember,
+			SaleBillUuid:  saleBill.Uuid,
+			SaleOrderUuid: saleOrder.Uuid,
+			MemberUuid:    ctx.GetMemberUuid(),
+		},
+		PaymentOrderUuid: paymentOrderUuid,
+	})
+
+	logger.Logger.Info("MockPayDineInOrderCallback, 模拟支付回调成功",
+		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+		zap.Uint64("sale_bill_uuid", saleBill.Uuid),
+		zap.Uint64("sale_order_uuid", saleOrder.Uuid))
 
 	return nil
 }

@@ -32,10 +32,10 @@ func (s *sStock) SubmitStockEntry(ctx context.Context, req *stock.SubmitStockEnt
 		warehouseName = warehouse.Name
 	}
 
-	// 设置库存变动类型，默认为 Material Issue
+	// 设置库存变动类型，默认为 Material Inventory Deduction（物料库存扣减）
 	stockEntryType := req.StockEntryType
 	if len(stockEntryType) == 0 {
-		stockEntryType = erp.StockEntryTypeMaterialIssue
+		stockEntryType = erp.StockEntryTypeMaterialInventoryDeduction
 	}
 
 	// 构建库存变动数据
@@ -69,11 +69,16 @@ func (s *sStock) SubmitStockEntry(ctx context.Context, req *stock.SubmitStockEnt
 		}
 
 		itemData := erp.StockEntryDetail{
-			ItemCode:   item.ItemCode,
-			ItemName:   item.ItemName,
-			Qty:        item.Qty,
-			SWarehouse: itemWarehouse,
-			DocType:    erp.DocTypeStockEntryDetail,
+			ItemCode: item.ItemCode,
+			ItemName: item.ItemName,
+			Qty:      item.Qty,
+			DocType:  erp.DocTypeStockEntryDetail,
+		}
+		// Material Receipt 入库用 t_warehouse，其他出库类型用 s_warehouse
+		if stockEntryType == erp.StockEntryTypeMaterialReceipt {
+			itemData.TWarehouse = itemWarehouse
+		} else {
+			itemData.SWarehouse = itemWarehouse
 		}
 
 		itemList = append(itemList, itemData)

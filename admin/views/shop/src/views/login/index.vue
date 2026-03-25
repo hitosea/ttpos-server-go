@@ -441,7 +441,8 @@
             setSessionStorage('supplier', res.data.supplier);
             // 设置erp数据
             setSessionStorage('erp', res.data.erp);
-            //
+            // 设置settings数据
+            setSessionStorage('settings', res.data.settings);
             await changeUserInfo(dataInfo);
             let auth = getSessionStorage('authlist');
             let authlist = {};
@@ -457,6 +458,9 @@
 
               // 确保 supplier 数据已设置
               const supplier = getSessionStorage('supplier');
+              // 设置settings数据
+              setSessionStorage('settings', res.data.settings);
+
               if (!supplier || !supplier.app_id) {
                 console.error('supplier 数据未正确设置，延迟重试');
                 setTimeout(() => {

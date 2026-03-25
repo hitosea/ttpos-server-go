@@ -20,6 +20,11 @@ type IProductLabelRepo interface {
 	ClearProductPackageLabelRelation(labelUuid uint64) error                                                          // 清除商品包与标签的关联关系
 	UpdateProductPackageLabelRelation(productPackageUuids []uint64, labelUuid uint64) error                           // 建立商品包与标签的关联关系
 	CheckHeadquarterLabelConflict(productPackageUuids []uint64) ([]model.ProductPackage, []model.ProductLabel, error) // 检查商品是否已被总部标签关联
+	SoftDeleteByHeadquarterExcludeUuids(headquarterUuid uint64, excludeUuids []uint64) error                          // 软删除总部标签（排除指定UUID）
+	FindHeadquarterByUuids(uuids []uint64) ([]model.ProductLabel, error)                                              // 根据UUID列表查询总部标签
+	UnscopedDeleteByUuid(uuid uint64) error                                                                           // 物理删除指定UUID的标签
+	UnscopedDeleteByHeadquarter(headquarterUuid uint64) error                                                         // 物理删除总部标签
+	FindAllHeadquarter() ([]model.ProductLabel, error)                                                                // 查询所有总部标签
 
 	// 查询选项
 	WhereUuid(uuid uint64) DBOption
@@ -220,4 +225,41 @@ func (r *ProductLabelRepoImpl) CheckHeadquarterLabelConflict(
 	}
 
 	return conflictPackages, labels, nil
+}
+
+// SoftDeleteByHeadquarterExcludeUuids 软删除总部标签（排除指定UUID）
+func (r *ProductLabelRepoImpl) SoftDeleteByHeadquarterExcludeUuids(headquarterUuid uint64, excludeUuids []uint64) error {
+	err := r.db.Model(&model.ProductLabel{}).
+		Where("headquarter_uuid = ?", headquarterUuid).
+		Where("uuid NOT IN (?)", excludeUuids).
+		Update("delete_time", time.Now().Unix()).Error
+	return errors.WithMessage(err)
+}
+
+// FindHeadquarterByUuids 根据UUID列表查询总部标签
+func (r *ProductLabelRepoImpl) FindHeadquarterByUuids(uuids []uint64) ([]model.ProductLabel, error) {
+	var productLabels []model.ProductLabel
+	err := r.db.Where("delete_time = 0 AND headquarter_uuid = 0 AND uuid IN (?)", uuids).
+		Find(&productLabels).Error
+	return productLabels, errors.WithMessage(err)
+}
+
+// UnscopedDeleteByUuid 物理删除指定UUID的标签
+func (r *ProductLabelRepoImpl) UnscopedDeleteByUuid(uuid uint64) error {
+	err := r.db.Unscoped().Where("uuid = ?", uuid).Delete(&model.ProductLabel{}).Error
+	return errors.WithMessage(err)
+}
+
+// UnscopedDeleteByHeadquarter 物理删除总部标签
+func (r *ProductLabelRepoImpl) UnscopedDeleteByHeadquarter(headquarterUuid uint64) error {
+	err := r.db.Unscoped().Where("headquarter_uuid = ?", headquarterUuid).Delete(&model.ProductLabel{}).Error
+	return errors.WithMessage(err)
+}
+
+// FindAllHeadquarter 查询所有总部标签
+func (r *ProductLabelRepoImpl) FindAllHeadquarter() ([]model.ProductLabel, error) {
+	var productLabels []model.ProductLabel
+	err := r.db.Where("delete_time = 0 AND headquarter_uuid = 0").
+		Find(&productLabels).Error
+	return productLabels, errors.WithMessage(err)
 }

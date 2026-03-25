@@ -1,0 +1,184 @@
+# TTPOS Integration Test Docker Compose Configuration
+# =================================================
+# Usage:
+#   Run tests:  docker compose -p test-<BUILD_ID> -f main/tests/docker-compose.yml up --build --exit-code-from test-runner
+#   Clean up:   docker compose -p test-<BUILD_ID> -f main/tests/docker-compose.yml down -v --remove-orphans
+#
+# Note: Coverage is always collected. Containers stay running after tests complete for debugging.
+#       Run 'make test-clean' to clean up.
+
+services:
+  # MySQL for Testing (with healthcheck)
+  mysql-test:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-testroot}
+      MYSQL_DATABASE: ${DB_DATABASE:-saas}
+      MYSQL_USER: ${DB_USERNAME:-test}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-test}
+      TZ: "Asia/Bangkok"
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=64M
+      --innodb-redo-log-capacity=256M
+      --innodb-flush-log-at-trx-commit=0
+      --sync-binlog=0
+      --skip-log-bin
+    # tmpfs keeps MySQL DDL fast for integration tests. We cap package-level
+    # concurrency in the test runner so this larger RAM-backed datadir can hold
+    # the in-flight tenant DBs without falling back to very slow disk I/O.
+    tmpfs:
+      - /var/lib/mysql:size=4096m
+    volumes:
+      - ../../admin/database/seeds/saas.sql:/docker-entrypoint-initdb.d/saas.sql:ro
+    healthcheck:
+      # Check a table created by the init script so the health check only passes
+      # after saas.sql has been applied and the real MySQL server has restarted.
+      test: ["CMD", "mysql", "-h", "127.0.0.1", "-P", "3306", "-u", "root", "-ptestroot", "saas", "-e", "SELECT 1 FROM ttpos_admin_access LIMIT 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 30s
+    networks:
+      - test-network
+
+  # Redis for Testing
+  redis-test:
+    image: redis:6.0-alpine
+    networks:
+      - test-network
+
+  # WireMock with gRPC Extension (mock BMP services)
+  # Proto descriptors are compiled from source at build time (see Dockerfile.wiremock).
+  wiremock:
+    build:
+      context: ../..
+      dockerfile: main/tests/Dockerfile.wiremock
+    command: ["--port", "8080", "--https-port", "8443"]
+    networks:
+      - test-network
+
+  # Go Service (always with coverage)
+  ttpos-server-go:
+    build:
+      context: ../..
+      dockerfile: main/Dockerfile.coverage
+      args:
+        - HTTP_PROXY=
+        - HTTPS_PROXY=
+        - http_proxy=
+        - https_proxy=
+        - GOPROXY=https://goproxy.cn,direct
+    volumes:
+      - ../../coverage:/coverage
+      # Mount Go module and build caches for faster incremental builds
+      - go-modules:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      # Database
+      - DB_HOST=mysql-test
+      - DB_PORT=3306
+      - DB_USERNAME=${DB_USERNAME:-test}
+      - DB_PASSWORD=${DB_PASSWORD:-test}
+      - DB_DATABASE=${DB_DATABASE:-saas}
+      - MAX_OPEN_CONNS=${TEST_APP_DB_MAX_OPEN_CONNS:-2}
+      - MAX_IDLE_CONNS=${TEST_APP_DB_MAX_IDLE_CONNS:-1}
+      - CONN_MAX_LIFE_TIME=${TEST_APP_DB_CONN_MAX_LIFE_TIME_SEC:-30}
+      # JWT
+      - JWT_SECRET=${JWT_SECRET:-test-secret-key-for-integration-tests}
+      # gRPC Mock Overrides (bypass Nacos)
+      # WireMock serves gRPC on HTTPS port 8443 (TLS with self-signed cert).
+      # GRPC_TLS_INSECURE=true makes the server accept any cert (InsecureSkipVerify).
+      - GRPC_TLS_INSECURE=true
+      - GRPC_ERP_ADDR=wiremock:8443
+      - GRPC_TAKEOUT_ADDR=wiremock:8443
+      - GRPC_MESSAGE_ADDR=wiremock:8443
+      - GRPC_WEBSOCKET_ADDR=wiremock:8443
+      # Server mode
+      - SERVER_MODE=test
+      # Disable Nacos for testing
+      - NACOS_ENABLED=false
+      # Redis
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      # Coverage
+      - GOCOVERDIR=/coverage
+      # Go cache environment
+      - GOMODCACHE=/go/pkg/mod
+      - GOCACHE=/root/.cache/go-build
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_started
+      wiremock:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/api/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+    networks:
+      - test-network
+
+  # Test Runner
+  test-runner:
+    build:
+      context: ../..
+      dockerfile: main/tests/Dockerfile
+      args:
+        - HTTP_PROXY=
+        - HTTPS_PROXY=
+        - http_proxy=
+        - https_proxy=
+        - GOPROXY=https://goproxy.cn,direct
+    volumes:
+      # Mount Go module and build caches for faster test runs
+      - go-modules:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      - SERVICE_URL=http://ttpos-server-go:8080
+      - DB_HOST=mysql-test
+      - DB_PORT=3306
+      - DB_USERNAME=${DB_USERNAME:-test}
+      - DB_PASSWORD=${DB_PASSWORD:-test}
+      - DB_DATABASE=${DB_DATABASE:-saas}
+      - TEST_DB_MAX_OPEN_CONNS=${TEST_DB_MAX_OPEN_CONNS:-2}
+      - TEST_DB_MAX_IDLE_CONNS=${TEST_DB_MAX_IDLE_CONNS:-1}
+      - TEST_DB_CONN_MAX_LIFETIME_SEC=${TEST_DB_CONN_MAX_LIFETIME_SEC:-30}
+      - TEST_DB_ADMIN_MAX_OPEN_CONNS=${TEST_DB_ADMIN_MAX_OPEN_CONNS:-1}
+      - TEST_DB_ADMIN_MAX_IDLE_CONNS=${TEST_DB_ADMIN_MAX_IDLE_CONNS:-1}
+      - TEST_DB_ADMIN_CONN_MAX_LIFETIME_SEC=${TEST_DB_ADMIN_CONN_MAX_LIFETIME_SEC:-15}
+      - WIREMOCK_URL=http://wiremock:8080
+      - JWT_SECRET=${JWT_SECRET:-test-secret-key-for-integration-tests}
+      # Redis (used by internal integration tests in pkg/lock and pkg/cache)
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      # Go cache environment
+      - GOMODCACHE=/go/pkg/mod
+      - GOCACHE=/root/.cache/go-build
+      # Full tenant schema SQL path (used by NewTestTenantFull in fixture package)
+      - SHOP_SQL_PATH=/app/admin/database/seeds/shop_01.sql
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      wiremock:
+        condition: service_started
+      ttpos-server-go:
+        condition: service_healthy
+    networks:
+      - test-network
+
+# Named volumes for Go caches (persist between test runs)
+volumes:
+  go-modules:
+  go-build-cache:
+
+networks:
+  test-network:
+    driver: bridge

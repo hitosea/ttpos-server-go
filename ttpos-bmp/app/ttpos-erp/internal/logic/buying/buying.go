@@ -5,6 +5,8 @@ import (
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/item"
+	"ttpos-bmp/app/ttpos-erp/api/stock"
+	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
@@ -45,6 +47,10 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 
 	purchaseOrder := &erp.PurchaseOrder{}
 	j.GetJson("data").Scan(purchaseOrder)
+
+	// 补写 PO Item 自定义字段（ERPNext make_purchase_order 不会从 MR 携带自定义字段）
+	s.fillPurchaseOrderItemCustomFields(ctx, purchaseOrder, req)
+
 	//修改货币类型
 	purchaseOrder.Currency = purchaseOrder.PriceListCurrency
 	purchaseOrder.Supplier = req.Supplier
@@ -111,6 +117,105 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 	return
 }
 
+// fillPurchaseOrderItemCustomFields 补写 PO Item 自定义字段
+// ERPNext 的 make_purchase_order（MR→PO）不会携带自定义字段，需在 PO 创建前手动设置
+func (s *sBuying) fillPurchaseOrderItemCustomFields(ctx context.Context, purchaseOrder *erp.PurchaseOrder, req *dto.CreatePurchaseFromMqReq) {
+	if len(purchaseOrder.Items) == 0 {
+		return
+	}
+
+	// 收集 PO 物品编码
+	itemCodes := make([]string, 0, len(purchaseOrder.Items))
+	for _, poItem := range purchaseOrder.Items {
+		if poItem.ItemCode != "" {
+			itemCodes = append(itemCodes, poItem.ItemCode)
+		}
+	}
+	if len(itemCodes) == 0 {
+		return
+	}
+
+	availableQtyMap := make(map[string]float64) // item_code -> 总店默认仓库库存
+	storeQtyMap := make(map[string]float64)     // item_code -> 门店所有仓库库存
+
+	// 查询总店物品默认仓库库存（custom_qty_available_for_purchase）
+	if req.SourceCompanyAbbr != "" {
+		itemWarehouses, err := service.Item().GetItemDefaultWarehouses(ctx, itemCodes, req.SourceCompanyAbbr, false)
+		if err != nil {
+			g.Log().Warningf(ctx, "fillPurchaseOrderItemCustomFields-查询总店物品默认仓库失败: %v", err)
+		} else {
+			// 按仓库分组，相同仓库的物品一次查询
+			warehouseItemCodes := make(map[string][]string)
+			for _, itemCode := range itemCodes {
+				whName, ok := itemWarehouses[itemCode]
+				if !ok || whName == "" {
+					continue
+				}
+				warehouseItemCodes[whName] = append(warehouseItemCodes[whName], itemCode)
+			}
+			for whName, codes := range warehouseItemCodes {
+				binResp, err := service.Stock().GetBin(ctx, &stock.GetBinReq{
+					Warehouse: whName,
+				})
+				if err != nil {
+					g.Log().Warningf(ctx, "fillPurchaseOrderItemCustomFields-查询仓库Bin失败: warehouse=%s, err=%v", whName, err)
+					continue
+				}
+				binMap := make(map[string]float64)
+				for _, bin := range binResp.Items {
+					binMap[bin.ItemCode] = bin.ActualQty
+				}
+				for _, itemCode := range codes {
+					if qty, ok := binMap[itemCode]; ok {
+						availableQtyMap[itemCode] = qty
+					}
+				}
+			}
+		}
+	}
+
+	// 查询门店所有仓库库存（custom_store_qty）
+	if req.CompanyAbbr != "" {
+		warehouseResp, err := service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
+			CompanyAbbr: req.CompanyAbbr,
+		})
+		if err != nil {
+			g.Log().Warningf(ctx, "fillPurchaseOrderItemCustomFields-查询门店仓库列表失败: %v", err)
+		} else if len(warehouseResp.WarehouseList) > 0 {
+			for _, wh := range warehouseResp.WarehouseList {
+				binResp, err := service.Stock().GetBin(ctx, &stock.GetBinReq{
+					Warehouse: wh.Name,
+				})
+				if err != nil {
+					continue
+				}
+				for _, bin := range binResp.Items {
+					storeQtyMap[bin.ItemCode] += bin.ActualQty
+				}
+			}
+		}
+	}
+
+	// 设置自定义字段到 PO Items（按 PO Item 的 UOM 换算）
+	// Bin 的 ActualQty 是 stock_uom，PO Item 的 qty 是 uom
+	// conversion_factor = stock_uom / uom，即 display_qty = stock_qty / conversion_factor
+	for _, poItem := range purchaseOrder.Items {
+		cf := poItem.ConversionFactor
+		if cf <= 0 {
+			cf = 1
+		}
+		if qty, ok := req.ItemLastPurchaseQty[poItem.ItemCode]; ok && qty > 0 {
+			poItem.CustomLastPurchaseQty = qty
+		}
+		if qty, ok := availableQtyMap[poItem.ItemCode]; ok {
+			poItem.CustomQtyAvailableForPurchase = qty / cf
+		}
+		if qty, ok := storeQtyMap[poItem.ItemCode]; ok {
+			poItem.CustomStoreQty = qty / cf
+		}
+	}
+}
+
 // CreateInnerSaleOrderFromPurchaseOrder 创建内部销售订单
 // 参数：
 //   - ctx: 上下文对象
@@ -140,8 +245,9 @@ func (s *sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req
 		item.DeliveryDate = req.DeliveryDate
 	}
 
-	// 处理dropship商品的供应商交付逻辑
-	if err := s.processDripShopItems(ctx, salesOrder.Items); err != nil {
+	// 处理dropship商品的供应商交付逻辑，同时判断是否全部为直送商品
+	allDropShip, err := s.processDripShopItems(ctx, salesOrder.Items)
+	if err != nil {
 		g.Log().Warningf(ctx, "处理dropship商品失败: %v", err)
 		// 不中断流程，继续创建订单
 	}
@@ -209,8 +315,9 @@ func (s *sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req
 	j.GetJson("data").Scan(&salesOrder)
 
 	//20251226 任务 38171 ERP-品采销售订单审批需求，在品采流程中，把销售订单状态变为草稿，结合工作审批流。
+	//20260305 任务 40167 如果全部物品都是直送(dropship)，SO 直接提交，跳过审批流。
 	//20260312 任务 40323 品牌采购自动审批：开关开启时，SO 自动提交
-	if req.AutoApprove {
+	if allDropShip || req.AutoApprove {
 		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, salesOrder.Name, erp.DocstatusSubmitted)
 		if err != nil {
 			return nil, gerror.Wrapf(err, "提交内部销售订单失败")
@@ -647,21 +754,28 @@ func (s *sBuying) buildPurchaseOrderCountFilters(ctx context.Context, req *buyin
 //   - items: 销售订单商品列表
 //
 // 返回：
+//   - allDropShip: 是否所有商品都是dropship类型
 //   - error: 错误信息
-func (s *sBuying) processDripShopItems(ctx context.Context, items []*erp.SaleOrderItem) error {
+func (s *sBuying) processDripShopItems(ctx context.Context, items []*erp.SaleOrderItem) (allDropShip bool, err error) {
+	if len(items) == 0 {
+		return false, nil
+	}
+	allDropShip = true
 	for _, orderItem := range items {
 		// 获取商品信息
 		itemDetail, err := service.Item().GetItem(ctx, &item.GetItemReq{
 			ItemCode: orderItem.ItemCode,
 		})
 		if err != nil {
-			// 获取商品信息失败，记录日志但不中断流程
+			// 获取商品信息失败，记录日志但不中断流程，保守视为非dropship
 			g.Log().Warningf(ctx, "获取商品信息失败，跳过dropship处理: %s, err: %v", orderItem.ItemCode, err)
+			allDropShip = false
 			continue
 		}
 
 		// 检查是否为dropship商品
 		if !s.isDripShopItem(itemDetail) {
+			allDropShip = false
 			continue // 非dropship商品，跳过处理
 		}
 
@@ -680,7 +794,7 @@ func (s *sBuying) processDripShopItems(ctx context.Context, items []*erp.SaleOrd
 		}
 	}
 
-	return nil
+	return allDropShip, nil
 }
 
 // isDripShopItem 判断商品是否为dropship商品
@@ -799,4 +913,193 @@ func (s *sBuying) convertSalesTaxesToInterface(taxes []*erp.SalesTaxesAndCharges
 		}
 	}
 	return result
+}
+
+// CreateSplitSaleOrdersFromPurchaseOrder 从采购订单创建按仓库拆分的内部销售订单
+// 按物品默认仓库分组，为每个仓库创建独立的 SO
+// 直采物品（delivered_by_supplier）单独生成一张 SO 并自动提交
+func (s *sBuying) CreateSplitSaleOrdersFromPurchaseOrder(ctx context.Context, req *dto.CreateInnerSaleOrderFromPurchaseOrderReq) ([]*erp.SaleOrder, error) {
+	// 1. 调用 ERPNext API 获取 SO 模板（包含 PO 的所有物品）
+	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+		Method: erp.ApiMethodMakeMappedDoc,
+	}, g.MapStrStr{
+		"method":      "erpnext.buying.doctype.purchase_order.purchase_order.make_inter_company_sales_order",
+		"source_name": req.SourceName,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建内部销售订单模板失败")
+	}
+
+	soTemplate := &erp.SaleOrder{}
+	resp.GetJson("data").Scan(&soTemplate)
+	soTemplate.DeliveryDate = req.DeliveryDate
+	for _, itm := range soTemplate.Items {
+		itm.DeliveryDate = req.DeliveryDate
+	}
+
+	// 2. 标记直采物品
+	_, err = s.processDripShopItems(ctx, soTemplate.Items)
+	if err != nil {
+		g.Log().Warningf(ctx, "处理dropship商品失败: %v", err)
+	}
+
+	// 3. 查询 SO 所属公司（总部）的 abbr，用于获取物品默认仓库
+	companyAbbr := ""
+	if erpCompany, err := service.Company().GetCompany(ctx, soTemplate.Company); err == nil && erpCompany != nil {
+		companyAbbr = erpCompany.Abbr
+	} else {
+		g.Log().Warningf(ctx, "获取SO公司简称失败, company: %s, err: %v", soTemplate.Company, err)
+	}
+
+	// 4. 收集物品编码，查询默认仓库
+	itemCodes := make([]string, 0, len(soTemplate.Items))
+	for _, itm := range soTemplate.Items {
+		if itm.ItemCode != "" {
+			itemCodes = append(itemCodes, itm.ItemCode)
+		}
+	}
+	itemWarehouses := make(map[string]string)
+	if companyAbbr != "" && len(itemCodes) > 0 {
+		itemWarehouses, err = service.Item().GetItemDefaultWarehouses(ctx, itemCodes, companyAbbr, false)
+		if err != nil {
+			g.Log().Warningf(ctx, "查询物品默认仓库失败: %v", err)
+			itemWarehouses = make(map[string]string)
+		}
+	}
+
+	// 5. 分组：直采组 + 按仓库的集采组
+	var dropshipItems []*erp.SaleOrderItem
+	warehouseGroups := make(map[string][]*erp.SaleOrderItem)
+
+	for _, itm := range soTemplate.Items {
+		if itm.DeliveredBySupplier {
+			dropshipItems = append(dropshipItems, itm)
+		} else {
+			warehouse := itemWarehouses[itm.ItemCode]
+			if warehouse == "" {
+				// 回退到公司默认仓库
+				wh, whErr := service.Warehouse().GetDefaultWarehouse(ctx, soTemplate.Company, "")
+				if whErr == nil && wh != nil {
+					warehouse = wh.Name
+				}
+			}
+			warehouseGroups[warehouse] = append(warehouseGroups[warehouse], itm)
+		}
+	}
+
+	// 6. 获取公共配置（价格表、税费）
+	sellingPriceList := s.resolveSellingPriceList(ctx, req.SellingPriceList, soTemplate.Company)
+	taxTemplateName, taxes := s.resolveSalesTax(ctx, req.TaxesAndCharges, soTemplate.Company)
+
+	// 7. 为每个仓库组创建 SO
+	var createdOrders []*erp.SaleOrder
+
+	for warehouse, items := range warehouseGroups {
+		so, err := s.createSingleSaleOrder(ctx, soTemplate, items, warehouse, sellingPriceList, taxTemplateName, taxes, req.TaxCategory, req.AutoApprove)
+		if err != nil {
+			return createdOrders, gerror.Wrapf(err, "创建仓库 %s 的销售订单失败", warehouse)
+		}
+		createdOrders = append(createdOrders, so)
+	}
+
+	// 8. 直采物品单独 SO（自动提交）
+	if len(dropshipItems) > 0 {
+		so, err := s.createSingleSaleOrder(ctx, soTemplate, dropshipItems, "", sellingPriceList, taxTemplateName, taxes, req.TaxCategory, true)
+		if err != nil {
+			return createdOrders, gerror.Wrapf(err, "创建直采销售订单失败")
+		}
+		createdOrders = append(createdOrders, so)
+	}
+
+	return createdOrders, nil
+}
+
+// createSingleSaleOrder 根据 SO 模板创建单个销售订单
+func (s *sBuying) createSingleSaleOrder(
+	ctx context.Context,
+	template *erp.SaleOrder,
+	items []*erp.SaleOrderItem,
+	setWarehouse string,
+	sellingPriceList string,
+	taxTemplateName string,
+	taxes []interface{},
+	taxCategory string,
+	autoSubmit bool,
+) (*erp.SaleOrder, error) {
+	so := &erp.SaleOrder{
+		Doctype:                    template.Doctype,
+		Customer:                   template.Customer,
+		CustomerName:               template.CustomerName,
+		OrderType:                  template.OrderType,
+		Company:                    template.Company,
+		Currency:                   template.Currency,
+		ConversionRate:             template.ConversionRate,
+		PriceListCurrency:          template.PriceListCurrency,
+		PlcConversionRate:          template.PlcConversionRate,
+		DeliveryDate:               template.DeliveryDate,
+		IsInternalCustomer:         template.IsInternalCustomer,
+		RepresentsCompany:          template.RepresentsCompany,
+		InterCompanyOrderReference: template.InterCompanyOrderReference,
+		IgnorePricingRule:          template.IgnorePricingRule,
+		Items:                      items,
+		SetWarehouse:               setWarehouse,
+		SellingPriceList:           sellingPriceList,
+		TaxCategory:                taxCategory,
+	}
+
+	if taxTemplateName != "" {
+		so.TaxesAndCharges = taxTemplateName
+		so.Taxes = taxes
+	}
+
+	resp, err := service.Document().Create(ctx, erp.DocTypeSaleOrder, so)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建销售订单失败")
+	}
+
+	resultSO := &erp.SaleOrder{}
+	resp.GetJson("data").Scan(&resultSO)
+	// ERPNext 响应不回传 set_warehouse，手动保留创建时设置的仓库
+	resultSO.SetWarehouse = setWarehouse
+
+	if autoSubmit {
+		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, resultSO.Name, erp.DocstatusSubmitted)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "提交销售订单失败")
+		}
+	}
+
+	return resultSO, nil
+}
+
+// resolveSellingPriceList 获取销售价格表
+func (s *sBuying) resolveSellingPriceList(ctx context.Context, reqPriceList string, company string) string {
+	if reqPriceList != "" {
+		return reqPriceList
+	}
+	defaultPriceList, err := service.PosPriceList().GetPosPriceListByCompany(ctx, company)
+	if err != nil {
+		g.Log().Warningf(ctx, "获取销售价格表失败，company: %s", company)
+		defaultPriceList, err = service.PosPriceList().GetDefaultPosPriceList(ctx)
+		if err != nil {
+			return ""
+		}
+	}
+	return defaultPriceList.SellingPriceList
+}
+
+// resolveSalesTax 获取销售税费模板和明细
+func (s *sBuying) resolveSalesTax(ctx context.Context, reqTax string, company string) (string, []interface{}) {
+	taxTemplateName := reqTax
+	if taxTemplateName == "" {
+		taxTemplateName = service.Accounts().GetDefaultSalesTaxTemplate(ctx, company)
+	}
+	if taxTemplateName == "" {
+		return "", nil
+	}
+	taxDetails := service.Accounts().GetSalesTaxTemplateDetails(ctx, taxTemplateName)
+	if len(taxDetails) > 0 {
+		return taxTemplateName, s.convertSalesTaxesToInterface(taxDetails)
+	}
+	return taxTemplateName, nil
 }

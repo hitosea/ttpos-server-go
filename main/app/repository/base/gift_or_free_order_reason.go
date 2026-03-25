@@ -20,6 +20,7 @@ type IGiftOrFreeOrderReasonRepo interface {
 	GetFreeOrderReasons(opts ...repository.DBOption) ([]*model.FreeReason, error)          // 获取赠品或免单原因列表
 	GetFreeOrderReasonByUuid(uuid uint64) (*model.FreeReason, error)                       // 根据uuid获取赠品或免单原因
 	GetFreeOrderReasonListByUuids(uuids []uint64) ([]*model.FreeReason, error)
+	CountFreeReason() (int64, error) // 获取免单原因数量
 }
 
 // NewGiftOrFreeOrderReasonRepo 创建新的赠品或免费订单原因仓库
@@ -175,6 +176,16 @@ func (r *GiftOrFreeOrderReasonRepoImpl) GetFreeOrderReasonListByUuids(uuids []ui
 
 func (r *GiftOrFreeOrderReasonRepoImpl) DeleteGiftOrFreeOrderReasons(uuids []uint64) error {
 	return r.db.Model(&model.FreeReason{}).Where("uuid IN (?)", uuids).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+// CountFreeReason 获取免单原因数量
+func (r *GiftOrFreeOrderReasonRepoImpl) CountFreeReason() (int64, error) {
+	var count int64
+	err := r.db.Model(&model.FreeReason{}).Where("delete_time = 0").Count(&count).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	return count, nil
 }
 
 func (r *GiftOrFreeOrderReasonRepoImpl) GetFreeOrderReasonByUuid(uuid uint64) (*model.FreeReason, error) {

@@ -162,6 +162,7 @@ rmi-docker-images:
 chown-all:
 	sudo chown -R $(shell whoami):$(shell id -gn) $(CURDIR)
 	sudo chown -R www-data:www-data $(CURDIR)/admin/runtime
+	sudo chown -R www-data:www-data $(CURDIR)/admin/public/uploads
 	sudo chmod -R 755 $(CURDIR)/admin/runtime
 	sudo rm -rf $(CURDIR)/admin/runtime/logs/*
 
@@ -173,3 +174,214 @@ update-mcp-token:
 # 验证数据库结构
 verify-db-structure:
 	cd ./main && go run main.go verify-db-structure
+
+# 导出数据库备份
+db-export:
+	@echo "🗄️  导出数据库备份..."
+	@APP_ID=$$(grep '^APP_ID=' .env | cut -d '=' -f 2 | tr -d ' '); \
+	DB_ROOT_PASSWORD=$$(grep '^DB_ROOT_PASSWORD=' .env | cut -d '=' -f 2 | tr -d ' '); \
+	CONTAINER="saas-db-$$APP_ID"; \
+	BACKUP_FILE="backup_all_$$(date +%Y%m%d_%H%M%S).sql.gz"; \
+	echo "📦 容器: $$CONTAINER"; \
+	echo "📁 备份文件: $$BACKUP_FILE"; \
+	docker exec $$CONTAINER mysqldump -uroot -p$$DB_ROOT_PASSWORD \
+		--all-databases \
+		--single-transaction \
+		--routines \
+		--triggers \
+		--events \
+		--set-gtid-purged=OFF \
+		| gzip > $$BACKUP_FILE; \
+	echo "✅ 数据库备份完成: $$BACKUP_FILE ($$(du -h $$BACKUP_FILE | cut -f1))"
+
+# 导入数据库备份
+# 用法: make db-import FILE=backup_all_20260307.sql.gz
+db-import:
+	@if [ -z "$(FILE)" ]; then \
+		echo "❌ 请指定备份文件: make db-import FILE=backup_all_xxx.sql.gz"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(FILE)" ]; then \
+		echo "❌ 文件不存在: $(FILE)"; \
+		exit 1; \
+	fi
+	@echo "🗄️  导入数据库备份: $(FILE)"
+	@APP_ID=$$(grep '^APP_ID=' .env | cut -d '=' -f 2 | tr -d ' '); \
+	DB_ROOT_PASSWORD=$$(grep '^DB_ROOT_PASSWORD=' .env | cut -d '=' -f 2 | tr -d ' '); \
+	CONTAINER="saas-db-$$APP_ID"; \
+	echo "📦 容器: $$CONTAINER"; \
+	echo "⏳ 正在导入，请稍候..."; \
+	gunzip < $(FILE) | docker exec -i $$CONTAINER mysql -uroot -p$$DB_ROOT_PASSWORD; \
+	echo "✅ 数据库导入完成"
+
+# ===========================================
+# Integration Testing Commands
+# ===========================================
+
+# Build configuration for tests
+BUILD_ID ?= $(shell date +%s)
+IMAGE_TAG ?= latest
+COVERAGE_DIR := coverage
+ENV_FILE := main/tests/test.env
+
+.PHONY: test-main-local test-clean test-help
+
+test-help:
+	@echo "TTPOS Integration Test Commands"
+	@echo ""
+	@echo "  make test-main-local       Run Main integration tests"
+	@echo "  make test-bmp-local        Run BMP integration tests"
+	@echo ""
+	@echo "Coverage is collected and merged after tests complete."
+	@echo "Test containers and volumes are automatically cleaned up."
+	@echo ""
+	@echo "Options:"
+	@echo "  BUILD_ID=<id>           Unique identifier for test run (default: timestamp)"
+
+# Run Main integration tests
+test-main-local:
+	@echo "=== Running Main Integration Tests (Local Mode) ==="
+	@echo "=== Cleaning up any previous run ==="
+	docker compose --env-file $(ENV_FILE) -p test-$(BUILD_ID) -f main/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+	@echo "=== Starting containers ==="
+	@mkdir -p $(COVERAGE_DIR)
+	@chmod 777 $(COVERAGE_DIR)
+	docker compose --env-file $(ENV_FILE) -p test-$(BUILD_ID) -f main/tests/docker-compose.yml up --build --exit-code-from test-runner
+	@echo "=== Merging coverage data ==="
+	go tool covdata textfmt -i=$(COVERAGE_DIR) -o=$(COVERAGE_DIR)/total.out 2>/dev/null || echo "No coverage data to merge"
+	@if [ -f $(COVERAGE_DIR)/total.out ]; then bash main/tests/fix-coverage-paths.sh $(COVERAGE_DIR)/total.out; fi
+	@echo "Coverage report: $(COVERAGE_DIR)/total.out"
+	@echo "=== Cleaning up test containers and volumes ==="
+	docker compose --env-file $(ENV_FILE) -p test-$(BUILD_ID) -f main/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+
+
+# Clean up all test containers and volumes
+test-clean:
+	@echo "=== Cleaning up all test containers ==="
+	@docker compose --env-file $(ENV_FILE) -p test-$(BUILD_ID) -f main/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+	@docker ps -q --filter "name=test-*" | xargs -r docker rm -f 2>/dev/null || true
+	@echo "=== Cleaning up coverage directory ==="
+	@rm -rf $(COVERAGE_DIR)/*
+	@echo "Done."
+
+# ===========================================
+# BMP Integration Testing Commands
+# ===========================================
+
+BMP_ENV_FILE := ttpos-bmp/tests/test.env
+
+.PHONY: test-bmp-local test-bmp-clean
+
+# Run BMP integration tests
+test-bmp-local:
+	@echo "=== Running BMP Integration Tests (Local Mode) ==="
+	@echo "=== Cleaning up any previous run ==="
+	docker compose --env-file $(BMP_ENV_FILE) -p bmp-test-$(BUILD_ID) -f ttpos-bmp/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+	@echo "=== Starting containers ==="
+	@mkdir -p $(COVERAGE_DIR)/bmp
+	@chmod 777 $(COVERAGE_DIR)/bmp
+	docker compose --env-file $(BMP_ENV_FILE) -p bmp-test-$(BUILD_ID) -f ttpos-bmp/tests/docker-compose.yml up --build --exit-code-from bmp-test-runner
+	@echo "=== Merging BMP coverage data ==="
+	go tool covdata textfmt -i=$(COVERAGE_DIR)/bmp -o=$(COVERAGE_DIR)/bmp-total.out 2>/dev/null || echo "No BMP coverage data to merge"
+	@if [ -f $(COVERAGE_DIR)/bmp-total.out ]; then bash ttpos-bmp/tests/fix-coverage-paths.sh $(COVERAGE_DIR)/bmp-total.out; fi
+	@echo "BMP coverage report: $(COVERAGE_DIR)/bmp-total.out"
+	@echo "=== Cleaning up test containers and volumes ==="
+	docker compose --env-file $(BMP_ENV_FILE) -p bmp-test-$(BUILD_ID) -f ttpos-bmp/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+
+# Clean up BMP test containers and volumes
+test-bmp-clean:
+	@echo "=== Cleaning up BMP test containers ==="
+	docker compose --env-file $(BMP_ENV_FILE) -p bmp-test-$(BUILD_ID) -f ttpos-bmp/tests/docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+	@rm -rf $(COVERAGE_DIR)/bmp
+	@echo "Done."
+
+# ===========================================
+# Unit Testing Commands
+# ===========================================
+
+.PHONY: unit-test unit-test-coverage
+
+# Run unit tests
+unit-test:
+	@echo "=== Running Unit Tests ==="
+	cd main && go test -v -count=1 ./...
+
+# Run unit tests with coverage
+unit-test-coverage:
+	@echo "=== Running Unit Tests with Coverage ==="
+	@mkdir -p $(COVERAGE_DIR)
+	cd main && go test -coverprofile=../$(COVERAGE_DIR)/unit.out -covermode=atomic ./...
+
+# ===========================================
+# Code Quality Commands
+# ===========================================
+
+.PHONY: lint fmt vet sonar
+
+# Run linter
+lint:
+	@echo "=== Running Linter ==="
+	cd main && golangci-lint run ./...
+
+# Format code
+fmt:
+	@echo "=== Formatting Code ==="
+	cd main && go fmt ./...
+
+# Run go vet
+vet:
+	@echo "=== Running go vet ==="
+	cd main && go vet ./...
+
+# ═══════════════════════════════════════════════════
+# CI 标准接口 — 供构建仓库调用
+# ═══════════════════════════════════════════════════
+
+.PHONY: ci-env ci-setup ci-lint ci-unit-test ci-integration-test ci-build
+
+# 输出 CI 需要的环境变量
+ci-env:
+	@echo "GO_VERSION=1.23"
+	@echo "NEEDS_DOCKER=true"
+	@echo "NEEDS_SUBMODULES=true"
+
+# 安装依赖、准备环境
+ci-setup:
+	cd main && go mod download
+	cd ttpos-bmp && go mod download
+	@which golangci-lint > /dev/null 2>&1 || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.62.2
+
+# 代码检查（BASE_REV 由环境变量传入，仅检查变更文件；未设置则全量扫描）
+ci-lint:
+	@fail=0; \
+	( cd main && go vet ./... || { go clean -cache && go vet ./...; } ) & pid1=$$!; \
+	( cd main && golangci-lint run $${BASE_REV:+--new-from-rev=$$BASE_REV} ) & pid2=$$!; \
+	wait $$pid1 || fail=1; \
+	wait $$pid2 || fail=1; \
+	exit $$fail
+
+# 单元测试，覆盖率输出到 coverage/（Main + BMP 并发）
+ci-unit-test:
+	@mkdir -p coverage; \
+	fail=0; \
+	( cd main && go test -short -v -count=1 -coverprofile=../coverage/unit.out -covermode=set ./... \
+		&& bash tests/fix-coverage-paths.sh ../coverage/unit.out ) & pid1=$$!; \
+	( cd ttpos-bmp && go test -count=1 -coverprofile=../coverage/bmp-unit.out -covermode=set ./... \
+		&& bash tests/fix-coverage-paths.sh ../coverage/bmp-unit.out ) & pid2=$$!; \
+	wait $$pid1 || fail=1; \
+	wait $$pid2 || fail=1; \
+	exit $$fail
+
+# 集成测试（需要 Docker），覆盖率输出到 coverage/（Main + BMP 并发）
+ci-integration-test:
+	@fail=0; \
+	$(MAKE) test-main-local BUILD_ID="$(BUILD_ID)" & pid1=$$!; \
+	$(MAKE) test-bmp-local BUILD_ID="$(BUILD_ID)" & pid2=$$!; \
+	wait $$pid1 || fail=1; \
+	wait $$pid2 || fail=1; \
+	exit $$fail
+
+# Docker 镜像构建推送（REF_NAME 由构建仓库传入）
+ci-build:
+	@echo "Building Docker images for $(REF_NAME)..."
+	# 复用现有的构建逻辑

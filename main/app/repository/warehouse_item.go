@@ -65,6 +65,17 @@ type IWarehouseItemRepo interface {
 	GetMaterialStockInNormalWarehouses(materialUuids []uint64) (map[uint64]float64, error)
 	// 按照物料UUID和仓库UUID分组获取物品库存
 	GetMaterialStockByWarehouse(materialUuids []uint64) ([]MaterialWarehouseStockResult, error)
+
+	// 批量操作
+	UpdateStockByUuid(uuid uint64, stock float64) error
+	UpdateStockByWarehouseAndMaterial(warehouseUuid, materialUuid uint64, stock float64) error
+	CreateBatchValues(items []model.WarehouseItem) error
+
+	// 获取所有活跃仓库中的库存物品
+	GetItemsInActiveWarehouses() ([]model.WarehouseItem, error)
+
+	// 条件查询选项
+	WhereMaterialCodeNotEmpty() DBOption
 }
 
 // WarehouseItemRepoImpl 仓库商品库存Repository实现
@@ -252,8 +263,7 @@ func (r *WarehouseItemRepoImpl) GetByWarehouseErpCode(warehouseErpCode string, o
 	var warehouseItems []model.WarehouseItem
 	query := r.db.Joins("JOIN ttpos_warehouse ON ttpos_warehouse_item.warehouse_uuid = ttpos_warehouse.uuid").
 		Where("ttpos_warehouse.erp_code = ?", warehouseErpCode).
-		Where("ttpos_warehouse.delete_time = 0").
-		Scopes(NotDeleted)
+		Where("ttpos_warehouse.delete_time = 0")
 	// 应用查询选项
 	for _, opt := range opts {
 		query = opt(query)
@@ -567,6 +577,33 @@ func (r *WarehouseItemRepoImpl) GetMaterialStockByWarehouse(materialUuids []uint
 	return results, nil
 }
 
+// UpdateStockByUuid 根据UUID更新库存数量
+func (r *WarehouseItemRepoImpl) UpdateStockByUuid(uuid uint64, stock float64) error {
+	return r.db.Model(&model.WarehouseItem{}).Where("uuid = ?", uuid).Update("stock", stock).Error
+}
+
+// UpdateStockByWarehouseAndMaterial 根据仓库和物品UUID更新库存数量
+func (r *WarehouseItemRepoImpl) UpdateStockByWarehouseAndMaterial(warehouseUuid, materialUuid uint64, stock float64) error {
+	return r.db.Model(&model.WarehouseItem{}).
+		Where("warehouse_uuid = ? AND material_uuid = ?", warehouseUuid, materialUuid).
+		Update("stock", stock).Error
+}
+
+// CreateBatchValues 批量创建仓库物品（值类型切片）
+func (r *WarehouseItemRepoImpl) CreateBatchValues(items []model.WarehouseItem) error {
+	if len(items) == 0 {
+		return nil
+	}
+	return r.db.Create(&items).Error
+}
+
+// WhereMaterialCodeNotEmpty 物品编码非空条件
+func (r *WarehouseItemRepoImpl) WhereMaterialCodeNotEmpty() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("material_code != ''")
+	}
+}
+
 // GetTransitWarehouseItemByWarehouseAndMaterial 获取在途仓库库存
 func (r *WarehouseItemRepoImpl) GetTransitWarehouseItemByWarehouseAndMaterial(
 	warehouseUuid, materialUuid uint64,
@@ -597,4 +634,13 @@ func (r *WarehouseItemRepoImpl) GetTransitWarehouseItemByWarehouseAndMaterial(
 		}
 	}
 	return warehouseItem, nil
+}
+
+// GetItemsInActiveWarehouses 获取所有活跃非在途仓库中的库存物品
+func (r *WarehouseItemRepoImpl) GetItemsInActiveWarehouses() ([]model.WarehouseItem, error) {
+	var warehouseItems []model.WarehouseItem
+	err := r.db.Model(&model.WarehouseItem{}).
+		Where("warehouse_uuid IN (?)", r.db.Model(&model.Warehouse{}).Select("uuid").Where("delete_time = 0 AND type != ?", constant.WarehouseTypeTransit)).
+		Find(&warehouseItems).Error
+	return warehouseItems, err
 }

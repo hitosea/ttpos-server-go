@@ -23,6 +23,9 @@ message MaterialRequestItem {
   double qty = 3;      // 物品数量，
   string warehouse = 4;      // 仓库名称，可选
   string uom = 5;      // 物品单位，
+  double custom_last_purchase_qty = 6;      // 上次采购数量（默认销售单位），可选，由TTPOS传入
+  double custom_qty_available_for_purchase = 7;      // 可采购数量（总店默认仓库库存），可选，由BMP填入
+  double custom_store_qty = 8;      // 门店库存（门店所有仓库库存），可选，由BMP填入
 }
 
 message SaveMaterialRequestReq {
@@ -36,7 +39,8 @@ message SaveMaterialRequestReq {
   string supplier = 8;      // 供应商名称, purpose 为 Purchases时 必填
   repeated MaterialRequestItem items = 9;      // 物品列表，
   string ref_no = 10;      // 来源单据号，可选，用于跟踪 ttpos 原始订单号
-  bool auto_approve = 11;   // 品牌采购自动审批标记，开启时 SO 自动提交并生成 DN
+  string source_company_abbr = 11;      // 来源公司缩写（总部公司），可选，用于查询总店物品默认仓库库存
+  bool auto_approve = 12;   // 品牌采购自动审批标记，开启时 SO 自动提交并生成 DN
 }
 
 message SaveMaterialRequestResp {
@@ -120,7 +124,7 @@ message SaveStockReconciliationReq {
   string purpose = 5;                                 // 用途，可选，默认 Stock Reconciliation / Opening Stock
   string warehouse = 6;                               // 仓库名称，可选
   repeated StockReconciliationItem items = 7;         // 盘点明细，必填
-  string inventory_type = 8;                          // 盘点类型，可选，可选值：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items
+  string inventory_type = 8;                          // 盘点类型，可选，可选值：Daily inventory/Weekly inventory/Monthly inventory/Designated item inventory/Inventory of all items/Fixed asset inventory
 }
 
 // 保存库存盘点响应

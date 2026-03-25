@@ -81,7 +81,9 @@ func (h *Handler) BaseInfo(c *gin.Context) {
 	cashierSetting, err3 := h.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	h5Setting, err4 := h.settingSrv.GetH5Setting(ctx, nil)
 
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+	templateStyleSetting, err5 := h.settingSrv.GetTemplateStyleSetting(ctx)
+
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("获取配置失败")))
 		return
 	}
@@ -111,6 +113,7 @@ func (h *Handler) BaseInfo(c *gin.Context) {
 			Language:        h5Setting.Language,
 			DefaultLanguage: h5Setting.DefaultLanguage,
 		},
+		TemplateStyle: templateStyleSetting.TemplateStyle,
 	})
 }
 

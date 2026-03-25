@@ -63,6 +63,11 @@ const (
 
 	// DocTypePrintFormat Print Format 文档类型
 	DocTypePrintFormat = "Print Format"
+
+	// DocTypeSalesInvoice Sales Invoice 文档类型
+	DocTypeSalesInvoice = "Sales Invoice"
+	// DocTypePaymentEntry Payment Entry 文档类型
+	DocTypePaymentEntry = "Payment Entry"
 )
 
 const (
@@ -91,6 +96,32 @@ const (
 
 const (
 	WarehouseTypeTransit = "Transit"
+)
+
+// 备用商品（外卖异常降级）
+const (
+	// SpareGoodsItemCode BY001 备用商品 Item Code
+	// 当外卖订单商品无法映射 ERP Item 时使用此备用商品落单
+	SpareGoodsItemCode = "BY001"
+	// SpareGoodsItemName BY001 备用商品名称
+	SpareGoodsItemName = "Spare goods"
+)
+
+// Webhook 事件类型
+const (
+	EventOnCancel = "on_cancel"
+)
+
+// SI 同步状态（BMP → Main 回调）
+const (
+	SyncStatusSuccess        = 3 // 同步成功
+	SyncStatusFailed         = 4 // 同步失败
+	SyncStatusExternalCancel = 5 // ERPNext 端外部取消
+)
+
+// SI 最大重试次数
+const (
+	MaxRetryCount = 5
 )
 
 // 税费模板文档类型

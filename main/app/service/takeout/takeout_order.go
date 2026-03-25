@@ -55,7 +55,7 @@ type ITakeoutOrderSrv interface {
 	// 注意：此方法使用 changeResult.ReturnItems 中的 OldItem 数据，包含变更前的数量
 	PrintReturnOrder(ctx context.Context, orderUuid uint64, changeResult *valueObject.OrderChangeResult) error
 	// RecordTakeoutOrderPeakTime 记录外卖订单高峰期（仅在订单完成时调用）
-	RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy uint64, completedTime int64, platformTotal float64, companyUuid uint64) error
+	RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy uint64, completedTime int64, platformTotal float64, companyUuid uint64, orderCreateTime int64) error
 }
 
 // ProcessTakeoutOrderOutboundAndSales 处理外卖订单出库和销量
@@ -352,40 +352,33 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, companyUuid uint64, ta
 		MaterialSalesVolume[warehouseOutFormItem.MaterialUuid] = decimal.NewFromFloat(MaterialSalesVolume[warehouseOutFormItem.MaterialUuid]).Add(decimal.NewFromFloat(warehouseOutFormItem.Num)).Round(4).InexactFloat64()
 	}
 
-	// Step 3: 在事务中更新库存
-	err = repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		// 更新出库单明细状态（标记为已减库存）
-		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsReduceStockByTakeoutOrderUuid(takeoutOrderUuid); err != nil {
-			logger.Logger.Error("reduceTakeoutOrderStock, UpdateWarehouseOutFormItemRecordsReduceStock failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
-			return err
-		}
-
-		// 更新 BOM 库存
-		if err := repository.NewProductBomRepo(tx).UpdateProductBoms(ProductBomsList); err != nil {
-			logger.Logger.Error("reduceTakeoutOrderStock, UpdateProductBoms failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
-			return err
-		}
-
-		// 更新材料库存
-		for _, material := range Materials {
-			if err := base.NewMaterialRepo(tx).UpdateMaterialsStockNum(material.MaterialUuid, material.WarehouseUuid, -material.ReduceStockNum); err != nil {
-				logger.Logger.Error("reduceTakeoutOrderStock, UpdateMaterialsStockNum failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
-				return err
-			}
-		}
-
-		// 通过sale_order_uuid查询出库单明细中有效的出库材料,然后统计每个材料的销量
-		for materialUuid, saleNum := range MaterialSalesVolume {
-			if err := repository.NewMaterialRepo(tx).AddActualSaleNum(materialUuid, saleNum); err != nil {
-				logger.Logger.Error("HandleAddMaterialSalesVolume process, AddActualSaleNum failed", zap.Any("materialUuid", materialUuid), zap.Any("saleNum", saleNum), zap.Error(err))
-				continue
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
+	// Step 3: 更新库存（db 已是外层事务的 tx，无需再开嵌套事务）
+	// 更新出库单明细状态（标记为已减库存）
+	if err := repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsReduceStockByTakeoutOrderUuid(takeoutOrderUuid); err != nil {
+		logger.Logger.Error("reduceTakeoutOrderStock, UpdateWarehouseOutFormItemRecordsReduceStock failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
 		return err
+	}
+
+	// 更新 BOM 库存
+	if err := repository.NewProductBomRepo(db).UpdateProductBoms(ProductBomsList); err != nil {
+		logger.Logger.Error("reduceTakeoutOrderStock, UpdateProductBoms failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
+		return err
+	}
+
+	// 更新材料库存
+	for _, material := range Materials {
+		if err := base.NewMaterialRepo(db).UpdateMaterialsStockNum(material.MaterialUuid, material.WarehouseUuid, -material.ReduceStockNum); err != nil {
+			logger.Logger.Error("reduceTakeoutOrderStock, UpdateMaterialsStockNum failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
+			return err
+		}
+	}
+
+	// 通过sale_order_uuid查询出库单明细中有效的出库材料,然后统计每个材料的销量
+	for materialUuid, saleNum := range MaterialSalesVolume {
+		if err := repository.NewMaterialRepo(db).AddActualSaleNum(materialUuid, saleNum); err != nil {
+			logger.Logger.Error("HandleAddMaterialSalesVolume process, AddActualSaleNum failed", zap.Any("materialUuid", materialUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
+		}
 	}
 
 	return nil
@@ -1587,7 +1580,7 @@ func (s *takeoutSrv) PrintReturnOrder(ctx context.Context, orderUuid uint64, cha
 
 // RecordTakeoutOrderPeakTime 记录外卖订单高峰期（仅在订单完成时调用）
 // 直接使用传入的订单数据构建 SaleBill，避免重新查询数据库导致的事务可见性问题
-func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy uint64, completedTime int64, platformTotal float64, companyUuid uint64) error {
+func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy uint64, completedTime int64, platformTotal float64, companyUuid uint64, orderCreateTime int64) error {
 	db := s.dbm.GetDB(companyUuid)
 
 	// 设置上下文
@@ -1601,17 +1594,18 @@ func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy 
 
 	// 2. 构建 SaleBill
 	saleBill := &model.SaleBill{
-		Status:        constant.SaleBillStatusComplete, // 设置为已完成状态，IsFinish() 才能返回 true
-		PaymentAmount: platformTotal,                   // 顾客实付金额（单位：元）
-		CashierUuid:   acceptedBy,                      // 使用接单人
-		FinishTime:    completedTime,                   // 使用完成时间
+		BaseModel:     model.BaseModel{CreateTime: orderCreateTime}, // 用订单创建时间，供测试营业时段守卫判断
+		Status:        constant.SaleBillStatusComplete,              // 设置为已完成状态，IsFinish() 才能返回 true
+		PaymentAmount: platformTotal,                                // 顾客实付金额（单位：元）
+		CashierUuid:   acceptedBy,                                   // 使用接单人
+		FinishTime:    completedTime,                                // 使用完成时间
 	}
 
 	// 3. 获取门店设置（时区）
 	settingSrv := setting.NewSrv(s.dbm, cache.Global)
 	storeSetting, err := settingSrv.GetStoreSetting(ctx)
 	if err != nil {
-		logger.Logger.Info("获取门店设置失败", zap.Error(err))
+		logger.Logger.Error("获取门店设置失败", zap.Error(err))
 		return err
 	}
 

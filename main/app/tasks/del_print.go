@@ -45,8 +45,12 @@ func (t *delPrintTask) Execute() {
 		log.Fatalf("Error querying companies with settings: %s", err)
 		return
 	}
-	//
 	for _, company := range companies {
-		repository.NewPrinterLogRepo(t.dbm.GetDB(company.Uuid)).Delete7DaysAgo()
+		if err := repository.NewPrinterLogRepo(t.dbm.GetDB(company.Uuid)).Delete7DaysAgo(); err != nil {
+			logger.Logger.Error("删除打印日志失败", zap.Uint64("company_uuid", company.Uuid), zap.String("company_name", company.Name), zap.Error(err))
+		}
+		if err := repository.NewPrinterLogDataRepo(t.dbm.GetDB(company.Uuid)).Delete7DaysAgo(); err != nil {
+			logger.Logger.Error("删除打印日志数据失败", zap.Uint64("company_uuid", company.Uuid), zap.String("company_name", company.Name), zap.Error(err))
+		}
 	}
 }

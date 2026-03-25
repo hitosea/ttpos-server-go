@@ -1,7 +1,10 @@
 package repository
 
 import (
+	"math"
+	"strings"
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -12,6 +15,7 @@ import (
 type IWarehouseInOutLogRepo interface {
 	// 基础操作
 	Create(warehouseLog *model.WarehouseInOutLog) error
+	CreateBatch(warehouseLogs []*model.WarehouseInOutLog) error
 	Update(warehouseLog *model.WarehouseInOutLog) error
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.WarehouseInOutLog, error)
@@ -43,6 +47,9 @@ type IWarehouseInOutLogRepo interface {
 	WhereCreateTimeBetween(startTime, endTime int) DBOption
 	WhereMaterialNameLike(keyword string) DBOption // 根据物品名称模糊查询
 	OrderByCreateTime(desc bool) DBOption
+
+	// GetOutboundConsumptionSince 批量查询每个物品从各自指定时间起的出库消耗量（SQL层聚合）
+	GetOutboundConsumptionSince(materialSinceTimes map[uint64]int64) (map[uint64]float64, error)
 }
 
 // WarehouseInOutLogRepoImpl 仓库出入库日志Repository实现
@@ -58,6 +65,14 @@ func NewWarehouseInOutLogRepo(db *gorm.DB) IWarehouseInOutLogRepo {
 // Create 创建仓库出入库日志
 func (r *WarehouseInOutLogRepoImpl) Create(warehouseLog *model.WarehouseInOutLog) error {
 	return r.db.Create(warehouseLog).Error
+}
+
+// CreateBatch 批量创建仓库出入库日志
+func (r *WarehouseInOutLogRepoImpl) CreateBatch(warehouseLogs []*model.WarehouseInOutLog) error {
+	if len(warehouseLogs) == 0 {
+		return nil
+	}
+	return r.db.Create(&warehouseLogs).Error
 }
 
 // Update 更新仓库出入库日志
@@ -305,6 +320,78 @@ func (r *WarehouseInOutLogRepoImpl) WhereSupplierErpCodesOrCompanyUuids(supplier
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("(supplier_erp_code IN ? OR (other_org_uuid IN ? and other_org_type = 1))", supplierErpCodes, companyUuids)
 	}
+}
+
+// GetOutboundConsumptionSince 批量查询每个物品从各自指定时间起的出库消耗量
+// materialSinceTimes: map[materialUuid]sinceTime，每个物品有独立的起始时间
+// 返回 map[materialUuid]totalConsumption，在 SQL 层通过 CASE WHEN 精确过滤并聚合
+func (r *WarehouseInOutLogRepoImpl) GetOutboundConsumptionSince(materialSinceTimes map[uint64]int64) (map[uint64]float64, error) {
+	result := make(map[uint64]float64)
+	if len(materialSinceTimes) == 0 {
+		return result, nil
+	}
+
+	// 分批处理，每批最多200个物品，避免 CASE WHEN 表达式过长影响 SQL 性能
+	const batchSize = 200
+	batch := make(map[uint64]int64, batchSize)
+	i := 0
+	for uuid, sinceTime := range materialSinceTimes {
+		batch[uuid] = sinceTime
+		i++
+		if i%batchSize == 0 {
+			if err := r.queryOutboundBatch(batch, result); err != nil {
+				return result, err
+			}
+			batch = make(map[uint64]int64, batchSize)
+		}
+	}
+	if len(batch) > 0 {
+		if err := r.queryOutboundBatch(batch, result); err != nil {
+			return result, err
+		}
+	}
+	return result, nil
+}
+
+// queryOutboundBatch 执行单批次出库消耗量查询
+func (r *WarehouseInOutLogRepoImpl) queryOutboundBatch(batch map[uint64]int64, result map[uint64]float64) error {
+	materialUuids := make([]uint64, 0, len(batch))
+	var minTime int64 = math.MaxInt64
+	var sb strings.Builder
+	args := make([]any, 0, len(batch)*2)
+	sb.WriteString("CASE material_uuid")
+	for uuid, sinceTime := range batch {
+		materialUuids = append(materialUuids, uuid)
+		sb.WriteString(" WHEN ? THEN ?")
+		args = append(args, uuid, sinceTime)
+		if sinceTime < minTime {
+			minTime = sinceTime
+		}
+	}
+	sb.WriteString(" END")
+
+	type consumptionRecord struct {
+		MaterialUuid uint64  `gorm:"column:material_uuid"`
+		TotalNum     float64 `gorm:"column:total_num"`
+	}
+	var records []consumptionRecord
+	err := r.db.Model(&model.WarehouseInOutLog{}).
+		Select("material_uuid, SUM(num) as total_num").
+		Where("material_uuid IN ?", materialUuids).
+		Where("log_type = ?", constant.WarehouseInOutLogLogTypeOut).
+		Where("scene != ?", constant.WarehouseInOutLogSceneTransitOut). // 排除在途出库（采购收货的在途仓转出，非真实消耗）
+		Where("create_time >= ?", minTime).
+		Where(gorm.Expr("create_time >= "+sb.String(), args...)).
+		Where("delete_time = 0").
+		Group("material_uuid").
+		Scan(&records).Error
+	if err != nil {
+		return err
+	}
+	for _, rec := range records {
+		result[rec.MaterialUuid] = rec.TotalNum
+	}
+	return nil
 }
 
 // WhereSupplierErpCode 供应商erp编码条件

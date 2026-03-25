@@ -38,7 +38,12 @@ func (s *rpcServer) Init(ctx context.Context) {
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.UnaryInterceptor(unaryRecordInterceptor()),
 	)
-	grpcx.Resolver.Register(nacos.New(GetNacosAddress(ctx)))
+	nacosAddr := GetNacosAddress(ctx)
+	if nacosAddr != "" && nacosAddr != ":" {
+		grpcx.Resolver.Register(nacos.New(nacosAddr))
+	} else {
+		g.Log().Infof(ctx, "Nacos address is empty, skipping gRPC service registration")
+	}
 	//使用默认组和集群名称
 	//.SetClusterName("DEFAULT")
 	//.SetGroupName("DEFAULT_GROUP"))
@@ -102,7 +107,12 @@ func unaryRecordInterceptor() grpc.UnaryServerInterceptor {
 }
 
 func (s *rpcServer) InitHttp(ctx context.Context) {
-	gsvc.SetRegistry(nacos.New(GetNacosAddress(ctx)))
+	nacosAddr := GetNacosAddress(ctx)
+	if nacosAddr == "" || nacosAddr == ":" {
+		g.Log().Infof(ctx, "Nacos address is empty, skipping HTTP registry")
+		return
+	}
+	gsvc.SetRegistry(nacos.New(nacosAddr))
 	//使用默认组和集群名称
 	//.SetClusterName("DEFAULT")
 	//.SetGroupName("DEFAULT_GROUP"))

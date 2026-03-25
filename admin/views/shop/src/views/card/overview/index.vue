@@ -46,8 +46,8 @@
                   </div>
                 </div>
                 <div class="p-relative">
-                  <autoTips :content="$t('充值：') + item.recharge_amount + ' (' + $t('额外赠送：') + item.gift_amount + ')'" :textRight="true">
-                    {{ $t('充值：') + item.recharge_amount + ' (' + $t('额外赠送：') + item.gift_amount + ')' }}
+                  <autoTips :content="$t('充值：') + $formatPrice(item.recharge_amount || 0) + ' (' + $t('额外赠送：') + $formatPrice(item.gift_amount || 0) + ')'" :textRight="true">
+                    {{ $t('充值：') + $formatPrice(item.recharge_amount || 0) + ' (' + $t('额外赠送：') + $formatPrice(item.gift_amount || 0) + ')' }}
                   </autoTips>
                 </div>
               </div>
@@ -90,9 +90,9 @@
                     </div>
                   </div>
                   <div class="p-relative">
-                    <autoTips :content="$t('消费次数：') + item.consumption_num + ' ' + $t('消费金额：') + item.consumption_amount" :textRight="true">
+                    <autoTips :content="$t('消费次数：') + item.consumption_num + ' ' + $t('消费金额：') + $formatPrice(item.consumption_amount || 0)" :textRight="true">
                       {{ $t('消费次数：') + item.consumption_num }}
-                      {{ $t('消费金额：') + item.consumption_amount }}
+                      {{ $t('消费金额：') + $formatPrice(item.consumption_amount || 0) }}
                     </autoTips>
                   </div>
                 </div>

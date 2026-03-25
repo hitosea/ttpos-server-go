@@ -19,13 +19,15 @@ type IPaymentMethodRepo interface {
 	WhereAssistant() DBOption             // 在助手端结账时显示
 	WhereKiosk() DBOption                 // 在自助点餐机结账时显示
 	WhereStatus(status int) DBOption
-	WhereExistsErpnextPayment() DBOption          // 存在ERPNext支付方式
-	WhereNotExistsErpnextPayment() DBOption       // 不存在ERPNext支付方式
-	WhereNotCode(codes []int) DBOption            // 排除支付方式代号
-	WherePaymentName(paymentName string) DBOption // 按支付方式名称查询
-	WhereCode(code int) DBOption                  // 按支付方式code查询
-	WhereSource(source int) DBOption              // 按来源查询
-	WhereNotSource(source int) DBOption           // 排除指定来源
+	WhereExistsErpnextPayment() DBOption                // 存在ERPNext支付方式
+	WhereNotExistsErpnextPayment() DBOption             // 不存在ERPNext支付方式
+	WhereNotCode(codes []int) DBOption                  // 排除支付方式代号
+	WherePaymentName(paymentName string) DBOption       // 按支付方式名称查询
+	WhereCode(code int) DBOption                        // 按支付方式code查询
+	WhereSource(source int) DBOption                    // 按来源查询
+	WhereNotSource(source int) DBOption                 // 排除指定来源
+	WhereErpnextPaymentId(paymentId string) DBOption    // 按ERPNext PaymentID查询
+	WhereErpnextPayment(erpnextPayment string) DBOption // 按ERPNext支付名称查询
 
 	WithLogoFile() DBOption   // 关联logo文件
 	WithQrcodeFile() DBOption // 关联二维码文件
@@ -39,6 +41,11 @@ type IPaymentMethodRepo interface {
 	BatchUpdateSort(items []model.PaymentMethod) error                                                                // 批量更新排序
 	GetPaymentMethodListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]*model.PaymentMethod, int64, error) // 分页查询支付方式列表
 	FilterPaymentMethod(paymentMethod model.PaymentMethod, lianLianPayAvailable bool) bool                            // 过滤支付方式：用于过滤LIANLIAN PAY未配置、免单
+	GetMaxCodeBySource(source int, minCode int) int                                                                   // 获取指定来源的最大code（含已删除）
+	FindHeadquarterByUuidsExcludeCodes(uuids []uint64, excludeCodes []int) ([]model.PaymentMethod, error)             // 查询总部支付方式（按UUID，排除指定code）
+	CountByHeadquarter(headquarterUuid uint64) (int64, error)                                                         // 统计来自指定总部的支付方式数量
+	Count(opts ...DBOption) (int64, error)                                                                            // 通用计数
+	WhereNameSourceOrErpnextPayment(paymentName string, source int, erpnextPayment string) DBOption                   // 按(名称+来源)或ERP支付方式查询
 }
 
 // IPaymentMethodQueryRepo 定义仓库查询接口
@@ -239,7 +246,7 @@ func (r *paymentMethodRepo) GetPaymentMethodsByCtx(ctx context.Context) []*model
 
 func (r *paymentMethodRepo) GetLianLianPayPaymentMethodList() ([]*model.PaymentMethod, error) {
 	opts := []DBOption{
-		// CommonRepo.WhereByStatus(constant.PaymentMethodStatusEnable),
+		CommonRepo.WhereByStatus(constant.PaymentMethodStatusEnable),
 		CommonRepo.WhereBySource(constant.PaymentMethodSourceLianLianPay),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.Preload(
@@ -256,9 +263,9 @@ func (r *paymentMethodRepo) GetLianLianPayPaymentMethodList() ([]*model.PaymentM
 	result := make([]*model.PaymentMethod, 0)
 	if len(paymentMethods) > 0 {
 		for _, paymentMethod := range paymentMethods {
-			if paymentMethod.Code != constant.PaymentMethodCodeLianLianQRPromptPay {
-				result = append(result, paymentMethod)
-			}
+			// if paymentMethod.Code != constant.PaymentMethodCodeLianLianQRPromptPay {
+			result = append(result, paymentMethod)
+			// }
 		}
 	}
 	return result, nil
@@ -377,6 +384,20 @@ func (r *paymentMethodRepo) WhereNotSource(source int) DBOption {
 	}
 }
 
+// WhereErpnextPaymentId 按ERPNext PaymentID查询
+func (r *paymentMethodRepo) WhereErpnextPaymentId(paymentId string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_payment_id = ?", paymentId)
+	}
+}
+
+// WhereErpnextPayment 按ERPNext支付名称查询
+func (r *paymentMethodRepo) WhereErpnextPayment(erpnextPayment string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_payment = ?", erpnextPayment)
+	}
+}
+
 // UpdatePaymentMethod 更新支付方式
 func (r *paymentMethodRepo) UpdatePaymentMethod(data map[string]any, options ...DBOption) error {
 	db := r.db.Model(&model.PaymentMethod{})
@@ -410,6 +431,16 @@ func (r *paymentMethodRepo) CheckHasOrders(uuid uint64) (bool, error) {
 		return false, errors.WithMessage(err, "检查关联订单失败")
 	}
 	return count > 0, nil
+}
+
+// GetMaxCodeBySource 获取指定来源的最大code（含已删除），如不存在返回 defaultCode
+func (r *paymentMethodRepo) GetMaxCodeBySource(source int, minCode int) int {
+	var maxCode int
+	r.db.Model(&model.PaymentMethod{}).Unscoped().
+		Where("source = ? AND code >= ?", source, minCode).
+		Select("COALESCE(MAX(code), ?)", minCode-100).
+		Scan(&maxCode)
+	return maxCode
 }
 
 // GetMaxSort 获取最大排序值
@@ -499,4 +530,40 @@ func (r *paymentMethodRepo) FilterPaymentMethod(paymentMethod model.PaymentMetho
 	}
 
 	return true
+}
+
+// FindHeadquarterByUuidsExcludeCodes 查询总部支付方式（按UUID，排除指定code）
+func (r *paymentMethodRepo) FindHeadquarterByUuidsExcludeCodes(uuids []uint64, excludeCodes []int) ([]model.PaymentMethod, error) {
+	var payments []model.PaymentMethod
+	err := r.db.Model(&model.PaymentMethod{}).
+		Where("delete_time = 0 AND headquarter_uuid = 0 AND uuid IN (?)", uuids).
+		Where("code NOT IN (?)", excludeCodes).
+		Find(&payments).Error
+	return payments, errors.WithMessage(err)
+}
+
+// CountByHeadquarter 统计来自指定总部的支付方式数量
+func (r *paymentMethodRepo) CountByHeadquarter(headquarterUuid uint64) (int64, error) {
+	var count int64
+	err := r.db.Model(&model.PaymentMethod{}).
+		Where("headquarter_uuid = ?", headquarterUuid).
+		Where("delete_time = 0").
+		Count(&count).Error
+	return count, errors.WithMessage(err)
+}
+
+func (r *paymentMethodRepo) Count(opts ...DBOption) (int64, error) {
+	var count int64
+	db := r.db.Model(&model.PaymentMethod{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&count).Error
+	return count, errors.WithMessage(err)
+}
+
+func (r *paymentMethodRepo) WhereNameSourceOrErpnextPayment(paymentName string, source int, erpnextPayment string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("(payment_name = ? AND source = ?) OR erpnext_payment = ?", paymentName, source, erpnextPayment)
+	}
 }

@@ -54,6 +54,16 @@ func (h *SettingHandler) SaveStoreSetting(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
+	// 处理营业状态切换
+	if updateStoreSetting.BusinessStatus != nil {
+		if err := h.companySrv.UpdateBusinessStatus(ctx, req.UpdateBusinessStatusReq{
+			Uuid:           ctx.GetCompanyUuid(),
+			BusinessStatus: *updateStoreSetting.BusinessStatus,
+		}); err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+	}
 	helper.Success(c, "保存成功")
 }
 
@@ -962,6 +972,189 @@ func (h *SettingHandler) SetDataManage(c *gin.Context) {
 	helper.Success(c, "设置成功")
 }
 
+// SaveDataManageStatus 保存数据管理开关状态
+// @Summary 保存数据管理开关状态
+// @Description 仅保存数据管理开关状态，不影响操作人员和订单选择
+// @Tags 商家端.数据管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaveDataManageStatusReq true "保存数据管理状态"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/data_manage/save_status [post]
+func (h *SettingHandler) SaveDataManageStatus(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var saveReq req.SaveDataManageStatusReq
+	if err := c.ShouldBindJSON(&saveReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	if err := h.dataManageSrv.SaveStatus(ctx, saveReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "保存成功")
+}
+
+// SetDataManageStaff 设置数据管理操作人员
+// @Summary 设置数据管理操作人员
+// @Description 设置操作人员，立即生效
+// @Tags 商家端.数据管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SetDataManageStaffReq true "设置操作人员"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/data_manage/set_staff [post]
+func (h *SettingHandler) SetDataManageStaff(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var staffReq req.SetDataManageStaffReq
+	if err := c.ShouldBindJSON(&staffReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	if err := h.dataManageSrv.SetStaff(ctx, staffReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "设置成功")
+}
+
+// GetDataManageOrderList 获取已选订单列表
+// @Summary 获取已选订单列表
+// @Description 获取数据管理中已选的订单列表，支持分页和搜索
+// @Tags 商家端.数据管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param page_no query int true "页码"
+// @param page_size query int true "页面大小"
+// @param order_no query string false "订单编号搜索"
+// @param date_type query int false "时间类型,-1=全部、0=今天、1=昨天、2=本周"
+// @param query_start_date query string false "查询开始日期"
+// @param query_end_date query string false "查询结束日期"
+// @param bill_type query int false "订单类型,-1=全部、0=餐单、1=外卖"
+// @Success 200 {object} dto.Response{data=setting.DataManageOrderListResp}
+// @Router /shop/setting/data_manage/order_list [get]
+func (h *SettingHandler) GetDataManageOrderList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var listReq req.GetDataManageOrderListReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	result, err := h.dataManageSrv.GetOrderList(ctx, listReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, result)
+}
+
+// RestoreDataManageOrder 恢复（移除）单条已选订单
+// @Summary 恢复单条已选订单
+// @Description 从数据管理中移除单条已选订单
+// @Tags 商家端.数据管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.RestoreDataManageOrderReq true "恢复订单"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/data_manage/order_restore [post]
+func (h *SettingHandler) RestoreDataManageOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var restoreReq req.RestoreDataManageOrderReq
+	if err := c.ShouldBindJSON(&restoreReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	if err := h.dataManageSrv.RestoreOrder(ctx, restoreReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "操作成功")
+}
+
+// GetDataManageOrderSelect 获取可选订单列表
+// @Summary 获取可选订单列表
+// @Description 获取可供选择的订单列表，支持筛选和分页，标记已选状态
+// @Tags 商家端.数据管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param page_no query int true "页码"
+// @param page_size query int true "页面大小"
+// @param order_no query string false "订单编号搜索"
+// @param date_type query int false "时间类型,-1=全部、0=今天、1=昨天、2=本周"
+// @param query_start_date query string false "查询开始日期"
+// @param query_end_date query string false "查询结束日期"
+// @param bill_type query int false "订单类型,-1=全部、0=餐单、1=外卖"
+// @Success 200 {object} dto.Response{data=setting.DataManageOrderSelectResp}
+// @Router /shop/setting/data_manage/order_select [get]
+func (h *SettingHandler) GetDataManageOrderSelect(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var selectReq req.GetDataManageOrderSelectReq
+	if err := c.ShouldBindQuery(&selectReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	result, err := h.dataManageSrv.GetOrderSelect(ctx, selectReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, result)
+}
+
+// SubmitDataManageOrder 提交订单选择
+// @Summary 提交订单选择
+// @Description 提交当前筛选范围内的订单选择结果，与筛选范围外的已选订单合并
+// @Tags 商家端.数据管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SubmitDataManageOrderReq true "提交订单选择"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/data_manage/order_submit [post]
+func (h *SettingHandler) SubmitDataManageOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var submitReq req.SubmitDataManageOrderReq
+	if err := c.ShouldBindJSON(&submitReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	if err := h.dataManageSrv.SubmitOrder(ctx, submitReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "操作成功")
+}
+
+// GetDataManageOrderSelectStats 获取可选订单统计预览
+// @Summary 获取可选订单统计预览
+// @Description 预览提交后的选中数量和实付金额，不持久化
+// @Tags 商家端.数据管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.GetDataManageOrderSelectStatsReq true "统计预览参数"
+// @Success 200 {object} dto.Response{data=setting.DataManageOrderSelectStatsResp}
+// @Router /shop/setting/data_manage/order_select_stats [post]
+func (h *SettingHandler) GetDataManageOrderSelectStats(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var statsReq req.GetDataManageOrderSelectStatsReq
+	if err := c.ShouldBindJSON(&statsReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	resp, err := h.dataManageSrv.GetOrderSelectStats(ctx, statsReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, resp)
+}
+
 // GetKioskSetting 获取自助点餐机设置
 // @Summary 获取自助点餐机设置
 // @Description 获取自助点餐机设置
@@ -1016,6 +1209,95 @@ func (h *SettingHandler) SaveKioskSetting(c *gin.Context) {
 
 	// 调用 Service 层保存
 	err := h.settingSrv.EditKioskSetting(ctx, kioskSettingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "保存成功")
+}
+
+// GetStoreScanOrderSetting 获取门店点餐配置
+// @Summary 获取门店点餐配置
+// @Description 获取门店点餐配置，包含业务开关、外送服务、到店自取等
+// @Tags 商家端.门店点餐设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.StoreScanOrderSettingResp}
+// @Router /shop/setting/store_scan_order [get]
+func (h *SettingHandler) GetStoreScanOrderSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	result, err := h.settingSrv.GetStoreScanOrderSetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, result)
+}
+
+// SaveStoreScanOrderSetting 保存门店点餐配置
+// @Summary 保存门店点餐配置
+// @Description 保存门店点餐配置，包含业务开关、外送服务、到店自取等
+// @Tags 商家端.门店点餐设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaveStoreScanOrderSettingReq true "保存门店点餐配置"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/store_scan_order [post]
+func (h *SettingHandler) SaveStoreScanOrderSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var settingReq req.SaveStoreScanOrderSettingReq
+	if err := c.ShouldBindJSON(&settingReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	err := h.settingSrv.SaveStoreScanOrderSetting(ctx, settingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "保存成功")
+}
+
+// GetTemplateStyleSetting 获取模板样式配置
+// @Summary 获取模板样式配置
+// @Description 获取模板样式配置，返回当前模板样式值（1/2/3）
+// @Tags 商家端.模板样式设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.TemplateStyleSettingResp}
+// @Router /shop/setting/template_style [get]
+func (h *SettingHandler) GetTemplateStyleSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	result, err := h.settingSrv.GetTemplateStyleSetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, result)
+}
+
+// SaveTemplateStyleSetting 保存模板样式配置
+// @Summary 保存模板样式配置
+// @Description 保存模板样式配置，模板值为 1/2/3
+// @Tags 商家端.模板样式设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaveTemplateStyleSettingReq true "保存模板样式配置"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/template_style [post]
+func (h *SettingHandler) SaveTemplateStyleSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var settingReq req.SaveTemplateStyleSettingReq
+	if err := c.ShouldBindJSON(&settingReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	err := h.settingSrv.SaveTemplateStyleSetting(ctx, settingReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -1310,6 +1592,10 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/setting/kiosk/carousel/upload", wrapper.UploadKioskCarousel)     // 上传自助点餐机轮播内容
 		privateApi.GET("/setting/kitchen", wrapper.GetKitchenSetting)                      // 获取厨显设置
 		privateApi.POST("/setting/kitchen", wrapper.SaveKitchenSetting)                    // 保存厨显设置
+		privateApi.GET("/setting/store_scan_order", wrapper.GetStoreScanOrderSetting)      // 获取门店点餐配置
+		privateApi.POST("/setting/store_scan_order", wrapper.SaveStoreScanOrderSetting)    // 保存门店点餐配置
+		privateApi.GET("/setting/template_style", wrapper.GetTemplateStyleSetting)         // 获取模板样式配置
+		privateApi.POST("/setting/template_style", wrapper.SaveTemplateStyleSetting)       // 保存模板样式配置
 
 		privateApi.GET("/setting/free_reason", wrapper.GetFreeReason)                     // 获取免单原因
 		privateApi.POST("/setting/free_reason/add", wrapper.AddFreeReason)                // 新增免单原因
@@ -1341,6 +1627,14 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		// 数据管理
 		privateApi.GET("/setting/data_manage", wrapper.GetDataManage)      // 获取数据管理
 		privateApi.POST("/setting/data_manage/set", wrapper.SetDataManage) // 设置数据管理
+		// 数据管理 - 拆分接口
+		privateApi.POST("/setting/data_manage/save_status", wrapper.SaveDataManageStatus)                 // 保存数据管理开关状态
+		privateApi.POST("/setting/data_manage/set_staff", wrapper.SetDataManageStaff)                     // 设置操作人员
+		privateApi.GET("/setting/data_manage/order_list", wrapper.GetDataManageOrderList)                 // 获取已选订单列表
+		privateApi.POST("/setting/data_manage/order_restore", wrapper.RestoreDataManageOrder)             // 恢复单条已选订单
+		privateApi.GET("/setting/data_manage/order_select", wrapper.GetDataManageOrderSelect)             // 获取可选订单列表
+		privateApi.POST("/setting/data_manage/order_submit", wrapper.SubmitDataManageOrder)               // 提交订单选择
+		privateApi.POST("/setting/data_manage/order_select_stats", wrapper.GetDataManageOrderSelectStats) // 可选订单统计预览
 
 		// 门店管理（总部功能）
 		privateApi.GET("/company/list", wrapper.GetCompanyList)       // 获取总部下所有门店列表

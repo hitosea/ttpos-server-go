@@ -22,6 +22,7 @@ type ChannelSalesResp struct {
 	Summary         *ChannelSalesBlock `json:"summary"`          // 合计
 	Table           *ChannelSalesBlock `json:"table"`            // 桌台
 	DineIn          *ChannelSalesBlock `json:"dine_in"`          // 点餐-店内
+	StoreScan       *ChannelSalesBlock `json:"store_scan"`       // 点餐-扫码
 	TakeoutShop     *ChannelSalesBlock `json:"takeout_shop"`     // 点餐-外卖
 	TakeoutDelivery *ChannelSalesBlock `json:"takeout_delivery"` // 外送
 	DineInStore     *ChannelSalesBlock `json:"dine_in_store"`    // 堂食

@@ -13,6 +13,7 @@ type IKitchenEfficiencyAnalysisRepo interface {
 	GetKitchenEfficiencyAnalysis(opts ...DBOption) (*model.KitchenEfficiencyAnalysis, error)                                                             // 获取后厨效率分析记录
 	GetKitchenEfficiencyAnalysisList(pageNo, pageSize int, opts ...DBOption) ([]*model.KitchenEfficiencyAnalysis, int64, error)                          // 获取后厨效率分析记录列表
 	UpdateKitchenEfficiencyAnalysis(opts []DBOption, vars map[string]any) error                                                                          // 更新后厨效率分析记录
+	UpdateKitchenEfficiencyAnalysisByStruct(analysis model.KitchenEfficiencyAnalysis, opts ...DBOption) error                                            // 使用结构体更新后厨效率分析记录
 	GetKitchenEfficiencyAnalysisByProductPackageUuid(productPackageUuids []uint64, startTime, endTime int64) ([]*KitchenEfficiencyAnalysisResult, error) // 根据product_package_uuid查询后厨效率分析记录
 	GetKitchenEfficiencyAnalysisAvg(startTime, endTime int64) (float64, error)                                                                           // 获取后厨效率分析平均值
 	CalculateKitchenEfficiencyAnalysis(startTime, endTime int64) ([]*model.KitchenEfficiencyAnalysis, error)                                             // 计算后厨效率分析记录
@@ -81,6 +82,15 @@ func (r *kitchenEfficiencyAnalysisRepo) UpdateKitchenEfficiencyAnalysis(opts []D
 		db = opt(db)
 	}
 	return db.Updates(vars).Error
+}
+
+// UpdateKitchenEfficiencyAnalysisByStruct 使用结构体更新后厨效率分析记录
+func (r *kitchenEfficiencyAnalysisRepo) UpdateKitchenEfficiencyAnalysisByStruct(analysis model.KitchenEfficiencyAnalysis, opts ...DBOption) error {
+	db := r.db.Model(&model.KitchenEfficiencyAnalysis{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(analysis).Error
 }
 
 type KitchenEfficiencyAnalysisResult struct {
@@ -172,7 +182,7 @@ func (r *kitchenEfficiencyAnalysisRepo) CalculateKitchenEfficiencyAnalysis(start
 			) AS t1
 	*/
 
-	// 查询数据（带分页）
+	// 查询数据（排除测试营业时段的生产订单）
 	dataQuery := `
 				SELECT t1.product_package_uuid,  t1.min , t1.max, t1.total ,t1.count, IF(t1.count = 0,0, t1.total /t1.count) AS avg   FROM (
 			SELECT
@@ -189,6 +199,7 @@ func (r *kitchenEfficiencyAnalysisRepo) CalculateKitchenEfficiencyAnalysis(start
 				AND delete_time = 0
 				AND STATUS = 2
 				AND all_duration > 0
+				AND ` + ExcludeTestBusinessSQL("") + `
 			GROUP BY
 				product_package_uuid
 			) AS t1

@@ -21,9 +21,13 @@ type ICompanyStaffRepo interface {
 	GetByCompanyUuid(companyUuid uint64, options ...DBOption) ([]*model.CompanyStaff, error)
 	GetByCompanyUuids(companyUuids []uint64, options ...DBOption) ([]*model.CompanyStaff, error)
 	GetByStaffAndCompany(staffUuid, companyUuid uint64, options ...DBOption) (*model.CompanyStaff, error)
+	FindByStaffAndCompany(staffUuid, companyUuid uint64) (*model.CompanyStaff, error) // 含已删除记录
+	Create(companyStaff *model.CompanyStaff) error
 	CreateCompanyStaff(companyStaff *model.CompanyStaff) *model.CompanyStaff
 	UpdateCompanyStaff(uuid uint64, vars map[string]any) error
+	UpdateByStaffAndCompany(staffUuid, companyUuid uint64, vars map[string]any) error
 	Delete(uuid uint64) error
+	DeleteByStaffAndCompany(staffUuid, companyUuid uint64) error
 }
 
 func NewCompanyStaffRepo(db *gorm.DB) ICompanyStaffRepo {
@@ -52,6 +56,11 @@ func (r *companyStaffRepo) GetCompanyStaff(opts ...DBOption) model.CompanyStaff 
 	}
 	db.First(&companyStaff)
 	return companyStaff
+}
+
+// Create 创建账号-门店关联记录
+func (r *companyStaffRepo) Create(companyStaff *model.CompanyStaff) error {
+	return r.db.Model(&model.CompanyStaff{}).Create(companyStaff).Error
 }
 
 func (r *companyStaffRepo) CreateCompanyStaff(companyStaff *model.CompanyStaff) *model.CompanyStaff {
@@ -181,9 +190,37 @@ func (r *companyStaffRepo) GetByStaffAndCompany(staffUuid, companyUuid uint64, o
 	return &companyStaff, nil
 }
 
+// FindByStaffAndCompany 根据员工和门店UUID获取关联记录（含已删除记录，用于恢复场景）
+func (r *companyStaffRepo) FindByStaffAndCompany(staffUuid, companyUuid uint64) (*model.CompanyStaff, error) {
+	var companyStaff model.CompanyStaff
+	if err := r.db.Model(&model.CompanyStaff{}).
+		Where("uuid = ?", staffUuid).
+		Where("company_uuid = ?", companyUuid).
+		First(&companyStaff).Error; err != nil {
+		return nil, err
+	}
+	return &companyStaff, nil
+}
+
+// UpdateByStaffAndCompany 根据员工和门店UUID更新关联记录
+func (r *companyStaffRepo) UpdateByStaffAndCompany(staffUuid, companyUuid uint64, vars map[string]any) error {
+	return r.db.Model(&model.CompanyStaff{}).
+		Where("uuid = ?", staffUuid).
+		Where("company_uuid = ?", companyUuid).
+		Updates(vars).Error
+}
+
 // Delete 删除账号-门店关联记录（软删除）
 func (r *companyStaffRepo) Delete(uuid uint64) error {
 	return r.db.Model(&model.CompanyStaff{}).
 		Where("uuid = ?", uuid).
+		Update("delete_time", time.Now().Unix()).Error
+}
+
+// DeleteByStaffAndCompany 根据员工和门店UUID删除关联记录（软删除）
+func (r *companyStaffRepo) DeleteByStaffAndCompany(staffUuid, companyUuid uint64) error {
+	return r.db.Model(&model.CompanyStaff{}).
+		Where("uuid = ?", staffUuid).
+		Where("company_uuid = ?", companyUuid).
 		Update("delete_time", time.Now().Unix()).Error
 }

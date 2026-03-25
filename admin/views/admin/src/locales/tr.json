@@ -484,5 +484,18 @@
     "请至少添加一个门店": "Lütfen en az bir mağaza ekleyin",
     "邮箱/手机号/员工ID": "E-posta/Telefon Numarası/Personel ID",
     "添加账号": "Hesap ekle",
-    "导入日志": "Günlükleri içe aktar"
+    "导入日志": "Günlükleri içe aktar",
+    "站点编码": "Site Kodu",
+    "留空查询全部": "Tümünü sorgulamak için boş bırakın",
+    "失败数": "Başarısız Sayısı",
+    "进行中": "Devam Ediyor",
+    "总进行中": "Toplam Devam Ediyor",
+    "重试": "Yeniden Dene",
+    "跳过": "Atla",
+    "总失败数": "Toplam Başarısız",
+    "全部重试": "Tümünü Yeniden Dene",
+    "全部跳过": "Tümünü Atla",
+    "Save Sales Invoice": "Satış Faturası Kaydet",
+    "Cancel Sales Invoice": "Satış Faturası İptal",
+    "Return Sales Invoice": "Satış Faturası İade"
 }

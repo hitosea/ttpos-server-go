@@ -44,15 +44,16 @@ func BuildApiPermissionKey(companyUuid, staffUuid uint64) string {
 }
 
 // BuildProductListCacheKey 构建商品列表缓存 key
-// Key 格式：{system_prefix}:{company_uuid}:product_list:{source}:{pageNo}:{pageSize}:{isMember}:{recommendUuids}
+// Key 格式：{system_prefix}:{company_uuid}:product_list:{source}:{pageNo}:{pageSize}:{isMember}:{orderType}:{recommendUuids}
 // 参数：
 //   - companyUuid: 门店 UUID
 //   - source: 来源（如 cashier, assistant 等）
 //   - pageNo: 页码
 //   - pageSize: 每页数量
 //   - isMember: 是否会员
+//   - orderType: 会员端订单类型（0-外送，1-堂食/到店自取）
 //   - recommendUuids: 推荐商品 UUID 列表（会自动排序以确保相同 UUIDs 但顺序不同时 key 一致）
-func BuildProductListCacheKey(companyUuid uint64, source string, pageNo, pageSize int, isMember bool, recommendUuids []uint64) string {
+func BuildProductListCacheKey(companyUuid uint64, source string, pageNo, pageSize int, isMember bool, orderType int, recommendUuids []uint64) string {
 	// 对推荐商品 UUIDs 排序，确保相同 UUIDs 但顺序不同时 key 一致
 	sortedUuids := make([]uint64, len(recommendUuids))
 	copy(sortedUuids, recommendUuids)
@@ -60,7 +61,7 @@ func BuildProductListCacheKey(companyUuid uint64, source string, pageNo, pageSiz
 		return sortedUuids[i] < sortedUuids[j]
 	})
 
-	// 构建 key：{system_prefix}:{company_uuid}:product_list:{source}:{pageNo}:{pageSize}:{isMember}:{recommendUuids}
+	// 构建 key：{system_prefix}:{company_uuid}:product_list:{source}:{pageNo}:{pageSize}:{isMember}:{orderType}:{recommendUuids}
 	keyParts := []string{
 		SystemPrefix,
 		fmt.Sprintf("%d", companyUuid),
@@ -69,6 +70,7 @@ func BuildProductListCacheKey(companyUuid uint64, source string, pageNo, pageSiz
 		fmt.Sprintf("%d", pageNo),
 		fmt.Sprintf("%d", pageSize),
 		fmt.Sprintf("%v", isMember),
+		fmt.Sprintf("%d", orderType),
 	}
 
 	// 添加推荐商品 UUIDs

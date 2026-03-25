@@ -338,9 +338,12 @@ func (model *SaleOrder) GetPaymentOrderRefundAmountMap(db *gorm.DB) map[uint64]f
 	return refundMap
 }
 
-// 根据sign获取销售订单商品
+// 根据sign获取销售订单商品（跳过已删除的商品）
 func (model *SaleOrder) GetSaleOrderProductBySign(sign string) *SaleOrderProduct {
 	for _, saleOrderProduct := range model.SaleOrderProducts {
+		if saleOrderProduct.IsDelete() {
+			continue
+		}
 		if saleOrderProduct.Sign == sign {
 			return saleOrderProduct
 		}
@@ -1178,7 +1181,7 @@ func (model *SaleOrder) SetFinishStatus(final FinalAmount) {
 	model.FinalPrice = final.FinalPrice
 	model.PaymentCommissionFee = final.PaymentCommissionFee
 	model.GiftAmount = final.GiftAmount
-
+	model.Unit = final.Unit
 }
 
 // SetFreeOrder 设置免单

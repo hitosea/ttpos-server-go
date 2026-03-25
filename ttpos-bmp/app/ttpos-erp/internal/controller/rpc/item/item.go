@@ -354,3 +354,24 @@ func (*Controller) CreateSingleVariantItem(ctx context.Context, req *item.Create
 		ItemCode: multiSpecItemCode,
 	}), nil
 }
+
+// GetItemDefaultWarehouses 批量获取物品在指定公司的默认仓库
+func (c *Controller) GetItemDefaultWarehouses(ctx context.Context, req *item.GetItemDefaultWarehousesReq) (*api.ResponseInfo, error) {
+	if len(req.ItemCodes) == 0 {
+		return rpc.ApiSuccessWithData("获取物品默认仓库成功", &item.GetItemDefaultWarehousesResp{
+			ItemWarehouses: make(map[string]string),
+		}), nil
+	}
+	if req.CompanyAbbr == "" {
+		return rpc.ApiError("公司简称不能为空"), nil
+	}
+
+	result, err := service.Item().GetItemDefaultWarehouses(ctx, req.ItemCodes, req.CompanyAbbr, req.OnlyItemDefaults)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	return rpc.ApiSuccessWithData("获取物品默认仓库成功", &item.GetItemDefaultWarehousesResp{
+		ItemWarehouses: result,
+	}), nil
+}

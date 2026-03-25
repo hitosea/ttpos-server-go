@@ -32,3 +32,9 @@ const (
 	ReceiptOrderStatusReceived = 1 // 已收货
 	ReceiptOrderStatusRejected = 2 // 已取消
 )
+
+// 收货类型常量
+const (
+	ReceiptTypeExternal = 1 // 外部收货
+	ReceiptTypeInternal = 2 // 内部收货（品采）
+)

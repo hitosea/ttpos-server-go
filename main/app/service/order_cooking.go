@@ -575,7 +575,11 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, saleBill *model.SaleBill) (resp.SentKitchen, error) {
 	if shopCart == nil {
 		var err error
-		shopCart, err = s.GetOrderCartInfo(ctx, saleBillUuid)
+		if ctx.GetSource() == constant.SourceTablet { // 平板端查询已送厨时不自动加购必点商品
+			shopCart, err = s.GetOrderCartInfo(ctx, saleBillUuid, repository.WithNoAutoAdd())
+		} else {
+			shopCart, err = s.GetOrderCartInfo(ctx, saleBillUuid)
+		}
 		if err != nil {
 			return resp.SentKitchen{}, errors.WithMessage(err, "获取点餐购物车信息: "+err.Error())
 		}

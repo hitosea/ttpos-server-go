@@ -357,20 +357,10 @@ func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req 
 	} else {
 		customer = customers[0]
 	}
-	containsCompany := false
-	for _, companyItem := range customer.Companies {
-		if companyItem.Company == toCompanyName {
-			// 调出方公司已在调入方交易对象中
-			containsCompany = true
-			break
-		}
-	}
-	if !containsCompany {
-		// 调出方公司不在调入方交易对象中，默认添加
-		err = service.Selling().AddCompanyToCustomer(ctx, customer, fromCompanyName)
-		if err != nil {
-			return nil, gerror.Wrapf(err, "添加调出方公司到调入方客户交易对象失败")
-		}
+	// 确保调出方公司在调入方客户的交易对象中（内部已查重，无需外部判断）
+	err = service.Selling().AddCompanyToCustomer(ctx, customer, fromCompanyName)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "添加调出方公司到调入方客户交易对象失败")
 	}
 
 	var supplier *buying.SupplierData

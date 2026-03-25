@@ -57,7 +57,7 @@ fi
 
 # 获取现有的 topic 列表
 echo "正在获取现有 topic 列表..."
-EXISTING_TOPICS=$(timeout 5 docker run $NETWORK_OPTS --rm apache/rocketmq:5.3.4 ./mqadmin topicList -n "$ROCKETMQ_NAME_SRV_ADDR" 2>/dev/null | grep -v "^#" | grep -v "^$" | awk '{print $1}' | sort)
+EXISTING_TOPICS=$(timeout 15 docker run $NETWORK_OPTS --rm apache/rocketmq:5.3.4 ./mqadmin topicList -n "$ROCKETMQ_NAME_SRV_ADDR" 2>/dev/null | grep -v "^#" | grep -v "^$" | awk '{print $1}' | sort) || true
 
 if [ $? -ne 0 ]; then
     echo "错误: 无法获取现有 topic 列表，请检查 RocketMQ 服务是否正常运行"
@@ -93,15 +93,16 @@ else
     while IFS= read -r topic; do
         if [ -n "$topic" ]; then
             echo "正在创建 topic: $topic"
-            timeout 15 docker run $NETWORK_OPTS --rm apache/rocketmq:5.3.4 ./mqadmin updateTopic \
+            OUTPUT=$(timeout 30 docker run $NETWORK_OPTS --rm apache/rocketmq:5.3.4 ./mqadmin updateTopic \
                 -n "$ROCKETMQ_NAME_SRV_ADDR" \
                 -t "$topic" \
                 -p 6 \
                 -r 4 \
                 -w 4 \
-                -c DefaultCluster
+                -c DefaultCluster 2>&1) || true
+            echo "$OUTPUT"
 
-            if [ $? -eq 0 ]; then
+            if echo "$OUTPUT" | grep -q "success"; then
                 echo "✓ 成功创建 topic: $topic"
             else
                 echo "✗ 创建 topic 失败: $topic"

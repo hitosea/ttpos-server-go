@@ -315,3 +315,37 @@ func (s *erpSrv) GetProductBomCardDetail(ctx context.Context, params req.ErpProd
 	}
 	return response, nil
 }
+
+// GetItemDefaultWarehouses 批量获取物品默认仓库
+// 根据物品编码列表和公司简称，查询每个物品在 item_defaults 中配置的默认仓库
+func (s *erpSrv) GetItemDefaultWarehouses(ctx context.Context, itemCodes []string, companyAbbr string, onlyItemDefaults bool) (map[string]string, error) {
+	if len(itemCodes) == 0 {
+		return make(map[string]string), nil
+	}
+
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	companySetting := ctx.GetCompanySetting()
+	result, err := client.GetItemDefaultWarehouses(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.GetItemDefaultWarehousesReq{
+		ItemCodes:        itemCodes,
+		CompanyAbbr:      companyAbbr,
+		OnlyItemDefaults: onlyItemDefaults,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "获取物品默认仓库失败")
+	}
+
+	response := &item.GetItemDefaultWarehousesResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+
+	return response.ItemWarehouses, nil
+}

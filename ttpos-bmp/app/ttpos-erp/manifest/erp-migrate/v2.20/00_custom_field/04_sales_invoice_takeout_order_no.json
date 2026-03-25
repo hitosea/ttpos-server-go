@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "Takeout Order No",
+  "fieldname": "custom_takeout_order_no",
+  "fieldtype": "Data",
+  "insert_after": "po_date",
+  "dt": "Sales Invoice"
+}

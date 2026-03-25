@@ -5,6 +5,8 @@ import "sync"
 const (
 	DailySalesOutboundSummaryLock = 1 // 每日销售出库汇总锁
 	KitchenEfficiencyAnalysisLock = 2 // 后厨效率分析锁
+	AutoReceiptLock               = 3 // 自动收货定时任务锁
+	ErpStockEntryLock             = 4 // ERP Stock Entry 合并扣减任务锁
 )
 
 // 字符串锁 key 前缀

@@ -350,6 +350,8 @@ type MemberRechargeOrder struct {
 
 	// ERP发票
 	ErpProductsInvoiceName string `gorm:"column:erp_products_invoice_name;type:varchar(255);comment:商品发票名称" json:"erp_products_invoice_name"`
+	ErpPaymentEntryNames   string `gorm:"column:erp_payment_entry_names;type:text;comment:Payment Entry名称(JSON)" json:"erp_payment_entry_names"`
+	ErpSyncStatus          int    `gorm:"column:erp_sync_status;type:tinyint(1);default:0;comment:ERP同步状态: 0=未同步 1=已入队 3=成功 4=失败" json:"erp_sync_status"`
 	// 反结账次数
 	ReverseSettleCount uint `gorm:"column:reverse_settle_count;type:int(11);default:0;comment:反结账次数" json:"reverse_settle_count"`
 

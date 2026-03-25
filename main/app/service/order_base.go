@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/metrics"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
@@ -32,9 +33,19 @@ import (
 
 // CreateInstantOrder 创建点餐订单
 func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 判断是否有待支付、未挂单的订单（收银机端特有检查）
+	_, hasInstantOrder, err := HasInstantOrder(ctx, db)
+	if err != nil {
+		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
+	}
+	if hasInstantOrder {
+		return resp.CreateInstantOrderResp{}, errors.New("有待支付、未挂单的订单")
+	}
+
 	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		if config.Server.Mode == constant.ServerModeStop { // 暂时关闭特性功能
-			db := ctx.GetDB()
 			// 创建订单编号
 			orderNo, err := s.createOrderNo(ctx, db, constant.OrderSourceInstant)
 			if err != nil {
@@ -70,21 +81,14 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	return s.createInstantOrder(ctx)
 }
 
-// createInstantOrder 创建点餐订单
+// createInstantOrder 创建点餐订单（内部方法，不检查 HasInstantOrder）
+// 调用方需自行决定是否检查 HasInstantOrder
 func (s *orderSrv) createInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error) {
 	dbId := ctx.GetDbId()
 	var billUuid uint64
 	var orderUuid uint64
 	db := s.dbm.GetDB(dbId)
 
-	// 判断是否有待支付、未挂单的订单
-	_, hasInstantOrder, err := HasInstantOrder(ctx, db)
-	if err != nil {
-		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
-	}
-	if hasInstantOrder {
-		return resp.CreateInstantOrderResp{}, errors.New("有待支付、未挂单的订单")
-	}
 	if err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 创建订单编号
 		orderNo, err := s.createOrderNo(ctx, tx, constant.OrderSourceInstant)
@@ -108,13 +112,15 @@ func (s *orderSrv) createInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			DeviceUuid:    ctx.GetDeviceUuid(),
 			Source:        constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
 			ClientVersion: constant.NormalizeClientVersion(ctx.GetVersion()),
+			ConsumerUuid:  s.getConsumerUuidForInstantOrder(ctx), // 会员端创建订单时关联会员UUID
 		})
 		if err != nil {
 			return errors.WithMessage(err)
 		}
 
 		// 创建销售账单设置
-		saleBillSetting, err := s.CreateSaleBillSetting(ctx, tx, saleBill.Uuid, saleBill.DeskUuid, false)
+		isMemberDineIn := ctx.GetSource() == jwt.SourceMember
+		saleBillSetting, err := s.CreateSaleBillSetting(ctx, tx, saleBill.Uuid, saleBill.DeskUuid, false, isMemberDineIn)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
@@ -132,6 +138,8 @@ func (s *orderSrv) createInstantOrder(ctx context.Context) (resp.CreateInstantOr
 	}); err != nil {
 		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
 	}
+
+	metrics.OrdersTotal.WithLabelValues(ctx.GetSource(), constant.OrderSourceInstant).Inc()
 
 	return resp.CreateInstantOrderResp{
 		SaleBillUuid:  billUuid,
@@ -161,6 +169,7 @@ func (s *orderSrv) CreateInstantOrderInCache(ctx context.Context, orderNo string
 		DeviceUuid:    ctx.GetDeviceUuid(),
 		Source:        constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
 		ClientVersion: constant.NormalizeClientVersion(ctx.GetVersion()),
+		ConsumerUuid:  s.getConsumerUuidForInstantOrder(ctx), // 会员端创建订单时关联会员UUID
 
 		// 设置默认值的必点方案、自动加购必点商品
 		ShowMustPlan:       constant.SaleBillShowMustPlanYes,
@@ -168,7 +177,8 @@ func (s *orderSrv) CreateInstantOrderInCache(ctx context.Context, orderNo string
 	}
 
 	// 创建销售账单设置（不保存到数据库）
-	saleBillSetting, err := s.NewSaleBillSetting(ctx, billUuid, 0, false)
+	isMemberDineIn := ctx.GetSource() == jwt.SourceMember
+	saleBillSetting, err := s.NewSaleBillSetting(ctx, billUuid, 0, false, isMemberDineIn)
 	if err != nil {
 		return resp.CreateInstantOrderResp{}, errors.WithMessage(err)
 	}
@@ -238,7 +248,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.GetMealNum(), req.Remark, req.DeskUuid, desk.DeskNo, staff.DutyNo, staff.Uuid, staff.GetUserName())
 
 	// 构建销售账单设置
-	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, req.DeskUuid, false)
+	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, req.DeskUuid, false, false)
 	if err != nil {
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}
@@ -353,6 +363,8 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}); err != nil {
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}
+
+	metrics.OrdersTotal.WithLabelValues(ctx.GetSource(), constant.OrderSourceDesk).Inc()
 
 	return resp.CreateDeskOrderResp{
 		SaleBillUuid:  saleBill.Uuid,
@@ -562,7 +574,11 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 	saleBillRepo := repository.NewSaleBillRepo(db)
 
 	// 查询所有已挂单的点餐销售账单
-	saleBills, total, err := saleBillRepo.GetHideSaleBillList(req.PageNo, req.PageSize, ctx.GetDeviceUuid())
+	var opts []repository.DBOption
+	if req.Keyword != "" {
+		opts = append(opts, saleBillRepo.WhereBySerialNo(req.Keyword))
+	}
+	saleBills, total, err := saleBillRepo.GetHideSaleBillList(req.PageNo, req.PageSize, ctx.GetDeviceUuid(), opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -632,6 +648,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 		productList := resp.InstantHideSaleProductList{List: list}
 		hideSaleBill := resp.InstantHideSaleBill{
 			SaleBillUuid: saleBill.Uuid,
+			OrderNo:      saleBill.OrderNo,
 			SerialNo:     saleBill.SerialNo,
 			Amount:       saleBill.Amount,
 			HideBillTime: saleBill.HideBillTime,
@@ -848,6 +865,11 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 		return nil, errSaleBill
 	}
 
+	// 会员端堂食订单不允许拆单
+	if saleBill.Source == constant.SaleBillSourceMember && saleBill.BillType == constant.SaleBillTypeInstant {
+		return nil, errors.New("会员端堂食订单不支持拆单")
+	}
+
 	// 最大只能创建10个
 	if len(saleBill.SaleOrders) == 10 {
 		return nil, errors.New("销售账单最多只能创建10个销售订单")
@@ -958,6 +980,12 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
+
+	// 会员端堂食订单不允许拆单操作
+	if saleBill.Source == constant.SaleBillSourceMember && saleBill.BillType == constant.SaleBillTypeInstant {
+		return nil, errors.New("会员端堂食订单不支持拆单")
+	}
+
 	// 获取销售订单信息
 	saleOrderFrom := saleBill.GetSaleOrder(req.From)
 	saleOrderTo := saleBill.GetSaleOrder(req.To)
@@ -1501,4 +1529,13 @@ func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProdu
 	}
 
 	return &resp.ProductPackageDetailRes{List: productPackageDetailList}, nil
+}
+
+// getConsumerUuidForInstantOrder 获取堂食订单的消费者UUID
+// 仅在会员端请求时返回会员UUID，其他端返回0
+func (s *orderSrv) getConsumerUuidForInstantOrder(ctx context.Context) uint64 {
+	if ctx.GetSource() == jwt.SourceMember {
+		return ctx.GetMemberUuid()
+	}
+	return 0
 }

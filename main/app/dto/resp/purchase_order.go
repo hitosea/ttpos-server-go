@@ -98,13 +98,18 @@ type PurchaseOrderItemInfo struct {
 	UnitList           []PurchaseOrderItemMaterialUnit `json:"unit_list"`             // 基准单位列表
 	Units              []PurchaseOrderItemUnit         `json:"units"`                 // 已经选中的采购单位列表
 
-	AvailableQuantity float64 `json:"available_quantity"` // 可采购数量
-	StoreQuantity     float64 `json:"store_quantity"`     // 门店数量
+	AvailableQuantity            float64            `json:"available_quantity"`              // 可采购数量
+	StoreQuantity                float64            `json:"store_quantity"`                  // 当前实时门店库存
+	LastPurchaseQuantity         float64            `json:"last_purchase_quantity"`          // 上次采购数量（默认销售单位）
+	LastPurchaseLocaleUnitName   dto.LocaleResponse `json:"last_purchase_locale_unit_name"`  // 上次采购时的单位名称
+	ConsumptionSinceLastPurchase float64            `json:"consumption_since_last_purchase"` // 上次采购完成后的消耗量（默认销售单位）
+	StoreSnapshotQuantity        float64            `json:"store_snapshot_quantity"`         // 申请时门店库存（默认销售单位）
 
 	DefaultSalesUnitUuid       uint64             `json:"default_sales_unit_uuid"`        // 默认销售单位UUID
 	DefaultSalesUnitLocaleName dto.LocaleResponse `json:"default_sales_unit_locale_name"` // 默认销售单位名称
 
-	QuotaConfig PurchaseOrderItemQuotaConfig `json:"quota_config"` // 限购配置
+	MaterialStatus int                          `json:"material_status"` // 物料状态 0-正常 1-禁用 2-删除
+	QuotaConfig    PurchaseOrderItemQuotaConfig `json:"quota_config"`    // 限购配置
 }
 
 // PurchaseOrderLogInfo 采购订单操作日志信息
@@ -216,6 +221,7 @@ type PurchaseReceiptOrderInfo struct {
 	SupplierName        string             `json:"supplier_name"`         // 供应商名称
 	LocaleWarehouseName dto.LocaleResponse `json:"locale_warehouse_name"` // 来源仓库名称（多语言）
 	IsFromDeliveryNote  bool               `json:"is_from_delivery_note"` // 是否来自DN单据
+	IsAutoReceipt       bool               `json:"is_auto_receipt"`       // 是否自动收货
 }
 
 // PurchaseReceiptItemInfo 收货明细信息
@@ -274,12 +280,13 @@ type ReceiptListItem struct {
 
 // ReceiptListOrderInfo 收货单简要信息
 type ReceiptListOrderInfo struct {
-	Uuid        uint64 `json:"uuid"`         // 收货单UUID
-	DisplayNo   string `json:"display_no"`   // 显示单号（已收货显示erp_order_no，草稿显示"草稿（时间）"）
-	Status      int    `json:"status"`       // 状态
-	ErpOrderNo  string `json:"erp_order_no"` // ERP收货单号
-	CreateTime  int64  `json:"create_time"`  // 创建时间
-	IsConfirmed bool   `json:"is_confirmed"` // 是否已确认
+	Uuid          uint64 `json:"uuid"`            // 收货单UUID
+	DisplayNo     string `json:"display_no"`      // 显示单号（已收货显示erp_order_no，草稿显示"草稿（时间）"）
+	Status        int    `json:"status"`          // 状态
+	ErpOrderNo    string `json:"erp_order_no"`    // ERP收货单号
+	CreateTime    int64  `json:"create_time"`     // 创建时间
+	IsConfirmed   bool   `json:"is_confirmed"`    // 是否已确认
+	IsAutoReceipt bool   `json:"is_auto_receipt"` // 是否自动收货
 }
 
 // ReceiptPendingItemsResp 待收货物品响应 (v2.16.0+)

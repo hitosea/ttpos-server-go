@@ -30,7 +30,7 @@ const (
 
 var SourceTextMap = map[string]string{
 	SourceCashier:   "收银端",
-	SourceMember:    "会员端",
+	SourceMember:    "门店点餐码",
 	SourceAssistant: "点餐助手",
 	SourceShop:      "商家后台",
 	SourceTablet:    "平板端",
@@ -49,6 +49,8 @@ const (
 	BrandT2MINIS        = "T2mini_s"          //自带打印机的 商米小屏收银机器
 	BrandD1             = "D1"                //自带打印机的 IMIN收银机器
 	BrandD4             = "D4"                //自带打印机的 IMIN收银机器
+	BrandFLEX3          = "FLEX 3"            //自带打印机的 自助点餐机
+	BrandSunmi          = "SUNMI"             //自带打印机的 商米自助点餐机
 )
 
 // 所有的机器
@@ -63,6 +65,8 @@ var BrandsAll = []string{
 	BrandD2sPlus2ndStgl,
 	BrandD1,
 	BrandD4,
+	BrandFLEX3,
+	BrandSunmi,
 }
 
 // 所有带打印机的机器
@@ -86,4 +90,6 @@ var SunmiAllPrints = []string{
 	BrandD2SPlus,
 	BrandD2S,
 	BrandD2sPlus2ndStgl,
+	BrandSunmi,
+	BrandFLEX3,
 }

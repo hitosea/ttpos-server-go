@@ -28,9 +28,14 @@ const (
 	SellingService_SavePosInvoice_FullMethodName       = "/selling.SellingService/SavePosInvoice"
 	SellingService_ReturnPosInvoice_FullMethodName     = "/selling.SellingService/ReturnPosInvoice"
 	SellingService_CancelPosInvoice_FullMethodName     = "/selling.SellingService/CancelPosInvoice"
+	SellingService_SaveSalesInvoice_FullMethodName     = "/selling.SellingService/SaveSalesInvoice"
+	SellingService_CancelSalesInvoice_FullMethodName   = "/selling.SellingService/CancelSalesInvoice"
+	SellingService_ReturnSalesInvoice_FullMethodName   = "/selling.SellingService/ReturnSalesInvoice"
 	SellingService_GetModeOfPaymentList_FullMethodName = "/selling.SellingService/GetModeOfPaymentList"
 	SellingService_GetModeOfPayment_FullMethodName     = "/selling.SellingService/GetModeOfPayment"
 	SellingService_SaveModeOfPayment_FullMethodName    = "/selling.SellingService/SaveModeOfPayment"
+	SellingService_GetFailedSIStats_FullMethodName     = "/selling.SellingService/GetFailedSIStats"
+	SellingService_RetryFailedSI_FullMethodName        = "/selling.SellingService/RetryFailedSI"
 )
 
 // SellingServiceClient is the client API for SellingService service.
@@ -53,12 +58,22 @@ type SellingServiceClient interface {
 	ReturnPosInvoice(ctx context.Context, in *ReturnPosInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 取消 Pos Invoice
 	CancelPosInvoice(ctx context.Context, in *CancelPosInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 保存 Sales Invoice (替代 POS Invoice)
+	SaveSalesInvoice(ctx context.Context, in *SaveSalesInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 取消 Sales Invoice
+	CancelSalesInvoice(ctx context.Context, in *CancelSalesInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 退款 Sales Invoice (Credit Note)
+	ReturnSalesInvoice(ctx context.Context, in *ReturnSalesInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 获取支付方式列表
 	GetModeOfPaymentList(ctx context.Context, in *GetModeOfPaymentListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 查询单个支付方式
 	GetModeOfPayment(ctx context.Context, in *GetModeOfPaymentReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 保存支付方式
 	SaveModeOfPayment(ctx context.Context, in *SaveModeOfPaymentReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 获取 SI 失败统计（死信队列）
+	GetFailedSIStats(ctx context.Context, in *GetFailedSIStatsReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 重试失败的 SI 记录
+	RetryFailedSI(ctx context.Context, in *RetryFailedSIReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type sellingServiceClient struct {
@@ -139,6 +154,36 @@ func (c *sellingServiceClient) CancelPosInvoice(ctx context.Context, in *CancelP
 	return out, nil
 }
 
+func (c *sellingServiceClient) SaveSalesInvoice(ctx context.Context, in *SaveSalesInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, SellingService_SaveSalesInvoice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sellingServiceClient) CancelSalesInvoice(ctx context.Context, in *CancelSalesInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, SellingService_CancelSalesInvoice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sellingServiceClient) ReturnSalesInvoice(ctx context.Context, in *ReturnSalesInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, SellingService_ReturnSalesInvoice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *sellingServiceClient) GetModeOfPaymentList(ctx context.Context, in *GetModeOfPaymentListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
@@ -169,6 +214,26 @@ func (c *sellingServiceClient) SaveModeOfPayment(ctx context.Context, in *SaveMo
 	return out, nil
 }
 
+func (c *sellingServiceClient) GetFailedSIStats(ctx context.Context, in *GetFailedSIStatsReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, SellingService_GetFailedSIStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sellingServiceClient) RetryFailedSI(ctx context.Context, in *RetryFailedSIReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, SellingService_RetryFailedSI_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SellingServiceServer is the server API for SellingService service.
 // All implementations must embed UnimplementedSellingServiceServer
 // for forward compatibility.
@@ -189,12 +254,22 @@ type SellingServiceServer interface {
 	ReturnPosInvoice(context.Context, *ReturnPosInvoiceReq) (*api.ResponseInfo, error)
 	// 取消 Pos Invoice
 	CancelPosInvoice(context.Context, *CancelPosInvoiceReq) (*api.ResponseInfo, error)
+	// 保存 Sales Invoice (替代 POS Invoice)
+	SaveSalesInvoice(context.Context, *SaveSalesInvoiceReq) (*api.ResponseInfo, error)
+	// 取消 Sales Invoice
+	CancelSalesInvoice(context.Context, *CancelSalesInvoiceReq) (*api.ResponseInfo, error)
+	// 退款 Sales Invoice (Credit Note)
+	ReturnSalesInvoice(context.Context, *ReturnSalesInvoiceReq) (*api.ResponseInfo, error)
 	// 获取支付方式列表
 	GetModeOfPaymentList(context.Context, *GetModeOfPaymentListReq) (*api.ResponseInfo, error)
 	// 查询单个支付方式
 	GetModeOfPayment(context.Context, *GetModeOfPaymentReq) (*api.ResponseInfo, error)
 	// 保存支付方式
 	SaveModeOfPayment(context.Context, *SaveModeOfPaymentReq) (*api.ResponseInfo, error)
+	// 获取 SI 失败统计（死信队列）
+	GetFailedSIStats(context.Context, *GetFailedSIStatsReq) (*api.ResponseInfo, error)
+	// 重试失败的 SI 记录
+	RetryFailedSI(context.Context, *RetryFailedSIReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedSellingServiceServer()
 }
 
@@ -226,6 +301,15 @@ func (UnimplementedSellingServiceServer) ReturnPosInvoice(context.Context, *Retu
 func (UnimplementedSellingServiceServer) CancelPosInvoice(context.Context, *CancelPosInvoiceReq) (*api.ResponseInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method CancelPosInvoice not implemented")
 }
+func (UnimplementedSellingServiceServer) SaveSalesInvoice(context.Context, *SaveSalesInvoiceReq) (*api.ResponseInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method SaveSalesInvoice not implemented")
+}
+func (UnimplementedSellingServiceServer) CancelSalesInvoice(context.Context, *CancelSalesInvoiceReq) (*api.ResponseInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelSalesInvoice not implemented")
+}
+func (UnimplementedSellingServiceServer) ReturnSalesInvoice(context.Context, *ReturnSalesInvoiceReq) (*api.ResponseInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReturnSalesInvoice not implemented")
+}
 func (UnimplementedSellingServiceServer) GetModeOfPaymentList(context.Context, *GetModeOfPaymentListReq) (*api.ResponseInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetModeOfPaymentList not implemented")
 }
@@ -234,6 +318,12 @@ func (UnimplementedSellingServiceServer) GetModeOfPayment(context.Context, *GetM
 }
 func (UnimplementedSellingServiceServer) SaveModeOfPayment(context.Context, *SaveModeOfPaymentReq) (*api.ResponseInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method SaveModeOfPayment not implemented")
+}
+func (UnimplementedSellingServiceServer) GetFailedSIStats(context.Context, *GetFailedSIStatsReq) (*api.ResponseInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetFailedSIStats not implemented")
+}
+func (UnimplementedSellingServiceServer) RetryFailedSI(context.Context, *RetryFailedSIReq) (*api.ResponseInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method RetryFailedSI not implemented")
 }
 func (UnimplementedSellingServiceServer) mustEmbedUnimplementedSellingServiceServer() {}
 func (UnimplementedSellingServiceServer) testEmbeddedByValue()                        {}
@@ -382,6 +472,60 @@ func _SellingService_CancelPosInvoice_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SellingService_SaveSalesInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveSalesInvoiceReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SellingServiceServer).SaveSalesInvoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SellingService_SaveSalesInvoice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SellingServiceServer).SaveSalesInvoice(ctx, req.(*SaveSalesInvoiceReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SellingService_CancelSalesInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelSalesInvoiceReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SellingServiceServer).CancelSalesInvoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SellingService_CancelSalesInvoice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SellingServiceServer).CancelSalesInvoice(ctx, req.(*CancelSalesInvoiceReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SellingService_ReturnSalesInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReturnSalesInvoiceReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SellingServiceServer).ReturnSalesInvoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SellingService_ReturnSalesInvoice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SellingServiceServer).ReturnSalesInvoice(ctx, req.(*ReturnSalesInvoiceReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SellingService_GetModeOfPaymentList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetModeOfPaymentListReq)
 	if err := dec(in); err != nil {
@@ -436,6 +580,42 @@ func _SellingService_SaveModeOfPayment_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SellingService_GetFailedSIStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFailedSIStatsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SellingServiceServer).GetFailedSIStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SellingService_GetFailedSIStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SellingServiceServer).GetFailedSIStats(ctx, req.(*GetFailedSIStatsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SellingService_RetryFailedSI_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RetryFailedSIReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SellingServiceServer).RetryFailedSI(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SellingService_RetryFailedSI_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SellingServiceServer).RetryFailedSI(ctx, req.(*RetryFailedSIReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SellingService_ServiceDesc is the grpc.ServiceDesc for SellingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -472,6 +652,18 @@ var SellingService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SellingService_CancelPosInvoice_Handler,
 		},
 		{
+			MethodName: "SaveSalesInvoice",
+			Handler:    _SellingService_SaveSalesInvoice_Handler,
+		},
+		{
+			MethodName: "CancelSalesInvoice",
+			Handler:    _SellingService_CancelSalesInvoice_Handler,
+		},
+		{
+			MethodName: "ReturnSalesInvoice",
+			Handler:    _SellingService_ReturnSalesInvoice_Handler,
+		},
+		{
 			MethodName: "GetModeOfPaymentList",
 			Handler:    _SellingService_GetModeOfPaymentList_Handler,
 		},
@@ -482,6 +674,14 @@ var SellingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SaveModeOfPayment",
 			Handler:    _SellingService_SaveModeOfPayment_Handler,
+		},
+		{
+			MethodName: "GetFailedSIStats",
+			Handler:    _SellingService_GetFailedSIStats_Handler,
+		},
+		{
+			MethodName: "RetryFailedSI",
+			Handler:    _SellingService_RetryFailedSI_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

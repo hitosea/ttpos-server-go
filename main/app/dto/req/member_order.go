@@ -120,3 +120,25 @@ type MemberOrderSearchReq struct {
 type MemberOrderSendAuthCodeReq struct {
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员端销售订单UUID
 }
+
+// MemberDineInOrderListReq 会员端堂食订单列表
+type MemberDineInOrderListReq struct {
+	dto.PageReq        // 分页参数
+	Status      string `form:"status"`  // 状态: "all" 全部, "unpaid" 待支付, "inprogress" 进行中(已支付,待接单/备餐中), "completed" 已完成(含部分退款/全部退款), "cancelled" 已取消(含已拒单)
+	Keyword     string `form:"keyword"` // 搜索关键字（按菜名或订单号搜索）
+}
+
+// GetMemberDineInOrderDetailReq 堂食订单详情
+type GetMemberDineInOrderDetailReq struct {
+	SaleBillUuid uint64 `form:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+}
+
+// MockPayDineInOrderCallbackReq 模拟堂食订单支付回调请求（仅用于测试）
+type MockPayDineInOrderCallbackReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+}
+
+// CancelMemberDineInOrderReq 取消会员端堂食订单
+type CancelMemberDineInOrderReq struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+}

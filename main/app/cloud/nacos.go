@@ -1,11 +1,15 @@
 package cloud
 
 import (
+	"crypto/tls"
 	"fmt"
+	"os"
+	"strings"
 	"ttpos-server-go/app/errors"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"sync"
@@ -71,6 +75,18 @@ func Startup() error {
 }
 
 func GetServiceGrpcAddr(serviceName string) (string, error) {
+	// Check for environment variable override first (for testing)
+	// Environment variable format: GRPC_{SERVICE_NAME}_ADDR
+	// e.g., GRPC_ERP_ADDR, GRPC_TAKEOUT_ADDR, GRPC_MESSAGE_ADDR, GRPC_WEBSOCKET_ADDR
+	envVarName := fmt.Sprintf("GRPC_%s_ADDR", strings.ToUpper(strings.TrimPrefix(serviceName, "ttpos-")))
+	if envAddr := os.Getenv(envVarName); envAddr != "" {
+		logger.Logger.Debug("Using gRPC address from environment variable",
+			zap.String("service", serviceName),
+			zap.String("env_var", envVarName),
+			zap.String("addr", envAddr))
+		return envAddr, nil
+	}
+
 	if nacosClient == nil {
 		return "", errors.WithMessage(errors.New("服务中心未启动，请稍等"))
 	}
@@ -83,11 +99,18 @@ func GetRpcConnWithName(serviceName ServiceName) (conn *grpc.ClientConn, err err
 		logger.Logger.Error("获取外送服务gRPC地址失败:", zap.Error(err))
 		return nil, err
 	}
-	// 1. 建立gRPC连接（开发环境使用Insecure，生产环境建议配置TLS）
-	//    同时接入 OpenTelemetry 客户端拦截器以自动创建与传播 trace
+	// Choose transport credentials: TLS with InsecureSkipVerify when GRPC_TLS_INSECURE=true
+	// (used in integration tests where gRPC mock server uses a self-signed cert),
+	// otherwise use plaintext (insecure) for internal microservice communication.
+	var creds credentials.TransportCredentials
+	if os.Getenv("GRPC_TLS_INSECURE") == "true" {
+		creds = credentials.NewTLS(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec
+	} else {
+		creds = insecure.NewCredentials()
+	}
 	conn, err = grpc.NewClient(
 		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(creds),
 		// 已使用 NewClientHandler 统一处理，增加调用链跟踪
 		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 	)

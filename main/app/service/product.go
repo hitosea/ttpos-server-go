@@ -22,7 +22,7 @@ import (
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/modules/printer"
-	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
+
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
@@ -170,15 +170,16 @@ type IProductSrv interface {
 	GetBatchTagColorUsage(ctx context.Context) (*product_resp.BatchTagColorUsageList, error)          // 获取色块被选择情况
 	SaveBatchProduct(ctx context.Context, req req.SaveBatchProductReq) error                          // 保存分批商品
 
-	SyncProductShopCategory(ctx context.Context, syncHeadquarterData bool) error // 同步产品分类
-	SyncProductTax(ctx context.Context, syncHeadquarterData bool) error          // 同步商品税类
-	SyncUnit(ctx context.Context, syncHeadquarterData bool) error                // 获取总部最新单位数据
-	SyncProductFlavor(ctx context.Context, syncHeadquarterData bool) error       // 同步商品规格
-	SyncSauce(ctx context.Context, syncHeadquarterData bool) error               // 获取总部最新加料数据
-	SyncAttributeGroup(ctx context.Context, syncHeadquarterData bool) error      // 获取总部最新属性组数据
-	SyncProduct(ctx context.Context, syncHeadquarterData bool) error             // 同步商品
-	SyncProductStockByBomCard(ctx context.Context) error                         // 计算所有关联成本卡的商品的库存
-	SyncProductPackageImage(ctx context.Context, syncHeadquarterData bool) error // 同步商品包图片
+	SyncProductShopCategory(ctx context.Context, syncHeadquarterData bool) error                                      // 同步产品分类
+	SyncProductTax(ctx context.Context, syncHeadquarterData bool) error                                               // 同步商品税类
+	SyncUnit(ctx context.Context, syncHeadquarterData bool) error                                                     // 获取总部最新单位数据
+	SyncProductFlavor(ctx context.Context, syncHeadquarterData bool) error                                            // 同步商品规格
+	SyncSauce(ctx context.Context, syncHeadquarterData bool) error                                                    // 获取总部最新加料数据
+	SyncAttributeGroup(ctx context.Context, syncHeadquarterData bool) error                                           // 获取总部最新属性组数据
+	SyncProduct(ctx context.Context, syncHeadquarterData bool) error                                                  // 同步商品
+	SyncHeadquarterProducts(hqDb *gorm.DB, subDb *gorm.DB, hqUuid uint64, companySetting *model.CompanySetting) error // 同步总部商品到子店
+	SyncProductStockByBomCard(ctx context.Context) error                                                              // 计算所有关联成本卡的商品的库存
+	SyncProductPackageImage(ctx context.Context, syncHeadquarterData bool) error                                      // 同步商品包图片
 
 	// ========== 总店删除资源时检查子店使用情况 ==========
 	// 删除前检查接口
@@ -268,7 +269,23 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 
 		// 如果是会员端查询商品列表
 		if req.IsMember {
-			// 获取外送折扣率
+			// 堂食/到店自取订单：价格与收银机相同，不应用外送折扣率
+			if req.OrderType == constant.MemberOrderTypeSelfPickup {
+				// 格式化产品列表（不应用外送折扣率）
+				productList := FormatProducts(ctx, products)
+
+				// 返回响应对象（不注入库存，库存数据在缓存外注入）
+				return product_resp.ProductListWithPaginationResp{
+					List: productList,
+					Meta: dto.PageResponse{
+						PageNo:   req.PageNo,
+						PageSize: req.PageSize,
+						Total:    total,
+					},
+				}, nil
+			}
+
+			// 外送订单：应用外送折扣率
 			// 获取门店业务设置
 			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 			if err != nil {
@@ -323,6 +340,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 			req.PageNo,
 			req.PageSize,
 			req.IsMember,
+			req.OrderType,
 			req.RecommendProductPackageUuids,
 		)
 		result, err = cacheLayer.GET(cacheKey, queryFunc)
@@ -423,6 +441,15 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 	var option FormatProductsOption
 	for _, fn := range options {
 		fn(&option)
+	}
+
+	// 判断 HQ 控制字段可编辑性
+	companySetting := ctx.GetCompanySetting()
+	isSubShop := companySetting.IsSubShop()
+	// 子店预读 HQ 控制设置（缓存模式，由 UpdateControlSetting 保证缓存有效）
+	var hqControlMap map[string]int
+	if isSubShop && companySetting.HeadquarterUuid > 0 {
+		hqControlMap = repository.GetHqControlMap(nil, companySetting.HeadquarterUuid)
 	}
 
 	// 转换为响应对象
@@ -592,6 +619,16 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				}
 			}
 			packageItem.Label = labelInfo
+			// HQ 控制字段可编辑性
+			if isSubShop && product.HeadquarterUuid > 0 && hqControlMap != nil {
+				packageItem.IsDineShelfEditable = !isUnifiedFromMap(hqControlMap, constant.HqFieldDineShelf)
+				packageItem.IsTakeoutShelfEditable = !isUnifiedFromMap(hqControlMap, constant.HqFieldTakeoutShelf)
+				packageItem.IsTakeoutPriceEditable = !isUnifiedFromMap(hqControlMap, constant.HqFieldTakeoutPrice)
+			} else {
+				packageItem.IsDineShelfEditable = true
+				packageItem.IsTakeoutShelfEditable = true
+				packageItem.IsTakeoutPriceEditable = true
+			}
 			if len(flavors) > 0 {
 				packageItem.Price = flavors[0].Price
 				list = append(list, packageItem)
@@ -728,10 +765,43 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				Detail:        product.Detail,
 				IsShowKitchen: product.IsShowKitchen,
 				Label:         labelInfo, // 商品标签
+				// HQ 控制字段可编辑性
+				IsDineShelfEditable: func() bool {
+					if isSubShop && product.HeadquarterUuid > 0 && hqControlMap != nil {
+						return !isUnifiedFromMap(hqControlMap, constant.HqFieldDineShelf)
+					}
+					return true
+				}(),
+				IsTakeoutShelfEditable: func() bool {
+					if isSubShop && product.HeadquarterUuid > 0 && hqControlMap != nil {
+						return !isUnifiedFromMap(hqControlMap, constant.HqFieldTakeoutShelf)
+					}
+					return true
+				}(),
+				IsTakeoutPriceEditable: func() bool {
+					if isSubShop && product.HeadquarterUuid > 0 && hqControlMap != nil {
+						return !isUnifiedFromMap(hqControlMap, constant.HqFieldTakeoutPrice)
+					}
+					return true
+				}(),
 			})
 		}
 	}
 	return list
+}
+
+// isUnifiedFromMap 从控制设置 map 判断指定字段是否为统一控制
+func isUnifiedFromMap(controlMap map[string]int, fieldType string) bool {
+	if mode, ok := controlMap[fieldType]; ok {
+		return mode == constant.HqControlUnified
+	}
+	// 无记录时返回默认值
+	switch fieldType {
+	case constant.HqFieldNegativeStock:
+		return true // 负库存默认统一控制
+	default:
+		return false // 其他默认分开控制
+	}
 }
 
 func getFlavor(productBom *model.ProductBom) product_resp.ProductFlavor {
@@ -1164,14 +1234,14 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 			SvName:       addReq.LocaleName.SV,
 			NotOverwrite: 1,
 		}
-		err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+		multiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
 			return err
 		}
 		// 保存产品分类
 		productCategory := model.ProductCategory{
 			ParentUuid:            addReq.ParentUuid,
-			MultiLanguageNameUuid: multiLanguageName.Uuid,
+			MultiLanguageNameUuid: multiLanguageNameUuid,
 			Name:                  addReq.LocaleName.ToJson(),
 			Sort:                  sort,
 			IsSpecial:             utils.IfInt(addReq.IsSpecial, 1, 0),
@@ -1182,7 +1252,7 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 			Source:                addReq.Source,
 			SourceId:              addReq.SourceId,
 		}
-		err = tx.Model(&model.ProductCategory{}).Create(&productCategory).Error
+		err = repository.NewProductCategoryRepo(tx).CreateProductCategoryRecord(&productCategory)
 		if err != nil {
 			return err
 		}
@@ -1288,7 +1358,7 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productCategory.MultiLanguageNameUuid).Updates(map[string]any{
+		err := repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageNameData(map[string]any{
 			"zh_name":    editReq.LocaleName.ZH,
 			"th_name":    editReq.LocaleName.TH,
 			"en_name":    editReq.LocaleName.EN,
@@ -1298,7 +1368,7 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 			"my_name":    editReq.LocaleName.MY,
 			"tr_name":    editReq.LocaleName.TR,
 			"sv_name":    editReq.LocaleName.SV,
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(productCategory.MultiLanguageNameUuid))
 		if err != nil {
 			return err
 		}
@@ -1315,7 +1385,7 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 		if editReq.IsDisplayInTakeout != nil {
 			updateData["is_display_in_takeout"] = *editReq.IsDisplayInTakeout
 		}
-		err = tx.Model(&model.ProductCategory{}).Where("uuid = ?", editReq.Uuid).Updates(updateData).Error
+		err = repository.NewProductCategoryRepo(tx).UpdateProductCategoryData(updateData, repository.CommonRepo.WhereByUuid(editReq.Uuid))
 		if err != nil {
 			return err
 		}
@@ -1452,9 +1522,7 @@ func (s *productSrv) SetCategoryDisplayInTakeout(ctx context.Context, categoryUu
 	}
 
 	// 更新分类的 is_display_in_takeout 为 1
-	err = db.Model(&model.ProductCategory{}).
-		Where("uuid = ?", categoryUuid).
-		Update("is_display_in_takeout", 1).Error
+	err = repository.NewProductCategoryRepo(db).UpdateProductCategoryData(map[string]any{"is_display_in_takeout": 1}, repository.CommonRepo.WhereByUuid(categoryUuid))
 	if err != nil {
 		logger.Logger.Error("设置分类外卖显示失败", zap.Uint64("categoryUuid", categoryUuid), zap.Error(err))
 		return nil // 不阻塞主流程，只记录日志
@@ -1549,32 +1617,32 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		if product.IsPackage() {
 			// 删除ttpos_product_package_group_item、ttpos_product_package_group表的记录
 			for _, productPackageGroup := range product.ProductPackageGroups {
-				err := tx.Model(&model.ProductPackageGroupItem{}).Where("product_package_group_uuid = ?", productPackageGroup.Uuid).Updates(map[string]any{
+				err := repository.NewProductPackageGroupRepo(tx).UpdateProductPackageGroupItem(map[string]any{
 					"delete_time": time.Now().Unix(),
-				}).Error
+				}, repository.CommonRepo.WhereByProductPackageGroupUuid(productPackageGroup.Uuid))
 				if err != nil {
 					return err
 				}
 			}
-			err = tx.Model(&model.ProductPackageGroup{}).Where("product_package_uuid = ?", request.Uuid).Updates(map[string]any{
+			err = repository.NewProductPackageGroupRepo(tx).UpdateProductPackageGroup(map[string]any{
 				"delete_time": time.Now().Unix(),
-			}).Error
+			}, repository.CommonRepo.WhereByProductPackageUuid(request.Uuid))
 			if err != nil {
 				return err
 			}
 		}
 
 		// 删除商品包
-		err := tx.Model(&model.ProductPackage{}).Where("uuid = ?", request.Uuid).Updates(map[string]any{
+		err := repository.NewProductPackageRepo(tx).UpdateProductPackage(map[string]any{
 			"delete_time": time.Now().Unix(),
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(request.Uuid))
 		if err != nil {
 			return err
 		}
 		// 删除商品包关联语言包
-		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", product.MultiLanguageNameUuid).Updates(map[string]any{
+		err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageNameData(map[string]any{
 			"delete_time": time.Now().Unix(),
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(product.MultiLanguageNameUuid))
 		if err != nil {
 			return err
 		}
@@ -1683,6 +1751,15 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		return nil, errors.New("删除商品失败")
 	}
 
+	// HQ 删除商品 → 自动推送删除状态到子店
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		utils.Go(func() {
+			hqPushSrv.OnHqProductChanged(ctx, request.Uuid)
+		})
+	}
+
 	return nil, nil
 }
 
@@ -1746,16 +1823,16 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 删除分类
-		err := tx.Model(&model.ProductCategory{}).Where("uuid = ?", deleteReq.Uuid).Updates(map[string]any{
+		err := repository.NewProductCategoryRepo(tx).UpdateProductCategoryData(map[string]any{
 			"delete_time": time.Now().Unix(),
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(deleteReq.Uuid))
 		if err != nil {
 			return err
 		}
 		// 删除多语言名称
-		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productCategory.MultiLanguageNameUuid).Updates(map[string]any{
+		err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageNameData(map[string]any{
 			"delete_time": time.Now().Unix(),
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(productCategory.MultiLanguageNameUuid))
 		if err != nil {
 			return err
 		}
@@ -2099,6 +2176,7 @@ func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.Pr
 		},
 		RecommendProductPackageUuids: recommendProductUuids,
 		IsMember:                     true,
+		OrderType:                    request.OrderType,
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取产品推荐列表失败")
@@ -2190,7 +2268,18 @@ func (s *productSrv) SearchProducts(ctx context.Context, req req.ProductSearchRe
 
 	// 如果是会员端查询商品列表
 	if req.IsMember {
-		// 获取外送折扣率
+		// 堂食/到店自取订单：价格与收银机相同，不应用外送折扣率
+		if req.OrderType == constant.MemberOrderTypeSelfPickup {
+			productList := FormatProducts(ctx, products)
+			// 注入商品规格和小料的库存
+			s.injectProductListStockNum(ctx, productList)
+			// 返回响应对象
+			return &product_resp.ProductSearchResp{
+				List: productList,
+			}, nil
+		}
+
+		// 外送订单：应用外送折扣率
 		// 获取门店业务设置
 		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 		if err != nil {
@@ -2305,8 +2394,7 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 获取当前最大的排序值
-	var maxSort int
-	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(max(sort), 0)").Scan(&maxSort)
+	maxSort, _ := repository.NewProductUnitRepo(db).GetMaxSort(repository.NotDeleted, repository.ExcludeHeadquarter)
 
 	// 保存产品单位
 	productUnit := model.ProductUnit{
@@ -2328,21 +2416,22 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 			TrName:   addReq.LocaleName.TR,
 			SvName:   addReq.LocaleName.SV,
 		}
-		err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+		multiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
 			return errors.WithMessage(errors.New("保存名称多语言失败"), err.Error())
 		}
-		productUnit.MultiLanguageNameUuid = multiLanguageName.Uuid
-		err = tx.Model(&model.ProductUnit{}).Create(&productUnit).Error
+		productUnit.MultiLanguageNameUuid = multiLanguageNameUuid
+		err = repository.NewProductUnitRepo(tx).CreateRecord(&productUnit)
 		if err != nil {
 			return errors.WithMessage(errors.New("保存单位失败"), err.Error())
 		}
 
 		// 修改商品的单位UUID
+		productPackageRepo := repository.NewProductPackageRepo(tx)
 		for _, productPackageUuid := range addReq.ProductPackageUuids {
-			err = tx.Model(&model.ProductPackage{}).Where("uuid = ?", productPackageUuid).Updates(map[string]any{
+			err = productPackageRepo.UpdateProductPackage(map[string]any{
 				"unit_uuid": productUnit.Uuid,
-			}).Error
+			}, repository.CommonRepo.WhereByUuid(productPackageUuid))
 			if err != nil {
 				return errors.WithMessage(errors.New("保存关联商品失败"), err.Error())
 			}
@@ -2367,7 +2456,7 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 			if err != nil {
 				return errors.WithMessage(errors.New("同步单位到erp失败"), err.Error())
 			}
-			err = tx.Model(&model.ProductUnit{}).Where("uuid = ?", productUnit.Uuid).Update("erpnext_uom", erpUom).Error
+			err = repository.NewProductUnitRepo(tx).UpdateProductUnitData(map[string]any{"erpnext_uom": erpUom}, repository.CommonRepo.WhereByUuid(productUnit.Uuid))
 			if err != nil {
 				return errors.WithMessage(errors.New("保存erp单位失败"), err.Error())
 			}
@@ -2507,7 +2596,7 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 修改多语言名称
-		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productUnit.MultiLanguageNameUuid).Updates(map[string]any{
+		err := repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageNameData(map[string]any{
 			"zh_name":    editUnitReq.LocaleName.ZH,
 			"th_name":    editUnitReq.LocaleName.TH,
 			"en_name":    editUnitReq.LocaleName.EN,
@@ -2517,22 +2606,22 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 			"my_name":    editUnitReq.LocaleName.MY,
 			"tr_name":    editUnitReq.LocaleName.TR,
 			"sv_name":    editUnitReq.LocaleName.SV,
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(productUnit.MultiLanguageNameUuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("保存名称多语言失败"), err.Error())
 		}
 		// 修改产品单位
-		err = tx.Model(&model.ProductUnit{}).Where("uuid = ?", editUnitReq.Uuid).Updates(map[string]any{
+		err = repository.NewProductUnitRepo(tx).UpdateProductUnitData(map[string]any{
 			"name": editUnitReq.LocaleName.ToJson(),
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(editUnitReq.Uuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("保存单位失败"), err.Error())
 		}
 
 		// 修改商品的单位UUID, 如果商品的单位UUID是当前单位，则修改为0
-		err = tx.Model(&model.ProductPackage{}).Where("unit_uuid = ?", editUnitReq.Uuid).Updates(map[string]any{
+		err = repository.NewProductPackageRepo(tx).UpdateProductPackage(map[string]any{
 			"unit_uuid": 0,
-		}).Error
+		}, repository.CommonRepo.WhereByUnitUuid(editUnitReq.Uuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("保存关联商品失败"), err.Error())
 		}
@@ -2578,9 +2667,9 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 				}
 			}
 			// 修改商品的单位UUID
-			err = tx.Model(&model.ProductPackage{}).Where("uuid in (?)", editUnitReq.ProductPackageUuids).Updates(map[string]any{
+			err = repository.NewProductPackageRepo(tx).UpdateProductPackage(map[string]any{
 				"unit_uuid": productUnit.Uuid,
-			}).Error
+			}, repository.CommonRepo.WhereInUuids(editUnitReq.ProductPackageUuids))
 			if err != nil {
 				return errors.WithMessage(errors.New("保存关联商品失败"), err.Error())
 			}
@@ -2645,12 +2734,12 @@ func (s *productSrv) DeleteProductUnit(ctx context.Context, deleteUnitReq req.Pr
 			}
 		}
 		// 删除产品单位
-		err := tx.Model(&model.ProductUnit{}).Where("uuid = ?", deleteUnitReq.Uuid).Update("delete_time", time.Now().Unix()).Error
+		err := repository.NewProductUnitRepo(tx).UpdateProductUnitData(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereByUuid(deleteUnitReq.Uuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("删除单位失败"), err.Error())
 		}
 		// 删除多语言名称
-		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productUnit.MultiLanguageNameUuid).Update("delete_time", time.Now().Unix()).Error
+		err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageNameData(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereByUuid(productUnit.MultiLanguageNameUuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("删除名称多语言失败"), err.Error())
 		}
@@ -2789,8 +2878,7 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 	}
 
 	// 获取当前最大的排序值
-	var maxSort int
-	db.Model(&model.ProductSauce{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(max(sort), 0)").Scan(&maxSort)
+	maxSort, _ := repository.NewProductSauceRepo(db).GetMaxSort(repository.NotDeleted, repository.ExcludeHeadquarter)
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言名称
@@ -2805,7 +2893,7 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 			TrName:   addReq.LocaleName.TR,
 			SvName:   addReq.LocaleName.SV,
 		}
-		err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+		multiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
 			return errors.WithMessage(errors.New("保存名称多语言失败"), err.Error())
 		}
@@ -2834,11 +2922,11 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 		productSauce := model.ProductSauce{
 			Sort:                  maxSort + 1,
 			Price:                 *addReq.Price,
-			MultiLanguageNameUuid: multiLanguageName.Uuid,
+			MultiLanguageNameUuid: multiLanguageNameUuid,
 			Name:                  addReq.LocaleName.ToJson(),
 			ErpCode:               erpCode,
 		}
-		err = tx.Model(&model.ProductSauce{}).Create(&productSauce).Error
+		err = repository.NewProductSauceRepo(tx).CreateRecord(&productSauce)
 		if err != nil {
 			return errors.WithMessage(errors.New("保存加料失败"), err.Error())
 		}
@@ -2911,7 +2999,7 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 	err = db.Transaction(func(tx *gorm.DB) error {
 		name := editReq.LocaleName.ToJson()
 		// 修改多语言名称
-		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productSauce.MultiLanguageNameUuid).Updates(map[string]any{
+		err := repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageNameData(map[string]any{
 			"zh_name":    editReq.LocaleName.ZH,
 			"th_name":    editReq.LocaleName.TH,
 			"en_name":    editReq.LocaleName.EN,
@@ -2921,15 +3009,15 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 			"my_name":    editReq.LocaleName.MY,
 			"tr_name":    editReq.LocaleName.TR,
 			"sv_name":    editReq.LocaleName.SV,
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(productSauce.MultiLanguageNameUuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("保存名称多语言失败"), err.Error())
 		}
 		// 修改商品加料
-		err = tx.Model(&model.ProductSauce{}).Where("uuid = ?", editReq.Uuid).Updates(map[string]any{
+		err = repository.NewProductSauceRepo(tx).UpdateProductSauce(map[string]any{
 			"name":  name,
 			"price": editReq.Price,
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(editReq.Uuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("保存加料失败"), err.Error())
 		}
@@ -2940,7 +3028,7 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 			// boms中product_sauce_uuid不是editReq.Uuid的记录，删除
 			for _, bom := range boms {
 				if !slices.Contains(editReq.ProductPackageUuids, bom.ProductPackageUuid) {
-					tx.Model(&model.ProductBom{}).Where("uuid = ?", bom.Uuid).Update("delete_time", time.Now().Unix())
+					bomRepo.UpdateProductBom(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereByUuid(bom.Uuid))
 				}
 				bomProductPackageUuids = append(bomProductPackageUuids, bom.ProductPackageUuid)
 			}
@@ -2964,7 +3052,8 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 			}
 		} else {
 			// 删除bom中sauce_uuid为当前商品加料的记录
-			err := tx.Model(&model.ProductBom{}).Where("product_sauce_uuid = ?", editReq.Uuid).Update("delete_time", time.Now().Unix()).Error
+			bomRepo := repository.NewProductBomRepo(tx)
+			err := bomRepo.UpdateProductBom(map[string]any{"delete_time": time.Now().Unix()}, bomRepo.WhereProductSauceUuid(editReq.Uuid))
 			if err != nil {
 				return errors.WithMessage(errors.New("删除关联商品失败"), err.Error())
 			}
@@ -3014,12 +3103,12 @@ func (s *productSrv) DeleteProductSauce(ctx context.Context, deleteReq req.Produ
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 删除商品加料
-		err := tx.Model(&model.ProductSauce{}).Where("uuid = ?", deleteReq.Uuid).Update("delete_time", time.Now().Unix()).Error
+		err := repository.NewProductSauceRepo(tx).UpdateProductSauce(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereByUuid(deleteReq.Uuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("删除加料失败"), err.Error())
 		}
 		// 删除多语言名称
-		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productSauce.MultiLanguageNameUuid).Update("delete_time", time.Now().Unix()).Error
+		err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageNameData(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereByUuid(productSauce.MultiLanguageNameUuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("删除名称多语言失败"), err.Error())
 		}
@@ -3293,8 +3382,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 	uuidLocaleMap := make(map[uint64]dto.LocaleResponse)
 
 	// 获取当前最大的排序值
-	var maxSort int
-	db.Model(&model.ProductAttributeGroup{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(max(sort), 0)").Scan(&maxSort)
+	maxSort, _ := base.NewProductAttributeGroupRepo(db).GetMaxSortWithScopes(repository.NotDeleted, repository.ExcludeHeadquarter)
 
 	productAttributeGroup := model.ProductAttributeGroup{
 		Name:     addReq.LocaleName.ToJson(),
@@ -3315,13 +3403,13 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 			TrName:   addReq.LocaleName.TR,
 			SvName:   addReq.LocaleName.SV,
 		}
-		err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+		multiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
 			return errors.WithMessage(errors.New("保存属性组名称多语言失败"), err.Error())
 		}
 		// 添加商品属性分组
-		productAttributeGroup.MultiLanguageNameUuid = multiLanguageName.Uuid
-		err = tx.Model(&model.ProductAttributeGroup{}).Create(&productAttributeGroup).Error
+		productAttributeGroup.MultiLanguageNameUuid = multiLanguageNameUuid
+		err = base.NewProductAttributeGroupRepo(tx).CreateRecord(&productAttributeGroup)
 		if err != nil {
 			return errors.WithMessage(errors.New("保存属性组失败"), err.Error())
 		}
@@ -3343,18 +3431,18 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 				TrName:   productAttribute.LocaleName.TR,
 				SvName:   productAttribute.LocaleName.SV,
 			}
-			err = tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+			attrMultiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 			if err != nil {
 				return errors.WithMessage(errors.New("保存属性值名称多语言失败"), err.Error())
 			}
 			// 添加商品属性
 			productAttributeModel := model.ProductAttribute{
 				Name:                  productAttribute.LocaleName.ToJson(),
-				MultiLanguageNameUuid: multiLanguageName.Uuid,
+				MultiLanguageNameUuid: attrMultiLanguageNameUuid,
 				AttributeGroupUuid:    productAttributeGroup.Uuid,
 				Sort:                  i + 1,
 			}
-			err = tx.Model(&model.ProductAttribute{}).Create(&productAttributeModel).Error
+			err = repository.NewProductAttributeRepo(tx).CreateRecord(&productAttributeModel)
 			if err != nil {
 				return errors.WithMessage(errors.New("保存属性失败"), err.Error())
 			}
@@ -3372,10 +3460,12 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 				ProductAttributeGroupUuid: productAttributeGroup.Uuid,
 				MaxSelection:              uint(len(attributeUuids)),
 			}
-			err = tx.Model(&model.ProductPackageAttributeGroup{}).Create(&productPackageAttributeGroup).Error
+			attrGroupSlice := []model.ProductPackageAttributeGroup{productPackageAttributeGroup}
+			err = repository.NewProductPackageAttributeGroupRepo(tx).CreateProductPackageAttributeGroups(attrGroupSlice)
 			if err != nil {
 				return errors.WithMessage(errors.New("保存属性组关联商品失败"), err.Error())
 			}
+			productPackageAttributeGroup = attrGroupSlice[0]
 
 			// 关联多个属性，添加到product_package_attribute表中
 			productPackageAttributeList := make([]model.ProductPackageAttribute, 0, len(attributeUuids))
@@ -3385,7 +3475,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 					AttributeUuid:                    attributeUuid,
 				})
 			}
-			err = tx.Model(&model.ProductPackageAttribute{}).Create(productPackageAttributeList).Error
+			err = repository.NewProductPackageAttributeRepo(tx).CreateProductPackageAttributes(productPackageAttributeList)
 			if err != nil {
 				return errors.WithMessage(errors.New("保存属性关联商品失败"), err.Error())
 			}
@@ -3623,7 +3713,7 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 		}
 
 		if len(productBoms) > 0 {
-			err := tx.Create(&productBoms).Error
+			err := repository.NewProductBomRepo(tx).CreateProductBoms(productBoms)
 			if err != nil {
 				return err
 			}
@@ -3917,7 +4007,8 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 更新属性组多语言
-		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", attributeGroup.MultiLanguageNameUuid).Updates(map[string]any{
+		multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
+		err := multiLanguageNameRepo.UpdateMultiLanguageNameData(map[string]any{
 			"zh_name":    editReq.LocaleName.ZH,
 			"th_name":    editReq.LocaleName.TH,
 			"en_name":    editReq.LocaleName.EN,
@@ -3927,7 +4018,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 			"my_name":    editReq.LocaleName.MY,
 			"tr_name":    editReq.LocaleName.TR,
 			"sv_name":    editReq.LocaleName.SV,
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(attributeGroup.MultiLanguageNameUuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("保存属性组名称多语言失败"), err.Error())
 		}
@@ -3936,8 +4027,9 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 		newProductPackageAttributeMap := make(map[uint64][]uint64)
 		for _, productAttribute := range editReq.ProductAttributes {
 			productAttributeUuid := productAttribute.Uuid
+			productAttributeRepo := repository.NewProductAttributeRepo(tx)
 			if productAttribute.Uuid != 0 { // 更新属性值多语言
-				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", attributeUuidToMultiLanguageUuidMap[productAttribute.Uuid]).Updates(map[string]any{
+				err := multiLanguageNameRepo.UpdateMultiLanguageNameData(map[string]any{
 					"zh_name":    productAttribute.LocaleName.ZH,
 					"th_name":    productAttribute.LocaleName.TH,
 					"en_name":    productAttribute.LocaleName.EN,
@@ -3947,15 +4039,15 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 					"my_name":    productAttribute.LocaleName.MY,
 					"tr_name":    productAttribute.LocaleName.TR,
 					"sv_name":    productAttribute.LocaleName.SV,
-				}).Error
+				}, repository.CommonRepo.WhereByUuid(attributeUuidToMultiLanguageUuidMap[productAttribute.Uuid]))
 				if err != nil {
 					return errors.WithMessage(errors.New("保存属性值名称多语言失败"), err.Error())
 				}
-				err = tx.Model(&model.ProductAttribute{}).Where("uuid = ?", productAttribute.Uuid).Updates(map[string]any{
+				err = productAttributeRepo.UpdateProductAttributeData(map[string]any{
 					"name":  productAttribute.LocaleName.ToJson(),
 					"sort":  productAttribute.Sort,
 					"price": productAttribute.Price,
-				}).Error
+				}, repository.CommonRepo.WhereByUuid(productAttribute.Uuid))
 				if err != nil {
 					return errors.WithMessage(errors.New("保存属性值失败"), err.Error())
 				}
@@ -3971,20 +4063,20 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 					TrName:   productAttribute.LocaleName.TR,
 					SvName:   productAttribute.LocaleName.SV,
 				}
-				err = tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+				newAttrNameUuid, err := multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
 				if err != nil {
 					return errors.WithMessage(errors.New("添加属性值名称多语言失败"), err.Error())
 				}
 				productAttributeModel := model.ProductAttribute{
 					Name:                  productAttribute.LocaleName.ToJson(),
-					MultiLanguageNameUuid: multiLanguageName.Uuid,
+					MultiLanguageNameUuid: newAttrNameUuid,
 					AttributeGroupUuid:    attributeGroup.Uuid,
 					Sort:                  productAttribute.Sort,
 					Price:                 productAttribute.Price,
 					Source:                productAttribute.Source,
 					SourceId:              productAttribute.SourceId,
 				}
-				err = tx.Model(&model.ProductAttribute{}).Create(&productAttributeModel).Error
+				err = productAttributeRepo.CreateRecord(&productAttributeModel)
 				if err != nil {
 					return errors.WithMessage(errors.New("保存属性值失败"), err.Error())
 				}
@@ -4000,9 +4092,10 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 			for _, attributeUuid := range attributeUuids {
 				if !slices.Contains(newProductPackageAttributeMap[productPackageUuid], attributeUuid) {
 					// 删除商品属性值
-					err := tx.Model(&model.ProductPackageAttribute{}).
-						Where("product_package_attribute_group_uuid = ?", productPackageAttributeGroupMap[productPackageUuid]).
-						Where("attribute_uuid = ?", attributeUuid).Update("delete_time", time.Now().Unix()).Error
+					err := repository.NewProductPackageAttributeRepo(tx).UpdateProductPackageAttribute(
+						map[string]any{"delete_time": time.Now().Unix()},
+						repository.CommonRepo.WhereByProductPackageAttributeGroupUuid(productPackageAttributeGroupMap[productPackageUuid]),
+						repository.CommonRepo.WhereByAttributeUuid(attributeUuid))
 					if err != nil {
 						return errors.WithMessage(errors.New("删除商品属性值失败"), err.Error())
 					}
@@ -4019,8 +4112,9 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 					ProductAttributeGroupUuid: attributeGroup.Uuid,
 					MaxSelection:              uint(len(attributeUuids)),
 				}
-				tx.Model(&model.ProductPackageAttributeGroup{}).Create(&newProductPackageAttributeGroup)
-				productPackageAttributeGroupMap[productPackageUuid] = newProductPackageAttributeGroup.Uuid
+				newAttrGroupSlice := []model.ProductPackageAttributeGroup{newProductPackageAttributeGroup}
+				repository.NewProductPackageAttributeGroupRepo(tx).CreateProductPackageAttributeGroups(newAttrGroupSlice)
+				productPackageAttributeGroupMap[productPackageUuid] = newAttrGroupSlice[0].Uuid
 			}
 			for _, attributeUuid := range attributeUuids {
 				if !slices.Contains(productPackageAttributeMap[productPackageUuid], attributeUuid) {
@@ -4032,7 +4126,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 			}
 		}
 		if len(newProductPackageAttributes) > 0 {
-			err := tx.Model(&model.ProductPackageAttribute{}).Create(&newProductPackageAttributes).Error
+			err := repository.NewProductPackageAttributeRepo(tx).CreateProductPackageAttributes(newProductPackageAttributes)
 			if err != nil {
 				return errors.WithMessage(errors.New("保存商品属性值失败"), err.Error())
 			}
@@ -4040,11 +4134,13 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 
 		// 删除属性值、商品属性值
 		if len(deletingAttributeUuids) > 0 {
-			err := tx.Model(&model.ProductAttribute{}).Where("uuid IN (?)", deletingAttributeUuids).Update("delete_time", time.Now().Unix()).Error
+			err := repository.NewProductAttributeRepo(tx).UpdateProductAttributeData(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereInUuids(deletingAttributeUuids))
 			if err != nil {
 				return errors.WithMessage(errors.New("删除属性值失败"), err.Error())
 			}
-			err = tx.Model(&model.ProductPackageAttribute{}).Where("attribute_uuid IN (?)", deletingAttributeUuids).Update("delete_time", time.Now().Unix()).Error
+			err = repository.NewProductPackageAttributeRepo(tx).UpdateProductPackageAttribute(map[string]any{"delete_time": time.Now().Unix()}, func(db *gorm.DB) *gorm.DB {
+				return db.Where("attribute_uuid IN (?)", deletingAttributeUuids)
+			})
 			if err != nil {
 				return errors.WithMessage(errors.New("删除属性值关联商品失败"), err.Error())
 			}
@@ -4052,12 +4148,32 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 
 		// 删除商品属性值、商品属性组
 		if len(removingProductPackageUuids) > 0 {
-			if err := tx.Model(model.ProductPackageAttribute{}).Where("product_package_attribute_group_uuid in (?)",
-				tx.Model(&model.ProductPackageAttributeGroup{}).Select("uuid").Where("product_package_uuid IN (?)", removingProductPackageUuids).Where("product_attribute_group_uuid = ?", attributeGroup.Uuid),
-			).Update("delete_time", time.Now().Unix()).Error; err != nil {
-				return errors.WithMessage(errors.New("删除商品包属性失败"), err.Error())
+			ppagRepo := repository.NewProductPackageAttributeGroupRepo(tx)
+			removingPPAGs, _ := ppagRepo.GetProductPackageAttributeGroups(
+				func(db *gorm.DB) *gorm.DB {
+					return db.Where("product_package_uuid IN (?)", removingProductPackageUuids).Where("product_attribute_group_uuid = ?", attributeGroup.Uuid)
+				},
+			)
+			removingPPAGUuids := make([]uint64, 0, len(removingPPAGs))
+			for _, ppag := range removingPPAGs {
+				removingPPAGUuids = append(removingPPAGUuids, ppag.Uuid)
 			}
-			if err := tx.Model(&model.ProductPackageAttributeGroup{}).Where("product_package_uuid IN (?)", removingProductPackageUuids).Where("product_attribute_group_uuid = ?", attributeGroup.Uuid).Update("delete_time", time.Now().Unix()).Error; err != nil {
+			if len(removingPPAGUuids) > 0 {
+				if err := repository.NewProductPackageAttributeRepo(tx).UpdateProductPackageAttribute(
+					map[string]any{"delete_time": time.Now().Unix()},
+					func(db *gorm.DB) *gorm.DB {
+						return db.Where("product_package_attribute_group_uuid IN (?)", removingPPAGUuids)
+					},
+				); err != nil {
+					return errors.WithMessage(errors.New("删除商品包属性失败"), err.Error())
+				}
+			}
+			if err := ppagRepo.UpdateProductPackageAttributeGroup(
+				map[string]any{"delete_time": time.Now().Unix()},
+				func(db *gorm.DB) *gorm.DB {
+					return db.Where("product_package_uuid IN (?)", removingProductPackageUuids).Where("product_attribute_group_uuid = ?", attributeGroup.Uuid)
+				},
+			); err != nil {
 				return errors.WithMessage(errors.New("删除商品包属性组失败"), err.Error())
 			}
 		}
@@ -4175,7 +4291,7 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 
 		manualTranslatedUuid = flavor.MultiLanguageNameUuid
 		// 更新多语言名称
-		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", flavor.MultiLanguageNameUuid).Updates(map[string]any{
+		err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageNameData(map[string]any{
 			"zh_name":    editReq.LocaleName.ZH,
 			"th_name":    editReq.LocaleName.TH,
 			"en_name":    editReq.LocaleName.EN,
@@ -4185,14 +4301,14 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 			"my_name":    editReq.LocaleName.MY,
 			"tr_name":    editReq.LocaleName.TR,
 			"sv_name":    editReq.LocaleName.SV,
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(flavor.MultiLanguageNameUuid))
 		if err != nil {
 			return err
 		}
 		// 更新商品规格
-		err = tx.Model(&model.ProductFlavor{}).Where("uuid = ?", editReq.Uuid).Updates(map[string]any{
+		err = repository.NewProductFlavorRepo(tx).UpdateProductFlavor(map[string]any{
 			"name": editReq.LocaleName.ToJson(),
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(editReq.Uuid))
 		if err != nil {
 			return err
 		}
@@ -4222,9 +4338,9 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 					return errors.New("商品bom不存在")
 				}
 				// 删除商品BOM
-				err := tx.Model(&model.ProductBom{}).Where("uuid = ?", productBom.Uuid).Updates(map[string]any{
+				err := repository.NewProductBomRepo(tx).UpdateProductBom(map[string]any{
 					"delete_time": time.Now().Unix(),
-				}).Error
+				}, commonRepo.WhereByUuid(productBom.Uuid))
 				if err != nil {
 					return err
 				}
@@ -4329,7 +4445,7 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 					}
 					// 新增商品BOM
 					uuid, _ := utils.GetID()
-					err := tx.Create(&model.ProductBom{
+					newBom := model.ProductBom{
 						BaseModel: model.BaseModel{
 							Uuid: uuid,
 						},
@@ -4340,7 +4456,8 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 						ProductFlavorUuid:  flavor.Uuid,
 						ProductPackageUuid: item.Uuid,
 						StockNum:           99999999,
-					}).Error
+					}
+					_, err := repository.NewProductBomRepo(tx).CreateProductBom(newBom)
 					if err != nil {
 						return err
 					}
@@ -4408,12 +4525,12 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 						}
 					}
 					// 编辑商品BOM
-					err := tx.Model(&model.ProductBom{}).Where("uuid = ?", item.BomUuid).Updates(map[string]any{
+					err := repository.NewProductBomRepo(tx).UpdateProductBom(map[string]any{
 						"price":                item.Price,
 						"name":                 editReq.LocaleName.ToJson(),
 						"status":               int(productPackage.Status),
 						"product_package_uuid": item.Uuid,
-					}).Error
+					}, commonRepo.WhereByUuid(item.BomUuid))
 					if err != nil {
 						return err
 					}
@@ -4462,18 +4579,18 @@ func (s *productSrv) DeleteProductAttribute(ctx context.Context, req req.Product
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 删除商品属性
-		err = tx.Model(&model.ProductAttribute{}).Where("uuid = ?", productAttribute.Uuid).Update("delete_time", time.Now().Unix()).Error
+		err = repository.NewProductAttributeRepo(tx).UpdateProductAttributeData(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereByUuid(productAttribute.Uuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("删除属性值失败"), err.Error())
 		}
 
 		// 删除属性值多语言
-		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productAttribute.MultiLanguageNameUuid).Update("delete_time", time.Now().Unix()).Error
+		err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageNameData(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereByUuid(productAttribute.MultiLanguageNameUuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("删除名称多语言失败"), err.Error())
 		}
 
-		err = tx.Model(&model.ProductPackageAttribute{}).Where("attribute_uuid = ?", productAttribute.Uuid).Update("delete_time", time.Now().Unix()).Error
+		err = repository.NewProductPackageAttributeRepo(tx).UpdateProductPackageAttribute(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereByAttributeUuid(productAttribute.Uuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("删除属性关联商品失败"), err.Error())
 		}
@@ -4493,7 +4610,7 @@ func (s *productSrv) DeleteProductAttribute(ctx context.Context, req req.Product
 			}
 			for _, relatedAttributeUuidCount := range relatedAttributeUuidCountList {
 				if relatedAttributeUuidCount.RelatedAttributeUuidCount == 0 {
-					err = tx.Model(&model.ProductPackageAttributeGroup{}).Where("uuid = ?", relatedAttributeUuidCount.ProductPackageAttributeGroupUuid).Update("delete_time", time.Now().Unix()).Error
+					err = repository.NewProductPackageAttributeGroupRepo(tx).UpdateProductPackageAttributeGroup(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereByUuid(relatedAttributeUuidCount.ProductPackageAttributeGroupUuid))
 					if err != nil {
 						return errors.WithMessage(errors.New("删除属性值关联商品失败"), err.Error())
 					}
@@ -4554,13 +4671,15 @@ func (s *productSrv) DeleteProductAttributeGroup(ctx context.Context, req req.Pr
 	err = db.Transaction(func(tx *gorm.DB) error {
 
 		// 删除属性组
-		err = tx.Model(&model.ProductAttributeGroup{}).Where("uuid = ?", productAttributeGroup.Uuid).Update("delete_time", time.Now().Unix()).Error
+		err = base.NewProductAttributeGroupRepo(tx).UpdateProductAttributeGroupData(map[string]any{"delete_time": time.Now().Unix()}, func(db *gorm.DB) *gorm.DB {
+			return db.Where("uuid = ?", productAttributeGroup.Uuid)
+		})
 		if err != nil {
 			return errors.WithMessage(errors.New("删除属性组失败"), err.Error())
 		}
 
 		// 删除属性组多语言
-		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productAttributeGroup.MultiLanguageNameUuid).Update("delete_time", time.Now().Unix()).Error
+		err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageNameData(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereByUuid(productAttributeGroup.MultiLanguageNameUuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("删除名称多语言失败"), err.Error())
 		}
@@ -4627,15 +4746,15 @@ func (s *productSrv) DeleteProductFlavor(ctx context.Context, deleteReq req.Prod
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 软删除商品规格
-		err = tx.Model(&model.ProductFlavor{}).Where("uuid = ?", productFlavor.Uuid).Updates(map[string]any{
+		err = repository.NewProductFlavorRepo(tx).UpdateProductFlavor(map[string]any{
 			"delete_time": time.Now().Unix(),
-		}).Error
+		}, repository.CommonRepo.WhereByUuid(productFlavor.Uuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("删除规格失败"), err.Error())
 		}
 
 		// 删除规格名称多语言
-		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productFlavor.MultiLanguageNameUuid).Update("delete_time", time.Now().Unix()).Error
+		err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageNameData(map[string]any{"delete_time": time.Now().Unix()}, repository.CommonRepo.WhereByUuid(productFlavor.MultiLanguageNameUuid))
 		if err != nil {
 			return errors.WithMessage(errors.New("删除名称多语言失败"), err.Error())
 		}
@@ -4994,23 +5113,27 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		products.DineTaxUuid = taxUuid
 		products.TakeoutTaxUuid = takeoutTaxUuid
 		products.NumType = utils.IfInt(item.NumType == 2, 2, 1)
-		// 处理数量计算方法
-		// 按小数计价，不在助手、平板、扫码端显示
-		if item.NumType == 2 && (products.IsShowTablet || products.IsShowAssistant || products.IsShowH5 || products.IsShowDelivery) {
-			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "按小数计价只能显示到收银机和厨显"))
-		}
-		// 未配置外送渠道，无法选择在外送显示
-		if companySetting.DeliveryStatus != 1 && products.IsShowDelivery {
-			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置外送渠道，无法选择在外送显示"))
-		}
-		// 处理商品名称
-		products.LocaleName = item.LocaleName
+		// 解析显示端（必须在校验之前，确保 IsShowXxx 字段已赋值）
 		products.IsShowCashier = strings.Contains(item.Shows, "1")
 		products.IsShowTablet = strings.Contains(item.Shows, "2")
 		products.IsShowKitchen = strings.Contains(item.Shows, "3")
 		products.IsShowAssistant = strings.Contains(item.Shows, "4")
 		products.IsShowH5 = strings.Contains(item.Shows, "5")
 		products.IsShowDelivery = strings.Contains(item.Shows, "6")
+		products.IsShowKiosk = strings.Contains(item.Shows, "7")
+		// 按小数计价，不在助手、平板、扫码端、自助点餐机显示
+		if item.NumType == 2 && (products.IsShowTablet || products.IsShowAssistant || products.IsShowH5 || products.IsShowDelivery || products.IsShowKiosk) {
+			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "按小数计价只能显示到收银机和厨显"))
+		}
+		// 未开启扫码点餐到店自取且未配置外送渠道，无法选择在扫码点餐显示
+		if companySetting.DeliveryStatus != 1 && !companySetting.IsOpenScanOrder() && products.IsShowDelivery {
+			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置扫码点餐渠道，无法选择在扫码点餐显示"))
+		}
+		// 未开启自助点餐机，无法选择在自助点餐机显示
+		if !companySetting.IsOpenKiosk() && products.IsShowKiosk {
+			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未开启自助点餐机，无法选择在自助点餐机显示"))
+		}
+		// 处理商品名称
 		// 验证是否已经存在
 		products.LocaleNameIsExist = dto.LocaleResponse{}
 		// 验证条形码存在性检查
@@ -5128,6 +5251,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 					IsShowAssistant: item.IsShowAssistant,
 					IsShowH5:        item.IsShowH5,
 					IsShowDelivery:  item.IsShowDelivery,
+					IsShowKiosk:     item.IsShowKiosk,
 				},
 				Discount: req.ProductShopAddDiscountReq{
 					IsEnableMemberDiscount:  item.IsEnableGrade,
@@ -5382,6 +5506,14 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		packageInventoryMap = make(map[uint64]float64)
 	}
 
+	// HQ 控制字段可编辑性
+	companySetting := ctx.GetCompanySetting()
+	isSubShop := companySetting.IsSubShop()
+	var hqControlMap map[string]int
+	if isSubShop && companySetting.HeadquarterUuid > 0 {
+		hqControlMap = repository.GetHqControlMap(nil, companySetting.HeadquarterUuid)
+	}
+
 	productList := make([]product_resp.ProductShopListItemResp, 0, len(productPackages))
 	for _, productPackage := range productPackages {
 		// 格式化商品信息
@@ -5476,6 +5608,17 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 			},
 			NumType:    productPackage.NumType,
 			IsEditable: isEditable(ctx, productPackage.HeadquarterUuid),
+		}
+
+		// HQ 控制字段可编辑性
+		if isSubShop && productPackage.HeadquarterUuid > 0 && hqControlMap != nil {
+			productItem.IsDineShelfEditable = !isUnifiedFromMap(hqControlMap, constant.HqFieldDineShelf)
+			productItem.IsTakeoutShelfEditable = !isUnifiedFromMap(hqControlMap, constant.HqFieldTakeoutShelf)
+			productItem.IsTakeoutPriceEditable = !isUnifiedFromMap(hqControlMap, constant.HqFieldTakeoutPrice)
+		} else {
+			productItem.IsDineShelfEditable = true
+			productItem.IsTakeoutShelfEditable = true
+			productItem.IsTakeoutPriceEditable = true
 		}
 
 		productList = append(productList, productItem)
@@ -5646,9 +5789,9 @@ func (s *productSrv) SortProductShopList(ctx context.Context, req req.SortProduc
 			if item.Sort == 0 {
 				return errors.New("排序不能为0")
 			}
-			err := tx.Model(&model.ProductPackage{}).Where("uuid = ?", productPackage.Uuid).Updates(map[string]any{
+			err := repository.NewProductPackageRepo(tx).UpdateProductPackage(map[string]any{
 				"sort": item.Sort,
-			}).Error
+			}, repository.CommonRepo.WhereByUuid(productPackage.Uuid))
 			if err != nil {
 				return errors.WithMessage(err)
 			}
@@ -5744,6 +5887,20 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		},
 		HeadquarterUuid: productPackage.HeadquarterUuid,
 		IsEditable:      isEditable(ctx, productPackage.HeadquarterUuid),
+	}
+
+	// HQ 控制字段可编辑性
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsSubShop() && productPackage.HeadquarterUuid > 0 {
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		hqControlMap := repository.GetHqControlMap(hqDb, companySetting.HeadquarterUuid)
+		productDetailResp.IsDineShelfEditable = !isUnifiedFromMap(hqControlMap, constant.HqFieldDineShelf)
+		productDetailResp.IsTakeoutShelfEditable = !isUnifiedFromMap(hqControlMap, constant.HqFieldTakeoutShelf)
+		productDetailResp.IsTakeoutPriceEditable = !isUnifiedFromMap(hqControlMap, constant.HqFieldTakeoutPrice)
+	} else {
+		productDetailResp.IsDineShelfEditable = true
+		productDetailResp.IsTakeoutShelfEditable = true
+		productDetailResp.IsTakeoutPriceEditable = true
 	}
 
 	// 注入商品规格和小料的库存
@@ -5881,6 +6038,30 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 		return errors.WithMessage(err, "修改商品状态失败")
 	}
 
+	companySetting := ctx.GetCompanySetting()
+
+	// 子店修改总部商品状态 → 与 HQ 值不一致时标记 override
+	if companySetting.IsSubShop() && productPackage.HeadquarterUuid > 0 {
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		hqProductRepo := repository.NewProductPackageRepo(hqDb)
+		hqProduct, hqErr := hqProductRepo.GetProductPackage(
+			repository.CommonRepo.WhereBySoftDelete(),
+			repository.CommonRepo.WhereByUuid(productPackage.Uuid),
+		)
+		if hqErr == nil && hqProduct != nil && hqProduct.ID > 0 && uint(*req.Status) != hqProduct.Status {
+			hqPushSrv := NewHqPushSrv(s.dbm)
+			_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProduct, productPackage.Uuid, constant.HqFieldDineShelf)
+		}
+	}
+
+	// HQ 修改商品状态 → 自动推送到子店
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		utils.Go(func() {
+			hqPushSrv.OnHqProductChanged(ctx, req.Uuid)
+		})
+	}
+
 	return nil
 }
 
@@ -5940,6 +6121,21 @@ func (s *productSrv) UpdateHeadquartersProduct(ctx context.Context, req req.Upda
 		return errors.WithMessage(err, "修改总部商品失败")
 	}
 
+	// 子店修改总部商品状态 → 与 HQ 值不一致时标记 override
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsSubShop() && product.HeadquarterUuid > 0 {
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		hqProductRepo := repository.NewProductPackageRepo(hqDb)
+		hqProduct, hqErr := hqProductRepo.GetProductPackage(
+			repository.CommonRepo.WhereBySoftDelete(),
+			repository.CommonRepo.WhereByUuid(product.Uuid),
+		)
+		if hqErr == nil && hqProduct != nil && hqProduct.ID > 0 && uint(*req.Status) != hqProduct.Status {
+			hqPushSrv := NewHqPushSrv(s.dbm)
+			_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProduct, product.Uuid, constant.HqFieldDineShelf)
+		}
+	}
+
 	return nil
 }
 
@@ -5947,15 +6143,17 @@ func (s *productSrv) UpdateHeadquartersProduct(ctx context.Context, req req.Upda
 func (s *productSrv) updateProductStatus(tx *gorm.DB, productPackage *model.ProductPackage, status *int) error {
 	commonRepo := repository.NewCommonRepo()
 	productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
-	err := tx.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", productPackage.Uuid).Updates(map[string]any{
+	productPackageRepo := repository.NewProductPackageRepo(tx)
+	productBomRepo := repository.NewProductBomRepo(tx)
+	err := productPackageRepo.UpdateProductPackage(map[string]any{
 		"status": status,
-	}).Error
+	}, repository.CommonRepo.WhereByUuid(productPackage.Uuid))
 	if err != nil {
 		return errors.WithMessage(err, "修改商品状态失败")
 	}
-	err = tx.Model(&model.ProductBom{}).Select("status").Where("product_package_uuid = ?", productPackage.Uuid).Updates(map[string]any{
+	err = productBomRepo.UpdateProductBom(map[string]any{
 		"status": status,
-	}).Error
+	}, repository.CommonRepo.WhereByProductPackageUuid(productPackage.Uuid))
 	if err != nil {
 		return errors.WithMessage(err, "修改商品规格状态失败")
 	}
@@ -5975,15 +6173,15 @@ func (s *productSrv) updateProductStatus(tx *gorm.DB, productPackage *model.Prod
 		}
 		for _, item := range productPackageGroupItems {
 			if item.ProductPackageGroup != nil && item.ProductPackageGroup.ProductPackage != nil {
-				err = tx.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
+				err = productPackageRepo.UpdateProductPackage(map[string]any{
 					"status": 0,
-				}).Error
+				}, repository.CommonRepo.WhereByUuid(item.ProductPackageGroup.ProductPackage.Uuid))
 				if err != nil {
 					return errors.WithMessage(err, "修改商品套餐状态失败")
 				}
-				err = tx.Model(&model.ProductBom{}).Select("status").Where("product_package_uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
+				err = productBomRepo.UpdateProductBom(map[string]any{
 					"status": 0,
-				}).Error
+				}, repository.CommonRepo.WhereByProductPackageUuid(item.ProductPackageGroup.ProductPackage.Uuid))
 				if err != nil {
 					return errors.WithMessage(err, "修改商品套餐组商品状态失败")
 				}
@@ -6266,6 +6464,15 @@ func (s *productSrv) AddProductShop(ctx context.Context, reqs req.ProductShopAdd
 	if err != nil {
 		logger.Logger.Error("添加商品失败", zap.Any("func", "AddProductShop"), zap.Any("params", reqs), zap.Error(err))
 		return nil, errors.WithMessage(err, "添加商品失败")
+	}
+
+	// HQ 添加商品 → 自动推送到子店（新商品走全字段推送）
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		utils.Go(func() {
+			hqPushSrv.OnHqProductChanged(ctx, productPackageUuid)
+		})
 	}
 
 	return s.GetProductDetail(ctx, req.ProductDetailReq{
@@ -6617,15 +6824,15 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 				}
 				for _, item := range productPackageGroupItems {
 					if item.ProductPackageGroup != nil && item.ProductPackageGroup.ProductPackage != nil {
-						err = tx.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
+						err = repository.NewProductPackageRepo(tx).UpdateProductPackage(map[string]any{
 							"status": 0,
-						}).Error
+						}, repository.CommonRepo.WhereByUuid(item.ProductPackageGroup.ProductPackage.Uuid))
 						if err != nil {
 							return errors.WithMessage(err, "修改商品套餐状态失败")
 						}
-						err = tx.Model(&model.ProductBom{}).Select("status").Where("product_package_uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
+						err = repository.NewProductBomRepo(tx).UpdateProductBom(map[string]any{
 							"status": 0,
-						}).Error
+						}, repository.CommonRepo.WhereByProductPackageUuid(item.ProductPackageGroup.ProductPackage.Uuid))
 						if err != nil {
 							return errors.WithMessage(err, "修改商品套餐组商品状态失败")
 						}
@@ -6655,6 +6862,15 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 	if err != nil {
 		logger.Logger.Error("编辑商品失败", zap.Any("func", "EditProductShop"), zap.Any("params", req), zap.Error(err))
 		return nil, nil, errors.WithMessage(err, "编辑商品失败")
+	}
+
+	// HQ 编辑商品 → 自动推送所有字段到子店
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		utils.Go(func() {
+			hqPushSrv.OnHqProductChanged(ctx, req.Uuid)
+		})
 	}
 
 	return nil, nil, nil
@@ -6691,9 +6907,9 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	}
 
 	companySetting := ctx.GetCompanySetting()
-	// 处理外送端,如果外送端未开启, 套餐商品或者小数计价,则不显示外送端
+	// 处理外送端,如果外送端或扫码点餐到店自取均未开启, 或者小数计价,则不显示外送端
 	isShowDelivery := uint(req.Show.IsShowDelivery)
-	if !companySetting.IsOpenRider() || req.Type == constant.ProductTypePackage || req.NumType == constant.ProductNumTypeDecimal {
+	if (!companySetting.IsOpenRider() && !companySetting.IsOpenScanOrder()) || req.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
 	}
 
@@ -6860,9 +7076,9 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 		}
 	}
 	companySetting := ctx.GetCompanySetting()
-	// 处理外送端,如果外送端未开启, 套餐商品或者小数计价,则不显示外送端
+	// 处理外送端,如果外送端或扫码点餐到店自取均未开启, 或者小数计价,则不显示外送端
 	isShowDelivery := uint(request.Show.IsShowDelivery)
-	if !companySetting.IsOpenRider() || request.Type == constant.ProductTypePackage || request.NumType == constant.ProductNumTypeDecimal {
+	if (!companySetting.IsOpenRider() && !companySetting.IsOpenScanOrder()) || request.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
 	}
 
@@ -7733,18 +7949,25 @@ func (s *productSrv) SyncUnit(ctx context.Context, syncHeadquarterData bool) err
 	var headquarter model.CompanySetting
 	var headquarterUnits []model.ProductUnit
 	if companySetting.IsSubShop() && syncHeadquarterData {
-		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+		headquarter, err = repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB)).GetOne(
+			repository.CommonRepo.WhereByUuid(companySetting.HeadquarterUuid),
+			repository.NotDeleted,
+		)
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
-		s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductUnit{}).Preload("MultiLanguageName").Find(&headquarterUnits)
+		headquarterUnits, _ = repository.NewProductUnitRepo(s.dbm.GetDB(headquarter.Uuid)).GetUnitListWithScopes(
+			repository.NewCommonRepo().Preload(repository.WithPreload{Query: "MultiLanguageName"}),
+		)
 	}
 
 	// 子店ttpos已有单位 和 要标记删除的单位
-	var units []model.ProductUnit
 	var deletingUnitUuids []uint64
 	unitMap := make(map[string]model.ProductUnit)
-	db.Model(&model.ProductUnit{}).Scopes(repository.ExcludeHeadquarter).Where("erpnext_uom != ''").Find(&units)
+	productUnitRepo := repository.NewProductUnitRepo(db)
+	units, _ := productUnitRepo.GetUnitListWithScopes(repository.ExcludeHeadquarter, func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_uom != ''")
+	})
 	for _, unit := range units {
 		if !slices.Contains(uomNames, unit.ErpnextUom) {
 			deletingUnitUuids = append(deletingUnitUuids, unit.Uuid)
@@ -7753,8 +7976,7 @@ func (s *productSrv) SyncUnit(ctx context.Context, syncHeadquarterData bool) err
 	}
 
 	// 子店ttpos单位最大的排序
-	var unitSort int
-	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(MAX(sort), 0)").Scan(&unitSort)
+	unitSort, _ := productUnitRepo.GetMaxSort(repository.NotDeleted, repository.ExcludeHeadquarter)
 	unitSort++
 
 	// 要恢复的单位Uuid
@@ -7764,8 +7986,9 @@ func (s *productSrv) SyncUnit(ctx context.Context, syncHeadquarterData bool) err
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 删除不在erp单位列表中的单位
+		txUnitRepo := repository.NewProductUnitRepo(tx)
 		if len(deletingUnitUuids) > 0 {
-			err := tx.Model(&model.ProductUnit{}).Where("uuid IN (?)", deletingUnitUuids).Update("delete_time", time.Now().Unix()).Error
+			err := txUnitRepo.SoftDeleteByUuids(deletingUnitUuids)
 			if err != nil {
 				return errors.WithMessage(errors.New("erp已删除单位，标记删除ttpos单位失败"), err.Error())
 			}
@@ -7790,17 +8013,17 @@ func (s *productSrv) SyncUnit(ctx context.Context, syncHeadquarterData bool) err
 			}
 			if unit, ok := unitMap[uom.UomName]; !ok {
 				// 不存在则新建
-				err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+				mlnUuid, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 				if err != nil {
 					return err
 				}
 				insertingProductUnits = append(insertingProductUnits, model.ProductUnit{
 					Name:                  multiLanguageName.ToJson(),
-					MultiLanguageNameUuid: multiLanguageName.Uuid,
+					MultiLanguageNameUuid: mlnUuid,
 					Sort:                  unitSort,
 					ErpnextUom:            uom.UomName,
 				})
-				multiLanguageNameUuids = append(multiLanguageNameUuids, multiLanguageName.Uuid)
+				multiLanguageNameUuids = append(multiLanguageNameUuids, mlnUuid)
 				unitSort++
 			} else if unit.DeleteTime > 0 { // 但是被标记为删除，需要恢复为被删除
 				recoveringUnitUuids = append(recoveringUnitUuids, unit.Uuid)
@@ -7809,7 +8032,7 @@ func (s *productSrv) SyncUnit(ctx context.Context, syncHeadquarterData bool) err
 		// 同步总部ttpos单位（多语言由 SyncMultiLanguage 任务处理）
 		if len(headquarterUnits) > 0 && syncHeadquarterData {
 			// 删除单位
-			tx.Where("headquarter_uuid > 0").Delete(&model.ProductUnit{})
+			txUnitRepo.HardDeleteByHeadquarter()
 
 			for _, headquarterUnit := range headquarterUnits {
 				insertingProductUnits = append(insertingProductUnits, model.ProductUnit{
@@ -7828,14 +8051,14 @@ func (s *productSrv) SyncUnit(ctx context.Context, syncHeadquarterData bool) err
 			}
 		}
 		if len(insertingProductUnits) > 0 {
-			err := tx.Model(&model.ProductUnit{}).Create(&insertingProductUnits).Error
+			err := txUnitRepo.CreateBatch(insertingProductUnits)
 			if err != nil {
 				return err
 			}
 		}
 		// 恢复为未删除
 		if len(recoveringUnitUuids) > 0 {
-			err := tx.Model(&model.ProductUnit{}).Where("uuid IN (?)", recoveringUnitUuids).Update("delete_time", 0).Error
+			err := txUnitRepo.RecoverByUuids(recoveringUnitUuids)
 			if err != nil {
 				return err
 			}
@@ -7861,18 +8084,20 @@ func (s *productSrv) SyncSauce(ctx context.Context, syncHeadquarterData bool) er
 	if !companySetting.IsSubShop() || !syncHeadquarterData {
 		return nil
 	}
-	var headquarter model.CompanySetting
-	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+	headquarter, err := repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB)).GetOne(
+		repository.CommonRepo.WhereByUuid(companySetting.HeadquarterUuid),
+		repository.NotDeleted,
+	)
 	if err != nil || headquarter.Uuid == 0 {
 		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
-	var headquarterSauces []model.ProductSauce
-	s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductSauce{}).Preload("MultiLanguageName").Find(&headquarterSauces)
+	hqSauceRepo := repository.NewProductSauceRepo(s.dbm.GetDB(headquarter.Uuid))
+	headquarterSauces := hqSauceRepo.GetProductSauceList(hqSauceRepo.WithMultiLanguageName())
 
 	if len(headquarterSauces) > 0 {
 		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
 			// 删除加料（多语言由 SyncMultiLanguage 任务处理）
-			tx.Where("headquarter_uuid > 0").Delete(&model.ProductSauce{})
+			repository.NewProductSauceRepo(tx).HardDeleteByHeadquarter()
 
 			var insertingProductSauce []model.ProductSauce
 			for _, headquarterSauce := range headquarterSauces {
@@ -7897,7 +8122,7 @@ func (s *productSrv) SyncSauce(ctx context.Context, syncHeadquarterData bool) er
 				})
 			}
 			if len(insertingProductSauce) > 0 {
-				err := tx.Model(&model.ProductSauce{}).Create(&insertingProductSauce).Error
+				err := repository.NewProductSauceRepo(tx).CreateBatch(insertingProductSauce)
 				if err != nil {
 					return err
 				}
@@ -7924,21 +8149,28 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context, syncHeadquarterData
 	if !companySetting.IsSubShop() || !syncHeadquarterData {
 		return nil
 	}
-	var headquarter model.CompanySetting
-	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+	headquarter, err := repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB)).GetOne(
+		repository.CommonRepo.WhereByUuid(companySetting.HeadquarterUuid),
+		repository.NotDeleted,
+	)
 	if err != nil || headquarter.Uuid == 0 {
 		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
 
-	var headquarterAttributeGroups []model.ProductAttributeGroup
-	s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductAttributeGroup{}).Preload("MultiLanguageName").Preload("ProductAttributes").Preload("ProductAttributes.MultiLanguageName").Find(&headquarterAttributeGroups)
+	headquarterAttributeGroups, _ := base.NewProductAttributeGroupRepo(s.dbm.GetDB(headquarter.Uuid)).GetProductAttributeGroupListWithAttributes()
 
 	if len(headquarterAttributeGroups) > 0 {
 		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
-			// 删除属性值
-			tx.Where("attribute_group_uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("uuid")).Delete(&model.ProductAttribute{})
+			// 删除属性值（不过滤delete_time，确保已软删除的总部属性组关联属性也被清理）
+			hqAttrGroupUuids, err := base.NewProductAttributeGroupRepo(tx).PluckHeadquarterUuids()
+			if err != nil {
+				return errors.WithMessage(err, "查询总部属性组UUID失败")
+			}
+			if err := repository.NewProductAttributeRepo(tx).HardDeleteByAttributeGroupUuids(hqAttrGroupUuids); err != nil {
+				return errors.WithMessage(err, "删除总部属性值失败")
+			}
 			// 删除属性组
-			tx.Where("headquarter_uuid > 0").Delete(&model.ProductAttributeGroup{})
+			base.NewProductAttributeGroupRepo(tx).HardDeleteByHeadquarter()
 
 			// 同步总部属性组和属性（多语言由 SyncMultiLanguage 任务处理）
 			var insertingProductAttributeGroups []model.ProductAttributeGroup
@@ -7975,14 +8207,12 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context, syncHeadquarterData
 				}
 			}
 			if len(insertingProductAttributeGroups) > 0 {
-				err := tx.Model(&model.ProductAttributeGroup{}).Create(&insertingProductAttributeGroups).Error
-				if err != nil {
+				if err := base.NewProductAttributeGroupRepo(tx).CreateBatch(insertingProductAttributeGroups); err != nil {
 					return err
 				}
 			}
 			if len(insertingProductAttributes) > 0 {
-				err := tx.Model(&model.ProductAttribute{}).Create(&insertingProductAttributes).Error
-				if err != nil {
+				if err := repository.NewProductAttributeRepo(tx).CreateBatch(insertingProductAttributes); err != nil {
 					return err
 				}
 			}
@@ -8210,363 +8440,11 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 
 	// 同步总店商品到子店
 	if companySetting.IsSubShop() && syncHeadquarterData {
-		// 同步总部商品到子店（多语言由 SyncMultiLanguage 任务处理）
-		db := s.dbm.GetDB(companySetting.CompanyUuid)
-		commonRepo := repository.NewCommonRepo()
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
-		productPackageRepo := repository.NewProductPackageRepo(headquarterDb)
-		subProductPackageRepo := repository.NewProductPackageRepo(db)
-		subProductBomRepo := repository.NewProductBomRepo(db)
-		headProductPackageList, err := productPackageRepo.GetProductPackageList(
-			commonRepo.WhereByHeadquarterUuid(0),
-			productPackageRepo.WithMultiLanguageName(),
-			productPackageRepo.WithProductBoms(),
-			productPackageRepo.WithProductPackageAttributeGroups(),
-			productPackageRepo.WithProductPackageAttributeGroupAttributes(),
-			productPackageRepo.WithProductPackageGroups(),
-			productPackageRepo.WithProductPackageGroupItems(),
-			productPackageRepo.WithProductPackageGroupMultiLanguageName(),
-		)
+		db := s.dbm.GetDB(companySetting.CompanyUuid)
+		err = s.SyncHeadquarterProducts(headquarterDb, db, companySetting.HeadquarterUuid, &companySetting)
 		if err != nil {
-			return errors.WithMessage(err, "获取总部商品包列表失败")
-		}
-		// 需要保存的商品包、商品bom、商品包属性组、商品包属性、商品套餐组、商品套餐商品
-		newProductPackageList := make([]model.ProductPackage, 0)
-		newProductBomList := make([]model.ProductBom, 0)
-		newProductPackageAttributeGroupList := make([]model.ProductPackageAttributeGroup, 0)
-		newProductPackageAttributeList := make([]model.ProductPackageAttribute, 0)
-		newProductPackageGroupList := make([]model.ProductPackageGroup, 0)
-		newProductPackageGroupItemList := make([]model.ProductPackageGroupItem, 0)
-		for _, productPackage := range headProductPackageList {
-			// 创建时间和更新时间
-			createTime := productPackage.CreateTime
-			updateTime := productPackage.UpdateTime
-			deleteTime := productPackage.DeleteTime
-			// 获取商品包的实际销量, 如果子店存在该商品包且创建时间相同，则使用子店的实际销量 或者 创建时间小于等于1760516651且公司uuid等于7171274190848000，则使用总店的实际销量
-			actualSaleNum := float64(0)
-			// 查询子店是否存在该商品包
-			existsProductPackage, err := subProductPackageRepo.GetProductPackage(
-				commonRepo.WhereByUuid(productPackage.Uuid),
-				commonRepo.WhereIsHeadquarter(),
-			)
-			if err == nil && existsProductPackage.Uuid > 0 && existsProductPackage.CreateTime == createTime {
-				actualSaleNum = existsProductPackage.ActualSaleNum
-			} else if productPackage.CreateTime <= 1760516651 && companySetting.CompanyUuid == 7171274190848000 {
-				actualSaleNum = productPackage.ActualSaleNum
-			}
-
-			status := productPackage.Status
-			if existsProductPackage != nil {
-				status = existsProductPackage.Status
-			}
-			// 创建商品包
-			newProductPackageList = append(newProductPackageList, model.ProductPackage{
-				BaseModel: model.BaseModel{
-					Uuid:       productPackage.Uuid,
-					CreateTime: createTime,
-					UpdateTime: updateTime,
-					DeleteTime: deleteTime,
-				},
-				Name:                          productPackage.MultiLanguageName.ToJson(),
-				ErpCode:                       productPackage.ErpCode,
-				MultiLanguageNameUuid:         productPackage.MultiLanguageNameUuid,
-				ImageName:                     productPackage.ImageName,
-				ImageFileUuid:                 productPackage.ImageFileUuid,
-				DeductStockType:               productPackage.DeductStockType,
-				NumType:                       productPackage.NumType,
-				UnitUuid:                      productPackage.UnitUuid,
-				DineTaxUuid:                   productPackage.DineTaxUuid,
-				CategoryUuid:                  productPackage.CategoryUuid,
-				TakeoutTaxUuid:                productPackage.TakeoutTaxUuid,
-				SpecialCategoryUuid:           productPackage.SpecialCategoryUuid,
-				PrinterTagUuid:                productPackage.PrinterTagUuid,
-				SupplierUuid:                  productPackage.SupplierUuid,
-				Status:                        status,
-				IsShowCashier:                 productPackage.IsShowCashier,
-				IsShowTablet:                  productPackage.IsShowTablet,
-				IsShowKitchen:                 productPackage.IsShowKitchen,
-				IsShowAssistant:               productPackage.IsShowAssistant,
-				IsShowH5:                      productPackage.IsShowH5,
-				IsShowDelivery:                productPackage.IsShowDelivery,
-				Sort:                          productPackage.Sort,
-				LimitNum:                      productPackage.LimitNum,
-				Describe:                      productPackage.Describe,
-				DescribeMultiLanguageNameUuid: productPackage.DescribeMultiLanguageNameUuid,
-				Detail:                        productPackage.Detail,
-				ActualSaleNum:                 actualSaleNum,
-				Price:                         productPackage.Price,
-				ProductType:                   productPackage.ProductType,
-				SauceRequired:                 productPackage.SauceRequired,
-				SauceMinSelection:             productPackage.SauceMinSelection,
-				SauceMaxSelection:             productPackage.SauceMaxSelection,
-				OpenDiscount:                  productPackage.OpenDiscount,
-				OpenOverallDiscount:           productPackage.OpenOverallDiscount,
-				IsBatch:                       productPackage.IsBatch,
-				HeadquarterUuid:               companySetting.HeadquarterUuid,
-				ProductLabelUuid:              productPackage.ProductLabelUuid,
-			})
-			for _, productBom := range productPackage.ProductBoms {
-				// 查询子店是否存在该商品包
-				bomActualSaleNum := float64(0)
-				bomStockNum := float64(0)
-				bomUseBomCardStock := 0
-				bomIsSoldOut := 0
-				bomIsOpenStock := 0
-				existsProductBom, err := subProductBomRepo.GetProductBom(
-					commonRepo.WhereByUuid(productBom.Uuid),
-					commonRepo.WhereByProductPackageUuid(productPackage.Uuid),
-				)
-				if err == nil && existsProductBom.Uuid > 0 && existsProductBom.CreateTime == productBom.CreateTime {
-					bomActualSaleNum = existsProductBom.ActualSaleNum
-					bomStockNum = existsProductBom.StockNum
-					bomUseBomCardStock = existsProductBom.UseBomCardStock
-					bomIsSoldOut = existsProductBom.IsSoldOut
-					bomIsOpenStock = existsProductBom.IsOpenStock
-				}
-				status := productBom.Status
-				if existsProductBom != nil {
-					status = existsProductBom.Status
-				}
-				newProductBomList = append(newProductBomList, model.ProductBom{
-					BaseModel: model.BaseModel{
-						Uuid:       productBom.Uuid,
-						CreateTime: productBom.CreateTime,
-						UpdateTime: productBom.UpdateTime,
-						DeleteTime: productBom.DeleteTime,
-					},
-					PurchasePrice:      productBom.PurchasePrice,
-					Price:              productBom.Price,
-					Name:               productBom.Name,
-					ErpCode:            productBom.ErpCode,
-					StockNum:           bomStockNum,
-					IsOpenStock:        bomIsOpenStock,
-					BarcodeValue:       productBom.BarcodeValue,
-					InternalCode:       productBom.InternalCode,
-					IsDefaultSelect:    productBom.IsDefaultSelect,
-					Status:             status,
-					IsSoldOut:          bomIsSoldOut,
-					ActualSaleNum:      bomActualSaleNum,
-					ProductFlavorUuid:  productBom.ProductFlavorUuid,
-					ProductSauceUuid:   productBom.ProductSauceUuid,
-					ProductPackageUuid: productBom.ProductPackageUuid,
-					ProductBomCardUuid: productBom.ProductBomCardUuid,
-					UseBomCardStock:    bomUseBomCardStock,
-				})
-			}
-			for _, productPackageAttributeGroup := range productPackage.ProductPackageAttributeGroups {
-				newProductPackageAttributeGroupList = append(newProductPackageAttributeGroupList, model.ProductPackageAttributeGroup{
-					BaseModel: model.BaseModel{
-						Uuid:       productPackageAttributeGroup.Uuid,
-						CreateTime: productPackageAttributeGroup.CreateTime,
-						UpdateTime: productPackageAttributeGroup.UpdateTime,
-						DeleteTime: productPackageAttributeGroup.DeleteTime,
-					},
-					IsMust:                    productPackageAttributeGroup.IsMust,
-					MaxSelection:              productPackageAttributeGroup.MaxSelection,
-					MinSelection:              productPackageAttributeGroup.MinSelection,
-					ProductPackageUuid:        productPackageAttributeGroup.ProductPackageUuid,
-					ProductAttributeGroupUuid: productPackageAttributeGroup.ProductAttributeGroupUuid,
-				})
-				for _, productPackageAttribute := range productPackageAttributeGroup.ProductPackageAttributes {
-					newProductPackageAttributeList = append(newProductPackageAttributeList, model.ProductPackageAttribute{
-						BaseModel: model.BaseModel{
-							Uuid:       productPackageAttribute.Uuid,
-							CreateTime: productPackageAttribute.CreateTime,
-							UpdateTime: productPackageAttribute.UpdateTime,
-							DeleteTime: productPackageAttribute.DeleteTime,
-						},
-						ProductPackageAttributeGroupUuid: productPackageAttribute.ProductPackageAttributeGroupUuid,
-						AttributeUuid:                    productPackageAttribute.AttributeUuid,
-						IsDefaultSelected:                productPackageAttribute.IsDefaultSelected,
-					})
-				}
-			}
-			for _, productPackageGroup := range productPackage.ProductPackageGroups {
-				newProductPackageGroupList = append(newProductPackageGroupList, model.ProductPackageGroup{
-					BaseModel: model.BaseModel{
-						Uuid:       productPackageGroup.Uuid,
-						CreateTime: productPackageGroup.CreateTime,
-						UpdateTime: productPackageGroup.UpdateTime,
-						DeleteTime: productPackageGroup.DeleteTime,
-					},
-					Name:                  productPackageGroup.MultiLanguageName.ToJson(),
-					ProductPackageUuid:    productPackageGroup.ProductPackageUuid,
-					MultiLanguageNameUuid: productPackageGroup.MultiLanguageName.Uuid,
-					GroupType:             productPackageGroup.GroupType,
-					OptionalCount:         productPackageGroup.OptionalCount,
-					OptionalMinCount:      productPackageGroup.OptionalMinCount,
-				})
-				for _, productPackageGroupItem := range productPackageGroup.ProductPackageGroupItems {
-					newProductPackageGroupItemList = append(newProductPackageGroupItemList, model.ProductPackageGroupItem{
-						BaseModel: model.BaseModel{
-							Uuid:       productPackageGroupItem.Uuid,
-							CreateTime: productPackageGroupItem.CreateTime,
-							UpdateTime: productPackageGroupItem.UpdateTime,
-							DeleteTime: productPackageGroupItem.DeleteTime,
-						},
-						ProductPackageGroupUuid: productPackageGroupItem.ProductPackageGroupUuid,
-						RelatedUuid:             productPackageGroupItem.RelatedUuid,
-						ProductBomUuid:          productPackageGroupItem.ProductBomUuid,
-						Num:                     productPackageGroupItem.Num,
-						Sort:                    productPackageGroupItem.Sort,
-						AddPrice:                productPackageGroupItem.AddPrice,
-						IsRequired:              productPackageGroupItem.IsRequired,
-						IsDefault:               productPackageGroupItem.IsDefault,
-					})
-				}
-			}
-		}
-		// 执行同步总店商品到子店
-		err = db.Transaction(func(tx *gorm.DB) error {
-			productPackageRepo := repository.NewProductPackageRepo(tx)
-			productBomRepo := repository.NewProductBomRepo(tx)
-			productPackageAttributeGroupRepo := repository.NewProductPackageAttributeGroupRepo(tx)
-			productPackageAttributeRepo := repository.NewProductPackageAttributeRepo(tx)
-			productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
-
-			// 需要删除的商品包、商品bom、商品包属性组、商品包属性、商品套餐组、商品套餐商品
-			delProductPackageUuid := make([]uint64, 0)
-			delProductBomUuid := make([]uint64, 0)
-			delProductPackageAttributeGroupUuid := make([]uint64, 0)
-			delProductPackageAttributeUuid := make([]uint64, 0)
-			delProductPackageGroupUuid := make([]uint64, 0)
-			delProductPackageGroupItemUuid := make([]uint64, 0)
-
-			subProductPackageList, err := productPackageRepo.GetProductPackageList(
-				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
-				productPackageRepo.WithMultiLanguageName(),
-				productPackageRepo.WithProductBoms(),
-				productPackageRepo.WithProductPackageAttributeGroups(),
-				productPackageRepo.WithProductPackageAttributeGroupAttributes(),
-				productPackageRepo.WithProductPackageGroups(),
-				productPackageRepo.WithProductPackageGroupItems(),
-				productPackageRepo.WithProductPackageGroupMultiLanguageName(),
-			)
-			if err != nil {
-				return errors.WithMessage(err, "获取子店商品列表失败")
-			}
-			for _, productPackage := range subProductPackageList {
-				delProductPackageUuid = append(delProductPackageUuid, productPackage.Uuid)
-				for _, productBom := range productPackage.ProductBoms {
-					delProductBomUuid = append(delProductBomUuid, productBom.Uuid)
-				}
-				for _, productPackageAttributeGroup := range productPackage.ProductPackageAttributeGroups {
-					delProductPackageAttributeGroupUuid = append(delProductPackageAttributeGroupUuid, productPackageAttributeGroup.Uuid)
-					for _, productPackageAttribute := range productPackageAttributeGroup.ProductPackageAttributes {
-						delProductPackageAttributeUuid = append(delProductPackageAttributeUuid, productPackageAttribute.Uuid)
-					}
-				}
-				for _, productPackageGroup := range productPackage.ProductPackageGroups {
-					delProductPackageGroupUuid = append(delProductPackageGroupUuid, productPackageGroup.Uuid)
-					for _, productPackageGroupItem := range productPackageGroup.ProductPackageGroupItems {
-						delProductPackageGroupItemUuid = append(delProductPackageGroupItemUuid, productPackageGroupItem.Uuid)
-					}
-				}
-			}
-
-			if len(delProductPackageUuid) > 0 {
-				err = productPackageRepo.DestroyProductPackage(commonRepo.WhereInUuids(delProductPackageUuid))
-				if err != nil {
-					return errors.WithMessage(err, "销毁商品包失败")
-				}
-			}
-			if len(delProductBomUuid) > 0 {
-				err = productBomRepo.DestroyProductBom(commonRepo.WhereInUuids(delProductBomUuid))
-				if err != nil {
-					return errors.WithMessage(err, "销毁商品bom失败")
-				}
-			}
-			if len(delProductPackageAttributeGroupUuid) > 0 {
-				err = productPackageAttributeGroupRepo.DestroyProductPackageAttributeGroup(commonRepo.WhereInUuids(delProductPackageAttributeGroupUuid))
-				if err != nil {
-					return errors.WithMessage(err, "销毁商品包属性组失败")
-				}
-			}
-			if len(delProductPackageAttributeUuid) > 0 {
-				err = productPackageAttributeRepo.DestroyProductPackageAttribute(commonRepo.WhereInUuids(delProductPackageAttributeUuid))
-				if err != nil {
-					return errors.WithMessage(err, "销毁商品包属性失败")
-				}
-			}
-			if len(delProductPackageGroupUuid) > 0 {
-				err = productPackageGroupRepo.DestroyProductPackageGroup(commonRepo.WhereInUuids(delProductPackageGroupUuid))
-				if err != nil {
-					return errors.WithMessage(err, "销毁商品包组失败")
-				}
-			}
-			if len(delProductPackageGroupItemUuid) > 0 {
-				err = productPackageGroupRepo.DestroyProductPackageGroupItem(commonRepo.WhereInUuids(delProductPackageGroupItemUuid))
-				if err != nil {
-					return errors.WithMessage(err, "销毁商品包组商品失败")
-				}
-			}
-
-			if len(newProductPackageList) > 0 {
-				err = productPackageRepo.CreateProductPackages(newProductPackageList)
-				if err != nil {
-					return errors.WithMessage(err, "创建商品包失败")
-				}
-			}
-			if len(newProductBomList) > 0 {
-				for _, v := range newProductBomList {
-					_, err = productBomRepo.CreateProductBom(v)
-					if err != nil {
-						logger.Logger.Error("创建商品bom失败", zap.Error(err))
-						// return errors.WithMessage(err, "创建商品bom失败")
-					}
-				}
-			}
-			if len(newProductPackageAttributeGroupList) > 0 {
-				for _, v := range newProductPackageAttributeGroupList {
-					err = productPackageAttributeGroupRepo.CreateProductPackageAttributeGroups([]model.ProductPackageAttributeGroup{v})
-					if err != nil {
-						logger.Logger.Error("创建商品包属性组失败", zap.Error(err))
-						// return errors.WithMessage(err, "创建商品包属性组失败")
-					}
-				}
-			}
-			if len(newProductPackageAttributeList) > 0 {
-				for _, v := range newProductPackageAttributeList {
-					err = productPackageAttributeRepo.CreateProductPackageAttributes([]model.ProductPackageAttribute{v})
-					if err != nil {
-						logger.Logger.Error("创建商品包属性失败", zap.Error(err))
-						// return errors.WithMessage(err, "创建商品包属性失败")
-					}
-				}
-			}
-			if len(newProductPackageGroupList) > 0 {
-				for _, v := range newProductPackageGroupList {
-					err = productPackageGroupRepo.CreateProductPackageGroups([]model.ProductPackageGroup{v})
-					if err != nil {
-						logger.Logger.Error("创建商品包组失败", zap.Error(err))
-						// return errors.WithMessage(err, "创建商品包组失败")
-					}
-				}
-			}
-			if len(newProductPackageGroupItemList) > 0 {
-				for _, v := range newProductPackageGroupItemList {
-					err = productPackageGroupRepo.CreateProductPackageGroupItems([]model.ProductPackageGroupItem{v})
-					if err != nil {
-						logger.Logger.Error("创建商品包组商品失败", zap.Error(err))
-						// return errors.WithMessage(err, "创建商品包组商品失败")
-					}
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			return errors.WithMessage(err, "同步总店商品到子店失败")
-		}
-
-		// 同步总店外卖商品到子店
-		err = s.syncHeadquarterTakeoutProducts(ctx, db, headquarterDb, &companySetting)
-		if err != nil {
-			return errors.WithMessage(err, "同步总店外卖商品到子店失败")
-		}
-		// 处理已删除的商品的外卖商品
-		err = s.deleteSubTakeoutProduct(db)
-		if err != nil {
-			return errors.WithMessage(err, "已删除的商品关联的外卖商品以及外卖商品关联的数据标记删除失败")
+			return err
 		}
 	}
 
@@ -8580,6 +8458,289 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 	return nil
 }
 
+// SyncHeadquarterProducts 同步总部商品到子店（delete+recreate 模式）
+func (s *productSrv) SyncHeadquarterProducts(hqDb *gorm.DB, subDb *gorm.DB, hqUuid uint64, companySetting *model.CompanySetting) error {
+	commonRepo := repository.NewCommonRepo()
+	productPackageRepo := repository.NewProductPackageRepo(hqDb)
+	subProductPackageRepo := repository.NewProductPackageRepo(subDb)
+	subProductBomRepo := repository.NewProductBomRepo(subDb)
+	headProductPackageList, err := productPackageRepo.GetProductPackageList(
+		commonRepo.WhereByHeadquarterUuid(0),
+		productPackageRepo.WithMultiLanguageName(),
+		productPackageRepo.WithProductBoms(),
+		productPackageRepo.WithProductPackageAttributeGroups(),
+		productPackageRepo.WithProductPackageAttributeGroupAttributes(),
+		productPackageRepo.WithProductPackageGroups(),
+		productPackageRepo.WithProductPackageGroupItems(),
+		productPackageRepo.WithProductPackageGroupMultiLanguageName(),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取总部商品包列表失败")
+	}
+	// 需要保存的商品包、商品bom、商品包属性组、商品包属性、商品套餐组、商品套餐商品
+	newProductPackageList := make([]model.ProductPackage, 0)
+	newProductBomList := make([]model.ProductBom, 0)
+	newProductPackageAttributeGroupList := make([]model.ProductPackageAttributeGroup, 0)
+	newProductPackageAttributeList := make([]model.ProductPackageAttribute, 0)
+	newProductPackageGroupList := make([]model.ProductPackageGroup, 0)
+	newProductPackageGroupItemList := make([]model.ProductPackageGroupItem, 0)
+	for _, productPackage := range headProductPackageList {
+		// 创建时间和更新时间
+		createTime := productPackage.CreateTime
+		updateTime := productPackage.UpdateTime
+		deleteTime := productPackage.DeleteTime
+		// 获取商品包的实际销量, 如果子店存在该商品包且创建时间相同，则使用子店的实际销量
+		actualSaleNum := float64(0)
+		// 查询子店是否存在该商品包
+		existsProductPackage, err := subProductPackageRepo.GetProductPackage(
+			commonRepo.WhereByUuid(productPackage.Uuid),
+			commonRepo.WhereIsHeadquarter(),
+		)
+		if err == nil && existsProductPackage.Uuid > 0 && existsProductPackage.CreateTime == createTime {
+			actualSaleNum = existsProductPackage.ActualSaleNum
+		} else if productPackage.CreateTime <= 1760516651 && companySetting.CompanyUuid == 7171274190848000 {
+			actualSaleNum = productPackage.ActualSaleNum
+		}
+
+		// 确定店内上下架状态：根据 HQ 控制模式 + override 决定
+		status := productPackage.Status
+		if existsProductPackage != nil {
+			if repository.IsHqUnifiedControl(hqDb, hqUuid, constant.HqFieldDineShelf) {
+				status = productPackage.Status // 统一控制：强制用 HQ 值
+			} else {
+				overrideRepo := repository.NewHqFieldOverrideRepo(subDb)
+				if overrideRepo.IsOverridden(productPackage.Uuid, constant.HqFieldDineShelf) {
+					status = existsProductPackage.Status // 分开控制+已修改：保留子店值
+				}
+				// 分开控制+无 override：使用 HQ 值
+			}
+		}
+		// 创建商品包
+		newProductPackageList = append(newProductPackageList, model.ProductPackage{
+			BaseModel: model.BaseModel{
+				Uuid:       productPackage.Uuid,
+				CreateTime: createTime,
+				UpdateTime: updateTime,
+				DeleteTime: deleteTime,
+			},
+			Name:                          productPackage.MultiLanguageName.ToJson(),
+			ErpCode:                       productPackage.ErpCode,
+			MultiLanguageNameUuid:         productPackage.MultiLanguageNameUuid,
+			ImageName:                     productPackage.ImageName,
+			ImageFileUuid:                 productPackage.ImageFileUuid,
+			DeductStockType:               productPackage.DeductStockType,
+			NumType:                       productPackage.NumType,
+			UnitUuid:                      productPackage.UnitUuid,
+			DineTaxUuid:                   productPackage.DineTaxUuid,
+			CategoryUuid:                  productPackage.CategoryUuid,
+			TakeoutTaxUuid:                productPackage.TakeoutTaxUuid,
+			SpecialCategoryUuid:           productPackage.SpecialCategoryUuid,
+			PrinterTagUuid:                productPackage.PrinterTagUuid,
+			SupplierUuid:                  productPackage.SupplierUuid,
+			Status:                        status,
+			IsShowCashier:                 productPackage.IsShowCashier,
+			IsShowTablet:                  productPackage.IsShowTablet,
+			IsShowKitchen:                 productPackage.IsShowKitchen,
+			IsShowAssistant:               productPackage.IsShowAssistant,
+			IsShowH5:                      productPackage.IsShowH5,
+			IsShowDelivery:                productPackage.IsShowDelivery,
+			Sort:                          productPackage.Sort,
+			LimitNum:                      productPackage.LimitNum,
+			Describe:                      productPackage.Describe,
+			DescribeMultiLanguageNameUuid: productPackage.DescribeMultiLanguageNameUuid,
+			Detail:                        productPackage.Detail,
+			ActualSaleNum:                 actualSaleNum,
+			Price:                         productPackage.Price,
+			ProductType:                   productPackage.ProductType,
+			SauceRequired:                 productPackage.SauceRequired,
+			SauceMinSelection:             productPackage.SauceMinSelection,
+			SauceMaxSelection:             productPackage.SauceMaxSelection,
+			OpenDiscount:                  productPackage.OpenDiscount,
+			OpenOverallDiscount:           productPackage.OpenOverallDiscount,
+			IsBatch:                       productPackage.IsBatch,
+			HeadquarterUuid:               hqUuid,
+			ProductLabelUuid:              productPackage.ProductLabelUuid,
+		})
+		for _, productBom := range productPackage.ProductBoms {
+			// 查询子店是否存在该商品bom，匹配 UUID + CreateTime
+			var existingBom *model.ProductBom
+			existsProductBom, err := subProductBomRepo.GetProductBom(
+				commonRepo.WhereByUuid(productBom.Uuid),
+				commonRepo.WhereByProductPackageUuid(productPackage.Uuid),
+			)
+			if err == nil && existsProductBom.Uuid > 0 {
+				if existsProductBom.CreateTime == productBom.CreateTime {
+					existingBom = existsProductBom // 完全匹配：保留库存/销量等本地字段
+				} else {
+					existingBom = &model.ProductBom{Status: existsProductBom.Status} // 仅保留上下架状态
+				}
+			}
+			newProductBomList = append(newProductBomList, buildSubStoreBom(productBom, existingBom))
+		}
+		for _, productPackageAttributeGroup := range productPackage.ProductPackageAttributeGroups {
+			newProductPackageAttributeGroupList = append(newProductPackageAttributeGroupList, buildSubStoreAttrGroup(productPackageAttributeGroup))
+			for _, productPackageAttribute := range productPackageAttributeGroup.ProductPackageAttributes {
+				newProductPackageAttributeList = append(newProductPackageAttributeList, buildSubStoreAttr(productPackageAttribute))
+			}
+		}
+		for _, productPackageGroup := range productPackage.ProductPackageGroups {
+			newProductPackageGroupList = append(newProductPackageGroupList, buildSubStorePkgGroup(productPackageGroup))
+			for _, productPackageGroupItem := range productPackageGroup.ProductPackageGroupItems {
+				newProductPackageGroupItemList = append(newProductPackageGroupItemList, buildSubStorePkgGroupItem(productPackageGroupItem))
+			}
+		}
+	}
+	// 执行同步总店商品到子店
+	err = subDb.Transaction(func(tx *gorm.DB) error {
+		productPackageRepo := repository.NewProductPackageRepo(tx)
+		productBomRepo := repository.NewProductBomRepo(tx)
+		productPackageAttributeGroupRepo := repository.NewProductPackageAttributeGroupRepo(tx)
+		productPackageAttributeRepo := repository.NewProductPackageAttributeRepo(tx)
+		productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
+
+		// 需要删除的商品包、商品bom、商品包属性组、商品包属性、商品套餐组、商品套餐商品
+		delProductPackageUuid := make([]uint64, 0)
+		delProductBomUuid := make([]uint64, 0)
+		delProductPackageAttributeGroupUuid := make([]uint64, 0)
+		delProductPackageAttributeUuid := make([]uint64, 0)
+		delProductPackageGroupUuid := make([]uint64, 0)
+		delProductPackageGroupItemUuid := make([]uint64, 0)
+
+		subProductPackageList, err := productPackageRepo.GetProductPackageList(
+			commonRepo.WhereByHeadquarterUuid(hqUuid),
+			productPackageRepo.WithMultiLanguageName(),
+			productPackageRepo.WithProductBoms(),
+			productPackageRepo.WithProductPackageAttributeGroups(),
+			productPackageRepo.WithProductPackageAttributeGroupAttributes(),
+			productPackageRepo.WithProductPackageGroups(),
+			productPackageRepo.WithProductPackageGroupItems(),
+			productPackageRepo.WithProductPackageGroupMultiLanguageName(),
+		)
+		if err != nil {
+			return errors.WithMessage(err, "获取子店商品列表失败")
+		}
+		for _, productPackage := range subProductPackageList {
+			delProductPackageUuid = append(delProductPackageUuid, productPackage.Uuid)
+			for _, productBom := range productPackage.ProductBoms {
+				delProductBomUuid = append(delProductBomUuid, productBom.Uuid)
+			}
+			for _, productPackageAttributeGroup := range productPackage.ProductPackageAttributeGroups {
+				delProductPackageAttributeGroupUuid = append(delProductPackageAttributeGroupUuid, productPackageAttributeGroup.Uuid)
+				for _, productPackageAttribute := range productPackageAttributeGroup.ProductPackageAttributes {
+					delProductPackageAttributeUuid = append(delProductPackageAttributeUuid, productPackageAttribute.Uuid)
+				}
+			}
+			for _, productPackageGroup := range productPackage.ProductPackageGroups {
+				delProductPackageGroupUuid = append(delProductPackageGroupUuid, productPackageGroup.Uuid)
+				for _, productPackageGroupItem := range productPackageGroup.ProductPackageGroupItems {
+					delProductPackageGroupItemUuid = append(delProductPackageGroupItemUuid, productPackageGroupItem.Uuid)
+				}
+			}
+		}
+
+		if len(delProductPackageUuid) > 0 {
+			err = productPackageRepo.DestroyProductPackage(commonRepo.WhereInUuids(delProductPackageUuid))
+			if err != nil {
+				return errors.WithMessage(err, "销毁商品包失败")
+			}
+		}
+		if len(delProductBomUuid) > 0 {
+			err = productBomRepo.DestroyProductBom(commonRepo.WhereInUuids(delProductBomUuid))
+			if err != nil {
+				return errors.WithMessage(err, "销毁商品bom失败")
+			}
+		}
+		if len(delProductPackageAttributeGroupUuid) > 0 {
+			err = productPackageAttributeGroupRepo.DestroyProductPackageAttributeGroup(commonRepo.WhereInUuids(delProductPackageAttributeGroupUuid))
+			if err != nil {
+				return errors.WithMessage(err, "销毁商品包属性组失败")
+			}
+		}
+		if len(delProductPackageAttributeUuid) > 0 {
+			err = productPackageAttributeRepo.DestroyProductPackageAttribute(commonRepo.WhereInUuids(delProductPackageAttributeUuid))
+			if err != nil {
+				return errors.WithMessage(err, "销毁商品包属性失败")
+			}
+		}
+		if len(delProductPackageGroupUuid) > 0 {
+			err = productPackageGroupRepo.DestroyProductPackageGroup(commonRepo.WhereInUuids(delProductPackageGroupUuid))
+			if err != nil {
+				return errors.WithMessage(err, "销毁商品包组失败")
+			}
+		}
+		if len(delProductPackageGroupItemUuid) > 0 {
+			err = productPackageGroupRepo.DestroyProductPackageGroupItem(commonRepo.WhereInUuids(delProductPackageGroupItemUuid))
+			if err != nil {
+				return errors.WithMessage(err, "销毁商品包组商品失败")
+			}
+		}
+
+		if len(newProductPackageList) > 0 {
+			err = productPackageRepo.CreateProductPackages(newProductPackageList)
+			if err != nil {
+				return errors.WithMessage(err, "创建商品包失败")
+			}
+		}
+		if len(newProductBomList) > 0 {
+			for _, v := range newProductBomList {
+				_, err = productBomRepo.CreateProductBom(v)
+				if err != nil {
+					logger.Logger.Error("创建商品bom失败", zap.Error(err))
+				}
+			}
+		}
+		if len(newProductPackageAttributeGroupList) > 0 {
+			for _, v := range newProductPackageAttributeGroupList {
+				err = productPackageAttributeGroupRepo.CreateProductPackageAttributeGroups([]model.ProductPackageAttributeGroup{v})
+				if err != nil {
+					logger.Logger.Error("创建商品包属性组失败", zap.Error(err))
+				}
+			}
+		}
+		if len(newProductPackageAttributeList) > 0 {
+			for _, v := range newProductPackageAttributeList {
+				err = productPackageAttributeRepo.CreateProductPackageAttributes([]model.ProductPackageAttribute{v})
+				if err != nil {
+					logger.Logger.Error("创建商品包属性失败", zap.Error(err))
+				}
+			}
+		}
+		if len(newProductPackageGroupList) > 0 {
+			for _, v := range newProductPackageGroupList {
+				err = productPackageGroupRepo.CreateProductPackageGroups([]model.ProductPackageGroup{v})
+				if err != nil {
+					logger.Logger.Error("创建商品包组失败", zap.Error(err))
+				}
+			}
+		}
+		if len(newProductPackageGroupItemList) > 0 {
+			for _, v := range newProductPackageGroupItemList {
+				err = productPackageGroupRepo.CreateProductPackageGroupItems([]model.ProductPackageGroupItem{v})
+				if err != nil {
+					logger.Logger.Error("创建商品包组商品失败", zap.Error(err))
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.WithMessage(err, "同步总店商品到子店失败")
+	}
+
+	// 同步总店外卖商品到子店
+	err = s.syncHeadquarterTakeoutProducts(nil, subDb, hqDb, companySetting)
+	if err != nil {
+		return errors.WithMessage(err, "同步总店外卖商品到子店失败")
+	}
+	// 处理已删除的商品的外卖商品
+	err = s.deleteSubTakeoutProduct(subDb)
+	if err != nil {
+		return errors.WithMessage(err, "已删除的商品关联的外卖商品以及外卖商品关联的数据标记删除失败")
+	}
+
+	return nil
+}
+
 // syncHeadquarterTakeoutProducts 同步总部外卖商品到子店
 func (s *productSrv) syncHeadquarterTakeoutProducts(
 	_ context.Context,
@@ -8587,8 +8748,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 	headquarterDb *gorm.DB,
 	companySetting *model.CompanySetting,
 ) error {
-	var takeouts []takeoutModel.Takeout
-	err := subDb.Model(&takeoutModel.Takeout{}).Where("enabled = 1").Find(&takeouts).Error
+	takeouts, err := repository.NewTakeoutRepo(subDb).GetEnabledTakeouts()
 	if err != nil {
 		return errors.WithMessage(err, "获取ttpos_takeout中enabled=1的数据失败")
 	}
@@ -8685,7 +8845,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 
 			if subTakeout != nil {
 				// 更新场景：子店已存在该外卖商品
-				err := s.updateSubTakeoutProduct(tx, headTakeout, subTakeout, companySetting, takeoutRepo, bomTakeoutRepo, attrTakeoutRepo, groupItemTakeoutRepo)
+				err := s.updateSubTakeoutProduct(tx, headTakeout, subTakeout, companySetting, takeoutRepo)
 				if err != nil {
 					logger.Logger.Error("更新子店外卖商品失败",
 						zap.Uint64("product_package_uuid", productPackageUuid),
@@ -8719,33 +8879,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 // 已删除的商品关联的外卖商品以及外卖商品关联的数据标记删除
 func (s *productSrv) deleteSubTakeoutProduct(db *gorm.DB) error {
 	err := db.Transaction(func(tx *gorm.DB) error {
-		now := time.Now().Unix()
-		// 如果商品删除了，相关的外卖商品以及外卖商品关联的表都标记删除
-		err := tx.Model(&model.ProductPackageTakeout{}).Where("product_package_uuid in (?)",
-			tx.Model(&model.ProductPackage{}).Where("delete_time > 0 OR num_type = 1").Select("uuid")). // 商品删除或者数量类型为小数时，相关的外卖商品以及外卖商品关联的表都标记删除
-			Update("delete_time", now).Error
-		if err != nil {
-			return err
-		}
-		err = tx.Model(&model.ProductBomTakeout{}).Where("product_package_takeout_uuid in (?)",
-			tx.Model(&model.ProductPackageTakeout{}).Where("delete_time > 0").Select("uuid")).
-			Update("delete_time", now).Error
-		if err != nil {
-			return err
-		}
-		err = tx.Model(&model.ProductPackageAttributeTakeout{}).Where("product_package_takeout_uuid in (?)",
-			tx.Model(&model.ProductPackageTakeout{}).Where("delete_time > 0").Select("uuid")).
-			Update("delete_time", now).Error
-		if err != nil {
-			return err
-		}
-		err = tx.Model(&model.ProductPackageGroupItemTakeout{}).Where("product_package_takeout_uuid in (?)",
-			tx.Model(&model.ProductPackageTakeout{}).Where("delete_time > 0").Select("uuid")).
-			Update("delete_time", now).Error
-		if err != nil {
-			return err
-		}
-		return nil
+		return repository.NewProductPackageTakeoutRepo(tx).CascadeSoftDeleteForRemovedProducts(tx)
 	})
 	if err != nil {
 		return errors.WithMessage(err, "已删除的商品关联的外卖商品以及外卖商品关联的表都标记删除失败")
@@ -8760,13 +8894,10 @@ func (s *productSrv) updateSubTakeoutProduct(
 	subTakeout *model.ProductPackageTakeout,
 	companySetting *model.CompanySetting,
 	takeoutRepo repository.IProductPackageTakeoutRepo,
-	bomTakeoutRepo repository.IProductBomTakeoutRepo,
-	attrTakeoutRepo repository.IProductPackageAttributeTakeoutRepo,
-	groupItemTakeoutRepo *repository.ProductPackageGroupItemTakeoutRepo,
 ) error {
 	commonRepo := repository.NewCommonRepo()
 
-	// 更新外卖商品主表（不更新 uuid、price、status，保留子店个性化配置）
+	// 更新外卖商品主表（根据控制模式决定是否更新 price、status）
 	updateData := map[string]any{
 		"product_package_uuid":              headTakeout.ProductPackageUuid,
 		"multi_language_name_uuid":          headTakeout.MultiLanguageNameUuid,
@@ -8785,152 +8916,39 @@ func (s *productSrv) updateSubTakeoutProduct(
 		"delete_time":                       headTakeout.DeleteTime,
 	}
 
+	// 根据 HQ 控制模式 + override 决定是否同步外卖上下架和外卖价格
+	headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	overrideRepo := repository.NewHqFieldOverrideRepo(tx)
+
+	// 外卖上下架
+	if repository.IsHqUnifiedControl(headquarterDb, companySetting.HeadquarterUuid, constant.HqFieldTakeoutShelf) {
+		updateData["status"] = headTakeout.Status
+	} else if overrideRepo.IsOverridden(subTakeout.Uuid, constant.HqFieldTakeoutShelf) {
+		// 分开控制+已修改：保留子店值（不写入 updateData）
+	} else {
+		updateData["status"] = headTakeout.Status // 分开控制+无 override：使用 HQ 值
+	}
+
+	// 外卖价格
+	if repository.IsHqUnifiedControl(headquarterDb, companySetting.HeadquarterUuid, constant.HqFieldTakeoutPrice) {
+		updateData["price"] = headTakeout.Price
+	} else if overrideRepo.IsOverridden(subTakeout.Uuid, constant.HqFieldTakeoutPrice) {
+		// 分开控制+已修改：保留子店值（不写入 updateData）
+	} else {
+		updateData["price"] = headTakeout.Price // 分开控制+无 override：使用 HQ 值
+	}
+
 	err := takeoutRepo.UpdateProductPackageTakeout(updateData, commonRepo.WhereByUuid(subTakeout.Uuid))
 	if err != nil {
 		return errors.WithMessage(err, "更新外卖商品主表失败")
 	}
 
-	// 处理外卖规格价格：构建子店已有数据的 Map
-	subBomMap := make(map[uint64]*model.ProductBomTakeout)
-	for _, bom := range subTakeout.ProductBomTakeouts {
-		subBomMap[bom.ProductBomUuid] = &bom
+	// 同步关联表（BomTakeout / AttributeTakeout / GroupItemTakeout）
+	syncBomPrice := false
+	if _, priceInUpdate := updateData["price"]; priceInUpdate {
+		syncBomPrice = true
 	}
-
-	for _, headBom := range headTakeout.ProductBomTakeouts {
-		if subBom, exists := subBomMap[headBom.ProductBomUuid]; exists {
-			// 更新：同步 create_time、update_time、delete_time
-			updateBomData := map[string]any{
-				"create_time": headBom.CreateTime,
-				"update_time": headBom.UpdateTime,
-				"delete_time": headBom.DeleteTime,
-			}
-			err := bomTakeoutRepo.UpdateProductBomTakeout(updateBomData, commonRepo.WhereByUuid(subBom.Uuid))
-			if err != nil {
-				logger.Logger.Error("更新子店外卖规格价格失败",
-					zap.Uint64("uuid", subBom.Uuid),
-					zap.Uint64("product_bom_uuid", headBom.ProductBomUuid),
-					zap.Error(err))
-			}
-		} else {
-			// 新增：总部有，子店没有
-			newBom := model.ProductBomTakeout{
-				BaseModel: model.BaseModel{
-					Uuid:       headBom.Uuid,
-					CreateTime: headBom.CreateTime,
-					UpdateTime: headBom.UpdateTime,
-					DeleteTime: headBom.DeleteTime,
-				},
-				ProductPackageTakeoutUuid: subTakeout.Uuid, // 使用子店外卖商品UUID
-				ProductBomUuid:            headBom.ProductBomUuid,
-				HeadquarterUuid:           companySetting.HeadquarterUuid,
-				Price:                     headBom.Price,
-				GrabModifierId:            headBom.GrabModifierId,
-			}
-			err := bomTakeoutRepo.CreateProductBomTakeout(&newBom)
-			if err != nil {
-				logger.Logger.Error("创建子店外卖规格价格失败",
-					zap.Uint64("product_bom_uuid", headBom.ProductBomUuid),
-					zap.Error(err))
-			}
-		}
-	}
-
-	// 处理外卖属性价格：构建子店已有数据的 Map
-	subAttrMap := make(map[uint64]*model.ProductPackageAttributeTakeout)
-	for _, attr := range subTakeout.ProductPackageAttributeTakeouts {
-		subAttrMap[attr.ProductPackageAttributeUuid] = &attr
-	}
-
-	for _, headAttr := range headTakeout.ProductPackageAttributeTakeouts {
-		if subAttr, exists := subAttrMap[headAttr.ProductPackageAttributeUuid]; exists {
-			// 更新：同步 create_time、update_time、delete_time
-			updateAttrData := map[string]any{
-				"create_time": headAttr.CreateTime,
-				"update_time": headAttr.UpdateTime,
-				"delete_time": headAttr.DeleteTime,
-			}
-			err := attrTakeoutRepo.UpdateProductPackageAttributeTakeout(updateAttrData, commonRepo.WhereByUuid(subAttr.Uuid))
-			if err != nil {
-				logger.Logger.Error("更新子店外卖属性价格失败",
-					zap.Uint64("uuid", subAttr.Uuid),
-					zap.Uint64("product_package_attribute_uuid", headAttr.ProductPackageAttributeUuid),
-					zap.Error(err))
-			}
-		} else {
-			// 新增：总部有，子店没有
-			newAttr := model.ProductPackageAttributeTakeout{
-				BaseModel: model.BaseModel{
-					Uuid:       headAttr.Uuid,
-					CreateTime: headAttr.CreateTime,
-					UpdateTime: headAttr.UpdateTime,
-					DeleteTime: headAttr.DeleteTime,
-				},
-				ProductPackageTakeoutUuid:   subTakeout.Uuid, // 使用子店外卖商品UUID
-				ProductPackageAttributeUuid: headAttr.ProductPackageAttributeUuid,
-				HeadquarterUuid:             companySetting.HeadquarterUuid,
-				Price:                       headAttr.Price,
-			}
-			err := attrTakeoutRepo.CreateProductPackageAttributeTakeout(&newAttr)
-			if err != nil {
-				logger.Logger.Error("创建子店外卖属性价格失败",
-					zap.Uint64("product_package_attribute_uuid", headAttr.ProductPackageAttributeUuid),
-					zap.Error(err))
-			}
-		}
-	}
-
-	// 处理外卖套餐子商品价格：构建子店已有数据的 Map（联合键：product_package_group_uuid + product_package_group_item_uuid）
-	subGroupItemMap := make(map[string]*model.ProductPackageGroupItemTakeout)
-	for _, groupItem := range subTakeout.ProductPackageGroupItemTakeouts {
-		key := fmt.Sprintf("%d-%d", groupItem.ProductPackageGroupUuid, groupItem.ProductPackageGroupItemUuid)
-		subGroupItemMap[key] = &groupItem
-	}
-
-	for _, headGroupItem := range headTakeout.ProductPackageGroupItemTakeouts {
-		key := fmt.Sprintf("%d-%d", headGroupItem.ProductPackageGroupUuid, headGroupItem.ProductPackageGroupItemUuid)
-		if subGroupItem, exists := subGroupItemMap[key]; exists {
-			// 更新：同步 create_time、update_time、delete_time
-			// 注意：这里需要使用原生 SQL 或 gorm 的 Model 更新，因为 ProductPackageGroupItemTakeoutRepo 没有通用的 Update 方法
-			err := tx.Model(&model.ProductPackageGroupItemTakeout{}).
-				Where("uuid = ?", subGroupItem.Uuid).
-				Updates(map[string]any{
-					"create_time": headGroupItem.CreateTime,
-					"update_time": headGroupItem.UpdateTime,
-					"delete_time": headGroupItem.DeleteTime,
-				}).Error
-			if err != nil {
-				logger.Logger.Error("更新子店外卖套餐子商品价格失败",
-					zap.Uint64("uuid", subGroupItem.Uuid),
-					zap.Uint64("product_package_group_uuid", headGroupItem.ProductPackageGroupUuid),
-					zap.Uint64("product_package_group_item_uuid", headGroupItem.ProductPackageGroupItemUuid),
-					zap.Error(err))
-			}
-		} else {
-			// 新增：总部有，子店没有
-			newGroupItem := model.ProductPackageGroupItemTakeout{
-				BaseModel: model.BaseModel{
-					Uuid:       headGroupItem.Uuid,
-					CreateTime: headGroupItem.CreateTime,
-					UpdateTime: headGroupItem.UpdateTime,
-					DeleteTime: headGroupItem.DeleteTime,
-				},
-				ProductPackageTakeoutUuid:   subTakeout.Uuid, // 使用子店外卖商品UUID
-				ProductPackageGroupItemUuid: headGroupItem.ProductPackageGroupItemUuid,
-				ProductPackageGroupUuid:     headGroupItem.ProductPackageGroupUuid,
-				HeadquarterUuid:             companySetting.HeadquarterUuid,
-				AddPrice:                    headGroupItem.AddPrice,
-			}
-			err := groupItemTakeoutRepo.CreateProductPackageGroupItemTakeout(&newGroupItem)
-			if err != nil {
-				logger.Logger.Error("创建子店外卖套餐子商品价格失败",
-					zap.Uint64("product_package_group_uuid", headGroupItem.ProductPackageGroupUuid),
-					zap.Uint64("product_package_group_item_uuid", headGroupItem.ProductPackageGroupItemUuid),
-					zap.Error(err))
-			}
-		}
-	}
-
-	return nil
+	return syncTakeoutAssociations(tx, headTakeout, subTakeout, companySetting.HeadquarterUuid, syncBomPrice)
 }
 
 // createSubTakeoutProduct 创建子店外卖商品
@@ -8943,7 +8961,14 @@ func (s *productSrv) createSubTakeoutProduct(
 	attrTakeoutRepo repository.IProductPackageAttributeTakeoutRepo,
 	groupItemTakeoutRepo *repository.ProductPackageGroupItemTakeoutRepo,
 ) error {
-	// 创建外卖商品主表（使用总部的 UUID，首次同步默认下架）
+	// 创建外卖商品主表（使用总部的 UUID）
+	// 统一控制模式：跟随总部状态；分开控制模式：默认下架，子店需手动上架
+	headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	takeoutStatus := uint(0)
+	if repository.IsHqUnifiedControl(headquarterDb, companySetting.HeadquarterUuid, constant.HqFieldTakeoutShelf) {
+		takeoutStatus = headTakeout.Status
+	}
+
 	newTakeout := model.ProductPackageTakeout{
 		ProductPackageUuid:            headTakeout.ProductPackageUuid,
 		MultiLanguageNameUuid:         headTakeout.MultiLanguageNameUuid,
@@ -8952,7 +8977,7 @@ func (s *productSrv) createSubTakeoutProduct(
 		ProductType:                   headTakeout.ProductType,
 		Price:                         headTakeout.Price, // 首次同步使用总部价格
 		TakeoutType:                   headTakeout.TakeoutType,
-		Status:                        0, // 默认下架
+		Status:                        takeoutStatus,
 		CategoryUuid:                  headTakeout.CategoryUuid,
 		SpecialCategoryUuid:           headTakeout.SpecialCategoryUuid,
 		ImageFileUuid:                 headTakeout.ImageFileUuid,
@@ -9179,10 +9204,8 @@ func (s *productSrv) DeleteBatchTag(ctx context.Context, req req.BatchTagDeleteR
 
 	// 查询分批类型是否被使用. sale_bill中是否被使用、正在进行中的订单中是否有商品正在使用
 	// 查询所有正在进行中的订单
-	var saleBillUuids []uint64
-	db.Model(&model.SaleBill{}).Where("status = ?", constant.SaleBillStatusPending).Where("delete_time = ?", 0).Where("batch_tag_uuid <> ?", 0).Select("uuid").Scan(&saleBillUuids)
-	var count int64
-	db.Model(&model.SaleOrderProduct{}).Where("sale_bill_uuid in (?) AND batch_tag_uuid = ?", saleBillUuids, req.Uuid).Where("delete_time = ?", 0).Count(&count)
+	saleBillUuids, _ := repository.NewSaleBillRepo(db).PluckPendingUuidsWithBatchTag()
+	count, _ := repository.NewSaleOrderProductRepo(db).CountByBatchTagInSaleBills(saleBillUuids, req.Uuid)
 	if count > 0 {
 		return errors.WithMessage(errors.New("该分批类型正在使用，无法删除"), "分批类型正在被使用")
 	}
@@ -9375,27 +9398,10 @@ func (s *productSrv) SyncProductPackageImage(ctx context.Context, syncHeadquarte
 	if !companySetting.IsSubShop() || !syncHeadquarterData {
 		return nil
 	}
-	var files []model.File
-	var fileGroups []model.FileGroup
 	headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
-
-	// 查询店内商品的图片UUID
-	productFileUuidQuery := headquarterDb.Model(&model.ProductPackage{}).Where("image_file_uuid > 0").Select("image_file_uuid")
-
-	// 查询外卖商品的图片UUID
-	takeoutFileUuidQuery := headquarterDb.Model(&model.ProductPackageTakeout{}).Where("image_file_uuid > 0").Select("image_file_uuid")
-
-	// 使用 UNION 合并两个查询
-	fileUuidQuery := headquarterDb.Raw("? UNION ?", productFileUuidQuery, takeoutFileUuidQuery)
-
-	err := headquarterDb.Model(&model.File{}).Where("uuid in (?)", fileUuidQuery).Find(&files).Error
+	files, fileGroups, err := repository.NewFileRepo(headquarterDb).GetProductImageFilesAndGroups()
 	if err != nil {
-		return errors.WithMessage(errors.New("查询文件失败"), err.Error())
-	}
-	fileGroupUuidQuery := headquarterDb.Model(&model.File{}).Where("uuid in (?)", fileUuidQuery).Where("group_uuid > 0").Select("group_uuid")
-	err = headquarterDb.Model(&model.FileGroup{}).Where("uuid in (?)", fileGroupUuidQuery).Find(&fileGroups).Error
-	if err != nil {
-		return errors.WithMessage(err, "查询文件分组失败")
+		return err
 	}
 	var newFiles []model.File
 	var newFileGroups []model.FileGroup
@@ -9439,21 +9445,18 @@ func (s *productSrv) SyncProductPackageImage(ctx context.Context, syncHeadquarte
 	}
 	// 删除后迁移
 	err = s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.File{}).Error; err != nil {
+		fileRepo := repository.NewFileRepo(tx)
+		if err := fileRepo.HardDeleteFilesByHeadquarter(companySetting.HeadquarterUuid); err != nil {
 			return errors.WithMessage(errors.New("删除总部文件失败"), err.Error())
 		}
-		if err := tx.Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.FileGroup{}).Error; err != nil {
+		if err := fileRepo.HardDeleteFileGroupsByHeadquarter(companySetting.HeadquarterUuid); err != nil {
 			return errors.WithMessage(errors.New("删除总部文件分组失败"), err.Error())
 		}
-		if len(newFiles) > 0 {
-			if err := tx.Create(&newFiles).Error; err != nil {
-				return errors.WithMessage(errors.New("同步总部文件失败"), err.Error())
-			}
+		if err := fileRepo.CreateFiles(newFiles); err != nil {
+			return errors.WithMessage(errors.New("同步总部文件失败"), err.Error())
 		}
-		if len(newFileGroups) > 0 {
-			if err := tx.Create(&newFileGroups).Error; err != nil {
-				return errors.WithMessage(errors.New("同步总部分组失败"), err.Error())
-			}
+		if err := fileRepo.CreateFileGroups(newFileGroups); err != nil {
+			return errors.WithMessage(errors.New("同步总部分组失败"), err.Error())
 		}
 		return nil
 	})

@@ -31,7 +31,7 @@ type Material struct {
 	DefaultSalesUnitName string                `json:"default_sales_unit_name"` // 默认销售单位名称
 	DefaultSalesUnitUuid uint64                `json:"default_sales_unit_uuid"` // 默认销售单位UUID
 	UnitList             []MaterialUnit        `json:"unit_list"`               // 单位列表
-	AllowSubstoreVisible int                   `json:"allow_substore_visible"`  // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	AllowSubstoreVisible int                   `json:"allow_substore_visible"`  // 允许子店可见（已废弃，固定返回1）
 	AllowNegativeStock   bool                  `json:"allow_negative_stock"`    // 是否允许负库存：true-允许，false-不允许
 
 	UnitLocaleName             dto.LocaleResponse `json:"unit_locale_name"`               // 基准单位名称
@@ -39,11 +39,18 @@ type Material struct {
 	PurchaseUnitLocaleName     dto.LocaleResponse `json:"purchase_unit_locale_name"`      // 采购单位名称
 	DefaultSalesUnitLocaleName dto.LocaleResponse `json:"default_sales_unit_locale_name"` // 默认销售单位名称
 
-	AvailableQuantity float64 `json:"available_quantity"` // 可采购数量
-	StoreQuantity     float64 `json:"store_quantity"`     // 门店数量
+	AvailableQuantity            float64            `json:"available_quantity"`              // 可采购数量
+	StoreQuantity                float64            `json:"store_quantity"`                  // 门店数量
+	LastPurchaseQuantity         float64            `json:"last_purchase_quantity"`          // 上次采购数量（默认销售单位）
+	LastPurchaseLocaleUnitName   dto.LocaleResponse `json:"last_purchase_locale_unit_name"`  // 上次采购时的单位名称
+	ConsumptionSinceLastPurchase float64            `json:"consumption_since_last_purchase"` // 上次采购完成后的消耗量（默认销售单位）
 
 	// 限购配置
 	QuotaConfig MaterialQuotaConfig `json:"quota_config"` // 限购配置
+
+	// HQ 控制字段可编辑性（仅子店+总部来源物品有意义）
+	IsSafetyStockEditable   bool `json:"is_safety_stock_editable"`   // 安全库存是否可编辑
+	IsNegativeStockEditable bool `json:"is_negative_stock_editable"` // 负库存是否可编辑
 }
 
 // MaterialQuotaConfig 限购配置
@@ -80,7 +87,7 @@ type MaterialDetailResp struct {
 	CategoryUuid               uint64               `json:"category_uuid"`                  // 分类UUID
 	CategoryName               string               `json:"category_name"`                  // 分类名称
 	Status                     int                  `json:"status"`                         // 状态 1-启用 0-停用
-	AllowSubstoreVisible       int                  `json:"allow_substore_visible"`         // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	AllowSubstoreVisible       int                  `json:"allow_substore_visible"`         // 允许子店可见（已废弃，固定返回1）
 	AllowNegativeStock         bool                 `json:"allow_negative_stock"`           // 是否允许负库存：true-允许，false-不允许
 	BarcodeValue               string               `json:"barcode_value"`                  // 条形码值
 	InternalCode               string               `json:"internal_code"`                  // 内部编码
@@ -102,6 +109,9 @@ type MaterialDetailResp struct {
 	DefaultSalesUnitLocaleName dto.LocaleResponse   `json:"default_sales_unit_locale_name"` // 默认销售单位多语言名称
 	OriginCountry              *CountryItem         `json:"origin_country"`                 // 原产地国家信息（可选）
 	IsEditable                 bool                 `json:"is_editable"`                    // 是否可编辑
+
+	// HQ 控制字段可编辑性（仅子店+总部来源物品有意义）
+	IsNegativeStockEditable bool `json:"is_negative_stock_editable"` // 负库存是否可编辑
 
 	// 兼容旧版本客户端
 	// 估值率,字段名称为 valuation, 兼容旧版本客户端, 2.12.0 版本后不再使用 valuation_rate 字段

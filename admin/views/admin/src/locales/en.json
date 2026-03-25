@@ -484,5 +484,18 @@
     "请至少添加一个门店": "Please add at least one store",
     "邮箱/手机号/员工ID": "Email/Mobile Number/Employee ID",
     "添加账号": "Add account",
-    "导入日志": "Import logs"
+    "导入日志": "Import logs",
+    "站点编码": "Site Code",
+    "留空查询全部": "Leave empty to query all",
+    "失败数": "Failed Count",
+    "进行中": "Pending",
+    "总进行中": "Total Pending",
+    "重试": "Retry",
+    "跳过": "Skip",
+    "总失败数": "Total Failed",
+    "全部重试": "Retry All",
+    "全部跳过": "Skip All",
+    "Save Sales Invoice": "Save Sales Invoice",
+    "Cancel Sales Invoice": "Cancel Sales Invoice",
+    "Return Sales Invoice": "Return Sales Invoice"
 }

@@ -350,6 +350,16 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		_ = s.productSrv.SetCategoryDisplayInTakeout(ctx, addReq.SpecialCategoryUuid)
 	}
 
+	// HQ 创建外卖商品 → 自动推送到子店
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		takeoutUuid := productPackageTakeout.Uuid
+		utils.Go(func() {
+			hqPushSrv.OnHqProductTakeoutChanged(ctx, takeoutUuid)
+		})
+	}
+
 	return productPackageTakeout, nil
 }
 
@@ -674,6 +684,52 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 		}
 	}
 
+	// HQ 编辑外卖商品 → 自动推送到子店
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		takeoutUuid := existTakeout.Uuid
+		utils.Go(func() {
+			hqPushSrv.OnHqProductTakeoutChanged(ctx, takeoutUuid)
+		})
+	}
+
+	// 子店编辑总部外卖商品 → 与 HQ 值不一致时标记 override
+	if isHeadquarterProduct {
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDb)
+		hqTakeout, hqErr := hqTakeoutRepo.GetProductPackageTakeoutByProductPackageUuid(existTakeout.ProductPackageUuid, existTakeout.TakeoutType)
+		if hqErr == nil && hqTakeout != nil && hqTakeout.ID > 0 {
+			hqPushSrv := NewHqPushSrv(s.dbm)
+			if uint(editReq.Status) != hqTakeout.Status {
+				_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProductTakeout, existTakeout.Uuid, constant.HqFieldTakeoutShelf)
+			}
+			// 对比外卖价格：主表价格 + 规格价格
+			priceDiff := editReq.Price != hqTakeout.Price
+			if !priceDiff && len(editReq.Flavors) > 0 {
+				// 获取 HQ 规格价格，按 product_bom_uuid 索引
+				hqBomTakeouts, _ := repository.NewProductBomTakeoutRepo(hqDb).GetProductBomTakeoutList(
+					repository.CommonRepo.WhereByProductPackageTakeoutUuid(hqTakeout.Uuid),
+					repository.CommonRepo.WhereBySoftDelete(),
+				)
+				hqBomPriceMap := make(map[uint64]float64, len(hqBomTakeouts))
+				for _, bt := range hqBomTakeouts {
+					hqBomPriceMap[bt.ProductBomUuid] = bt.Price
+				}
+				for _, flavorReq := range editReq.Flavors {
+					if hqPrice, ok := hqBomPriceMap[flavorReq.BomUuid]; ok {
+						if flavorReq.Price != hqPrice {
+							priceDiff = true
+							break
+						}
+					}
+				}
+			}
+			if priceDiff {
+				_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProductTakeout, existTakeout.Uuid, constant.HqFieldTakeoutPrice)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -891,6 +947,16 @@ func (s *productTakeoutSrv) DeleteProductTakeoutShop(ctx context.Context, delete
 		return err
 	}
 
+	// HQ 删除外卖商品 → 推送到子店同步删除
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		takeoutUuid := takeout.Uuid
+		utils.Go(func() {
+			hqPushSrv.OnHqProductTakeoutChanged(ctx, takeoutUuid)
+		})
+	}
+
 	return nil
 }
 
@@ -908,12 +974,41 @@ func (s *productTakeoutSrv) UpdateProductTakeoutShopStatus(ctx context.Context, 
 		return errors.WithMessage(errors.New("外卖商品不存在"))
 	}
 
+	// 子店 + 总部商品 + 统一控制 → 拦截修改
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsSubShop() && takeout.HeadquarterUuid > 0 {
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		if repository.IsHqUnifiedControl(hqDb, companySetting.HeadquarterUuid, constant.HqFieldTakeoutShelf) {
+			return nil // 统一控制下静默忽略，批量操作不报错
+		}
+	}
+
 	if err := takeoutRepo.UpdateProductPackageTakeout(
 		map[string]any{"status": *statusReq.Status},
 		takeoutRepo.WhereByUuid(takeout.Uuid),
 	); err != nil {
 		logger.Logger.Error("更新外卖商品状态失败", zap.Any("func", "UpdateProductTakeoutShopStatus"), zap.Any("params", statusReq), zap.Error(err))
 		return errors.WithMessage(err, "更新外卖商品状态失败")
+	}
+
+	// HQ 修改外卖商品状态 → 自动推送到子店
+	if companySetting.IsHeadquarter() {
+		hqPushSrv := NewHqPushSrv(s.dbm)
+		takeoutUuid := takeout.Uuid
+		utils.Go(func() {
+			hqPushSrv.OnHqProductTakeoutChanged(ctx, takeoutUuid)
+		})
+	}
+
+	// 子店修改总部外卖商品状态 → 与 HQ 值不一致时标记 override
+	if companySetting.IsSubShop() && takeout.HeadquarterUuid > 0 {
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		hqTakeoutRepo := repository.NewProductPackageTakeoutRepo(hqDb)
+		hqTakeout, hqErr := hqTakeoutRepo.GetProductPackageTakeoutByProductPackageUuid(takeout.ProductPackageUuid, takeout.TakeoutType)
+		if hqErr == nil && hqTakeout != nil && hqTakeout.ID > 0 && uint(*statusReq.Status) != hqTakeout.Status {
+			hqPushSrv := NewHqPushSrv(s.dbm)
+			_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityProductTakeout, takeout.Uuid, constant.HqFieldTakeoutShelf)
+		}
 	}
 
 	return nil
@@ -1098,12 +1193,15 @@ func (s *productTakeoutSrv) GetProductCount(
 	db := ctx.GetDB()
 
 	// 4. 构造查询条件
-	var count int64
-	query := db.Model(&model.ProductPackageTakeout{}).
-		Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package_takeout.product_package_uuid = ttpos_product_package.uuid").
-		Joins("LEFT JOIN ttpos_product_category ON ttpos_product_package_takeout.category_uuid = ttpos_product_category.uuid").
-		Where("ttpos_product_package_takeout.delete_time = ?", 0).
-		Where("ttpos_product_package.delete_time = ?", 0)
+	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
+	opts := []repository.DBOption{
+		func(db *gorm.DB) *gorm.DB {
+			return db.Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package_takeout.product_package_uuid = ttpos_product_package.uuid").
+				Joins("LEFT JOIN ttpos_product_category ON ttpos_product_package_takeout.category_uuid = ttpos_product_category.uuid").
+				Where("ttpos_product_package_takeout.delete_time = ?", 0).
+				Where("ttpos_product_package.delete_time = ?", 0)
+		},
+	}
 
 	// 5. 如果指定了平台，添加平台过滤 (使用 takeout_type 字段)
 	if platform != "" {
@@ -1113,16 +1211,18 @@ func (s *productTakeoutSrv) GetProductCount(
 			"grab":    1,
 			"lineman": 2, // LINE MAN
 		}
-		if takeoutType, exists := platformTypeMap[platform]; exists {
-			query = query.Where("ttpos_product_package_takeout.takeout_type = ?", takeoutType)
-		} else {
-			// 未知平台，使用类型 3（其他）
-			query = query.Where("ttpos_product_package_takeout.takeout_type = ?", 3)
+		takeoutType := uint(3)
+		if t, exists := platformTypeMap[platform]; exists {
+			takeoutType = t
 		}
+		opts = append(opts, func(db *gorm.DB) *gorm.DB {
+			return db.Where("ttpos_product_package_takeout.takeout_type = ?", takeoutType)
+		})
 	}
 
 	// 7. 执行统计
-	if err := query.Count(&count).Error; err != nil {
+	count, err := takeoutRepo.GetProductPackageTakeoutCount(opts...)
+	if err != nil {
 		logger.Logger.Error("查询商品统计失败",
 			zap.Uint64("company_uuid", companyUuid),
 			zap.String("platform", platform),
@@ -1242,19 +1342,19 @@ func (s *productTakeoutSrv) getProductNames(db *gorm.DB, productUuids []uint64) 
 		return names
 	}
 
-	var products []model.ProductPackage
-	err := db.Model(&model.ProductPackage{}).
-		Where("uuid IN ?", productUuids).
-		Where("delete_time = ?", 0).
-		Select("uuid, name").
-		Find(&products).Error
-
+	productList, err := repository.NewProductPackageRepo(db).GetProductPackageList(
+		repository.CommonRepo.WhereInUuids(productUuids),
+		repository.CommonRepo.WhereBySoftDelete(),
+		func(db *gorm.DB) *gorm.DB {
+			return db.Select("uuid, name")
+		},
+	)
 	if err != nil {
 		logger.Logger.Warn("获取商品名称失败", zap.Error(err))
 		return names
 	}
 
-	for _, product := range products {
+	for _, product := range productList {
 		names[product.Uuid] = product.Name
 	}
 

@@ -113,6 +113,7 @@ type PurchaseOrderApproveReq struct {
 	Action       string `json:"action" binding:"required,oneof=approve reject"` // 审核动作：approve-通过，reject-驳回
 	RejectReason string `json:"reject_reason"`                                  // 驳回备注，可以为空最大100个字符
 	Remark       string `json:"remark"`                                         // 批注, 可以为空最大100个字符
+	IsConfirm    bool   `json:"is_confirm"`                                     // 是否确认审核（跳过默认仓库校验提示）
 }
 
 // PurchaseOrderSubmitReq 提交采购订单请求
@@ -131,14 +132,16 @@ type PurchaseOrderSupplierSyncReq struct {
 
 // PurchaseReceiptCreateReq 创建收货记录请求
 type PurchaseReceiptCreateReq struct {
-	PurchaseOrderUuid  uint64                         `json:"purchase_order_uuid" binding:"required,min=1"`     // 采购订单ID
-	ReceiveTime        int64                          `json:"receive_time" binding:"required,min=0"`            // 收货时间(时间戳)
-	ReceiptType        int                            `json:"receipt_type" binding:"required,min=1,max=2"`      // 收货类型 1-外部收货 2-内部收货
-	Items              []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`      // 收货明细
-	IsConfirm          bool                           `json:"is_confirm"`                                       // 是否确认收货
-	FileUuids          []uint64                       `json:"file_uuids" binding:"omitempty,max=10"`            // 附件UUID列表，最多10个
-	DeliveryNoteNo     string                         `json:"delivery_note_no" binding:"omitempty,max=255"`     // v2.16.0+ DN单号
-	SourceSupplierCode string                         `json:"source_supplier_code" binding:"omitempty,max=255"` // v2.16.0+ 供应商编码
+	PurchaseOrderUuid      uint64                         `json:"purchase_order_uuid" binding:"required,min=1"`     // 采购订单ID
+	ReceiveTime            int64                          `json:"receive_time" binding:"required,min=0"`            // 收货时间(时间戳)
+	ReceiptType            int                            `json:"receipt_type" binding:"required,min=1,max=2"`      // 收货类型 1-外部收货 2-内部收货
+	Items                  []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`      // 收货明细
+	IsConfirm              bool                           `json:"is_confirm"`                                       // 是否确认收货
+	FileUuids              []uint64                       `json:"file_uuids" binding:"omitempty,max=10"`            // 附件UUID列表，最多10个
+	DeliveryNoteNo         string                         `json:"delivery_note_no" binding:"omitempty,max=255"`     // v2.16.0+ DN单号
+	SourceSupplierCode     string                         `json:"source_supplier_code" binding:"omitempty,max=255"` // v2.16.0+ 供应商编码
+	IsAutoReceipt          bool                           `json:"-"`                                                // 是否自动收货（仅内部使用，不接受外部传参）
+	SourceWarehouseErpCode string                         `json:"-"`                                                // 发货仓库ERP编码（仅内部使用，DN收货时从DN获取）
 }
 
 // PurchaseReceiptUpdateReq 更新收货记录请求

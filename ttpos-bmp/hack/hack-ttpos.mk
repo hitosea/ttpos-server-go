@@ -140,7 +140,7 @@ erp.migrate:
 	@echo "🚀 开始执行ERP数据迁移..."
 	@echo "📍 站点代码: $(SITE_CODE)"
 	@echo "📁 迁移目录: $(DIR_BASE)"
-	@cd app/ttpos-erp && gf run main.go --args "migrate --siteCode $(SITE_CODE) --dirBase $(DIR_BASE)"
+	@cd app/ttpos-erp && go run main.go migrate --siteCode $(SITE_CODE) --dirBase $(DIR_BASE)
 	@echo "✅ ERP数据迁移执行完成!"
 
 
@@ -168,7 +168,7 @@ erp.migrate-all:
 	@echo "🚀 开始执行ERP全量数据迁移..."
 	@echo "📍 站点代码: $(SITE_CODE)"
 	@echo "📁 迁移根目录: $(BASE_DIR)"
-	@cd app/ttpos-erp && gf run main.go --args "migrate-all --siteCode $(SITE_CODE) --dirBase $(BASE_DIR)"
+	@cd app/ttpos-erp && go run main.go migrate-all --siteCode $(SITE_CODE) --dirBase $(BASE_DIR)
 	@echo "✅ ERP全量数据迁移执行完成!"
 
 

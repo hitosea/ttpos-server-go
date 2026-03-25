@@ -23,9 +23,9 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
-	"ttpos-server-go/pkg/gormcache"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/metrics"
 	"ttpos-server-go/pkg/otlp"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
@@ -102,91 +102,91 @@ var rootCommand = &cobra.Command{
 		var dbm *database.DBManager = database.GetDBManager(config.Database)
 
 		// ==================== GORM 查询缓存（一键注释此区块可禁用）====================
-		fmt.Println("[GORM Cache] 启用 GORM 查询缓存")
-		gormcache.Init(&gormcache.Config{
-			Easer:   true,            // 启用请求合并（相同查询只执行一次）
-			TTL:     5 * time.Minute, // 缓存 5 分钟
-			MaxRows: 1000,            // 超过 1000 行不缓存
-			AllowDBs: []string{ // 内测商户白名单（仅这些商户启用缓存）
-				"shop3290397937664000",
-			},
-			Tables: []string{ // 只缓存低频更新的表
-				// ==================== 商品相关 ====================
-				"ttpos_product",
-				"ttpos_product_category",
-				"ttpos_product_attribute",
-				"ttpos_product_package",
-				"ttpos_product_bom",
-				"ttpos_product_label",
-				"ttpos_product_flavor",        // 商品规格
-				"ttpos_product_sauce",         // 商品小料
-				"ttpos_product_unit",          // 商品单位
-				"ttpos_product_bom_card",      // 商品成本卡
-				"ttpos_product_package_group", // 商品套餐组
+		// fmt.Println("[GORM Cache] 启用 GORM 查询缓存")
+		// gormcache.Init(&gormcache.Config{
+		// 	Easer:   true,            // 启用请求合并（相同查询只执行一次）
+		// 	TTL:     5 * time.Minute, // 缓存 5 分钟
+		// 	MaxRows: 1000,            // 超过 1000 行不缓存
+		// 	AllowDBs: []string{ // 内测商户白名单（仅这些商户启用缓存）
+		// 		// "shop3290397937664000",
+		// 	},
+		// 	Tables: []string{ // 只缓存低频更新的表
+		// 		// ==================== 商品相关 ====================
+		// 		"ttpos_product",
+		// 		"ttpos_product_category",
+		// 		"ttpos_product_attribute",
+		// 		"ttpos_product_package",
+		// 		"ttpos_product_bom",
+		// 		"ttpos_product_label",
+		// 		"ttpos_product_flavor",        // 商品规格
+		// 		"ttpos_product_sauce",         // 商品小料
+		// 		"ttpos_product_unit",          // 商品单位
+		// 		"ttpos_product_bom_card",      // 商品成本卡
+		// 		"ttpos_product_package_group", // 商品套餐组
 
-				// ==================== 桌位相关 ====================
-				"ttpos_table_area",
-				"ttpos_table",
-				"ttpos_desk_region",     // 桌位区域
-				"ttpos_desk_type",       // 桌位类型
-				"ttpos_desk_map_layout", // 桌位地图布局
+		// 		// ==================== 桌位相关 ====================
+		// 		"ttpos_table_area",
+		// 		"ttpos_table",
+		// 		"ttpos_desk_region",     // 桌位区域
+		// 		"ttpos_desk_type",       // 桌位类型
+		// 		"ttpos_desk_map_layout", // 桌位地图布局
 
-				// ==================== 支付相关 ====================
-				"ttpos_payment_method",
-				"ttpos_payment_order",
+		// 		// ==================== 支付相关 ====================
+		// 		"ttpos_payment_method",
+		// 		"ttpos_payment_order",
 
-				// ==================== 会员相关 ====================
-				"ttpos_member_point_log",
-				"ttpos_member_level",
-				"ttpos_member_card_type",
+		// 		// ==================== 会员相关 ====================
+		// 		"ttpos_member_point_log",
+		// 		"ttpos_member_level",
+		// 		"ttpos_member_card_type",
 
-				// ==================== 自助餐相关 ====================
-				"ttpos_buffet",
-				"ttpos_buffet_package",
-				"ttpos_buffet_customer_type",
-				"ttpos_buffet_customer_type_price",
+		// 		// ==================== 自助餐相关 ====================
+		// 		"ttpos_buffet",
+		// 		"ttpos_buffet_package",
+		// 		"ttpos_buffet_customer_type",
+		// 		"ttpos_buffet_customer_type_price",
 
-				// ==================== 订单属性表 ====================
-				"ttpos_sale_order_buffet_customer_type",
-				"ttpos_sale_order_buffet_delay_product",
-				"ttpos_sale_order_product_attribute",
-				"ttpos_sale_order_product_bom",
-				"ttpos_sale_order_product_reason",
-				"ttpos_sale_order_coupon",
-				"ttpos_return_order_product",
-				"ttpos_production_order_product",
+		// 		// ==================== 订单属性表 ====================
+		// 		"ttpos_sale_order_buffet_customer_type",
+		// 		"ttpos_sale_order_buffet_delay_product",
+		// 		"ttpos_sale_order_product_attribute",
+		// 		"ttpos_sale_order_product_bom",
+		// 		"ttpos_sale_order_product_reason",
+		// 		"ttpos_sale_order_coupon",
+		// 		"ttpos_return_order_product",
+		// 		"ttpos_production_order_product",
 
-				// ==================== 订单配置字典 ====================
-				"ttpos_order_remark",       // 整单备注字典
-				"ttpos_order_item_remark",  // 单品备注字典
-				"ttpos_return_food_reason", // 退菜原因字典
-				"ttpos_order_source",       // 外卖来源配置
-				"ttpos_production_order",   // 生产订单
+		// 		// ==================== 订单配置字典 ====================
+		// 		"ttpos_order_remark",       // 整单备注字典
+		// 		"ttpos_order_item_remark",  // 单品备注字典
+		// 		"ttpos_return_food_reason", // 退菜原因字典
+		// 		"ttpos_order_source",       // 外卖来源配置
+		// 		"ttpos_production_order",   // 生产订单
 
-				// ==================== 原料物料 ====================
-				"ttpos_material",      // 原料表
-				"ttpos_material_unit", // 原料单位
+		// 		// ==================== 原料物料 ====================
+		// 		"ttpos_material",      // 原料表
+		// 		"ttpos_material_unit", // 原料单位
 
-				// ==================== 访问控制 ====================
-				"ttpos_access", // 权限表
-				"ttpos_role",   // 角色表
+		// 		// ==================== 访问控制 ====================
+		// 		"ttpos_access", // 权限表
+		// 		"ttpos_role",   // 角色表
 
-				// ==================== 财务配置 ====================
-				"ttpos_tax",      // 税种表
-				"ttpos_supplier", // 供应商表
+		// 		// ==================== 财务配置 ====================
+		// 		"ttpos_tax",      // 税种表
+		// 		"ttpos_supplier", // 供应商表
 
-				// ==================== 其他基础数据 ====================
-				"ttpos_batch_tag",
-				"ttpos_multi_language_name",
-				"ttpos_company",
-				"ttpos_company_setting",
-				"ttpos_printer",
-			},
-		})
-		database.SetOnDBReady(func(db *gorm.DB, dbName string) {
-			gormcache.Enable(db, dbName, nil)
-		})
-		dbm.EnableCacheForAllDBs()
+		// 		// ==================== 其他基础数据 ====================
+		// 		"ttpos_batch_tag",
+		// 		"ttpos_multi_language_name",
+		// 		"ttpos_company",
+		// 		"ttpos_company_setting",
+		// 		"ttpos_printer",
+		// 	},
+		// })
+		// database.SetOnDBReady(func(db *gorm.DB, dbName string) {
+		// 	gormcache.Enable(db, dbName, nil)
+		// })
+		// dbm.EnableCacheForAllDBs()
 		// ==================== GORM 查询缓存结束 ====================
 
 		// 初始化对象存储缓存配置的缓存层（使用三级缓存基础设施）
@@ -246,6 +246,23 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 		// 添加记录特殊headers中间件
 		r.Use(otlp.RecordSpecialHeaders())
 	}
+	// Prometheus metrics
+	if config.Metrics.Enabled {
+		metrics.Init()
+		r.Use(metrics.Middleware())
+
+		// Expose metrics on separate port
+		metricsRouter := gin.New()
+		metricsRouter.GET("/metrics", metrics.Handler())
+
+		utils.Go(func() {
+			logger.Logger.Info("Metrics server started", zap.String("port", config.Metrics.Port))
+			if err := metricsRouter.Run(":" + config.Metrics.Port); err != nil {
+				logger.Logger.Error("Metrics server failed", zap.Error(err))
+			}
+		})
+	}
+
 	// 添加请求参数日志中间件
 	if config.Server.Mode == "debug" {
 		r.Use(gin.Logger(), middleware.Recovery(logger.Logger, config.Server.Mode))
@@ -341,10 +358,12 @@ func gracefulShutdown(srv *http.Server) {
 func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	c := cron.New(cron.WithSeconds())
 
-	// 删除7天前的打印日志
-	_, _ = c.AddFunc("0 6 * * *", func() {
+	// 删除7天前的打印日志（每天06:00）
+	if _, err := c.AddFunc("0 0 6 * * *", func() {
 		tasks.NewDelPrintTask(dbm, cache).Execute()
-	})
+	}); err != nil {
+		logger.Logger.Error("注册定时任务失败: 删除打印日志", zap.Error(err))
+	}
 
 	// // 每小时执行销售出库汇总任务
 	_, _ = c.AddFunc("0 0 * * * *", func() {
@@ -368,6 +387,21 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	// 每分钟执行检查物品库存任务
 	_, _ = c.AddFunc("30 * * * * *", func() {
 		tasks.NewCheckMaterialStockTask(dbm, cache).Execute()
+	})
+
+	// 每小时执行 ERP Stock Entry 合并扣减任务（任务内部按门店时区判断是否到达本地午夜）
+	_, _ = c.AddFunc("0 0 * * * *", func() {
+		tasks.NewErpStockEntryTask(dbm, cache).Execute()
+	})
+
+	// 每小时执行自动收货任务（时区前置过滤，仅处理到达本地午夜的门店）
+	_, _ = c.AddFunc("0 0 * * * *", func() {
+		tasks.NewAutoReceiptTask(dbm, cache).Execute()
+	})
+
+	// 每天凌晨3点删除7天前的订单操作耗时记录
+	_, _ = c.AddFunc("0 0 3 * * *", func() {
+		tasks.NewDelOperationDurationTask(dbm, cache).Execute()
 	})
 
 	// 启动定时器

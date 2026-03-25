@@ -20,8 +20,11 @@ type ISaleOrderRepo interface {
 	UpdateOrCreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
 	DeleteSaleOrder(saleOrderUuid uint64) error
-	UpdateSaleOrderErpInvoice(saleOrderUuid uint64, productsInvoiceName string, materialInvoiceName string) error
+	UpdateSaleOrderErpSalesInvoice(saleOrderUuid uint64, salesInvoiceName string, paymentEntryNames string) error
+	UpdateSaleOrderErpSyncStatus(saleOrderUuid uint64, syncStatus int, salesInvoiceName string, paymentEntryNames string) error
+	ClearErpSalesInvoiceInfo(saleOrderUuid uint64, syncStatus int) error
 	UpdateSaleOrderActivity(saleOrderUuid uint64, fullReductionActivityUuid uint64, fullReductionActivityMessage string, activityAmount float64, autoPointsExchange uint) error // 更新销售订单的满减活动信息
+	BatchMarkErpStockDeducted(orderUuids []uint64) error                                                                                                                        // 批量标记订单ERP库存已扣减
 }
 
 // ISaleOrderQueryRepo 销售账单查询
@@ -29,6 +32,12 @@ type ISaleOrderQueryRepo interface {
 	GetSaleOrder(opts ...DBOption) (model.SaleOrder, error)
 	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
 	GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, error)
+	PluckOrderNos(orderNoPrefix string, startTime, endTime int64) ([]string, error) // 查询订单编号
+	GetSaleOrderList(opts ...DBOption) ([]model.SaleOrder, error)                   // 查询销售订单列表
+	CountSaleOrders(opts ...DBOption) (int64, error)                                // 统计销售订单数量
+	SumPaymentAmount(opts ...DBOption) (float64, error)                             // 统计支付金额总和
+	WherePendingStockEntry() DBOption                                               // 待 Stock Entry 扣减的已完成订单 scope
+	WhereSettledWithInvoice() DBOption                                              // 已创建 Sales Invoice 的已完成订单 scope
 }
 
 type saleOrderRepo struct {
@@ -67,6 +76,16 @@ func (r *saleOrderRepo) GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, er
 	var memberUuid uint64
 	err := r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Select("consumer_uuid").Scan(&memberUuid).Error
 	return memberUuid, errors.WithMessage(err)
+}
+
+// PluckOrderNos 查询指定前缀和时间范围内的订单编号
+func (r *saleOrderRepo) PluckOrderNos(orderNoPrefix string, startTime, endTime int64) ([]string, error) {
+	var orderNos []string
+	err := r.db.Model(&model.SaleOrder{}).
+		Where("order_no LIKE ?", orderNoPrefix+"%").
+		Where("create_time >= ? AND create_time <= ?", startTime, endTime).
+		Pluck("order_no", &orderNos).Error
+	return orderNos, err
 }
 
 func (r *saleOrderRepo) UpdateSaleOrderRecord(obj model.SaleOrder) error {
@@ -122,11 +141,86 @@ func (r *saleOrderRepo) SetCheckoutZeroRuleCancel(saleOrderUuid uint64) error {
 	}).Error
 }
 
-func (r *saleOrderRepo) UpdateSaleOrderErpInvoice(saleOrderUuid uint64, productsInvoiceName string, materialInvoiceName string) error {
+func (r *saleOrderRepo) UpdateSaleOrderErpSalesInvoice(saleOrderUuid uint64, salesInvoiceName string, paymentEntryNames string) error {
 	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
-		"erp_products_invoice_name": productsInvoiceName,
-		"erp_material_invoice_name": materialInvoiceName,
+		"erp_sales_invoice_name":  salesInvoiceName,
+		"erp_payment_entry_names": paymentEntryNames,
 	}).Error
+}
+
+// UpdateSaleOrderErpSyncStatus 更新 ERP 同步状态及 SI/PE 名称（MQ 回调使用）
+func (r *saleOrderRepo) UpdateSaleOrderErpSyncStatus(saleOrderUuid uint64, syncStatus int, salesInvoiceName string, paymentEntryNames string) error {
+	data := map[string]any{
+		"erp_sync_status": syncStatus,
+	}
+	if salesInvoiceName != "" {
+		data["erp_sales_invoice_name"] = salesInvoiceName
+	}
+	if paymentEntryNames != "" {
+		data["erp_payment_entry_names"] = paymentEntryNames
+	}
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(data).Error
+}
+
+// ClearErpSalesInvoiceInfo 清空 ERP 发票信息并更新同步状态（外部取消时使用）
+func (r *saleOrderRepo) ClearErpSalesInvoiceInfo(saleOrderUuid uint64, syncStatus int) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]any{
+		"erp_sync_status":        syncStatus,
+		"erp_sales_invoice_name":  "",
+		"erp_payment_entry_names": "",
+	}).Error
+}
+
+// GetSaleOrderList 查询销售订单列表
+func (r *saleOrderRepo) GetSaleOrderList(opts ...DBOption) ([]model.SaleOrder, error) {
+	var saleOrders []model.SaleOrder
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&saleOrders).Error
+	return saleOrders, err
+}
+
+// WherePendingStockEntry 查询待 Stock Entry 扣减的已完成堂食订单
+// 条件：erp_stock_deducted=0、已创建 Sales Invoice、已结账、未删除
+func (r *saleOrderRepo) WherePendingStockEntry() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erp_stock_deducted = ?", 0).
+			Where("erp_sales_invoice_name != ''").
+			Where("status = ?", constant.SaleOrderStatusFinish).
+			Where("delete_time = 0")
+	}
+}
+
+// WhereSettledWithInvoice 查询已创建 Sales Invoice 的已完成订单（不区分 erp_stock_deducted 状态）
+// 用于 SI 模式下排除已同步 ERPNext 的订单
+func (r *saleOrderRepo) WhereSettledWithInvoice() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status = ? AND erp_sales_invoice_name != '' AND delete_time = 0", constant.SaleOrderStatusFinish)
+	}
+}
+
+// CountSaleOrders 统计销售订单数量
+func (r *saleOrderRepo) CountSaleOrders(opts ...DBOption) (int64, error) {
+	var count int64
+	db := r.db.Model(&model.SaleOrder{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&count).Error
+	return count, err
+}
+
+// SumPaymentAmount 统计支付金额总和
+func (r *saleOrderRepo) SumPaymentAmount(opts ...DBOption) (float64, error) {
+	var result struct{ Amount float64 }
+	db := r.db.Model(&model.SaleOrder{}).Select("COALESCE(SUM(payment_amount), 0) AS amount")
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Scan(&result).Error
+	return result.Amount, err
 }
 
 func (r *saleOrderRepo) UpdateSaleOrderActivity(saleOrderUuid uint64, fullReductionActivityUuid uint64, fullReductionActivityMessage string, activityAmount float64, autoPointsExchange uint) error {
@@ -136,4 +230,14 @@ func (r *saleOrderRepo) UpdateSaleOrderActivity(saleOrderUuid uint64, fullReduct
 		"activity_amount":                 activityAmount,
 		"auto_points_exchange":            autoPointsExchange,
 	}).Error
+}
+
+// BatchMarkErpStockDeducted 批量标记订单ERP库存已扣减
+func (r *saleOrderRepo) BatchMarkErpStockDeducted(orderUuids []uint64) error {
+	if len(orderUuids) == 0 {
+		return nil
+	}
+	return r.db.Model(&model.SaleOrder{}).
+		Where("uuid IN ?", orderUuids).
+		Update("erp_stock_deducted", 1).Error
 }

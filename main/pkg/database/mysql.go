@@ -18,6 +18,7 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 	if config.Server.Mode == gin.DebugMode { // 调试模式
 		ignoreRecordNotFoundError = false // 不忽略
 	}
+
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		conf.User,
 		conf.Password,

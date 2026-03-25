@@ -289,6 +289,8 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 		EnableOrderSource: "0", // 外卖功能开关 0-关闭 1-开启
 		EnableNationality: "0", // 国籍功能开关 0-关闭 1-开启
 
+		AllowZeroValuationRate: "1", // 盘点允许估值率为0 0-关闭 1-开启，默认开启
+
 		DiscountNeedPassword:       "0",        // 折扣操作是否需要密码 0-否 1-是
 		DiscountAuthorizedStaffIds: []uint64{}, // 折扣操作授权员工ID列表
 		RefundNeedPassword:         "0",        // 退款操作是否需要密码 0-否 1-是
@@ -343,6 +345,14 @@ func (s *Srv) getDefaultStore(language string) setting.Store {
 				Name:  "（UTC+07:00）" + i18n.Translate(language, "曼谷，河内，雅加达"),
 				Key:   "Asia/Bangkok",
 				Value: "（UTC+07:00）" + i18n.Translate(language, "曼谷，河内，雅加达"),
+			}, {
+				Name:  "（UTC+07:00）" + i18n.Translate(language, "胡志明市，河内"),
+				Key:   "Asia/Ho_Chi_Minh",
+				Value: "（UTC+07:00）" + i18n.Translate(language, "胡志明市，河内"),
+			}, {
+				Name:  "（UTC+06:30）" + i18n.Translate(language, "内比都，仰光"),
+				Key:   "Asia/Yangon",
+				Value: "（UTC+06:30）" + i18n.Translate(language, "内比都，仰光"),
 			}, {
 				Name:  "（UTC+3:00）" + i18n.Translate(language, "安卡拉"),
 				Key:   "Europe/Istanbul",

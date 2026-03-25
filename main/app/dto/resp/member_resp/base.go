@@ -16,12 +16,17 @@ type UserResp struct {
 }
 
 type MemberResp struct {
-	LanguageList        []dto.LanguageItem `json:"language_list"`           // 语言列表
-	IsMemberShowSoldOut bool               `json:"is_member_show_sold_out"` // 是否显示售罄商品
-	IsOpenRider         bool               `json:"is_open_rider"`           // 是否开启外送
-	AreaCode            []string           `json:"area_code"`               // 区号列表
-	Language            []string           `json:"language"`                // 常用语言
-	DefaultLanguage     string             `json:"default_language"`        // 默认语言
+	LanguageList         []dto.LanguageItem `json:"language_list"`            // 语言列表
+	IsMemberShowSoldOut  bool               `json:"is_member_show_sold_out"`  // 是否显示售罄商品
+	IsOpenRider          bool               `json:"is_open_rider"`            // 是否开启外送
+	IsOpenStoreScanOrder bool               `json:"is_open_store_scan_order"` // 是否开启门店扫码点餐
+	DeliveryAvailable    bool               `json:"delivery_available"`       // 外送服务是否可用（云平台是否开启）
+	SelfPickupAvailable  bool               `json:"self_pickup_available"`    // 到店自取是否可用（云平台是否开启）
+	IsStoreResting       bool               `json:"is_store_resting"`         // 商家是否休息中
+	IsOrderFirstPayLater bool               `json:"is_order_first_pay_later"` // 堂食是否开启先下单后付款
+	AreaCode             []string           `json:"area_code"`                // 区号列表
+	Language             []string           `json:"language"`                 // 常用语言
+	DefaultLanguage      string             `json:"default_language"`         // 默认语言
 }
 
 type CompanyResp struct {
@@ -34,8 +39,9 @@ type CompanyResp struct {
 }
 
 type MemberBaseInfoResp struct {
-	User     UserResp         `json:"user"`     // 会员信息
-	Member   MemberResp       `json:"member"`   // 会员端配置信息
-	Company  CompanyResp      `json:"company"`  // 公司信息
-	Currency setting.Currency `json:"currency"` // 货币单位
+	User          UserResp         `json:"user"`           // 会员信息
+	Member        MemberResp       `json:"member"`         // 会员端配置信息
+	Company       CompanyResp      `json:"company"`        // 公司信息
+	Currency      setting.Currency `json:"currency"`       // 货币单位
+	TemplateStyle int              `json:"template_style"` // 模板样式：1/2/3
 }

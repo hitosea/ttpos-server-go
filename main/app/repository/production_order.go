@@ -47,6 +47,7 @@ type IProductionOrderRepo interface {
 	UpdateProduct(opts []DBOption, vars map[string]any) error                                                                                             // 更新送厨商品
 	UpdateOrder(opts []DBOption, vars map[string]any) error                                                                                               // 更新送厨单
 	IsProductionFinishedBySaleBillUuid(saleBillUuid uint64) (bool, error)                                                                                 // 检查销售账单下所有生产订单是否完成
+	HasProductionOrderBySaleBillUuid(saleBillUuid uint64) (bool, error)                                                                                   // 检查销售账单是否存在生产订单
 	UpdateProductionOrderProductBatchTimeAndBatchTagUuid(saleBillUuid uint64, saleOrderProductUuids []uint64, batchTime int64, batchTagUuid uint64) error // 通过sale_bill_uuid和sale_order_product_uuid更新生产订单商品的batch_time、batch_tag_uuid
 }
 
@@ -462,6 +463,13 @@ func (r *productionRepo) IsProductionFinishedBySaleBillUuid(saleBillUuid uint64)
 	return count == 0, errors.WithMessage(err)
 }
 
+// HasProductionOrderBySaleBillUuid 检查销售账单是否存在任何生产订单商品
+func (r *productionRepo) HasProductionOrderBySaleBillUuid(saleBillUuid uint64) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.ProductionOrderProduct{}).Where("sale_bill_uuid = ?", saleBillUuid).Count(&count).Error
+	return count > 0, errors.WithMessage(err)
+}
+
 // 通过sale_bill_uuid和sale_order_product_uuid更新生产订单商品的batch_time、batch_tag_uuid
 func (r *productionRepo) UpdateProductionOrderProductBatchTimeAndBatchTagUuid(saleBillUuid uint64, saleOrderProductUuids []uint64, batchTime int64, batchTagUuid uint64) error {
 	return r.db.Model(&model.ProductionOrderProduct{}).Where("sale_bill_uuid = ? AND sale_order_product_uuid in (?)", saleBillUuid, saleOrderProductUuids).
@@ -492,6 +500,8 @@ func (r *productionRepo) GetProductionOrderList(pageNo, pageSize int, productBom
 	} else {
 		db.Where("finished_time BETWEEN ? AND ?", startTime, endTime) // 选择时间区间
 	}
+	// 排除测试营业时段的生产订单
+	db = db.Where(ExcludeTestBusinessSQL(""))
 	err := db.
 		Where("status = ?", constant.ProductionOrderProductStatusFinished). // 已经完成出餐的商品
 		Order("finished_time desc").                                        // 按照完成时间最新的在前
@@ -518,6 +528,8 @@ func (r *productionRepo) GetProductionOrderListCount(productBomUuids []uint64, s
 	} else {
 		db.Where("finished_time BETWEEN ? AND ?", startTime, endTime) // 选择时间区间
 	}
+	// 排除测试营业时段的生产订单
+	db = db.Where(ExcludeTestBusinessSQL(""))
 	err := db.
 		Where("status = ?", constant.ProductionOrderProductStatusFinished). // 已经完成出餐的商品
 		Count(&count).Error

@@ -124,7 +124,13 @@ class SurveyService
         $sheet->setCellValue('A' . ($index = $index + 1), __('最小订单金额'));
         $sheet->setCellValue('A' . ($index = $index + 1), __('最大订单金额'));
         $sheet->setCellValue('A' . ($index = $index + 1), __('平均订单金额'));
-        // v2.3.0新增 外送数据 
+        // 扫码点餐
+        $sheet->setCellValue('A' . ($index = $index + 1), __('点餐方式') . '-' . __('扫码'));
+        $sheet->setCellValue('A' . ($index = $index + 1), __('订单数'));
+        $sheet->setCellValue('A' . ($index = $index + 1), __('最小订单金额'));
+        $sheet->setCellValue('A' . ($index = $index + 1), __('最大订单金额'));
+        $sheet->setCellValue('A' . ($index = $index + 1), __('平均订单金额'));
+        // v2.3.0新增 外送数据
         if (request()->licenses['is_open_delivery'] == 1) {
             $sheet->setCellValue('A' . ($index = $index + 1), __('外送点餐'));
             $sheet->setCellValue('A' . ($index = $index + 1), __('订单数'));
@@ -224,7 +230,12 @@ class SurveyService
             $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_instant_order_amount']); //最小订单金额
             $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_instant_order_amount']); //最大订单金额
             $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_instant_order_amount']); //平均订单金额
-            // v2.3.0新增 外送订单 
+            // 扫码点餐
+            $sheet->setCellValue($columnLetter . ($index = $index + 2), $data['total_scan_order_num'] ?? 0); // 扫码点餐订单数
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_scan_order_amount'] ?? 0); // 扫码点餐最小订单金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_scan_order_amount'] ?? 0); // 扫码点餐最大订单金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_scan_order_amount'] ?? 0); // 扫码点餐平均订单金额
+            // v2.3.0新增 外送订单
             if (request()->licenses['is_open_delivery'] == 1) {
                 $sheet->setCellValue($columnLetter . ($index = $index + 2), $data['total_takeout_order_num']); // 外送订单数
                 $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_takeout_order_amount']); // 外送最小订单金额

@@ -11,6 +11,7 @@ type ISettingRepo interface {
 	GetAll() ([]model.Setting, error)
 	Updates(key string, values string) error
 	GetByKey(key string) model.Setting
+	GetByKeyNotDeleted(key string) model.Setting // 带 delete_time = 0 过滤
 	Create(setting model.Setting) (model.Setting, error)
 }
 
@@ -39,6 +40,12 @@ func (r *SettingRepo) Updates(key string, values string) error {
 func (r *SettingRepo) GetByKey(key string) model.Setting {
 	var setting model.Setting
 	r.db.Model(&model.Setting{}).Where("`key` = ?", key).First(&setting)
+	return setting
+}
+
+func (r *SettingRepo) GetByKeyNotDeleted(key string) model.Setting {
+	var setting model.Setting
+	r.db.Model(&model.Setting{}).Where("`key` = ? AND delete_time = 0", key).First(&setting)
 	return setting
 }
 

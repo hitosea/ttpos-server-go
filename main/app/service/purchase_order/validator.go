@@ -373,7 +373,8 @@ type dnItemInfo struct {
 
 // DNReceiptValidationResult DN收货校验结果
 type DNReceiptValidationResult struct {
-	DNItemMap map[string]dnItemInfo // DN物品编码 -> DN物品信息
+	DNItemMap    map[string]dnItemInfo // DN物品编码 -> DN物品信息
+	SetWarehouse string                // DN发货仓库ERP编码
 }
 
 // validateDNReceipt 校验DN类型收货 (v2.16.0+)
@@ -523,7 +524,8 @@ func (v *purchaseOrderValidator) validateDNReceipt(
 	}
 
 	return &DNReceiptValidationResult{
-		DNItemMap: dnItemMap,
+		DNItemMap:    dnItemMap,
+		SetWarehouse: targetDN.SetWarehouse,
 	}, nil
 }
 

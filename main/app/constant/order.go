@@ -5,10 +5,11 @@ const (
 )
 
 const (
-	OrderSourceInstant  = "instant"  // 点餐
-	OrderSourceDesk     = "desk"     // 桌台
-	OrderSourceRecharge = "recharge" // 充值
-	OrderSourceMember   = "member"   // 会员端
+	OrderSourceInstant      = "instant"        // 点餐
+	OrderSourceDesk         = "desk"           // 桌台
+	OrderSourceRecharge     = "recharge"       // 充值
+	OrderSourceMember       = "member"         // 会员端-外送
+	OrderSourceMemberDineIn = "member_dine_in" // 会员端-堂食
 )
 
 const (
@@ -37,6 +38,12 @@ var SaleBillDiningMethodMap = map[uint]uint{
 	0: SaleBillDiningMethodDineIn,
 	1: SaleBillDiningMethodTakeout,
 }
+
+// 会员端订单类型（用于商品列表查询）
+const (
+	MemberOrderTypeDelivery   = 0 // 外送（默认）- 商品价格应用外送折扣率
+	MemberOrderTypeSelfPickup = 1 // 堂食/到店自取 - 商品价格与收银机相同
+)
 
 const (
 	SaleBillStatusPending  = 0 // 待付款
@@ -121,17 +128,19 @@ const (
 
 // OrderSourceMapToOrderNoType 订单来源映射到订单编号类型
 var OrderSourceMapToOrderNoType = map[string]string{
-	OrderSourceInstant:  "1", // 点餐
-	OrderSourceDesk:     "2", // 桌台
-	OrderSourceRecharge: "3", // 充值
-	OrderSourceMember:   "4", // 会员端
+	OrderSourceInstant:      "1", // 点餐
+	OrderSourceDesk:         "2", // 桌台
+	OrderSourceRecharge:     "3", // 充值
+	OrderSourceMember:       "4", // 会员端-外送
+	OrderSourceMemberDineIn: "5", // 会员端-堂食
 }
 
 // OrderSourceMapToBillType 订单来源映射到销售账单类型
 var OrderSourceMapToBillType = map[string]uint{
-	OrderSourceInstant: SaleBillTypeInstant, // 点餐
-	OrderSourceDesk:    SaleBillTypeDesk,    // 桌台
-	OrderSourceMember:  SaleBillTypeTakeout, // 会员端
+	OrderSourceInstant:      SaleBillTypeInstant, // 点餐
+	OrderSourceDesk:         SaleBillTypeDesk,    // 桌台
+	OrderSourceMember:       SaleBillTypeTakeout, // 会员端-外送
+	OrderSourceMemberDineIn: SaleBillTypeInstant, // 会员端-堂食（使用点餐类型，价格与收银机一致）
 }
 
 // 订单操作类型
@@ -203,6 +212,69 @@ const (
 	H5OrderStatusAccepted      = 2 // 已接单
 	H5OrderStatusRejected      = 3 // 已拒单
 )
+
+// H5订单类型
+const (
+	H5OrderTypeDesk         = 0 // 桌台扫码订单
+	H5OrderTypeMemberDineIn = 1 // 会员端堂食订单
+)
+
+// 会员端堂食下单模式
+const (
+	OrderFirstPayLaterNo  = 0 // 先付后下单（默认）
+	OrderFirstPayLaterYes = 1 // 先下单后付
+)
+
+// 会员端堂食订单状态过滤（用于列表查询参数）
+const (
+	MemberDineInOrderStatusAll        = "all"        // 全部
+	MemberDineInOrderStatusUnpaid     = "unpaid"     // 待支付
+	MemberDineInOrderStatusInProgress = "inprogress" // 进行中（已支付，待接单/备餐中）
+	MemberDineInOrderStatusCompleted  = "completed"  // 已完成（包括部分退款、全部退款）
+	MemberDineInOrderStatusCancelled  = "cancelled"  // 已取消（包括已取消和已拒单）
+)
+
+// 会员端堂食订单详细状态（用于返回给前端显示）
+const (
+	MemberDineInDetailStatusUnpaid        = "unpaid"         // 待支付
+	MemberDineInDetailStatusPending       = "pending"        // 待接单
+	MemberDineInDetailStatusPreparing     = "preparing"      // 备餐中
+	MemberDineInDetailStatusCompleted     = "completed"      // 已完成
+	MemberDineInDetailStatusPartialRefund = "partial_refund" // 部分退款
+	MemberDineInDetailStatusFullRefund    = "full_refund"    // 全部退款
+	MemberDineInDetailStatusCancelled     = "cancelled"      // 已取消
+	MemberDineInDetailStatusRejected      = "rejected"       // 已拒单
+)
+
+// GetMemberDineInOrderStatusFilter 根据状态过滤参数返回 SaleBill 状态列表和 H5 订单状态列表
+// 返回值：
+//   - billStatuses: SaleBill 状态过滤条件
+//   - h5OrderStatuses: H5Order 状态过滤条件（用于进行中和已取消状态的细分）
+//   - isPaid: 是否已支付过滤条件
+func GetMemberDineInOrderStatusFilter(status string) (billStatuses []uint, h5OrderStatuses []uint, isPaid *bool) {
+	switch status {
+	case MemberDineInOrderStatusUnpaid:
+		// 待支付：账单未完成且未支付
+		billStatuses = []uint{SaleBillStatusPending}
+		isPaidFalse := false
+		isPaid = &isPaidFalse
+	case MemberDineInOrderStatusInProgress:
+		// 进行中：已支付，待接单或备餐中（H5订单状态为待接单或已接单）
+		billStatuses = []uint{SaleBillStatusComplete} // 会员端堂食订单支付完成后标记订单为已经完成
+		h5OrderStatuses = []uint{H5OrderStatusOrder, H5OrderStatusAccepted}
+	case MemberDineInOrderStatusCompleted:
+		// 已完成：账单已结账（包括部分退款、全部退款，因为退款后账单状态仍为已完成）
+		billStatuses = []uint{SaleBillStatusComplete}
+	case MemberDineInOrderStatusCancelled:
+		// 已取消：账单已取消 或 H5订单已拒单
+		// 注意：已拒单时账单状态可能是已取消，所以只需过滤 SaleBillStatusCanceled
+		billStatuses = []uint{SaleBillStatusCanceled}
+	default:
+		// 全部：不过滤状态
+		billStatuses = nil
+	}
+	return
+}
 
 const (
 	SaleBillIsLockYes   = 1 // 账单锁定

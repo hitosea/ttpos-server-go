@@ -13,9 +13,9 @@ import (
 
 // RateLimiterByKey 基于 key 的限流器管理
 type RateLimiterByKey struct {
-	limiters sync.Map    // key -> *rate.Limiter
-	rate     rate.Limit  // 每秒允许的请求数
-	burst    int         // 突发容量
+	limiters sync.Map   // key -> *rate.Limiter
+	rate     rate.Limit // 每秒允许的请求数
+	burst    int        // 突发容量
 }
 
 // NewRateLimiterByKey 创建基于 key 的限流器

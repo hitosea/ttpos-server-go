@@ -43,10 +43,14 @@ func TestInitIdGeneratorWithInvalidServerId(t *testing.T) {
 
 // TestIdUniqueness 测试ID唯一性
 func TestIdUniqueness(t *testing.T) {
+	count := 100000
+	if testing.Short() {
+		t.Log("唯一性测试（使用 -short 标志）")
+		count = 10000
+	}
 	viper.Set("SERVER_ID", 1)
 	InitIdGenerator()
 
-	const count = 100000
 	ids := make(map[uint64]bool, count)
 
 	// 生成大量ID并检查唯一性
@@ -61,11 +65,15 @@ func TestIdUniqueness(t *testing.T) {
 
 // TestConcurrentIdGeneration 测试并发生成ID的唯一性
 func TestConcurrentIdGeneration(t *testing.T) {
+	goroutines := 100
+	idsPerGoroutine := 1000
+	if testing.Short() {
+		t.Log("并发生成测试（使用 -short 标志）")
+		goroutines = 20
+		idsPerGoroutine = 500 // 20 * 500 = 10,000 IDs in short mode
+	}
 	viper.Set("SERVER_ID", 1)
 	InitIdGenerator()
-
-	const goroutines = 100
-	const idsPerGoroutine = 1000
 
 	var wg sync.WaitGroup
 	idsChan := make(chan uint64, goroutines*idsPerGoroutine)

@@ -64,6 +64,14 @@ func DefaultStoreSetting() *StoreSetting {
 				Key:   "Asia/Bangkok",
 				Value: "（UTC+07:00）曼谷，河内，雅加达",
 			}, {
+				Name:  "（UTC+07:00）胡志明市，河内",
+				Key:   "Asia/Ho_Chi_Minh",
+				Value: "（UTC+07:00）胡志明市，河内",
+			}, {
+				Name:  "（UTC+06:30）内比都，仰光",
+				Key:   "Asia/Yangon",
+				Value: "（UTC+06:30）内比都，仰光",
+			}, {
 				Name:  "（UTC+3:00）安卡拉",
 				Key:   "Europe/Istanbul",
 				Value: "（UTC+3:00）安卡拉",

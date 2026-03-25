@@ -19,9 +19,10 @@ type H5OrderInfo struct {
 	OrderTime    int64   `json:"order_time"`     // h5订单下单时间
 	HandleTime   int64   `json:"handle_time"`    // 接单、拒单时间
 	WaitTime     int64   `json:"wait_time"`      // 等待时间，单位：秒
-	DeskNo       string  `json:"desk_no"`        // 桌台编号
+	DeskNo       string  `json:"desk_no"`        // 桌台编号（桌台扫码订单）或取餐号（会员端堂食订单，值为sale_bill.serial_no）
 	Price        float64 `json:"price"`          // 订单金额
 	Status       uint    `json:"status"`         // 状态：1-待处理; 2-已接单; 3-已拒单
+	OrderType    uint    `json:"order_type"`     // 订单类型：0=桌台扫码订单、1=会员端堂食订单
 }
 
 type H5OrderItem struct {
@@ -60,9 +61,19 @@ type OperationLog struct {
 	List []OrderOperationLog `json:"list"`
 }
 
+type H5OrderPaymentMethodItem struct {
+	Name string `json:"name"` // 支付方式名称
+	Code int    `json:"code"` // 支付方式代号
+}
+
+type H5OrderPaymentMethodList struct {
+	List []H5OrderPaymentMethodItem `json:"list"` // 支付方式列表
+}
+
 type H5OrderDetailResp struct {
-	H5OrderDetail   H5OrderDetail `json:"h5_order_detail"`  // 订单详情
-	NewProduct      ProductList   `json:"new_product"`      // 新增商品列表
-	AcceptedProduct ProductList   `json:"accepted_product"` // 已下单商品列表
-	OperationLog    OperationLog  `json:"operation"`        // 操作日志列表
+	H5OrderDetail   H5OrderDetail            `json:"h5_order_detail"`  // 订单详情
+	NewProduct      ProductList              `json:"new_product"`      // 新增商品列表
+	AcceptedProduct ProductList              `json:"accepted_product"` // 已下单商品列表
+	OperationLog    OperationLog             `json:"operation"`        // 操作日志列表
+	PaymentMethod   H5OrderPaymentMethodList `json:"payment_method"`   // 支付方式列表
 }

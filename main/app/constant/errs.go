@@ -108,7 +108,8 @@ const (
 
 // 采购订单业务错误码
 const (
-	CodePurchaseOrderSupplierDisabled = -901 // 供应商已禁用
+	CodePurchaseOrderSupplierDisabled       = -901 // 供应商已禁用
+	CodePurchaseOrderItemNoDefaultWarehouse = -902 // 物品未配置默认发货仓
 )
 
 // 调拨订单业务错误码

@@ -222,3 +222,62 @@ type DeskMergeShopCartResp struct {
 	IsResetDiscount bool      `json:"is_reset_discount"`
 	ShopCart        *ShopCart `json:"shop_cart"`
 }
+
+// DineInOrderFormResp 会员端堂食订单提交表单响应
+type DineInOrderFormResp struct {
+	SaleBillUuid   uint64            `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid  uint64            `json:"sale_order_uuid"` // 销售订单UUID
+	DiningMethod   uint              `json:"dining_method"`   // 用餐方式 0:堂食 1:打包
+	ProductList    DineInProductList `json:"product_list"`    // 商品列表
+	AmountInfo     DineInAmountInfo  `json:"amount_info"`     // 金额信息
+	PaymentMethods       PaymentMethodList `json:"payment_methods"`        // 支付方式列表
+	Remark               string            `json:"remark"`                 // 订单备注
+	IsOrderFirstPayLater bool              `json:"is_order_first_pay_later"` // 是否先下单后付款（true调submit，false调pay）
+}
+
+// DineInProductList 堂食订单商品列表
+type DineInProductList struct {
+	List []DineInProduct `json:"list"`
+}
+
+// DineInProduct 堂食订单商品
+type DineInProduct struct {
+	SaleOrderProductUuid uint64             `json:"sale_order_product_uuid"` // 销售订单商品UUID
+	LocaleName           dto.LocaleResponse `json:"locale_name"`             // 商品名称
+	LocaleAttributeName  dto.LocaleResponse `json:"locale_attribute_name"`   // 商品属性（规格+小料+属性）
+	Num                  float64            `json:"num"`                     // 数量
+	UnitPrice            float64            `json:"unit_price"`              // 单价（折前）,含税费
+	Amount               float64            `json:"amount"`                  // 商品金额（折前）
+	Image                string             `json:"image"`                   // 商品图片URL
+	ProductType          uint               `json:"product_type"`            // 商品类型 0-商品 1-套餐
+	PackageProductList   PackageProductList `json:"package_product_list"`    // 套餐子商品列表（仅套餐商品有值）
+}
+
+// DineInAmountInfo 堂食订单金额信息
+type DineInAmountInfo struct {
+	ProductAmount  float64 `json:"product_amount"`  // 商品金额（合计）
+	TaxAmount      float64 `json:"tax_amount"`      // 消费税
+	ServiceAmount  float64 `json:"service_amount"`  // 服务费
+	MemberDiscount float64 `json:"member_discount"` // 会员折扣金额
+	TotalAmount    float64 `json:"total_amount"`    // 应付金额
+}
+
+// DineInOrderPaymentInfoResp 堂食订单支付信息响应
+type DineInOrderPaymentInfoResp struct {
+	SaleBillUuid      uint64  `json:"sale_bill_uuid"`      // 销售账单UUID
+	SaleOrderUuid     uint64  `json:"sale_order_uuid"`     // 销售订单UUID
+	PaymentOrderUuid  uint64  `json:"payment_order_uuid"`  // 支付单UUID
+	PaymentMethodName string  `json:"payment_method_name"` // 支付方式名称
+	IsWechatPay       bool    `json:"is_wechat_pay"`       // 是否是微信支付
+	QrCode            string  `json:"qr_code"`             // 支付单二维码 (返回base64图片)
+	LinkUrl           string  `json:"link_url"`            // 支付单链接 (返回跳转地址)
+	Status            int     `json:"status"`              // 支付单状态 0-未支付 1-已支付
+	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额
+}
+
+// DineInOrderPaymentStatusResp 堂食订单支付状态响应
+type DineInOrderPaymentStatusResp struct {
+	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID
+	Status        uint   `json:"status"`          // 支付状态 0-未支付 1-已支付 2-支付失败
+}

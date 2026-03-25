@@ -17,7 +17,13 @@ type IProductSauceRepo interface {
 	GetProductSauceList(opts ...DBOption) []model.ProductSauce
 	UpdateProductSauce(data map[string]any, opts ...DBOption) error
 
+	CreateRecord(sauce *model.ProductSauce) error
+	CreateBatch(sauces []model.ProductSauce) error
+	GetMaxSort(scopes ...func(*gorm.DB) *gorm.DB) (int, error)
+	HardDeleteByHeadquarter() error
+
 	WithMultiLanguageName(opts ...DBOption) DBOption
+	UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error
 }
 
 type productSauceRepoImpl struct {
@@ -135,4 +141,30 @@ func (r *productSauceRepoImpl) WithMultiLanguageName(opts ...DBOption) DBOption 
 			return db
 		})
 	}
+}
+
+func (r *productSauceRepoImpl) CreateRecord(sauce *model.ProductSauce) error {
+	return r.db.Create(sauce).Error
+}
+
+func (r *productSauceRepoImpl) CreateBatch(sauces []model.ProductSauce) error {
+	if len(sauces) == 0 {
+		return nil
+	}
+	return r.db.Create(&sauces).Error
+}
+
+func (r *productSauceRepoImpl) GetMaxSort(scopes ...func(*gorm.DB) *gorm.DB) (int, error) {
+	var maxSort int
+	err := r.db.Model(&model.ProductSauce{}).Scopes(scopes...).Select("ifnull(max(sort), 0)").Scan(&maxSort).Error
+	return maxSort, err
+}
+
+func (r *productSauceRepoImpl) HardDeleteByHeadquarter() error {
+	return r.db.Where("headquarter_uuid > 0").Delete(&model.ProductSauce{}).Error
+}
+
+// UpdateNameByMultiLanguageNameUuid 根据多语言名称UUID更新name字段
+func (r *productSauceRepoImpl) UpdateNameByMultiLanguageNameUuid(multiLanguageNameUuid uint64, name string) error {
+	return r.db.Model(&model.ProductSauce{}).Where("multi_language_name_uuid = ?", multiLanguageNameUuid).Update("name", name).Error
 }

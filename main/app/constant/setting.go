@@ -24,6 +24,8 @@ const (
 	SettingCloudBasic     = "cloud_basic"      // 云端-基础信息
 	SettingBatchColor     = "batch_color"      // 分批类型颜色设置
 	SettingDataManage     = "data_manage"      // 数据管理设置
+	SettingStoreScanOrder = "store_scan_order" // 门店点餐设置
+	SettingTemplateStyle  = "template_style"   // 模板样式设置
 )
 
 const (
@@ -73,3 +75,40 @@ const (
 	BatchPrintModeDefault = "default" // 默认
 	BatchPrintModeMerge   = "merge"   // 合并
 )
+
+// SettingDescribe 配置项描述映射
+var SettingDescribe = map[string]string{
+	SettingPrinter:        "小票打印机设置",
+	SettingStore:          "商城设置",
+	SettingRecharge:       "充值设置",
+	SettingPoints:         "积分设置",
+	SettingSysAdminConfig: "系统配置",
+	SettingSysConfig:      "系统配置",
+	SettingBalance:        "充值设置",
+	SettingCurrency:       "门店-货币单位",
+	SettingTaxRate:        "门店-税率管理",
+	SettingServiceCharge:  "门店-服务费",
+	SettingPayment:        "门店-支付方式",
+	SettingBusiness:       "门店-业务设置",
+	SettingCashier:        "各端-收银机设置",
+	SettingTablet:         "各端-平板端设置",
+	SettingH5:             "各端-扫码H5设置",
+	SettingKitchen:        "各端-厨显设置",
+	SettingAssistant:      "各端-点餐助手设置",
+	SettingKiosk:          "各端-自助点餐机设置",
+	SettingBuffet:         "自助餐-自助餐设置",
+	SettingPointsRule:     "积分规则设置",
+	SettingCloudBasic:     "云端-基础信息",
+	SettingBatchColor:     "分批类型颜色设置",
+	SettingDataManage:     "数据管理设置",
+	SettingStoreScanOrder: "门店点餐设置",
+	SettingTemplateStyle:  "模板样式设置",
+}
+
+// GetSettingDescribe 获取配置项描述
+func GetSettingDescribe(settingKey string) string {
+	if desc, ok := SettingDescribe[settingKey]; ok {
+		return desc
+	}
+	return settingKey
+}
