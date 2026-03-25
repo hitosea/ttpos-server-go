@@ -299,19 +299,19 @@ func WithCompanyIsEnableErp(v int) func(*CompanyOptions) {
 
 // CompanySettingOptions contains options for seeding company settings.
 type CompanySettingOptions struct {
-	UUID                     int64
-	CompanyUUID              int64
-	ErpnextSiteCode          string
-	ErpnextPosProfileName    string
-	ErpnextAdminEmail        string
-	ErpnextCompanyAbbr       string
-	ErpnextHeadquarterAbbr   string
-	ErpnextBranchName        string
-	HeadquarterUuid          int64
-	EnableDataManagement     int
-	DeliveryStatus           int // 外送状态: 0-关闭 1-开启
-	EnableKiosk              int // 自助点餐机: 0-关闭 1-开启
-	IsOpenMemberInstant      int // 扫码点餐到店自取: 0-关闭 1-开启
+	UUID                   int64
+	CompanyUUID            int64
+	ErpnextSiteCode        string
+	ErpnextPosProfileName  string
+	ErpnextAdminEmail      string
+	ErpnextCompanyAbbr     string
+	ErpnextHeadquarterAbbr string
+	ErpnextBranchName      string
+	HeadquarterUuid        int64
+	EnableDataManagement   int
+	DeliveryStatus         int // 外送状态: 0-关闭 1-开启
+	EnableKiosk            int // 自助点餐机: 0-关闭 1-开启
+	IsOpenMemberInstant    int // 扫码点餐到店自取: 0-关闭 1-开启
 }
 
 // SeedCompanySetting creates a company_setting record in the tenant database.
@@ -542,14 +542,14 @@ func WithShiftLogErpOpenEntryName(name string) func(*ShiftLogOptions) {
 
 // PaymentMethodOptions contains options for seeding a payment method.
 type PaymentMethodOptions struct {
-	UUID              int64
-	Name              string
-	Code              int
-	Source            int    // 0=system, 1=manual, 2=LianLianPay
-	Status            int    // 1=enabled
-	IsShowCashier     int    // 1=visible on cashier terminal
-	ErpnextPayment    string // ERPNext payment name (fallback mode_of_payment)
-	ErpnextPaymentId  string // ERPNext payment ID (preferred over ErpnextPayment)
+	UUID             int64
+	Name             string
+	Code             int
+	Source           int    // 0=system, 1=manual, 2=LianLianPay
+	Status           int    // 1=enabled
+	IsShowCashier    int    // 1=visible on cashier terminal
+	ErpnextPayment   string // ERPNext payment name (fallback mode_of_payment)
+	ErpnextPaymentId string // ERPNext payment ID (preferred over ErpnextPayment)
 }
 
 // SeedPaymentMethod creates a payment_method record in the tenant database.
@@ -773,7 +773,7 @@ type PaymentOrderOptions struct {
 	PaymentMethodUUID int64
 	PaymentMethodName string
 	PaymentAmount     float64
-	Status            int // 1=paid, 0=unpaid
+	Status            int   // 1=paid, 0=unpaid
 	RelatedUUID       int64 // sale_order_uuid
 	RelatedType       int   // 0=sale_order
 }
@@ -784,11 +784,11 @@ func SeedPaymentOrder(tb testing.TB, db *sql.DB, opts ...func(*PaymentOrderOptio
 
 	opt := PaymentOrderOptions{
 		UUID:              generateSnowflakeID(),
-		PaymentMethodUUID: 0,          // caller must set via WithPaymentOrderPaymentMethodUUID
+		PaymentMethodUUID: 0, // caller must set via WithPaymentOrderPaymentMethodUUID
 		PaymentMethodName: "Cash",
 		PaymentAmount:     100.0,
-		Status:            1,          // paid
-		RelatedType:       0,          // sale_order
+		Status:            1, // paid
+		RelatedType:       0, // sale_order
 	}
 
 	for _, o := range opts {
@@ -908,7 +908,7 @@ func SeedSetting(tb testing.TB, db *sql.DB, key string, values string) {
 
 	now := time.Now().Unix()
 	_, err := db.Exec(`
-		INSERT INTO ttpos_setting (` + "`key`" + `, ` + "`describe`" + `, ` + "`values`" + `, create_time, update_time, delete_time)
+		INSERT INTO ttpos_setting (`+"`key`"+`, `+"`describe`"+`, `+"`values`"+`, create_time, update_time, delete_time)
 		VALUES (?, ?, ?, ?, ?, 0)
 	`, key, key, values, now, now)
 
@@ -1019,11 +1019,11 @@ func WithProductBomPackageUUID(uuid int64) func(*ProductBomOptions) {
 
 // ProductPackageOptions contains options for seeding a product package.
 type ProductPackageOptions struct {
-	UUID             int64
-	Name             string
-	Status           int
-	ProductType      int   // 0=普通商品, 1=套餐
-	HeadquarterUuid  int64 // 总部UUID, 0=总部原生商品
+	UUID            int64
+	Name            string
+	Status          int
+	ProductType     int   // 0=普通商品, 1=套餐
+	HeadquarterUuid int64 // 总部UUID, 0=总部原生商品
 }
 
 // SeedProductPackage creates a product_package record.
@@ -1290,16 +1290,16 @@ func SeedProductWithFlavor(tb testing.TB, db *sql.DB, productName string, price 
 
 // MustPlanOptions contains options for seeding a product must plan.
 type MustPlanOptions struct {
-	UUID        int64
-	Name        string
-	UseChannel  string // "10"=dining, "20"=desk, "10,20"=both
-	MustType    int    // 0=each order, 1=each person
-	MustRule    int    // 0=fixed products, 1=optional
-	Status      int    // 1=enabled, 0=disabled
-	AutoCart    int    // 1=auto add to cart, 0=manual
-	AutoChange  int    // 1=customer can change qty
-	AutoCheck   int    // 1=check at order time
-	AutoCheckout int   // 1=check at checkout time
+	UUID         int64
+	Name         string
+	UseChannel   string // "10"=dining, "20"=desk, "10,20"=both
+	MustType     int    // 0=each order, 1=each person
+	MustRule     int    // 0=fixed products, 1=optional
+	Status       int    // 1=enabled, 0=disabled
+	AutoCart     int    // 1=auto add to cart, 0=manual
+	AutoChange   int    // 1=customer can change qty
+	AutoCheck    int    // 1=check at order time
+	AutoCheckout int    // 1=check at checkout time
 }
 
 // SeedMustPlan creates a product_must_plan record in the tenant database.
