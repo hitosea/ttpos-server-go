@@ -1,0 +1,59 @@
+name: Dispatch CI
+
+on:
+  pull_request:
+    # GitHub 默认只触发 opened / synchronize / reopened；
+    # 显式补上 edited，确保修改 PR base 分支后会重新 dispatch。
+    types: [opened, synchronize, reopened, edited]
+    branches: [main, develop, dev, release, test, 'release/*']
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - '.cursor/**'
+      - '.agents'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'admin/**'
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: dispatch-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dispatch:
+    if: ${{ github.event_name != 'pull_request' || (!contains(github.event.pull_request.labels.*.name, 'skip-ci') && (github.event.action != 'edited' || contains(toJson(github.event.changes), '"base"'))) }}
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
+    steps:
+      - name: Determine event type
+        id: event
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            echo "type=ci-go" >> $GITHUB_OUTPUT
+          else
+            echo "type=build" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Dispatch to build repo
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.BUILD_REPO_PAT }}
+          repository: ${{ vars.BUILD_REPO }}
+          event-type: ${{ steps.event.outputs.type }}
+          client-payload: |
+            {
+              "sha": "${{ github.event.pull_request.head.sha || github.sha }}",
+              "pr_number": "${{ github.event.pull_request.number || '' }}",
+              "base_ref": "${{ github.base_ref }}",
+              "head_ref": "${{ github.head_ref }}",
+              "ref": "${{ github.ref }}",
+              "ref_name": "${{ github.ref_name }}",
+              "event_name": "${{ github.event_name }}",
+              "event_action": "${{ github.event.action || '' }}",
+              "source_repo": "${{ github.repository }}"
+            }

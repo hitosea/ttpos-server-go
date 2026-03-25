@@ -332,3 +332,56 @@ fmt:
 vet:
 	@echo "=== Running go vet ==="
 	cd main && go vet ./...
+
+# ═══════════════════════════════════════════════════
+# CI 标准接口 — 供构建仓库调用
+# ═══════════════════════════════════════════════════
+
+.PHONY: ci-env ci-setup ci-lint ci-unit-test ci-integration-test ci-build
+
+# 输出 CI 需要的环境变量
+ci-env:
+	@echo "GO_VERSION=1.23"
+	@echo "NEEDS_DOCKER=true"
+	@echo "NEEDS_SUBMODULES=true"
+
+# 安装依赖、准备环境
+ci-setup:
+	cd main && go mod download
+	cd ttpos-bmp && go mod download
+	@which golangci-lint > /dev/null 2>&1 || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.62.2
+
+# 代码检查（BASE_REV 由环境变量传入，仅检查变更文件；未设置则全量扫描）
+ci-lint:
+	@fail=0; \
+	( cd main && go vet ./... || { go clean -cache && go vet ./...; } ) & pid1=$$!; \
+	( cd main && golangci-lint run $${BASE_REV:+--new-from-rev=$$BASE_REV} ) & pid2=$$!; \
+	wait $$pid1 || fail=1; \
+	wait $$pid2 || fail=1; \
+	exit $$fail
+
+# 单元测试，覆盖率输出到 coverage/（Main + BMP 并发）
+ci-unit-test:
+	@mkdir -p coverage; \
+	fail=0; \
+	( cd main && go test -short -v -count=1 -coverprofile=../coverage/unit.out -covermode=set ./... \
+		&& bash tests/fix-coverage-paths.sh ../coverage/unit.out ) & pid1=$$!; \
+	( cd ttpos-bmp && go test -count=1 -coverprofile=../coverage/bmp-unit.out -covermode=set ./... \
+		&& bash tests/fix-coverage-paths.sh ../coverage/bmp-unit.out ) & pid2=$$!; \
+	wait $$pid1 || fail=1; \
+	wait $$pid2 || fail=1; \
+	exit $$fail
+
+# 集成测试（需要 Docker），覆盖率输出到 coverage/（Main + BMP 并发）
+ci-integration-test:
+	@fail=0; \
+	$(MAKE) test-main-local BUILD_ID="$(BUILD_ID)" & pid1=$$!; \
+	$(MAKE) test-bmp-local BUILD_ID="$(BUILD_ID)" & pid2=$$!; \
+	wait $$pid1 || fail=1; \
+	wait $$pid2 || fail=1; \
+	exit $$fail
+
+# Docker 镜像构建推送（REF_NAME 由构建仓库传入）
+ci-build:
+	@echo "Building Docker images for $(REF_NAME)..."
+	# 复用现有的构建逻辑

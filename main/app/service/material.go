@@ -351,6 +351,17 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		}
 	}
 
+	// 品牌采购：查询上次采购完成后的出库消耗量
+	consumptionMap := make(map[uint64]float64)
+	if req.PurchaseType == constant.PurchaseTypeBrand {
+		inOutLogRepo := repository.NewWarehouseInOutLogRepo(s.dbm.GetDB(dbId))
+		var consumptionErr error
+		consumptionMap, consumptionErr = inOutLogRepo.GetOutboundConsumptionSince(repository.BuildConsumptionSinceTimes(lastPurchaseInfoMap))
+		if consumptionErr != nil {
+			logger.Logger.Warn("查询出库消耗量失败", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Error(consumptionErr))
+		}
+	}
+
 	// 获取可见性过滤配置
 	var visibleCategoryUuidSet map[uint64]struct{}
 	var needVisibilityFilter bool
@@ -418,8 +429,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			defaultSalesUnitLocaleName = *language.JsonToLocaleResponse(defaultSalesUnit.Name)
 		}
 
-		// 库存数量、可用库存数量、在途库存数量
-		num := decimal.NewFromFloat(0)
+		// 可用库存数量、在途库存数量
 		availableNum := decimal.NewFromFloat(0)
 		transitNum := decimal.NewFromFloat(0)
 		for _, warehouseItem := range material.WarehouseItems {
@@ -434,7 +444,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 			}
 		}
-		stockNum := num.Add(availableNum).Add(transitNum).InexactFloat64()
+		stockNum := availableNum.InexactFloat64()
 
 		// 非基准单位的库存数
 		notBasicUnitStocks := make([]material_resp.NotBasicUnitStock, 0)
@@ -541,8 +551,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			AllowNegativeStock:         material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
 			AvailableQuantity:          decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
 			StoreQuantity:              stockNum,
-			LastPurchaseQuantity:       decimal.NewFromFloat(lastPurchaseInfo.BaseQty).Round(3).InexactFloat64(),
-			LastPurchaseLocaleUnitName: *language.JsonToLocaleResponse(lastPurchaseInfo.UnitName),
+			LastPurchaseQuantity:          decimal.NewFromFloat(lastPurchaseInfo.Quantity).Round(3).InexactFloat64(),
+			LastPurchaseLocaleUnitName:    *language.JsonToLocaleResponse(lastPurchaseInfo.UnitName),
+			ConsumptionSinceLastPurchase: decimal.NewFromFloat(consumptionMap[material.Uuid]).Round(3).InexactFloat64(),
 			QuotaConfig: func() material_resp.MaterialQuotaConfig {
 				if req.PurchaseType != 2 {
 					return material_resp.MaterialQuotaConfig{
@@ -611,7 +622,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				if unit.ConversionRate != 0 {
 					respMaterial.AvailableQuantity = decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 					respMaterial.StoreQuantity = decimal.NewFromFloat(stockNum).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
-					respMaterial.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseInfo.BaseQty).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+					respMaterial.ConsumptionSinceLastPurchase = decimal.NewFromFloat(consumptionMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 				}
 			}
 		}

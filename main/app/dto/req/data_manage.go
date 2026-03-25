@@ -1,5 +1,7 @@
 package req
 
+import "encoding/json"
+
 // SaveDataManageStatusReq 保存数据管理开关状态
 type SaveDataManageStatusReq struct {
 	IsEnableDataManage bool `json:"is_enable_data_manage"` // 是否启用数据管理
@@ -47,11 +49,59 @@ type SubmitDataManageOrderReq struct {
 }
 
 // GetDataManageOrderSelectStatsReq 获取可选订单统计预览（不持久化）
-// 支持多组筛选条件，与 SubmitDataManageOrderReq 对齐：
-//   - 每组 Filter 独立处理后合并统计
-//   - 支持跨筛选上下文累积选择的预览
+// 仅支持单个筛选条件：
+//   - 无 filter 时默认近7天
+//   - 有 filter 时按该筛选条件预览
 type GetDataManageOrderSelectStatsReq struct {
-	Filters []DataManageOrderSubmitFilter `json:"filters"` // 筛选条件数组，每组独立处理后合并统计
+	Filter *DataManageOrderSubmitFilter `json:"filter"` // 单个筛选条件
+}
+
+// UnmarshalJSON 兼容两种请求体格式：
+// 1) 新格式：{"filter": {...}}
+// 2) 旧格式：{...DataManageOrderSubmitFilter 字段...}
+func (r *GetDataManageOrderSelectStatsReq) UnmarshalJSON(data []byte) error {
+	type alias GetDataManageOrderSelectStatsReq
+	var wrapped alias
+	if err := json.Unmarshal(data, &wrapped); err != nil {
+		return err
+	}
+	if wrapped.Filter != nil {
+		*r = GetDataManageOrderSelectStatsReq(wrapped)
+		return nil
+	}
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	if _, ok := raw["filter"]; ok {
+		*r = GetDataManageOrderSelectStatsReq(wrapped)
+		return nil
+	}
+
+	legacyKeys := []string{
+		"select_all", "selected_uuids", "deselected_uuids",
+		"order_no", "date_type", "query_start_date", "query_end_date", "bill_type",
+	}
+	hasLegacyKey := false
+	for _, key := range legacyKeys {
+		if _, ok := raw[key]; ok {
+			hasLegacyKey = true
+			break
+		}
+	}
+	if !hasLegacyKey {
+		*r = GetDataManageOrderSelectStatsReq(wrapped)
+		return nil
+	}
+
+	var legacy DataManageOrderSubmitFilter
+	if err := json.Unmarshal(data, &legacy); err != nil {
+		return err
+	}
+	r.Filter = &legacy
+	return nil
 }
 
 // DataManageOrderSubmitFilter 提交/预览时的筛选条件（含选择操作）

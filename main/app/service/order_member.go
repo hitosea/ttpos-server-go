@@ -359,8 +359,8 @@ func (s *orderSrv) GetDineInOrderFormInfo(ctx context.Context, request req.GetDi
 			LocaleName:           saleOrderProduct.GetLocaleName(),
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(), // 包含规格+小料+属性
 			Num:                  saleOrderProduct.Num,
-			UnitPrice:            saleOrderProduct.OriginTotalPrice, // 折前单价，含税费
-			Amount:               saleOrderProduct.GetTotalPriceOrigin(),
+			UnitPrice:            saleOrderProduct.SalePrice,      // 折前单价（纯商品价格，与订单详情保持一致）
+			Amount:               saleOrderProduct.GetSalePrice(), // 折前总价 = 单价 * 数量
 			Image: func() string {
 				if saleOrderProduct.ImageFileUuid != 0 && saleOrderProduct.ImageFile != nil {
 					return saleOrderProduct.ImageFile.GetUrl(baseUrl)
@@ -3497,7 +3497,13 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 		h5Order := s.getH5OrderForMemberDineIn(h5OrderRepo, saleBill.Uuid)
 
 		// 获取生产单完成状态（提前获取，用于后续过滤判断）
-		isProductionFinished, _ := productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+		// 未开启厨显KDS时，直接视为"已完成"（不存在备餐中状态）
+		var isProductionFinished bool
+		if ctx.GetCompanySetting().IsOpenKitchenKds != 1 {
+			isProductionFinished = true
+		} else {
+			isProductionFinished, _ = productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+		}
 
 		// 先下单后付款模式的状态过滤逻辑：
 		// - 待支付：备餐完成后显示在待支付列表（等待用户付款）
@@ -4051,10 +4057,10 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	orderRemark := ""
 	if latestRemark := saleBill.GetLatestOrderRemarkRes(); latestRemark != nil {
 		// 优先返回 CustomRemark（自定义备注），否则返回多语言备注
-		if latestRemark.CustomRemark != "" {
-			orderRemark = latestRemark.CustomRemark
-		} else {
+		if latestRemark.CustomRemark == "" {
 			orderRemark = latestRemark.Remark.GetLocale(ctx.GetLanguage())
+		} else {
+			orderRemark = latestRemark.Remark.GetLocale(ctx.GetLanguage()) + ";" + latestRemark.CustomRemark
 		}
 	}
 

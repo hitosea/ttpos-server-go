@@ -197,6 +197,15 @@ func createShopDB(t *testing.T) *gorm.DB {
 		source TEXT DEFAULT '',
 		source_product_id TEXT DEFAULT ''
 	)`)
+	db.Exec(`CREATE TABLE ttpos_product_bom (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		uuid INTEGER DEFAULT 0,
+		create_time INTEGER DEFAULT 0,
+		update_time INTEGER DEFAULT 0,
+		delete_time INTEGER DEFAULT 0,
+		product_package_uuid INTEGER DEFAULT 0,
+		status INTEGER DEFAULT 0
+	)`)
 	db.Exec(`CREATE TABLE ttpos_product_bom_takeout (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		uuid INTEGER DEFAULT 0,

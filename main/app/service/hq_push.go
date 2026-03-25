@@ -782,11 +782,15 @@ func (s *hqPushSrv) pushProductToStores(hqUuid uint64, storeUuids []uint64, prod
 
 	controlRepo := s.getHqControlRepo(hqUuid)
 
+	// 限制并发，避免子店数过多时瞬时 goroutine 过载
+	sem := make(chan struct{}, 10)
 	for _, storeUuid := range storeUuids {
 		su := storeUuid
 		// 每个子店独立构建 updateData，避免多个 goroutine 并发写同一个 map
 		storeUpdateData := s.buildProductUpdateData(hqProduct)
+		sem <- struct{}{}
 		utils.Go(func() {
+			defer func() { <-sem }()
 			s.pushSingleProductToStore(hqUuid, su, productUuid, hqProduct, controlRepo, storeUpdateData)
 		})
 	}

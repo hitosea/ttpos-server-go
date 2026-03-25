@@ -49,11 +49,28 @@ Read the relevant files to understand the endpoint's request/response:
 1. Read `main/router/router.go` to find the route group
 2. Read the handler file in `main/app/api/v1/{terminal}/`
 3. Read the request type from `main/app/dto/req/` for payload structure
+4. Read at least one service method on the execution path to find **business-required fields** that may not be covered by binding tags
 
 **For BMP module:**
 1. Read `ttpos-bmp/app/ttpos-{service}/internal/controller/` for HTTP routes
 2. Read the protobuf in `ttpos-bmp/app/ttpos-{service}/api/` for gRPC
 3. Read `ttpos-bmp/app/ttpos-{service}/internal/model/dto/` for request structure
+4. Read at least one service/usecase layer to find **business-required fields** and async side effects
+
+Before drafting any request body, produce a quick contract checklist:
+- required headers / token source
+- required seed data / fixtures
+- required request fields from DTO **and** service validation
+- each UUID field's meaning and source (entity UUID vs BOM/flavor UUID vs group UUID)
+- whether the path has async/background work after the HTTP response returns
+- one neighboring test in the same directory to mirror style and fixture usage
+
+### Current traps to hard-check
+
+- **Package order / package product scenarios**: if the request item is a package (`product_type = 1`), do not stop at `flavor_uuid`. Check whether the API also requires `product_package_uuid`. In member dine-in package flows, missing `product_package_uuid` yields `套餐UUID不能为0`.
+- **UUID role confusion**: `product_package_uuid` is the parent package UUID; `flavor_uuid` is often a product BOM/spec UUID. Never treat them as interchangeable.
+- **Fixture gaps**: if an existing seed helper does not return a required UUID, extend the helper result struct in test/fixture code. Do not hardcode `0`, guess IDs, or work around it in production code.
+- **Async integration paths**: if the scenario triggers background goroutines (for example HQ push / cross-store sync), do not add manual DB teardown or aggressive cleanup in the test body.
 
 ---
 
@@ -131,6 +148,10 @@ Check if the target file already exists:
 7. ✅ Each test has a doc comment with `// Route:` annotation
 8. ✅ No shared state between tests — each creates its own tenant/data
 9. ✅ Cleanup via `t.Cleanup()` in fixture functions (not manual)
+10. ✅ Reuse nearby fixture patterns before inventing new seed/setup logic
+11. ✅ Do not modify production code only to make an integration test pass unless the user explicitly asks
+12. ✅ Do not manually drop tenant DBs or add global cleanup side effects in tests
+13. ✅ For every request UUID field, know exactly which seeded object it comes from and assert / verify it is non-zero before sending the request
 
 ### File structure (from template):
 
@@ -156,10 +177,20 @@ After writing, run the new test(s) to verify they pass:
 make test-main-local BUILD_ID=verify
 ```
 
+For a narrow verification pass, prefer running the affected test package from the correct module root first:
+
+```bash
+cd main/tests && go test -tags=integration ./member -run 'Package|DineIn'
+```
+
+`main/tests` is its own Go module. Do **not** run `go test ./tests/...` from `main/`.
+
 **BMP:**
 ```bash
 make test-bmp-local BUILD_ID=verify
 ```
+
+If the first failure is a validation / business-rule error, re-check the request contract and fixture outputs before touching application code.
 
 ---
 

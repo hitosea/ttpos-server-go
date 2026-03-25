@@ -28,9 +28,19 @@ class SeedHqFieldOverrideLegacyData extends Migrator
             throw new \RuntimeException('hq_field_override 表不存在，请先执行建表迁移');
         }
 
-        // 从当前商户数据库获取 headquarter_uuid
-        $companySetting = $this->fetchRow("SELECT headquarter_uuid FROM ttpos_company_setting WHERE delete_time = 0 LIMIT 1");
-        if (empty($companySetting) || empty($companySetting['headquarter_uuid']) || $companySetting['headquarter_uuid'] == 0) {
+        // 按 main 的 IsSubShop 逻辑判断是否子店：
+        // !IsTtposSite() && erpnext_company_abbr != erpnext_headquarter_abbr
+        // IsTtposSite(): erpnext_site_code == '1' || erpnext_site_code == ''
+        $companySetting = $this->fetchRow(
+            "SELECT headquarter_uuid
+             FROM ttpos_company_setting
+             WHERE delete_time = 0
+               AND NOT (erpnext_site_code = '1' OR erpnext_site_code = '')
+               AND erpnext_company_abbr <> erpnext_headquarter_abbr
+               AND headquarter_uuid > 0
+             LIMIT 1"
+        );
+        if (empty($companySetting) || empty($companySetting['headquarter_uuid'])) {
             // 不是子店（没有总部），跳过
             return;
         }
