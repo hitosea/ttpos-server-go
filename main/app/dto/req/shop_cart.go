@@ -134,6 +134,7 @@ type ProductParams struct {
 	SauceProductBomUuidList         []uint64         `json:"sauce_product_bom_uuid_list"`         // 加料信息
 	SauceUuidList                   []uint64         `json:"sauce_uuid"`                          // 加料信息,SauceProductBomUuidList的别名,只有会员端堂食订单创建使用
 	ProductPackageAttributeUuidList []uint64         `json:"product_package_attribute_uuid_list"` // 属性信息
+	AttributeUuidList               []uint64         `json:"attribute_uuid"`                      // 属性信息,ProductPackageAttributeUuidList的别名,只有会员端堂食订单创建使用
 	AddPrice                        float64          `json:"add_price"`                           // 加价金额
 	Operation                       string           `json:"operation"`                           // 操作类型。add: 加购，sub: 减购
 	MustPlanUuid                    uint64           `json:"must_plan_uuid"`                      // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
@@ -162,6 +163,9 @@ func (req *ProductParams) ApplyCompatibleFields() {
 	}
 	if len(req.SauceUuidList) > 0 {
 		req.SauceProductBomUuidList = req.SauceUuidList
+	}
+	if len(req.AttributeUuidList) > 0 {
+		req.ProductPackageAttributeUuidList = req.AttributeUuidList
 	}
 }
 
