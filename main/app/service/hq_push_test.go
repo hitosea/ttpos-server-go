@@ -241,6 +241,17 @@ func createShopDB(t *testing.T) *gorm.DB {
 		headquarter_uuid INTEGER DEFAULT 0,
 		add_price REAL DEFAULT 0
 	)`)
+	db.Exec(`CREATE TABLE ttpos_product_bom (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		uuid INTEGER DEFAULT 0,
+		create_time INTEGER DEFAULT 0,
+		update_time INTEGER DEFAULT 0,
+		delete_time INTEGER DEFAULT 0,
+		product_package_uuid INTEGER DEFAULT 0,
+		status INTEGER DEFAULT 0,
+		price REAL DEFAULT 0,
+		headquarter_uuid INTEGER DEFAULT 0
+	)`)
 	db.Exec(`CREATE TABLE ttpos_material (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		uuid INTEGER DEFAULT 0,
@@ -281,6 +292,9 @@ func createShopDB(t *testing.T) *gorm.DB {
 	db.Exec(`CREATE TABLE ttpos_product_unit (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		uuid INTEGER DEFAULT 0,
+		create_time INTEGER DEFAULT 0,
+		update_time INTEGER DEFAULT 0,
+		delete_time INTEGER DEFAULT 0,
 		name TEXT DEFAULT ''
 	)`)
 	return db
@@ -1015,7 +1029,7 @@ func TestHqPush_BatchSafetyStock_Force_NoOverride_Syncs(t *testing.T) {
 	}
 }
 
-func TestHqPush_BatchSafetyStock_Force_HasOverride_OverwriteAndClear(t *testing.T) {
+func TestHqPush_BatchSafetyStock_Force_HasOverride_Preserved(t *testing.T) {
 	srv, hqDB, storeDB, _ := setupHqPushTest(t)
 
 	matUuid := uint64(6102)
@@ -1025,12 +1039,13 @@ func TestHqPush_BatchSafetyStock_Force_HasOverride_OverwriteAndClear(t *testing.
 
 	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, true)
 
+	// 安全库存不受强制推送影响，有 override 时保持子店值
 	got := getStoreMaterialSafetyStock(storeDB, matUuid)
-	if got == nil || *got != 30.0 {
-		t.Errorf("safety_stock: want 30.0 (overwritten), got %v", got)
+	if got == nil || *got != 10.0 {
+		t.Errorf("safety_stock: want 10.0 (preserved, override protected), got %v", got)
 	}
-	if hasOverride(storeDB, matUuid, constant.HqFieldSafetyStock) {
-		t.Error("safety_stock override should be cleared after force push")
+	if !hasOverride(storeDB, matUuid, constant.HqFieldSafetyStock) {
+		t.Error("safety_stock override should be preserved (not affected by force push)")
 	}
 }
 
@@ -1225,6 +1240,9 @@ func TestHqPush_MaterialRealtime_SyncsMaterialUnit(t *testing.T) {
 	// HQ has 2 non-base units
 	seedHqMaterialUnit(t, hqDB, 8101, matUuid, 501, 1000, "kg")
 	seedHqMaterialUnit(t, hqDB, 8102, matUuid, 502, 500, "half-kg")
+	// Sub-store needs corresponding product_unit records (resolveValidMaterialUnits checks existence)
+	storeDB.Exec("INSERT INTO ttpos_product_unit (uuid, name, delete_time) VALUES (501, 'kg', 0)")
+	storeDB.Exec("INSERT INTO ttpos_product_unit (uuid, name, delete_time) VALUES (502, 'half-kg', 0)")
 	// Sub-store has 1 old unit (will be replaced)
 	seedStoreMaterialUnit(t, storeDB, 8199, matUuid, 599, 999, "old-unit")
 
@@ -1606,7 +1624,7 @@ func TestHqPush_TakeoutPush_CreatesWithAllAssociations(t *testing.T) {
 
 // 模拟 forcePushToAllSubStores 的行为：negative_stock 分开→统一时触发 forceOverwrite=true，
 // 验证两个字段的 override 均被清除、值均被覆盖
-func TestHqPush_ForceOverwrite_NegAndSafety_BothOverridden_AllCleared(t *testing.T) {
+func TestHqPush_ForceOverwrite_NegAndSafety_BothOverridden_NegClearedSafetyPreserved(t *testing.T) {
 	srv, hqDB, storeDB, _ := setupHqPushTest(t)
 
 	mat1 := uint64(7001)
@@ -1626,33 +1644,35 @@ func TestHqPush_ForceOverwrite_NegAndSafety_BothOverridden_AllCleared(t *testing
 	// forceOverwrite=true，模拟 negative_stock 从分开→统一
 	srv.(*hqPushSrv).pushNegativeStockToStore(testHqUuid, testStoreUuid, true)
 
-	// mat1: 两个字段都被覆盖
+	// mat1: 负库存被强制覆盖
 	if got := getStoreMaterialNegStock(storeDB, mat1); got != 1 {
 		t.Errorf("mat1 neg_stock: want 1 (forced), got %d", got)
 	}
-	if got := getStoreMaterialSafetyStock(storeDB, mat1); got == nil || *got != 100.0 {
-		t.Errorf("mat1 safety_stock: want 100.0 (forced), got %v", got)
+	// mat1: 安全库存不受强制推送影响，有 override 时保持子店值
+	if got := getStoreMaterialSafetyStock(storeDB, mat1); got == nil || *got != 10.0 {
+		t.Errorf("mat1 safety_stock: want 10.0 (preserved), got %v", got)
 	}
-	// mat1: 两个 override 均被清除
+	// mat1: 负库存 override 被清除，安全库存 override 保留
 	if hasOverride(storeDB, mat1, constant.HqFieldNegativeStock) {
 		t.Error("mat1 neg_stock override should be cleared")
 	}
-	if hasOverride(storeDB, mat1, constant.HqFieldSafetyStock) {
-		t.Error("mat1 safety_stock override should be cleared")
+	if !hasOverride(storeDB, mat1, constant.HqFieldSafetyStock) {
+		t.Error("mat1 safety_stock override should be preserved")
 	}
 
-	// mat2
+	// mat2: 负库存被强制覆盖
 	if got := getStoreMaterialNegStock(storeDB, mat2); got != 0 {
 		t.Errorf("mat2 neg_stock: want 0 (forced), got %d", got)
 	}
-	if got := getStoreMaterialSafetyStock(storeDB, mat2); got == nil || *got != 200.0 {
-		t.Errorf("mat2 safety_stock: want 200.0 (forced), got %v", got)
+	// mat2: 安全库存不受强制推送影响
+	if got := getStoreMaterialSafetyStock(storeDB, mat2); got == nil || *got != 20.0 {
+		t.Errorf("mat2 safety_stock: want 20.0 (preserved), got %v", got)
 	}
 	if hasOverride(storeDB, mat2, constant.HqFieldNegativeStock) {
 		t.Error("mat2 neg_stock override should be cleared")
 	}
-	if hasOverride(storeDB, mat2, constant.HqFieldSafetyStock) {
-		t.Error("mat2 safety_stock override should be cleared")
+	if !hasOverride(storeDB, mat2, constant.HqFieldSafetyStock) {
+		t.Error("mat2 safety_stock override should be preserved")
 	}
 }
 
@@ -1687,14 +1707,15 @@ func TestHqPush_UpdateControlSetting_SeparateToUnified_TriggersForcePush(t *test
 	if got := getStoreMaterialNegStock(storeDB, matUuid); got != 1 {
 		t.Errorf("neg_stock: want 1 (forced), got %d", got)
 	}
-	if got := getStoreMaterialSafetyStock(storeDB, matUuid); got == nil || *got != 50.0 {
-		t.Errorf("safety_stock: want 50.0 (forced), got %v", got)
+	// 安全库存不受强制推送影响，有 override 时保持子店值
+	if got := getStoreMaterialSafetyStock(storeDB, matUuid); got == nil || *got != 5.0 {
+		t.Errorf("safety_stock: want 5.0 (preserved), got %v", got)
 	}
 	if hasOverride(storeDB, matUuid, constant.HqFieldNegativeStock) {
 		t.Error("neg_stock override should be cleared after force push")
 	}
-	if hasOverride(storeDB, matUuid, constant.HqFieldSafetyStock) {
-		t.Error("safety_stock override should be cleared after force push")
+	if !hasOverride(storeDB, matUuid, constant.HqFieldSafetyStock) {
+		t.Error("safety_stock override should be preserved (not affected by force push)")
 	}
 }
 

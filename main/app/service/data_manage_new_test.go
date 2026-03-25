@@ -27,6 +27,7 @@ func setupDataManageTestDBWithOrders(t *testing.T) *database.DBManager {
 			uuid INTEGER DEFAULT 0, create_time INTEGER DEFAULT 0, update_time INTEGER DEFAULT 0, delete_time INTEGER DEFAULT 0,
 			order_no TEXT DEFAULT '', duty_no TEXT DEFAULT '', serial_no TEXT DEFAULT '',
 			status INTEGER DEFAULT 0, is_lock INTEGER DEFAULT 0, is_split_order INTEGER DEFAULT 0,
+			is_order_first_pay_later INTEGER DEFAULT 0,
 			bill_type INTEGER DEFAULT 0, dining_method INTEGER DEFAULT 0,
 			order_source_uuid INTEGER DEFAULT 0, order_source_name TEXT DEFAULT '',
 			nationality_uuid INTEGER DEFAULT 0, nationality_name TEXT DEFAULT '',

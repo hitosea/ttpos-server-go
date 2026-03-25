@@ -171,7 +171,12 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 
 		ErpnextOpenPosEntryName: erpnextOpenPosEntryName,
 		OpeningPaymentMethods:   openingPaymentMethodsStr,
-		ShiftVersion:            constant.ShiftVersionNew,
+		ShiftVersion: func() int {
+			if companySetting.IsErpSalesInvoiceMode() {
+				return constant.ShiftVersionNew
+			}
+			return constant.ShiftVersionLegacy
+		}(),
 	})
 	if err != nil {
 		return model.StaffShiftLog{}, errors.WithMessage(err, "创建交班记录失败")

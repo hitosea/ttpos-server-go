@@ -55,7 +55,7 @@ func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(obj model.SaleO
 	if obj.Data != "" {
 		if err := json.Unmarshal([]byte(obj.Data), &data); err != nil {
 			fmt.Println("CreateSaleOrderAbnormalLog", err)
-			logger.Logger.Info("CreateSaleOrderAbnormalLog", zap.String("error", err.Error()))
+			logger.Logger.Error("CreateSaleOrderAbnormalLog", zap.String("error", err.Error()))
 			return errors.WithMessage(err)
 		}
 	}

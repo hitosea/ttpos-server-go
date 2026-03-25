@@ -115,7 +115,7 @@ func AddStock(payloadCtx context.Context, db *gorm.DB, saleBillUuid uint64) {
 	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
 	warehouseFormItems, err := warehouseFormRepo.GetWarehouseFormItemNotProcessed(saleBillUuid)
 	if err != nil {
-		logger.Logger.Info("SubscribeCancelSaleOrderProductEvent process, GetWarehouseFormItemNotProcessed failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
+		logger.Logger.Error("SubscribeCancelSaleOrderProductEvent process, GetWarehouseFormItemNotProcessed failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
 		return
 	}
 	productBoms := make(map[uint64]*model.ProductBom)
@@ -173,7 +173,7 @@ func AddStock(payloadCtx context.Context, db *gorm.DB, saleBillUuid uint64) {
 		}
 		return nil
 	}); err != nil {
-		logger.Logger.Info("SubscribeCancelSaleOrderProductEvent process, Transaction failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
+		logger.Logger.Error("SubscribeCancelSaleOrderProductEvent process, Transaction failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
 		return
 	}
 }
