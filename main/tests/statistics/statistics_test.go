@@ -3,6 +3,7 @@
 package statistics_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
@@ -23,6 +24,7 @@ const (
 	pathStatsPaymentMethod = "/api/v1/shop/statistics/payment_method"
 	pathStatsProductRank   = "/api/v1/shop/statistics/product_rank"
 	pathStatsTimePeriod    = "/api/v1/shop/statistics/business/time_period"
+	pathStatsChannelSales  = "/api/v1/shop/statistics/channel_sales"
 	pathSetDataManage      = "/api/v1/shop/setting/data_manage/set"
 )
 
@@ -263,7 +265,96 @@ func Test_P1_Shop_Statistics_TimePeriod_ExcludesDataManaged(t *testing.T) {
 		AssertOK(t).AssertSuccess(t)
 }
 
+// Test_P1_Shop_Statistics_ChannelSales_HappyPath tests fetching channel sales statistics
+// and verifies the response contains "store_scan" field (renamed from "scan").
+// Route: GET /shop/statistics/channel_sales
+func Test_P1_Shop_Statistics_ChannelSales_HappyPath(t *testing.T) {
+	companyUUID := fixture.GenerateCompanyUUID(t)
+	db := fixture.NewTestTenantFull(t, companyUUID)
+	companyUUIDInt := mustParseInt64(companyUUID)
+
+	fixture.SeedCompany(t, db, fixture.WithCompanyUUID(companyUUIDInt))
+	fixture.SeedCompanySetting(t, db, fixture.WithCompanySettingCompanyUUID(companyUUIDInt))
+	staff := fixture.SeedStaff(t, db,
+		fixture.WithStaffCompanyUUID(companyUUIDInt),
+		fixture.WithStaffIsSuper(1),
+	)
+
+	// Seed a scan order (source=5) with payment_amount=100, no refund
+	bill1 := fixture.SeedSaleBill(t, db, fixture.WithSaleBillFinishTime(1750000000))
+	fixture.SeedStatisticsSale(t, db,
+		fixture.WithStatisticsSaleBillUUID(bill1.UUID),
+		fixture.WithStatisticsSaleSource(5), // scan
+		fixture.WithStatisticsSalePaymentAmount(100),
+		fixture.WithStatisticsSaleCompleteTime(1750000000),
+	)
+
+	// Seed a fully refunded scan order (source=5): payment=50, refund=50 → net amount = 0
+	bill2 := fixture.SeedSaleBill(t, db, fixture.WithSaleBillFinishTime(1750000001))
+	fixture.SeedStatisticsSale(t, db,
+		fixture.WithStatisticsSaleBillUUID(bill2.UUID),
+		fixture.WithStatisticsSaleSource(5), // scan
+		fixture.WithStatisticsSalePaymentAmount(50),
+		fixture.WithStatisticsSaleRefundAmount(50),
+		fixture.WithStatisticsSaleCompleteTime(1750000001),
+	)
+
+	fixture.SetupWireMock(t)
+
+	token := fixture.GenerateShopToken(t, companyUUID, mustParseString(staff.UUID))
+	resp := fixture.NewHTTPClient().WithToken(token).WithHeaders(versionHeaders).Get(t, pathStatsChannelSales+"?start_time=1700000000&end_time=1900000000")
+	apiResp := resp.AssertOK(t).AssertSuccess(t).ParseAPIResponse(t)
+
+	var data map[string]json.RawMessage
+	if err := json.Unmarshal(apiResp.Data, &data); err != nil {
+		t.Fatalf("failed to parse data: %v", err)
+	}
+
+	// Verify "store_scan" field exists (renamed from "scan")
+	if _, ok := data["store_scan"]; !ok {
+		t.Fatalf("expected 'store_scan' field in response data, got keys: %v", mapKeys(data))
+	}
+	// Verify old "scan" field does NOT exist
+	if _, ok := data["scan"]; ok {
+		t.Errorf("unexpected 'scan' field in response data; should have been renamed to 'store_scan'")
+	}
+
+	// Verify store_scan.min_order_amount = 0 (the fully refunded order)
+	var storeScan struct {
+		MinOrderAmount float64 `json:"min_order_amount"`
+		TotalOrderNum  int64   `json:"total_order_num"`
+	}
+	if err := json.Unmarshal(data["store_scan"], &storeScan); err != nil {
+		t.Fatalf("failed to parse store_scan: %v", err)
+	}
+	if storeScan.TotalOrderNum != 2 {
+		t.Errorf("expected store_scan.total_order_num=2, got %d", storeScan.TotalOrderNum)
+	}
+	if storeScan.MinOrderAmount != 0 {
+		t.Errorf("expected store_scan.min_order_amount=0 (fully refunded order), got %f", storeScan.MinOrderAmount)
+	}
+}
+
+// Test_P1_Shop_Statistics_ChannelSales_Unauthorized tests that unauthenticated requests are rejected.
+// Route: GET /shop/statistics/channel_sales
+func Test_P1_Shop_Statistics_ChannelSales_Unauthorized(t *testing.T) {
+	resp := fixture.NewHTTPClient().Get(t, pathStatsChannelSales)
+	apiResp := resp.AssertOK(t).ParseAPIResponse(t)
+	if apiResp.Code != codeTokenInvalid && apiResp.Code != codeAccessDenied {
+		t.Fatalf("expected error code %d or %d but got %d: %s",
+			codeTokenInvalid, codeAccessDenied, apiResp.Code, apiResp.Message)
+	}
+}
+
 // Helpers
+
+func mapKeys(m map[string]json.RawMessage) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
 
 func mustParseInt64(s string) int64 {
 	var i int64

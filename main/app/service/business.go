@@ -3085,7 +3085,7 @@ func (s *businessSrv) CountChannelSales(ctx context.Context, req req.ChannelSale
 		Summary:         convertToBlock(channelData["summary"]),
 		Table:           convertToBlock(channelData["table"]),
 		DineIn:          convertToBlock(channelData["dine_in"]),
-		Scan:            convertToBlock(channelData["scan"]),
+		StoreScan:       convertToBlock(channelData["scan"]),
 		TakeoutShop:     convertToBlock(channelData["takeout_shop"]),
 		TakeoutDelivery: convertToBlock(channelData["takeout_delivery"]),
 		DineInStore:     convertToBlock(channelData["dine_in_store"]),
@@ -3542,7 +3542,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["summary"], params.Result.Summary, false)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["table"], params.Result.Table, true)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["dine_in"], params.Result.DineIn, false)
-	writeChannelData(sheet2Name, &rowIdx2, channelNames["scan"], params.Result.DineIn, false)
+	writeChannelData(sheet2Name, &rowIdx2, channelNames["scan"], params.Result.StoreScan, false)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["takeout_shop"], params.Result.TakeoutShop, false)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["takeout_delivery"], params.Result.TakeoutDelivery, false)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["grab"], params.Result.Grab, false)

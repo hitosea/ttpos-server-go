@@ -155,7 +155,7 @@ var (
 		"SUM(t.meal_num) AS total_meal_num",                                                // 总用餐人数
 		"SUM(t.instant_order_amount) AS total_instant_order_amount",                        // 即时订单金额（店内）
 		"SUM(t.instant_order_takeaway_amount) AS total_instant_order_takeaway_amount",      // 即时订单-外卖来源金额
-		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_num",                                                                                                                   // 总即时订单数量（店内）
+		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_num",                                                                                                                  // 总即时订单数量（店内）
 		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_takeaway_num",                                                                                                                           // 总即时订单数量（外卖来源）
 		"SUM(t.takeout_order_amount) AS total_takeout_order_amount",                                                                                                                                                                                                // 总外送订单金额
 		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END) AS total_takeout_order_num",                                                                                                                                           // 总外送订单数量
@@ -165,18 +165,18 @@ var (
 		"MIN(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",                                                                 // 最小桌台订单金额
 		"MAX(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount > 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",                                                                                       // 最大桌台订单金额
 		"ROUND(SUM(t.avg_desk_order_amount) / COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_desk_order_amount",                                                                               // 平均桌台订单金额
-		"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",            // 最小即时订单金额（店内）
-		"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",                                                     // 最大即时订单金额（店内）
-		"ROUND(SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END), 2) AS avg_instant_order_amount",                                        // 平均即时订单金额（店内）
+		"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",          // 最小即时订单金额（店内）
+		"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",                                                   // 最大即时订单金额（店内）
+		"ROUND(SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END), 2) AS avg_instant_order_amount",                                      // 平均即时订单金额（店内）
 		"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.instant_order_takeaway_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_takeaway_amount ELSE NULL END) AS min_instant_order_takeaway_amount", // 最小即时订单金额（外卖来源）
 		"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.instant_order_takeaway_amount > 0 THEN t.instant_order_takeaway_amount ELSE NULL END) AS max_instant_order_takeaway_amount",                                          // 最大即时订单金额（外卖来源）
 		"ROUND(SUM(t.avg_instant_order_takeaway_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_meger = 0 AND t.instant_order_takeaway_amount > 0 THEN 1 END), 2) AS avg_instant_order_takeaway_amount",                             // 平均即时订单金额（外卖来源）
 		"MIN(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.takeout_order_amount ELSE NULL END) AS min_takeout_order_amount",                                                                            // 最小外送订单金额
 		"MAX(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount > 0 THEN t.takeout_order_amount ELSE NULL END) AS max_takeout_order_amount",                                                                                                                     // 最大外送订单金额
 		"ROUND(SUM(t.avg_takeout_order_amount) / COUNT(CASE WHEN t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END), 2) AS avg_takeout_order_amount",                                                                                                                  // 平均外送订单金额
-		"SUM(t.scan_order_amount) AS total_scan_order_amount",                                                                                                                         // 总扫码订单金额
-		"COUNT(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_scan_order_num",                                                // 总扫码订单数量
-		"MIN(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.scan_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 AND t.scan_order_amount > 0 THEN t.scan_order_amount ELSE NULL END) AS min_scan_order_amount", // 最小扫码订单金额
+		"SUM(t.scan_order_amount) AS total_scan_order_amount",                                                                          // 总扫码订单金额
+		"COUNT(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_scan_order_num", // 总扫码订单数量
+		"MIN(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.scan_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.scan_order_amount ELSE NULL END) AS min_scan_order_amount", // 最小扫码订单金额
 		"MAX(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.scan_order_amount > 0 AND t.is_meger = 0 THEN t.scan_order_amount ELSE NULL END) AS max_scan_order_amount",                                                   // 最大扫码订单金额
 		"ROUND(SUM(t.avg_scan_order_amount) / COUNT(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_scan_order_amount",                                                                // 平均扫码订单金额
 	}
@@ -3267,7 +3267,7 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 		},
 		"scan": { // 点餐-扫码：source = 5 && desk_uuid = 0 && is_takeout = 0
 			"COUNT(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
-			"MIN(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.scan_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 AND t.scan_order_amount > 0 THEN t.scan_order_amount ELSE NULL END) AS min_order_amount",
+			"MIN(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.scan_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.scan_order_amount ELSE NULL END) AS min_order_amount",
 			"MAX(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.scan_order_amount > 0 AND t.is_meger = 0 THEN t.scan_order_amount ELSE NULL END) AS max_order_amount",
 			"ROUND(SUM(t.avg_scan_order_amount) / COUNT(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_order_amount",
 			"0 AS total_desk_num",
