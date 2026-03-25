@@ -92,7 +92,7 @@ func isMySQLError(err error) bool {
 // ErrorWithDetail 返回错误
 func ErrorWithDetail(c *gin.Context, code int, err error) {
 	// 记录完整错误到日志
-	logger.Logger.Info("ErrorWithDetail", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
+	logger.Logger.Error("ErrorWithDetail", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
 
 	if config.Server.Mode == constant.ServerModeRelease {
 		// 只有Release模式才返回原始错误信息。如123123
@@ -120,7 +120,7 @@ func ErrorWithDetail(c *gin.Context, code int, err error) {
 // ErrorWithMessage 返回错误
 func ErrorWithMessage(c *gin.Context, code int, err error) {
 	// 记录完整错误到日志
-	logger.Logger.Info("ErrorWithMessage", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
+	logger.Logger.Error("ErrorWithMessage", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
 
 	if config.Server.Mode == constant.ServerModeRelease {
 		// 只有Release模式才返回原始错误信息。如123123
@@ -145,7 +145,7 @@ func ErrorWithMessage(c *gin.Context, code int, err error) {
 // ErrorWithData 返回错误携带数据
 func ErrorWithData(c *gin.Context, code int, data any, err error) {
 	// 记录完整错误到日志
-	logger.Logger.Info("ErrorWithData", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
+	logger.Logger.Error("ErrorWithData", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
 
 	if config.Server.Mode == constant.ServerModeRelease {
 		err = pkgerrors.Cause(err)
@@ -169,7 +169,7 @@ func ErrorWithData(c *gin.Context, code int, data any, err error) {
 // ErrorAutoWithData 返回错误携带数据
 func ErrorAutoWithData(c *gin.Context, code int, err error) {
 	// 记录完整错误到日志
-	logger.Logger.Info("ErrorAutoWithData", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
+	logger.Logger.Error("ErrorAutoWithData", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
 
 	if config.Server.Mode == constant.ServerModeRelease {
 		err = pkgerrors.Cause(err)

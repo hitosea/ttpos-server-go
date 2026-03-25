@@ -1053,7 +1053,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 	// 获取门店设置
 	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
 	if err != nil {
-		logger.Logger.Info("ReturnOrder process, GetStoreSetting failed", zap.Error(err))
+		logger.Logger.Error("ReturnOrder process, GetStoreSetting failed", zap.Error(err))
 		return errors.WithMessage(err), constant.CodeFail
 	}
 
@@ -1894,7 +1894,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 	// 获取门店设置
 	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
 	if err != nil {
-		logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetStoreSetting failed", zap.Error(err))
+		logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, GetStoreSetting failed", zap.Error(err))
 		return errors.WithMessage(err)
 	}
 

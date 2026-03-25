@@ -314,7 +314,7 @@ func (s *TranslateSrv) TranslateAll() error {
 		if len(multiLanguageNameUuids) > 0 {
 			utils.Go(func() {
 				if err := s.Translate(companyUuid); err != nil {
-					logger.Logger.Info("Translate-Redis-Translate-go", zap.Uint64("companyUuid", companyUuid), zap.Any("err", err), zap.String("key", key))
+					logger.Logger.Error("Translate-Redis-Translate-go", zap.Uint64("companyUuid", companyUuid), zap.Any("err", err), zap.String("key", key))
 				}
 			})
 		} else {
