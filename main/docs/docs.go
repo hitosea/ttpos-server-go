@@ -25194,7 +25194,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "批量更新物品可见性设置（仅总店可用）",
+                "description": "已废弃，接口保留兼容，不再执行实际操作",
                 "consumes": [
                     "application/json"
                 ],
@@ -25205,23 +25205,9 @@ const docTemplate = `{
                     "商家端.物品管理"
                 ],
                 "summary": "批量更新物品可见性",
-                "parameters": [
-                    {
-                        "description": "批量更新物品可见性请求",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.MaterialBatchUpdateVisibleReq"
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
                     }
                 }
             }
@@ -43100,7 +43086,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
+                    "description": "允许子店可见（已废弃，固定返回1）",
                     "type": "integer"
                 },
                 "available_num": {
@@ -43340,7 +43326,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
+                    "description": "允许子店可见（已废弃，固定返回1）",
                     "type": "integer"
                 },
                 "barcode_value": {
@@ -48785,12 +48771,13 @@ const docTemplate = `{
         "req.GetDataManageOrderSelectStatsReq": {
             "type": "object",
             "properties": {
-                "filters": {
-                    "description": "筛选条件数组，每组独立处理后合并统计",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
-                    }
+                "filter": {
+                    "description": "单个筛选条件",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
+                        }
+                    ]
                 }
             }
         },
@@ -49416,10 +49403,6 @@ const docTemplate = `{
                     "description": "是否允许负库存",
                     "type": "boolean"
                 },
-                "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
-                    "type": "integer"
-                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -49482,25 +49465,6 @@ const docTemplate = `{
                 "valuation": {
                     "description": "估值率",
                     "type": "number"
-                }
-            }
-        },
-        "req.MaterialBatchUpdateVisibleReq": {
-            "type": "object",
-            "required": [
-                "uuids"
-            ],
-            "properties": {
-                "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许",
-                    "type": "integer"
-                },
-                "uuids": {
-                    "description": "物品UUID列表",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
                 }
             }
         },
@@ -49592,10 +49556,6 @@ const docTemplate = `{
                 "allow_negative_stock": {
                     "description": "是否允许负库存",
                     "type": "boolean"
-                },
-                "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
-                    "type": "integer"
                 },
                 "barcode_value": {
                     "description": "条形码值",
@@ -51418,10 +51378,6 @@ const docTemplate = `{
                 "allow_negative_stock": {
                     "description": "是否允许负库存",
                     "type": "boolean"
-                },
-                "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
-                    "type": "integer"
                 },
                 "barcode_value": {
                     "description": "条形码值",
@@ -55141,6 +55097,10 @@ const docTemplate = `{
                 "sale_order_uuid"
             ],
             "properties": {
+                "remark": {
+                    "description": "订单备注（同步到收银端整单备注）",
+                    "type": "string"
+                },
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
                     "type": "integer"
@@ -62223,9 +62183,17 @@ const docTemplate = `{
                     "description": "优惠折扣金额（整单打折），与收银机购物车 discount_amount 一致",
                     "type": "number"
                 },
+                "member_discount_amount": {
+                    "description": "会员优惠折扣金额，与收银机购物车 member_discount_amount 一致",
+                    "type": "number"
+                },
                 "payment_method_name": {
                     "description": "支付方式名称",
                     "type": "string"
+                },
+                "product_amount": {
+                    "description": "商品金额（合计）",
+                    "type": "number"
                 },
                 "service_fee": {
                     "description": "服务费",
@@ -62243,6 +62211,14 @@ const docTemplate = `{
                 "image": {
                     "description": "商品图片",
                     "type": "string"
+                },
+                "is_cancel": {
+                    "description": "是否退菜",
+                    "type": "boolean"
+                },
+                "is_gift": {
+                    "description": "是否赠菜",
+                    "type": "boolean"
                 },
                 "locale_attribute_name": {
                     "description": "商品属性",

@@ -68,17 +68,15 @@ func Test_P1_Shop_DataManage_OrderSelectStats_FilterOnly_AppliesDateFilter(t *te
 	}).AssertOK(t).AssertSuccess(t)
 
 	resp := httpClient.Post(t, pathOrderSelectStats, map[string]any{
-		"filters": []map[string]any{
-			{
-				"bill_type":        -1,
-				"date_type":        -1,
-				"deselected_uuids": []uint64{},
-				"order_no":         "",
-				"query_end_date":   "2026-03-03 23:59:59",
-				"query_start_date": "2026-03-01 00:00:00",
-				"select_all":       false,
-				"selected_uuids":   []uint64{},
-			},
+		"filter": map[string]any{
+			"bill_type":        -1,
+			"date_type":        -1,
+			"deselected_uuids": []uint64{},
+			"order_no":         "",
+			"query_end_date":   "2026-03-03 23:59:59",
+			"query_start_date": "2026-03-01 00:00:00",
+			"select_all":       false,
+			"selected_uuids":   []uint64{},
 		},
 	})
 	resp.AssertOK(t).AssertSuccess(t)
@@ -137,7 +135,7 @@ func Test_P1_Shop_DataManage_OrderSelectStats_NoFilter_DefaultLast7Days(t *testi
 	}).AssertOK(t).AssertSuccess(t)
 
 	resp := httpClient.Post(t, pathOrderSelectStats, map[string]any{
-		"filters": []map[string]any{},
+		"filter": nil,
 	})
 	resp.AssertOK(t).AssertSuccess(t)
 
@@ -152,6 +150,66 @@ func Test_P1_Shop_DataManage_OrderSelectStats_NoFilter_DefaultLast7Days(t *testi
 	}
 	if data.PaidAmount != 110 {
 		t.Fatalf("expected paid_amount=110 (default last 7 days), got %v", data.PaidAmount)
+	}
+}
+
+// Test_P1_Shop_DataManage_OrderSelectStats_LegacyRootFilterPayload
+// 验证兼容旧请求：直接传 filter 字段（不包裹在 {"filter": {...}} 中）。
+func Test_P1_Shop_DataManage_OrderSelectStats_LegacyRootFilterPayload(t *testing.T) {
+	companyUUID := fixture.GenerateCompanyUUID(t)
+	db := fixture.NewTestTenantFull(t, companyUUID)
+	companyUUIDInt := mustParseInt64(companyUUID)
+
+	fixture.SeedCompany(t, db, fixture.WithCompanyUUID(companyUUIDInt))
+	fixture.SeedCompanySetting(t, db,
+		fixture.WithCompanySettingCompanyUUID(companyUUIDInt),
+		fixture.WithCompanySettingEnableDataManagement(1),
+	)
+	staff := fixture.SeedStaff(t, db,
+		fixture.WithStaffCompanyUUID(companyUUIDInt),
+		fixture.WithStaffIsSuper(1),
+	)
+
+	fixture.SetupWireMock(t)
+
+	inRangeTime := mustParseDateTimeUnix("2026-03-24 12:00:00")
+	inRangeBillUUID := fixture.GenerateSnowflakeID()
+	seedSaleBillForDataManageStats(t, db, inRangeBillUUID, inRangeTime, 88)
+
+	token := fixture.GenerateShopToken(t, companyUUID, mustParseString(staff.UUID))
+	httpClient := fixture.NewHTTPClient().
+		WithToken(token).
+		WithHeaders(map[string]string{testVersionHeaderKey: testVersionHeaderValue})
+
+	httpClient.Post(t, pathSetDataManage, map[string]any{
+		"is_enable_data_manage": true,
+		"staff_uuids":           []uint64{},
+		"sale_bill_uuids":       []uint64{uint64(inRangeBillUUID)},
+	}).AssertOK(t).AssertSuccess(t)
+
+	// 直接传旧格式（root filter）
+	resp := httpClient.Post(t, pathOrderSelectStats, map[string]any{
+		"bill_type":        -1,
+		"date_type":        -1,
+		"deselected_uuids": []uint64{},
+		"order_no":         "",
+		"query_end_date":   "2026-03-25 23:59:59",
+		"query_start_date": "2026-03-23 00:00:00",
+		"select_all":       false,
+		"selected_uuids":   []uint64{},
+	})
+	resp.AssertOK(t).AssertSuccess(t)
+
+	apiResp := resp.ParseAPIResponse(t)
+	var data orderSelectStatsData
+	if err := json.Unmarshal(apiResp.Data, &data); err != nil {
+		t.Fatalf("failed to parse response data: %v", err)
+	}
+	if data.SelectedCount != 1 {
+		t.Fatalf("expected selected_count=1, got %d", data.SelectedCount)
+	}
+	if data.PaidAmount != 88 {
+		t.Fatalf("expected paid_amount=88, got %v", data.PaidAmount)
 	}
 }
 

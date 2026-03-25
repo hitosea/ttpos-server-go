@@ -583,8 +583,7 @@ func (s *DataManageSrv) SubmitOrder(ctx context.Context, req shop_req.SubmitData
 }
 
 // GetOrderSelectStats 获取可选订单统计预览（不持久化）
-// 支持多组 Filters，与 SubmitOrder 对齐：
-//   - 遍历所有 Filter 计算 toAddSet / toDeleteSet（复用 SubmitOrder 的合并逻辑）
+// 使用单个 filter 计算预览：
 //   - 最终选中集合 = 已持久化 + toAddSet - toDeleteSet
 func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.GetDataManageOrderSelectStatsReq) (*setting_resp.DataManageOrderSelectStatsResp, error) {
 	if err := s.checkPermission(ctx); err != nil {
@@ -596,7 +595,7 @@ func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.Ge
 	orderRepo := repository.NewOrderRepo(db)
 	dataManageRepo := repository.NewDataManageRepo(db)
 	tz := ctx.GetCompanySetting().Timezone
-	filters := s.normalizeOrderSelectStatsFilters(req.Filters)
+	filters := s.normalizeOrderSelectStatsFilter(req.Filter)
 
 	// 1) 本次增删集合（toAdd/toDelete）
 	toAddSet, toDeleteSet := s.buildOrderSelectOperationSets(filters, orderRepo, commonRepo, tz)
@@ -619,10 +618,10 @@ func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.Ge
 	return s.calcOrderSelectStats(finalSet, orderRepo, commonRepo), nil
 }
 
-// normalizeOrderSelectStatsFilters 规范化统计筛选条件：
-// 无筛选条件时默认近7天；单个 filter 未传时间筛选时也默认近7天
-func (s *DataManageSrv) normalizeOrderSelectStatsFilters(filters []shop_req.DataManageOrderSubmitFilter) []shop_req.DataManageOrderSubmitFilter {
-	if len(filters) == 0 {
+// normalizeOrderSelectStatsFilter 规范化统计筛选条件：
+// 仅在无筛选条件时默认近7天；有筛选时保持原值
+func (s *DataManageSrv) normalizeOrderSelectStatsFilter(filter *shop_req.DataManageOrderSubmitFilter) []shop_req.DataManageOrderSubmitFilter {
+	if filter == nil {
 		return []shop_req.DataManageOrderSubmitFilter{
 			{
 				DateType: constant.OrderDateTypeLastWeek,
@@ -631,15 +630,7 @@ func (s *DataManageSrv) normalizeOrderSelectStatsFilters(filters []shop_req.Data
 		}
 	}
 
-	normalized := make([]shop_req.DataManageOrderSubmitFilter, 0, len(filters))
-	for _, f := range filters {
-		hasDateFilter := f.DateType != constant.OrderDateTypeAll || f.QueryStartDate != "" || f.QueryEndDate != ""
-		if !hasDateFilter {
-			f.DateType = constant.OrderDateTypeLastWeek
-		}
-		normalized = append(normalized, f)
-	}
-	return normalized
+	return []shop_req.DataManageOrderSubmitFilter{*filter}
 }
 
 // buildOrderSelectOperationSets 计算本次请求的新增/移除集合
