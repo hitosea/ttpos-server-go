@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
@@ -43,6 +44,14 @@ func (t *ErpStockEntryTask) Execute() {
 	}()
 
 	logger.Logger.Info("开始执行ERP Stock Entry合并扣减任务")
+
+	start := time.Now()
+	lock.NewSystemLock().LockUuid(lock.ErpStockEntryLock)
+	defer lock.NewSystemLock().UnlockUuid(lock.ErpStockEntryLock)
+	if time.Since(start) > 1*time.Second {
+		logger.Logger.Warn("ERP Stock Entry任务: 其他节点已处理，跳过")
+		return
+	}
 
 	saasDB := t.dbm.GetDB(constant.DefaultDB)
 	if saasDB == nil {
