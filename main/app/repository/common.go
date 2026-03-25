@@ -1139,3 +1139,11 @@ func SelectColumnFromTable(db *gorm.DB, tableName string, column string, opts ..
 	err := query.Find(&records).Error
 	return records, err
 }
+
+// resolveTableName 使用 NamingStrategy 解析完整表名（含前缀）
+func resolveTableName(db *gorm.DB, name string) string {
+	if db.Config != nil && db.Config.NamingStrategy != nil {
+		return db.Config.NamingStrategy.TableName(name)
+	}
+	return name
+}

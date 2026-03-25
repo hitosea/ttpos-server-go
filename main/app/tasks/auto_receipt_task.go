@@ -45,7 +45,6 @@ type autoReceiptInput struct {
 	pendingItems []req.PurchaseReceiptItemCreateReq
 	rule         *shopRuleInfo
 	shopUuid     uint64
-	loc          *time.Location
 }
 
 // AutoReceiptTask 品采自动收货定时任务
@@ -265,7 +264,7 @@ func (t *AutoReceiptTask) processOrder(
 		// 满足所有条件，执行自动收货
 		t.executeAutoReceipt(ctx, autoReceiptInput{
 			order: order, dn: dn, pendingItems: pendingItems,
-			rule: matchedRule, shopUuid: shopUuid, loc: loc,
+			rule: matchedRule, shopUuid: shopUuid,
 		}, deps)
 	}
 }
@@ -292,8 +291,7 @@ func (t *AutoReceiptTask) executeAutoReceipt(ctx context.Context, in autoReceipt
 		return
 	}
 
-	// 记录日志（使用门店时区的当天0点）
-	receiptTime, _ := utils.Timezone(in.loc.String()).TodayStartEndUnix()
+	// 记录日志
 	_, err = deps.logRepo.Create(model.AutoReceiptLog{
 		HeadquarterCompanyUuid: in.rule.HeadquarterUuid,
 		RuleUuid:               in.rule.RuleUuid,
@@ -301,7 +299,7 @@ func (t *AutoReceiptTask) executeAutoReceipt(ctx context.Context, in autoReceipt
 		ReceiptOrderUuid:       result.Uuid,
 		ReceiptOrderNo:         result.OrderNo,
 		ReceiptErpOrderNo:      in.dn.Name,
-		ReceiptTime:            receiptTime,
+		ReceiptTime:            now.Unix(),
 	})
 	if err != nil {
 		logger.Logger.Error("自动收货任务: 记录日志失败",

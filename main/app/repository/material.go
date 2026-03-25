@@ -593,8 +593,8 @@ func (r *MaterialRepoImpl) SubActualSaleNum(materialUuid uint64, saleNum float64
 
 func (r *MaterialRepoImpl) CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse {
 	var result dto.LocaleResponse
-	materialTable := r.db.Table("material").Name()
-	multiLanguageNameTable := r.db.Table("multi_language_name").Name()
+	materialTable := resolveTableName(r.db, "material")
+	multiLanguageNameTable := resolveTableName(r.db, "multi_language_name")
 
 	// 定义语言字段映射
 	languageFields := map[string]string{
