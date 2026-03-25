@@ -21,6 +21,7 @@ class AppValidate extends  BaseValidate
         'link_phone|联系电话' => 'require|max:20',
         'user_name|超管邮箱' => 'require|max:64|email',
         'password|超管密码' =>  'require|checkPassword',
+        'confirm_password|确认超管密码' => 'requireWith:password|confirm:password',
         'cash_limit|收银机上限' => 'require|integer|between:0,999',
         'kitchen_limit|厨显上限' => 'require|integer|between:0,999',
         'tablet_limit|平板上限' => 'require|integer|between:0,999',

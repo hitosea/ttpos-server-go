@@ -2283,4 +2283,5 @@ return [
     "超管" => "Super-Admin",
     "商户UUID不能为空" => "Händler-UUID darf nicht leer sein",
     "缓存失效任务执行失败: " => "Cache-Invaliderungsauftrag fehlgeschlagen:",
+    "确认超管密码与超管密码不一致" => "Die Bestätigung des Super-Admin-Passworts stimmt nicht mit dem Super-Admin-Passwort überein",
 ];
