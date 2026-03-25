@@ -3868,7 +3868,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	}
 
 	// 判断是否是"先下单后付"模式的订单（Status=Pending 但有 H5 订单）
-	isOrderFirstPayLater := saleBill.Status == constant.SaleBillStatusPending && h5Order != nil
+	isOrderFirstPayLater := saleBill.IsOrderFirstPayLater == 1
 
 	// 计算剩余支付时间（"先下单后付"模式的订单不显示支付倒计时）
 	var remainingPaymentTime int64
