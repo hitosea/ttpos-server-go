@@ -636,11 +636,11 @@ func (r *WarehouseItemRepoImpl) GetTransitWarehouseItemByWarehouseAndMaterial(
 	return warehouseItem, nil
 }
 
-// GetItemsInActiveWarehouses 获取所有活跃仓库中的库存物品
+// GetItemsInActiveWarehouses 获取所有活跃非在途仓库中的库存物品
 func (r *WarehouseItemRepoImpl) GetItemsInActiveWarehouses() ([]model.WarehouseItem, error) {
 	var warehouseItems []model.WarehouseItem
 	err := r.db.Model(&model.WarehouseItem{}).
-		Where("warehouse_uuid IN (?)", r.db.Model(&model.Warehouse{}).Select("uuid").Where("delete_time = 0")).
+		Where("warehouse_uuid IN (?)", r.db.Model(&model.Warehouse{}).Select("uuid").Where("delete_time = 0 AND type != ?", constant.WarehouseTypeTransit)).
 		Find(&warehouseItems).Error
 	return warehouseItems, err
 }
