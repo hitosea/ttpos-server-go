@@ -195,6 +195,24 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 		}
 	})
 
+	// 批量为无班次的会员端堂食订单分配班次
+	// 先付后下单模式下，自动接单时可能因无可用班次而留空，此时补充班次信息
+	utils.Go(func() {
+		saleBillRepo := repository.NewSaleBillRepo(db)
+		count, err := saleBillRepo.BatchAssignShiftToMemberDineInOrders(shiftLog.ShiftNo, staff.Uuid, staff.GetUserName())
+		if err != nil {
+			logger.Logger.Warn("批量分配会员端堂食订单班次失败",
+				zap.Error(err),
+				zap.String("shiftNo", shiftLog.ShiftNo),
+				zap.Uint64("staffUuid", staff.Uuid))
+		} else if count > 0 {
+			logger.Logger.Info("批量分配会员端堂食订单班次成功",
+				zap.Int64("count", count),
+				zap.String("shiftNo", shiftLog.ShiftNo),
+				zap.Uint64("staffUuid", staff.Uuid))
+		}
+	})
+
 	return shiftLog, nil
 }
 

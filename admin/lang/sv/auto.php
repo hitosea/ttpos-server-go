@@ -2275,4 +2275,5 @@ return [
     "超管" => "Superadmin",
     "商户UUID不能为空" => "Handlarens UUID får inte vara tom",
     "缓存失效任务执行失败: " => "Cache-invalideringsuppgift misslyckades att utföra:",
+    "确认超管密码与超管密码不一致" => "Bekräftelsen av superadministratörens lösenord matchar inte superadministratörens lösenord",
 ];

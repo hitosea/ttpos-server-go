@@ -78,6 +78,7 @@ type IMemberOrderSrv interface {
 	MemberOrderSelectingTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error   // 外送订单选购超时自动取消订单
 	MemberOrderPayTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error         // 外送订单支付超时自动取消订单
 	MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error // 外送订单骑手接单超时自动取消订单
+	DineInOrderPayTimeoutAutoCancel(ctx context.Context, saleBillUuid uint64) error                // 堂食订单支付超时自动取消订单
 
 	// 完成外送订单
 	CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64) error // 完成外送订单
@@ -2780,6 +2781,90 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 	return nil
 }
 
+// DineInOrderPayTimeoutAutoCancel 堂食订单支付超时自动取消订单
+// 当会员端堂食订单创建后在指定时间内未完成支付，自动取消订单
+func (s *orderSrv) DineInOrderPayTimeoutAutoCancel(ctx context.Context, saleBillUuid uint64) error {
+	// 获取DB
+	db := ctx.GetDB()
+
+	// 1. 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		logger.Logger.Error("获取堂食订单失败",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid),
+			zap.Error(err))
+		return err
+	}
+
+	// 2. 检查订单状态是否可以取消 - 只有待付款状态的订单才能自动取消
+	if saleBill.Status != constant.SaleBillStatusPending {
+		if saleBill.Status == constant.SaleBillStatusCanceled {
+			// 已取消，无需处理
+			return nil
+		}
+		// 已支付或已完成，无需取消
+		return nil
+	}
+
+	// 3. 检查是否为会员端订单（会员端 Source = 5）
+	if saleBill.Source != constant.SaleBillSourceMember {
+		logger.Logger.Warn("非会员端堂食订单，跳过自动取消",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid),
+			zap.Uint("source", uint(saleBill.Source)))
+		return nil
+	}
+
+	// 4. 检查支付超时剩余时间（防止误触发）- 堂食订单超时时间为15分钟
+	dineInPaymentTimeout := int64(15 * 60) // 15分钟
+	if saleBill.SubmitPayTime > 0 {
+		elapsedTime := time.Now().Unix() - int64(saleBill.SubmitPayTime)
+		remainingTime := dineInPaymentTimeout - elapsedTime
+		if remainingTime > 5 {
+			logger.Logger.Warn("堂食订单支付未超时",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("sale_bill_uuid", saleBillUuid),
+				zap.Int64("remaining_time", remainingTime))
+			return errors.New("订单支付未超时")
+		}
+	}
+
+	// 5. 执行取消操作
+	reason := constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneDineInPaymentTimeout]
+	if err := repository.NewOrderRepo(db).CancelOrderWithoutTx(saleBillUuid); err != nil {
+		logger.Logger.Error("取消堂食订单失败",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid),
+			zap.Error(err))
+		return err
+	}
+
+	// 6. 发布订单取消事件，通知前端
+	utils.Go(func() {
+		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       constant.SourceMember,
+				SaleBillUuid: saleBillUuid,
+			},
+			Data: event.CancelMemberOrderPayloadData{
+				Type:    "timeout_cancel",
+				Refunds: make([]event.CancelMemberOrderPayloadDataRefund, 0),
+			},
+		})
+	})
+
+	_ = reason // Reason is used for logging context
+
+	logger.Logger.Info("堂食订单支付超时自动取消成功",
+		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+		zap.Uint64("sale_bill_uuid", saleBillUuid))
+
+	return nil
+}
+
 // CreateMemberDineInOrder 创建会员端堂食订单
 // 1. sale_bill_uuid 为0时，新建订单并添加商品
 // 2. sale_bill_uuid 不为0时，更新已有订单（识别新增、修改、删除的商品）
@@ -2801,7 +2886,8 @@ func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.Crea
 	}
 
 	var result *resp.CreateInstantOrderResp
-	if request.SaleBillUuid == 0 {
+	isNewOrder := request.SaleBillUuid == 0
+	if isNewOrder {
 		// 新建订单
 		result, err = s.createDineInOrder(ctx, request)
 	} else {
@@ -2810,6 +2896,33 @@ func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.Crea
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	// 仅新建订单时添加支付超时自动取消任务
+	if isNewOrder && result != nil && Queue.MemberOrderCancelQueue != nil {
+		saleBillUuid := result.SaleBillUuid
+		companyUuid := ctx.GetCompanyUuid()
+		utils.Go(func() {
+			// 构建队列消息参数
+			paramsJson := utils.ToJson(map[string]any{
+				"sale_bill_uuid": saleBillUuid,
+				"company_uuid":   companyUuid,
+				"cancel_scene":   constant.MemberSaleOrderSceneDineInPaymentTimeout,
+			})
+
+			// 发送延时消息：15分钟后执行自动取消
+			_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
+				paramsJson,
+				15*time.Minute,
+				delayqueue.WithRetryCount(3),
+			)
+			if err != nil {
+				logger.Logger.Error("添加堂食订单支付超时自动取消任务失败",
+					zap.Uint64("company_uuid", companyUuid),
+					zap.Uint64("sale_bill_uuid", saleBillUuid),
+					zap.Error(err))
+			}
+		})
 	}
 
 	return result, nil
@@ -3503,6 +3616,13 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 			isProductionFinished = true
 		} else {
 			isProductionFinished, _ = productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+			if isProductionFinished {
+				hasProduction, _ := productionRepo.HasProductionOrderBySaleBillUuid(saleBill.Uuid)
+				if !hasProduction {
+					// 开启了厨显但没有生产单（尚未送厨）→ 视为未完成
+					isProductionFinished = false
+				}
+			}
 		}
 
 		// 先下单后付款模式的状态过滤逻辑：
@@ -3542,7 +3662,13 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 		// H5 订单状态内存过滤（结合生产单完成状态）
 		// 仅对非 Pending 状态的订单应用 H5 状态过滤
 		if saleBill.Status != constant.SaleBillStatusPending {
-			if !s.filterDineInOrderByH5Status(h5Order, h5OrderStatuses, listReq.Status, isProductionFinished) {
+			// 先下单后付 + 已结账：无论 H5/生产状态如何，都已是最终态（已完成）
+			// 不应再用 H5/生产状态做 tab 归属判断
+			if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && saleBill.Status == constant.SaleBillStatusComplete {
+				if listReq.Status == constant.MemberDineInOrderStatusInProgress {
+					continue // 已结账不应出现在进行中
+				}
+			} else if !s.filterDineInOrderByH5Status(h5Order, h5OrderStatuses, listReq.Status, isProductionFinished) {
 				continue
 			}
 		}
@@ -4056,12 +4182,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	// 获取订单备注：统一从 OrderRemark（整单备注）读取
 	orderRemark := ""
 	if latestRemark := saleBill.GetLatestOrderRemarkRes(); latestRemark != nil {
-		// 优先返回 CustomRemark（自定义备注），否则返回多语言备注
-		if latestRemark.CustomRemark == "" {
-			orderRemark = latestRemark.Remark.GetLocale(ctx.GetLanguage())
-		} else {
-			orderRemark = latestRemark.Remark.GetLocale(ctx.GetLanguage()) + ";" + latestRemark.CustomRemark
-		}
+		orderRemark = latestRemark.Remark.GetLocale(ctx.GetLanguage())
 	}
 
 	return &resp.GetMemberDineInOrderDetailResp{

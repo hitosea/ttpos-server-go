@@ -18,62 +18,77 @@ func TestGetMemberDineInOrderStatusInfo_OrderFirstPayLater(t *testing.T) {
 	tests := []struct {
 		name                 string
 		saleBillStatus       uint
+		isOrderFirstPayLater uint
 		h5Order              *model.H5Order
 		isProductionFinished bool
 		wantStatus           string
 	}{
+		// 先下单后付模式 (OrderFirst)
 		{
-			name:           "Pending + H5 waiting acceptance → pending",
-			saleBillStatus: constant.SaleBillStatusPending,
-			h5Order:        &model.H5Order{Status: constant.H5OrderStatusOrder},
-			wantStatus:     constant.MemberDineInDetailStatusPending,
-		},
-		{
-			name:           "Pending + H5 accepted, production not finished → preparing",
-			saleBillStatus: constant.SaleBillStatusPending,
-			h5Order:        &model.H5Order{Status: constant.H5OrderStatusAccepted},
-			wantStatus:     constant.MemberDineInDetailStatusPreparing,
-		},
-		{
-			name:                 "Pending + H5 accepted, production finished → completed",
+			name:                 "OrderFirst: Pending + H5 waiting acceptance → pending",
 			saleBillStatus:       constant.SaleBillStatusPending,
+			isOrderFirstPayLater: constant.OrderFirstPayLaterYes,
+			h5Order:              &model.H5Order{Status: constant.H5OrderStatusOrder},
+			wantStatus:           constant.MemberDineInDetailStatusPending,
+		},
+		{
+			name:                 "OrderFirst: Pending + H5 accepted, production not finished → preparing",
+			saleBillStatus:       constant.SaleBillStatusPending,
+			isOrderFirstPayLater: constant.OrderFirstPayLaterYes,
+			h5Order:              &model.H5Order{Status: constant.H5OrderStatusAccepted},
+			wantStatus:           constant.MemberDineInDetailStatusPreparing,
+		},
+		{
+			name:                 "OrderFirst: Pending + H5 accepted, production finished → unpaid",
+			saleBillStatus:       constant.SaleBillStatusPending,
+			isOrderFirstPayLater: constant.OrderFirstPayLaterYes,
 			h5Order:              &model.H5Order{Status: constant.H5OrderStatusAccepted},
 			isProductionFinished: true,
+			wantStatus:           constant.MemberDineInDetailStatusUnpaid,
+		},
+		{
+			name:                 "OrderFirst: Pending + H5 rejected → rejected",
+			saleBillStatus:       constant.SaleBillStatusPending,
+			isOrderFirstPayLater: constant.OrderFirstPayLaterYes,
+			h5Order:              &model.H5Order{Status: constant.H5OrderStatusRejected},
+			wantStatus:           constant.MemberDineInDetailStatusRejected,
+		},
+		{
+			name:                 "OrderFirst: Complete → completed (final state)",
+			saleBillStatus:       constant.SaleBillStatusComplete,
+			isOrderFirstPayLater: constant.OrderFirstPayLaterYes,
+			h5Order:              &model.H5Order{Status: constant.H5OrderStatusAccepted},
 			wantStatus:           constant.MemberDineInDetailStatusCompleted,
 		},
 		{
-			name:           "Pending + H5 rejected → rejected",
-			saleBillStatus: constant.SaleBillStatusPending,
-			h5Order:        &model.H5Order{Status: constant.H5OrderStatusRejected},
-			wantStatus:     constant.MemberDineInDetailStatusRejected,
+			name:                 "OrderFirst: Canceled + H5 rejected → rejected",
+			saleBillStatus:       constant.SaleBillStatusCanceled,
+			isOrderFirstPayLater: constant.OrderFirstPayLaterYes,
+			h5Order:              &model.H5Order{Status: constant.H5OrderStatusRejected},
+			wantStatus:           constant.MemberDineInDetailStatusRejected,
 		},
+		// 先付后下单模式 (PayFirst)
 		{
-			name:           "Pending + no H5 (normal pay-first mode) → unpaid",
+			name:           "PayFirst: Pending + no H5 → unpaid",
 			saleBillStatus: constant.SaleBillStatusPending,
 			h5Order:        nil,
 			wantStatus:     constant.MemberDineInDetailStatusUnpaid,
 		},
 		{
-			name:           "Complete + H5 accepted, production not finished → preparing",
+			name:           "PayFirst: Complete + H5 accepted, production not finished → preparing",
 			saleBillStatus: constant.SaleBillStatusComplete,
 			h5Order:        &model.H5Order{Status: constant.H5OrderStatusAccepted},
 			wantStatus:     constant.MemberDineInDetailStatusPreparing,
 		},
 		{
-			name:                 "Complete + H5 accepted, production finished → completed",
+			name:                 "PayFirst: Complete + H5 accepted, production finished → completed",
 			saleBillStatus:       constant.SaleBillStatusComplete,
 			h5Order:              &model.H5Order{Status: constant.H5OrderStatusAccepted},
 			isProductionFinished: true,
 			wantStatus:           constant.MemberDineInDetailStatusCompleted,
 		},
 		{
-			name:           "Canceled + H5 rejected → rejected",
-			saleBillStatus: constant.SaleBillStatusCanceled,
-			h5Order:        &model.H5Order{Status: constant.H5OrderStatusRejected},
-			wantStatus:     constant.MemberDineInDetailStatusRejected,
-		},
-		{
-			name:           "Canceled + no H5 → cancelled",
+			name:           "PayFirst: Canceled + no H5 → cancelled",
 			saleBillStatus: constant.SaleBillStatusCanceled,
 			h5Order:        nil,
 			wantStatus:     constant.MemberDineInDetailStatusCancelled,
@@ -84,7 +99,10 @@ func TestGetMemberDineInOrderStatusInfo_OrderFirstPayLater(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			saleBill := &model.SaleBill{Status: tt.saleBillStatus}
+			saleBill := &model.SaleBill{
+				Status:               tt.saleBillStatus,
+				IsOrderFirstPayLater: tt.isOrderFirstPayLater,
+			}
 			result := srv.getMemberDineInOrderStatusInfo(saleBill, tt.h5Order, tt.isProductionFinished, "en")
 
 			if result.Status != tt.wantStatus {

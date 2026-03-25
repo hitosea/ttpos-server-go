@@ -2275,4 +2275,5 @@ return [
     "超管" => "Super Admin",
     "商户UUID不能为空" => "Merchant UUID cannot be empty",
     "缓存失效任务执行失败: " => "Cache invalidation task failed to execute:",
+    "确认超管密码与超管密码不一致" => "Confirmation of the super admin password does not match the super admin password",
 ];

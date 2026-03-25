@@ -3085,6 +3085,7 @@ func (s *businessSrv) CountChannelSales(ctx context.Context, req req.ChannelSale
 		Summary:         convertToBlock(channelData["summary"]),
 		Table:           convertToBlock(channelData["table"]),
 		DineIn:          convertToBlock(channelData["dine_in"]),
+		Scan:            convertToBlock(channelData["scan"]),
 		TakeoutShop:     convertToBlock(channelData["takeout_shop"]),
 		TakeoutDelivery: convertToBlock(channelData["takeout_delivery"]),
 		DineInStore:     convertToBlock(channelData["dine_in_store"]),

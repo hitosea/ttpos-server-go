@@ -2176,6 +2176,7 @@ func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.Pr
 		},
 		RecommendProductPackageUuids: recommendProductUuids,
 		IsMember:                     true,
+		OrderType:                    request.OrderType,
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取产品推荐列表失败")
