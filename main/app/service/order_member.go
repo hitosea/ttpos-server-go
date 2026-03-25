@@ -535,7 +535,19 @@ func (s *orderSrv) PayDineInOrder(ctx context.Context, request req.PayDineInOrde
 
 	// 更新订单备注和提交支付时间
 	if request.Remark != "" {
-		saleBill.Remark = request.Remark
+		// 会员端备注写入 OrderRemark（整单备注），与收银端整单备注统一
+		orderRemarkInfo := resp.OrderRemarkInfo{
+			List: []resp.OrderRemarkItem{
+				{
+					IsLatest:   true,
+					Uuids:      []uint64{},
+					Remarks:    []dto.LocaleResponse{},
+					Remark:     request.Remark,
+					CreateTime: time.Now().Unix(),
+				},
+			},
+		}
+		saleBill.OrderRemark = orderRemarkInfo.ToJson()
 	}
 	if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
 		return errors.WithMessage(err, "更新订单失败")
@@ -2835,8 +2847,23 @@ func (s *orderSrv) SubmitMemberDineInOrder(ctx context.Context, request req.Subm
 		return errors.New("订单已提交，请勿重复操作")
 	}
 
-	// 3. 标记 sale_bill 为先下单后付款
+	// 3. 标记 sale_bill 为先下单后付款，并保存会员端备注到整单备注
 	saleBill.IsOrderFirstPayLater = 1
+	if request.Remark != "" {
+		// 会员端备注保存到 OrderRemark 字段（整单备注），格式与收银端一致
+		orderRemarkInfo := resp.OrderRemarkInfo{
+			List: []resp.OrderRemarkItem{
+				{
+					IsLatest:   true,
+					Uuids:      []uint64{},
+					Remarks:    []dto.LocaleResponse{},
+					Remark:     request.Remark,
+					CreateTime: time.Now().Unix(),
+				},
+			},
+		}
+		saleBill.OrderRemark = orderRemarkInfo.ToJson()
+	}
 	if err := repository.NewSaleBillRepo(db).UpdateSaleBill(saleBill); err != nil {
 		return errors.WithMessage(err, "更新订单标记失败")
 	}
@@ -3881,6 +3908,17 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		}
 	}
 
+	// 获取订单备注：统一从 OrderRemark（整单备注）读取
+	orderRemark := ""
+	if latestRemark := saleBill.GetLatestOrderRemarkRes(); latestRemark != nil {
+		// 优先返回 CustomRemark（自定义备注），否则返回多语言备注
+		if latestRemark.CustomRemark != "" {
+			orderRemark = latestRemark.CustomRemark
+		} else {
+			orderRemark = latestRemark.Remark.GetLocale(ctx.GetLanguage())
+		}
+	}
+
 	return &resp.GetMemberDineInOrderDetailResp{
 		SaleBillUuid:         saleBill.Uuid,
 		SaleOrderUuid:        saleOrder.Uuid,
@@ -3889,7 +3927,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		OrderNo:              saleBill.OrderNo,
 		StatusInfo:           s.getMemberDineInOrderStatusInfo(saleBill, h5Order, isProductionFinished, ctx.GetLanguage()),
 		DiningMethod:         saleBill.DiningMethod,
-		Remark:               saleBill.Remark,
+		Remark:               orderRemark,
 		CreateTime:           saleBill.CreateTime,
 		SubmitPayTime:        saleBill.SubmitPayTime,
 		PayTime:              payTime,
@@ -3898,12 +3936,13 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		RefundAmount:         refundAmount,
 		IsOrderFirstPayLater: saleBill.IsOrderFirstPayLater == 1,
 		AmountInfo: resp.MemberDineInOrderAmountInfo{
-			ProductAmount:     saleOrder.ProductOriginalAmount,
-			DiscountAmount:    saleBill.CustomDiscountFee,
-			ServiceFee:        saleBill.ServiceFee,
-			TaxFee:            saleBill.TaxFee,
-			Amount:            amount,
-			PaymentMethodName: paymentMethodName,
+			ProductAmount:        saleOrder.ProductOriginalAmount,
+			DiscountAmount:       saleOrder.CustomDiscountFee,
+			MemberDiscountAmount: saleOrder.MemberDiscountFee,
+			ServiceFee:           saleBill.ServiceFee,
+			TaxFee:               saleBill.TaxFee,
+			Amount:               amount,
+			PaymentMethodName:    paymentMethodName,
 		},
 		ProductList: resp.MemberDineInOrderProductList{
 			List: productList,
