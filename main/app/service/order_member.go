@@ -3496,35 +3496,47 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 		// 获取 H5 订单
 		h5Order := s.getH5OrderForMemberDineIn(h5OrderRepo, saleBill.Uuid)
 
-		// "先下单后付"模式内存过滤：通过 IsOrderFirstPayLater 标记区分
-		// - "待支付"列表：排除先下单后付的订单（它们属于"进行中"）
-		// - "进行中"列表：Pending 状态必须是先下单后付的订单才能归入进行中
-		if listReq.Status == constant.MemberDineInOrderStatusUnpaid && saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && saleBill.Status == constant.SaleBillStatusPending {
-			continue // 先下单后付的订单不显示在"待支付"列表
-		}
-		if listReq.Status == constant.MemberDineInOrderStatusInProgress && saleBill.Status == constant.SaleBillStatusPending && saleBill.IsOrderFirstPayLater != constant.OrderFirstPayLaterYes {
-			continue // Pending 状态非先下单后付的是普通待支付订单，不属于"进行中"
-		}
-
-		// 获取生产单完成状态
+		// 获取生产单完成状态（提前获取，用于后续过滤判断）
 		isProductionFinished, _ := productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
 
+		// 先下单后付款模式的状态过滤逻辑：
+		// - 待支付：备餐完成后显示在待支付列表（等待用户付款）
+		// - 进行中：备餐未完成时显示在进行中列表
+		isOrderFirstPayLater := saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && saleBill.Status == constant.SaleBillStatusPending
+
+		if listReq.Status == constant.MemberDineInOrderStatusUnpaid {
+			// 待支付列表过滤逻辑：
+			// - 先付款后下单模式：正常显示 Pending 状态的未支付订单
+			// - 先下单后付款模式：仅显示备餐完成的订单（此时需要用户付款）
+			if isOrderFirstPayLater && !isProductionFinished {
+				continue // 先下单后付 + 备餐未完成 → 不在待支付列表（应在进行中）
+			}
+		}
+
+		if listReq.Status == constant.MemberDineInOrderStatusInProgress {
+			// 进行中列表过滤逻辑：
+			if saleBill.Status == constant.SaleBillStatusPending {
+				if !isOrderFirstPayLater {
+					continue // Pending 状态非先下单后付的是普通待支付订单，不属于"进行中"
+				}
+				// 先下单后付订单的进行中过滤
+				if h5Order == nil {
+					continue
+				}
+				if h5Order.Status != constant.H5OrderStatusOrder && h5Order.Status != constant.H5OrderStatusAccepted {
+					continue
+				}
+				// 备餐完成的不在"进行中"（应在待支付列表）
+				if isProductionFinished {
+					continue
+				}
+			}
+		}
+
 		// H5 订单状态内存过滤（结合生产单完成状态）
-		// 对于"进行中"+ Pending 状态的先下单后付订单，跳过 h5OrderStatuses 过滤（已在上面过滤）
+		// 仅对非 Pending 状态的订单应用 H5 状态过滤
 		if saleBill.Status != constant.SaleBillStatusPending {
 			if !s.filterDineInOrderByH5Status(h5Order, h5OrderStatuses, listReq.Status, isProductionFinished) {
-				continue
-			}
-		} else if listReq.Status == constant.MemberDineInOrderStatusInProgress {
-			// 先下单后付订单的进行中过滤：H5 订单必须是待接单或已接单状态
-			if h5Order == nil {
-				continue
-			}
-			if h5Order.Status != constant.H5OrderStatusOrder && h5Order.Status != constant.H5OrderStatusAccepted {
-				continue
-			}
-			// 已接单且生产单全部完成的不在"进行中"
-			if h5Order.Status == constant.H5OrderStatusAccepted && isProductionFinished {
 				continue
 			}
 		}
