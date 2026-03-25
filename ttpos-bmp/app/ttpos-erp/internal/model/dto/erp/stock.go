@@ -98,6 +98,8 @@ const (
 	StockEntryTypeManufacture = "Manufacture"
 	// StockEntryTypeRepack 重新包装
 	StockEntryTypeRepack = "Repack"
+	// StockEntryTypeMaterialInventoryDeduction 物料库存扣减（TTPOS 合并扣减专用）
+	StockEntryTypeMaterialInventoryDeduction = "Material Inventory Deduction"
 
 	// DocTypeStockEntry 库存变动单据类型
 	DocTypeStockEntry = "Stock Entry"

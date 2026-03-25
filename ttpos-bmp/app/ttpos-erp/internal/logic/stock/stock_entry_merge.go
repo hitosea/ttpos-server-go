@@ -165,4 +165,4 @@ func MergeStockItems(items []StockEntryMergeItem) []StockEntryMergeItem {
 }
 
 // StockEntryTypeMergedDeduction 合并扣减类型
-const StockEntryTypeMergedDeduction = "Material Issue"
+const StockEntryTypeMergedDeduction = erp.StockEntryTypeMaterialInventoryDeduction
