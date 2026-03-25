@@ -1085,9 +1085,9 @@ func (h *purchaseOrderHelper) getLastPurchaseQtyByMaterialCode(
 		return result
 	}
 
-	// 查询上次完成品牌采购的基准单位数量
+	// 查询上次完成品牌采购的数量
 	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(db)
-	baseQtyMap, err := purchaseOrderItemRepo.GetLastCompletedBrandPurchaseBaseQty(materialUuids)
+	quantityMap, err := purchaseOrderItemRepo.GetLastCompletedBrandPurchaseQuantity(materialUuids)
 	if err != nil {
 		logger.Logger.Warn("查询上次品牌采购数量失败", zap.Error(err))
 		return result
@@ -1112,15 +1112,15 @@ func (h *purchaseOrderHelper) getLastPurchaseQtyByMaterialCode(
 	}
 
 	// 转换为默认销售单位并按MaterialCode建立映射
-	for materialUuid, baseQty := range baseQtyMap {
+	for materialUuid, quantity := range quantityMap {
 		code, ok := uuidToCode[materialUuid]
-		if !ok || baseQty == 0 {
+		if !ok || quantity == 0 {
 			continue
 		}
 		if rate, hasRate := conversionRateMap[materialUuid]; hasRate {
-			result[code] = decimal.NewFromFloat(baseQty).Div(decimal.NewFromFloat(rate)).Round(4).InexactFloat64()
+			result[code] = decimal.NewFromFloat(quantity).Div(decimal.NewFromFloat(rate)).Round(4).InexactFloat64()
 		} else {
-			result[code] = decimal.NewFromFloat(baseQty).Round(4).InexactFloat64()
+			result[code] = decimal.NewFromFloat(quantity).Round(4).InexactFloat64()
 		}
 	}
 	return result

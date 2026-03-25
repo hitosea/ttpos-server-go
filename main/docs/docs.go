@@ -43105,6 +43105,10 @@ const docTemplate = `{
                     "description": "分类UUID",
                     "type": "integer"
                 },
+                "consumption_since_last_purchase": {
+                    "description": "上次采购完成后的消耗量（默认销售单位）",
+                    "type": "number"
+                },
                 "cost_unit_locale_name": {
                     "description": "成本单位名称",
                     "allOf": [
@@ -66162,6 +66166,10 @@ const docTemplate = `{
                 "base_unit_name": {
                     "description": "基准单位名称",
                     "type": "string"
+                },
+                "consumption_since_last_purchase": {
+                    "description": "上次采购完成后的消耗量（默认销售单位）",
+                    "type": "number"
                 },
                 "default_sales_unit_locale_name": {
                     "description": "默认销售单位名称",

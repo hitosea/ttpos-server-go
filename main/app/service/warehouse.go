@@ -1405,3 +1405,4 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 		},
 	}, nil
 }
+
