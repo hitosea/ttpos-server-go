@@ -53,6 +53,18 @@ const (
 	StockReconciliationPurposeInitial = 2
 )
 
+// StockReconciliationPurposeToErp 将盘点目的转换为 ERP purpose
+func StockReconciliationPurposeToErp(purpose int) string {
+	switch purpose {
+	case StockReconciliationPurposeInventory:
+		return "Stock Reconciliation"
+	case StockReconciliationPurposeInitial:
+		return "Opening Stock"
+	default:
+		return "Stock Reconciliation"
+	}
+}
+
 const (
 	// StockReconciliationInventoryStatusProfit 库存状态-盘盈
 	StockReconciliationInventoryStatusProfit = 1

@@ -379,6 +379,17 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		lastPurchaseInfoMap, _ = purchaseOrderItemRepo.GetLastCompletedBrandPurchaseInfo(materialUuids)
 	}
 
+	// 品牌采购：查询上次采购完成后的出库消耗量
+	consumptionMap := make(map[uint64]float64)
+	if purchaseOrder.IsHeadquarterPurchase() {
+		inOutLogRepo := repository.NewWarehouseInOutLogRepo(db)
+		var consumptionErr error
+		consumptionMap, consumptionErr = inOutLogRepo.GetOutboundConsumptionSince(repository.BuildConsumptionSinceTimes(lastPurchaseInfoMap))
+		if consumptionErr != nil {
+			logger.Logger.Warn("查询出库消耗量失败", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Error(consumptionErr))
+		}
+	}
+
 	lang := ctx.GetLanguage()
 	// 转换明细数据
 	for _, item := range purchaseOrder.Items {
@@ -467,8 +478,10 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		itemInfo.StoreQuantity = decimal.NewFromFloat(storeQuantityMap[item.MaterialUuid]).Round(3).InexactFloat64()
 		// 上次采购数量（基准单位，后面转换为默认销售单位）和采购单位名称
 		lastPurchaseInfo := lastPurchaseInfoMap[item.MaterialUuid]
-		itemInfo.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseInfo.BaseQty).Round(3).InexactFloat64()
+		itemInfo.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseInfo.Quantity).Round(3).InexactFloat64()
 		itemInfo.LastPurchaseLocaleUnitName = *language.JsonToLocaleResponse(lastPurchaseInfo.UnitName)
+		// 上次采购完成后的消耗量（基准单位，后面转换为默认销售单位）
+		itemInfo.ConsumptionSinceLastPurchase = decimal.NewFromFloat(consumptionMap[item.MaterialUuid]).Round(3).InexactFloat64()
 		// 申请时门店库存快照（已按默认销售单位存储）
 		itemInfo.StoreSnapshotQuantity = decimal.NewFromFloat(item.StoreSnapshotQuantity).Round(3).InexactFloat64()
 		// 物料状态：0-正常 1-禁用 2-删除
@@ -489,7 +502,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 					if unit.ConversionRate != 0 {
 						itemInfo.AvailableQuantity = decimal.NewFromFloat(avaliableQuantityMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 						itemInfo.StoreQuantity = decimal.NewFromFloat(storeQuantityMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
-						itemInfo.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseInfo.BaseQty).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+						itemInfo.ConsumptionSinceLastPurchase = decimal.NewFromFloat(consumptionMap[item.MaterialUuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 					}
 				}
 			}

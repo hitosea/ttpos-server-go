@@ -840,6 +840,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 			Warehouse:     stockReconciliation.Warehouse.ErpCode,
 			Items:         erpItems,
 			InventoryType: constant.StockReconciliationTypeToErpInventoryType(stockReconciliation.Type),
+			Purpose:       constant.StockReconciliationPurposeToErp(stockReconciliation.Purpose),
 		})
 		if err != nil {
 			logger.Logger.Error("提交盘点单失败", zap.Error(err))
