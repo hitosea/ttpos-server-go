@@ -1595,10 +1595,10 @@ func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy 
 	// 2. 构建 SaleBill
 	saleBill := &model.SaleBill{
 		BaseModel:     model.BaseModel{CreateTime: orderCreateTime}, // 用订单创建时间，供测试营业时段守卫判断
-		Status:        constant.SaleBillStatusComplete,            // 设置为已完成状态，IsFinish() 才能返回 true
-		PaymentAmount: platformTotal,                              // 顾客实付金额（单位：元）
-		CashierUuid:   acceptedBy,                                 // 使用接单人
-		FinishTime:    completedTime,                              // 使用完成时间
+		Status:        constant.SaleBillStatusComplete,              // 设置为已完成状态，IsFinish() 才能返回 true
+		PaymentAmount: platformTotal,                                // 顾客实付金额（单位：元）
+		CashierUuid:   acceptedBy,                                   // 使用接单人
+		FinishTime:    completedTime,                                // 使用完成时间
 	}
 
 	// 3. 获取门店设置（时区）
