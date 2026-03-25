@@ -18,10 +18,8 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 	if config.Server.Mode == gin.DebugMode { // 调试模式
 		ignoreRecordNotFoundError = false // 不忽略
 	}
-	// 开启 interpolateParams 让驱动在客户端完成参数插值，避免 server-side prepared statements。
-	// 在 MySQL Router 读写分离场景下，prepared statements 会让连接更容易被 pin 到 primary，
-	// 从而导致读请求难以路由到 secondary；这里不要随意移除。
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local&interpolateParams=true",
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		conf.User,
 		conf.Password,
 		conf.Host,

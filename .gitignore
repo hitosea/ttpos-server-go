@@ -17,6 +17,7 @@ __debug_*
 
 /vendor/
 /node_modules/
+/ttpos-scripts/node_modules/
 /certificate
 /ttpos-flutter
 /pay-server

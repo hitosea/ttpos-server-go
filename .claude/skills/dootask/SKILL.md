@@ -83,5 +83,5 @@ description: 读取 DooTask 任务详情。当用户使用 /dootask 命令或需
 
 ## 相关命令
 
-- `/devhq` - 开发指挥部
+- `/dev-task` - 开发指挥部
 - `/commit` - 生成提交消息

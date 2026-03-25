@@ -48,12 +48,14 @@ func (s *sSelling) SaveSalesInvoice(ctx context.Context, req *selling.SaveSalesI
 				description = fmt.Sprintf("[BY001] %s", item.Description)
 			}
 			si.Items = append(si.Items, erp.SalesInvoiceItem{
-				ItemCode:    itemCode,
-				Qty:         item.Qty,
-				Rate:        0,
-				Amount:      0,
-				Uom:         item.Uom,
-				Description: description,
+				ItemCode:           itemCode,
+				Qty:                item.Qty,
+				Rate:               0,
+				Amount:             0,
+				Uom:                item.Uom,
+				Description:        description,
+				IsFreeItem:         1,
+				DiscountPercentage: 100,
 			})
 		}
 	}
@@ -283,12 +285,14 @@ func (s *sSelling) buildCreditNote(ctx context.Context, req *selling.ReturnSales
 	// 物品明细
 	for _, item := range req.MaterialItems {
 		items = append(items, erp.SalesInvoiceItem{
-			ItemCode:    item.ItemCode,
-			Qty:         item.Qty,
-			Rate:        0,
-			Amount:      0,
-			Uom:         item.Uom,
-			Description: item.Description,
+			ItemCode:           item.ItemCode,
+			Qty:                item.Qty,
+			Rate:               0,
+			Amount:             0,
+			Uom:                item.Uom,
+			Description:        item.Description,
+			IsFreeItem:         1,
+			DiscountPercentage: 100,
 		})
 	}
 
