@@ -359,8 +359,8 @@ func (s *orderSrv) GetDineInOrderFormInfo(ctx context.Context, request req.GetDi
 			LocaleName:           saleOrderProduct.GetLocaleName(),
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(), // 包含规格+小料+属性
 			Num:                  saleOrderProduct.Num,
-			UnitPrice:            saleOrderProduct.OriginTotalPrice, // 折前单价，含税费
-			Amount:               saleOrderProduct.GetTotalPriceOrigin(),
+			UnitPrice:            saleOrderProduct.SalePrice,      // 折前单价（纯商品价格，与订单详情保持一致）
+			Amount:               saleOrderProduct.GetSalePrice(), // 折前总价 = 单价 * 数量
 			Image: func() string {
 				if saleOrderProduct.ImageFileUuid != 0 && saleOrderProduct.ImageFile != nil {
 					return saleOrderProduct.ImageFile.GetUrl(baseUrl)
