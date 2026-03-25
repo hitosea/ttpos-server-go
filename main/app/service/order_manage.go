@@ -2299,6 +2299,12 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			staff := ctx.GetStaff()
+			shiftLogRepo := repository.NewShiftLogRepo(db)
+			shiftLog, shiftLogErr := shiftLogRepo.GetShiftLog(
+				repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+				repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+			)
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			for _, saleOrder := range saleBill.SaleOrders {
 				if saleOrder.IsDelete() {
@@ -2371,8 +2377,21 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 					}
 
 					sysLock.UnlockUuidString(seLockKey)
+				} else {
+					if shiftLogErr != nil {
+						return errors.WithMessage(shiftLogErr)
+					}
+					if shiftLog.IsHandedOver() {
+						return errors.New("当前班次已交班，无法保存发票")
+					}
+					err := erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
+						OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName, //异步模式必填
+						OrderNo:          orderNo,                          //异步模式必填
+					})
+					if err != nil {
+						return errors.WithMessage(err)
+					}
 				}
-				// NOTE: POS Invoice 反结账路径已废弃，发票名称不再持久化到 sale_order
 			}
 			ctx.Mark("erp_invoice_cancelled")
 		}
