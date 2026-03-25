@@ -363,7 +363,22 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	} else if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
 		// 普通会员端堂食订单（先付后下单）：接单后标记账单完成
 		staff := ctx.GetStaff()
-		saleBill.SetFinishSaleBill(staff.DutyNo, staff.Uuid, staff.GetUserName())
+		dutyNo, cashierUuid, cashierName := staff.DutyNo, staff.Uuid, staff.GetUserName()
+
+		// 自动接单时 ctx 中无 Staff 信息，使用 GetAvailableShiftInfo 获取班次
+		// 优先级：1.主收银机班次 2.最先登录的收银机班次 3.留空等下次登录分配
+		if staff.Uuid == 0 {
+			shiftLogRepo := repository.NewShiftLogRepo(db)
+			shiftDutyNo, shiftStaffUuid, shiftStaffName, err := shiftLogRepo.GetAvailableShiftInfo()
+			if err != nil {
+				ctx.Log().Warn("AcceptH5Order, GetAvailableShiftInfo failed",
+					zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+					zap.Uint64("h5_order_uuid", h5OrderUuid),
+					zap.Error(err))
+			}
+			dutyNo, cashierUuid, cashierName = shiftDutyNo, shiftStaffUuid, shiftStaffName
+		}
+		saleBill.SetFinishSaleBill(dutyNo, cashierUuid, cashierName)
 		saleBill.CalcAll()
 
 		// 计算结账抹零（只有无手续费时才抹零），确保后续 SyncMemberOrderToErp 使用正确的值
