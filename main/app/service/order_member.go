@@ -78,6 +78,7 @@ type IMemberOrderSrv interface {
 	MemberOrderSelectingTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error   // 外送订单选购超时自动取消订单
 	MemberOrderPayTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error         // 外送订单支付超时自动取消订单
 	MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error // 外送订单骑手接单超时自动取消订单
+	DineInOrderPayTimeoutAutoCancel(ctx context.Context, saleBillUuid uint64) error                // 堂食订单支付超时自动取消订单
 
 	// 完成外送订单
 	CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64) error // 完成外送订单
@@ -2780,6 +2781,90 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 	return nil
 }
 
+// DineInOrderPayTimeoutAutoCancel 堂食订单支付超时自动取消订单
+// 当会员端堂食订单创建后在指定时间内未完成支付，自动取消订单
+func (s *orderSrv) DineInOrderPayTimeoutAutoCancel(ctx context.Context, saleBillUuid uint64) error {
+	// 获取DB
+	db := ctx.GetDB()
+
+	// 1. 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		logger.Logger.Error("获取堂食订单失败",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid),
+			zap.Error(err))
+		return err
+	}
+
+	// 2. 检查订单状态是否可以取消 - 只有待付款状态的订单才能自动取消
+	if saleBill.Status != constant.SaleBillStatusPending {
+		if saleBill.Status == constant.SaleBillStatusCanceled {
+			// 已取消，无需处理
+			return nil
+		}
+		// 已支付或已完成，无需取消
+		return nil
+	}
+
+	// 3. 检查是否为会员端订单（会员端 Source = 5）
+	if saleBill.Source != constant.SaleBillSourceMember {
+		logger.Logger.Warn("非会员端堂食订单，跳过自动取消",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid),
+			zap.Uint("source", uint(saleBill.Source)))
+		return nil
+	}
+
+	// 4. 检查支付超时剩余时间（防止误触发）- 堂食订单超时时间为15分钟
+	dineInPaymentTimeout := int64(15 * 60) // 15分钟
+	if saleBill.SubmitPayTime > 0 {
+		elapsedTime := time.Now().Unix() - int64(saleBill.SubmitPayTime)
+		remainingTime := dineInPaymentTimeout - elapsedTime
+		if remainingTime > 5 {
+			logger.Logger.Warn("堂食订单支付未超时",
+				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+				zap.Uint64("sale_bill_uuid", saleBillUuid),
+				zap.Int64("remaining_time", remainingTime))
+			return errors.New("订单支付未超时")
+		}
+	}
+
+	// 5. 执行取消操作
+	reason := constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneDineInPaymentTimeout]
+	if err := repository.NewOrderRepo(db).CancelOrderWithoutTx(saleBillUuid); err != nil {
+		logger.Logger.Error("取消堂食订单失败",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.Uint64("sale_bill_uuid", saleBillUuid),
+			zap.Error(err))
+		return err
+	}
+
+	// 6. 发布订单取消事件，通知前端
+	utils.Go(func() {
+		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       constant.SourceMember,
+				SaleBillUuid: saleBillUuid,
+			},
+			Data: event.CancelMemberOrderPayloadData{
+				Type:    "timeout_cancel",
+				Refunds: make([]event.CancelMemberOrderPayloadDataRefund, 0),
+			},
+		})
+	})
+
+	_ = reason // Reason is used for logging context
+
+	logger.Logger.Info("堂食订单支付超时自动取消成功",
+		zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+		zap.Uint64("sale_bill_uuid", saleBillUuid))
+
+	return nil
+}
+
 // CreateMemberDineInOrder 创建会员端堂食订单
 // 1. sale_bill_uuid 为0时，新建订单并添加商品
 // 2. sale_bill_uuid 不为0时，更新已有订单（识别新增、修改、删除的商品）
@@ -2801,7 +2886,8 @@ func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.Crea
 	}
 
 	var result *resp.CreateInstantOrderResp
-	if request.SaleBillUuid == 0 {
+	isNewOrder := request.SaleBillUuid == 0
+	if isNewOrder {
 		// 新建订单
 		result, err = s.createDineInOrder(ctx, request)
 	} else {
@@ -2810,6 +2896,33 @@ func (s *orderSrv) CreateMemberDineInOrder(ctx context.Context, request req.Crea
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	// 仅新建订单时添加支付超时自动取消任务
+	if isNewOrder && result != nil && Queue.MemberOrderCancelQueue != nil {
+		saleBillUuid := result.SaleBillUuid
+		companyUuid := ctx.GetCompanyUuid()
+		utils.Go(func() {
+			// 构建队列消息参数
+			paramsJson := utils.ToJson(map[string]any{
+				"sale_bill_uuid": saleBillUuid,
+				"company_uuid":   companyUuid,
+				"cancel_scene":   constant.MemberSaleOrderSceneDineInPaymentTimeout,
+			})
+
+			// 发送延时消息：15分钟后执行自动取消
+			_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
+				paramsJson,
+				15*time.Minute,
+				delayqueue.WithRetryCount(3),
+			)
+			if err != nil {
+				logger.Logger.Error("添加堂食订单支付超时自动取消任务失败",
+					zap.Uint64("company_uuid", companyUuid),
+					zap.Uint64("sale_bill_uuid", saleBillUuid),
+					zap.Error(err))
+			}
+		})
 	}
 
 	return result, nil
