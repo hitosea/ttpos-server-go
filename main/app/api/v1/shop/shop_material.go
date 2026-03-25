@@ -419,38 +419,18 @@ func (h *MaterialHandler) UpdateMaterialStatusBatch(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
-// BatchUpdateMaterialVisible 批量更新物品可见性
+// BatchUpdateMaterialVisible 批量更新物品可见性（已废弃，保留接口兼容）
 // @Summary 批量更新物品可见性
-// @Description 批量更新物品可见性设置（仅总店可用）
+// @Description 已废弃，接口保留兼容，不再执行实际操作
 // @Tags 商家端.物品管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.MaterialBatchUpdateVisibleReq true "批量更新物品可见性请求"
 // @Success 200 {object} nil "成功"
-// @Failure 400 {object} nil "错误请求"
 // @Router /shop/material/batch_update_visible [post]
 func (h *MaterialHandler) BatchUpdateMaterialVisible(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	visibleReq := req.MaterialBatchUpdateVisibleReq{}
-
-	if err := c.ShouldBindJSON(&visibleReq); err != nil {
-		helper.HandleValidationError(c, err, visibleReq, dto.PageReqMessage)
-		return
-	}
-	if err := visibleReq.Validate(); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
-		return
-	}
-
-	updatedCount, err := h.materialSrv.UpdateMaterialVisibleBatch(ctx, visibleReq)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-
 	helper.Success(c, gin.H{
-		"updated_count": updatedCount,
+		"updated_count": 0,
 	})
 }
 

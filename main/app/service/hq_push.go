@@ -1345,7 +1345,6 @@ func (s *hqPushSrv) pushSingleMaterialToStore(hqUuid, storeUuid uint64, hqMateri
 		"purchase_unit_uuid":       purchaseUnitUuid,
 		"cost_unit_uuid":           costUnitUuid,
 		"default_sales_unit_uuid":  defaultSalesUnitUuid,
-		"allow_substore_visible":   hqMaterial.AllowSubstoreVisible,
 		"delete_time":              hqMaterial.DeleteTime,
 		"update_time":              hqMaterial.UpdateTime,
 	}
