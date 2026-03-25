@@ -418,8 +418,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			defaultSalesUnitLocaleName = *language.JsonToLocaleResponse(defaultSalesUnit.Name)
 		}
 
-		// 库存数量、可用库存数量、在途库存数量
-		num := decimal.NewFromFloat(0)
+		// 可用库存数量、在途库存数量
 		availableNum := decimal.NewFromFloat(0)
 		transitNum := decimal.NewFromFloat(0)
 		for _, warehouseItem := range material.WarehouseItems {
@@ -434,7 +433,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 			}
 		}
-		stockNum := num.Add(availableNum).Add(transitNum).InexactFloat64()
+		stockNum := availableNum.InexactFloat64()
 
 		// 非基准单位的库存数
 		notBasicUnitStocks := make([]material_resp.NotBasicUnitStock, 0)
