@@ -193,7 +193,7 @@ func Test_P1_Shop_DataManage_OrderSelectStats_MultiFilters(t *testing.T) {
 		"sale_bill_uuids":       []uint64{},
 	}).AssertOK(t).AssertSuccess(t)
 
-	// 跨时间范围：3月选2单 + 2月选2单 → 共4单，金额 1000
+	// 跨时间范围：3月选2单 + 2月选2单，最后清空筛选查看全部 → 共4单，金额 1000
 	resp := httpClient.Post(t, pathOrderSelectStats, map[string]any{
 		"filters": []map[string]any{
 			{
@@ -213,6 +213,13 @@ func Test_P1_Shop_DataManage_OrderSelectStats_MultiFilters(t *testing.T) {
 				"bill_type":        -1,
 				"query_start_date": "2026-02-01 00:00:00",
 				"query_end_date":   "2026-02-28 23:59:59",
+			},
+			{
+				"select_all":       false,
+				"selected_uuids":   []uint64{},
+				"deselected_uuids": []uint64{},
+				"date_type":        -1,
+				"bill_type":        -1,
 			},
 		},
 	})
