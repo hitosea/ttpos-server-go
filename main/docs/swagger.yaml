@@ -4856,10 +4856,11 @@ definitions:
     type: object
   req.GetDataManageOrderSelectStatsReq:
     properties:
-      filter:
-        allOf:
-        - $ref: '#/definitions/req.DataManageOrderSubmitFilter'
-        description: 单个筛选条件
+      filters:
+        description: 筛选条件数组，每组独立处理
+        items:
+          $ref: '#/definitions/req.DataManageOrderSubmitFilter'
+        type: array
     type: object
   req.GetOrderCartProductBatchCookingListReq:
     properties:
@@ -11381,6 +11382,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesMeta'
         description: 元数据
+      scan:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 点餐-扫码
       summary:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesBlock'
@@ -21509,6 +21514,11 @@ definitions:
       selected_count:
         description: 预览选中数量
         type: integer
+      selected_uuids:
+        description: 最终选中的订单UUID列表
+        items:
+          type: integer
+        type: array
       total_count:
         description: 筛选范围内订单总数
         type: integer
@@ -44136,6 +44146,23 @@ paths:
       summary: 导出用户分析统计
       tags:
       - 商家端.报表
+  /shop/stock_entry/trigger_deduction:
+    post:
+      consumes:
+      - application/json
+      description: 查询未扣减库存的已结账订单，合并提交 Stock Entry 到 ERPNext
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 触发 Stock Entry 合并扣减
+      tags:
+      - 商家端.库存管理
   /shop/stock_loss/annotation_list:
     get:
       consumes:

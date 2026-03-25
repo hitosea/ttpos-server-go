@@ -927,7 +927,7 @@ func TestGetOrderSelectStats_SelectAll(t *testing.T) {
 
 	// 全选所有 → 3条，金额 600
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		Filter: &shop_req.DataManageOrderSubmitFilter{SelectAll: true, DateType: -1, BillType: -1},
+		Filters: []shop_req.DataManageOrderSubmitFilter{{SelectAll: true, DateType: -1, BillType: -1}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -962,7 +962,7 @@ func TestGetOrderSelectStats_SelectAllWithDeselect(t *testing.T) {
 
 	// 全选但排除 1002 → finalSet={1001,1003}，金额 400
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		Filter: &shop_req.DataManageOrderSubmitFilter{SelectAll: true, DeselectedUuids: []uint64{1002}, DateType: -1, BillType: -1},
+		Filters: []shop_req.DataManageOrderSubmitFilter{{SelectAll: true, DeselectedUuids: []uint64{1002}, DateType: -1, BillType: -1}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -1003,7 +1003,7 @@ func TestGetOrderSelectStats_ManualSelect(t *testing.T) {
 
 	// 手动选 1003 → existing{1001} ∪ {1003} = {1001,1003}，2条，金额 400
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		Filter: &shop_req.DataManageOrderSubmitFilter{SelectedUuids: []uint64{1003}, DateType: -1, BillType: -1},
+		Filters: []shop_req.DataManageOrderSubmitFilter{{SelectedUuids: []uint64{1003}, DateType: -1, BillType: -1}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -1016,9 +1016,7 @@ func TestGetOrderSelectStats_ManualSelect(t *testing.T) {
 	}
 
 	// 兜底：都为空 → 返回已管理统计 existing{1001}，1条，金额 100
-	stats, err = srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		Filter: nil,
-	})
+	stats, err = srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats fallback failed: %v", err)
 	}
@@ -1053,7 +1051,7 @@ func TestGetOrderSelectStats_WithFilter(t *testing.T) {
 
 	// 全选仅餐单（bill_type=0）→ finalSet={1001,1002}，金额 300，TotalCount=2
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		Filter: &shop_req.DataManageOrderSubmitFilter{SelectAll: true, DateType: -1, BillType: 0},
+		Filters: []shop_req.DataManageOrderSubmitFilter{{SelectAll: true, DateType: -1, BillType: 0}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats with filter failed: %v", err)
@@ -1095,7 +1093,7 @@ func TestGetOrderSelectStats_FilterOnly_ShouldApplyFilter(t *testing.T) {
 
 	// 仅传筛选条件（无 selected/deselected 变化）
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		Filter: &shop_req.DataManageOrderSubmitFilter{
+		Filters: []shop_req.DataManageOrderSubmitFilter{{
 			SelectAll:       false,
 			SelectedUuids:   []uint64{},
 			DeselectedUuids: []uint64{},
@@ -1103,7 +1101,7 @@ func TestGetOrderSelectStats_FilterOnly_ShouldApplyFilter(t *testing.T) {
 			BillType:        -1,
 			QueryStartDate:  "2026-03-01 00:00:00",
 			QueryEndDate:    "2026-03-03 23:59:59",
-		},
+		}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -1142,9 +1140,7 @@ func TestGetOrderSelectStats_NoFilter_DefaultLast7Days(t *testing.T) {
 	})
 	insertTestDataManages(t, db, []uint64{1001, 1002})
 
-	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		Filter: nil,
-	})
+	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
 	}
@@ -1182,7 +1178,7 @@ func TestGetOrderSelectStats_Deselect(t *testing.T) {
 
 	// 案例3：DeselectedUuids=[1002] → existing{1001,1002,1003} - {1002} = {1001,1003}，2条，金额 400
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		Filter: &shop_req.DataManageOrderSubmitFilter{DeselectedUuids: []uint64{1002}, DateType: -1, BillType: -1},
+		Filters: []shop_req.DataManageOrderSubmitFilter{{DeselectedUuids: []uint64{1002}, DateType: -1, BillType: -1}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -1220,7 +1216,7 @@ func TestGetOrderSelectStats_ManualSelectPartial(t *testing.T) {
 
 	// 手动选 1001 → SelectedCount=1, TotalCount=1, IsSelectAll=false
 	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
-		Filter: &shop_req.DataManageOrderSubmitFilter{SelectedUuids: []uint64{1001}, DateType: -1, BillType: -1},
+		Filters: []shop_req.DataManageOrderSubmitFilter{{SelectedUuids: []uint64{1001}, DateType: -1, BillType: -1}},
 	})
 	if err != nil {
 		t.Fatalf("GetOrderSelectStats failed: %v", err)
@@ -1233,5 +1229,95 @@ func TestGetOrderSelectStats_ManualSelectPartial(t *testing.T) {
 	}
 	if stats.TotalCount != 1 {
 		t.Errorf("Expected total_count=1, got %d", stats.TotalCount)
+	}
+}
+
+// TestGetOrderSelectStats_MultiFilters_ClearScope 跨范围累积选择后清空筛选 → 合并全部
+func TestGetOrderSelectStats_MultiFilters_ClearScope(t *testing.T) {
+	dbm := setupDataManageTestDBWithOrders(t)
+	ctx := createDataManageTestContext(t, dbm)
+	db := dbm.GetDB(constant.MockDB)
+	srv := newTestDataManageSrv(dbm)
+
+	marchTime := time.Date(2026, 3, 15, 12, 0, 0, 0, time.UTC).Unix()
+	febTime := time.Date(2026, 2, 15, 12, 0, 0, 0, time.UTC).Unix()
+
+	insertTestSaleBills(t, db, []model.SaleBill{
+		{BaseModel: model.BaseModel{Uuid: 1001, CreateTime: marchTime, UpdateTime: marchTime}, OrderNo: "ORD001", Status: 1, BillType: 0, ProductionTime: marchTime, PaymentAmount: 100},
+		{BaseModel: model.BaseModel{Uuid: 1002, CreateTime: marchTime, UpdateTime: marchTime}, OrderNo: "ORD002", Status: 1, BillType: 0, ProductionTime: marchTime, PaymentAmount: 200},
+		{BaseModel: model.BaseModel{Uuid: 1003, CreateTime: febTime, UpdateTime: febTime}, OrderNo: "ORD003", Status: 1, BillType: 0, ProductionTime: febTime, PaymentAmount: 300},
+		{BaseModel: model.BaseModel{Uuid: 1004, CreateTime: febTime, UpdateTime: febTime}, OrderNo: "ORD004", Status: 1, BillType: 0, ProductionTime: febTime, PaymentAmount: 400},
+	})
+	insertTestSaleOrders(t, db, []model.SaleOrder{
+		{BaseModel: model.BaseModel{Uuid: 2001, CreateTime: marchTime, UpdateTime: marchTime}, SaleBillUuid: 1001, Status: 1},
+		{BaseModel: model.BaseModel{Uuid: 2002, CreateTime: marchTime, UpdateTime: marchTime}, SaleBillUuid: 1002, Status: 1},
+		{BaseModel: model.BaseModel{Uuid: 2003, CreateTime: febTime, UpdateTime: febTime}, SaleBillUuid: 1003, Status: 1},
+		{BaseModel: model.BaseModel{Uuid: 2004, CreateTime: febTime, UpdateTime: febTime}, SaleBillUuid: 1004, Status: 1},
+	})
+
+	// 3月选2单 + 2月选2单 + 清空筛选 → 4单，金额 1000
+	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{SelectedUuids: []uint64{1001, 1002}, DateType: -1, BillType: -1, QueryStartDate: "2026-03-01 00:00:00", QueryEndDate: "2026-03-31 23:59:59"},
+			{SelectedUuids: []uint64{1003, 1004}, DateType: -1, BillType: -1, QueryStartDate: "2026-02-01 00:00:00", QueryEndDate: "2026-02-28 23:59:59"},
+			{DateType: -1, BillType: -1},
+		},
+	})
+	if err != nil {
+		t.Fatalf("GetOrderSelectStats failed: %v", err)
+	}
+	if stats.SelectedCount != 4 {
+		t.Errorf("Expected selected_count=4, got %d", stats.SelectedCount)
+	}
+	if stats.PaidAmount != 1000 {
+		t.Errorf("Expected paid_amount=1000, got %f", stats.PaidAmount)
+	}
+	if len(stats.SelectedUuids) != 4 {
+		t.Errorf("Expected 4 selected_uuids, got %d", len(stats.SelectedUuids))
+	}
+}
+
+// TestGetOrderSelectStats_MultiFilters_NarrowScope 跨范围累积选择后缩小筛选 → 只返回范围内的
+func TestGetOrderSelectStats_MultiFilters_NarrowScope(t *testing.T) {
+	dbm := setupDataManageTestDBWithOrders(t)
+	ctx := createDataManageTestContext(t, dbm)
+	db := dbm.GetDB(constant.MockDB)
+	srv := newTestDataManageSrv(dbm)
+
+	marchTime := time.Date(2026, 3, 15, 12, 0, 0, 0, time.UTC).Unix()
+	febTime := time.Date(2026, 2, 15, 12, 0, 0, 0, time.UTC).Unix()
+
+	insertTestSaleBills(t, db, []model.SaleBill{
+		{BaseModel: model.BaseModel{Uuid: 1001, CreateTime: marchTime, UpdateTime: marchTime}, OrderNo: "ORD001", Status: 1, BillType: 0, ProductionTime: marchTime, PaymentAmount: 100},
+		{BaseModel: model.BaseModel{Uuid: 1002, CreateTime: marchTime, UpdateTime: marchTime}, OrderNo: "ORD002", Status: 1, BillType: 0, ProductionTime: marchTime, PaymentAmount: 200},
+		{BaseModel: model.BaseModel{Uuid: 1003, CreateTime: febTime, UpdateTime: febTime}, OrderNo: "ORD003", Status: 1, BillType: 0, ProductionTime: febTime, PaymentAmount: 300},
+		{BaseModel: model.BaseModel{Uuid: 1004, CreateTime: febTime, UpdateTime: febTime}, OrderNo: "ORD004", Status: 1, BillType: 0, ProductionTime: febTime, PaymentAmount: 400},
+	})
+	insertTestSaleOrders(t, db, []model.SaleOrder{
+		{BaseModel: model.BaseModel{Uuid: 2001, CreateTime: marchTime, UpdateTime: marchTime}, SaleBillUuid: 1001, Status: 1},
+		{BaseModel: model.BaseModel{Uuid: 2002, CreateTime: marchTime, UpdateTime: marchTime}, SaleBillUuid: 1002, Status: 1},
+		{BaseModel: model.BaseModel{Uuid: 2003, CreateTime: febTime, UpdateTime: febTime}, SaleBillUuid: 1003, Status: 1},
+		{BaseModel: model.BaseModel{Uuid: 2004, CreateTime: febTime, UpdateTime: febTime}, SaleBillUuid: 1004, Status: 1},
+	})
+
+	// 3月选2单 + 2月选2单 + 回到3月筛选 → 只有2单在3月范围内，金额 300
+	stats, err := srv.GetOrderSelectStats(ctx, shop_req.GetDataManageOrderSelectStatsReq{
+		Filters: []shop_req.DataManageOrderSubmitFilter{
+			{SelectedUuids: []uint64{1001, 1002}, DateType: -1, BillType: -1, QueryStartDate: "2026-03-01 00:00:00", QueryEndDate: "2026-03-31 23:59:59"},
+			{SelectedUuids: []uint64{1003, 1004}, DateType: -1, BillType: -1, QueryStartDate: "2026-02-01 00:00:00", QueryEndDate: "2026-02-28 23:59:59"},
+			{DateType: -1, BillType: -1, QueryStartDate: "2026-03-01 00:00:00", QueryEndDate: "2026-03-31 23:59:59"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("GetOrderSelectStats failed: %v", err)
+	}
+	if stats.SelectedCount != 2 {
+		t.Errorf("Expected selected_count=2 (only March in scope), got %d", stats.SelectedCount)
+	}
+	if stats.PaidAmount != 300 {
+		t.Errorf("Expected paid_amount=300, got %f", stats.PaidAmount)
+	}
+	if len(stats.SelectedUuids) != 2 {
+		t.Errorf("Expected 2 selected_uuids, got %d", len(stats.SelectedUuids))
 	}
 }

@@ -583,8 +583,8 @@ func (s *DataManageSrv) SubmitOrder(ctx context.Context, req shop_req.SubmitData
 }
 
 // GetOrderSelectStats 获取可选订单统计预览（不持久化）
-// 使用单个 filter 计算预览：
-//   - 最终选中集合 = 已持久化 + toAddSet - toDeleteSet
+// 只统计最后一个筛选条件范围内的订单，前面的 filters 仅贡献选择状态。
+// 如果前面 filters 选中的订单也落在最后一个 filter 范围内，则合并计入。
 func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.GetDataManageOrderSelectStatsReq) (*setting_resp.DataManageOrderSelectStatsResp, error) {
 	if err := s.checkPermission(ctx); err != nil {
 		return nil, err
@@ -595,14 +595,16 @@ func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.Ge
 	orderRepo := repository.NewOrderRepo(db)
 	dataManageRepo := repository.NewDataManageRepo(db)
 	tz := ctx.GetCompanySetting().Timezone
-	filters := s.normalizeOrderSelectStatsFilter(req.Filter)
+	filters := s.normalizeOrderSelectStatsFilter(req)
 
-	// 1) 本次增删集合（toAdd/toDelete）
+	// 1) 所有 filters 贡献的增删集合
 	toAddSet, toDeleteSet := s.buildOrderSelectOperationSets(filters, orderRepo, commonRepo, tz)
-	// 2) 基线集合（existing）
-	existingSet := s.buildOrderSelectExistingSet(filters, db, orderRepo, dataManageRepo, commonRepo, tz)
 
-	// 3. 最终选中集合 = existing + toAddSet - toDeleteSet
+	// 2) 仅最后一个 filter 定义展示范围和基线
+	lastFilter := []shop_req.DataManageOrderSubmitFilter{filters[len(filters)-1]}
+	existingSet := s.buildOrderSelectExistingSet(lastFilter, db, orderRepo, dataManageRepo, commonRepo, tz)
+
+	// 3) 最终选中集合 = existing + toAddSet - toDeleteSet
 	finalSet := make(map[uint64]struct{}, len(existingSet)+len(toAddSet))
 	for uid := range existingSet {
 		finalSet[uid] = struct{}{}
@@ -614,23 +616,41 @@ func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.Ge
 		delete(finalSet, uid)
 	}
 
-	// 4) 统计
+	// 4) 限定到最后一个 filter 的范围：只保留命中该筛选条件的订单
+	lf := filters[len(filters)-1]
+	scopeOpt := s.buildOrderFilterOption(lf.OrderNo, lf.DateType, lf.QueryStartDate, lf.QueryEndDate, lf.BillType, tz)
+	scopeUuids := orderRepo.GetSaleBillUuids(
+		commonRepo.WhereBySoftDelete(),
+		commonRepo.WhereByCooking(),
+		func(db *gorm.DB) *gorm.DB { return db.Where("status = ?", 1) },
+		scopeOpt,
+	)
+	scopeSet := make(map[uint64]struct{}, len(scopeUuids))
+	for _, uid := range scopeUuids {
+		scopeSet[uid] = struct{}{}
+	}
+	for uid := range finalSet {
+		if _, inScope := scopeSet[uid]; !inScope {
+			delete(finalSet, uid)
+		}
+	}
+
+	// 5) 统计
 	return s.calcOrderSelectStats(finalSet, orderRepo, commonRepo), nil
 }
 
 // normalizeOrderSelectStatsFilter 规范化统计筛选条件：
-// 仅在无筛选条件时默认近7天；有筛选时保持原值
-func (s *DataManageSrv) normalizeOrderSelectStatsFilter(filter *shop_req.DataManageOrderSubmitFilter) []shop_req.DataManageOrderSubmitFilter {
-	if filter == nil {
-		return []shop_req.DataManageOrderSubmitFilter{
-			{
-				DateType: constant.OrderDateTypeLastWeek,
-				BillType: constant.OrderDateTypeAll,
-			},
-		}
+// 有 Filters 时直接使用，无则默认近7天
+func (s *DataManageSrv) normalizeOrderSelectStatsFilter(req shop_req.GetDataManageOrderSelectStatsReq) []shop_req.DataManageOrderSubmitFilter {
+	if len(req.Filters) > 0 {
+		return req.Filters
 	}
-
-	return []shop_req.DataManageOrderSubmitFilter{*filter}
+	return []shop_req.DataManageOrderSubmitFilter{
+		{
+			DateType: constant.OrderDateTypeLastWeek,
+			BillType: constant.OrderDateTypeAll,
+		},
+	}
 }
 
 // buildOrderSelectOperationSets 计算本次请求的新增/移除集合
@@ -721,6 +741,7 @@ func (s *DataManageSrv) calcOrderSelectStats(finalSet map[uint64]struct{}, order
 			PaidAmount:    0,
 			TotalCount:    0,
 			IsSelectAll:   false,
+			SelectedUuids: make([]uint64, 0),
 		}
 	}
 
@@ -746,6 +767,7 @@ func (s *DataManageSrv) calcOrderSelectStats(finalSet map[uint64]struct{}, order
 		PaidAmount:    totalPaidAmount,
 		TotalCount:    selectedCount,
 		IsSelectAll:   false,
+		SelectedUuids: finalUuids,
 	}
 }
 
