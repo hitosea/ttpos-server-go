@@ -3610,6 +3610,26 @@ func (s *orderSrv) getH5OrderForMemberDineIn(h5OrderRepo repository.IH5OrderRepo
 	h5Order, err := h5OrderRepo.GetH5Order(
 		h5OrderRepo.WhereSaleBillUuid(saleBillUuid),
 		h5OrderRepo.WhereOrderType(constant.H5OrderTypeMemberDineIn),
+		// 预加载 H5OrderProducts（用于拒单后显示商品列表）
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "H5OrderProducts",
+				Args: []any{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			repository.WithPreload{
+				Query: "H5OrderProducts.SaleOrderProduct",
+				Args: []any{
+					func(db *gorm.DB) *gorm.DB {
+						return db.Unscoped() // 包括已软删除的商品
+					},
+				},
+			},
+			repository.WithPreload{
+				Query: "H5OrderProducts.SaleOrderProduct.ImageFile",
+			},
+		),
 	)
 	if err != nil || h5Order.Uuid == 0 {
 		return nil
@@ -3669,38 +3689,73 @@ func (s *orderSrv) filterDineInOrderByH5Status(h5Order *model.H5Order, h5OrderSt
 
 // buildMemberDineInOrderProductList 构建会员端堂食订单商品列表
 // 返回：商品数量、商品金额、商品列表（最多3个）
-func (s *orderSrv) buildMemberDineInOrderProductList(ctx context.Context, saleBill model.SaleBill) (float64, float64, []resp.MemberOrderProduct) {
+func (s *orderSrv) buildMemberDineInOrderProductList(ctx context.Context, saleBill model.SaleBill, h5Order *model.H5Order) (float64, float64, []resp.MemberOrderProduct) {
 	var num float64
 	var productAmount float64
 	productList := make([]resp.MemberOrderProduct, 0)
 	displayCount := 0
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 
-	saleOrder := saleBill.GetFirstSaleOrder()
-	if saleOrder == nil {
-		return num, productAmount, productList
-	}
+	// 判断是否是已拒单状态
+	isRejected := h5Order != nil && h5Order.Status == constant.H5OrderStatusRejected
 
-	for _, product := range saleOrder.SaleOrderProducts {
-		if product.IsPackageSubProduct() {
-			continue // 跳过套餐子商品
-		}
-		num += product.Num
-		productAmount += product.GetTotalPrice()
+	if isRejected && len(h5Order.H5OrderProducts) > 0 {
+		// 已拒单：从 H5OrderProducts 快照获取商品信息
+		for _, h5Product := range h5Order.H5OrderProducts {
+			num += h5Product.Num
+			productAmount += h5Product.SalePrice * h5Product.Num
 
-		// 只返回前3个商品
-		if displayCount < 3 {
-			productList = append(productList, resp.MemberOrderProduct{
-				LocaleName: product.GetLocaleName(),
-				Num:        product.Num,
-				TotalPrice: product.GetTotalPrice(),
-				Image: func() string {
-					if product.ImageFile == nil {
+			// 只返回前3个商品
+			if displayCount < 3 {
+				// 快照名称存储的是单一语言，需要填充到所有语言字段
+				localeName := dto.LocaleResponse{
+					ZH: h5Product.Name, TH: h5Product.Name, EN: h5Product.Name,
+					ZHTW: h5Product.Name, JA: h5Product.Name, KO: h5Product.Name,
+					MY: h5Product.Name, TR: h5Product.Name, SV: h5Product.Name,
+				}
+				productList = append(productList, resp.MemberOrderProduct{
+					LocaleName: localeName,
+					Num:        h5Product.Num,
+					TotalPrice: h5Product.SalePrice * h5Product.Num,
+					Image: func() string {
+						if h5Product.SaleOrderProduct != nil && h5Product.SaleOrderProduct.ImageFile != nil {
+							return h5Product.SaleOrderProduct.ImageFile.GetUrl(baseUrl)
+						}
 						return ""
-					}
-					return product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
-				}(),
-			})
-			displayCount++
+					}(),
+				})
+				displayCount++
+			}
+		}
+	} else {
+		// 正常订单：从 SaleOrderProducts 获取商品信息
+		saleOrder := saleBill.GetFirstSaleOrder()
+		if saleOrder == nil {
+			return num, productAmount, productList
+		}
+
+		for _, product := range saleOrder.SaleOrderProducts {
+			if product.IsPackageSubProduct() {
+				continue // 跳过套餐子商品
+			}
+			num += product.Num
+			productAmount += product.GetTotalPrice()
+
+			// 只返回前3个商品
+			if displayCount < 3 {
+				productList = append(productList, resp.MemberOrderProduct{
+					LocaleName: product.GetLocaleName(),
+					Num:        product.Num,
+					TotalPrice: product.GetTotalPrice(),
+					Image: func() string {
+						if product.ImageFile == nil {
+							return ""
+						}
+						return product.ImageFile.GetUrl(baseUrl)
+					}(),
+				})
+				displayCount++
+			}
 		}
 	}
 
@@ -3710,7 +3765,7 @@ func (s *orderSrv) buildMemberDineInOrderProductList(ctx context.Context, saleBi
 // buildMemberDineInOrderItem 构建单个会员端堂食订单响应项
 func (s *orderSrv) buildMemberDineInOrderItem(ctx context.Context, saleBill model.SaleBill, h5Order *model.H5Order, isProductionFinished bool) resp.MemberDineInOrder {
 	// 构建商品列表
-	num, productAmount, productList := s.buildMemberDineInOrderProductList(ctx, saleBill)
+	num, productAmount, productList := s.buildMemberDineInOrderProductList(ctx, saleBill, h5Order)
 
 	// 计算订单状态
 	statusInfo := s.getMemberDineInOrderStatusInfo(&saleBill, h5Order, isProductionFinished, ctx.GetLanguage())
@@ -3769,75 +3824,143 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		return nil, errors.New("订单类型错误")
 	}
 
-	// 获取 H5 订单
+	// 获取 H5 订单（带商品快照，用于拒单后显示商品）
 	h5Order, _ := h5OrderRepo.GetH5Order(
 		h5OrderRepo.WhereSaleBillUuid(saleBill.Uuid),
 		h5OrderRepo.WhereOrderType(constant.H5OrderTypeMemberDineIn),
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "H5OrderProducts",
+				Args: []any{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			repository.WithPreload{
+				Query: "H5OrderProducts.SaleOrderProduct",
+				Args: []any{
+					func(db *gorm.DB) *gorm.DB {
+						return db.Unscoped() // 包括已软删除的商品
+					},
+				},
+			},
+			repository.WithPreload{
+				Query: "H5OrderProducts.SaleOrderProduct.ImageFile",
+			},
+		),
 	)
 
 	// 获取生产单完成状态
-	// 注意：当没有生产单时（如先下单后付的订单尚未送厨），IsProductionFinishedBySaleBillUuid 返回 true（count==0）
-	// 但此时订单并非真正完成，需要检查是否存在生产单来区分"从未送厨"和"全部完成"
-	isProductionFinished, _ := productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
-	if isProductionFinished {
-		hasProduction, _ := productionRepo.HasProductionOrderBySaleBillUuid(saleBill.Uuid)
-		if !hasProduction {
-			isProductionFinished = false
+	// 未开启厨显KDS时，直接视为"已完成"（不存在备餐中状态）
+	// 开启厨显时，需要检查生产单是否全部完成
+	var isProductionFinished bool
+	if ctx.GetCompanySetting().IsOpenKitchenKds != 1 {
+		// 未开启厨显 → 直接视为已完成
+		isProductionFinished = true
+	} else {
+		// 开启厨显 → 检查生产单状态
+		isProductionFinished, _ = productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+		if isProductionFinished {
+			hasProduction, _ := productionRepo.HasProductionOrderBySaleBillUuid(saleBill.Uuid)
+			if !hasProduction {
+				// 开启了厨显但没有生产单（尚未送厨）→ 视为未完成
+				isProductionFinished = false
+			}
 		}
 	}
 
 	// 获取商品列表（包含退款信息）
 	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	productList := make([]resp.MemberDineInOrderProduct, 0)
-	for _, product := range saleOrder.SaleOrderProducts {
-		if product.IsPackageSubProduct() {
-			continue // 跳过套餐子商品（套餐子商品挂在套餐主商品下）
-		}
 
-		// 计算商品退款金额
-		var productRefundAmount float64
-		for _, returnOrderProduct := range product.ReturnOrderProducts {
-			productRefundAmount += returnOrderProduct.ProductTotalAmount
-		}
+	// 判断是否是已拒单状态
+	isRejected := h5Order != nil && h5Order.Status == constant.H5OrderStatusRejected
 
-		memberProduct := resp.MemberDineInOrderProduct{
-			LocaleName:          product.GetLocaleName(),
-			LocaleAttributeName: product.GetAttributeName(),
-			Num:                 product.Num,
-			Price:               product.SalePrice,      // 折前单价
-			TotalPrice:          product.GetSalePrice(), // 折前总价 = 单价 * 数量
-			Image: func() string {
-				if product.ImageFile == nil {
-					return ""
-				}
-				return product.ImageFile.GetUrl(baseUrl)
-			}(),
-			RefundAmount:       productRefundAmount,
-			ProductType:        uint(product.ProductType),
-			PackageProductList: resp.PackageProductList{List: make([]resp.PackageProduct, 0)},
-			IsGift:             product.IsGiftProduct(),
-			IsCancel:           product.IsCancelProduct(),
-		}
-
-		// 套餐商品：挂载子商品列表
-		if product.IsPackageProduct() {
-			subProducts := saleOrder.GetPackageSubProductList(product.Uuid)
-			for _, sub := range subProducts {
-				if sub.DeleteTime != 0 {
-					continue
-				}
-				memberProduct.PackageProductList.List = append(memberProduct.PackageProductList.List, resp.PackageProduct{
-					Uuid:                sub.Uuid,
-					LocaleName:          sub.GetLocaleName(),
-					LocaleAttributeName: sub.GetAttributeName(),
-					Num:                 sub.Num,
-					UnitNum:             sub.GetProductNum(),
-					AddPrice:            sub.AddPrice,
-				})
+	if isRejected && len(h5Order.H5OrderProducts) > 0 {
+		// 已拒单：从 H5OrderProducts 快照获取商品信息
+		for _, h5Product := range h5Order.H5OrderProducts {
+			// 快照名称存储的是单一语言，需要填充到所有语言字段
+			localeName := dto.LocaleResponse{
+				ZH: h5Product.Name, TH: h5Product.Name, EN: h5Product.Name,
+				ZHTW: h5Product.Name, JA: h5Product.Name, KO: h5Product.Name,
+				MY: h5Product.Name, TR: h5Product.Name, SV: h5Product.Name,
 			}
+			localeAttrName := dto.LocaleResponse{
+				ZH: h5Product.AttributeText, TH: h5Product.AttributeText, EN: h5Product.AttributeText,
+				ZHTW: h5Product.AttributeText, JA: h5Product.AttributeText, KO: h5Product.AttributeText,
+				MY: h5Product.AttributeText, TR: h5Product.AttributeText, SV: h5Product.AttributeText,
+			}
+			memberProduct := resp.MemberDineInOrderProduct{
+				LocaleName:          localeName,
+				LocaleAttributeName: localeAttrName,
+				Num:                 h5Product.Num,
+				Price:               h5Product.SalePrice,                 // 折前单价
+				TotalPrice:          h5Product.SalePrice * h5Product.Num, // 折前总价
+				Image: func() string {
+					if h5Product.SaleOrderProduct != nil && h5Product.SaleOrderProduct.ImageFile != nil {
+						return h5Product.SaleOrderProduct.ImageFile.GetUrl(baseUrl)
+					}
+					return ""
+				}(),
+				RefundAmount:       0, // 拒单订单没有退款
+				ProductType:        0, // 快照中没有商品类型，默认为普通商品
+				PackageProductList: resp.PackageProductList{List: make([]resp.PackageProduct, 0)},
+				IsGift:             false,
+				IsCancel:           false,
+			}
+			productList = append(productList, memberProduct)
 		}
+	} else {
+		// 正常订单：从 SaleOrderProducts 获取商品信息
+		for _, product := range saleOrder.SaleOrderProducts {
+			if product.IsPackageSubProduct() {
+				continue // 跳过套餐子商品（套餐子商品挂在套餐主商品下）
+			}
 
-		productList = append(productList, memberProduct)
+			// 计算商品退款金额
+			var productRefundAmount float64
+			for _, returnOrderProduct := range product.ReturnOrderProducts {
+				productRefundAmount += returnOrderProduct.ProductTotalAmount
+			}
+
+			memberProduct := resp.MemberDineInOrderProduct{
+				LocaleName:          product.GetLocaleName(),
+				LocaleAttributeName: product.GetAttributeName(),
+				Num:                 product.Num,
+				Price:               product.SalePrice,      // 折前单价
+				TotalPrice:          product.GetSalePrice(), // 折前总价 = 单价 * 数量
+				Image: func() string {
+					if product.ImageFile == nil {
+						return ""
+					}
+					return product.ImageFile.GetUrl(baseUrl)
+				}(),
+				RefundAmount:       productRefundAmount,
+				ProductType:        uint(product.ProductType),
+				PackageProductList: resp.PackageProductList{List: make([]resp.PackageProduct, 0)},
+				IsGift:             product.IsGiftProduct(),
+				IsCancel:           product.IsCancelProduct(),
+			}
+
+			// 套餐商品：挂载子商品列表
+			if product.IsPackageProduct() {
+				subProducts := saleOrder.GetPackageSubProductList(product.Uuid)
+				for _, sub := range subProducts {
+					if sub.DeleteTime != 0 {
+						continue
+					}
+					memberProduct.PackageProductList.List = append(memberProduct.PackageProductList.List, resp.PackageProduct{
+						Uuid:                sub.Uuid,
+						LocaleName:          sub.GetLocaleName(),
+						LocaleAttributeName: sub.GetAttributeName(),
+						Num:                 sub.Num,
+						UnitNum:             sub.GetProductNum(),
+						AddPrice:            sub.AddPrice,
+					})
+				}
+			}
+
+			productList = append(productList, memberProduct)
+		}
 	}
 
 	// 计算订单总退款金额
