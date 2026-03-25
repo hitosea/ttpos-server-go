@@ -1053,7 +1053,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 	// 获取门店设置
 	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
 	if err != nil {
-		logger.Logger.Info("ReturnOrder process, GetStoreSetting failed", zap.Error(err))
+		logger.Logger.Error("ReturnOrder process, GetStoreSetting failed", zap.Error(err))
 		return errors.WithMessage(err), constant.CodeFail
 	}
 
@@ -1894,7 +1894,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 	// 获取门店设置
 	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
 	if err != nil {
-		logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetStoreSetting failed", zap.Error(err))
+		logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, GetStoreSetting failed", zap.Error(err))
 		return errors.WithMessage(err)
 	}
 
@@ -2299,6 +2299,12 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			staff := ctx.GetStaff()
+			shiftLogRepo := repository.NewShiftLogRepo(db)
+			shiftLog, shiftLogErr := shiftLogRepo.GetShiftLog(
+				repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+				repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+			)
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			for _, saleOrder := range saleBill.SaleOrders {
 				if saleOrder.IsDelete() {
@@ -2371,8 +2377,21 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 					}
 
 					sysLock.UnlockUuidString(seLockKey)
+				} else {
+					if shiftLogErr != nil {
+						return errors.WithMessage(shiftLogErr)
+					}
+					if shiftLog.IsHandedOver() {
+						return errors.New("当前班次已交班，无法保存发票")
+					}
+					err := erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
+						OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName, //异步模式必填
+						OrderNo:          orderNo,                          //异步模式必填
+					})
+					if err != nil {
+						return errors.WithMessage(err)
+					}
 				}
-				// NOTE: POS Invoice 反结账路径已废弃，发票名称不再持久化到 sale_order
 			}
 			ctx.Mark("erp_invoice_cancelled")
 		}

@@ -64,7 +64,7 @@ func (r *MarketingActivityConsumptionRepo) CreateOrUpdateConsumption(activityUui
 			amount,
 		)
 		if err != nil {
-			logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, UpdateAmount failed", zap.Any("consumption", consumption), zap.Error(err))
+			logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, UpdateAmount failed", zap.Any("consumption", consumption), zap.Error(err))
 		}
 	} else {
 		// 不存在则新增
@@ -75,7 +75,7 @@ func (r *MarketingActivityConsumptionRepo) CreateOrUpdateConsumption(activityUui
 			ConsumptionAmount: amount,
 		})
 		if err != nil {
-			logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("activityUuid", activityUuid), zap.Any("referrerUuid", referrerUuid), zap.Any("consumerUuid", consumerUuid), zap.Error(err))
+			logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("activityUuid", activityUuid), zap.Any("referrerUuid", referrerUuid), zap.Any("consumerUuid", consumerUuid), zap.Error(err))
 		}
 	}
 	if err != nil {

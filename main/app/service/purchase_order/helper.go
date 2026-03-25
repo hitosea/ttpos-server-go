@@ -250,7 +250,7 @@ func (h *purchaseOrderHelper) batchUpdateHeadquarterItems(
 		)
 		if err != nil {
 			// 如果找不到对应的明细，记录警告但不中断流程
-			logger.Logger.Info("更新总部采购申请明细失败", zap.String("物料编码", itemUpdate.MaterialCode), zap.Error(err))
+			logger.Logger.Error("更新总部采购申请明细失败", zap.String("物料编码", itemUpdate.MaterialCode), zap.Error(err))
 			continue
 		}
 

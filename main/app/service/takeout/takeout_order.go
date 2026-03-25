@@ -1605,7 +1605,7 @@ func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy 
 	settingSrv := setting.NewSrv(s.dbm, cache.Global)
 	storeSetting, err := settingSrv.GetStoreSetting(ctx)
 	if err != nil {
-		logger.Logger.Info("获取门店设置失败", zap.Error(err))
+		logger.Logger.Error("获取门店设置失败", zap.Error(err))
 		return err
 	}
 
