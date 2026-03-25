@@ -32,10 +32,10 @@ func (s *sStock) SubmitStockEntry(ctx context.Context, req *stock.SubmitStockEnt
 		warehouseName = warehouse.Name
 	}
 
-	// 设置库存变动类型，默认为 Material Issue
+	// 设置库存变动类型，默认为 Material Inventory Deduction（物料库存扣减）
 	stockEntryType := req.StockEntryType
 	if len(stockEntryType) == 0 {
-		stockEntryType = erp.StockEntryTypeMaterialIssue
+		stockEntryType = erp.StockEntryTypeMaterialInventoryDeduction
 	}
 
 	// 构建库存变动数据

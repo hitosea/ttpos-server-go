@@ -80,6 +80,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache)                  // 仓库管理
 			shop.RegisterPrintHandlers(shopGroup, dbm, cache)                      // 打印管理
 			shop.RegisterStockReconciliationHandlers(shopGroup, dbm, cache)        // 盘点
+			shop.RegisterStockEntryHandlers(shopGroup, dbm, cache)                 // Stock Entry 扣减
 			shop.RegisterBatchProductHandlers(shopGroup, dbm, cache)               // 分批商品
 			shop.RegisterTransferOrderHandlers(shopGroup, dbm, cache)              // 调拨单
 			shop.RegisterExportRecordHandlers(shopGroup, dbm, cache)               // 导出记录
