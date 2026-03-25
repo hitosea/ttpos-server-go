@@ -23,6 +23,7 @@ func (p *ProductListReq) ToPageReq() dto.PageReq {
 
 // ProductRecommendListReq 商品推荐列表查询
 type ProductRecommendListReq struct {
+	OrderType int `form:"order_type" json:"order_type"` // 订单类型：0-外送（默认），1-堂食（到店自取）
 }
 
 // ProductSearchReq 商品搜索查询
