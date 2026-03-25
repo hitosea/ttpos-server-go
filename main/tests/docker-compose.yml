@@ -82,6 +82,9 @@ services:
       - DB_USERNAME=${DB_USERNAME:-test}
       - DB_PASSWORD=${DB_PASSWORD:-test}
       - DB_DATABASE=${DB_DATABASE:-saas}
+      - MAX_OPEN_CONNS=${TEST_APP_DB_MAX_OPEN_CONNS:-2}
+      - MAX_IDLE_CONNS=${TEST_APP_DB_MAX_IDLE_CONNS:-1}
+      - CONN_MAX_LIFE_TIME=${TEST_APP_DB_CONN_MAX_LIFE_TIME_SEC:-30}
       # JWT
       - JWT_SECRET=${JWT_SECRET:-test-secret-key-for-integration-tests}
       # gRPC Mock Overrides (bypass Nacos)
@@ -144,6 +147,12 @@ services:
       - DB_USERNAME=${DB_USERNAME:-test}
       - DB_PASSWORD=${DB_PASSWORD:-test}
       - DB_DATABASE=${DB_DATABASE:-saas}
+      - TEST_DB_MAX_OPEN_CONNS=${TEST_DB_MAX_OPEN_CONNS:-2}
+      - TEST_DB_MAX_IDLE_CONNS=${TEST_DB_MAX_IDLE_CONNS:-1}
+      - TEST_DB_CONN_MAX_LIFETIME_SEC=${TEST_DB_CONN_MAX_LIFETIME_SEC:-30}
+      - TEST_DB_ADMIN_MAX_OPEN_CONNS=${TEST_DB_ADMIN_MAX_OPEN_CONNS:-1}
+      - TEST_DB_ADMIN_MAX_IDLE_CONNS=${TEST_DB_ADMIN_MAX_IDLE_CONNS:-1}
+      - TEST_DB_ADMIN_CONN_MAX_LIFETIME_SEC=${TEST_DB_ADMIN_CONN_MAX_LIFETIME_SEC:-15}
       - WIREMOCK_URL=http://wiremock:8080
       - JWT_SECRET=${JWT_SECRET:-test-secret-key-for-integration-tests}
       # Redis (used by internal integration tests in pkg/lock and pkg/cache)

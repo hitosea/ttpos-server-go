@@ -28,6 +28,24 @@ const (
 	codeFail         = -1
 )
 
+var autoReceiptWarehouseCodes = []string{
+	"WH-TEST-001",
+	"WH-LIST-001",
+	"WH-UPD-001",
+	"WH-DEL-001",
+	"WH-DUP-001",
+	"WH-DIFFA-001",
+	"WH-DIFFB-001",
+	"WH-NF-001",
+	"WH-RMSHOP-001",
+	"WH-UPDDUP-001",
+	"WH-DISABLED-001",
+	"WH-FLOW-001",
+	"WH-STATUS0-001",
+	"WH-NOSTATUS-001",
+	"WH-UPDST0-001",
+}
+
 // --- P0 ---
 
 // Test_P0_Shop_AutoReceipt_RuleCreate_HappyPath tests creating a rule successfully.
@@ -221,7 +239,7 @@ func Test_P0_Shop_AutoReceipt_WarehouseList_HappyPath(t *testing.T) {
 	env := setupHeadquarterEnv(t)
 
 	// Seed a warehouse with erp_code in the tenant DB
-	seedWarehouse(t, env.tenantDB, "WH-TEST-WLIST", `{"zh":"测试仓库","en":"Test Warehouse"}`, "warehouse")
+	seedWarehouse(t, env.tenantDB, "WH-TEST-WLIST", `{"zh":"测试仓库","en":"Test Warehouse"}`, "normal", env.companyUUID)
 
 	resp := env.client.Get(t, pathWarehouseList)
 	resp.AssertOK(t).AssertSuccess(t)
@@ -959,6 +977,7 @@ func setupHeadquarterEnv(t *testing.T) testEnv {
 		fixture.WithCompanySettingCompanyUUID(companyUUIDInt),
 		fixture.WithCompanySettingHeadquarterConfig("test-site", "HQ"),
 	)
+	seedAutoReceiptWarehouses(t, db, companyUUIDInt)
 	staff := fixture.SeedStaff(t, db,
 		fixture.WithStaffCompanyUUID(companyUUIDInt),
 		fixture.WithStaffIsSuper(1),
@@ -1054,16 +1073,29 @@ func getRuleUuidByWarehouse(t *testing.T, client *fixture.HTTPClient, warehouseE
 }
 
 // seedWarehouse inserts a warehouse into the tenant DB.
-func seedWarehouse(t *testing.T, db *sql.DB, erpCode, nameJSON, whType string) {
+func seedWarehouse(t *testing.T, db *sql.DB, erpCode, nameJSON, whType string, headquarterUUID ...int64) {
 	t.Helper()
+
+	var hqUUID int64
+	if len(headquarterUUID) > 0 {
+		hqUUID = headquarterUUID[0]
+	}
 
 	now := time.Now().Unix()
 	_, err := db.Exec(`
-		INSERT INTO ttpos_warehouse (uuid, name, type, erp_code, status, create_time, update_time, delete_time)
-		VALUES (?, ?, ?, ?, 1, ?, ?, 0)
-	`, generateTestID(), nameJSON, whType, erpCode, now, now)
+		INSERT INTO ttpos_warehouse (uuid, name, type, erp_code, status, headquarter_uuid, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, 1, ?, ?, ?, 0)
+	`, generateTestID(), nameJSON, whType, erpCode, hqUUID, now, now)
 	if err != nil {
 		t.Fatalf("failed to seed warehouse: %v", err)
+	}
+}
+
+func seedAutoReceiptWarehouses(t *testing.T, db *sql.DB, headquarterUUID int64) {
+	t.Helper()
+
+	for _, erpCode := range autoReceiptWarehouseCodes {
+		seedWarehouse(t, db, erpCode, fmt.Sprintf(`{"zh":"%s","en":"%s"}`, erpCode, erpCode), "normal", headquarterUUID)
 	}
 }
 
