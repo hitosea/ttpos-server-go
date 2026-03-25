@@ -37011,6 +37011,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/stock_entry/trigger_deduction": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "查询未扣减库存的已结账订单，合并提交 Stock Entry 到 ERPNext",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.库存管理"
+                ],
+                "summary": "触发 Stock Entry 合并扣减",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/stock_loss/annotation_list": {
             "get": {
                 "security": [
@@ -48775,13 +48803,12 @@ const docTemplate = `{
         "req.GetDataManageOrderSelectStatsReq": {
             "type": "object",
             "properties": {
-                "filter": {
-                    "description": "单个筛选条件",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
-                        }
-                    ]
+                "filters": {
+                    "description": "筛选条件数组，每组独立处理",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
+                    }
                 }
             }
         },
@@ -58114,6 +58141,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.ChannelSalesMeta"
+                        }
+                    ]
+                },
+                "scan": {
+                    "description": "点餐-扫码",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
                         }
                     ]
                 },
@@ -73023,6 +73058,13 @@ const docTemplate = `{
                 "selected_count": {
                     "description": "预览选中数量",
                     "type": "integer"
+                },
+                "selected_uuids": {
+                    "description": "最终选中的订单UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 },
                 "total_count": {
                     "description": "筛选范围内订单总数",
