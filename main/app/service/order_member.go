@@ -3859,12 +3859,16 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 		paymentOrderRepo.WithPaymentMethod(),
 	)
 	if len(paymentOrders) > 0 {
-		// 获取第一个已支付的支付订单
-		paymentOrder := paymentOrders[0]
-		payTime = paymentOrder.CreateTime // PaymentOrder 使用 CreateTime 作为支付时间
-		if paymentOrder.PaymentMethod != nil {
-			paymentMethodName = paymentOrder.PaymentMethod.GetName()
+		// 获取第一个已支付的支付订单作为支付时间
+		payTime = paymentOrders[0].CreateTime
+		// 拼接所有支付方式名称（多种支付方式用 + 连接）
+		var paymentMethodNames []string
+		for _, po := range paymentOrders {
+			if po.PaymentMethod != nil {
+				paymentMethodNames = append(paymentMethodNames, po.PaymentMethod.GetName())
+			}
 		}
+		paymentMethodName = strings.Join(paymentMethodNames, " , ")
 	}
 
 	// 判断是否是"先下单后付"模式的订单（Status=Pending 但有 H5 订单）
