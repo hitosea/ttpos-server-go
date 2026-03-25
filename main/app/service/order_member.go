@@ -3776,13 +3776,21 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	)
 
 	// 获取生产单完成状态
-	// 注意：当没有生产单时（如先下单后付的订单尚未送厨），IsProductionFinishedBySaleBillUuid 返回 true（count==0）
-	// 但此时订单并非真正完成，需要检查是否存在生产单来区分"从未送厨"和"全部完成"
-	isProductionFinished, _ := productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
-	if isProductionFinished {
-		hasProduction, _ := productionRepo.HasProductionOrderBySaleBillUuid(saleBill.Uuid)
-		if !hasProduction {
-			isProductionFinished = false
+	// 未开启厨显KDS时，直接视为"已完成"（不存在备餐中状态）
+	// 开启厨显时，需要检查生产单是否全部完成
+	var isProductionFinished bool
+	if ctx.GetCompanySetting().IsOpenKitchenKds != 1 {
+		// 未开启厨显 → 直接视为已完成
+		isProductionFinished = true
+	} else {
+		// 开启厨显 → 检查生产单状态
+		isProductionFinished, _ = productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+		if isProductionFinished {
+			hasProduction, _ := productionRepo.HasProductionOrderBySaleBillUuid(saleBill.Uuid)
+			if !hasProduction {
+				// 开启了厨显但没有生产单（尚未送厨）→ 视为未完成
+				isProductionFinished = false
+			}
 		}
 	}
 
