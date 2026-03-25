@@ -391,11 +391,11 @@ func (r *PurchaseOrderItemRepoImpl) GetLastCompletedBrandPurchaseInfo(
 	oneMonthAgo := time.Now().AddDate(0, -1, 0).Unix()
 
 	latestTimeSubQuery := r.db.Table("ttpos_purchase_order_item poi2").
-		Select("poi2.material_uuid, MAX(po2.pass_time) AS max_time").
+		Select("poi2.material_uuid, MAX(po2.final_receive_time) AS max_time").
 		Joins("JOIN ttpos_purchase_order po2 ON po2.uuid = poi2.purchase_order_uuid").
 		Where("po2.purchase_type = ?", constant.PurchaseTypeBrand).
 		Where("po2.status = ?", constant.PurchaseOrderStatusCompleted).
-		Where("po2.pass_time >= ?", oneMonthAgo).
+		Where("po2.final_receive_time >= ?", oneMonthAgo).
 		Where("poi2.material_uuid IN ?", materialUuids).
 		Where("po2.delete_time = 0").
 		Where("poi2.delete_time = 0").
@@ -405,7 +405,7 @@ func (r *PurchaseOrderItemRepoImpl) GetLastCompletedBrandPurchaseInfo(
 	err := r.db.Table("ttpos_purchase_order_item poi").
 		Select("poi.uuid, poi.material_uuid, poi.num, poi.unit_conversion_rate, poi.unit_name").
 		Joins("JOIN ttpos_purchase_order po ON po.uuid = poi.purchase_order_uuid").
-		Joins("JOIN (?) latest ON poi.material_uuid = latest.material_uuid AND po.pass_time = latest.max_time", latestTimeSubQuery).
+		Joins("JOIN (?) latest ON poi.material_uuid = latest.material_uuid AND po.final_receive_time = latest.max_time", latestTimeSubQuery).
 		Where("po.purchase_type = ?", constant.PurchaseTypeBrand).
 		Where("po.status = ?", constant.PurchaseOrderStatusCompleted).
 		Where("po.delete_time = 0").

@@ -111,9 +111,13 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 
 			if req.DeliveryNoteNo != "" {
 				// DN类型校验
-				_, err := s.validator.validateDNReceipt(ctx, s.dbm, purchaseOrder, req.DeliveryNoteNo, req.Items, purchaseOrderItemsMap)
+				dnResult, err := s.validator.validateDNReceipt(ctx, s.dbm, purchaseOrder, req.DeliveryNoteNo, req.Items, purchaseOrderItemsMap)
 				if err != nil {
 					return err
+				}
+				// 从DN获取发货仓库
+				if dnResult.SetWarehouse != "" {
+					req.SourceWarehouseErpCode = dnResult.SetWarehouse
 				}
 			} else if req.SourceSupplierCode != "" {
 				// 供应商类型校验
@@ -187,6 +191,23 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			}
 		}
 
+		// 确定发货仓库：优先使用请求中的（来自DN），否则回退到采购单上的
+		sourceWarehouseErpCode := purchaseOrder.WarehouseErpCode
+		sourceWarehouseName := purchaseOrder.WarehouseName
+		if req.SourceWarehouseErpCode != "" {
+			warehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(req.SourceWarehouseErpCode)
+			if err == nil && warehouse != nil {
+				sourceWarehouseErpCode = warehouse.ErpCode
+				sourceWarehouseName = warehouse.Name
+			} else {
+				logger.Logger.Warn("DN发货仓库匹配失败，回退到采购单仓库",
+					zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+					zap.String("dn_erp_code", req.SourceWarehouseErpCode),
+					zap.String("fallback_erp_code", purchaseOrder.WarehouseErpCode),
+					zap.Error(err))
+			}
+		}
+
 		receiptOrder := &model.PurchaseReceiptOrder{
 			BaseModel: model.BaseModel{
 				Uuid: receiptOrderUuid,
@@ -202,8 +223,8 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			SupplierErpCode:        supplierErpCode,
 			ReceiveTime:            req.ReceiveTime,
 			PurchaseOrder:          *purchaseOrder,
-			SourceWarehouseErpCode: purchaseOrder.WarehouseErpCode,
-			SourceWarehouseName:    purchaseOrder.WarehouseName,
+			SourceWarehouseErpCode: sourceWarehouseErpCode,
+			SourceWarehouseName:    sourceWarehouseName,
 			TargetWarehouseErpCode: purchaseOrder.DefaultWarehouseErpCode,
 			TargetWarehouseName:    purchaseOrder.DefaultWarehouseName,
 			DeliveryNoteNo:         req.DeliveryNoteNo,
