@@ -3616,6 +3616,13 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 			isProductionFinished = true
 		} else {
 			isProductionFinished, _ = productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+			if isProductionFinished {
+				hasProduction, _ := productionRepo.HasProductionOrderBySaleBillUuid(saleBill.Uuid)
+				if !hasProduction {
+					// 开启了厨显但没有生产单（尚未送厨）→ 视为未完成
+					isProductionFinished = false
+				}
+			}
 		}
 
 		// 先下单后付款模式的状态过滤逻辑：
@@ -3655,7 +3662,13 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 		// H5 订单状态内存过滤（结合生产单完成状态）
 		// 仅对非 Pending 状态的订单应用 H5 状态过滤
 		if saleBill.Status != constant.SaleBillStatusPending {
-			if !s.filterDineInOrderByH5Status(h5Order, h5OrderStatuses, listReq.Status, isProductionFinished) {
+			// 先下单后付 + 已结账：无论 H5/生产状态如何，都已是最终态（已完成）
+			// 不应再用 H5/生产状态做 tab 归属判断
+			if saleBill.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && saleBill.Status == constant.SaleBillStatusComplete {
+				if listReq.Status == constant.MemberDineInOrderStatusInProgress {
+					continue // 已结账不应出现在进行中
+				}
+			} else if !s.filterDineInOrderByH5Status(h5Order, h5OrderStatuses, listReq.Status, isProductionFinished) {
 				continue
 			}
 		}
