@@ -320,6 +320,10 @@ class App extends AppModel
                     $this->error = $validate->getError();
                     return false;
                 }
+                if (empty($data['confirm_password']) || $data['password'] !== $data['confirm_password']) {
+                    $this->error = '确认超管密码与超管密码不一致';
+                    return false;
+                }
                 // 使用 bcrypt 加密密码
                 $user_data['password'] = hash_password_bcrypt($data['password']);
             }
