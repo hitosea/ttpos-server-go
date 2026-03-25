@@ -519,9 +519,10 @@ func (r *saleBillRepo) BatchAssignShiftToMemberDineInOrders(dutyNo string, cashi
 		return nil, nil
 	}
 
-	// 批量更新
+	// 批量更新（保留 duty_no='' 条件，防止并发场景下覆盖已分配的班次）
 	if err := r.db.Model(&model.SaleBill{}).
 		Where("uuid IN ?", uuids).
+		Where("duty_no = ?", "").
 		Updates(map[string]any{
 			"duty_no":      dutyNo,
 			"cashier_uuid": cashierUuid,

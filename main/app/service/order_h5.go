@@ -455,7 +455,7 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 			})
 		})
 		if saleBill.DutyNo != "" {
-			// 外送订单完结时, 发布"统计"事件
+			// DutyNo 非空时发布统计事件；为空时跳过，待班次分配后由 CreateWorkingLog 触发
 			utils.Go(func() {
 				event.NewSystemBus().PublishStatisticsSaleEvent(event.StatisticsSalePayload{
 					BasePayload: event.BasePayload{ // 统计

@@ -204,6 +204,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 		if err != nil {
 			logger.Logger.Warn("批量分配会员端堂食订单班次失败",
 				zap.Error(err),
+				zap.Uint64("company_uuid", company.Uuid),
 				zap.String("shiftNo", shiftLog.ShiftNo),
 				zap.Uint64("staffUuid", staff.Uuid))
 			return
@@ -213,6 +214,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 		}
 		logger.Logger.Info("批量分配会员端堂食订单班次成功",
 			zap.Int("count", len(saleBillUuids)),
+			zap.Uint64("company_uuid", company.Uuid),
 			zap.String("shiftNo", shiftLog.ShiftNo),
 			zap.Uint64("staffUuid", staff.Uuid))
 
