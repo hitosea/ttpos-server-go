@@ -14,16 +14,17 @@
 
 **总计**: {total_tasks} 个任务, {completed} 完成, {failed} 失败
 
-## Wave 执行详情
+## Layer 执行详情
 
-### Wave {n}
+### Layer {n}
 
-**并行任务**: {wave_task_names}
+**并行任务**: {layer_task_names}
 **策略**: {parallel|sequential}
 
 #### {task_id}: {task_name}
 
 **Agent**: {agent_type}
+**隔离**: {worktree|无}
 **输出文件**: {output_file}
 **摘要**: {summary}
 
