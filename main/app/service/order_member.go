@@ -3497,7 +3497,13 @@ func (s *orderSrv) GetMemberDineInOrderList(ctx context.Context, listReq req.Mem
 		h5Order := s.getH5OrderForMemberDineIn(h5OrderRepo, saleBill.Uuid)
 
 		// 获取生产单完成状态（提前获取，用于后续过滤判断）
-		isProductionFinished, _ := productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+		// 未开启厨显KDS时，直接视为"已完成"（不存在备餐中状态）
+		var isProductionFinished bool
+		if ctx.GetCompanySetting().IsOpenKitchenKds != 1 {
+			isProductionFinished = true
+		} else {
+			isProductionFinished, _ = productionRepo.IsProductionFinishedBySaleBillUuid(saleBill.Uuid)
+		}
 
 		// 先下单后付款模式的状态过滤逻辑：
 		// - 待支付：备餐完成后显示在待支付列表（等待用户付款）
