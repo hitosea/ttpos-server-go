@@ -5124,9 +5124,9 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		if item.NumType == 2 && (products.IsShowTablet || products.IsShowAssistant || products.IsShowH5 || products.IsShowDelivery || products.IsShowKiosk) {
 			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "按小数计价只能显示到收银机和厨显"))
 		}
-		// 未开启扫码点餐到店自取且未配置外送渠道，无法选择在外送显示
+		// 未开启扫码点餐到店自取且未配置外送渠道，无法选择在扫码点餐显示
 		if companySetting.DeliveryStatus != 1 && !companySetting.IsOpenScanOrder() && products.IsShowDelivery {
-			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置外送渠道，无法选择在外送显示"))
+			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置扫码点餐渠道，无法选择在扫码点餐显示"))
 		}
 		// 未开启自助点餐机，无法选择在自助点餐机显示
 		if !companySetting.IsOpenKiosk() && products.IsShowKiosk {

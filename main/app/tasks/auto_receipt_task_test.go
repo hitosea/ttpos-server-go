@@ -821,7 +821,6 @@ func TestExecuteAutoReceipt_Success(t *testing.T) {
 	t.Parallel()
 	task := &AutoReceiptTask{}
 	ctx := newTestContext(100, "HQ")
-	loc := time.FixedZone("UTC+8", 8*3600)
 	dn := &delivery_note.DeliveryNote{Name: "DN-001"}
 	order := &model.PurchaseOrder{BaseModel: model.BaseModel{Uuid: 2001}}
 	pendingItems := []req.PurchaseReceiptItemCreateReq{
@@ -854,7 +853,7 @@ func TestExecuteAutoReceipt_Success(t *testing.T) {
 
 	task.executeAutoReceipt(ctx, autoReceiptInput{
 		order: order, dn: dn, pendingItems: pendingItems,
-		rule: rule, shopUuid: 100, loc: loc,
+		rule: rule, shopUuid: 100,
 	}, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
 
 	if !receiptCalled {
@@ -869,7 +868,6 @@ func TestExecuteAutoReceipt_CreateReceiptFails(t *testing.T) {
 	t.Parallel()
 	task := &AutoReceiptTask{}
 	ctx := newTestContext(100, "HQ")
-	loc := time.FixedZone("UTC+8", 8*3600)
 	dn := &delivery_note.DeliveryNote{Name: "DN-001"}
 	order := &model.PurchaseOrder{BaseModel: model.BaseModel{Uuid: 2001}}
 	pendingItems := []req.PurchaseReceiptItemCreateReq{
@@ -894,7 +892,7 @@ func TestExecuteAutoReceipt_CreateReceiptFails(t *testing.T) {
 	// Should return early without calling logRepo.Create
 	task.executeAutoReceipt(ctx, autoReceiptInput{
 		order: order, dn: dn, pendingItems: pendingItems,
-		rule: rule, shopUuid: 100, loc: loc,
+		rule: rule, shopUuid: 100,
 	}, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
 
 	if logCalled {
@@ -906,7 +904,6 @@ func TestExecuteAutoReceipt_LogCreateFails(t *testing.T) {
 	t.Parallel()
 	task := &AutoReceiptTask{}
 	ctx := newTestContext(100, "HQ")
-	loc := time.FixedZone("UTC+8", 8*3600)
 	dn := &delivery_note.DeliveryNote{Name: "DN-001"}
 	order := &model.PurchaseOrder{BaseModel: model.BaseModel{Uuid: 2001}}
 	pendingItems := []req.PurchaseReceiptItemCreateReq{
@@ -928,7 +925,7 @@ func TestExecuteAutoReceipt_LogCreateFails(t *testing.T) {
 	// Should not panic — just log the error
 	task.executeAutoReceipt(ctx, autoReceiptInput{
 		order: order, dn: dn, pendingItems: pendingItems,
-		rule: rule, shopUuid: 100, loc: loc,
+		rule: rule, shopUuid: 100,
 	}, orderProcessDeps{purchaseOrderSrv: poMock, logRepo: logMock})
 }
 

@@ -187,8 +187,8 @@ func (r *MultiLanguageNameRepoImpl) CountNameExistsByTable(tableName string, lan
 		return 0, errors.New("不支持的语言: " + lang)
 	}
 
-	mlnTable := r.db.Table("multi_language_name").Name()
-	bizTable := r.db.Table(tableName).Name()
+	mlnTable := resolveTableName(r.db, "multi_language_name")
+	bizTable := resolveTableName(r.db, tableName)
 	var count int64
 	query := r.db.Table(bizTable).
 		Joins(fmt.Sprintf("JOIN %s ON %s.multi_language_name_uuid = %s.uuid", mlnTable, bizTable, mlnTable)).
