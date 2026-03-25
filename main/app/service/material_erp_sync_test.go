@@ -189,10 +189,12 @@ func (m *mockMaterialRepo) UpdateMaterialData(data map[string]any, opts ...repos
 // mockContext implements pkg/context.Context for unit testing
 type mockContext struct {
 	pkgctx.Context
-	language string
+	language       string
+	companySetting model.CompanySetting
 }
 
-func (m *mockContext) GetLanguage() string { return m.language }
+func (m *mockContext) GetLanguage() string                     { return m.language }
+func (m *mockContext) GetCompanySetting() model.CompanySetting { return m.companySetting }
 
 // --- Tests ---
 

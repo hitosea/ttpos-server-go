@@ -145,6 +145,7 @@ func createStaffShiftTestContext(t *testing.T, dbm *database.DBManager, enableEr
 			Uuid: constant.MockDB,
 		},
 		CompanyUuid:           constant.MockDB,
+		ErpInvoiceMode:        1,
 		ErpnextSiteCode:       erpnextSiteCode,
 		ErpnextPosProfileName: "TEST_PROFILE",
 		ErpnextAdminEmail:     "test@example.com",
