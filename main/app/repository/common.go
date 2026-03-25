@@ -830,6 +830,25 @@ func (r *commonRepo) WhereExcludeTestBusinessByRelatedOrder() DBOption {
 	}
 }
 
+// ExcludeTestBusinessByBillSQL 通过 sale_bill_uuid 追溯到 sale_bill.create_time 判断是否在测试时段。
+// 适用于统计表等 create_time 可能因记录重建而偏移的场景。
+// billUuidExpr 为 sale_bill_uuid 的表达式，如 "sp.sale_bill_uuid"、"sale_bill_uuid"。
+func ExcludeTestBusinessByBillSQL(billUuidExpr string) string {
+	return "NOT EXISTS (SELECT 1 FROM ttpos_sale_bill _sb " +
+		"JOIN ttpos_business_status_period bsp ON bsp.delete_time = 0 " +
+		"AND _sb.create_time >= bsp.start_time " +
+		"AND (bsp.end_time = 0 OR _sb.create_time <= bsp.end_time) " +
+		"WHERE _sb.uuid = " + billUuidExpr + " AND _sb.delete_time = 0)"
+}
+
+// WhereExcludeTestBusinessByBill 排除关联 sale_bill 创建时间落在测试营业时段内的记录
+func (r *commonRepo) WhereExcludeTestBusinessByBill(billUuidExpr string) DBOption {
+	sql := ExcludeTestBusinessByBillSQL(billUuidExpr)
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where(sql)
+	}
+}
+
 // SortWithID 根据ID排序
 func (r *commonRepo) SortWithID(order string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {

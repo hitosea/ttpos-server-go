@@ -55,7 +55,7 @@ type ITakeoutOrderSrv interface {
 	// 注意：此方法使用 changeResult.ReturnItems 中的 OldItem 数据，包含变更前的数量
 	PrintReturnOrder(ctx context.Context, orderUuid uint64, changeResult *valueObject.OrderChangeResult) error
 	// RecordTakeoutOrderPeakTime 记录外卖订单高峰期（仅在订单完成时调用）
-	RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy uint64, completedTime int64, platformTotal float64, companyUuid uint64) error
+	RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy uint64, completedTime int64, platformTotal float64, companyUuid uint64, orderCreateTime int64) error
 }
 
 // ProcessTakeoutOrderOutboundAndSales 处理外卖订单出库和销量
@@ -1580,7 +1580,7 @@ func (s *takeoutSrv) PrintReturnOrder(ctx context.Context, orderUuid uint64, cha
 
 // RecordTakeoutOrderPeakTime 记录外卖订单高峰期（仅在订单完成时调用）
 // 直接使用传入的订单数据构建 SaleBill，避免重新查询数据库导致的事务可见性问题
-func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy uint64, completedTime int64, platformTotal float64, companyUuid uint64) error {
+func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy uint64, completedTime int64, platformTotal float64, companyUuid uint64, orderCreateTime int64) error {
 	db := s.dbm.GetDB(companyUuid)
 
 	// 设置上下文
@@ -1594,10 +1594,11 @@ func (s *takeoutSrv) RecordTakeoutOrderPeakTime(ctx context.Context, acceptedBy 
 
 	// 2. 构建 SaleBill
 	saleBill := &model.SaleBill{
-		Status:        constant.SaleBillStatusComplete, // 设置为已完成状态，IsFinish() 才能返回 true
-		PaymentAmount: platformTotal,                   // 顾客实付金额（单位：元）
-		CashierUuid:   acceptedBy,                      // 使用接单人
-		FinishTime:    completedTime,                   // 使用完成时间
+		BaseModel:     model.BaseModel{CreateTime: orderCreateTime}, // 用订单创建时间，供测试营业时段守卫判断
+		Status:        constant.SaleBillStatusComplete,              // 设置为已完成状态，IsFinish() 才能返回 true
+		PaymentAmount: platformTotal,                                // 顾客实付金额（单位：元）
+		CashierUuid:   acceptedBy,                                   // 使用接单人
+		FinishTime:    completedTime,                                // 使用完成时间
 	}
 
 	// 3. 获取门店设置（时区）
