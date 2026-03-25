@@ -25,8 +25,8 @@ type ISaleBillRepo interface {
 	UpdateSaleBillBatchTagUuid(saleBillUuid uint64, batchTagUuid uint64) error // 更新销售账单的分批类型UUID
 	UpdateOrderSource(saleBillUuid uint64, orderSourceUuid uint64) error
 	UpdateNationality(saleBillUuid uint64, nationalityUuid uint64) error
-	// BatchAssignShiftToMemberDineInOrders 批量为无班次的会员端堂食订单分配班次
-	BatchAssignShiftToMemberDineInOrders(dutyNo string, cashierUuid uint64, cashierName string) (int64, error)
+	// BatchAssignShiftToMemberDineInOrders 批量为无班次的会员端堂食订单分配班次，返回被更新的 saleBillUuid 列表
+	BatchAssignShiftToMemberDineInOrders(dutyNo string, cashierUuid uint64, cashierName string) ([]uint64, error)
 }
 
 // ISaleBillQueryRepo 销售账单的查询接口。
@@ -501,22 +501,34 @@ func (r *saleBillRepo) WhereBySerialNo(keyword string) DBOption {
 // BatchAssignShiftToMemberDineInOrders 批量为无班次的会员端堂食订单分配班次
 // 查找条件：会员端(source=5) + 即时点餐(bill_type=1) + 已完成(status=1) + 无班次(duty_no='')
 // 这些订单是先付后下单模式下，自动接单时因无可用班次而留空的订单
-func (r *saleBillRepo) BatchAssignShiftToMemberDineInOrders(dutyNo string, cashierUuid uint64, cashierName string) (int64, error) {
-	result := r.db.Model(&model.SaleBill{}).
+// 返回被更新的 saleBillUuid 列表，用于后续触发统计事件
+func (r *saleBillRepo) BatchAssignShiftToMemberDineInOrders(dutyNo string, cashierUuid uint64, cashierName string) ([]uint64, error) {
+	// 先查询待更新的订单 uuid 列表
+	var uuids []uint64
+	if err := r.db.Model(&model.SaleBill{}).
 		Where("source = ?", constant.SaleBillSourceMember).
 		Where("bill_type = ?", constant.SaleBillTypeInstant).
 		Where("status = ?", constant.SaleBillStatusComplete).
 		Where("duty_no = ?", "").
 		Where("delete_time = ?", 0).
+		Pluck("uuid", &uuids).Error; err != nil {
+		return nil, err
+	}
+
+	if len(uuids) == 0 {
+		return nil, nil
+	}
+
+	// 批量更新
+	if err := r.db.Model(&model.SaleBill{}).
+		Where("uuid IN ?", uuids).
 		Updates(map[string]any{
 			"duty_no":      dutyNo,
 			"cashier_uuid": cashierUuid,
 			"cashier_name": cashierName,
-		})
-
-	if result.Error != nil {
-		return 0, result.Error
+		}).Error; err != nil {
+		return nil, err
 	}
 
-	return result.RowsAffected, nil
+	return uuids, nil
 }
