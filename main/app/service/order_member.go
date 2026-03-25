@@ -4056,12 +4056,7 @@ func (s *orderSrv) GetMemberDineInOrderDetail(ctx context.Context, detailReq req
 	// 获取订单备注：统一从 OrderRemark（整单备注）读取
 	orderRemark := ""
 	if latestRemark := saleBill.GetLatestOrderRemarkRes(); latestRemark != nil {
-		// 优先返回 CustomRemark（自定义备注），否则返回多语言备注
-		if latestRemark.CustomRemark == "" {
-			orderRemark = latestRemark.Remark.GetLocale(ctx.GetLanguage())
-		} else {
-			orderRemark = latestRemark.Remark.GetLocale(ctx.GetLanguage()) + ";" + latestRemark.CustomRemark
-		}
+		orderRemark = latestRemark.Remark.GetLocale(ctx.GetLanguage())
 	}
 
 	return &resp.GetMemberDineInOrderDetailResp{
