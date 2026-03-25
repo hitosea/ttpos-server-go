@@ -313,20 +313,8 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		return nil, errors.WithMessage(errSaleBill, "repository.NewOrderRepo(db).GetSaleBillAllInfo")
 	}
 
-	// 先下单后付模式：判断是否走"接单送厨+转挂单"流程
-	isOrderFirstPayLater := false
-	if h5Order.OrderType == constant.H5OrderTypeMemberDineIn {
-		storeScanOrderSetting, err := s.settingSrv.GetStoreScanOrderSetting(ctx)
-		if err != nil {
-			ctx.Log().Warn("获取门店点餐配置失败，按默认流程处理",
-				zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
-				zap.Error(err),
-			)
-		}
-		if storeScanOrderSetting.IsOrderFirstPayLater == constant.OrderFirstPayLaterYes && saleBill.Status == constant.SaleBillStatusPending {
-			isOrderFirstPayLater = true
-		}
-	}
+	// 判断是否是"先下单后付"模式的订单（Status=Pending 但有 H5 订单）
+	isOrderFirstPayLater := saleBill.IsOrderFirstPayLater == 1
 
 	{
 		ignoreMust := true // 接单，送厨忽略必点方案

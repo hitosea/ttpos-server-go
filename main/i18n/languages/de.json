@@ -4676,7 +4676,7 @@
   "未配置PAY_SERVICE_LIANLIAN_CALLBACK_URL": "PAY_SERVICE_LIANLIAN_CALLBACK_URL ist nicht konfiguriert",
   "未配置PAY_SERVICE_SIGN_SALT": "PAY_SERVICE_SIGN_SALT ist nicht konfiguriert",
   "未配置PAY_SERVICE_URL": "PAY_SERVICE_URL ist nicht konfiguriert",
-  "未配置外送渠道，无法选择在外送显示": "Lieferkanal nicht konfiguriert, Anzeige für Lieferung nicht möglich",
+  "未配置扫码点餐渠道，无法选择在扫码点餐显示": "Scan-Bestellkanal nicht konfiguriert, Anzeige für Scan-Bestellung nicht möglich",
   "未配置库存预警邮箱，跳过发送": "Warn-E-Mail für Lagerbestand nicht konfiguriert, Versand übersprungen",
   "未配置打印机, 请联系管理员": "Drucker nicht konfiguriert, bitte wenden Sie sich an den Administrator",
   "未配置支付信息": "Zahlungsinformationen nicht konfiguriert",

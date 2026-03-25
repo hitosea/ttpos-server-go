@@ -12,6 +12,7 @@ type OrderCompletedEvent struct {
 	AcceptedBy       uint64  // 接单人UUID
 	CompletedTime    int64   // 完成时间
 	PlatformTotal    float64 // 平台总金额
+	OrderCreateTime  int64   // 订单创建时间（用于测试营业时段判断）
 }
 
 // EventName 事件名称
@@ -30,6 +31,7 @@ func NewOrderCompletedEvent(
 	acceptedBy uint64,
 	completedTime int64,
 	platformTotal float64,
+	orderCreateTime int64,
 ) OrderCompletedEvent {
 	return OrderCompletedEvent{
 		BaseDomainEvent:  NewBaseDomainEvent(orderUuid),
@@ -42,5 +44,6 @@ func NewOrderCompletedEvent(
 		AcceptedBy:       acceptedBy,
 		CompletedTime:    completedTime,
 		PlatformTotal:    platformTotal,
+		OrderCreateTime:  orderCreateTime,
 	}
 }

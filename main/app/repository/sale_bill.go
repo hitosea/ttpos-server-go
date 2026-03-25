@@ -450,6 +450,7 @@ func (r *saleBillRepo) UpdateNationality(saleBillUuid uint64, nationalityUuid ui
 }
 
 // WhereKeyword 根据订单号或商品名称搜索销售账单
+// 支持搜索：1) 正常订单的商品名称 2) 拒单订单的商品快照名称
 func (r *saleBillRepo) WhereKeyword(keyword string, language string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if keyword == "" {
@@ -465,16 +466,23 @@ func (r *saleBillRepo) WhereKeyword(keyword string, language string) DBOption {
 		// 获取表前缀
 		prefix := config.Database.TablePrefix
 
-		// 子查询：通过商品名称查找对应的 sale_bill uuid
+		// 子查询1：通过商品名称查找对应的 sale_bill uuid（正常订单）
 		// sale_order_product -> sale_order.sale_bill_uuid
-		subQuery := r.db.Table(prefix+"sale_order so").
+		subQuery1 := r.db.Table(prefix+"sale_order so").
 			Select("DISTINCT so.sale_bill_uuid").
 			Joins("INNER JOIN "+prefix+"sale_order_product sop ON sop.sale_order_uuid = so.uuid AND sop.delete_time = 0").
 			Joins("LEFT JOIN "+prefix+"multi_language_name mln ON sop.multi_language_name_uuid = mln.uuid").
 			Where("so.delete_time = ?", 0).
 			Where("mln."+columnName+" LIKE ?", "%"+keyword+"%")
 
-		return db.Where("(uuid IN (?) OR order_no LIKE ?)", subQuery, "%"+keyword+"%")
+		// 子查询2：通过 H5 订单商品快照名称查找（拒单订单）
+		// h5_order_product.name 存储的是拒单时的商品名称快照
+		subQuery2 := r.db.Table(prefix+"h5_order_product hop").
+			Select("DISTINCT hop.sale_bill_uuid").
+			Where("hop.delete_time = ?", 0).
+			Where("hop.name LIKE ?", "%"+keyword+"%")
+
+		return db.Where("(uuid IN (?) OR uuid IN (?) OR order_no LIKE ?)", subQuery1, subQuery2, "%"+keyword+"%")
 	}
 }
 

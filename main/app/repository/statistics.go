@@ -190,7 +190,7 @@ func (r *StatisticsRepo) CountSale(opts ...DBOption) model.StatisticsSaleData {
 	}
 
 	subQuery := db.Model(&model.StatisticsSale{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(countSaleSubQuerySelect).
 		Group("sale_bill_uuid")
 
@@ -255,7 +255,7 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 	}
 
 	subQuery := db.Model(&model.StatisticsSale{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(countSaleSubQuerySelect).
 		Group("sale_bill_uuid")
 
@@ -681,7 +681,7 @@ func (r *StatisticsRepo) CountPayment(opts ...DBOption) []model.StatisticsPaymen
 	paymentMethodTable := prefix + "payment_method pm"
 
 	db.Table(statisticsPaymentTable).
-		Where(ExcludeTestBusinessSQL("sp")).
+		Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 		Select(countPaymentSelect).
 		Joins("LEFT JOIN " + paymentMethodTable + " ON sp.payment_method_uuid = pm.uuid").
 		Group("sp.payment_method_uuid").
@@ -722,7 +722,7 @@ func (r *StatisticsRepo) CountPaymentDays(timezone string, opts ...DBOption) []m
 	paymentMethodTable := prefix + "payment_method pm"
 
 	db.Table(statisticsPaymentTable).
-		Where(ExcludeTestBusinessSQL("sp")).
+		Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 		Select(
 			"pm.id",
 			"pm.sort",
@@ -849,7 +849,7 @@ func (r *StatisticsRepo) CountTax(opts ...DBOption) []model.StatisticsTaxData {
 	}
 
 	db.Model(&model.StatisticsProduct{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"tax_rate",
 			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
@@ -869,7 +869,7 @@ func (r *StatisticsRepo) CountBuffetTax(opts ...DBOption) []model.StatisticsTaxD
 	}
 
 	db.Model(&model.StatisticsCustomerType{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"tax_rate",
 			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
@@ -889,7 +889,7 @@ func (r *StatisticsRepo) CountBuffetDelayTax(opts ...DBOption) []model.Statistic
 	}
 
 	db.Model(&model.StatisticsDelay{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"tax_rate",
 			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
@@ -922,11 +922,11 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 	productParentCategoryTable := prefix + "product_category as ppc"
 
 	// 统计订单数量
-	dbOrder.Table(statisticsProductTable).Where(ExcludeTestBusinessSQL("sp")).Select("COUNT(DISTINCT sale_bill_uuid) AS order_num").Pluck("order_num", &orderNum)
+	dbOrder.Table(statisticsProductTable).Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).Select("COUNT(DISTINCT sale_bill_uuid) AS order_num").Pluck("order_num", &orderNum)
 
 	if categoryType != 2 {
 		db.Table(statisticsProductTable).
-			Where(ExcludeTestBusinessSQL("sp")).
+			Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 			Select(
 				"IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid) AS category_parent_uuid",
 				"IF(pc.parent_uuid = 0, JSON_UNQUOTE(JSON_EXTRACT(pc.NAME, '$."+language+"')), JSON_UNQUOTE(JSON_EXTRACT(ppc.NAME, '$."+language+"'))) AS category_parent_name",
@@ -947,7 +947,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 			Find(&result)
 	} else {
 		db.Table(statisticsProductTable).
-			Where(ExcludeTestBusinessSQL("sp")).
+			Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 			Select(
 				"pc.parent_uuid AS category_parent_uuid",
 				"JSON_UNQUOTE(JSON_EXTRACT(ppc.NAME, '$."+language+"')) AS category_parent_name",
@@ -994,7 +994,7 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 	productParentCategoryTable := prefix + "product_category as ppc"
 
 	err := db.Table(statisticsProductTable).
-		Where(ExcludeTestBusinessSQL("sp")).
+		Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 		Select(
 			"sp.product_bom_uuid AS product_bom_uuid",
 			"CASE WHEN pp.name IS NOT NULL AND pp.name != '' THEN JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) ELSE '' END AS product_name",
@@ -1050,7 +1050,7 @@ func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData 
 	deskTable := prefix + "desk as d"
 	deskRegionTable := prefix + "desk_region as dr"
 	db.Table(statisticsSaleTable).
-		Where(ExcludeTestBusinessSQL("ss")).
+		Where(ExcludeTestBusinessByBillSQL("ss.sale_bill_uuid")).
 		Select(countAreaSelect, "dr.uuid AS area_id").
 		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
 		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
@@ -1095,7 +1095,7 @@ func (r *StatisticsRepo) CountAreaDays(timezone string, opts ...DBOption) []mode
 	deskTable := prefix + "desk as d"
 	deskRegionTable := prefix + "desk_region as dr"
 	db.Table(statisticsSaleTable).
-		Where(ExcludeTestBusinessSQL("ss")).
+		Where(ExcludeTestBusinessByBillSQL("ss.sale_bill_uuid")).
 		Select(
 			"dr.uuid AS area_id",
 			"dr.name AS area_name",
@@ -1242,7 +1242,7 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 	// 保持原有逻辑完全不变，应用所有 opts 条件
 	var statisticsData []model.StatisticsProductData
 	statisticsQuery := db.Table(statisticsProductTable).
-		Where(ExcludeTestBusinessSQL("sp")).
+		Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 		Select(
 			"sp.product_package_uuid AS product_package_uuid",
 			"SUM(sp.product_num) AS sale_num",
@@ -1403,7 +1403,7 @@ func (r *StatisticsRepo) Count7Days(opts ...DBOption) []struct {
 	// 返回每个订单的完成时间和支付金额
 	// 不在这里进行日期分组，避免使用数据库时区
 	db.Model(&model.StatisticsSale{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"complete_time",
 			"sale_order_uuid",
@@ -1977,7 +1977,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 
 	// 构建店内商品销售查询（子查询）
 	storeQuery := db2.Table(statisticsProductTable).
-		Where(ExcludeTestBusinessSQL("sp")).
+		Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 		Select(
 			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+req.Language+"')) AS product_name",
 			"JSON_UNQUOTE(JSON_EXTRACT(pc.name, '$."+req.Language+"')) AS category_name",
@@ -2197,7 +2197,7 @@ func (r *StatisticsRepo) CountFreePayment(opts ...DBOption) model.StatisticsFree
 	}
 
 	db.Model(&model.StatisticsSale{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"COUNT(sale_order_uuid) AS total_order_num",
 			"SUM(free_amount) AS total_free_amount",
@@ -2217,7 +2217,7 @@ func (r *StatisticsRepo) CountFreePaymentDays(opts ...DBOption) []model.Statisti
 	}
 
 	db.Model(&model.StatisticsSale{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"COUNT(sale_order_uuid) AS total_order_num",
 			"SUM(free_amount) AS total_free_amount",
