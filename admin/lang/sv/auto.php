@@ -1235,7 +1235,7 @@ return [
     "未配置 PAY_SERVICE_LIANLIAN_REFUND_CALLBACK_URL" => "PAY_SERVICE_LIANLIAN_REFUND_CALLBACK_URL är inte konfigurerad",
     "未配置PAY_SERVICE_SIGN_SALT" => "PAY_SERVICE_SIGN_SALT är inte konfigurerad",
     "未配置PAY_SERVICE_URL" => "PAY_SERVICE_URL ej konfigurerad",
-    "未配置外送渠道，无法选择在外送显示" => "Ingen leveranskanal har konfigurerats, kan inte väljas för visning i leverans",
+    "未配置扫码点餐渠道，无法选择在扫码点餐显示" => "Skanna-beställningskanal ej konfigurerad, kan inte välja att visa för skanna-beställning",
     "未配置打印机, 请联系管理员" => "Skrivare är inte konfigurerad, kontakta administratören",
     "本次充值" => "Denna påfyllning",
     "本次消耗的材料数" => "Antal material som förbrukats denna gång",

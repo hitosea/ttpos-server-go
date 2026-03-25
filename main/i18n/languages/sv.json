@@ -4676,7 +4676,7 @@
   "未配置PAY_SERVICE_LIANLIAN_CALLBACK_URL": "PAY_SERVICE_LIANLIAN_CALLBACK_URL ej konfigurerad",
   "未配置PAY_SERVICE_SIGN_SALT": "PAY_SERVICE_SIGN_SALT har inte konfigurerats",
   "未配置PAY_SERVICE_URL": "PAY_SERVICE_URL har inte konfigurerats",
-  "未配置外送渠道，无法选择在外送显示": "Leveranskanal ej konfigurerad, kan inte välja att visa för hemleverans",
+  "未配置扫码点餐渠道，无法选择在扫码点餐显示": "Skanna-beställningskanal ej konfigurerad, kan inte välja att visa för skanna-beställning",
   "未配置库存预警邮箱，跳过发送": "Lagervarningsmail ej konfigurerad, skickande hoppades över",
   "未配置打印机, 请联系管理员": "Skrivaren är inte konfigurerad, kontakta administratören",
   "未配置支付信息": "Betalningsinformation ej konfigurerad",

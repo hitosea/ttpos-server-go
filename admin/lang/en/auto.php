@@ -2110,7 +2110,7 @@ return [
     "Redis连接失败" => "Redis connection failed",
     "外送商品价格错误" => "Delivery product price error",
     "按小数计价只能显示到收银机和厨显" => "Decimal pricing can only be displayed on the POS and kitchen display",
-    "未配置外送渠道，无法选择在外送显示" => "Delivery channel not configured, cannot select to display for delivery",
+    "未配置扫码点餐渠道，无法选择在扫码点餐显示" => "Scan-to-order channel not configured, cannot select to display in scan-to-order",
     "只能选择在外送显示的商品" => "Only products set to display for delivery can be selected",
     "必点方案不能包含按小数计价商品" => "Mandatory selection packages cannot include decimal-priced items",
     "外送设置" => "Delivery settings",
