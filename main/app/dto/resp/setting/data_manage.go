@@ -49,10 +49,11 @@ type DataManageOrderSelectMeta struct {
 
 // DataManageOrderSelectStatsResp 可选订单统计预览响应（不持久化，仅预览提交后的统计）
 type DataManageOrderSelectStatsResp struct {
-	SelectedCount int64   `json:"selected_count"` // 预览选中数量
-	PaidAmount    float64 `json:"paid_amount"`    // 预览选中实付金额合计
-	TotalCount    int64   `json:"total_count"`    // 筛选范围内订单总数
-	IsSelectAll   bool    `json:"is_select_all"`  // 是否全选（所有筛选范围内的订单都已选中）
+	SelectedCount int64    `json:"selected_count"` // 预览选中数量
+	PaidAmount    float64  `json:"paid_amount"`    // 预览选中实付金额合计
+	TotalCount    int64    `json:"total_count"`    // 筛选范围内订单总数
+	IsSelectAll   bool     `json:"is_select_all"`  // 是否全选（所有筛选范围内的订单都已选中）
+	SelectedUuids []uint64 `json:"selected_uuids"` // 最终选中的订单UUID列表
 }
 
 // DataManageStatistics 数据管理统计信息响应

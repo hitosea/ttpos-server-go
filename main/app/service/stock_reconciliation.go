@@ -160,22 +160,6 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 
 // GetStockReconciliationTemplate 获取盘点单模板
 func (s *stockReconciliationSrv) GetStockReconciliationTemplate(ctx context.Context) (resp.StockReconciliationTemplateResp, error) {
-	// 异步触发 Stock Entry 合并扣减（确保盘点选物品时 ERPNext 库存是最新的）
-	companySetting := ctx.GetCompanySetting()
-	if companySetting.IsErpSalesInvoiceMode() {
-		utils.Go(func() {
-			companyUuid := ctx.GetCompanyUuid()
-			erpCtx := ctx.Copy()
-			erpCtx.SetDB(s.dbm.GetDB(companyUuid))
-			erpStockEntrySrv := NewErpStockEntrySrv(s.dbm)
-			if err := erpStockEntrySrv.TriggerStockEntryDeduction(erpCtx, companyUuid); err != nil {
-				logger.Logger.Error("盘点模板触发Stock Entry合并扣减失败",
-					zap.Uint64("company_uuid", companyUuid),
-					zap.Error(err))
-			}
-		})
-	}
-
 	// 调用盘点模板服务获取模板数据
 	templateResp, err := s.fetchReconciliationTemplate(ctx)
 	if err != nil {
@@ -840,6 +824,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 			Warehouse:     stockReconciliation.Warehouse.ErpCode,
 			Items:         erpItems,
 			InventoryType: constant.StockReconciliationTypeToErpInventoryType(stockReconciliation.Type),
+			Purpose:       constant.StockReconciliationPurposeToErp(stockReconciliation.Purpose),
 		})
 		if err != nil {
 			logger.Logger.Error("提交盘点单失败", zap.Error(err))

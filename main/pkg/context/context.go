@@ -52,10 +52,11 @@ type Context interface {
 	GetAssistantUuid() uint64 // 获取员工uuid(助手端)
 
 	// 设备相关
-	GetDeviceSn() string    // 获取设备SN
-	GetDeviceUuid() uint64  // 获取设备uuid
-	GetDeskUuid() uint64    // 获取桌台ID
-	GetH5OrderUuid() string // 获取H5订单ID
+	GetDeviceSn() string       // 获取设备SN
+	GetDeviceUuid() uint64     // 获取设备uuid
+	SetDeviceUuid(uuid uint64) // 设置设备uuid（用于非HTTP请求场景，如自动接单）
+	GetDeskUuid() uint64       // 获取桌台ID
+	GetH5OrderUuid() string    // 获取H5订单ID
 
 	// 会员相关
 	GetMember() model.Member       // 获取会员信息
@@ -389,6 +390,10 @@ func (c *ContextImpl) GetDeviceSn() string {
 
 func (c *ContextImpl) GetDeviceUuid() uint64 {
 	return c.deviceUuid
+}
+
+func (c *ContextImpl) SetDeviceUuid(uuid uint64) {
+	c.deviceUuid = uuid
 }
 
 func (c *ContextImpl) GetH5OrderUuid() string {

@@ -9,7 +9,7 @@ type AutoReceiptLog struct {
 	ReceiptOrderUuid       uint64 `gorm:"column:receipt_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:收货单UUID" json:"receipt_order_uuid"`
 	ReceiptOrderNo         string `gorm:"column:receipt_order_no;type:varchar(100);not null;default:'';comment:收货单号" json:"receipt_order_no"`
 	ReceiptErpOrderNo      string `gorm:"column:receipt_erp_order_no;type:varchar(255);not null;default:'';comment:收货单ERP单号" json:"receipt_erp_order_no"`
-	ReceiptTime            int64  `gorm:"column:receipt_time;type:int(10);not null;default:0;comment:收货日期（当天0点时间戳，筛选用）" json:"receipt_time"`
+	ReceiptTime            int64  `gorm:"column:receipt_time;type:int(10);not null;default:0;comment:收货时间（时间戳）" json:"receipt_time"`
 }
 
 func (AutoReceiptLog) TableName() string {

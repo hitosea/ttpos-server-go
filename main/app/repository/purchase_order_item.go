@@ -61,9 +61,9 @@ type IPurchaseOrderItemRepo interface {
 		excludeOrderUuid uint64,
 	) (float64, error)
 
-	// GetLastCompletedBrandPurchaseBaseQty 批量查询每个物品最近一次已完成品牌采购的基准单位数量
-	GetLastCompletedBrandPurchaseBaseQty(materialUuids []uint64) (map[uint64]float64, error)
-	// GetLastCompletedBrandPurchaseInfo 批量查询每个物品最近一次已完成品牌采购的基准单位数量和采购单位名称
+	// GetLastCompletedBrandPurchaseQuantity 批量查询每个物品最近一次已完成品牌采购的数量
+	GetLastCompletedBrandPurchaseQuantity(materialUuids []uint64) (map[uint64]float64, error)
+	// GetLastCompletedBrandPurchaseInfo 批量查询每个物品最近一次已完成品牌采购的数量和采购单位名称
 	GetLastCompletedBrandPurchaseInfo(materialUuids []uint64) (map[uint64]LastBrandPurchaseInfo, error)
 }
 
@@ -350,9 +350,9 @@ func (r *PurchaseOrderItemRepoImpl) WithPreloadUnits() DBOption {
 	}
 }
 
-// GetLastCompletedBrandPurchaseBaseQty 批量查询每个物品最近一次已完成品牌采购的基准单位数量
-// 返回 map[materialUuid]baseUnitQuantity
-func (r *PurchaseOrderItemRepoImpl) GetLastCompletedBrandPurchaseBaseQty(
+// GetLastCompletedBrandPurchaseQuantity 批量查询每个物品最近一次已完成品牌采购的数量
+// 返回 map[materialUuid]quantity
+func (r *PurchaseOrderItemRepoImpl) GetLastCompletedBrandPurchaseQuantity(
 	materialUuids []uint64,
 ) (map[uint64]float64, error) {
 	infoMap, err := r.GetLastCompletedBrandPurchaseInfo(materialUuids)
@@ -361,18 +361,30 @@ func (r *PurchaseOrderItemRepoImpl) GetLastCompletedBrandPurchaseBaseQty(
 	}
 	result := make(map[uint64]float64, len(infoMap))
 	for materialUuid, info := range infoMap {
-		result[materialUuid] = info.BaseQty
+		result[materialUuid] = info.Quantity
 	}
 	return result, nil
 }
 
 // LastBrandPurchaseInfo 上次品牌采购信息
 type LastBrandPurchaseInfo struct {
-	BaseQty  float64 // 基准单位数量
-	UnitName string  // 采购时的单位名称（JSON格式多语言）
+	Quantity         float64 // 数量
+	UnitName         string  // 采购时的单位名称（JSON格式多语言）
+	FinalReceiveTime int64   // 采购单完成时间（时间戳）
 }
 
-// GetLastCompletedBrandPurchaseInfo 批量查询每个物品最近一次已完成品牌采购的基准单位数量和采购单位名称
+// BuildConsumptionSinceTimes 从上次采购信息中提取每个物品的完成时间，用于查询消耗量
+func BuildConsumptionSinceTimes(lastPurchaseInfoMap map[uint64]LastBrandPurchaseInfo) map[uint64]int64 {
+	result := make(map[uint64]int64, len(lastPurchaseInfoMap))
+	for matUuid, info := range lastPurchaseInfoMap {
+		if info.FinalReceiveTime > 0 {
+			result[matUuid] = info.FinalReceiveTime
+		}
+	}
+	return result
+}
+
+// GetLastCompletedBrandPurchaseInfo 批量查询每个物品最近一次已完成品牌采购的数量、采购单位名称和完成时间
 func (r *PurchaseOrderItemRepoImpl) GetLastCompletedBrandPurchaseInfo(
 	materialUuids []uint64,
 ) (map[uint64]LastBrandPurchaseInfo, error) {
@@ -387,15 +399,16 @@ func (r *PurchaseOrderItemRepoImpl) GetLastCompletedBrandPurchaseInfo(
 		Num                float64
 		UnitConversionRate float64
 		UnitName           string
+		FinalReceiveTime   int64
 	}
 	oneMonthAgo := time.Now().AddDate(0, -1, 0).Unix()
 
 	latestTimeSubQuery := r.db.Table("ttpos_purchase_order_item poi2").
-		Select("poi2.material_uuid, MAX(po2.pass_time) AS max_time").
+		Select("poi2.material_uuid, MAX(po2.final_receive_time) AS max_time").
 		Joins("JOIN ttpos_purchase_order po2 ON po2.uuid = poi2.purchase_order_uuid").
 		Where("po2.purchase_type = ?", constant.PurchaseTypeBrand).
 		Where("po2.status = ?", constant.PurchaseOrderStatusCompleted).
-		Where("po2.pass_time >= ?", oneMonthAgo).
+		Where("po2.final_receive_time >= ?", oneMonthAgo).
 		Where("poi2.material_uuid IN ?", materialUuids).
 		Where("po2.delete_time = 0").
 		Where("poi2.delete_time = 0").
@@ -403,9 +416,9 @@ func (r *PurchaseOrderItemRepoImpl) GetLastCompletedBrandPurchaseInfo(
 
 	var records []itemRecord
 	err := r.db.Table("ttpos_purchase_order_item poi").
-		Select("poi.uuid, poi.material_uuid, poi.num, poi.unit_conversion_rate, poi.unit_name").
+		Select("poi.uuid, poi.material_uuid, poi.num, poi.unit_conversion_rate, poi.unit_name, po.final_receive_time").
 		Joins("JOIN ttpos_purchase_order po ON po.uuid = poi.purchase_order_uuid").
-		Joins("JOIN (?) latest ON poi.material_uuid = latest.material_uuid AND po.pass_time = latest.max_time", latestTimeSubQuery).
+		Joins("JOIN (?) latest ON poi.material_uuid = latest.material_uuid AND po.final_receive_time = latest.max_time", latestTimeSubQuery).
 		Where("po.purchase_type = ?", constant.PurchaseTypeBrand).
 		Where("po.status = ?", constant.PurchaseOrderStatusCompleted).
 		Where("po.delete_time = 0").
@@ -442,19 +455,21 @@ func (r *PurchaseOrderItemRepoImpl) GetLastCompletedBrandPurchaseInfo(
 		unitsByItem[unit.ItemUuid] = append(unitsByItem[unit.ItemUuid], unit)
 	}
 
-	// 计算基准单位数量并记录单位名称
+	// 计算数量并记录单位名称
 	for materialUuid, item := range latestItems {
-		info := LastBrandPurchaseInfo{}
+		info := LastBrandPurchaseInfo{
+			FinalReceiveTime: item.FinalReceiveTime,
+		}
 		itemUnits := unitsByItem[item.Uuid]
 		if len(itemUnits) > 0 {
-			var baseQty float64
+			var quantity float64
 			for _, u := range itemUnits {
-				baseQty += u.Num * u.UnitConversionRate
+				quantity += u.Num
 			}
-			info.BaseQty = baseQty
+			info.Quantity = quantity
 			info.UnitName = itemUnits[0].UnitName // 取第一个单位的名称
 		} else {
-			info.BaseQty = item.Num * item.UnitConversionRate
+			info.Quantity = item.Num
 			info.UnitName = item.UnitName // 无多单位时取主表的单位名称
 		}
 		result[materialUuid] = info

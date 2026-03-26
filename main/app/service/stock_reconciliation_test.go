@@ -1013,7 +1013,6 @@ func setupLoadValidateTestDB(t *testing.T) *gorm.DB {
 			headquarter_uuid INTEGER DEFAULT 0,
 			warehouse_uuid INTEGER DEFAULT 0,
 			init_stock REAL DEFAULT 0,
-			allow_substore_visible INTEGER DEFAULT 0,
 			origin_country_code TEXT DEFAULT '',
 			allow_negative_stock INTEGER DEFAULT 0,
 			delivered_by_supplier INTEGER DEFAULT 0,
@@ -1406,4 +1405,3 @@ func TestRejectStockReconciliation_Success(t *testing.T) {
 	assert.Equal(t, "数量有误，请重新核对", annotation.Content)
 	assert.Equal(t, constant.StockReconciliationAnnotationTypeReject, annotation.AnnotationType)
 }
-

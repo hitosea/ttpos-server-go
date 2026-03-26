@@ -28,9 +28,19 @@ class SeedHqFieldOverrideLegacyData extends Migrator
             throw new \RuntimeException('hq_field_override 表不存在，请先执行建表迁移');
         }
 
-        // 从当前商户数据库获取 headquarter_uuid
-        $companySetting = $this->fetchRow("SELECT headquarter_uuid FROM ttpos_company_setting WHERE delete_time = 0 LIMIT 1");
-        if (empty($companySetting) || empty($companySetting['headquarter_uuid']) || $companySetting['headquarter_uuid'] == 0) {
+        // 按 main 的 IsSubShop 逻辑判断是否子店：
+        // !IsTtposSite() && erpnext_company_abbr != erpnext_headquarter_abbr
+        // IsTtposSite(): erpnext_site_code == '1' || erpnext_site_code == ''
+        $companySetting = $this->fetchRow(
+            "SELECT headquarter_uuid
+             FROM ttpos_company_setting
+             WHERE delete_time = 0
+               AND NOT (erpnext_site_code = '1' OR erpnext_site_code = '')
+               AND erpnext_company_abbr <> erpnext_headquarter_abbr
+               AND headquarter_uuid > 0
+             LIMIT 1"
+        );
+        if (empty($companySetting) || empty($companySetting['headquarter_uuid'])) {
             // 不是子店（没有总部），跳过
             return;
         }
@@ -240,8 +250,26 @@ class SeedHqFieldOverrideLegacyData extends Migrator
      */
     private function collectMaterialOverrides($hqPdo, $hqDbName)
     {
+        // 检查 ttpos_material 表中可选字段是否存在（部分商户库可能缺少 safety_stock）
+        $materialTable = $this->table('material');
+        $hasSafetyStock = $materialTable->hasColumn('safety_stock');
+        $hasNegativeStock = $materialTable->hasColumn('allow_negative_stock');
+
+        if (!$hasSafetyStock && !$hasNegativeStock) {
+            return;
+        }
+
+        $columns = ['uuid'];
+        if ($hasSafetyStock) {
+            $columns[] = 'safety_stock';
+        }
+        if ($hasNegativeStock) {
+            $columns[] = 'allow_negative_stock';
+        }
+
+        $columnStr = implode(', ', $columns);
         $subMaterials = $this->fetchAll(
-            "SELECT uuid, safety_stock, allow_negative_stock FROM ttpos_material WHERE headquarter_uuid > 0 AND delete_time = 0"
+            "SELECT {$columnStr} FROM ttpos_material WHERE headquarter_uuid > 0 AND delete_time = 0"
         );
         if (empty($subMaterials)) {
             return;
@@ -253,12 +281,10 @@ class SeedHqFieldOverrideLegacyData extends Migrator
             $subMap[$row['uuid']] = $row;
         }
 
-        $existingSafetyOverrides = $this->getExistingOverrides($uuids, 'safety_stock');
-        $existingNegativeOverrides = $this->getExistingOverrides($uuids, 'negative_stock');
+        $existingSafetyOverrides = $hasSafetyStock ? $this->getExistingOverrides($uuids, 'safety_stock') : [];
+        $existingNegativeOverrides = $hasNegativeStock ? $this->getExistingOverrides($uuids, 'negative_stock') : [];
 
-        $hqMaterials = $this->fetchFromHq($hqPdo, $hqDbName, 'material',
-            ['uuid', 'safety_stock', 'allow_negative_stock'], $uuids
-        );
+        $hqMaterials = $this->fetchFromHq($hqPdo, $hqDbName, 'material', $columns, $uuids);
         $hqMap = [];
         foreach ($hqMaterials as $row) {
             $hqMap[$row['uuid']] = $row;
@@ -270,11 +296,11 @@ class SeedHqFieldOverrideLegacyData extends Migrator
             }
             $hqRow = $hqMap[$uuid];
 
-            if (!isset($existingSafetyOverrides[$uuid]) && $subRow['safety_stock'] != $hqRow['safety_stock']) {
+            if ($hasSafetyStock && !isset($existingSafetyOverrides[$uuid]) && $subRow['safety_stock'] != $hqRow['safety_stock']) {
                 $this->pendingOverrides[] = ['material', $uuid, 'safety_stock'];
             }
 
-            if (!isset($existingNegativeOverrides[$uuid]) && $subRow['allow_negative_stock'] != $hqRow['allow_negative_stock']) {
+            if ($hasNegativeStock && !isset($existingNegativeOverrides[$uuid]) && $subRow['allow_negative_stock'] != $hqRow['allow_negative_stock']) {
                 $this->pendingOverrides[] = ['material', $uuid, 'negative_stock'];
             }
         }

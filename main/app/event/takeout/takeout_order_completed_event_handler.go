@@ -64,6 +64,7 @@ func (s *takeoutOrderCompletedEventSubscriber) Handle(domainEvent event.DomainEv
 			orderCompletedEvent.CompletedTime,
 			orderCompletedEvent.PlatformTotal,
 			orderCompletedEvent.CompanyUuid,
+			orderCompletedEvent.OrderCreateTime,
 		); err != nil {
 			logger.Logger.Error("记录外卖订单高峰期失败",
 				zap.Uint64("orderUuid", orderCompletedEvent.OrderUuid),

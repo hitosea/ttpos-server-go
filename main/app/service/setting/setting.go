@@ -125,16 +125,18 @@ type shopAppSetting struct {
 
 // 版本检查模块名称常量，与 middleware.VersionCheckType 值一致
 const (
-	ModulePurchaseOrder = "purchase_order"
-	ModuleTransferOrder = "transfer_order"
-	ModuleStatistics    = "statistics"
+	ModulePurchaseOrder       = "purchase_order"
+	ModuleTransferOrder       = "transfer_order"
+	ModuleStatistics          = "statistics"
+	ModuleStockReconciliation = "stock_reconciliation"
 )
 
 // defaultModuleMinVersions 各模块默认最小版本号
 var defaultModuleMinVersions = map[string]string{
-	ModulePurchaseOrder: constant.ClientVersionV2160,
-	ModuleTransferOrder: constant.ClientVersionV2090,
-	ModuleStatistics:    constant.ClientVersionV2196,
+	ModulePurchaseOrder:       constant.ClientVersionV2160,
+	ModuleTransferOrder:       constant.ClientVersionV2090,
+	ModuleStatistics:          constant.ClientVersionV2196,
+	ModuleStockReconciliation: constant.ClientVersionV22014,
 }
 
 // GetShopAppMinVersion 获取指定模块的最小版本号
@@ -544,8 +546,11 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		printSpeed             int = 2  // 打印速度 1-流畅(不分片打印) 2-稳定(分片大包打印) 3-兼容(分片小包打印)
 	)
 
+	// 来源设备品牌
+	deviceSource := ctx.GetSource()
+
 	// 收银机开启
-	if isCashierOpen {
+	if isCashierOpen || deviceSource == constant.SourceKiosk {
 
 		// 收银机机绑定的打印机key
 		for _, cashierPrinter := range printerSetting.CashierPrinter {
@@ -588,12 +593,17 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			enableStatusCheck = printer.EnableStatusCheck
 			enableSound = printer.EnableSound
 			printSpeed = printer.PrintSpeed
-		} else if printerId != "0" && printerId != "" {
+		} else if (printerId != "0" && printerId != "") || deviceSource == constant.SourceKiosk {
 			// 收银机内置的打印机
-			printerCashierDeviceSn = printerId
+			brand := ""
 			isCashierPrinter = true
 			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-			brand := deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(printerId))
+			if deviceSource == constant.SourceKiosk {
+				brand = deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(deviceSn))
+			} else {
+				printerCashierDeviceSn = printerId
+				brand = deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(printerId))
+			}
 			if slices.Contains(constant.SunmiAllPrints, brand) {
 				// 商米打印机
 				printerType = printerConstant.PrinterTypeCashierSunmi
@@ -2079,6 +2089,8 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 
 	storeSetting.LogoURL = storeSettingReq.LogoUrl
 	storeSetting.Company = storeSettingReq.CompanyName
+	storeSetting.Address = storeSettingReq.Address
+	storeSetting.Phone = storeSettingReq.Phone
 	storeSetting.StoreCode = storeSettingReq.StoreCode
 	storeSetting.TaxNumber = storeSettingReq.TaxNumber
 	storeSetting.Coordinates = storeSettingReq.Coordinates
@@ -2627,36 +2639,38 @@ func (s *Srv) GetStoreScanOrderSetting(ctx context.Context) (setting.StoreScanOr
 	}
 
 	return setting.StoreScanOrderSettingResp{
-		IsEnabled:           data.IsEnabled,
-		EnableDelivery:      data.EnableDelivery,
-		EnableSelfPickup:    data.EnableSelfPickup,
-		DeliveryAvailable:   deliveryAvailable,
-		SelfPickupAvailable: selfPickupAvailable,
+		IsEnabled:            data.IsEnabled,
+		EnableDelivery:       data.EnableDelivery,
+		EnableSelfPickup:     data.EnableSelfPickup,
+		IsOrderFirstPayLater: data.IsOrderFirstPayLater,
+		DeliveryAvailable:    deliveryAvailable,
+		SelfPickupAvailable:  selfPickupAvailable,
 	}, nil
 }
 
 // SaveStoreScanOrderSetting 保存门店点餐配置
 func (s *Srv) SaveStoreScanOrderSetting(ctx context.Context, settingReq req.SaveStoreScanOrderSettingReq) error {
-	companySetting, err := s.GetCompanySetting(ctx)
-	if err != nil {
-		return errors.WithMessage(err, "获取公司设置失败")
-	}
+	// companySetting, err := s.GetCompanySetting(ctx)
+	// if err != nil {
+	// 	return errors.WithMessage(err, "获取公司设置失败")
+	// }
 
-	// 校验：如果要开启外送服务，云平台必须已开启外送功能（与 is_open_rider 保持一致）
-	if settingReq.EnableDelivery == 1 && !companySetting.IsOpenRider() {
-		return errors.New("暂未开启，请联系销售代表")
-	}
+	// // 校验：如果要开启外送服务，云平台必须已开启外送功能（与 is_open_rider 保持一致）
+	// if settingReq.EnableDelivery == 1 && !companySetting.IsOpenRider() {
+	// 	return errors.New("暂未开启，请联系销售代表")
+	// }
 
-	// 校验：如果要开启到店自取，云平台必须已开启会员端即时点餐功能
-	if settingReq.EnableSelfPickup == 1 && companySetting.IsOpenMemberInstant != 1 {
-		return errors.New("暂未开启，请联系销售代表")
-	}
+	// // 校验：如果要开启到店自取，云平台必须已开启会员端即时点餐功能
+	// if settingReq.EnableSelfPickup == 1 && companySetting.IsOpenMemberInstant != 1 {
+	// 	return errors.New("暂未开启，请联系销售代表")
+	// }
 
 	// 保存设置
 	data := setting.StoreScanOrderSetting{
-		IsEnabled:        settingReq.IsEnabled,
-		EnableDelivery:   settingReq.EnableDelivery,
-		EnableSelfPickup: settingReq.EnableSelfPickup,
+		IsEnabled:            settingReq.IsEnabled,
+		EnableDelivery:       settingReq.EnableDelivery,
+		EnableSelfPickup:     settingReq.EnableSelfPickup,
+		IsOrderFirstPayLater: settingReq.IsOrderFirstPayLater,
 	}
 
 	if err := s.UpdateSetting(ctx, constant.SettingStoreScanOrder, data); err != nil {

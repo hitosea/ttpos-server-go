@@ -1165,7 +1165,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_final_receive_time` (`final_receive_time`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购申请表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item` (
@@ -2814,7 +2815,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_shift_log` (
     `erpnext_close_pos_entry_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext结账名称',
     `erpnext_async_record_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext异步记录ID',
     `opening_payment_methods` VARCHAR(2000) NOT NULL DEFAULT '' COMMENT '开账时的支付方式UUID列表（逗号分隔）',
-    `shift_version` TINYINT(1) NOT NULL DEFAULT 2 COMMENT '班次版本: 1=旧版(有ERP开关帐) 2=新版(无ERP开关帐)',
+    `shift_version` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '班次版本: 1=旧版(有ERP开关帐) 2=新版(无ERP开关帐)',
     `shift_end_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '当班结束时间',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',

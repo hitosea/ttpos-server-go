@@ -1008,7 +1008,7 @@ definitions:
         description: 是否允许负库存：true-允许，false-不允许
         type: boolean
       allow_substore_visible:
-        description: 允许子店可见：1-允许，0-不允许（仅总店可用）
+        description: 允许子店可见（已废弃，固定返回1）
         type: integer
       available_num:
         description: 可用库存数量
@@ -1022,6 +1022,9 @@ definitions:
       category_uuid:
         description: 分类UUID
         type: integer
+      consumption_since_last_purchase:
+        description: 上次采购完成后的消耗量（默认销售单位）
+        type: number
       cost_unit_locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -1167,7 +1170,7 @@ definitions:
         description: 是否允许负库存：true-允许，false-不允许
         type: boolean
       allow_substore_visible:
-        description: 允许子店可见：1-允许，0-不允许（仅总店可用）
+        description: 允许子店可见（已废弃，固定返回1）
         type: integer
       barcode_value:
         description: 条形码值
@@ -1934,6 +1937,9 @@ definitions:
       default_language:
         description: 默认语言
         type: string
+      delivery_available:
+        description: 外送服务是否可用（云平台是否开启）
+        type: boolean
       is_member_show_sold_out:
         description: 是否显示售罄商品
         type: boolean
@@ -1942,6 +1948,9 @@ definitions:
         type: boolean
       is_open_store_scan_order:
         description: 是否开启门店扫码点餐
+        type: boolean
+      is_order_first_pay_later:
+        description: 堂食是否开启先下单后付款
         type: boolean
       is_store_resting:
         description: 商家是否休息中
@@ -1956,6 +1965,9 @@ definitions:
         items:
           $ref: '#/definitions/dto.LanguageItem'
         type: array
+      self_pickup_available:
+        description: 到店自取是否可用（云平台是否开启）
+        type: boolean
     type: object
   member_resp.PointsRecord:
     properties:
@@ -4215,6 +4227,7 @@ definitions:
     required:
     - locale_name
     - shop_uuids
+    - status
     - warehouse_erp_code
     type: object
   req.CreateMemberDineInOrderReq:
@@ -4222,7 +4235,7 @@ definitions:
       products:
         description: 商品列表
         items:
-          $ref: '#/definitions/req.OrderProductAddReq'
+          $ref: '#/definitions/req.ProductParams'
         type: array
       sale_bill_uuid:
         description: 销售账单UUID. 值为0时，表示创建新订单。值不为0时，表示向已有订单添加商品。
@@ -4843,33 +4856,10 @@ definitions:
     type: object
   req.GetDataManageOrderSelectStatsReq:
     properties:
-      bill_type:
-        description: 订单类型,-1=全部、0=餐单、1=外卖
-        type: integer
-      date_type:
-        description: 时间类型,-1=全部、0=今天、1=昨天、2=本周
-        type: integer
-      deselected_uuids:
-        description: 取消/移除的UUID（select_all=true时排除，select_all=false时移除）
+      filters:
+        description: 筛选条件数组，每组独立处理
         items:
-          type: integer
-        type: array
-      order_no:
-        description: 订单编号搜索
-        type: string
-      query_end_date:
-        description: 查询结束日期
-        type: string
-      query_start_date:
-        description: 查询开始日期
-        type: string
-      select_all:
-        description: 是否全选当前筛选范围
-        type: boolean
-      selected_uuids:
-        description: 手动新增的UUID（select_all=false时使用）
-        items:
-          type: integer
+          $ref: '#/definitions/req.DataManageOrderSubmitFilter'
         type: array
     type: object
   req.GetOrderCartProductBatchCookingListReq:
@@ -5320,9 +5310,6 @@ definitions:
       allow_negative_stock:
         description: 是否允许负库存
         type: boolean
-      allow_substore_visible:
-        description: 允许子店可见：1-允许，0-不允许（仅总店可用）
-        type: integer
       barcode_value:
         description: 条形码值
         type: string
@@ -5368,19 +5355,6 @@ definitions:
       valuation:
         description: 估值率
         type: number
-    type: object
-  req.MaterialBatchUpdateVisibleReq:
-    properties:
-      allow_substore_visible:
-        description: 允许子店可见：1-允许，0-不允许
-        type: integer
-      uuids:
-        description: 物品UUID列表
-        items:
-          type: integer
-        type: array
-    required:
-    - uuids
     type: object
   req.MaterialCategoryAddReq:
     properties:
@@ -5440,9 +5414,6 @@ definitions:
       allow_negative_stock:
         description: 是否允许负库存
         type: boolean
-      allow_substore_visible:
-        description: 允许子店可见：1-允许，0-不允许（仅总店可用）
-        type: integer
       barcode_value:
         description: 条形码值
         type: string
@@ -5583,6 +5554,17 @@ definitions:
         type: integer
     required:
     - conversion_rate
+    - uuid
+    type: object
+  req.MaterialUpdateNegativeStockReq:
+    properties:
+      allow_negative_stock:
+        description: 是否允许负库存
+        type: boolean
+      uuid:
+        description: 物品UUID
+        type: integer
+    required:
     - uuid
     type: object
   req.MaterialUpdateSafetyStockReq:
@@ -6701,9 +6683,6 @@ definitions:
       allow_negative_stock:
         description: 是否允许负库存
         type: boolean
-      allow_substore_visible:
-        description: 允许子店可见：1-允许，0-不允许（仅总店可用）
-        type: integer
       barcode_value:
         description: 条形码值
         type: string
@@ -7137,6 +7116,9 @@ definitions:
         type: integer
       flavor_product_bom_uuid:
         description: 商品规格uuid
+        type: integer
+      flavor_uuid:
+        description: 商品规格uuid,FlavorProductBomUuid的别名,只有会员端堂食订单创建使用
         type: integer
       is_buffet:
         description: 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
@@ -8843,6 +8825,9 @@ definitions:
       is_enabled:
         description: 启用状态：0-关闭，1-开启
         type: integer
+      is_order_first_pay_later:
+        description: 先下单后付：0-先付后下单(默认)，1-先下单后付
+        type: integer
     type: object
   req.SaveTemplateStyleSettingReq:
     properties:
@@ -9297,6 +9282,21 @@ definitions:
           $ref: '#/definitions/req.DataManageOrderSubmitFilter'
         type: array
     type: object
+  req.SubmitMemberDineInOrderReq:
+    properties:
+      remark:
+        description: 订单备注（同步到收银端整单备注）
+        type: string
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+    required:
+    - sale_bill_uuid
+    - sale_order_uuid
+    type: object
   req.SubmitShiftReq:
     properties:
       is_background:
@@ -9739,6 +9739,7 @@ definitions:
     required:
     - locale_name
     - shop_uuids
+    - status
     - uuid
     - warehouse_erp_code
     type: object
@@ -11381,6 +11382,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesMeta'
         description: 元数据
+      scan:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 点餐-扫码
       summary:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesBlock'
@@ -12667,6 +12672,9 @@ definitions:
       dining_method:
         description: 用餐方式 0:堂食 1:打包
         type: integer
+      is_order_first_pay_later:
+        description: 是否先下单后付款（true调submit，false调pay）
+        type: boolean
       payment_methods:
         allOf:
         - $ref: '#/definitions/resp.PaymentMethodList'
@@ -12746,6 +12754,13 @@ definitions:
       num:
         description: 数量
         type: number
+      package_product_list:
+        allOf:
+        - $ref: '#/definitions/resp.PackageProductList'
+        description: 套餐子商品列表（仅套餐商品有值）
+      product_type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
       sale_order_product_uuid:
         description: 销售订单商品UUID
         type: integer
@@ -13042,6 +13057,9 @@ definitions:
       dining_method:
         description: 用餐方式：0-堂食 1-打包
         type: integer
+      is_order_first_pay_later:
+        description: 是否先下单后付款（true时前端调submit，false时调pay）
+        type: boolean
       order_no:
         description: 订单编号
         type: string
@@ -13492,6 +13510,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.OperationLog'
         description: 操作日志列表
+      payment_method:
+        allOf:
+        - $ref: '#/definitions/resp.H5OrderPaymentMethodList'
+        description: 支付方式列表
     type: object
   resp.H5OrderItem:
     properties:
@@ -13548,6 +13570,23 @@ definitions:
       unhandled_count:
         description: 未处理的接单数量
         type: integer
+    type: object
+  resp.H5OrderPaymentMethodItem:
+    properties:
+      code:
+        description: 支付方式代号
+        type: integer
+      name:
+        description: 支付方式名称
+        type: string
+    type: object
+  resp.H5OrderPaymentMethodList:
+    properties:
+      list:
+        description: 支付方式列表
+        items:
+          $ref: '#/definitions/resp.H5OrderPaymentMethodItem'
+        type: array
     type: object
   resp.HeadquartersDataListResp:
     properties:
@@ -13618,6 +13657,9 @@ definitions:
       hide_bill_time:
         description: 挂单时间
         type: integer
+      order_no:
+        description: 销售账单编号
+        type: string
       products:
         allOf:
         - $ref: '#/definitions/resp.InstantHideSaleProductList'
@@ -14061,11 +14103,17 @@ definitions:
         description: 应付金额
         type: number
       discount_amount:
-        description: 优惠金额
+        description: 优惠折扣金额（整单打折），与收银机购物车 discount_amount 一致
+        type: number
+      member_discount_amount:
+        description: 会员优惠折扣金额，与收银机购物车 member_discount_amount 一致
         type: number
       payment_method_name:
         description: 支付方式名称
         type: string
+      product_amount:
+        description: 商品金额（合计）
+        type: number
       service_fee:
         description: 服务费
         type: number
@@ -14078,6 +14126,12 @@ definitions:
       image:
         description: 商品图片
         type: string
+      is_cancel:
+        description: 是否退菜
+        type: boolean
+      is_gift:
+        description: 是否赠菜
+        type: boolean
       locale_attribute_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -14089,9 +14143,16 @@ definitions:
       num:
         description: 数量
         type: number
+      package_product_list:
+        allOf:
+        - $ref: '#/definitions/resp.PackageProductList'
+        description: 套餐子商品列表（仅套餐商品有值）
       price:
         description: 单价（折前）
         type: number
+      product_type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
       refund_amount:
         description: 退款金额（0表示未退款）
         type: number
@@ -16743,6 +16804,9 @@ definitions:
       base_unit_name:
         description: 基准单位名称
         type: string
+      consumption_since_last_purchase:
+        description: 上次采购完成后的消耗量（默认销售单位）
+        type: number
       default_sales_unit_locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -18368,6 +18432,9 @@ definitions:
       is_lock:
         description: 购物车是否锁定 true:锁定 false:未锁定
         type: boolean
+      is_split_disabled:
+        description: 是否禁止拆单（会员端堂食订单为true）
+        type: boolean
       must_plans:
         allOf:
         - $ref: '#/definitions/resp.ProductMustPlanList'
@@ -19988,6 +20055,9 @@ definitions:
     type: object
   resp.UnprocessedH5OrderItem:
     properties:
+      can_reject:
+        description: 是否可以拒单
+        type: boolean
       desk_no:
         description: 桌台编号
         type: string
@@ -21444,6 +21514,11 @@ definitions:
       selected_count:
         description: 预览选中数量
         type: integer
+      selected_uuids:
+        description: 最终选中的订单UUID列表
+        items:
+          type: integer
+        type: array
       total_count:
         description: 筛选范围内订单总数
         type: integer
@@ -21941,6 +22016,9 @@ definitions:
         type: integer
       is_enabled:
         description: 启用状态：0-关闭，1-开启
+        type: integer
+      is_order_first_pay_later:
+        description: 先下单后付：0-先付后下单(默认)，1-先下单后付
         type: integer
       self_pickup_available:
         description: 到店自取是否可用（云平台是否开启）：0-不可用，1-可用
@@ -28000,6 +28078,10 @@ paths:
       - application/json
       description: 显示点餐订单列表（取单列表）
       parameters:
+      - description: 搜索关键词（按流水号搜索）
+        in: query
+        name: keyword
+        type: string
       - description: 页码
         in: query
         minimum: 1
@@ -34806,6 +34888,30 @@ paths:
       summary: 获取堂食订单支付状态
       tags:
       - 会员端-订单
+  /member/order/dine_in/submit:
+    post:
+      consumes:
+      - application/json
+      description: 先下单后付模式下，会员端创建订单后可多次加购，最终通过此接口提交生成 H5 订单
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SubmitMemberDineInOrderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 提交堂食订单到收银机
+      tags:
+      - 会员端-堂食订单
   /member/order/form/info:
     get:
       consumes:
@@ -36912,21 +37018,12 @@ paths:
     post:
       consumes:
       - application/json
-      description: 批量更新物品可见性设置（仅总店可用）
-      parameters:
-      - description: 批量更新物品可见性请求
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.MaterialBatchUpdateVisibleReq'
+      description: 已废弃，接口保留兼容，不再执行实际操作
       produces:
       - application/json
       responses:
         "200":
           description: 成功
-        "400":
-          description: 错误请求
       security:
       - JwtToken: []
       summary: 批量更新物品可见性
@@ -37297,6 +37394,30 @@ paths:
       security:
       - JwtToken: []
       summary: 获取物品的单位列表
+      tags:
+      - 商家端.物品管理
+  /shop/material/update_negative_stock:
+    post:
+      consumes:
+      - application/json
+      description: 子店修改总店同步物品的负库存设置
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialUpdateNegativeStockReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 修改物品负库存设置
       tags:
       - 商家端.物品管理
   /shop/material/update_safety_stock:
@@ -44025,6 +44146,23 @@ paths:
       summary: 导出用户分析统计
       tags:
       - 商家端.报表
+  /shop/stock_entry/trigger_deduction:
+    post:
+      consumes:
+      - application/json
+      description: 查询未扣减库存的已结账订单，合并提交 Stock Entry 到 ERPNext
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 触发 Stock Entry 合并扣减
+      tags:
+      - 商家端.库存管理
   /shop/stock_loss/annotation_list:
     get:
       consumes:

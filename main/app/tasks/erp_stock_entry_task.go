@@ -9,7 +9,9 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 )
@@ -19,8 +21,8 @@ const (
 	stockEntryRetryDelay = 5 * time.Minute
 )
 
-// ErpStockEntryTask 0 点 Stock Entry 合并扣减任务
-// 每日执行，查询所有 ERP 商家的未出库订单，合并后提交 Stock Entry
+// ErpStockEntryTask Stock Entry 合并扣减任务
+// 每小时执行，按门店时区判断是否到达本地午夜，满足条件则合并未出库订单提交 Stock Entry
 type ErpStockEntryTask struct {
 	dbm   *database.DBManager
 	cache cache.Cache
@@ -42,6 +44,14 @@ func (t *ErpStockEntryTask) Execute() {
 	}()
 
 	logger.Logger.Info("开始执行ERP Stock Entry合并扣减任务")
+
+	start := time.Now()
+	lock.NewSystemLock().LockUuid(lock.ErpStockEntryLock)
+	defer lock.NewSystemLock().UnlockUuid(lock.ErpStockEntryLock)
+	if time.Since(start) > 1*time.Second {
+		logger.Logger.Warn("ERP Stock Entry任务: 其他节点已处理，跳过")
+		return
+	}
 
 	saasDB := t.dbm.GetDB(constant.DefaultDB)
 	if saasDB == nil {
@@ -79,6 +89,15 @@ func (t *ErpStockEntryTask) Execute() {
 		if !company.CompanySetting.IsErpSalesInvoiceMode() {
 			continue
 		}
+
+		// 按门店时区判断是否到达本地午夜，未到达则跳过
+		timezone := company.CompanySetting.GetTimezone()
+		if utils.SetTimezone(timezone).Now().Hour() != 0 {
+			continue
+		}
+
+		logger.Logger.Info("ERP Stock Entry: 门店到达本地午夜",
+			zap.Uint64("company_uuid", companyUuid), zap.String("timezone", timezone))
 
 		ctx := context.NewDefaultContext()
 		ctx.SetCompanyUuid(company.Uuid)

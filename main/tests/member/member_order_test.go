@@ -5,6 +5,7 @@ package member_test
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"ttpos-server-go/tests/fixture"
@@ -213,11 +214,12 @@ func Test_Member_DineIn_Create_Package_Success(t *testing.T) {
 		"sale_order_uuid": 0,
 		"products": []map[string]any{
 			{
-				"flavor_uuid":  pkgResult.PackageBomUUID,
-				"num":          1,
-				"price":        50.00,
-				"product_type": 1,
-				"products":     subProducts,
+				"flavor_uuid":          pkgResult.PackageBomUUID,
+				"product_package_uuid": pkgResult.PackageUUID,
+				"num":                  1,
+				"price":                50.00,
+				"product_type":         1,
+				"products":             subProducts,
 			},
 		},
 	}
@@ -301,11 +303,12 @@ func Test_Member_DineIn_Create_PackageAndNormal_Success(t *testing.T) {
 				"product_type": 0,
 			},
 			{
-				"flavor_uuid":  pkgResult.PackageBomUUID,
-				"num":          1,
-				"price":        45.00,
-				"product_type": 1,
-				"products":     subProducts,
+				"flavor_uuid":          pkgResult.PackageBomUUID,
+				"product_package_uuid": pkgResult.PackageUUID,
+				"num":                  1,
+				"price":                45.00,
+				"product_type":         1,
+				"products":             subProducts,
 			},
 		},
 	}
@@ -371,11 +374,12 @@ func Test_Member_DineIn_Create_PackageEmptySub_Fail(t *testing.T) {
 		"sale_order_uuid": 0,
 		"products": []map[string]any{
 			{
-				"flavor_uuid":  pkgResult.PackageBomUUID,
-				"num":          1,
-				"price":        30.00,
-				"product_type": 1,
-				"products":     []map[string]any{},
+				"flavor_uuid":          pkgResult.PackageBomUUID,
+				"product_package_uuid": pkgResult.PackageUUID,
+				"num":                  1,
+				"price":                30.00,
+				"product_type":         1,
+				"products":             []map[string]any{},
 			},
 		},
 	}
@@ -391,6 +395,9 @@ func Test_Member_DineIn_Create_PackageEmptySub_Fail(t *testing.T) {
 	apiResp := resp.ParseAPIResponse(t)
 	if apiResp.Code == 0 {
 		t.Error("expected error for package with empty sub-products, but got success")
+	}
+	if !strings.Contains(apiResp.Message, "套餐子商品不能为空") {
+		t.Fatalf("expected error message to contain 套餐子商品不能为空, got: %s", apiResp.Message)
 	}
 }
 
@@ -520,11 +527,12 @@ func Test_Member_DineIn_Create_Package_IsAcceptOrder(t *testing.T) {
 		"sale_order_uuid": 0,
 		"products": []map[string]any{
 			{
-				"flavor_uuid":  pkgResult.PackageBomUUID,
-				"num":          1,
-				"price":        40.00,
-				"product_type": 1,
-				"products":     subProducts,
+				"flavor_uuid":          pkgResult.PackageBomUUID,
+				"product_package_uuid": pkgResult.PackageUUID,
+				"num":                  1,
+				"price":                40.00,
+				"product_type":         1,
+				"products":             subProducts,
 			},
 		},
 	}

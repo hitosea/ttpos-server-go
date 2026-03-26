@@ -86,13 +86,21 @@ func (h *ProductHandler) GetProductList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param order_type query int false "订单类型：0-外送（默认），1-堂食（到店自取）"
 // @Success 200 {object} product_resp.ProductCategoryListResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/product/recommend/list [get]
 func (h *ProductHandler) GetProductRecommendList(c *gin.Context) {
+	// 绑定请求参数
+	recommendListReq := req.ProductRecommendListReq{}
+	if err := c.ShouldBindQuery(&recommendListReq); err != nil {
+		helper.HandleValidationError(c, err, recommendListReq, nil)
+		return
+	}
+
 	ctx := helper.GetContext(c)
 	// 获取会员端产品类别列表
-	res, err := h.productSrv.GetProductRecommendList(ctx, req.ProductRecommendListReq{})
+	res, err := h.productSrv.GetProductRecommendList(ctx, recommendListReq)
 
 	// 处理错误
 	if err != nil {

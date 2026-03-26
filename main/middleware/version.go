@@ -12,9 +12,10 @@ import (
 type VersionCheckType string
 
 const (
-	TypePurchaseOrder VersionCheckType = VersionCheckType(setting.ModulePurchaseOrder)
-	TypeTransferOrder VersionCheckType = VersionCheckType(setting.ModuleTransferOrder)
-	TypeStatistics    VersionCheckType = VersionCheckType(setting.ModuleStatistics)
+	TypePurchaseOrder       VersionCheckType = VersionCheckType(setting.ModulePurchaseOrder)
+	TypeTransferOrder       VersionCheckType = VersionCheckType(setting.ModuleTransferOrder)
+	TypeStatistics          VersionCheckType = VersionCheckType(setting.ModuleStatistics)
+	TypeStockReconciliation VersionCheckType = VersionCheckType(setting.ModuleStockReconciliation)
 )
 
 // MinVersionCheck 版本检查，从配置中动态获取指定模块的最低版本

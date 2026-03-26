@@ -180,7 +180,7 @@ func CheckoutSaleOrderEventHandler() {
 				// 获取最新的会员信息
 				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
 				if err != nil {
-					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetMemberRecord failed", zap.Any("payload", payload), zap.Error(err))
+					logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, GetMemberRecord failed", zap.Any("payload", payload), zap.Error(err))
 					return
 				}
 				// 创建积分发放记录. // 累计会员的消费金额、消费次数
@@ -199,7 +199,7 @@ func CheckoutSaleOrderEventHandler() {
 					}
 					return nil
 				}); err != nil {
-					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, Transaction failed", zap.Any("payload", payload), zap.Error(err))
+					logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, Transaction failed", zap.Any("payload", payload), zap.Error(err))
 					return
 				}
 
@@ -234,7 +234,7 @@ func CheckoutSaleOrderEventHandler() {
 			setting := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
 			storeSetting, err := setting.GetStoreSetting(payload.Ctx)
 			if err != nil {
-				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetStoreSetting failed", zap.Error(err))
+				logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, GetStoreSetting failed", zap.Error(err))
 				return
 			}
 			//
@@ -242,7 +242,7 @@ func CheckoutSaleOrderEventHandler() {
 			err = repository.NewSaleOrderPeakTimeRepo(db).Record("inc", payload.SaleBill, 0.0, storeSetting.TimeZone)
 			if err != nil {
 				fmt.Println("SubscribeCheckoutSaleOrderEvent process, Record failed", payload, err)
-				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, Record failed", zap.Any("payload", payload), zap.Error(err))
+				logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, Record failed", zap.Any("payload", payload), zap.Error(err))
 			}
 		})
 
@@ -419,7 +419,7 @@ func HandleMemberPoints(db *gorm.DB) {
 	memberPointLogRepo := repository.NewMemberPointLogRepo(db)
 	memberPointLogs, err := memberPointLogRepo.GetMemberPointLogNotProcessed()
 	if err != nil {
-		logger.Logger.Info("HandleMemberPoints process, GetMemberPointLogNotProcessed failed", zap.Error(err))
+		logger.Logger.Error("HandleMemberPoints process, GetMemberPointLogNotProcessed failed", zap.Error(err))
 		return
 	}
 
@@ -445,7 +445,7 @@ func HandleMemberPoints(db *gorm.DB) {
 	// 获取会员信息
 	members, err := repository.NewMemberRepo(db).GetMembersByUuids(memberUuids)
 	if err != nil {
-		logger.Logger.Info("HandleMemberPoints process, GetMembersByUuids failed", zap.Any("memberUuids", memberUuids), zap.Error(err))
+		logger.Logger.Error("HandleMemberPoints process, GetMembersByUuids failed", zap.Any("memberUuids", memberUuids), zap.Error(err))
 		return
 	}
 
@@ -488,7 +488,7 @@ func HandleMemberPoints(db *gorm.DB) {
 		}
 		return nil
 	}); err != nil {
-		logger.Logger.Info("HandleMemberPoints process, Transaction failed", zap.Any("members", members), zap.Error(err))
+		logger.Logger.Error("HandleMemberPoints process, Transaction failed", zap.Any("members", members), zap.Error(err))
 		return
 	}
 	// 记录日志
@@ -507,7 +507,7 @@ func HandleMemberBalance(db *gorm.DB) {
 	memberBalanceLogRepo := repository.NewMemberBalanceLogRepo(db)
 	memberBalanceLogs, err := memberBalanceLogRepo.GetMemberBalanceLogNotProcessed()
 	if err != nil {
-		logger.Logger.Info("HandleMemberBalance process, GetMemberBalanceLogNotProcessed failed", zap.Error(err))
+		logger.Logger.Error("HandleMemberBalance process, GetMemberBalanceLogNotProcessed failed", zap.Error(err))
 		return
 	}
 
@@ -539,7 +539,7 @@ func HandleMemberBalance(db *gorm.DB) {
 	// 获取会员信息
 	members, err := repository.NewMemberRepo(db).GetMembersByUuids(memberUuids)
 	if err != nil {
-		logger.Logger.Info("HandleMemberBalance process, GetMembersByUuids failed", zap.Any("memberUuids", memberUuids), zap.Error(err))
+		logger.Logger.Error("HandleMemberBalance process, GetMembersByUuids failed", zap.Any("memberUuids", memberUuids), zap.Error(err))
 		return
 	}
 	// 更新会员余额
@@ -576,7 +576,7 @@ func HandleMemberBalance(db *gorm.DB) {
 		}
 		return nil
 	}); err != nil {
-		logger.Logger.Info("HandleMemberBalance process, Transaction failed", zap.Any("members", members), zap.Error(err))
+		logger.Logger.Error("HandleMemberBalance process, Transaction failed", zap.Any("members", members), zap.Error(err))
 		return
 	}
 	// 记录日志
@@ -628,7 +628,7 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 
 			activity, err := repository.NewMarketingActivityRepo(db).GetActivity(saleOrder.Member.ActivityUuid)
 			if err != nil || activity == nil {
-				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetActivity failed", zap.Any("activityUuid", saleOrder.Member.ActivityUuid), zap.Error(err))
+				logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, GetActivity failed", zap.Any("activityUuid", saleOrder.Member.ActivityUuid), zap.Error(err))
 				continue
 			}
 			if !activity.IsValid() {
@@ -648,13 +648,13 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 					consumptionAmount,
 				)
 				if err != nil {
-					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
+					logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
 				}
 				// 发放奖励
 				err := HandleActivitySendReward(payload, db, activity.Uuid, saleOrder.Member.ReferrerUuid)
 				if err != nil {
 					fmt.Println(err)
-					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed - 01", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
+					logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, SendReward failed - 01", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
 				}
 			}
 
@@ -663,7 +663,7 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 				referrer, err := repository.NewMemberRepo(db).GetMemberByReferrerUuid(saleOrder.Member.ReferrerUuid)
 				if err != nil {
 					fmt.Println(err)
-					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetMemberByReferrerUuid failed", zap.Any("referrerUuid", saleOrder.Member.ReferrerUuid), zap.Error(err))
+					logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, GetMemberByReferrerUuid failed", zap.Any("referrerUuid", saleOrder.Member.ReferrerUuid), zap.Error(err))
 					continue
 				}
 				if referrer.IsExistActivityAndReferrer() {
@@ -675,13 +675,13 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 						consumptionAmount,
 					)
 					if err != nil {
-						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
+						logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
 					}
 					// 发放奖励
 					err = HandleActivitySendReward(payload, db, referrer.ActivityUuid, referrer.ReferrerUuid)
 					if err != nil {
 						fmt.Println(err)
-						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed - 02", zap.Any("activityUuid", referrer.ActivityUuid), zap.Error(err))
+						logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, SendReward failed - 02", zap.Any("activityUuid", referrer.ActivityUuid), zap.Error(err))
 					}
 				}
 			}
@@ -814,7 +814,7 @@ func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.D
 			utils.Go(func() {
 				err := service.NewSMSSrv(dbm).SendMemberCouponSMS(payload.Ctx, member.Phone, &sms.MemberCouponRequest{CouponNum: uint64(rewardCountToGive)})
 				if err != nil {
-					logger.Logger.Info("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
+					logger.Logger.Error("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 				}
 			})
 		}
@@ -877,7 +877,7 @@ func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.D
 			utils.Go(func() {
 				err := service.NewSMSSrv(dbm).SendMemberPointsSMS(payload.Ctx, member.Phone, &sms.MemberPointsRequest{Points: points})
 				if err != nil {
-					logger.Logger.Info("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
+					logger.Logger.Error("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 				}
 			})
 		}

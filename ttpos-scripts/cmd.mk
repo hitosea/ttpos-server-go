@@ -65,7 +65,6 @@ help:
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "debug" "切换到调试模式"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "run" "运行项目（调试模式）"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "stop-service" "停止服务"
-	@printf "\033[1;33m  %-25s\033[0m - %s\n" "dev" "启动开发模式（热重启 + HTTP调试代理）"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build-web" "构建前端项目"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build-doc" "生成API文档"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "start-http-debug-proxy" "启动HTTP调试代理"

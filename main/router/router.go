@@ -67,7 +67,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterStaffHandlers(shopGroup, dbm, cache)                      // 管理员管理
 			shop.RegisterRoleHandlers(shopGroup, dbm, cache)                       // 角色管理
 			shop.RegisterSettingHandlers(shopGroup, dbm, cache)                    // 设置
-			shop.RegisterAutoReceiptHandlers(shopGroup, dbm, cache)                 // 自动收货
+			shop.RegisterAutoReceiptHandlers(shopGroup, dbm, cache)                // 自动收货
 			shop.RegisterPaymentMethodHandlers(shopGroup, dbm, cache)              // 支付方式管理
 			shop.RegisterProductHandlers(shopGroup, dbm, cache)                    // 商品
 			shop.RegisterProductLabelHandlers(shopGroup, dbm, cache)               // 商品标签
@@ -80,6 +80,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache)                  // 仓库管理
 			shop.RegisterPrintHandlers(shopGroup, dbm, cache)                      // 打印管理
 			shop.RegisterStockReconciliationHandlers(shopGroup, dbm, cache)        // 盘点
+			shop.RegisterStockEntryHandlers(shopGroup, dbm, cache)                 // Stock Entry 扣减
 			shop.RegisterBatchProductHandlers(shopGroup, dbm, cache)               // 分批商品
 			shop.RegisterTransferOrderHandlers(shopGroup, dbm, cache)              // 调拨单
 			shop.RegisterExportRecordHandlers(shopGroup, dbm, cache)               // 导出记录

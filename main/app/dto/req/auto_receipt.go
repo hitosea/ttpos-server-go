@@ -8,7 +8,7 @@ type CreateAutoReceiptRuleReq struct {
 	WarehouseErpCode string             `json:"warehouse_erp_code" binding:"required"`
 	ShopUuids        []uint64           `json:"shop_uuids" binding:"required,min=1"`
 	DelayDays        int                `json:"delay_days" binding:"gte=0"`
-	Status           int                `json:"status" binding:"oneof=0 1"`
+	Status           *int               `json:"status" binding:"required,oneof=0 1"`
 }
 
 // UpdateAutoReceiptRuleReq 更新自动收货规则（全量更新，所有字段必填）
@@ -17,7 +17,7 @@ type UpdateAutoReceiptRuleReq struct {
 	LocaleName       dto.LocaleResponse `json:"locale_name" binding:"required"`        // 规则名称（多语言）
 	WarehouseErpCode string             `json:"warehouse_erp_code" binding:"required"` // 发货仓库ERP编码
 	DelayDays        int                `json:"delay_days" binding:"gte=0"`
-	Status           int                `json:"status" binding:"oneof=0 1"`
+	Status           *int               `json:"status" binding:"required,oneof=0 1"`
 	ShopUuids        []uint64           `json:"shop_uuids" binding:"required,min=1"`
 }
 
@@ -37,7 +37,7 @@ type AutoReceiptShopListReq struct {
 // AutoReceiptLogListReq 自动收货记录列表查询
 type AutoReceiptLogListReq struct {
 	dto.PageReq
-	ShopCompanyUuid uint64 `form:"shop_company_uuid"`                          // 门店筛选
+	ShopCompanyUuid uint64 `form:"shop_company_uuid"`                                           // 门店筛选
 	StartTime       string `form:"start_time" binding:"omitempty,datetime=2006-01-02 15:04:05"` // 收货时间范围-开始（格式: 2006-01-02 15:04:05）
 	EndTime         string `form:"end_time" binding:"omitempty,datetime=2006-01-02 15:04:05"`   // 收货时间范围-结束（格式: 2006-01-02 15:04:05）
 }

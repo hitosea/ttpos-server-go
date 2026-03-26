@@ -163,7 +163,7 @@ func RiderCompletedMemberSaleOrderEventHandler() {
 				// 获取最新的会员信息
 				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
 				if err != nil {
-					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetMemberRecord failed", zap.Any("payload", payload), zap.Error(err))
+					logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, GetMemberRecord failed", zap.Any("payload", payload), zap.Error(err))
 					return
 				}
 				// 创建积分发放记录. // 累计会员的消费金额、消费次数
@@ -182,7 +182,7 @@ func RiderCompletedMemberSaleOrderEventHandler() {
 					}
 					return nil
 				}); err != nil {
-					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, Transaction failed", zap.Any("payload", payload), zap.Error(err))
+					logger.Logger.Error("SubscribeCheckoutSaleOrderEvent process, Transaction failed", zap.Any("payload", payload), zap.Error(err))
 					return
 				}
 

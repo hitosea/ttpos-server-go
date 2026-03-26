@@ -170,16 +170,16 @@ type IProductSrv interface {
 	GetBatchTagColorUsage(ctx context.Context) (*product_resp.BatchTagColorUsageList, error)          // 获取色块被选择情况
 	SaveBatchProduct(ctx context.Context, req req.SaveBatchProductReq) error                          // 保存分批商品
 
-	SyncProductShopCategory(ctx context.Context, syncHeadquarterData bool) error // 同步产品分类
-	SyncProductTax(ctx context.Context, syncHeadquarterData bool) error          // 同步商品税类
-	SyncUnit(ctx context.Context, syncHeadquarterData bool) error                // 获取总部最新单位数据
-	SyncProductFlavor(ctx context.Context, syncHeadquarterData bool) error       // 同步商品规格
-	SyncSauce(ctx context.Context, syncHeadquarterData bool) error               // 获取总部最新加料数据
-	SyncAttributeGroup(ctx context.Context, syncHeadquarterData bool) error      // 获取总部最新属性组数据
-	SyncProduct(ctx context.Context, syncHeadquarterData bool) error                                   // 同步商品
+	SyncProductShopCategory(ctx context.Context, syncHeadquarterData bool) error                                      // 同步产品分类
+	SyncProductTax(ctx context.Context, syncHeadquarterData bool) error                                               // 同步商品税类
+	SyncUnit(ctx context.Context, syncHeadquarterData bool) error                                                     // 获取总部最新单位数据
+	SyncProductFlavor(ctx context.Context, syncHeadquarterData bool) error                                            // 同步商品规格
+	SyncSauce(ctx context.Context, syncHeadquarterData bool) error                                                    // 获取总部最新加料数据
+	SyncAttributeGroup(ctx context.Context, syncHeadquarterData bool) error                                           // 获取总部最新属性组数据
+	SyncProduct(ctx context.Context, syncHeadquarterData bool) error                                                  // 同步商品
 	SyncHeadquarterProducts(hqDb *gorm.DB, subDb *gorm.DB, hqUuid uint64, companySetting *model.CompanySetting) error // 同步总部商品到子店
-	SyncProductStockByBomCard(ctx context.Context) error                         // 计算所有关联成本卡的商品的库存
-	SyncProductPackageImage(ctx context.Context, syncHeadquarterData bool) error // 同步商品包图片
+	SyncProductStockByBomCard(ctx context.Context) error                                                              // 计算所有关联成本卡的商品的库存
+	SyncProductPackageImage(ctx context.Context, syncHeadquarterData bool) error                                      // 同步商品包图片
 
 	// ========== 总店删除资源时检查子店使用情况 ==========
 	// 删除前检查接口
@@ -2176,6 +2176,7 @@ func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.Pr
 		},
 		RecommendProductPackageUuids: recommendProductUuids,
 		IsMember:                     true,
+		OrderType:                    request.OrderType,
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取产品推荐列表失败")
@@ -5124,9 +5125,9 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		if item.NumType == 2 && (products.IsShowTablet || products.IsShowAssistant || products.IsShowH5 || products.IsShowDelivery || products.IsShowKiosk) {
 			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "按小数计价只能显示到收银机和厨显"))
 		}
-		// 未开启扫码点餐到店自取且未配置外送渠道，无法选择在外送显示
-		if companySetting.DeliveryStatus != 1 && companySetting.IsOpenMemberInstant != 1 && products.IsShowDelivery {
-			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置外送渠道，无法选择在外送显示"))
+		// 未开启扫码点餐到店自取且未配置外送渠道，无法选择在扫码点餐显示
+		if companySetting.DeliveryStatus != 1 && !companySetting.IsOpenScanOrder() && products.IsShowDelivery {
+			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置扫码点餐渠道，无法选择在扫码点餐显示"))
 		}
 		// 未开启自助点餐机，无法选择在自助点餐机显示
 		if !companySetting.IsOpenKiosk() && products.IsShowKiosk {
@@ -6906,9 +6907,9 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	}
 
 	companySetting := ctx.GetCompanySetting()
-	// 处理外送端,如果外送端未开启, 或者小数计价,则不显示外送端
+	// 处理外送端,如果外送端或扫码点餐到店自取均未开启, 或者小数计价,则不显示外送端
 	isShowDelivery := uint(req.Show.IsShowDelivery)
-	if !companySetting.IsOpenRider() || req.NumType == constant.ProductNumTypeDecimal {
+	if (!companySetting.IsOpenRider() && !companySetting.IsOpenScanOrder()) || req.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
 	}
 
@@ -7075,9 +7076,9 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 		}
 	}
 	companySetting := ctx.GetCompanySetting()
-	// 处理外送端,如果外送端未开启, 或者小数计价,则不显示外送端
+	// 处理外送端,如果外送端或扫码点餐到店自取均未开启, 或者小数计价,则不显示外送端
 	isShowDelivery := uint(request.Show.IsShowDelivery)
-	if !companySetting.IsOpenRider() || request.NumType == constant.ProductNumTypeDecimal {
+	if (!companySetting.IsOpenRider() && !companySetting.IsOpenScanOrder()) || request.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
 	}
 
@@ -8960,7 +8961,14 @@ func (s *productSrv) createSubTakeoutProduct(
 	attrTakeoutRepo repository.IProductPackageAttributeTakeoutRepo,
 	groupItemTakeoutRepo *repository.ProductPackageGroupItemTakeoutRepo,
 ) error {
-	// 创建外卖商品主表（使用总部的 UUID，首次同步默认下架）
+	// 创建外卖商品主表（使用总部的 UUID）
+	// 统一控制模式：跟随总部状态；分开控制模式：默认下架，子店需手动上架
+	headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	takeoutStatus := uint(0)
+	if repository.IsHqUnifiedControl(headquarterDb, companySetting.HeadquarterUuid, constant.HqFieldTakeoutShelf) {
+		takeoutStatus = headTakeout.Status
+	}
+
 	newTakeout := model.ProductPackageTakeout{
 		ProductPackageUuid:            headTakeout.ProductPackageUuid,
 		MultiLanguageNameUuid:         headTakeout.MultiLanguageNameUuid,
@@ -8969,7 +8977,7 @@ func (s *productSrv) createSubTakeoutProduct(
 		ProductType:                   headTakeout.ProductType,
 		Price:                         headTakeout.Price, // 首次同步使用总部价格
 		TakeoutType:                   headTakeout.TakeoutType,
-		Status:                        0, // 默认下架
+		Status:                        takeoutStatus,
 		CategoryUuid:                  headTakeout.CategoryUuid,
 		SpecialCategoryUuid:           headTakeout.SpecialCategoryUuid,
 		ImageFileUuid:                 headTakeout.ImageFileUuid,

@@ -299,16 +299,19 @@ func WithCompanyIsEnableErp(v int) func(*CompanyOptions) {
 
 // CompanySettingOptions contains options for seeding company settings.
 type CompanySettingOptions struct {
-	UUID                     int64
-	CompanyUUID              int64
-	ErpnextSiteCode          string
-	ErpnextPosProfileName    string
-	ErpnextAdminEmail        string
-	ErpnextCompanyAbbr       string
-	ErpnextHeadquarterAbbr   string
-	ErpnextBranchName        string
-	HeadquarterUuid          int64
-	EnableDataManagement     int
+	UUID                   int64
+	CompanyUUID            int64
+	ErpnextSiteCode        string
+	ErpnextPosProfileName  string
+	ErpnextAdminEmail      string
+	ErpnextCompanyAbbr     string
+	ErpnextHeadquarterAbbr string
+	ErpnextBranchName      string
+	HeadquarterUuid        int64
+	EnableDataManagement   int
+	DeliveryStatus         int // 外送状态: 0-关闭 1-开启
+	EnableKiosk            int // 自助点餐机: 0-关闭 1-开启
+	IsOpenMemberInstant    int // 扫码点餐到店自取: 0-关闭 1-开启
 }
 
 // SeedCompanySetting creates a company_setting record in the tenant database.
@@ -327,9 +330,9 @@ func SeedCompanySetting(tb testing.TB, db *sql.DB, opts ...func(*CompanySettingO
 
 	now := time.Now().Unix()
 	_, err := db.Exec(`
-		INSERT INTO ttpos_company_setting (uuid, company_uuid, erpnext_site_code, erpnext_pos_profile_name, erpnext_admin_email, erpnext_company_abbr, erpnext_headquarter_abbr, headquarter_uuid, erpnext_branch_name, enable_data_management, create_time, update_time, delete_time)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-	`, opt.UUID, opt.CompanyUUID, opt.ErpnextSiteCode, opt.ErpnextPosProfileName, opt.ErpnextAdminEmail, opt.ErpnextCompanyAbbr, opt.ErpnextHeadquarterAbbr, opt.HeadquarterUuid, opt.ErpnextBranchName, opt.EnableDataManagement, now, now)
+		INSERT INTO ttpos_company_setting (uuid, company_uuid, erpnext_site_code, erpnext_pos_profile_name, erpnext_admin_email, erpnext_company_abbr, erpnext_headquarter_abbr, headquarter_uuid, erpnext_branch_name, enable_data_management, delivery_status, enable_kiosk, is_open_member_instant, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.CompanyUUID, opt.ErpnextSiteCode, opt.ErpnextPosProfileName, opt.ErpnextAdminEmail, opt.ErpnextCompanyAbbr, opt.ErpnextHeadquarterAbbr, opt.HeadquarterUuid, opt.ErpnextBranchName, opt.EnableDataManagement, opt.DeliveryStatus, opt.EnableKiosk, opt.IsOpenMemberInstant, now, now)
 
 	if err != nil {
 		tb.Fatalf("failed to seed company_setting: %v", err)
@@ -380,6 +383,30 @@ func WithCompanySettingHeadquarterUuid(uuid int64) func(*CompanySettingOptions) 
 func WithCompanySettingEnableDataManagement(v int) func(*CompanySettingOptions) {
 	return func(o *CompanySettingOptions) {
 		o.EnableDataManagement = v
+	}
+}
+
+// WithCompanySettingDeliveryStatus sets the delivery_status (0=off, 1=on).
+// Controls IsOpenRider() which gates is_show_delivery on products.
+func WithCompanySettingDeliveryStatus(v int) func(*CompanySettingOptions) {
+	return func(o *CompanySettingOptions) {
+		o.DeliveryStatus = v
+	}
+}
+
+// WithCompanySettingEnableKiosk sets the enable_kiosk flag (0=off, 1=on).
+// Controls IsOpenKiosk() which gates is_show_kiosk on products.
+func WithCompanySettingEnableKiosk(v int) func(*CompanySettingOptions) {
+	return func(o *CompanySettingOptions) {
+		o.EnableKiosk = v
+	}
+}
+
+// WithCompanySettingIsOpenMemberInstant sets the is_open_member_instant flag (0=off, 1=on).
+// Controls IsOpenScanOrder() — scan-to-order self-pickup for delivery display.
+func WithCompanySettingIsOpenMemberInstant(v int) func(*CompanySettingOptions) {
+	return func(o *CompanySettingOptions) {
+		o.IsOpenMemberInstant = v
 	}
 }
 
@@ -515,14 +542,14 @@ func WithShiftLogErpOpenEntryName(name string) func(*ShiftLogOptions) {
 
 // PaymentMethodOptions contains options for seeding a payment method.
 type PaymentMethodOptions struct {
-	UUID              int64
-	Name              string
-	Code              int
-	Source            int    // 0=system, 1=manual, 2=LianLianPay
-	Status            int    // 1=enabled
-	IsShowCashier     int    // 1=visible on cashier terminal
-	ErpnextPayment    string // ERPNext payment name (fallback mode_of_payment)
-	ErpnextPaymentId  string // ERPNext payment ID (preferred over ErpnextPayment)
+	UUID             int64
+	Name             string
+	Code             int
+	Source           int    // 0=system, 1=manual, 2=LianLianPay
+	Status           int    // 1=enabled
+	IsShowCashier    int    // 1=visible on cashier terminal
+	ErpnextPayment   string // ERPNext payment name (fallback mode_of_payment)
+	ErpnextPaymentId string // ERPNext payment ID (preferred over ErpnextPayment)
 }
 
 // SeedPaymentMethod creates a payment_method record in the tenant database.
@@ -724,6 +751,11 @@ func generateSnowflakeID() int64 {
 	return time.Now().UnixMilli()<<16 | (snowflakeCounter.Add(1) & 0xFFFF)
 }
 
+// GenerateSnowflakeID generates a unique snowflake-style ID for testing.
+func GenerateSnowflakeID() int64 {
+	return generateSnowflakeID()
+}
+
 // GenerateUUID generates a UUID string for testing.
 func GenerateUUID() string {
 	return uuid.New().String()
@@ -741,7 +773,7 @@ type PaymentOrderOptions struct {
 	PaymentMethodUUID int64
 	PaymentMethodName string
 	PaymentAmount     float64
-	Status            int // 1=paid, 0=unpaid
+	Status            int   // 1=paid, 0=unpaid
 	RelatedUUID       int64 // sale_order_uuid
 	RelatedType       int   // 0=sale_order
 }
@@ -752,11 +784,11 @@ func SeedPaymentOrder(tb testing.TB, db *sql.DB, opts ...func(*PaymentOrderOptio
 
 	opt := PaymentOrderOptions{
 		UUID:              generateSnowflakeID(),
-		PaymentMethodUUID: 0,          // caller must set via WithPaymentOrderPaymentMethodUUID
+		PaymentMethodUUID: 0, // caller must set via WithPaymentOrderPaymentMethodUUID
 		PaymentMethodName: "Cash",
 		PaymentAmount:     100.0,
-		Status:            1,          // paid
-		RelatedType:       0,          // sale_order
+		Status:            1, // paid
+		RelatedType:       0, // sale_order
 	}
 
 	for _, o := range opts {
@@ -876,7 +908,7 @@ func SeedSetting(tb testing.TB, db *sql.DB, key string, values string) {
 
 	now := time.Now().Unix()
 	_, err := db.Exec(`
-		INSERT INTO ttpos_setting (` + "`key`" + `, ` + "`describe`" + `, ` + "`values`" + `, create_time, update_time, delete_time)
+		INSERT INTO ttpos_setting (`+"`key`"+`, `+"`describe`"+`, `+"`values`"+`, create_time, update_time, delete_time)
 		VALUES (?, ?, ?, ?, ?, 0)
 	`, key, key, values, now, now)
 
@@ -987,10 +1019,11 @@ func WithProductBomPackageUUID(uuid int64) func(*ProductBomOptions) {
 
 // ProductPackageOptions contains options for seeding a product package.
 type ProductPackageOptions struct {
-	UUID        int64
-	Name        string
-	Status      int
-	ProductType int // 0=普通商品, 1=套餐
+	UUID            int64
+	Name            string
+	Status          int
+	ProductType     int   // 0=普通商品, 1=套餐
+	HeadquarterUuid int64 // 总部UUID, 0=总部原生商品
 }
 
 // SeedProductPackage creates a product_package record.
@@ -998,10 +1031,11 @@ func SeedProductPackage(tb testing.TB, db *sql.DB, opts ...func(*ProductPackageO
 	tb.Helper()
 
 	opt := ProductPackageOptions{
-		UUID:        generateSnowflakeID(),
-		Name:        `{"zh_name":"测试商品包","en_name":"Test Package"}`,
-		Status:      1,
-		ProductType: 0,
+		UUID:            generateSnowflakeID(),
+		Name:            `{"zh_name":"测试商品包","en_name":"Test Package"}`,
+		Status:          1,
+		ProductType:     0,
+		HeadquarterUuid: 0,
 	}
 
 	for _, o := range opts {
@@ -1010,9 +1044,9 @@ func SeedProductPackage(tb testing.TB, db *sql.DB, opts ...func(*ProductPackageO
 
 	now := time.Now().Unix()
 	_, err := db.Exec(`
-		INSERT INTO ttpos_product_package (uuid, name, multi_language_name_uuid, status, product_type, create_time, update_time, delete_time)
-		VALUES (?, ?, 0, ?, ?, ?, ?, 0)
-	`, opt.UUID, opt.Name, opt.Status, opt.ProductType, now, now)
+		INSERT INTO ttpos_product_package (uuid, name, multi_language_name_uuid, status, product_type, headquarter_uuid, create_time, update_time, delete_time)
+		VALUES (?, ?, 0, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.Name, opt.Status, opt.ProductType, opt.HeadquarterUuid, now, now)
 
 	if err != nil {
 		tb.Fatalf("failed to seed product_package: %v", err)
@@ -1032,6 +1066,27 @@ func WithProductPackageUUID(uuid int64) func(*ProductPackageOptions) {
 func WithProductPackageProductType(productType int) func(*ProductPackageOptions) {
 	return func(o *ProductPackageOptions) {
 		o.ProductType = productType
+	}
+}
+
+// WithProductPackageStatus sets the status for the product package (0=下架, 1=上架).
+func WithProductPackageStatus(status int) func(*ProductPackageOptions) {
+	return func(o *ProductPackageOptions) {
+		o.Status = status
+	}
+}
+
+// WithProductPackageHeadquarterUuid sets the headquarter_uuid for the product package.
+func WithProductPackageHeadquarterUuid(uuid int64) func(*ProductPackageOptions) {
+	return func(o *ProductPackageOptions) {
+		o.HeadquarterUuid = uuid
+	}
+}
+
+// WithProductBomStatus sets the status for the product BOM (0=下架, 1=上架).
+func WithProductBomStatus(status int) func(*ProductBomOptions) {
+	return func(o *ProductBomOptions) {
+		o.Status = status
 	}
 }
 
@@ -1138,8 +1193,9 @@ type PackageSubItem struct {
 
 // SeedPackageProductResult holds the result of SeedPackageProductWithSubItems.
 type SeedPackageProductResult struct {
-	PackageBomUUID int64 // The parent package's product_bom UUID (used as flavor_uuid in API)
-	GroupUUID      int64 // The package group UUID (used as product_package_group_uuid in API)
+	PackageUUID    int64   // The parent package's product_package UUID (used as product_package_uuid in API)
+	PackageBomUUID int64   // The parent package's product_bom UUID (used as flavor_uuid in API)
+	GroupUUID      int64   // The package group UUID (used as product_package_group_uuid in API)
 	SubBomUUIDs    []int64 // Each sub-product's product_bom UUID (used as flavor_uuid in API)
 }
 
@@ -1149,7 +1205,7 @@ type SeedPackageProductResult struct {
 //   - A product_package_group linked to the parent
 //   - For each sub-item: product_package + product_flavor + product_bom + product_package_group_item
 //
-// Returns the parent BOM UUID, group UUID, and sub-item BOM UUIDs.
+// Returns the parent package UUID, parent BOM UUID, group UUID, and sub-item BOM UUIDs.
 func SeedPackageProductWithSubItems(tb testing.TB, db *sql.DB, packageName string, packagePrice float64, subItems []PackageSubItem) SeedPackageProductResult {
 	tb.Helper()
 
@@ -1198,6 +1254,7 @@ func SeedPackageProductWithSubItems(tb testing.TB, db *sql.DB, packageName strin
 	}
 
 	return SeedPackageProductResult{
+		PackageUUID:    parentPkg.UUID,
 		PackageBomUUID: parentBom.UUID,
 		GroupUUID:      group.UUID,
 		SubBomUUIDs:    subBomUUIDs,
@@ -1233,16 +1290,16 @@ func SeedProductWithFlavor(tb testing.TB, db *sql.DB, productName string, price 
 
 // MustPlanOptions contains options for seeding a product must plan.
 type MustPlanOptions struct {
-	UUID        int64
-	Name        string
-	UseChannel  string // "10"=dining, "20"=desk, "10,20"=both
-	MustType    int    // 0=each order, 1=each person
-	MustRule    int    // 0=fixed products, 1=optional
-	Status      int    // 1=enabled, 0=disabled
-	AutoCart    int    // 1=auto add to cart, 0=manual
-	AutoChange  int    // 1=customer can change qty
-	AutoCheck   int    // 1=check at order time
-	AutoCheckout int   // 1=check at checkout time
+	UUID         int64
+	Name         string
+	UseChannel   string // "10"=dining, "20"=desk, "10,20"=both
+	MustType     int    // 0=each order, 1=each person
+	MustRule     int    // 0=fixed products, 1=optional
+	Status       int    // 1=enabled, 0=disabled
+	AutoCart     int    // 1=auto add to cart, 0=manual
+	AutoChange   int    // 1=customer can change qty
+	AutoCheck    int    // 1=check at order time
+	AutoCheckout int    // 1=check at checkout time
 }
 
 // SeedMustPlan creates a product_must_plan record in the tenant database.
@@ -1419,6 +1476,92 @@ func SeedDeskRegion(tb testing.TB, db *sql.DB, opts ...func(*DeskRegionOptions))
 // WithDeskRegionRecordUUID sets the UUID for the desk region record.
 func WithDeskRegionRecordUUID(uuid int64) func(*DeskRegionOptions) {
 	return func(o *DeskRegionOptions) { o.UUID = uuid }
+}
+
+// StatisticsSaleOptions contains options for seeding a statistics_sale record.
+type StatisticsSaleOptions struct {
+	UUID                 int64
+	SaleBillUUID         int64
+	DeskUUID             int64
+	OrderSourceUUID      int64
+	Source               int // 0=default, 1=cashier, 5=scan
+	IsMeger              int
+	IsSpecial            int
+	IsTakeout            int
+	PaymentAmount        float64
+	RefundAmount         float64
+	RefundPaymentBalance float64
+	CompleteTime         int64
+	MealNum              int
+}
+
+// SeedStatisticsSale creates a statistics_sale record in the tenant database.
+func SeedStatisticsSale(tb testing.TB, db *sql.DB, opts ...func(*StatisticsSaleOptions)) StatisticsSaleOptions {
+	tb.Helper()
+
+	opt := StatisticsSaleOptions{
+		UUID:         generateSnowflakeID(),
+		SaleBillUUID: generateSnowflakeID(),
+		CompleteTime: 1750000000,
+	}
+
+	for _, o := range opts {
+		o(&opt)
+	}
+
+	now := time.Now().Unix()
+	_, err := db.Exec(`
+		INSERT INTO ttpos_statistics_sale (
+			uuid, sale_bill_uuid, desk_uuid, order_source_uuid, source,
+			is_meger, is_special, is_takeout, payment_amount, refund_amount,
+			refund_payment_balance, complete_time, meal_num,
+			create_time, update_time, delete_time
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+	`, opt.UUID, opt.SaleBillUUID, opt.DeskUUID, opt.OrderSourceUUID, opt.Source,
+		opt.IsMeger, opt.IsSpecial, opt.IsTakeout, opt.PaymentAmount, opt.RefundAmount,
+		opt.RefundPaymentBalance, opt.CompleteTime, opt.MealNum,
+		now, now)
+
+	if err != nil {
+		tb.Fatalf("failed to seed statistics sale: %v", err)
+	}
+
+	return opt
+}
+
+// WithStatisticsSaleBillUUID sets the sale_bill_uuid for the statistics_sale record.
+func WithStatisticsSaleBillUUID(uuid int64) func(*StatisticsSaleOptions) {
+	return func(o *StatisticsSaleOptions) {
+		o.SaleBillUUID = uuid
+	}
+}
+
+// WithStatisticsSaleSource sets the source for the statistics_sale record.
+func WithStatisticsSaleSource(source int) func(*StatisticsSaleOptions) {
+	return func(o *StatisticsSaleOptions) {
+		o.Source = source
+	}
+}
+
+// WithStatisticsSalePaymentAmount sets the payment_amount.
+func WithStatisticsSalePaymentAmount(amount float64) func(*StatisticsSaleOptions) {
+	return func(o *StatisticsSaleOptions) {
+		o.PaymentAmount = amount
+	}
+}
+
+// WithStatisticsSaleRefundAmount sets the refund_amount.
+func WithStatisticsSaleRefundAmount(amount float64) func(*StatisticsSaleOptions) {
+	return func(o *StatisticsSaleOptions) {
+		o.RefundAmount = amount
+	}
+}
+
+// WithStatisticsSaleCompleteTime sets the complete_time.
+func WithStatisticsSaleCompleteTime(ts int64) func(*StatisticsSaleOptions) {
+	return func(o *StatisticsSaleOptions) {
+		o.CompleteTime = ts
+	}
 }
 
 // SeedCashierPermissions seeds the ttpos_access table with all cashier permissions

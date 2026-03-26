@@ -61,9 +61,19 @@ type OperationLog struct {
 	List []OrderOperationLog `json:"list"`
 }
 
+type H5OrderPaymentMethodItem struct {
+	Name string `json:"name"` // 支付方式名称
+	Code int    `json:"code"` // 支付方式代号
+}
+
+type H5OrderPaymentMethodList struct {
+	List []H5OrderPaymentMethodItem `json:"list"` // 支付方式列表
+}
+
 type H5OrderDetailResp struct {
-	H5OrderDetail   H5OrderDetail `json:"h5_order_detail"`  // 订单详情
-	NewProduct      ProductList   `json:"new_product"`      // 新增商品列表
-	AcceptedProduct ProductList   `json:"accepted_product"` // 已下单商品列表
-	OperationLog    OperationLog  `json:"operation"`        // 操作日志列表
+	H5OrderDetail   H5OrderDetail            `json:"h5_order_detail"`  // 订单详情
+	NewProduct      ProductList              `json:"new_product"`      // 新增商品列表
+	AcceptedProduct ProductList              `json:"accepted_product"` // 已下单商品列表
+	OperationLog    OperationLog             `json:"operation"`        // 操作日志列表
+	PaymentMethod   H5OrderPaymentMethodList `json:"payment_method"`   // 支付方式列表
 }

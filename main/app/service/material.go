@@ -75,7 +75,6 @@ type IMaterialSrv interface {
 	UpdateMaterialByEprItem(ctx context.Context, request req.MaterialEditErpReq) error
 	DeleteMaterial(ctx context.Context, req req.MaterialDeleteReq) error
 	UpdateMaterialStatusBatch(ctx context.Context, req req.MaterialStatusReq) error
-	UpdateMaterialVisibleBatch(ctx context.Context, req req.MaterialBatchUpdateVisibleReq) (int, error) // 批量更新物品可见性，返回更新数量
 	AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error
 	GetMaterialCategoryList(ctx context.Context, req req.MaterialCategoryListReq) (material_resp.MaterialCategoryListResp, error)
 	GetMaterialCategoryDetail(ctx context.Context, req req.MaterialCategoryDetailReq) (*material_resp.MaterialCategory, error)
@@ -91,16 +90,17 @@ type IMaterialSrv interface {
 	ImportMaterialList(ctx context.Context, req req.MaterialImportListReq) (material_resp.MaterialImportResp, error)
 	ImportMaterial(ctx context.Context, req req.MaterialImportReq) error
 	GetWarehouseItemsByErpCode(ctx context.Context, warehouseErpCode string, pageNo, pageSize int) ([]model.WarehouseItem, int64, error)
-	SyncMaterialCategory(ctx context.Context, syncHeadquarterData bool) error // 同步物品分类
-	SyncMaterial(ctx context.Context, syncHeadquarterData bool) error                       // 同步物品
+	SyncMaterialCategory(ctx context.Context, syncHeadquarterData bool) error    // 同步物品分类
+	SyncMaterial(ctx context.Context, syncHeadquarterData bool) error            // 同步物品
 	SyncHeadquarterMaterials(hqDb *gorm.DB, subDb *gorm.DB, hqUuid uint64) error // 同步总部物品到子店
-	SyncProductBomCard(ctx context.Context, syncHeadquarterData bool) error   // 同步成本卡
+	SyncProductBomCard(ctx context.Context, syncHeadquarterData bool) error      // 同步成本卡
 
 	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64, extraOpts ...repository.DBOption) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
 
 	CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error // 检查物品安全库存
 
-	UpdateMaterialSafetyStock(ctx context.Context, req req.MaterialUpdateSafetyStockReq) error // 修改物品安全库存
+	UpdateMaterialSafetyStock(ctx context.Context, req req.MaterialUpdateSafetyStockReq) error     // 修改物品安全库存
+	UpdateMaterialNegativeStock(ctx context.Context, req req.MaterialUpdateNegativeStockReq) error // 修改物品负库存设置
 }
 
 type materialSrv struct {
@@ -198,12 +198,6 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			availableQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
 		}
 	}
-
-	// 任务39419物品可见性,要求失效这个过滤功能
-	// 子店查询时自动过滤不可见物品
-	// if companySetting.IsSubShop() {
-	// 	dbOptions = append(dbOptions, materialRepo.WhereAllowSubstoreVisible(1))
-	// }
 
 	// 预加载关联数据
 	dbOptions = append(dbOptions, commonRepo.Preload(
@@ -357,6 +351,17 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		}
 	}
 
+	// 品牌采购：查询上次采购完成后的出库消耗量
+	consumptionMap := make(map[uint64]float64)
+	if req.PurchaseType == constant.PurchaseTypeBrand {
+		inOutLogRepo := repository.NewWarehouseInOutLogRepo(s.dbm.GetDB(dbId))
+		var consumptionErr error
+		consumptionMap, consumptionErr = inOutLogRepo.GetOutboundConsumptionSince(repository.BuildConsumptionSinceTimes(lastPurchaseInfoMap))
+		if consumptionErr != nil {
+			logger.Logger.Warn("查询出库消耗量失败", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Error(consumptionErr))
+		}
+	}
+
 	// 获取可见性过滤配置
 	var visibleCategoryUuidSet map[uint64]struct{}
 	var needVisibilityFilter bool
@@ -424,8 +429,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			defaultSalesUnitLocaleName = *language.JsonToLocaleResponse(defaultSalesUnit.Name)
 		}
 
-		// 库存数量、可用库存数量、在途库存数量
-		num := decimal.NewFromFloat(0)
+		// 可用库存数量、在途库存数量
 		availableNum := decimal.NewFromFloat(0)
 		transitNum := decimal.NewFromFloat(0)
 		for _, warehouseItem := range material.WarehouseItems {
@@ -440,7 +444,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 			}
 		}
-		stockNum := num.Add(availableNum).Add(transitNum).InexactFloat64()
+		stockNum := availableNum.InexactFloat64()
 
 		// 非基准单位的库存数
 		notBasicUnitStocks := make([]material_resp.NotBasicUnitStock, 0)
@@ -543,12 +547,13 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			DefaultSalesUnitLocaleName: defaultSalesUnitLocaleName,
 			CostUnitLocaleName:         costUnitLocaleName,
 			UnitList:                   unitList,
-			AllowSubstoreVisible:       material.AllowSubstoreVisible,
+			AllowSubstoreVisible:       1,
 			AllowNegativeStock:         material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
 			AvailableQuantity:          decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Round(3).InexactFloat64(),
 			StoreQuantity:              stockNum,
-			LastPurchaseQuantity:       decimal.NewFromFloat(lastPurchaseInfo.BaseQty).Round(3).InexactFloat64(),
-			LastPurchaseLocaleUnitName: *language.JsonToLocaleResponse(lastPurchaseInfo.UnitName),
+			LastPurchaseQuantity:          decimal.NewFromFloat(lastPurchaseInfo.Quantity).Round(3).InexactFloat64(),
+			LastPurchaseLocaleUnitName:    *language.JsonToLocaleResponse(lastPurchaseInfo.UnitName),
+			ConsumptionSinceLastPurchase: decimal.NewFromFloat(consumptionMap[material.Uuid]).Round(3).InexactFloat64(),
 			QuotaConfig: func() material_resp.MaterialQuotaConfig {
 				if req.PurchaseType != 2 {
 					return material_resp.MaterialQuotaConfig{
@@ -617,7 +622,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				if unit.ConversionRate != 0 {
 					respMaterial.AvailableQuantity = decimal.NewFromFloat(availableQuantityMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 					respMaterial.StoreQuantity = decimal.NewFromFloat(stockNum).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
-					respMaterial.LastPurchaseQuantity = decimal.NewFromFloat(lastPurchaseInfo.BaseQty).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+					respMaterial.ConsumptionSinceLastPurchase = decimal.NewFromFloat(consumptionMap[material.Uuid]).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
 				}
 			}
 		}
@@ -743,7 +748,7 @@ func (s *materialSrv) doGetMaterialDetail(
 		CategoryUuid:               material.CategoryUuid,
 		CategoryName:               material.Category.MultiLanguageName.GetNameByLang(lang),
 		Status:                     int(utils.BoolToUint(material.Status)),
-		AllowSubstoreVisible:       material.AllowSubstoreVisible,
+		AllowSubstoreVisible:       1,
 		AllowNegativeStock:         material.AllowNegativeStock == constant.Yes,
 		BarcodeValue:               material.BarcodeValue,
 		InternalCode:               material.InternalCode,
@@ -1057,9 +1062,6 @@ func (s *materialSrv) addMaterialByErpItemTx(ctx context.Context, tx *gorm.DB, r
 		InternalCode:         request.InternalCode,
 		AllowNegativeStock:   request.AllowNegativeStock,
 	}
-	if request.AllowSubstoreVisible {
-		params.AllowSubstoreVisible = 1
-	}
 	params.SetHeadquarterUuid(0)
 
 	warehouseUuid, err := repository.NewWarehouseRepo(tx).GetDefaultWarehouse()
@@ -1296,16 +1298,9 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 			}
 			return false
 		}(),
-		NotBaseUnitList: notBaseUnitList,
-		Unit:            &unit,
-		InternalCode:    request.InternalCode,
-		AllowSubstoreVisible: func() int {
-			// 如果前端版本号小于 2.10，则都等于 1
-			if ctx.Version(context.LT, constant.ClientVersionV2100) {
-				return 1
-			}
-			return request.AllowSubstoreVisible
-		}(),
+		NotBaseUnitList:   notBaseUnitList,
+		Unit:              &unit,
+		InternalCode:      request.InternalCode,
 		OriginCountryCode: request.OriginCountryCode,
 		AllowNegativeStock: func() int {
 			if request.AllowNegativeStock != nil && *request.AllowNegativeStock {
@@ -1566,15 +1561,6 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			err = materialRepo.UpdateMaterialStatus(request.Uuid, false)
 			if err != nil {
 				return errors.WithMessage(err, "更新物品状态失败")
-			}
-		}
-
-		// 单独更新 AllowSubstoreVisible 字段，因为 GORM 的 Updates 会跳过零值
-		// 前端版本号 >= 2.10 时才需要更新
-		if ctx.Version(context.GTE, constant.ClientVersionV2100) {
-			err = materialRepo.UpdateMaterialAllowSubstoreVisible(request.Uuid, request.AllowSubstoreVisible)
-			if err != nil {
-				return errors.WithMessage(err, "更新物品子店可见性失败")
 			}
 		}
 
@@ -2146,58 +2132,6 @@ func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req
 	}
 
 	return nil
-}
-
-// UpdateMaterialVisibleBatch 批量更新物品可见性
-func (s *materialSrv) UpdateMaterialVisibleBatch(ctx context.Context, request req.MaterialBatchUpdateVisibleReq) (int, error) {
-	// 验证请求参数
-	if err := request.Validate(); err != nil {
-		return 0, errors.WithMessage(err)
-	}
-
-	// 检查权限：仅总店可以更新可见性
-	companySetting := ctx.GetCompanySetting()
-	if companySetting.IsSubShop() {
-		return 0, errors.WithMessage(errors.New("子店无权修改物品可见性设置"))
-	}
-
-	dbId := ctx.GetDbId()
-	db := s.dbm.GetDB(dbId)
-
-	var updatedCount int64
-	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		materialRepo := repository.NewMaterialRepo(tx)
-
-		// 检查物品是否存在且不是总部物品（总部物品不能修改）
-		materials, err := materialRepo.GetMaterialDetailByUuids(request.Uuids)
-		if err != nil {
-			return errors.WithMessage(err, errMsgGetMaterialDetailFailed)
-		}
-
-		// 过滤掉总部物品
-		validUuids := make([]uint64, 0)
-		for _, material := range materials {
-			if !material.IsHeadquarter() {
-				validUuids = append(validUuids, material.Uuid)
-			}
-		}
-
-		if len(validUuids) == 0 {
-			return errors.WithMessage(errors.New("没有可更新的物品（总部物品不能修改）"))
-		}
-
-		// 批量更新可见性
-		if err := materialRepo.UpdateMaterialVisibleBatch(validUuids, request.AllowSubstoreVisible); err != nil {
-			return errors.WithMessage(err)
-		}
-
-		updatedCount = int64(len(validUuids))
-		return nil
-	}); err != nil {
-		return 0, errors.WithMessage(err)
-	}
-
-	return int(updatedCount), nil
 }
 
 // GetMaterialCategoryList 获取物品类别列表
@@ -2817,8 +2751,6 @@ func newProductBomCardLog(ctx context.Context, num float64, cardUuid uint64, car
 func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.ProductBomCardDetailReq) (*material_resp.ProductBomCardDetailResp, error) {
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
-	companySetting := ctx.GetCompanySetting()
-
 	productBomCardRepo := repository.NewProductBomCardRepo(db)
 	productBomCard, err := productBomCardRepo.GetProductBomCardDetail(req.Uuid)
 	if err != nil {
@@ -2827,9 +2759,6 @@ func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.Produ
 
 	materialList := []material_resp.ProductBomCardMaterial{}
 	for _, material := range productBomCard.RelatedMaterials {
-		if !companySetting.IsHeadquarter() && material.Material.AllowSubstoreVisible == 0 {
-			continue
-		}
 		unitList := []material_resp.MaterialUnit{}
 		for _, unit := range material.Material.NotBaseUnitList {
 			unitList = append(unitList, material_resp.MaterialUnit{
@@ -3325,15 +3254,14 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 
 			// 添加物品
 			tmp := req.MaterialAddReq{
-				LocaleName:           item.LocaleName,
-				CategoryUuid:         item.CategoryUuid,
-				UnitUuid:             item.UnitUuid,
-				Status:               item.Status,
-				InitStock:            item.InitStock,
-				BarcodeValue:         item.BarcodeValue,
-				PurchaseUnitUuid:     item.UnitUuid,
-				CostUnitUuid:         item.UnitUuid,
-				AllowSubstoreVisible: 1,
+				LocaleName:       item.LocaleName,
+				CategoryUuid:     item.CategoryUuid,
+				UnitUuid:         item.UnitUuid,
+				Status:           item.Status,
+				InitStock:        item.InitStock,
+				BarcodeValue:     item.BarcodeValue,
+				PurchaseUnitUuid: item.UnitUuid,
+				CostUnitUuid:     item.UnitUuid,
 			}
 			err := s.AddMaterial(ctx, tmp)
 			if err != nil {
@@ -3626,12 +3554,11 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 						}
 						return ""
 					}(),
-					NotForSale:           itemInfo.NotForSale,
-					AllowNegativeStock:   itemInfo.AllowNegativeStock, // 是否允许负库存：true-允许，false-不允许
-					AllowSubstoreVisible: true,
-					DeliveredBySupplier:  deliveredBySupplier,
-					SupplierErpCode:      supplierErpCode,
-					Specification:        itemInfo.CustomSpecification,
+					NotForSale:          itemInfo.NotForSale,
+					AllowNegativeStock:  itemInfo.AllowNegativeStock, // 是否允许负库存：true-允许，false-不允许
+					DeliveredBySupplier: deliveredBySupplier,
+					SupplierErpCode:     supplierErpCode,
+					Specification:       itemInfo.CustomSpecification,
 				})
 				if err != nil {
 					logger.Logger.Error("同步erp物品列表失败-02", zap.Error(err))
@@ -3748,7 +3675,6 @@ func (s *materialSrv) SyncHeadquarterMaterials(hqDb *gorm.DB, subDb *gorm.DB, hq
 				HeadquarterUuid:       hqUuid,
 				DefaultSalesUnitUuid:  material.DefaultSalesUnitUuid,
 				WarehouseUuid:         material.WarehouseUuid,
-				AllowSubstoreVisible:  material.AllowSubstoreVisible,
 				AllowNegativeStock:    material.AllowNegativeStock,
 				OriginCountryCode:     material.OriginCountryCode,
 				DeliveredBySupplier:   material.DeliveredBySupplier,
@@ -3844,7 +3770,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 				itemCode := bom.ItemCode                                              // 商品、小料的erpnext编码
 				objectByItemCodeResp, err := s.getObjectByItemCode(ctx, itemCode, tx) // 获取物品或加料
 				if err != nil {
-					logger.Logger.Info("同步成本卡时，获取物品或加料失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard), zap.Any("itemCode", itemCode))
+					logger.Logger.Error("同步成本卡时，获取物品或加料失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard), zap.Any("itemCode", itemCode))
 					continue
 				}
 				if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeFlavor { // 规格商品
@@ -3855,13 +3781,13 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 						map[string]any{"product_bom_card_uuid": bomCard.Uuid},
 						commonRepo.WhereByUuid(objectByItemCodeResp.ProductBom.Uuid),
 					); err != nil {
-						logger.Logger.Info("同步成本卡时，更新product_bom表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
+						logger.Logger.Error("同步成本卡时，更新product_bom表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
 						continue
 					}
 				} else if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeSauce { // 小料
 					// 更新product_sauce表的成本卡uuid
 					if err := repository.NewProductSauceRepo(tx).UpdateProductBomCard(objectByItemCodeResp.ProductSauce.Uuid, bomCard.Uuid); err != nil {
-						logger.Logger.Info("同步成本卡时，更新product_sauce表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
+						logger.Logger.Error("同步成本卡时，更新product_sauce表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
 						continue
 					}
 				}
@@ -3870,7 +3796,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 		for _, bom := range needCreate {
 			if err := s.createProductBomCardByErpBom(ctx, tx, bom); err != nil {
 				if strings.Contains(err.Error(), "物品或加料不存在") || strings.Contains(err.Error(), "单位不存在") {
-					logger.Logger.Info("同步成本卡时，创建成本卡失败，物品或加料或物料单位不存在", zap.String("bom_name", bom.BomName), zap.Any("bom", bom))
+					logger.Logger.Error("同步成本卡时，创建成本卡失败，物品或加料或物料单位不存在", zap.String("bom_name", bom.BomName), zap.Any("bom", bom))
 					continue
 				} else {
 					return errors.WithMessage(err, "创建成本卡失败")
@@ -3880,7 +3806,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterDat
 		for _, bomCard := range needDisable {
 			if err := s.disableProductBomCard(ctx, tx, bomCard); err != nil {
 				if strings.Contains(err.Error(), "获取商品或加料失败") {
-					logger.Logger.Info("同步成本卡时，失效成本卡失败，商品或加料不存在", zap.String("bom_name", bomCard.Name), zap.Any("bom_card", bomCard))
+					logger.Logger.Error("同步成本卡时，失效成本卡失败，商品或加料不存在", zap.String("bom_name", bomCard.Name), zap.Any("bom_card", bomCard))
 					continue
 				} else {
 					return errors.WithMessage(err, "失效成本卡失败")
@@ -4443,6 +4369,70 @@ func (s *materialSrv) UpdateMaterialSafetyStock(ctx context.Context, req req.Mat
 			if safetyStockDiff {
 				hqPushSrv := NewHqPushSrv(s.dbm)
 				_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityMaterial, req.Uuid, constant.HqFieldSafetyStock)
+			}
+		}
+	}
+
+	return nil
+}
+
+// UpdateMaterialNegativeStock 修改物品负库存设置（子店专用）
+func (s *materialSrv) UpdateMaterialNegativeStock(ctx context.Context, req req.MaterialUpdateNegativeStockReq) error {
+	companySetting := ctx.GetCompanySetting()
+
+	// 权限校验：只有子店账号才能通过此接口修改
+	if !companySetting.IsSubShop() {
+		return errors.New("非子店账号无法修改")
+	}
+
+	// 检查负库存字段是否处于"分开控制"模式
+	hqPushSrv := NewHqPushSrv(s.dbm)
+	if !hqPushSrv.IsFieldEditable(companySetting.HeadquarterUuid, constant.HqFieldNegativeStock) {
+		return errors.New("负库存字段当前为统一控制，子店无法修改")
+	}
+
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+	materialRepo := repository.NewMaterialRepo(db)
+	commonRepo := repository.NewCommonRepo()
+
+	// 查询物品，确保物品存在
+	material, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "物品不存在")
+	}
+
+	// 检查是否从允许负库存改为不允许负库存
+	if material.AllowNegativeStock == constant.Yes && !req.AllowNegativeStock {
+		for _, warehouseItem := range material.WarehouseItems {
+			if warehouseItem.Stock < 0 {
+				return errors.WithMessage(errors.New("物品已产生负库存，请修正库存后再关闭负库存设置"))
+			}
+		}
+	}
+
+	// 更新负库存设置
+	negativeStockValue := 0
+	if req.AllowNegativeStock {
+		negativeStockValue = 1
+	}
+	updateData := map[string]any{
+		"allow_negative_stock": negativeStockValue,
+		"update_time":          time.Now().Unix(),
+	}
+
+	if err := materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(req.Uuid)); err != nil {
+		return errors.WithMessage(err, "更新物品负库存设置失败")
+	}
+
+	// 子店修改总部物品负库存 → 与 HQ 值不一致时标记 override
+	if material.HeadquarterUuid > 0 {
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		hqMaterialRepo := repository.NewMaterialRepo(hqDb)
+		hqMaterial, hqErr := hqMaterialRepo.GetMaterialDetailByUuid(req.Uuid)
+		if hqErr == nil && hqMaterial != nil {
+			if negativeStockValue != hqMaterial.AllowNegativeStock {
+				_ = hqPushSrv.MarkFieldOverridden(ctx, constant.HqEntityMaterial, req.Uuid, constant.HqFieldNegativeStock)
 			}
 		}
 	}

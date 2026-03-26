@@ -127,24 +127,26 @@ func GetStatusList(status string) []uint {
 
 // 取消场景：merchant_cancel-商家取消；member_cancel-用户取消；merchant_reject-商家拒单
 const (
-	MemberSaleOrderSceneMerchantCancel     = "merchant_cancel"      // 商家取消。备餐中取消
-	MemberSaleOrderSceneMemberCancel       = "member_cancel_paid"   // 用户取消。已支付时用户取消
-	MemberSaleOrderSceneMerchantReject     = "merchant_reject"      // 商家拒单
-	MemberSaleOrderSceneSelectingTimeout   = "selecting_timeout"    // 选购超时
-	MemberSaleOrderScenePaymentTimeout     = "payment_timeout"      // 支付超时。未支付时用户取消
-	MemberSaleOrderSceneMemberCancelUnpaid = "member_cancel_unpaid" // 用户取消。未支付时用户取消
-	MemberSaleOrderSceneRiderPickupTimeout = "rider_pickup_timeout" // 骑手接单超时。取消订单
+	MemberSaleOrderSceneMerchantCancel       = "merchant_cancel"        // 商家取消。备餐中取消
+	MemberSaleOrderSceneMemberCancel         = "member_cancel_paid"     // 用户取消。已支付时用户取消
+	MemberSaleOrderSceneMerchantReject       = "merchant_reject"        // 商家拒单
+	MemberSaleOrderSceneSelectingTimeout     = "selecting_timeout"      // 选购超时
+	MemberSaleOrderScenePaymentTimeout       = "payment_timeout"        // 支付超时。未支付时用户取消
+	MemberSaleOrderSceneMemberCancelUnpaid   = "member_cancel_unpaid"   // 用户取消。未支付时用户取消
+	MemberSaleOrderSceneRiderPickupTimeout   = "rider_pickup_timeout"   // 骑手接单超时。取消订单
+	MemberSaleOrderSceneDineInPaymentTimeout = "dinein_payment_timeout" // 堂食订单支付超时
 )
 
 // 取消原因
 var MemberSaleOrderSceneReason = map[string]string{
-	MemberSaleOrderSceneMerchantCancel:     "商家取消",
-	MemberSaleOrderSceneMemberCancel:       "用户取消",
-	MemberSaleOrderSceneMerchantReject:     "商家拒单",
-	MemberSaleOrderSceneSelectingTimeout:   "选购超时",
-	MemberSaleOrderScenePaymentTimeout:     "支付超时",
-	MemberSaleOrderSceneMemberCancelUnpaid: "用户取消",
-	MemberSaleOrderSceneRiderPickupTimeout: "骑手超时未接单",
+	MemberSaleOrderSceneMerchantCancel:       "商家取消",
+	MemberSaleOrderSceneMemberCancel:         "用户取消",
+	MemberSaleOrderSceneMerchantReject:       "商家拒单",
+	MemberSaleOrderSceneSelectingTimeout:     "选购超时",
+	MemberSaleOrderScenePaymentTimeout:       "支付超时",
+	MemberSaleOrderSceneMemberCancelUnpaid:   "用户取消",
+	MemberSaleOrderSceneRiderPickupTimeout:   "骑手超时未接单",
+	MemberSaleOrderSceneDineInPaymentTimeout: "支付超时",
 }
 
 // 外送订单是否已计算距离费

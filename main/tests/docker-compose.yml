@@ -21,15 +21,15 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
       --innodb-buffer-pool-size=64M
-      --innodb-log-file-size=16M
+      --innodb-redo-log-capacity=256M
       --innodb-flush-log-at-trx-commit=0
       --sync-binlog=0
       --skip-log-bin
-    # tmpfs for MySQL data dir: keeps all test data in RAM, making DDL (CREATE/DROP TABLE)
-    # near-instant. Safe because test data is always ephemeral.
-    # 1536m supports ~60 tenant databases with tuned InnoDB settings above.
+    # tmpfs keeps MySQL DDL fast for integration tests. We cap package-level
+    # concurrency in the test runner so this larger RAM-backed datadir can hold
+    # the in-flight tenant DBs without falling back to very slow disk I/O.
     tmpfs:
-      - /var/lib/mysql:size=1536m
+      - /var/lib/mysql:size=4096m
     volumes:
       - ../../admin/database/seeds/saas.sql:/docker-entrypoint-initdb.d/saas.sql:ro
     healthcheck:
@@ -82,6 +82,9 @@ services:
       - DB_USERNAME=${DB_USERNAME:-test}
       - DB_PASSWORD=${DB_PASSWORD:-test}
       - DB_DATABASE=${DB_DATABASE:-saas}
+      - MAX_OPEN_CONNS=${TEST_APP_DB_MAX_OPEN_CONNS:-2}
+      - MAX_IDLE_CONNS=${TEST_APP_DB_MAX_IDLE_CONNS:-1}
+      - CONN_MAX_LIFE_TIME=${TEST_APP_DB_CONN_MAX_LIFE_TIME_SEC:-30}
       # JWT
       - JWT_SECRET=${JWT_SECRET:-test-secret-key-for-integration-tests}
       # gRPC Mock Overrides (bypass Nacos)
@@ -144,6 +147,12 @@ services:
       - DB_USERNAME=${DB_USERNAME:-test}
       - DB_PASSWORD=${DB_PASSWORD:-test}
       - DB_DATABASE=${DB_DATABASE:-saas}
+      - TEST_DB_MAX_OPEN_CONNS=${TEST_DB_MAX_OPEN_CONNS:-2}
+      - TEST_DB_MAX_IDLE_CONNS=${TEST_DB_MAX_IDLE_CONNS:-1}
+      - TEST_DB_CONN_MAX_LIFETIME_SEC=${TEST_DB_CONN_MAX_LIFETIME_SEC:-30}
+      - TEST_DB_ADMIN_MAX_OPEN_CONNS=${TEST_DB_ADMIN_MAX_OPEN_CONNS:-1}
+      - TEST_DB_ADMIN_MAX_IDLE_CONNS=${TEST_DB_ADMIN_MAX_IDLE_CONNS:-1}
+      - TEST_DB_ADMIN_CONN_MAX_LIFETIME_SEC=${TEST_DB_ADMIN_CONN_MAX_LIFETIME_SEC:-15}
       - WIREMOCK_URL=http://wiremock:8080
       - JWT_SECRET=${JWT_SECRET:-test-secret-key-for-integration-tests}
       # Redis (used by internal integration tests in pkg/lock and pkg/cache)

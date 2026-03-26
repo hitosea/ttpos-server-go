@@ -10197,6 +10197,12 @@ const docTemplate = `{
                 "summary": "显示点餐订单列表（取单列表）",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "搜索关键词（按流水号搜索）",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
                         "minimum": 1,
                         "type": "integer",
                         "description": "页码",
@@ -21683,6 +21689,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/order/dine_in/submit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "先下单后付模式下，会员端创建订单后可多次加购，最终通过此接口提交生成 H5 订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-堂食订单"
+                ],
+                "summary": "提交堂食订单到收银机",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SubmitMemberDineInOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/member/order/form/info": {
             "get": {
                 "security": [
@@ -25149,7 +25194,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "批量更新物品可见性设置（仅总店可用）",
+                "description": "已废弃，接口保留兼容，不再执行实际操作",
                 "consumes": [
                     "application/json"
                 ],
@@ -25160,23 +25205,9 @@ const docTemplate = `{
                     "商家端.物品管理"
                 ],
                 "summary": "批量更新物品可见性",
-                "parameters": [
-                    {
-                        "description": "批量更新物品可见性请求",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.MaterialBatchUpdateVisibleReq"
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
                     }
                 }
             }
@@ -25764,6 +25795,45 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/material_resp.MaterialUnitListResp"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/material/update_negative_stock": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "子店修改总店同步物品的负库存设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "修改物品负库存设置",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MaterialUpdateNegativeStockReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -36941,6 +37011,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/stock_entry/trigger_deduction": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "查询未扣减库存的已结账订单，合并提交 Stock Entry 到 ERPNext",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.库存管理"
+                ],
+                "summary": "触发 Stock Entry 合并扣减",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/stock_loss/annotation_list": {
             "get": {
                 "security": [
@@ -43016,7 +43114,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
+                    "description": "允许子店可见（已废弃，固定返回1）",
                     "type": "integer"
                 },
                 "available_num": {
@@ -43034,6 +43132,10 @@ const docTemplate = `{
                 "category_uuid": {
                     "description": "分类UUID",
                     "type": "integer"
+                },
+                "consumption_since_last_purchase": {
+                    "description": "上次采购完成后的消耗量（默认销售单位）",
+                    "type": "number"
                 },
                 "cost_unit_locale_name": {
                     "description": "成本单位名称",
@@ -43256,7 +43358,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
+                    "description": "允许子店可见（已废弃，固定返回1）",
                     "type": "integer"
                 },
                 "barcode_value": {
@@ -44407,6 +44509,10 @@ const docTemplate = `{
                     "description": "默认语言",
                     "type": "string"
                 },
+                "delivery_available": {
+                    "description": "外送服务是否可用（云平台是否开启）",
+                    "type": "boolean"
+                },
                 "is_member_show_sold_out": {
                     "description": "是否显示售罄商品",
                     "type": "boolean"
@@ -44417,6 +44523,10 @@ const docTemplate = `{
                 },
                 "is_open_store_scan_order": {
                     "description": "是否开启门店扫码点餐",
+                    "type": "boolean"
+                },
+                "is_order_first_pay_later": {
+                    "description": "堂食是否开启先下单后付款",
                     "type": "boolean"
                 },
                 "is_store_resting": {
@@ -44436,6 +44546,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/dto.LanguageItem"
                     }
+                },
+                "self_pickup_available": {
+                    "description": "到店自取是否可用（云平台是否开启）",
+                    "type": "boolean"
                 }
             }
         },
@@ -47745,6 +47859,7 @@ const docTemplate = `{
             "required": [
                 "locale_name",
                 "shop_uuids",
+                "status",
                 "warehouse_erp_code"
             ],
             "properties": {
@@ -47786,7 +47901,7 @@ const docTemplate = `{
                     "description": "商品列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/req.OrderProductAddReq"
+                        "$ref": "#/definitions/req.ProductParams"
                     }
                 },
                 "sale_bill_uuid": {
@@ -48688,42 +48803,11 @@ const docTemplate = `{
         "req.GetDataManageOrderSelectStatsReq": {
             "type": "object",
             "properties": {
-                "bill_type": {
-                    "description": "订单类型,-1=全部、0=餐单、1=外卖",
-                    "type": "integer"
-                },
-                "date_type": {
-                    "description": "时间类型,-1=全部、0=今天、1=昨天、2=本周",
-                    "type": "integer"
-                },
-                "deselected_uuids": {
-                    "description": "取消/移除的UUID（select_all=true时排除，select_all=false时移除）",
+                "filters": {
+                    "description": "筛选条件数组，每组独立处理",
                     "type": "array",
                     "items": {
-                        "type": "integer"
-                    }
-                },
-                "order_no": {
-                    "description": "订单编号搜索",
-                    "type": "string"
-                },
-                "query_end_date": {
-                    "description": "查询结束日期",
-                    "type": "string"
-                },
-                "query_start_date": {
-                    "description": "查询开始日期",
-                    "type": "string"
-                },
-                "select_all": {
-                    "description": "是否全选当前筛选范围",
-                    "type": "boolean"
-                },
-                "selected_uuids": {
-                    "description": "手动新增的UUID（select_all=false时使用）",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
+                        "$ref": "#/definitions/req.DataManageOrderSubmitFilter"
                     }
                 }
             }
@@ -49350,10 +49434,6 @@ const docTemplate = `{
                     "description": "是否允许负库存",
                     "type": "boolean"
                 },
-                "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
-                    "type": "integer"
-                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -49416,25 +49496,6 @@ const docTemplate = `{
                 "valuation": {
                     "description": "估值率",
                     "type": "number"
-                }
-            }
-        },
-        "req.MaterialBatchUpdateVisibleReq": {
-            "type": "object",
-            "required": [
-                "uuids"
-            ],
-            "properties": {
-                "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许",
-                    "type": "integer"
-                },
-                "uuids": {
-                    "description": "物品UUID列表",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
                 }
             }
         },
@@ -49526,10 +49587,6 @@ const docTemplate = `{
                 "allow_negative_stock": {
                     "description": "是否允许负库存",
                     "type": "boolean"
-                },
-                "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
-                    "type": "integer"
                 },
                 "barcode_value": {
                     "description": "条形码值",
@@ -49733,6 +49790,22 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.MaterialUpdateNegativeStockReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "allow_negative_stock": {
+                    "description": "是否允许负库存",
+                    "type": "boolean"
+                },
+                "uuid": {
+                    "description": "物品UUID",
                     "type": "integer"
                 }
             }
@@ -51337,10 +51410,6 @@ const docTemplate = `{
                     "description": "是否允许负库存",
                     "type": "boolean"
                 },
-                "allow_substore_visible": {
-                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
-                    "type": "integer"
-                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -51953,6 +52022,10 @@ const docTemplate = `{
                 },
                 "flavor_product_bom_uuid": {
                     "description": "商品规格uuid",
+                    "type": "integer"
+                },
+                "flavor_uuid": {
+                    "description": "商品规格uuid,FlavorProductBomUuid的别名,只有会员端堂食订单创建使用",
                     "type": "integer"
                 },
                 "is_buffet": {
@@ -54399,6 +54472,10 @@ const docTemplate = `{
                 "is_enabled": {
                     "description": "启用状态：0-关闭，1-开启",
                     "type": "integer"
+                },
+                "is_order_first_pay_later": {
+                    "description": "先下单后付：0-先付后下单(默认)，1-先下单后付",
+                    "type": "integer"
                 }
             }
         },
@@ -55044,6 +55121,27 @@ const docTemplate = `{
                 }
             }
         },
+        "req.SubmitMemberDineInOrderReq": {
+            "type": "object",
+            "required": [
+                "sale_bill_uuid",
+                "sale_order_uuid"
+            ],
+            "properties": {
+                "remark": {
+                    "description": "订单备注（同步到收银端整单备注）",
+                    "type": "string"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.SubmitShiftReq": {
             "type": "object",
             "properties": {
@@ -55623,6 +55721,7 @@ const docTemplate = `{
             "required": [
                 "locale_name",
                 "shop_uuids",
+                "status",
                 "uuid",
                 "warehouse_erp_code"
             ],
@@ -58045,6 +58144,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "scan": {
+                    "description": "点餐-扫码",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
                 "summary": {
                     "description": "合计",
                     "allOf": [
@@ -59914,6 +60021,10 @@ const docTemplate = `{
                     "description": "用餐方式 0:堂食 1:打包",
                     "type": "integer"
                 },
+                "is_order_first_pay_later": {
+                    "description": "是否先下单后付款（true调submit，false调pay）",
+                    "type": "boolean"
+                },
                 "payment_methods": {
                     "description": "支付方式列表",
                     "allOf": [
@@ -60032,6 +60143,18 @@ const docTemplate = `{
                 "num": {
                     "description": "数量",
                     "type": "number"
+                },
+                "package_product_list": {
+                    "description": "套餐子商品列表（仅套餐商品有值）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PackageProductList"
+                        }
+                    ]
+                },
+                "product_type": {
+                    "description": "商品类型 0-商品 1-套餐",
+                    "type": "integer"
                 },
                 "sale_order_product_uuid": {
                     "description": "销售订单商品UUID",
@@ -60463,6 +60586,10 @@ const docTemplate = `{
                 "dining_method": {
                     "description": "用餐方式：0-堂食 1-打包",
                     "type": "integer"
+                },
+                "is_order_first_pay_later": {
+                    "description": "是否先下单后付款（true时前端调submit，false时调pay）",
+                    "type": "boolean"
                 },
                 "order_no": {
                     "description": "订单编号",
@@ -61181,6 +61308,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.OperationLog"
                         }
                     ]
+                },
+                "payment_method": {
+                    "description": "支付方式列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.H5OrderPaymentMethodList"
+                        }
+                    ]
                 }
             }
         },
@@ -61260,6 +61395,31 @@ const docTemplate = `{
                 "unhandled_count": {
                     "description": "未处理的接单数量",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.H5OrderPaymentMethodItem": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "支付方式代号",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.H5OrderPaymentMethodList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "支付方式列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.H5OrderPaymentMethodItem"
+                    }
                 }
             }
         },
@@ -61364,6 +61524,10 @@ const docTemplate = `{
                 "hide_bill_time": {
                     "description": "挂单时间",
                     "type": "integer"
+                },
+                "order_no": {
+                    "description": "销售账单编号",
+                    "type": "string"
                 },
                 "products": {
                     "description": "商品列表",
@@ -62055,12 +62219,20 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "discount_amount": {
-                    "description": "优惠金额",
+                    "description": "优惠折扣金额（整单打折），与收银机购物车 discount_amount 一致",
+                    "type": "number"
+                },
+                "member_discount_amount": {
+                    "description": "会员优惠折扣金额，与收银机购物车 member_discount_amount 一致",
                     "type": "number"
                 },
                 "payment_method_name": {
                     "description": "支付方式名称",
                     "type": "string"
+                },
+                "product_amount": {
+                    "description": "商品金额（合计）",
+                    "type": "number"
                 },
                 "service_fee": {
                     "description": "服务费",
@@ -62078,6 +62250,14 @@ const docTemplate = `{
                 "image": {
                     "description": "商品图片",
                     "type": "string"
+                },
+                "is_cancel": {
+                    "description": "是否退菜",
+                    "type": "boolean"
+                },
+                "is_gift": {
+                    "description": "是否赠菜",
+                    "type": "boolean"
                 },
                 "locale_attribute_name": {
                     "description": "商品属性",
@@ -62099,9 +62279,21 @@ const docTemplate = `{
                     "description": "数量",
                     "type": "number"
                 },
+                "package_product_list": {
+                    "description": "套餐子商品列表（仅套餐商品有值）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PackageProductList"
+                        }
+                    ]
+                },
                 "price": {
                     "description": "单价（折前）",
                     "type": "number"
+                },
+                "product_type": {
+                    "description": "商品类型 0-商品 1-套餐",
+                    "type": "integer"
                 },
                 "refund_amount": {
                     "description": "退款金额（0表示未退款）",
@@ -66010,6 +66202,10 @@ const docTemplate = `{
                     "description": "基准单位名称",
                     "type": "string"
                 },
+                "consumption_since_last_purchase": {
+                    "description": "上次采购完成后的消耗量（默认销售单位）",
+                    "type": "number"
+                },
                 "default_sales_unit_locale_name": {
                     "description": "默认销售单位名称",
                     "allOf": [
@@ -68394,6 +68590,10 @@ const docTemplate = `{
                     "description": "购物车是否锁定 true:锁定 false:未锁定",
                     "type": "boolean"
                 },
+                "is_split_disabled": {
+                    "description": "是否禁止拆单（会员端堂食订单为true）",
+                    "type": "boolean"
+                },
                 "must_plans": {
                     "description": "必点方案列表信息",
                     "allOf": [
@@ -70752,6 +70952,10 @@ const docTemplate = `{
         "resp.UnprocessedH5OrderItem": {
             "type": "object",
             "properties": {
+                "can_reject": {
+                    "description": "是否可以拒单",
+                    "type": "boolean"
+                },
                 "desk_no": {
                     "description": "桌台编号",
                     "type": "string"
@@ -72855,6 +73059,13 @@ const docTemplate = `{
                     "description": "预览选中数量",
                     "type": "integer"
                 },
+                "selected_uuids": {
+                    "description": "最终选中的订单UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "total_count": {
                     "description": "筛选范围内订单总数",
                     "type": "integer"
@@ -73555,6 +73766,10 @@ const docTemplate = `{
                 },
                 "is_enabled": {
                     "description": "启用状态：0-关闭，1-开启",
+                    "type": "integer"
+                },
+                "is_order_first_pay_later": {
+                    "description": "先下单后付：0-先付后下单(默认)，1-先下单后付",
                     "type": "integer"
                 },
                 "self_pickup_available": {

@@ -87,6 +87,7 @@ var (
 		"sale_bill_uuid",
 		"desk_uuid",
 		"order_source_uuid",
+		"source",
 		"is_meger",
 		"is_special",
 		"is_takeout",
@@ -115,8 +116,8 @@ var (
 		"SUM(payment_amount - refund_amount - refund_payment_balance) AS avg_order_amount",
 		"SUM(IF(desk_uuid > 0 AND is_takeout = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS desk_order_amount",
 		"SUM(IF(desk_uuid > 0 AND is_takeout = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_desk_order_amount",
-		"SUM(IF(desk_uuid = 0 AND order_source_uuid = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS instant_order_amount",
-		"SUM(IF(desk_uuid = 0 AND order_source_uuid = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_amount",
+		"SUM(IF(desk_uuid = 0 AND order_source_uuid = 0 AND source != 5 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS instant_order_amount",
+		"SUM(IF(desk_uuid = 0 AND order_source_uuid = 0 AND source != 5, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_amount",
 		"SUM(IF(desk_uuid = 0 AND order_source_uuid > 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS instant_order_takeaway_amount",
 		"SUM(IF(desk_uuid = 0 AND order_source_uuid > 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_takeaway_amount",
 		"SUM(IF(is_takeout = 1 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS takeout_order_amount",
@@ -154,7 +155,7 @@ var (
 		"SUM(t.meal_num) AS total_meal_num",                                                // 总用餐人数
 		"SUM(t.instant_order_amount) AS total_instant_order_amount",                        // 即时订单金额（店内）
 		"SUM(t.instant_order_takeaway_amount) AS total_instant_order_takeaway_amount",      // 即时订单-外卖来源金额
-		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_num",                                                                                                                                    // 总即时订单数量（店内）
+		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_num",                                                                                                                  // 总即时订单数量（店内）
 		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_takeaway_num",                                                                                                                           // 总即时订单数量（外卖来源）
 		"SUM(t.takeout_order_amount) AS total_takeout_order_amount",                                                                                                                                                                                                // 总外送订单金额
 		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END) AS total_takeout_order_num",                                                                                                                                           // 总外送订单数量
@@ -164,20 +165,20 @@ var (
 		"MIN(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",                                                                 // 最小桌台订单金额
 		"MAX(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount > 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",                                                                                       // 最大桌台订单金额
 		"ROUND(SUM(t.avg_desk_order_amount) / COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_desk_order_amount",                                                                               // 平均桌台订单金额
-		"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",                            // 最小即时订单金额（店内）
-		"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",                                                                     // 最大即时订单金额（店内）
-		"ROUND(SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END), 2) AS avg_instant_order_amount",                                                        // 平均即时订单金额（店内）
+		"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",          // 最小即时订单金额（店内）
+		"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",                                                   // 最大即时订单金额（店内）
+		"ROUND(SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END), 2) AS avg_instant_order_amount",                                      // 平均即时订单金额（店内）
 		"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.instant_order_takeaway_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_takeaway_amount ELSE NULL END) AS min_instant_order_takeaway_amount", // 最小即时订单金额（外卖来源）
 		"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.instant_order_takeaway_amount > 0 THEN t.instant_order_takeaway_amount ELSE NULL END) AS max_instant_order_takeaway_amount",                                          // 最大即时订单金额（外卖来源）
 		"ROUND(SUM(t.avg_instant_order_takeaway_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_meger = 0 AND t.instant_order_takeaway_amount > 0 THEN 1 END), 2) AS avg_instant_order_takeaway_amount",                             // 平均即时订单金额（外卖来源）
 		"MIN(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.takeout_order_amount ELSE NULL END) AS min_takeout_order_amount",                                                                            // 最小外送订单金额
 		"MAX(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount > 0 THEN t.takeout_order_amount ELSE NULL END) AS max_takeout_order_amount",                                                                                                                     // 最大外送订单金额
 		"ROUND(SUM(t.avg_takeout_order_amount) / COUNT(CASE WHEN t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END), 2) AS avg_takeout_order_amount",                                                                                                                  // 平均外送订单金额
-		"SUM(t.scan_order_amount) AS total_scan_order_amount",                                                                                                                         // 总扫码订单金额
-		"COUNT(CASE WHEN t.scan_order_amount > 0 AND t.is_meger = 0 THEN 1 END) AS total_scan_order_num",                                                                              // 总扫码订单数量
-		"MIN(CASE WHEN t.scan_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 AND t.scan_order_amount > 0 THEN t.scan_order_amount ELSE NULL END) AS min_scan_order_amount", // 最小扫码订单金额
-		"MAX(CASE WHEN t.scan_order_amount > 0 AND t.is_meger = 0 THEN t.scan_order_amount ELSE NULL END) AS max_scan_order_amount",                                                   // 最大扫码订单金额
-		"ROUND(SUM(t.avg_scan_order_amount) / COUNT(CASE WHEN t.scan_order_amount > 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_scan_order_amount",                                    // 平均扫码订单金额
+		"SUM(t.scan_order_amount) AS total_scan_order_amount",                                                                          // 总扫码订单金额
+		"COUNT(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_scan_order_num", // 总扫码订单数量
+		"MIN(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.scan_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.scan_order_amount ELSE NULL END) AS min_scan_order_amount", // 最小扫码订单金额
+		"MAX(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.scan_order_amount > 0 AND t.is_meger = 0 THEN t.scan_order_amount ELSE NULL END) AS max_scan_order_amount",                                                   // 最大扫码订单金额
+		"ROUND(SUM(t.avg_scan_order_amount) / COUNT(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_scan_order_amount",                                                                // 平均扫码订单金额
 	}
 )
 
@@ -190,7 +191,7 @@ func (r *StatisticsRepo) CountSale(opts ...DBOption) model.StatisticsSaleData {
 	}
 
 	subQuery := db.Model(&model.StatisticsSale{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(countSaleSubQuerySelect).
 		Group("sale_bill_uuid")
 
@@ -255,7 +256,7 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 	}
 
 	subQuery := db.Model(&model.StatisticsSale{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(countSaleSubQuerySelect).
 		Group("sale_bill_uuid")
 
@@ -330,14 +331,14 @@ func (r *StatisticsRepo) CountSaleDays(timezone string, opts ...DBOption) []mode
 		InstantOrderTakeawayNumForAvg    int64
 		TakeoutOrderNumForAvg            int64
 		// 扫码订单统计
-		TotalScanOrderAmount    decimal.Decimal
-		TotalScanOrderNum       int64
-		MinScanOrderAmount      decimal.Decimal
-		MaxScanOrderAmount      decimal.Decimal
-		AvgScanOrderAmount      decimal.Decimal
-		ScanOrderAmounts        []decimal.Decimal
-		AvgScanOrderAmountSum   decimal.Decimal
-		ScanOrderNumForAvg      int64
+		TotalScanOrderAmount  decimal.Decimal
+		TotalScanOrderNum     int64
+		MinScanOrderAmount    decimal.Decimal
+		MaxScanOrderAmount    decimal.Decimal
+		AvgScanOrderAmount    decimal.Decimal
+		ScanOrderAmounts      []decimal.Decimal
+		AvgScanOrderAmountSum decimal.Decimal
+		ScanOrderNumForAvg    int64
 	}
 
 	groupedData := make(map[string]*groupData)
@@ -681,7 +682,7 @@ func (r *StatisticsRepo) CountPayment(opts ...DBOption) []model.StatisticsPaymen
 	paymentMethodTable := prefix + "payment_method pm"
 
 	db.Table(statisticsPaymentTable).
-		Where(ExcludeTestBusinessSQL("sp")).
+		Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 		Select(countPaymentSelect).
 		Joins("LEFT JOIN " + paymentMethodTable + " ON sp.payment_method_uuid = pm.uuid").
 		Group("sp.payment_method_uuid").
@@ -722,7 +723,7 @@ func (r *StatisticsRepo) CountPaymentDays(timezone string, opts ...DBOption) []m
 	paymentMethodTable := prefix + "payment_method pm"
 
 	db.Table(statisticsPaymentTable).
-		Where(ExcludeTestBusinessSQL("sp")).
+		Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 		Select(
 			"pm.id",
 			"pm.sort",
@@ -849,7 +850,7 @@ func (r *StatisticsRepo) CountTax(opts ...DBOption) []model.StatisticsTaxData {
 	}
 
 	db.Model(&model.StatisticsProduct{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"tax_rate",
 			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
@@ -869,7 +870,7 @@ func (r *StatisticsRepo) CountBuffetTax(opts ...DBOption) []model.StatisticsTaxD
 	}
 
 	db.Model(&model.StatisticsCustomerType{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"tax_rate",
 			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
@@ -889,7 +890,7 @@ func (r *StatisticsRepo) CountBuffetDelayTax(opts ...DBOption) []model.Statistic
 	}
 
 	db.Model(&model.StatisticsDelay{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"tax_rate",
 			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
@@ -922,11 +923,11 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 	productParentCategoryTable := prefix + "product_category as ppc"
 
 	// 统计订单数量
-	dbOrder.Table(statisticsProductTable).Where(ExcludeTestBusinessSQL("sp")).Select("COUNT(DISTINCT sale_bill_uuid) AS order_num").Pluck("order_num", &orderNum)
+	dbOrder.Table(statisticsProductTable).Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).Select("COUNT(DISTINCT sale_bill_uuid) AS order_num").Pluck("order_num", &orderNum)
 
 	if categoryType != 2 {
 		db.Table(statisticsProductTable).
-			Where(ExcludeTestBusinessSQL("sp")).
+			Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 			Select(
 				"IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid) AS category_parent_uuid",
 				"IF(pc.parent_uuid = 0, JSON_UNQUOTE(JSON_EXTRACT(pc.NAME, '$."+language+"')), JSON_UNQUOTE(JSON_EXTRACT(ppc.NAME, '$."+language+"'))) AS category_parent_name",
@@ -947,7 +948,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 			Find(&result)
 	} else {
 		db.Table(statisticsProductTable).
-			Where(ExcludeTestBusinessSQL("sp")).
+			Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 			Select(
 				"pc.parent_uuid AS category_parent_uuid",
 				"JSON_UNQUOTE(JSON_EXTRACT(ppc.NAME, '$."+language+"')) AS category_parent_name",
@@ -994,7 +995,7 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 	productParentCategoryTable := prefix + "product_category as ppc"
 
 	err := db.Table(statisticsProductTable).
-		Where(ExcludeTestBusinessSQL("sp")).
+		Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 		Select(
 			"sp.product_bom_uuid AS product_bom_uuid",
 			"CASE WHEN pp.name IS NOT NULL AND pp.name != '' THEN JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) ELSE '' END AS product_name",
@@ -1050,7 +1051,7 @@ func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData 
 	deskTable := prefix + "desk as d"
 	deskRegionTable := prefix + "desk_region as dr"
 	db.Table(statisticsSaleTable).
-		Where(ExcludeTestBusinessSQL("ss")).
+		Where(ExcludeTestBusinessByBillSQL("ss.sale_bill_uuid")).
 		Select(countAreaSelect, "dr.uuid AS area_id").
 		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
 		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
@@ -1095,7 +1096,7 @@ func (r *StatisticsRepo) CountAreaDays(timezone string, opts ...DBOption) []mode
 	deskTable := prefix + "desk as d"
 	deskRegionTable := prefix + "desk_region as dr"
 	db.Table(statisticsSaleTable).
-		Where(ExcludeTestBusinessSQL("ss")).
+		Where(ExcludeTestBusinessByBillSQL("ss.sale_bill_uuid")).
 		Select(
 			"dr.uuid AS area_id",
 			"dr.name AS area_name",
@@ -1242,7 +1243,7 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 	// 保持原有逻辑完全不变，应用所有 opts 条件
 	var statisticsData []model.StatisticsProductData
 	statisticsQuery := db.Table(statisticsProductTable).
-		Where(ExcludeTestBusinessSQL("sp")).
+		Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 		Select(
 			"sp.product_package_uuid AS product_package_uuid",
 			"SUM(sp.product_num) AS sale_num",
@@ -1403,7 +1404,7 @@ func (r *StatisticsRepo) Count7Days(opts ...DBOption) []struct {
 	// 返回每个订单的完成时间和支付金额
 	// 不在这里进行日期分组，避免使用数据库时区
 	db.Model(&model.StatisticsSale{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"complete_time",
 			"sale_order_uuid",
@@ -1977,7 +1978,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 
 	// 构建店内商品销售查询（子查询）
 	storeQuery := db2.Table(statisticsProductTable).
-		Where(ExcludeTestBusinessSQL("sp")).
+		Where(ExcludeTestBusinessByBillSQL("sp.sale_bill_uuid")).
 		Select(
 			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+req.Language+"')) AS product_name",
 			"JSON_UNQUOTE(JSON_EXTRACT(pc.name, '$."+req.Language+"')) AS category_name",
@@ -2197,7 +2198,7 @@ func (r *StatisticsRepo) CountFreePayment(opts ...DBOption) model.StatisticsFree
 	}
 
 	db.Model(&model.StatisticsSale{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"COUNT(sale_order_uuid) AS total_order_num",
 			"SUM(free_amount) AS total_free_amount",
@@ -2217,7 +2218,7 @@ func (r *StatisticsRepo) CountFreePaymentDays(opts ...DBOption) []model.Statisti
 	}
 
 	db.Model(&model.StatisticsSale{}).
-		Where(ExcludeTestBusinessSQL("")).
+		Where(ExcludeTestBusinessByBillSQL("sale_bill_uuid")).
 		Select(
 			"COUNT(sale_order_uuid) AS total_order_num",
 			"SUM(free_amount) AS total_free_amount",
@@ -3157,6 +3158,7 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 		statisticsSaleTable + ".sale_bill_uuid",
 		statisticsSaleTable + ".desk_uuid",
 		statisticsSaleTable + ".order_source_uuid",
+		statisticsSaleTable + ".source",
 		statisticsSaleTable + ".is_meger",
 		statisticsSaleTable + ".is_special",
 		statisticsSaleTable + ".is_takeout",
@@ -3185,12 +3187,14 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 		"SUM(" + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance) AS avg_order_amount",
 		"SUM(IF(" + statisticsSaleTable + ".desk_uuid > 0 AND " + statisticsSaleTable + ".is_takeout = 0 AND " + statisticsSaleTable + ".is_meger = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS desk_order_amount",
 		"SUM(IF(" + statisticsSaleTable + ".desk_uuid > 0 AND " + statisticsSaleTable + ".is_takeout = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS avg_desk_order_amount",
-		"SUM(IF(" + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".order_source_uuid = 0 AND " + statisticsSaleTable + ".is_meger = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS instant_order_amount",
-		"SUM(IF(" + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".order_source_uuid = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS avg_instant_order_amount",
+		"SUM(IF(" + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".order_source_uuid = 0 AND " + statisticsSaleTable + ".source != 5 AND " + statisticsSaleTable + ".is_meger = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS instant_order_amount",
+		"SUM(IF(" + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".order_source_uuid = 0 AND " + statisticsSaleTable + ".source != 5, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS avg_instant_order_amount",
 		"SUM(IF(" + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".order_source_uuid > 0 AND " + statisticsSaleTable + ".is_meger = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS instant_order_takeaway_amount",
 		"SUM(IF(" + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".order_source_uuid > 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS avg_instant_order_takeaway_amount",
 		"SUM(IF(" + statisticsSaleTable + ".is_takeout = 1 AND " + statisticsSaleTable + ".is_meger = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS takeout_order_amount",
 		"SUM(IF(" + statisticsSaleTable + ".is_takeout = 1, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS avg_takeout_order_amount",
+		"SUM(IF(" + statisticsSaleTable + ".source = 5 AND " + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".is_takeout = 0 AND " + statisticsSaleTable + ".is_meger = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS scan_order_amount",
+		"SUM(IF(" + statisticsSaleTable + ".source = 5 AND " + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".is_takeout = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS avg_scan_order_amount",
 		statisticsSaleTable + ".complete_time",
 		"sb.dining_method",
 	}
@@ -3229,11 +3233,11 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 			"SUM(IF(t.desk_uuid > 0 AND t.is_takeout = 0, t.meal_num, 0)) AS total_meal_num",
 			"ROUND(SUM(t.desk_order_amount) / NULLIF(SUM(IF(t.desk_uuid > 0 AND t.is_takeout = 0, t.meal_num, 0)), 0), 2) AS order_amount_meal_avg", // 人均订单金额：桌台订单总金额 / 用餐人数，保留两位小数
 		},
-		"dine_in": { // 点餐-店内：desk_uuid = 0 && order_source_uuid = 0 && is_takeout = 0
-			"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
-			"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_order_amount",
-			"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_order_amount",
-			"ROUND(SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END), 2) AS avg_order_amount",
+		"dine_in": { // 点餐-店内：desk_uuid = 0 && order_source_uuid = 0 && source != 5 && is_takeout = 0
+			"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
+			"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_order_amount",
+			"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_order_amount",
+			"ROUND(SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END), 2) AS avg_order_amount",
 			"0 AS total_desk_num",
 			"0 AS total_meal_num",
 		},
@@ -3253,19 +3257,27 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 			"0 AS total_desk_num",
 			"0 AS total_meal_num",
 		},
-		"dine_in_store": { // 堂食：桌台订单 + 点餐订单（非打包）
-			"COUNT(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.is_meger = 0 THEN 1 END) AS total_order_num",
-			"MIN(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS min_order_amount",
-			"MAX(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.order_amount > 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS max_order_amount",
-			"ROUND(SUM(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.is_meger = 0 THEN t.avg_order_amount ELSE 0 END) / COUNT(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.is_meger = 0 THEN 1 END), 2) AS avg_order_amount",
+		"dine_in_store": { // 堂食：桌台订单 + 点餐订单（非打包，排除扫码）
+			"COUNT(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.is_meger = 0 THEN 1 END) AS total_order_num",
+			"MIN(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS min_order_amount",
+			"MAX(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.order_amount > 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS max_order_amount",
+			"ROUND(SUM(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.is_meger = 0 THEN t.avg_order_amount ELSE 0 END) / COUNT(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.is_meger = 0 THEN 1 END), 2) AS avg_order_amount",
 			"0 AS total_desk_num",
 			"0 AS total_meal_num",
 		},
-		"takeaway": { // 外带：点餐订单（打包）
-			"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
-			"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_order_amount",
-			"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_order_amount",
-			"ROUND(SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END), 2) AS avg_order_amount",
+		"scan": { // 点餐-扫码：source = 5 && desk_uuid = 0 && is_takeout = 0
+			"COUNT(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
+			"MIN(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.scan_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.scan_order_amount ELSE NULL END) AS min_order_amount",
+			"MAX(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.scan_order_amount > 0 AND t.is_meger = 0 THEN t.scan_order_amount ELSE NULL END) AS max_order_amount",
+			"ROUND(SUM(t.avg_scan_order_amount) / COUNT(CASE WHEN t.source = 5 AND t.desk_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_order_amount",
+			"0 AS total_desk_num",
+			"0 AS total_meal_num",
+		},
+		"takeaway": { // 外带：点餐订单（打包，排除扫码）
+			"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
+			"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_order_amount",
+			"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_order_amount",
+			"ROUND(SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.source != 5 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END), 2) AS avg_order_amount",
 			"0 AS total_desk_num",
 			"0 AS total_meal_num",
 		},

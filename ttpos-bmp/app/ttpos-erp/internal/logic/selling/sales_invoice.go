@@ -48,12 +48,14 @@ func (s *sSelling) SaveSalesInvoice(ctx context.Context, req *selling.SaveSalesI
 				description = fmt.Sprintf("[BY001] %s", item.Description)
 			}
 			si.Items = append(si.Items, erp.SalesInvoiceItem{
-				ItemCode:    itemCode,
-				Qty:         item.Qty,
-				Rate:        0,
-				Amount:      0,
-				Uom:         item.Uom,
-				Description: description,
+				ItemCode:           itemCode,
+				Qty:                item.Qty,
+				Rate:               0,
+				Amount:             0,
+				Uom:                item.Uom,
+				Description:        description,
+				IsFreeItem:         1,
+				DiscountPercentage: 100,
 			})
 		}
 	}
@@ -210,6 +212,7 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 		}
 		if item.IsFreeItem {
 			siItem.IsFreeItem = 1
+			siItem.DiscountPercentage = 100 // ERPNext SI 不自动处理 is_free_item，需显式打折
 		}
 		items = append(items, siItem)
 	}
@@ -244,17 +247,9 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 		Taxes:              taxes,
 		DiscountAmount:     req.DiscountAmount,
 		Docstatus:          0,
-		TtposSaleOrderUuid: req.SaleOrderUuid,
-		TtposOrderNo:       req.OrderNo,
-		PoNo:               req.OrderNo,
+		PoNo: req.OrderNo,
 	}
 
-	if req.OrderSourceUuid != nil && *req.OrderSourceUuid != "" {
-		si.TtposOrderSourceUuid = *req.OrderSourceUuid
-	}
-	if req.OrderSourceName != nil && *req.OrderSourceName != "" {
-		si.TtposOrderSourceName = *req.OrderSourceName
-	}
 	if req.TakeoutOrderNo != nil {
 		si.TtposTakeoutOrderNo = *req.TakeoutOrderNo
 	}
@@ -273,24 +268,31 @@ func (s *sSelling) buildSalesInvoice(ctx context.Context, req *selling.SaveSales
 func (s *sSelling) buildCreditNote(ctx context.Context, req *selling.ReturnSalesInvoiceReq, companyName, postingDate string) *erp.CreditNote {
 	items := make([]erp.SalesInvoiceItem, 0, len(req.Items))
 	for _, item := range req.Items {
-		items = append(items, erp.SalesInvoiceItem{
+		siItem := erp.SalesInvoiceItem{
 			ItemCode:    item.ItemCode,
 			Qty:         item.Qty, // Main 端已传负数
 			Rate:        item.Rate,
 			Amount:      item.Amount,
 			Uom:         item.Uom,
 			Description: item.Description,
-		})
+		}
+		if item.IsFreeItem {
+			siItem.IsFreeItem = 1
+			siItem.DiscountPercentage = 100
+		}
+		items = append(items, siItem)
 	}
 	// 物品明细
 	for _, item := range req.MaterialItems {
 		items = append(items, erp.SalesInvoiceItem{
-			ItemCode:    item.ItemCode,
-			Qty:         item.Qty,
-			Rate:        0,
-			Amount:      0,
-			Uom:         item.Uom,
-			Description: item.Description,
+			ItemCode:           item.ItemCode,
+			Qty:                item.Qty,
+			Rate:               0,
+			Amount:             0,
+			Uom:                item.Uom,
+			Description:        item.Description,
+			IsFreeItem:         1,
+			DiscountPercentage: 100,
 		})
 	}
 
@@ -313,8 +315,7 @@ func (s *sSelling) buildCreditNote(ctx context.Context, req *selling.ReturnSales
 		UpdateStock:        0,
 		Items:              items,
 		Taxes:              taxes,
-		TtposSaleOrderUuid: req.SaleOrderUuid,
-		TtposRefundType:    req.RefundType,
+		TtposRefundType: req.RefundType,
 	}
 }
 
@@ -344,7 +345,6 @@ func (s *sSelling) createPaymentEntry(ctx context.Context, req *selling.SaveSale
 				AllocatedAmount:  payment.Amount,
 			},
 		},
-		TtposSaleOrderUuid: req.SaleOrderUuid,
 	}
 
 	// 记录到 receive_payment_entry
@@ -415,7 +415,6 @@ func (s *sSelling) createRefundPaymentEntry(ctx context.Context, req *selling.Re
 				AllocatedAmount:  -payment.Amount, // Credit Note outstanding 为负数，allocated 需匹配
 			},
 		},
-		TtposSaleOrderUuid: req.SaleOrderUuid,
 	}
 
 	resp, err := service.Document().Create(ctx, erp.DocTypePaymentEntry, pe)

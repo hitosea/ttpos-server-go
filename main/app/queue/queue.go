@@ -19,10 +19,10 @@ import (
 const TAKEOUT = "takeout"
 
 const (
-	TopicItemChange                    = "erp-item-change"
-	TopicDocChange                     = "erp-doc-change"
-	TopicErpCancelInvoiceCallback      = "erp-invoice-cancel"              // ERP 取消发票成功回调
-	TopicErpSalesInvoiceCallback       = "erp-sales-invoice-callback"      // ERP SI 异步回调（BMP → Main）
+	TopicItemChange               = "erp-item-change"
+	TopicDocChange                = "erp-doc-change"
+	TopicErpCancelInvoiceCallback = "erp-invoice-cancel"         // ERP 取消发票成功回调
+	TopicErpSalesInvoiceCallback  = "erp-sales-invoice-callback" // ERP SI 异步回调（BMP → Main）
 )
 
 const (

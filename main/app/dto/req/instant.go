@@ -180,7 +180,8 @@ type InstantOrderSaleOrderDeleteAllReq struct {
 }
 
 type HideSaleBillListReq struct {
-	dto.PageReq // 分页参数
+	dto.PageReq        // 分页参数
+	Keyword     string `form:"keyword"` // 搜索关键词（按流水号搜索）
 }
 
 type OrderTakeoutReq struct {

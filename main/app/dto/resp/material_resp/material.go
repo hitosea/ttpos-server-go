@@ -31,7 +31,7 @@ type Material struct {
 	DefaultSalesUnitName string                `json:"default_sales_unit_name"` // 默认销售单位名称
 	DefaultSalesUnitUuid uint64                `json:"default_sales_unit_uuid"` // 默认销售单位UUID
 	UnitList             []MaterialUnit        `json:"unit_list"`               // 单位列表
-	AllowSubstoreVisible int                   `json:"allow_substore_visible"`  // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	AllowSubstoreVisible int                   `json:"allow_substore_visible"`  // 允许子店可见（已废弃，固定返回1）
 	AllowNegativeStock   bool                  `json:"allow_negative_stock"`    // 是否允许负库存：true-允许，false-不允许
 
 	UnitLocaleName             dto.LocaleResponse `json:"unit_locale_name"`               // 基准单位名称
@@ -39,10 +39,11 @@ type Material struct {
 	PurchaseUnitLocaleName     dto.LocaleResponse `json:"purchase_unit_locale_name"`      // 采购单位名称
 	DefaultSalesUnitLocaleName dto.LocaleResponse `json:"default_sales_unit_locale_name"` // 默认销售单位名称
 
-	AvailableQuantity              float64            `json:"available_quantity"`              // 可采购数量
-	StoreQuantity                  float64            `json:"store_quantity"`                  // 门店数量
-	LastPurchaseQuantity           float64            `json:"last_purchase_quantity"`           // 上次采购数量（默认销售单位）
-	LastPurchaseLocaleUnitName     dto.LocaleResponse `json:"last_purchase_locale_unit_name"`   // 上次采购时的单位名称
+	AvailableQuantity            float64            `json:"available_quantity"`              // 可采购数量
+	StoreQuantity                float64            `json:"store_quantity"`                  // 门店数量
+	LastPurchaseQuantity         float64            `json:"last_purchase_quantity"`          // 上次采购数量（默认销售单位）
+	LastPurchaseLocaleUnitName   dto.LocaleResponse `json:"last_purchase_locale_unit_name"`  // 上次采购时的单位名称
+	ConsumptionSinceLastPurchase float64            `json:"consumption_since_last_purchase"` // 上次采购完成后的消耗量（默认销售单位）
 
 	// 限购配置
 	QuotaConfig MaterialQuotaConfig `json:"quota_config"` // 限购配置
@@ -86,7 +87,7 @@ type MaterialDetailResp struct {
 	CategoryUuid               uint64               `json:"category_uuid"`                  // 分类UUID
 	CategoryName               string               `json:"category_name"`                  // 分类名称
 	Status                     int                  `json:"status"`                         // 状态 1-启用 0-停用
-	AllowSubstoreVisible       int                  `json:"allow_substore_visible"`         // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	AllowSubstoreVisible       int                  `json:"allow_substore_visible"`         // 允许子店可见（已废弃，固定返回1）
 	AllowNegativeStock         bool                 `json:"allow_negative_stock"`           // 是否允许负库存：true-允许，false-不允许
 	BarcodeValue               string               `json:"barcode_value"`                  // 条形码值
 	InternalCode               string               `json:"internal_code"`                  // 内部编码

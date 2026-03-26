@@ -28,6 +28,24 @@ const (
 	codeFail         = -1
 )
 
+var autoReceiptWarehouseCodes = []string{
+	"WH-TEST-001",
+	"WH-LIST-001",
+	"WH-UPD-001",
+	"WH-DEL-001",
+	"WH-DUP-001",
+	"WH-DIFFA-001",
+	"WH-DIFFB-001",
+	"WH-NF-001",
+	"WH-RMSHOP-001",
+	"WH-UPDDUP-001",
+	"WH-DISABLED-001",
+	"WH-FLOW-001",
+	"WH-STATUS0-001",
+	"WH-NOSTATUS-001",
+	"WH-UPDST0-001",
+}
+
 // --- P0 ---
 
 // Test_P0_Shop_AutoReceipt_RuleCreate_HappyPath tests creating a rule successfully.
@@ -221,7 +239,7 @@ func Test_P0_Shop_AutoReceipt_WarehouseList_HappyPath(t *testing.T) {
 	env := setupHeadquarterEnv(t)
 
 	// Seed a warehouse with erp_code in the tenant DB
-	seedWarehouse(t, env.tenantDB, "WH-TEST-WLIST", `{"zh":"测试仓库","en":"Test Warehouse"}`, "warehouse")
+	seedWarehouse(t, env.tenantDB, "WH-TEST-WLIST", `{"zh":"测试仓库","en":"Test Warehouse"}`, "normal", env.companyUUID)
 
 	resp := env.client.Get(t, pathWarehouseList)
 	resp.AssertOK(t).AssertSuccess(t)
@@ -824,6 +842,113 @@ func Test_P1_Shop_AutoReceipt_CRUD_FullFlow(t *testing.T) {
 	}
 }
 
+// Test_P1_Shop_AutoReceipt_RuleCreate_StatusZero verifies that creating a rule
+// with status=0 (disabled) persists correctly — the database must store 0, not
+// fall back to the column default (1).
+// Route: POST /shop/auto_receipt/rule/create
+func Test_P1_Shop_AutoReceipt_RuleCreate_StatusZero(t *testing.T) {
+	env := setupHeadquarterEnv(t)
+
+	body := map[string]any{
+		"locale_name":        map[string]string{"zh": "禁用规则"},
+		"warehouse_erp_code": "WH-STATUS0-001",
+		"shop_uuids":         []int64{env.shopCompanyUUID1},
+		"delay_days":         1,
+		"status":             0,
+	}
+	env.client.Post(t, pathRuleCreate, body).AssertOK(t).AssertSuccess(t)
+
+	// Verify via list that the persisted status is 0
+	listResp := env.client.Get(t, pathRuleList)
+	listResp.AssertOK(t).AssertSuccess(t)
+	apiResp := listResp.ParseAPIResponse(t)
+	var listData ruleListData
+	if err := json.Unmarshal(apiResp.Data, &listData); err != nil {
+		t.Fatalf("failed to parse list response: %v", err)
+	}
+	for _, rule := range listData.List {
+		if rule.WarehouseErpCode == "WH-STATUS0-001" {
+			if rule.Status != 0 {
+				t.Errorf("expected status=0 (disabled), got %d", rule.Status)
+			}
+			return
+		}
+	}
+	t.Error("created rule with warehouse_erp_code=WH-STATUS0-001 not found in list")
+}
+
+// Test_P1_Shop_AutoReceipt_RuleCreate_MissingStatus verifies that omitting the
+// status field triggers a validation error (the field is required).
+// Route: POST /shop/auto_receipt/rule/create
+func Test_P1_Shop_AutoReceipt_RuleCreate_MissingStatus(t *testing.T) {
+	env := setupHeadquarterEnv(t)
+
+	body := map[string]any{
+		"locale_name":        map[string]string{"zh": "缺少状态"},
+		"warehouse_erp_code": "WH-NOSTATUS-001",
+		"shop_uuids":         []int64{env.shopCompanyUUID1},
+		"delay_days":         0,
+		// status intentionally omitted
+	}
+	resp := env.client.Post(t, pathRuleCreate, body)
+	resp.AssertOK(t)
+	apiResp := resp.ParseAPIResponse(t)
+	if apiResp.Code == 0 {
+		t.Error("expected validation error when status is missing, got success")
+	}
+}
+
+// Test_P1_Shop_AutoReceipt_RuleUpdate_StatusZero verifies that updating a rule's
+// status from 1 to 0 persists correctly.
+// Route: POST /shop/auto_receipt/rule/update
+func Test_P1_Shop_AutoReceipt_RuleUpdate_StatusZero(t *testing.T) {
+	env := setupHeadquarterEnv(t)
+
+	// Create a rule with status=1
+	createBody := map[string]any{
+		"locale_name":        map[string]string{"zh": "待禁用规则"},
+		"warehouse_erp_code": "WH-UPDST0-001",
+		"shop_uuids":         []int64{env.shopCompanyUUID1},
+		"delay_days":         2,
+		"status":             1,
+	}
+	env.client.Post(t, pathRuleCreate, createBody).AssertOK(t).AssertSuccess(t)
+
+	ruleUuid := getRuleUuidByWarehouse(t, env.client, "WH-UPDST0-001")
+	if ruleUuid == 0 {
+		t.Fatal("failed to find created rule")
+	}
+
+	// Update status to 0
+	updateBody := map[string]any{
+		"uuid":               ruleUuid,
+		"locale_name":        map[string]string{"zh": "待禁用规则"},
+		"warehouse_erp_code": "WH-UPDST0-001",
+		"shop_uuids":         []int64{env.shopCompanyUUID1},
+		"delay_days":         2,
+		"status":             0,
+	}
+	env.client.Post(t, pathRuleUpdate, updateBody).AssertOK(t).AssertSuccess(t)
+
+	// Verify via list
+	listResp := env.client.Get(t, pathRuleList)
+	listResp.AssertOK(t).AssertSuccess(t)
+	apiResp := listResp.ParseAPIResponse(t)
+	var listData ruleListData
+	if err := json.Unmarshal(apiResp.Data, &listData); err != nil {
+		t.Fatalf("failed to parse list response: %v", err)
+	}
+	for _, rule := range listData.List {
+		if rule.Uuid == ruleUuid {
+			if rule.Status != 0 {
+				t.Errorf("expected status=0 after update, got %d", rule.Status)
+			}
+			return
+		}
+	}
+	t.Error("updated rule not found in list")
+}
+
 // --- Helpers ---
 
 // testEnv holds the test environment for auto-receipt tests.
@@ -852,6 +977,7 @@ func setupHeadquarterEnv(t *testing.T) testEnv {
 		fixture.WithCompanySettingCompanyUUID(companyUUIDInt),
 		fixture.WithCompanySettingHeadquarterConfig("test-site", "HQ"),
 	)
+	seedAutoReceiptWarehouses(t, db, companyUUIDInt)
 	staff := fixture.SeedStaff(t, db,
 		fixture.WithStaffCompanyUUID(companyUUIDInt),
 		fixture.WithStaffIsSuper(1),
@@ -947,16 +1073,29 @@ func getRuleUuidByWarehouse(t *testing.T, client *fixture.HTTPClient, warehouseE
 }
 
 // seedWarehouse inserts a warehouse into the tenant DB.
-func seedWarehouse(t *testing.T, db *sql.DB, erpCode, nameJSON, whType string) {
+func seedWarehouse(t *testing.T, db *sql.DB, erpCode, nameJSON, whType string, headquarterUUID ...int64) {
 	t.Helper()
+
+	var hqUUID int64
+	if len(headquarterUUID) > 0 {
+		hqUUID = headquarterUUID[0]
+	}
 
 	now := time.Now().Unix()
 	_, err := db.Exec(`
-		INSERT INTO ttpos_warehouse (uuid, name, type, erp_code, status, create_time, update_time, delete_time)
-		VALUES (?, ?, ?, ?, 1, ?, ?, 0)
-	`, generateTestID(), nameJSON, whType, erpCode, now, now)
+		INSERT INTO ttpos_warehouse (uuid, name, type, erp_code, status, headquarter_uuid, create_time, update_time, delete_time)
+		VALUES (?, ?, ?, ?, 1, ?, ?, ?, 0)
+	`, generateTestID(), nameJSON, whType, erpCode, hqUUID, now, now)
 	if err != nil {
 		t.Fatalf("failed to seed warehouse: %v", err)
+	}
+}
+
+func seedAutoReceiptWarehouses(t *testing.T, db *sql.DB, headquarterUUID int64) {
+	t.Helper()
+
+	for _, erpCode := range autoReceiptWarehouseCodes {
+		seedWarehouse(t, db, erpCode, fmt.Sprintf(`{"zh":"%s","en":"%s"}`, erpCode, erpCode), "normal", headquarterUUID)
 	}
 }
 

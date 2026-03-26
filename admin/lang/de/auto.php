@@ -520,7 +520,7 @@ return [
     "繁體中文" => "Traditionelles Chinesisch",
     "日本語" => "Japanisch",
     "按小数计价只能显示到收银机和厨显" => "Dezimalpreisangaben werden nur an der Kasse und auf dem Küchendisplay angezeigt",
-    "未配置外送渠道，无法选择在外送显示" => "Lieferkanal nicht konfiguriert, Anzeige bei Lieferung nicht möglich",
+    "未配置扫码点餐渠道，无法选择在扫码点餐显示" => "Scan-Bestellkanal nicht konfiguriert, Anzeige für Scan-Bestellung nicht möglich",
     "商品名称格式错误" => "Fehler im Produktnamenformat",
     "商品名称对应语言不存在" => "Entsprechende Sprache für den Produktnamen existiert nicht",
     "图片名称已存在" => "Bildname existiert bereits",
@@ -2283,4 +2283,5 @@ return [
     "超管" => "Super-Admin",
     "商户UUID不能为空" => "Händler-UUID darf nicht leer sein",
     "缓存失效任务执行失败: " => "Cache-Invaliderungsauftrag fehlgeschlagen:",
+    "确认超管密码与超管密码不一致" => "Die Bestätigung des Super-Admin-Passworts stimmt nicht mit dem Super-Admin-Passwort überein",
 ];

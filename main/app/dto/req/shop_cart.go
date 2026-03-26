@@ -132,7 +132,9 @@ type ProductParams struct {
 	Price                           *float64         `json:"price"`                               // 商品价格，商品单价。当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格。可选，不传时，不进行价格校验
 	IsBuffet                        *bool            `json:"is_buffet"`                           // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
 	SauceProductBomUuidList         []uint64         `json:"sauce_product_bom_uuid_list"`         // 加料信息
+	SauceUuidList                   []uint64         `json:"sauce_uuid"`                          // 加料信息,SauceProductBomUuidList的别名,只有会员端堂食订单创建使用
 	ProductPackageAttributeUuidList []uint64         `json:"product_package_attribute_uuid_list"` // 属性信息
+	AttributeUuidList               []uint64         `json:"attribute_uuid"`                      // 属性信息,ProductPackageAttributeUuidList的别名,只有会员端堂食订单创建使用
 	AddPrice                        float64          `json:"add_price"`                           // 加价金额
 	Operation                       string           `json:"operation"`                           // 操作类型。add: 加购，sub: 减购
 	MustPlanUuid                    uint64           `json:"must_plan_uuid"`                      // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
@@ -154,8 +156,17 @@ type ProductParams struct {
 
 // ApplyCompatibleFields 将兼容字段赋值到标准字段
 // 会员端堂食订单创建时,客户端传 flavor_uuid(FlavorflavUuid),需要赋值到 FlavorProductBomUuid
+// 会员端堂食订单创建时,客户端传 sauce_uuid(SauceUuidList),需要赋值到 SauceProductBomUuidList
 func (req *ProductParams) ApplyCompatibleFields() {
-	req.FlavorProductBomUuid = req.FlavorflavUuid
+	if req.FlavorflavUuid != 0 {
+		req.FlavorProductBomUuid = req.FlavorflavUuid
+	}
+	if len(req.SauceUuidList) > 0 {
+		req.SauceProductBomUuidList = req.SauceUuidList
+	}
+	if len(req.AttributeUuidList) > 0 {
+		req.ProductPackageAttributeUuidList = req.AttributeUuidList
+	}
 }
 
 func (req *ProductParams) SetIsPackageProduct(subProducts []ProductParams) {

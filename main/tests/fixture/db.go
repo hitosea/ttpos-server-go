@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -19,6 +20,15 @@ var (
 	templateErr       error
 	cachedTableList   []string
 	cachedTableListMu sync.Mutex
+)
+
+const (
+	defaultTestDBMaxOpenConns       = 4
+	defaultTestDBMaxIdleConns       = 2
+	defaultTestDBConnMaxLifetimeSec = 30
+	defaultAdminDBMaxOpenConns      = 1
+	defaultAdminDBMaxIdleConns      = 1
+	defaultAdminDBConnLifetimeSec   = 15
 )
 
 // templateLockName is the MySQL advisory lock name used for cross-process synchronization.
@@ -37,6 +47,7 @@ func ensureTemplateDB(tb testing.TB) {
 			templateErr = fmt.Errorf("open root connection for template: %w", err)
 			return
 		}
+		configureAdminDBPool(rootDB)
 		defer rootDB.Close()
 
 		// Acquire MySQL advisory lock — blocks until the lock holder (first process) finishes.
@@ -85,6 +96,7 @@ func ensureTemplateDB(tb testing.TB) {
 			templateErr = fmt.Errorf("open multiStatements connection for template: %w", err)
 			return
 		}
+		configureAdminDBPool(schemaDB)
 		sqlContent := strings.ReplaceAll(string(sqlBytes), "CREATE TABLE `", "CREATE TABLE IF NOT EXISTS `")
 		if _, err = schemaDB.Exec(sqlContent); err != nil {
 			schemaDB.Close()
@@ -168,6 +180,7 @@ func cloneFromTemplate(tb testing.TB, rootDB *sql.DB, targetDB string) {
 	if err != nil {
 		tb.Fatalf("failed to open multiStatements connection for clone: %v", err)
 	}
+	configureAdminDBPool(multiDB)
 	defer multiDB.Close()
 
 	if _, err = multiDB.Exec(batch.String()); err != nil {
@@ -234,6 +247,7 @@ func NewDB(tb testing.TB, config DBConfig) *sql.DB {
 	if err != nil {
 		tb.Fatalf("failed to open database connection: %v", err)
 	}
+	configureTestDBPool(db)
 
 	if err := db.Ping(); err != nil {
 		tb.Fatalf("failed to ping database: %v", err)
@@ -260,6 +274,7 @@ func NewTestTenant(tb testing.TB, tenantUUID string) *sql.DB {
 	if err != nil {
 		tb.Fatalf("failed to open root database connection: %v", err)
 	}
+	configureAdminDBPool(rootDB)
 	defer rootDB.Close()
 
 	// Create the tenant database
@@ -291,12 +306,19 @@ func NewTestTenant(tb testing.TB, tenantUUID string) *sql.DB {
 
 	// Cleanup: drop the database when test is done
 	tb.Cleanup(func() {
+		_ = db.Close()
+
+		if !shouldDropTenantDBImmediately() {
+			return
+		}
+
 		rootConfig := RootDBConfig()
 		dropDB, err := sql.Open("mysql", rootConfig.DSNWithoutDB())
 		if err != nil {
 			tb.Logf("warning: failed to open connection for cleanup: %v", err)
 			return
 		}
+		configureAdminDBPool(dropDB)
 		defer dropDB.Close()
 
 		_, err = dropDB.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", dbName))
@@ -325,6 +347,7 @@ func NewTestTenantFull(tb testing.TB, tenantUUID string) *sql.DB {
 	if err != nil {
 		tb.Fatalf("failed to open root database connection: %v", err)
 	}
+	configureAdminDBPool(rootDB)
 	defer rootDB.Close()
 
 	dbName := fmt.Sprintf("shop%s", tenantUUID)
@@ -345,12 +368,19 @@ func NewTestTenantFull(tb testing.TB, tenantUUID string) *sql.DB {
 	// Cleanup: drop the test database after the test completes.
 	// With MySQL data on tmpfs, DROP DATABASE (195 tables) takes ~0.3s instead of ~25s.
 	tb.Cleanup(func() {
+		_ = db.Close()
+
+		if !shouldDropTenantDBImmediately() {
+			return
+		}
+
 		dropConfig := RootDBConfig()
 		dropDB, err := sql.Open("mysql", dropConfig.DSNWithoutDB())
 		if err != nil {
 			tb.Logf("warning: failed to open connection for cleanup: %v", err)
 			return
 		}
+		configureAdminDBPool(dropDB)
 		defer dropDB.Close()
 		_, err = dropDB.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", dbName))
 		if err != nil {
@@ -556,4 +586,20 @@ func TruncateTable(tb testing.TB, db *sql.DB, tableName string) {
 	if err != nil {
 		tb.Fatalf("failed to truncate table %s: %v", tableName, err)
 	}
+}
+
+func shouldDropTenantDBImmediately() bool {
+	return getEnv("TEST_DROP_TENANT_DB", "1") != "0"
+}
+
+func configureTestDBPool(db *sql.DB) {
+	db.SetMaxOpenConns(getEnvInt("TEST_DB_MAX_OPEN_CONNS", defaultTestDBMaxOpenConns))
+	db.SetMaxIdleConns(getEnvInt("TEST_DB_MAX_IDLE_CONNS", defaultTestDBMaxIdleConns))
+	db.SetConnMaxLifetime(time.Duration(getEnvInt("TEST_DB_CONN_MAX_LIFETIME_SEC", defaultTestDBConnMaxLifetimeSec)) * time.Second)
+}
+
+func configureAdminDBPool(db *sql.DB) {
+	db.SetMaxOpenConns(getEnvInt("TEST_DB_ADMIN_MAX_OPEN_CONNS", defaultAdminDBMaxOpenConns))
+	db.SetMaxIdleConns(getEnvInt("TEST_DB_ADMIN_MAX_IDLE_CONNS", defaultAdminDBMaxIdleConns))
+	db.SetConnMaxLifetime(time.Duration(getEnvInt("TEST_DB_ADMIN_CONN_MAX_LIFETIME_SEC", defaultAdminDBConnLifetimeSec)) * time.Second)
 }

@@ -55,7 +55,7 @@ func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(obj model.SaleO
 	if obj.Data != "" {
 		if err := json.Unmarshal([]byte(obj.Data), &data); err != nil {
 			fmt.Println("CreateSaleOrderAbnormalLog", err)
-			logger.Logger.Info("CreateSaleOrderAbnormalLog", zap.String("error", err.Error()))
+			logger.Logger.Error("CreateSaleOrderAbnormalLog", zap.String("error", err.Error()))
 			return errors.WithMessage(err)
 		}
 	}
@@ -243,6 +243,7 @@ func (r *OrderAbnormalRecordRepoImpl) GetRecordInfo(cashierUuid uint64, dutyNo s
 		reverseSettleTimes,
 	).
 		Where("duty_no = ?", dutyNo).
+		Where(ExcludeTestBusinessSQL("")). // 排除测试营业时段的异常记录
 		First(&orderAbnormalRecord).Error
 	if err != nil {
 		return &business_data_resp.AbnormalData{}, errors.WithMessage(err)

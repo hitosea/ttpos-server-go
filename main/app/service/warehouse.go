@@ -215,23 +215,15 @@ func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWar
 			return errors.WithMessage(errors.New("翻译失败"), err.Error())
 		}
 		// 保存多语言
-		multiLanguageName := model.MultiLanguageName{
-			ZhName:   addReq.LocaleName.ZH,
-			ThName:   addReq.LocaleName.TH,
-			EnName:   addReq.LocaleName.EN,
-			ZhTwName: addReq.LocaleName.ZHTW,
-			JaName:   addReq.LocaleName.JA,
-			KoName:   addReq.LocaleName.KO,
-			MyName:   addReq.LocaleName.MY,
-			TrName:   addReq.LocaleName.TR,
-			SvName:   addReq.LocaleName.SV,
-		}
+		multiLanguageName := model.MultiLanguageName{}
+		multiLanguageName.InitByLocaleResponse(addReq.LocaleName)
 		multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
-		if _, err = multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName); err != nil {
+		multiLanguageNameUuid, err := multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
+		if err != nil {
 			return errors.WithMessage(err, "创建多语言名称失败")
 		}
 		warehouse.Name = addReq.LocaleName.ToJson()
-		warehouse.MultiLanguageNameUuid = multiLanguageName.Uuid
+		warehouse.MultiLanguageNameUuid = multiLanguageNameUuid
 		var erpCode string
 		// 调用erp接口
 		if ctx.GetCompany().IsOpenErp() {
@@ -305,7 +297,7 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 	}
 	exists = checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   warehouse.Uuid,
-		Source: constant.CheckNameSourceCategory,
+		Source: constant.CheckNameSourceWarehouse,
 		Names:  names,
 	})
 	if exists {
@@ -328,21 +320,21 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 		"transit": "Transit",
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
-		// 更新多语言名称
 		multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
-		err = multiLanguageNameRepo.UpdateMultiLanguageName(warehouse.MultiLanguageNameUuid, model.MultiLanguageName{
-			ZhName:   updateReq.LocaleName.ZH,
-			ThName:   updateReq.LocaleName.TH,
-			EnName:   updateReq.LocaleName.EN,
-			ZhTwName: updateReq.LocaleName.ZHTW,
-			JaName:   updateReq.LocaleName.JA,
-			KoName:   updateReq.LocaleName.KO,
-			MyName:   updateReq.LocaleName.MY,
-			TrName:   updateReq.LocaleName.TR,
-			SvName:   updateReq.LocaleName.SV,
-		})
-		if err != nil {
-			return errors.WithMessage(err, "更新多语言名称失败")
+		multiLanguageName := model.MultiLanguageName{}
+		multiLanguageName.InitByLocaleResponse(updateReq.LocaleName)
+		if warehouse.MultiLanguageNameUuid == 0 {
+			// 历史数据修复：创建时未关联多语言记录，补建并回写外键
+			multiLanguageNameUuid, err := multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
+			if err != nil {
+				return errors.WithMessage(err, "创建多语言名称失败")
+			}
+			updateData["multi_language_name_uuid"] = multiLanguageNameUuid
+		} else {
+			err = multiLanguageNameRepo.UpdateMultiLanguageName(warehouse.MultiLanguageNameUuid, multiLanguageName)
+			if err != nil {
+				return errors.WithMessage(err, "更新多语言名称失败")
+			}
 		}
 		// 更新仓库
 		warehouseRepo := repository.NewWarehouseRepo(tx)
@@ -870,8 +862,9 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 					SvName:   erpWarehouse.AliasName,
 				}
 				txMultiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
-				if _, err = txMultiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName); err != nil {
-					return errors.WithMessage(errors.New("创建多语言名称失败"), err.Error())
+				multiLanguageNameUuid, err := txMultiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
+				if err != nil {
+					return errors.WithMessage(err, "创建多语言名称失败")
 				}
 				// 处理code
 				if code == "" {
@@ -891,7 +884,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bo
 				localeName := multiLanguageName.GetNames()
 				insertingWarehouses = append(insertingWarehouses, model.Warehouse{
 					Name:                  localeName.ToJson(),
-					MultiLanguageNameUuid: multiLanguageName.Uuid,
+					MultiLanguageNameUuid: multiLanguageNameUuid,
 					Type:                  warehouseType,
 					Code:                  code,
 					Status:                status,
@@ -1291,7 +1284,6 @@ func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListRe
 // GetWarehouseMaterialList 获取仓库物品列表
 func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.WarehouseMaterialListReq) (resp.WarehouseMaterialListResp, error) {
 	db := ctx.GetDB()
-	companySetting := ctx.GetCompanySetting()
 	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
 	materialRepo := repository.NewMaterialRepo(db)
 
@@ -1313,11 +1305,6 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 	var materialOpts []repository.DBOption
 	materialOpts = append(materialOpts, repository.NewCommonRepo().WhereByStatus(uint(1)))
 	materialOpts = append(materialOpts, repository.NotDeleted)
-
-	// 子店查询时自动过滤不可见物品
-	if companySetting.IsSubShop() {
-		materialOpts = append(materialOpts, materialRepo.WhereAllowSubstoreVisible(1))
-	}
 
 	// 物品uuid必须在仓库物品列表中
 	materialOpts = append(materialOpts, materialRepo.WhereUuidInWarehouseItem(req.WarehouseUuid))
@@ -1418,3 +1405,4 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 		},
 	}, nil
 }
+

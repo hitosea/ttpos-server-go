@@ -94,7 +94,8 @@ func GetMemberOrderCancelQueue() *delayqueue.DelayQueue {
 
 // MemberOrderCancelParams 会员订单取消队列参数
 type MemberOrderCancelParams struct {
-	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员订单UUID
+	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员订单UUID（外送订单使用）
+	SaleBillUuid        uint64 `json:"sale_bill_uuid"`         // 销售账单UUID（堂食订单使用）
 	CompanyUuid         uint64 `json:"company_uuid"`           // 公司UUID
 	CancelScene         string `json:"cancel_scene"`           // 取消场景
 }
@@ -153,6 +154,19 @@ func ProcessMemberOrderCancel(paramsJson string) bool {
 		err := orderSrv.MemberOrderRiderPickupTimeoutAutoCancel(ctx, params.MemberSaleOrderUuid)
 		if err != nil {
 			logger.Logger.Error("处理会员订单自动取消失败", zap.Error(err))
+			return false
+		}
+		return true
+	}
+
+	// 堂食订单支付超时自动取消订单
+	if params.CancelScene == constant.MemberSaleOrderSceneDineInPaymentTimeout {
+		err := orderSrv.DineInOrderPayTimeoutAutoCancel(ctx, params.SaleBillUuid)
+		if err != nil {
+			logger.Logger.Error("处理堂食订单自动取消失败",
+				zap.Uint64("company_uuid", params.CompanyUuid),
+				zap.Uint64("sale_bill_uuid", params.SaleBillUuid),
+				zap.Error(err))
 			return false
 		}
 		return true

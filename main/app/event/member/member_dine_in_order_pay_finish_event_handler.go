@@ -126,7 +126,7 @@ func createH5OrderForMemberDineIn(payload event.PayFinishMemberDineInOrderPayloa
 		Status:          constant.H5OrderStatusOrder,      // 状态：待接单
 		OrderType:       constant.H5OrderTypeMemberDineIn, // 订单类型：会员端堂食订单
 		IsAutoAccept:    0,                                // 非自动接单
-		IsNeedAudit:     companySetting.IsOpenH5Order,      // 关闭扫码点餐接单则不需要审核，直接送厨
+		IsNeedAudit:     companySetting.IsOpenH5Order,     // 关闭扫码点餐接单则不需要审核，直接送厨
 		OrderTime:       now,                              // 下单时间
 		H5OrderProducts: h5OrderProductList,
 	}

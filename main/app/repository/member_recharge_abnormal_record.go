@@ -74,6 +74,7 @@ func (r *MemberRechargeAbnormalRecordRepoImpl) GetRecordInfo(cashierUuid uint64,
 	}
 	err := db.Select(refundTimes, reverseSettleTimes).
 		Where("duty_no = ?", dutyNo).
+		Where(ExcludeTestBusinessSQL("")). // 排除测试营业时段的异常记录
 		First(&orderAbnormalRecord).Error
 	if err != nil {
 		return &business_data_resp.AbnormalData{}, errors.WithMessage(err)

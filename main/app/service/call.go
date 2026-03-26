@@ -277,12 +277,43 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 	res.AbnormalPrint.List = abnormalPrintItems
 
 	// 未处理的h5订单
+	// 收集会员端堂食订单的SaleOrderUuid，批量查询支付方式
+	qrPromptPayOrders := make(map[uint64]bool) // saleOrderUuid -> 是否QR PromptPay
+	var memberDineInSaleOrderUuids []uint64
 	for _, order := range orders {
+		if order.OrderType == constant.H5OrderTypeMemberDineIn && order.SaleOrderUuid > 0 {
+			memberDineInSaleOrderUuids = append(memberDineInSaleOrderUuids, order.SaleOrderUuid)
+		}
+	}
+	if len(memberDineInSaleOrderUuids) > 0 {
+		paymentOrderRepo := repository.NewPaymentOrderRepo(ctx.GetDB())
+		paymentOrders, _ := paymentOrderRepo.GetPaymentOrderList(
+			paymentOrderRepo.WhereRelatedUuids(memberDineInSaleOrderUuids),
+			repository.CommonRepo.WhereByRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
+			repository.CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid),
+			repository.CommonRepo.WhereBySoftDelete(),
+			paymentOrderRepo.WithPaymentMethod(),
+		)
+		for _, po := range paymentOrders {
+			if po.PaymentMethod != nil &&
+				(po.PaymentMethod.Code == constant.PaymentMethodCodeQRPromptPay ||
+					po.PaymentMethod.Code == constant.PaymentMethodCodeLianLianQRPromptPay ||
+					po.PaymentMethod.Code == constant.PaymentMethodCodeKbankThaiQR) {
+				qrPromptPayOrders[po.RelatedUuid] = true
+			}
+		}
+	}
+	for _, order := range orders {
+		canReject := true
+		if order.OrderType == constant.H5OrderTypeMemberDineIn && qrPromptPayOrders[order.SaleOrderUuid] {
+			canReject = false
+		}
 		res.H5Order.List = append(res.H5Order.List, resp.UnprocessedH5OrderItem{
 			Uuid:         order.Uuid,
 			DeskNo:       order.DeskNo,
 			Status:       order.Status,
 			IsAutoAccept: order.IsAutoAccept == 1,
+			CanReject:    canReject,
 		})
 	}
 

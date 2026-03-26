@@ -3085,6 +3085,7 @@ func (s *businessSrv) CountChannelSales(ctx context.Context, req req.ChannelSale
 		Summary:         convertToBlock(channelData["summary"]),
 		Table:           convertToBlock(channelData["table"]),
 		DineIn:          convertToBlock(channelData["dine_in"]),
+		StoreScan:       convertToBlock(channelData["scan"]),
 		TakeoutShop:     convertToBlock(channelData["takeout_shop"]),
 		TakeoutDelivery: convertToBlock(channelData["takeout_delivery"]),
 		DineInStore:     convertToBlock(channelData["dine_in_store"]),
@@ -3203,6 +3204,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"summary":          "合计",
 			"table":            "桌台",
 			"dine_in":          "点餐-店内",
+			"scan":             "点餐-扫码",
 			"takeout_shop":     "点餐-外卖",
 			"takeout_delivery": "外送",
 			"dine_in_store":    "堂食",
@@ -3215,6 +3217,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"summary":          "Total",
 			"table":            "Table",
 			"dine_in":          "Dine-in Order",
+			"scan":             "Scan Order",
 			"takeout_shop":     "Takeaway Order",
 			"takeout_delivery": "Delivery",
 			"dine_in_store":    "Dine-in",
@@ -3227,6 +3230,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"summary":          "รวม",
 			"table":            "โต๊ะ",
 			"dine_in":          "สั่งอาหารในร้าน",
+			"scan":             "สแกนสั่งอาหาร",
 			"takeout_shop":     "สั่งอาหารกลับบ้าน",
 			"takeout_delivery": "จัดส่ง",
 			"dine_in_store":    "สั่งอาหารในร้าน",
@@ -3239,6 +3243,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"summary":          "合計",
 			"table":            "桌台",
 			"dine_in":          "點餐-店內",
+			"scan":             "點餐-掃碼",
 			"takeout_shop":     "點餐-外賣",
 			"takeout_delivery": "外送",
 			"dine_in_store":    "店內點餐",
@@ -3251,6 +3256,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"summary":          "合計",
 			"table":            "テーブル",
 			"dine_in":          "店内注文",
+			"scan":             "QR注文",
 			"takeout_shop":     "テイクアウト注文",
 			"takeout_delivery": "配達",
 			"dine_in_store":    "店内点餐",
@@ -3263,6 +3269,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"summary":          "합계",
 			"table":            "테이블",
 			"dine_in":          "매장 주문",
+			"scan":             "QR 주문",
 			"takeout_shop":     "테이크아웃 주문",
 			"takeout_delivery": "배달",
 			"dine_in_store":    "店内点餐",
@@ -3275,6 +3282,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"summary":          "စုစုပေါင်း",
 			"table":            "စားပွဲ",
 			"dine_in":          "ဆိုင်တွင်မှာယူ",
+			"scan":             "QR ကုဒ်ဖြင့်မှာယူ",
 			"takeout_shop":     "အိမ်သို့ယူ",
 			"takeout_delivery": "ပို့ဆောင်မှု",
 			"dine_in_store":    "ဆိုင်တွင်မှာယူ",
@@ -3287,6 +3295,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"summary":          "Toplam",
 			"table":            "Masa",
 			"dine_in":          "Restoranda Sipariş",
+			"scan":             "QR Sipariş",
 			"takeout_shop":     "Paket Sipariş",
 			"takeout_delivery": "Teslimat",
 			"dine_in_store":    "Restoranda Sipariş",
@@ -3299,6 +3308,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 			"summary":          "Totalt",
 			"table":            "Bord",
 			"dine_in":          "Beställning på restaurang",
+			"scan":             "QR-beställning",
 			"takeout_shop":     "Takeaway-beställning",
 			"takeout_delivery": "Leverans",
 			"dine_in_store":    "Restoranda Sipariş",
@@ -3532,6 +3542,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["summary"], params.Result.Summary, false)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["table"], params.Result.Table, true)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["dine_in"], params.Result.DineIn, false)
+	writeChannelData(sheet2Name, &rowIdx2, channelNames["scan"], params.Result.StoreScan, false)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["takeout_shop"], params.Result.TakeoutShop, false)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["takeout_delivery"], params.Result.TakeoutDelivery, false)
 	writeChannelData(sheet2Name, &rowIdx2, channelNames["grab"], params.Result.Grab, false)

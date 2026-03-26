@@ -974,6 +974,15 @@ func (s *productTakeoutSrv) UpdateProductTakeoutShopStatus(ctx context.Context, 
 		return errors.WithMessage(errors.New("外卖商品不存在"))
 	}
 
+	// 子店 + 总部商品 + 统一控制 → 拦截修改
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsSubShop() && takeout.HeadquarterUuid > 0 {
+		hqDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		if repository.IsHqUnifiedControl(hqDb, companySetting.HeadquarterUuid, constant.HqFieldTakeoutShelf) {
+			return nil // 统一控制下静默忽略，批量操作不报错
+		}
+	}
+
 	if err := takeoutRepo.UpdateProductPackageTakeout(
 		map[string]any{"status": *statusReq.Status},
 		takeoutRepo.WhereByUuid(takeout.Uuid),
@@ -983,7 +992,6 @@ func (s *productTakeoutSrv) UpdateProductTakeoutShopStatus(ctx context.Context, 
 	}
 
 	// HQ 修改外卖商品状态 → 自动推送到子店
-	companySetting := ctx.GetCompanySetting()
 	if companySetting.IsHeadquarter() {
 		hqPushSrv := NewHqPushSrv(s.dbm)
 		takeoutUuid := takeout.Uuid

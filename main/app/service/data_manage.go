@@ -318,7 +318,6 @@ func (s *DataManageSrv) GetOrderList(ctx context.Context, req shop_req.GetDataMa
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	orderRepo := repository.NewOrderRepo(db)
-	dataManageRepo := repository.NewDataManageRepo(db)
 	commonRepo := repository.NewCommonRepo()
 	tz := ctx.GetCompanySetting().Timezone
 
@@ -335,24 +334,27 @@ func (s *DataManageSrv) GetOrderList(ctx context.Context, req shop_req.GetDataMa
 		DiningMethod:     -1,
 		IsOnlyDataManage: 1, // 仅查询 data_manage 中的订单（子查询模式）
 	}
-	lists, total, _, err := orderRepo.GetCashierOrderListWithPagination(reqs, tz)
+	lists, total, orderListDBOption, err := orderRepo.GetCashierOrderListWithPagination(reqs, tz)
 	if err != nil {
 		return nil, errors.New("查询失败")
 	}
 
-	// 统计所有已选订单的数量和实付金额（通过子查询，避免加载全量 UUID）
+	// 统计当前筛选条件下已选订单的数量和实付金额（与订单列表筛选保持一致）
 	dataManageSubQuery := commonRepo.WhereInDataManageSubQuery(db, "uuid",
 		commonRepo.WhereByType(model.DataManageTypeOrder),
 		commonRepo.WhereBySoftDelete(),
 	)
-	orderCount, _ := dataManageRepo.Count(dataManageRepo.WhereByType(model.DataManageTypeOrder))
-	totalPaidAmount := decimal.NewFromFloat(orderRepo.SumSaleBillPaymentAmount(
-		dataManageSubQuery,
+	statsOpts := []repository.DBOption{
+		commonRepo.WhereBySoftDelete(),
 		commonRepo.WhereByCooking(),
-	)).Sub(decimal.NewFromFloat(orderRepo.SumSaleBillRefundAmount(
+		commonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
 		dataManageSubQuery,
-		commonRepo.WhereByCooking(),
-	))).Round(2).InexactFloat64()
+	}
+	if orderListDBOption != nil {
+		statsOpts = append(statsOpts, orderListDBOption)
+	}
+	orderCount, paidAmount := orderRepo.CountAndSumSaleBill(statsOpts...)
+	totalPaidAmount := decimal.NewFromFloat(paidAmount).Sub(decimal.NewFromFloat(orderRepo.SumSaleBillRefundAmount(statsOpts...))).Round(2).InexactFloat64()
 
 	// 构建响应
 	list := make([]setting_resp.DataManageOrderItem, 0, len(lists))
@@ -464,7 +466,6 @@ func (s *DataManageSrv) SubmitOrder(ctx context.Context, req shop_req.SubmitData
 			allUuids := orderRepo.GetSaleBillUuids(
 				commonRepo.WhereBySoftDelete(),
 				commonRepo.WhereByCooking(),
-				commonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
 				func(db *gorm.DB) *gorm.DB { return db.Where("status = ?", 1) },
 				filterOpt,
 			)
@@ -582,11 +583,8 @@ func (s *DataManageSrv) SubmitOrder(ctx context.Context, req shop_req.SubmitData
 }
 
 // GetOrderSelectStats 获取可选订单统计预览（不持久化）
-// 基于当前筛选范围内已管理的订单 + 当前操作的增量：
-//   - SelectAll=true：筛选范围全部 - DeselectedUuids
-//   - SelectAll=false + SelectedUuids：已管理(筛选范围内) ∪ SelectedUuids
-//   - SelectAll=false + DeselectedUuids：已管理(筛选范围内) - DeselectedUuids
-//   - 兜底：已管理(筛选范围内)
+// 只统计最后一个筛选条件范围内的订单，前面的 filters 仅贡献选择状态。
+// 如果前面 filters 选中的订单也落在最后一个 filter 范围内，则合并计入。
 func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.GetDataManageOrderSelectStatsReq) (*setting_resp.DataManageOrderSelectStatsResp, error) {
 	if err := s.checkPermission(ctx); err != nil {
 		return nil, err
@@ -595,93 +593,156 @@ func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.Ge
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	orderRepo := repository.NewOrderRepo(db)
+	dataManageRepo := repository.NewDataManageRepo(db)
 	tz := ctx.GetCompanySetting().Timezone
+	filters := s.normalizeOrderSelectStatsFilter(req)
 
-	// 1. 构建当前筛选条件
-	filterOpt := s.buildOrderFilterOption(req.OrderNo, req.DateType, req.QueryStartDate, req.QueryEndDate, req.BillType, tz)
-	baseOpts := []repository.DBOption{
+	// 1) 所有 filters 贡献的增删集合
+	toAddSet, toDeleteSet := s.buildOrderSelectOperationSets(filters, orderRepo, commonRepo, tz)
+
+	// 2) 仅最后一个 filter 定义展示范围和基线
+	lastFilter := []shop_req.DataManageOrderSubmitFilter{filters[len(filters)-1]}
+	existingSet := s.buildOrderSelectExistingSet(lastFilter, db, orderRepo, dataManageRepo, commonRepo, tz)
+
+	// 3) 最终选中集合 = existing + toAddSet - toDeleteSet
+	finalSet := make(map[uint64]struct{}, len(existingSet)+len(toAddSet))
+	for uid := range existingSet {
+		finalSet[uid] = struct{}{}
+	}
+	for uid := range toAddSet {
+		finalSet[uid] = struct{}{}
+	}
+	for uid := range toDeleteSet {
+		delete(finalSet, uid)
+	}
+
+	// 4) 限定到最后一个 filter 的范围：只保留命中该筛选条件的订单
+	lf := filters[len(filters)-1]
+	scopeOpt := s.buildOrderFilterOption(lf.OrderNo, lf.DateType, lf.QueryStartDate, lf.QueryEndDate, lf.BillType, tz)
+	scopeUuids := orderRepo.GetSaleBillUuids(
 		commonRepo.WhereBySoftDelete(),
 		commonRepo.WhereByCooking(),
-		commonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
 		func(db *gorm.DB) *gorm.DB { return db.Where("status = ?", 1) },
-		filterOpt,
+		scopeOpt,
+	)
+	scopeSet := make(map[uint64]struct{}, len(scopeUuids))
+	for _, uid := range scopeUuids {
+		scopeSet[uid] = struct{}{}
+	}
+	for uid := range finalSet {
+		if _, inScope := scopeSet[uid]; !inScope {
+			delete(finalSet, uid)
+		}
 	}
 
-	// 2. 查询当前筛选范围内的所有订单 UUID
-	filterUuids := orderRepo.GetSaleBillUuids(baseOpts...)
-	filterUuidSet := make(map[uint64]struct{}, len(filterUuids))
-	for _, uid := range filterUuids {
-		filterUuidSet[uid] = struct{}{}
-	}
-	totalCount := int64(len(filterUuidSet))
+	// 5) 统计
+	return s.calcOrderSelectStats(finalSet, orderRepo, commonRepo), nil
+}
 
-	// 3. 查询当前筛选范围内已在数据管理中的订单（基线，分批查询避免 IN 子句过大）
-	dataManageRepo := repository.NewDataManageRepo(db)
+// normalizeOrderSelectStatsFilter 规范化统计筛选条件：
+// 有 Filters 时直接使用，无则默认近7天
+func (s *DataManageSrv) normalizeOrderSelectStatsFilter(req shop_req.GetDataManageOrderSelectStatsReq) []shop_req.DataManageOrderSubmitFilter {
+	if len(req.Filters) > 0 {
+		return req.Filters
+	}
+	return []shop_req.DataManageOrderSubmitFilter{
+		{
+			DateType: constant.OrderDateTypeLastWeek,
+			BillType: constant.OrderDateTypeAll,
+		},
+	}
+}
+
+// buildOrderSelectOperationSets 计算本次请求的新增/移除集合
+func (s *DataManageSrv) buildOrderSelectOperationSets(filters []shop_req.DataManageOrderSubmitFilter, orderRepo repository.IOrderRepo, commonRepo repository.ICommonRepo, tz string) (map[uint64]struct{}, map[uint64]struct{}) {
+	toAddSet := make(map[uint64]struct{})
+	toDeleteSet := make(map[uint64]struct{})
+
+	for _, f := range filters {
+		if f.SelectAll {
+			filterOpt := s.buildOrderFilterOption(f.OrderNo, f.DateType, f.QueryStartDate, f.QueryEndDate, f.BillType, tz)
+			allUuids := orderRepo.GetSaleBillUuids(
+				commonRepo.WhereBySoftDelete(),
+				commonRepo.WhereByCooking(),
+				func(db *gorm.DB) *gorm.DB { return db.Where("status = ?", 1) },
+				filterOpt,
+			)
+			deselectedSet := make(map[uint64]struct{}, len(f.DeselectedUuids))
+			for _, uid := range f.DeselectedUuids {
+				deselectedSet[uid] = struct{}{}
+			}
+			for _, uid := range allUuids {
+				if _, excluded := deselectedSet[uid]; !excluded {
+					toAddSet[uid] = struct{}{}
+				}
+			}
+			continue
+		}
+
+		for _, uid := range f.DeselectedUuids {
+			toDeleteSet[uid] = struct{}{}
+		}
+		for _, uid := range f.SelectedUuids {
+			toAddSet[uid] = struct{}{}
+		}
+	}
+
+	// 冲突处理：同一 UUID 同时新增和移除时，以移除优先
+	for uid := range toDeleteSet {
+		delete(toAddSet, uid)
+	}
+
+	return toAddSet, toDeleteSet
+}
+
+// buildOrderSelectExistingSet 构建基线已选集合
+func (s *DataManageSrv) buildOrderSelectExistingSet(filters []shop_req.DataManageOrderSubmitFilter, db *gorm.DB, orderRepo repository.IOrderRepo, dataManageRepo repository.IDataManageRepo, commonRepo repository.ICommonRepo, tz string) map[uint64]struct{} {
 	existingSet := make(map[uint64]struct{})
-	const queryBatchSize = 1000
-	for i := 0; i < len(filterUuids); i += queryBatchSize {
-		end := min(i+queryBatchSize, len(filterUuids))
-		managed := dataManageRepo.GetDataUuids(
+
+	// 无筛选时，回退为全部已持久化订单（兼容旧行为）
+	if len(filters) == 0 {
+		existingUuids := dataManageRepo.GetDataUuids(
 			dataManageRepo.WhereByType(model.DataManageTypeOrder),
-			dataManageRepo.WhereInDataUuids(filterUuids[i:end]),
+			commonRepo.WhereBySoftDelete(),
 		)
-		for _, uid := range managed {
+		for _, uid := range existingUuids {
+			existingSet[uid] = struct{}{}
+		}
+		return existingSet
+	}
+
+	// 有筛选时：按每个 filter 查询“已持久化且命中筛选”的并集
+	dataManageSubQuery := commonRepo.WhereInDataManageSubQuery(db, "uuid",
+		commonRepo.WhereByType(model.DataManageTypeOrder),
+		commonRepo.WhereBySoftDelete(),
+	)
+	for _, f := range filters {
+		filterOpt := s.buildOrderFilterOption(f.OrderNo, f.DateType, f.QueryStartDate, f.QueryEndDate, f.BillType, tz)
+		filteredExistingUuids := orderRepo.GetSaleBillUuids(
+			commonRepo.WhereBySoftDelete(),
+			commonRepo.WhereByCooking(),
+			func(db *gorm.DB) *gorm.DB { return db.Where("status = ?", 1) },
+			dataManageSubQuery,
+			filterOpt,
+		)
+		for _, uid := range filteredExistingUuids {
 			existingSet[uid] = struct{}{}
 		}
 	}
 
-	// 4. 根据操作类型计算最终选中集合
-	finalSet := make(map[uint64]struct{})
+	return existingSet
+}
 
-	if req.SelectAll {
-		// 案例1/2：全选筛选范围 - DeselectedUuids
-		deselectedSet := make(map[uint64]struct{}, len(req.DeselectedUuids))
-		for _, uid := range req.DeselectedUuids {
-			deselectedSet[uid] = struct{}{}
-		}
-		for _, uid := range filterUuids {
-			if _, excluded := deselectedSet[uid]; !excluded {
-				finalSet[uid] = struct{}{}
-			}
-		}
-	} else {
-		// 以筛选范围内已管理的订单为基线
-		for uid := range existingSet {
-			finalSet[uid] = struct{}{}
-		}
-		if len(req.DeselectedUuids) > 0 {
-			// 案例3：从已管理中移除
-			for _, uid := range req.DeselectedUuids {
-				delete(finalSet, uid)
-			}
-		}
-		if len(req.SelectedUuids) > 0 {
-			// 案例4：手动新增
-			for _, uid := range req.SelectedUuids {
-				finalSet[uid] = struct{}{}
-			}
-		}
-	}
-
-	// 5. 判断是否全选
-	isSelectAll := totalCount > 0
-	if isSelectAll {
-		for uid := range filterUuidSet {
-			if _, ok := finalSet[uid]; !ok {
-				isSelectAll = false
-				break
-			}
-		}
-	}
-
-	// 6. 统计选中集合的数量和金额
+// calcOrderSelectStats 按最终集合统计数量与实付金额
+func (s *DataManageSrv) calcOrderSelectStats(finalSet map[uint64]struct{}, orderRepo repository.IOrderRepo, commonRepo repository.ICommonRepo) *setting_resp.DataManageOrderSelectStatsResp {
 	if len(finalSet) == 0 {
 		return &setting_resp.DataManageOrderSelectStatsResp{
 			SelectedCount: 0,
 			PaidAmount:    0,
-			TotalCount:    totalCount,
-			IsSelectAll:   isSelectAll,
-		}, nil
+			TotalCount:    0,
+			IsSelectAll:   false,
+			SelectedUuids: make([]uint64, 0),
+		}
 	}
 
 	finalUuids := make([]uint64, 0, len(finalSet))
@@ -694,8 +755,8 @@ func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.Ge
 	const statsBatchSize = 1000
 	for i := 0; i < len(finalUuids); i += statsBatchSize {
 		end := min(i+statsBatchSize, len(finalUuids))
-		count, paidAmount := orderRepo.CountAndSumSaleBill(commonRepo.WhereInUuids(finalUuids[i:end]))
-		refundAmount := orderRepo.SumSaleBillRefundAmount(commonRepo.WhereInUuids(finalUuids[i:end]))
+		count, paidAmount := orderRepo.CountAndSumSaleBill(commonRepo.WhereInUuids(finalUuids[i:end]), commonRepo.WhereBySoftDelete(), commonRepo.WhereByCooking())
+		refundAmount := orderRepo.SumSaleBillRefundAmount(commonRepo.WhereInUuids(finalUuids[i:end]), commonRepo.WhereByCooking())
 		selectedCount += count
 		totalPaidAmountDec = totalPaidAmountDec.Add(decimal.NewFromFloat(paidAmount).Sub(decimal.NewFromFloat(refundAmount)))
 	}
@@ -704,42 +765,46 @@ func (s *DataManageSrv) GetOrderSelectStats(ctx context.Context, req shop_req.Ge
 	return &setting_resp.DataManageOrderSelectStatsResp{
 		SelectedCount: selectedCount,
 		PaidAmount:    totalPaidAmount,
-		TotalCount:    totalCount,
-		IsSelectAll:   isSelectAll,
-	}, nil
+		TotalCount:    selectedCount,
+		IsSelectAll:   false,
+		SelectedUuids: finalUuids,
+	}
 }
 
 // buildOrderItem 构建订单列表项
 func (s *DataManageSrv) buildOrderItem(order model.SaleBill, isSelected bool) setting_resp.DataManageOrderItem {
-	// 获取支付方式名称列表
-	paymentMethods := make([]string, 0)
-	if len(order.SaleOrders) > 0 {
-		seen := make(map[string]struct{})
-		for _, so := range order.SaleOrders {
-			for _, po := range so.PaymentOrders {
-				name := po.PaymentMethodName
-				if po.PaymentMethod != nil && po.PaymentMethod.Name != "" {
-					name = po.PaymentMethod.Name
-				}
-				if name != "" {
-					if _, ok := seen[name]; !ok {
-						seen[name] = struct{}{}
-						paymentMethods = append(paymentMethods, name)
-					}
-				}
-			}
-		}
-	}
-
 	return setting_resp.DataManageOrderItem{
 		SaleBillUuid:  order.Uuid,
 		OrderNo:       order.OrderNo,
 		CreateTime:    order.CreateTime,
 		Amount:        order.Amount,
 		PaymentAmount: order.GetPaymentAmount(),
-		PaymentMethod: strings.Join(paymentMethods, ", "),
+		PaymentMethod: s.buildPaymentMethodNames(order),
 		IsSelected:    isSelected,
 	}
+}
+
+// buildPaymentMethodNames 提取去重的支付方式名称
+func (s *DataManageSrv) buildPaymentMethodNames(order model.SaleBill) string {
+	seen := make(map[string]struct{})
+	names := make([]string, 0)
+	for _, so := range order.SaleOrders {
+		for _, po := range so.PaymentOrders {
+			name := po.PaymentMethodName
+			if po.PaymentMethod != nil && po.PaymentMethod.Name != "" {
+				name = po.PaymentMethod.Name
+			}
+			if name == "" {
+				continue
+			}
+			if _, ok := seen[name]; ok {
+				continue
+			}
+			seen[name] = struct{}{}
+			names = append(names, name)
+		}
+	}
+	return strings.Join(names, ", ")
 }
 
 // buildOrderFilterOption 构建订单筛选条件
@@ -749,13 +814,15 @@ func (s *DataManageSrv) buildOrderFilterOption(orderNo string, dateType int, que
 		if orderNo != "" {
 			db = db.Where("order_no LIKE ?", "%"+orderNo+"%")
 		}
-		// 账单类型
+		// 账单类型：指定类型精确匹配，否则限制为堂食+点餐（排除外送）
 		if billType != -1 {
 			db = db.Where("bill_type = ?", billType)
+		} else {
+			db = db.Where("bill_type IN (?)", []uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant})
 		}
 		// 日期类型
 		var startTime, endTime int64
-		if dateType >= 0 && dateType <= 3 {
+		if dateType >= constant.OrderDateTypeToday && dateType <= constant.OrderDateTypeLastMonth {
 			switch dateType {
 			case constant.OrderDateTypeToday:
 				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeToday)
@@ -765,6 +832,13 @@ func (s *DataManageSrv) buildOrderFilterOption(orderNo string, dateType int, que
 				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisWeek)
 			case constant.OrderDateTypeMonth:
 				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisMonth)
+			case constant.OrderDateTypeYear:
+				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisYear)
+			case constant.OrderDateTypeLastWeek:
+				// 数据管理场景“近7天”按含今天口径：today-6d 00:00:00 ~ today 23:59:59
+				startTime, endTime = utils.SetTimezone(tz).Last7DaysStartEndUnix()
+			case constant.OrderDateTypeLastMonth:
+				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeLastMonth)
 			}
 		}
 		// 自定义日期范围

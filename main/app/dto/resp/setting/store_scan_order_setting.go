@@ -4,18 +4,20 @@ import "ttpos-server-go/pkg/utils"
 
 // StoreScanOrderSetting 门店点餐配置（数据库存储结构）
 type StoreScanOrderSetting struct {
-	IsEnabled        int `json:"is_enabled"`         // 启用状态：0-关闭，1-开启
-	EnableDelivery   int `json:"enable_delivery"`    // 外送服务：0-关闭，1-开启
-	EnableSelfPickup int `json:"enable_self_pickup"` // 到店自取：0-关闭，1-开启
+	IsEnabled            int `json:"is_enabled"`               // 启用状态：0-关闭，1-开启
+	EnableDelivery       int `json:"enable_delivery"`          // 外送服务：0-关闭，1-开启
+	EnableSelfPickup     int `json:"enable_self_pickup"`       // 到店自取：0-关闭，1-开启
+	IsOrderFirstPayLater int `json:"is_order_first_pay_later"` // 先下单后付：0-先付后下单(默认)，1-先下单后付
 }
 
 // StoreScanOrderSettingResp 门店点餐配置响应
 type StoreScanOrderSettingResp struct {
-	IsEnabled           int `json:"is_enabled"`             // 启用状态：0-关闭，1-开启
-	EnableDelivery      int `json:"enable_delivery"`        // 外送服务：0-关闭，1-开启
-	EnableSelfPickup    int `json:"enable_self_pickup"`     // 到店自取：0-关闭，1-开启
-	DeliveryAvailable   int `json:"delivery_available"`     // 外送服务是否可用（云平台是否开启）：0-不可用，1-可用
-	SelfPickupAvailable int `json:"self_pickup_available"`  // 到店自取是否可用（云平台是否开启）：0-不可用，1-可用
+	IsEnabled            int `json:"is_enabled"`               // 启用状态：0-关闭，1-开启
+	EnableDelivery       int `json:"enable_delivery"`          // 外送服务：0-关闭，1-开启
+	EnableSelfPickup     int `json:"enable_self_pickup"`       // 到店自取：0-关闭，1-开启
+	IsOrderFirstPayLater int `json:"is_order_first_pay_later"` // 先下单后付：0-先付后下单(默认)，1-先下单后付
+	DeliveryAvailable    int `json:"delivery_available"`       // 外送服务是否可用（云平台是否开启）：0-不可用，1-可用
+	SelfPickupAvailable  int `json:"self_pickup_available"`    // 到店自取是否可用（云平台是否开启）：0-不可用，1-可用
 }
 
 // IsStoreResting 判断商家是否休息中

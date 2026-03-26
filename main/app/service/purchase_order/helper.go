@@ -88,6 +88,14 @@ func (h *purchaseOrderHelper) generateReceiptNo(
 	return receiptNo, nil
 }
 
+// translatePurchaseOrderLogRemark 仅翻译特定的采购订单日志备注
+func translatePurchaseOrderLogRemark(lang, remark string) string {
+	if remark == "品牌采购自动审批" {
+		return i18n.Translate(lang, remark)
+	}
+	return remark
+}
+
 // createPurchaseOrderLog 创建采购订单操作日志
 func (h *purchaseOrderHelper) createPurchaseOrderLog(
 	db *gorm.DB,
@@ -242,7 +250,7 @@ func (h *purchaseOrderHelper) batchUpdateHeadquarterItems(
 		)
 		if err != nil {
 			// 如果找不到对应的明细，记录警告但不中断流程
-			logger.Logger.Info("更新总部采购申请明细失败", zap.String("物料编码", itemUpdate.MaterialCode), zap.Error(err))
+			logger.Logger.Error("更新总部采购申请明细失败", zap.String("物料编码", itemUpdate.MaterialCode), zap.Error(err))
 			continue
 		}
 
@@ -375,22 +383,6 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
 		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
 		materialRepo := repository.NewMaterialRepo(tx)
-		warehouseRepo := repository.NewWarehouseRepo(tx)
-
-		// 按物品默认仓库或采购单指定仓库确定出库仓库
-		// 新流程：每个物品使用 ERP item_defaults 中的默认仓库；旧流程：使用采购单上指定的仓库
-		usePerItemWarehouse := purchaseOrder.WarehouseErpCode == ""
-
-		// 旧流程：获取采购单指定的单一仓库
-		var singleWarehouse *model.Warehouse
-		if !usePerItemWarehouse {
-			var err error
-			singleWarehouse, err = warehouseRepo.GetByErpCode(purchaseOrder.WarehouseErpCode)
-			if err != nil {
-				logger.Logger.Error("reduceHeadquarterStockAndLog-GetByErpCode", zap.Any("warehouseErpCode", purchaseOrder.WarehouseErpCode), zap.Any("err", err))
-				return errors.WithMessage(errors.New("获取总部出库仓库信息失败"), err.Error())
-			}
-		}
 
 		// 获取在途仓库
 		transitWarehouse, _ := repository.NewWarehouseRepo(subDb).GetTransitWarehouse()
@@ -425,23 +417,18 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			}
 			item.Material = &material
 
-			// 确定出库仓库
+			// 确定出库仓库：使用 ERP item_defaults 中物品的默认仓库
 			var targetWarehouseUuid uint64
-			if usePerItemWarehouse {
-				// 新流程：使用 ERP item_defaults 中物品的默认仓库
-				if whUuid, ok := itemDefaultWarehouseMap[item.MaterialCode]; ok && whUuid != 0 {
-					targetWarehouseUuid = whUuid
-				} else {
-					// 物品在 ERP 未配置默认仓库，跳过库存扣减（ERP侧会走保底方案）
-					logger.Logger.Warn("reduceHeadquarterStockAndLog-物品未配置默认仓库，跳过库存扣减",
-						zap.Uint64("material_uuid", item.MaterialUuid),
-						zap.String("material_code", item.MaterialCode),
-						zap.Uint64("company_uuid", purchaseOrder.CompanyUuid),
-					)
-					continue
-				}
+			if whUuid, ok := itemDefaultWarehouseMap[item.MaterialCode]; ok && whUuid != 0 {
+				targetWarehouseUuid = whUuid
 			} else {
-				targetWarehouseUuid = singleWarehouse.Uuid
+				// 物品在 ERP 未配置默认仓库，跳过库存扣减（ERP侧会走保底方案）
+				logger.Logger.Warn("reduceHeadquarterStockAndLog-物品未配置默认仓库，跳过库存扣减",
+					zap.Uint64("material_uuid", item.MaterialUuid),
+					zap.String("material_code", item.MaterialCode),
+					zap.Uint64("company_uuid", purchaseOrder.CompanyUuid),
+				)
+				continue
 			}
 
 			// 查找仓库商品库存记录
@@ -1098,9 +1085,9 @@ func (h *purchaseOrderHelper) getLastPurchaseQtyByMaterialCode(
 		return result
 	}
 
-	// 查询上次完成品牌采购的基准单位数量
+	// 查询上次完成品牌采购的数量
 	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(db)
-	baseQtyMap, err := purchaseOrderItemRepo.GetLastCompletedBrandPurchaseBaseQty(materialUuids)
+	quantityMap, err := purchaseOrderItemRepo.GetLastCompletedBrandPurchaseQuantity(materialUuids)
 	if err != nil {
 		logger.Logger.Warn("查询上次品牌采购数量失败", zap.Error(err))
 		return result
@@ -1125,15 +1112,15 @@ func (h *purchaseOrderHelper) getLastPurchaseQtyByMaterialCode(
 	}
 
 	// 转换为默认销售单位并按MaterialCode建立映射
-	for materialUuid, baseQty := range baseQtyMap {
+	for materialUuid, quantity := range quantityMap {
 		code, ok := uuidToCode[materialUuid]
-		if !ok || baseQty == 0 {
+		if !ok || quantity == 0 {
 			continue
 		}
 		if rate, hasRate := conversionRateMap[materialUuid]; hasRate {
-			result[code] = decimal.NewFromFloat(baseQty).Div(decimal.NewFromFloat(rate)).Round(4).InexactFloat64()
+			result[code] = decimal.NewFromFloat(quantity).Div(decimal.NewFromFloat(rate)).Round(4).InexactFloat64()
 		} else {
-			result[code] = decimal.NewFromFloat(baseQty).Round(4).InexactFloat64()
+			result[code] = decimal.NewFromFloat(quantity).Round(4).InexactFloat64()
 		}
 	}
 	return result

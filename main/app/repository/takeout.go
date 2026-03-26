@@ -7,8 +7,8 @@ import (
 )
 
 type ITakeoutRepo interface {
-	GetEnabledTakeouts() ([]takeoutModel.Takeout, error)              // 获取已启用的外卖平台
-	BatchMarkErpStockDeducted(orderUuids []uint64) error              // 批量标记外卖订单ERP库存已扣减
+	GetEnabledTakeouts() ([]takeoutModel.Takeout, error) // 获取已启用的外卖平台
+	BatchMarkErpStockDeducted(orderUuids []uint64) error // 批量标记外卖订单ERP库存已扣减
 }
 
 func NewTakeoutRepo(db *gorm.DB) ITakeoutRepo {

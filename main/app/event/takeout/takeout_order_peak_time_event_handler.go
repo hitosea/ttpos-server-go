@@ -77,6 +77,7 @@ func (s *takeoutOrderPeakTimeEventSubscriber) Handle(domainEvent event.DomainEve
 				order.CompletedTime,
 				order.PlatformTotal,
 				peakTimeEvent.CompanyUuid,
+				order.CreateTime,
 			); err != nil {
 				logger.Logger.Error("记录外卖订单高峰期失败",
 					zap.Uint64("orderUuid", orderUuid),

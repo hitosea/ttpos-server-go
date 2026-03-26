@@ -2110,7 +2110,7 @@ return [
     "Redis连接失败" => "Redis bağlantısı başarısız",
     "外送商品价格错误" => "Dışarıya ürün fiyatı hatası",
     "按小数计价只能显示到收银机和厨显" => "Ondalık fiyatlandırma yalnızca kasa ve mutfak ekranında gösterilebilir",
-    "未配置外送渠道，无法选择在外送显示" => "Dışarıya servis kanalı yapılandırılmadı, dışarıya servis gösterimi seçilemiyor",
+    "未配置扫码点餐渠道，无法选择在扫码点餐显示" => "QR Sipariş Kanalı Yapılandırılmadı, QR Sipariş Gösterimi Seçilemez",
     "只能选择在外送显示的商品" => "Yalnızca dışarıya servis için gösterilecek ürünler seçilebilir",
     "必点方案不能包含按小数计价商品" => "Zorunlu seçim paketine ondalık fiyatlandırılan ürünler eklenemez",
     "外送设置" => "Dışarıya servis ayarları",
@@ -2275,4 +2275,5 @@ return [
     "超管" => "Süper Yönetici",
     "商户UUID不能为空" => "Tüccar UUID boş olamaz",
     "缓存失效任务执行失败: " => "Önbellek geçersizleme görevi başarısız oldu:",
+    "确认超管密码与超管密码不一致" => "Yönetici şifresinin onayı yönetici şifresiyle eşleşmiyor",
 ];

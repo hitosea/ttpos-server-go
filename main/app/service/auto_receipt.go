@@ -65,6 +65,19 @@ func (s *autoReceiptSrv) getHeadquarterUuid(ctx context.Context) uint64 {
 	return ctx.GetCompanyUuid()
 }
 
+// validateWarehouseEnabled 校验发货仓库是否存在且启用
+func (s *autoReceiptSrv) validateWarehouseEnabled(ctx context.Context, warehouseErpCode string) error {
+	warehouseRepo := repository.NewWarehouseRepo(ctx.GetDB())
+	_, err := warehouseRepo.GetByErpCode(warehouseErpCode, warehouseRepo.WhereStatus(1))
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.NewWithCode(constant.CodeWarehouseDisabled, i18n.Translate(ctx.GetLanguage(), "发货仓库已禁用或已删除，请重新选择"))
+		}
+		return errors.WithMessage(err, "查询发货仓库失败")
+	}
+	return nil
+}
+
 // CreateRule 创建自动收货规则
 func (s *autoReceiptSrv) CreateRule(ctx context.Context, r req.CreateAutoReceiptRuleReq) error {
 	if err := s.checkHeadquarter(ctx); err != nil {
@@ -77,6 +90,10 @@ func (s *autoReceiptSrv) CreateRule(ctx context.Context, r req.CreateAutoReceipt
 		return errors.New("规则名称长度不能超过100个字符")
 	}
 
+	if err := s.validateWarehouseEnabled(ctx, r.WarehouseErpCode); err != nil {
+		return err
+	}
+
 	// 事务内校验 + 创建（避免 TOCTOU 竞态）
 	err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		shopRepo := repository.NewAutoReceiptRuleShopRepo(tx)
@@ -86,7 +103,7 @@ func (s *autoReceiptSrv) CreateRule(ctx context.Context, r req.CreateAutoReceipt
 		if err != nil {
 			return err
 		}
-		if err := s.checkShopsNotConfigured(ctx, configuredMap, r.ShopUuids); err != nil {
+		if err := s.checkShopsNotConfigured(ctx, tx, configuredMap, r.ShopUuids); err != nil {
 			return err
 		}
 
@@ -130,6 +147,10 @@ func (s *autoReceiptSrv) UpdateRule(ctx context.Context, r req.UpdateAutoReceipt
 		return errors.New("规则名称长度不能超过100个字符")
 	}
 
+	if err := s.validateWarehouseEnabled(ctx, r.WarehouseErpCode); err != nil {
+		return err
+	}
+
 	err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		ruleRepo := repository.NewAutoReceiptRuleRepo(tx)
 		if err := s.verifyRuleExists(ruleRepo, r.Uuid, headquarterUuid); err != nil {
@@ -141,14 +162,14 @@ func (s *autoReceiptSrv) UpdateRule(ctx context.Context, r req.UpdateAutoReceipt
 			"name":               r.LocaleName.ToJson(),
 			"warehouse_erp_code": r.WarehouseErpCode,
 			"delay_days":         r.DelayDays,
-			"status":             r.Status,
+			"status":             *r.Status,
 		}
 		if err := ruleRepo.Update(r.Uuid, headquarterUuid, vars); err != nil {
 			return errors.WithMessage(err, "更新规则失败")
 		}
 
 		shopRepo := repository.NewAutoReceiptRuleShopRepo(tx)
-		return s.syncRuleShops(ctx, shopRepo, r.Uuid, headquarterUuid, r.WarehouseErpCode, r.ShopUuids)
+		return s.syncRuleShops(ctx, tx, shopRepo, r.Uuid, headquarterUuid, r.WarehouseErpCode, r.ShopUuids)
 	})
 
 	if err != nil {
@@ -412,7 +433,7 @@ func (s *autoReceiptSrv) GetWarehouseList(ctx context.Context) (resp.AutoReceipt
 	}
 
 	warehouseRepo := repository.NewWarehouseRepo(ctx.GetDB())
-	warehouses, err := warehouseRepo.Get(warehouseRepo.WhereErpCodeNotEmpty(), warehouseRepo.WhereStatus(1))
+	warehouses, err := warehouseRepo.Get(warehouseRepo.WhereErpCodeNotEmpty(), warehouseRepo.WhereStatus(1), warehouseRepo.WhereType("normal"))
 	if err != nil {
 		return resp.AutoReceiptWarehouseListResp{}, errors.WithMessage(err, "查询仓库列表失败")
 	}
@@ -464,7 +485,7 @@ func buildRuleGroupList(rules []model.AutoReceiptRule, ruleShopMap map[uint64][]
 			WarehouseErpCode:    rule.WarehouseErpCode,
 			WarehouseLocaleName: warehouseNameMap[rule.WarehouseErpCode],
 			DelayDays:           rule.DelayDays,
-			Status:              rule.Status,
+			Status:              derefIntOr(rule.Status, 1),
 			ShopCount:           len(shops),
 			Shops:               shops,
 		})
@@ -505,7 +526,7 @@ func (s *autoReceiptSrv) verifyRuleExists(ruleRepo repository.IAutoReceiptRuleRe
 }
 
 // syncRuleShops 全量同步规则门店（diff 增删）
-func (s *autoReceiptSrv) syncRuleShops(ctx context.Context, shopRepo repository.IAutoReceiptRuleShopRepo, ruleUuid uint64, headquarterUuid uint64, warehouseErpCode string, newShopUuids []uint64) error {
+func (s *autoReceiptSrv) syncRuleShops(ctx context.Context, db *gorm.DB, shopRepo repository.IAutoReceiptRuleShopRepo, ruleUuid uint64, headquarterUuid uint64, warehouseErpCode string, newShopUuids []uint64) error {
 	currentShops, err := shopRepo.GetByRuleUuids([]uint64{ruleUuid})
 	if err != nil {
 		return errors.WithMessage(err, "查询当前门店失败")
@@ -519,7 +540,7 @@ func (s *autoReceiptSrv) syncRuleShops(ctx context.Context, shopRepo repository.
 		if err != nil {
 			return err
 		}
-		if err := s.checkShopsNotConfigured(ctx, configuredMap, toAdd); err != nil {
+		if err := s.checkShopsNotConfigured(ctx, db, configuredMap, toAdd); err != nil {
 			return err
 		}
 	}
@@ -579,7 +600,7 @@ func (s *autoReceiptSrv) getCompanyNameMap(db *gorm.DB, companyUuids []uint64) m
 	companyRepo := repository.NewCompanyRepo(db)
 	companies, err := companyRepo.GetByUuids(companyUuids)
 	if err != nil {
-		logger.Logger.Error("批量获取公司名称失败", zap.Error(err))
+		logger.Logger.Error("批量获取公司名称失败", zap.Uint64s("company_uuids", companyUuids), zap.Error(err))
 		return nameMap
 	}
 	for _, c := range companies {
@@ -617,10 +638,15 @@ func (s *autoReceiptSrv) getConfiguredShopMap(shopRepo repository.IAutoReceiptRu
 }
 
 // checkShopsNotConfigured 校验门店是否已在同仓库其他规则中配置
-func (s *autoReceiptSrv) checkShopsNotConfigured(ctx context.Context, configuredMap map[uint64]bool, shopUuids []uint64) error {
+func (s *autoReceiptSrv) checkShopsNotConfigured(ctx context.Context, db *gorm.DB, configuredMap map[uint64]bool, shopUuids []uint64) error {
 	for _, shopUuid := range shopUuids {
 		if configuredMap[shopUuid] {
-			msg := fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "门店 %d 已在该仓库的其他规则中配置"), shopUuid)
+			nameMap := s.getCompanyNameMap(db, []uint64{shopUuid})
+			name := fmt.Sprintf("%d", shopUuid)
+			if n, ok := nameMap[shopUuid]; ok {
+				name = n
+			}
+			msg := fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "门店 %s 已在该仓库的其他规则中配置"), name)
 			return errors.New(msg)
 		}
 	}
@@ -645,4 +671,12 @@ func (s *autoReceiptSrv) getShopStoreCodeMap(ctx context.Context, companyUuids [
 		codeMap[uuid] = storeSetting.StoreCode
 	}
 	return codeMap
+}
+
+// derefIntOr 安全解引用 *int 指针，nil 时返回默认值
+func derefIntOr(p *int, def int) int {
+	if p != nil {
+		return *p
+	}
+	return def
 }

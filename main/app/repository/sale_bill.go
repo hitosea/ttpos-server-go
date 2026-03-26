@@ -25,6 +25,8 @@ type ISaleBillRepo interface {
 	UpdateSaleBillBatchTagUuid(saleBillUuid uint64, batchTagUuid uint64) error // 更新销售账单的分批类型UUID
 	UpdateOrderSource(saleBillUuid uint64, orderSourceUuid uint64) error
 	UpdateNationality(saleBillUuid uint64, nationalityUuid uint64) error
+	// BatchAssignShiftToMemberDineInOrders 批量为无班次的会员端堂食订单分配班次，返回被更新的 saleBillUuid 列表
+	BatchAssignShiftToMemberDineInOrders(dutyNo string, cashierUuid uint64, cashierName string) ([]uint64, error)
 }
 
 // ISaleBillQueryRepo 销售账单的查询接口。
@@ -35,11 +37,12 @@ type ISaleBillQueryRepo interface {
 	WhereKeyword(keyword string, language string) DBOption
 	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
-	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error)                       // 获取销售订单的拆单序号。用于操作日志展示
-	GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
-	GetInstantSaleBillLatest() (*model.SaleBill, error)                                            // 获取最新的一条点餐销售账单
-	GetMemberSaleBillLatest() (*model.SaleBill, error)                                             // 获取最新的一条会员端销售账单
-	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
+	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error)                                         // 获取销售订单的拆单序号。用于操作日志展示
+	GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64, opts ...DBOption) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
+	WhereBySerialNo(keyword string) DBOption                                                                         // 根据流水号模糊搜索
+	GetInstantSaleBillLatest() (*model.SaleBill, error)                                                              // 获取最新的一条点餐销售账单
+	GetMemberSaleBillLatest() (*model.SaleBill, error)                                                               // 获取最新的一条会员端销售账单
+	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                                       // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
 	GetDeskSaleBillUnPay() ([]*model.SaleBill, error)                               // 获取所有未付款的桌台账单
 	GetCompleteTotal() (int64, error)                                               // 获取总数量
@@ -196,32 +199,34 @@ func (r *saleBillRepo) UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) err
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("auto_add_must_product", 0).Error
 }
 
-func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) {
+func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64, opts ...DBOption) ([]*model.SaleBill, int64, error) {
 	var saleBills []*model.SaleBill
-	saleBills, total, err := r.GetSaleBillListPage(pageNo, pageSize,
+	queryOpts := []DBOption{
 		CommonRepo.WhereByIsHide(true),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByStatus(constant.SaleBillStatusPending),
-		CommonRepo.WhereByDeviceUuid(deviceUuid),
-		CommonRepo.Preload(
-			WithPreload{
-				Query: "SaleOrders",
-				Args: []interface{}{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
+		// CommonRepo.WhereByDeviceUuid(deviceUuid), 产品定义会员端堂食订单先下单后付款时需要在挂单列表中显示
+	}
+	queryOpts = append(queryOpts, opts...)
+	queryOpts = append(queryOpts, CommonRepo.Preload(
+		WithPreload{
+			Query: "SaleOrders",
+			Args: []any{
+				CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts",
-				Args: []interface{}{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-					CommonRepo.DBOption(CommonRepo.WhereByProductIsAccept()),
-				},
+		},
+		WithPreload{
+			Query: "SaleOrders.SaleOrderProducts",
+			Args: []any{
+				CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				CommonRepo.DBOption(CommonRepo.WhereByProductIsAccept()),
 			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
-			},
-		),
-	)
+		},
+		WithPreload{
+			Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
+		},
+	))
+	saleBills, total, err := r.GetSaleBillListPage(pageNo, pageSize, queryOpts...)
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
@@ -447,6 +452,7 @@ func (r *saleBillRepo) UpdateNationality(saleBillUuid uint64, nationalityUuid ui
 }
 
 // WhereKeyword 根据订单号或商品名称搜索销售账单
+// 支持搜索：1) 正常订单的商品名称 2) 拒单订单的商品快照名称
 func (r *saleBillRepo) WhereKeyword(keyword string, language string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if keyword == "" {
@@ -462,15 +468,68 @@ func (r *saleBillRepo) WhereKeyword(keyword string, language string) DBOption {
 		// 获取表前缀
 		prefix := config.Database.TablePrefix
 
-		// 子查询：通过商品名称查找对应的 sale_bill uuid
+		// 子查询1：通过商品名称查找对应的 sale_bill uuid（正常订单）
 		// sale_order_product -> sale_order.sale_bill_uuid
-		subQuery := r.db.Table(prefix+"sale_order so").
+		subQuery1 := r.db.Table(prefix+"sale_order so").
 			Select("DISTINCT so.sale_bill_uuid").
 			Joins("INNER JOIN "+prefix+"sale_order_product sop ON sop.sale_order_uuid = so.uuid AND sop.delete_time = 0").
 			Joins("LEFT JOIN "+prefix+"multi_language_name mln ON sop.multi_language_name_uuid = mln.uuid").
 			Where("so.delete_time = ?", 0).
 			Where("mln."+columnName+" LIKE ?", "%"+keyword+"%")
 
-		return db.Where("(uuid IN (?) OR order_no LIKE ?)", subQuery, "%"+keyword+"%")
+		// 子查询2：通过 H5 订单商品快照名称查找（拒单订单）
+		// h5_order_product.name 存储的是拒单时的商品名称快照
+		subQuery2 := r.db.Table(prefix+"h5_order_product hop").
+			Select("DISTINCT hop.sale_bill_uuid").
+			Where("hop.delete_time = ?", 0).
+			Where("hop.name LIKE ?", "%"+keyword+"%")
+
+		return db.Where("(uuid IN (?) OR uuid IN (?) OR order_no LIKE ?)", subQuery1, subQuery2, "%"+keyword+"%")
 	}
+}
+
+// WhereBySerialNo 根据流水号模糊搜索
+func (r *saleBillRepo) WhereBySerialNo(keyword string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if keyword == "" {
+			return db
+		}
+		return db.Where("serial_no LIKE ?", Like(keyword))
+	}
+}
+
+// BatchAssignShiftToMemberDineInOrders 批量为无班次的会员端堂食订单分配班次
+// 查找条件：会员端(source=5) + 即时点餐(bill_type=1) + 已完成(status=1) + 无班次(duty_no='')
+// 这些订单是先付后下单模式下，自动接单时因无可用班次而留空的订单
+// 返回被更新的 saleBillUuid 列表，用于后续触发统计事件
+func (r *saleBillRepo) BatchAssignShiftToMemberDineInOrders(dutyNo string, cashierUuid uint64, cashierName string) ([]uint64, error) {
+	// 先查询待更新的订单 uuid 列表
+	var uuids []uint64
+	if err := r.db.Model(&model.SaleBill{}).
+		Where("source = ?", constant.SaleBillSourceMember).
+		Where("bill_type = ?", constant.SaleBillTypeInstant).
+		Where("status = ?", constant.SaleBillStatusComplete).
+		Where("duty_no = ?", "").
+		Where("delete_time = ?", 0).
+		Pluck("uuid", &uuids).Error; err != nil {
+		return nil, err
+	}
+
+	if len(uuids) == 0 {
+		return nil, nil
+	}
+
+	// 批量更新（保留 duty_no='' 条件，防止并发场景下覆盖已分配的班次）
+	if err := r.db.Model(&model.SaleBill{}).
+		Where("uuid IN ?", uuids).
+		Where("duty_no = ?", "").
+		Updates(map[string]any{
+			"duty_no":      dutyNo,
+			"cashier_uuid": cashierUuid,
+			"cashier_name": cashierName,
+		}).Error; err != nil {
+		return nil, err
+	}
+
+	return uuids, nil
 }
