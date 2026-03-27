@@ -8198,4 +8198,8 @@
   "點餐-掃碼": "Bestellung - Scannen",
   "龘": "龘",
   "龙": "Drache"
+  ,"仅总部可操作区域管理": "Nur die Zentrale kann Bereiche verwalten",
+  "区域名称超过100字符": "Bereichsname überschreitet 100 Zeichen",
+  "区域名称已存在": "Bereichsname existiert bereits",
+  "部分门店已属于其他区域": "Einige Filialen gehören bereits zu anderen Bereichen"
 }

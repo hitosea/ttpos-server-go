@@ -23,6 +23,7 @@ type ICompanySettingRepo interface {
 	GetAllByHeadquarterUuid(headquarterUuid uint64) ([]model.CompanySetting, error)         // 获取总部下所有公司的设置
 	UpdateSmsQuota(companyUuid uint64, quota int) error                                     // 扣减公司的短信余额
 	UpdateByCompanyUuid(companyUuid uint64, data map[string]any) error                      // 根据公司UUID更新设置
+	UpdateByCompanyUuids(companyUuids []uint64, data map[string]any) error                  // 根据公司UUID列表批量更新设置
 	UpdateBySiteCodeAndCompanyAbbr(siteCode, companyAbbr string, data map[string]any) error // 根据站点编码和公司缩写更新设置
 
 	GetErpnextCompanyAbbrUuidMap(opts ...DBOption) (map[string]uint64, error)
@@ -127,6 +128,14 @@ func (r *companySettingRepo) GetCompanySettingsByCompanyUuids(companyUuids []uin
 // UpdateByCompanyUuid 根据公司UUID更新设置
 func (r *companySettingRepo) UpdateByCompanyUuid(companyUuid uint64, data map[string]any) error {
 	return r.db.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Updates(data).Error
+}
+
+// UpdateByCompanyUuids 根据公司UUID列表批量更新设置
+func (r *companySettingRepo) UpdateByCompanyUuids(companyUuids []uint64, data map[string]any) error {
+	if len(companyUuids) == 0 {
+		return nil
+	}
+	return r.db.Model(&model.CompanySetting{}).Where("company_uuid IN (?)", companyUuids).Updates(data).Error
 }
 
 // UpdateBySiteCodeAndCompanyAbbr 根据站点编码和公司缩写更新设置

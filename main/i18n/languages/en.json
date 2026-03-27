@@ -8198,4 +8198,8 @@
   "點餐-掃碼": "Order - Scan",
   "龘": "龘",
   "龙": "Dragon"
+  ,"仅总部可操作区域管理": "Only headquarters can manage areas",
+  "区域名称超过100字符": "Area name exceeds 100 characters",
+  "区域名称已存在": "Area name already exists",
+  "部分门店已属于其他区域": "Some shops already belong to other areas"
 }

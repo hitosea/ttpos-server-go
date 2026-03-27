@@ -8198,4 +8198,8 @@
   "點餐-掃碼": "Beställning - Skanna",
   "龘": "龘",
   "龙": "Drake"
+  ,"仅总部可操作区域管理": "Endast huvudkontoret kan hantera områden",
+  "区域名称超过100字符": "Områdesnamnet överstiger 100 tecken",
+  "区域名称已存在": "Områdesnamnet finns redan",
+  "部分门店已属于其他区域": "Vissa butiker tillhör redan andra områden"
 }

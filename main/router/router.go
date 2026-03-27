@@ -93,6 +93,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterTakeoutHandlers(shopGroup, dbm, cache)                    // 外卖平台集成
 			shop.RegisterStockLossHandlers(shopGroup, dbm, cache)                  // 报损管理
 			shop.RegisterHqPushHandlers(shopGroup, dbm, cache)                     // 总部推送控制
+			shop.RegisterCompanyAreaHandlers(shopGroup, dbm, cache)                 // 门店区域管理
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")

@@ -4166,6 +4166,52 @@ definitions:
     - lang
     - text
     type: object
+  req.CompanyAreaCreateReq:
+    properties:
+      company_uuids:
+        description: 关联的门店UUID列表
+        items:
+          type: integer
+        type: array
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 区域多语言名称
+      sort:
+        description: 排序
+        type: integer
+    required:
+    - locale_name
+    type: object
+  req.CompanyAreaDeleteReq:
+    properties:
+      uuid:
+        description: 区域UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.CompanyAreaUpdateReq:
+    properties:
+      company_uuids:
+        description: 关联的门店UUID列表
+        items:
+          type: integer
+        type: array
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 区域多语言名称
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 区域UUID
+        type: integer
+    required:
+    - locale_name
+    - uuid
+    type: object
   req.CompanyRoleItem:
     properties:
       company_uuid:
@@ -7111,6 +7157,11 @@ definitions:
       add_price:
         description: 加价金额
         type: number
+      attribute_uuid:
+        description: 属性信息,ProductPackageAttributeUuidList的别名,只有会员端堂食订单创建使用
+        items:
+          type: integer
+        type: array
       batch_tag_uuid:
         description: 分批类型UUID, 可选（前置模式时使用）
         type: integer
@@ -7164,6 +7215,11 @@ definitions:
         type: array
       sauce_product_bom_uuid_list:
         description: 加料信息
+        items:
+          type: integer
+        type: array
+      sauce_uuid:
+        description: 加料信息,SauceProductBomUuidList的别名,只有会员端堂食订单创建使用
         items:
           type: integer
         type: array
@@ -11382,7 +11438,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesMeta'
         description: 元数据
-      scan:
+      store_scan:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesBlock'
         description: 点餐-扫码
@@ -11496,6 +11552,94 @@ definitions:
       uuid:
         description: 商家UUID
         type: integer
+    type: object
+  resp.CompanyAreaInfoResp:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 多语言名称
+      shop_list:
+        description: 关联门店列表
+        items:
+          $ref: '#/definitions/resp.CompanyAreaShop'
+        type: array
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 区域UUID
+        type: integer
+    type: object
+  resp.CompanyAreaItem:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 多语言名称
+      shop_count:
+        description: 关联门店数量
+        type: integer
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 区域UUID
+        type: integer
+    type: object
+  resp.CompanyAreaListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.CompanyAreaItem'
+        type: array
+      total_shop_count:
+        description: 总门店数
+        type: integer
+      unassigned_shop_count:
+        description: 未分配区域的门店数
+        type: integer
+    type: object
+  resp.CompanyAreaShop:
+    properties:
+      name:
+        description: 门店名称
+        type: string
+      status:
+        description: 状态
+        type: integer
+      uuid:
+        description: 门店UUID
+        type: integer
+    type: object
+  resp.CompanyAreaShopItem:
+    properties:
+      area_name:
+        description: 所属区域名称
+        type: string
+      area_uuid:
+        description: '所属区域UUID: 0-未分配'
+        type: integer
+      name:
+        description: 门店名称
+        type: string
+      uuid:
+        description: 门店UUID
+        type: integer
+    type: object
+  resp.CompanyAreaShopListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.CompanyAreaShopItem'
+        type: array
+    type: object
+  resp.CompanyAreaUnassignedResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.CompanyAreaShop'
+        type: array
     type: object
   resp.CompanyBusinessAverage:
     properties:
@@ -11645,6 +11789,12 @@ definitions:
     type: object
   resp.CompanyInfoResp:
     properties:
+      area_name:
+        description: 所属区域名称
+        type: string
+      area_uuid:
+        description: '所属区域UUID: 0-未分配'
+        type: integer
       name:
         description: 门店名称
         type: string
@@ -22142,7 +22292,7 @@ definitions:
         description: 翻译后的中文繁体
         type: string
     type: object
-host: 8080--main--blue-iguana-12--dingri101.coder.gezi.vip
+host: 8181--main--cyan-felidae-20--zzhheverywhere.coder.hitosea.com
 info:
   contact: {}
   description: 点餐系统服务端接口文档
@@ -35227,6 +35377,11 @@ paths:
       consumes:
       - application/json
       description: 获取会员端商家推荐商品列表
+      parameters:
+      - description: 订单类型：0-外送（默认），1-堂食（到店自取）
+        in: query
+        name: order_type
+        type: integer
       produces:
       - application/json
       responses:
@@ -36265,6 +36420,173 @@ paths:
       summary: 修改门店信息
       tags:
       - 商家端.门店管理
+  /shop/company_area/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建门店区域，支持多语言名称，可同时关联门店。区域名称不可重复，每个门店只能属于一个区域
+      parameters:
+      - description: 创建区域请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CompanyAreaCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建区域
+      tags:
+      - 商家端.门店区域
+  /shop/company_area/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除区域，该区域下所有门店自动变为未分配状态
+      parameters:
+      - description: 删除区域请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CompanyAreaDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除区域
+      tags:
+      - 商家端.门店区域
+  /shop/company_area/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取区域详情，包含区域关联的门店列表
+      parameters:
+      - description: 区域UUID
+        format: int64
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanyAreaInfoResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取区域详情
+      tags:
+      - 商家端.门店区域
+  /shop/company_area/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前总部下所有区域列表，包含每个区域关联的门店数量、总门店数和未分配门店数
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanyAreaListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取区域列表
+      tags:
+      - 商家端.门店区域
+  /shop/company_area/shop_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取总部下所有门店（含总部自身），返回门店UUID、名称和区域归属信息，用于区域管理选择门店
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanyAreaShopListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取区域管理用门店列表
+      tags:
+      - 商家端.门店区域
+  /shop/company_area/unassigned:
+    get:
+      consumes:
+      - application/json
+      description: 获取总部下所有未分配区域的门店列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanyAreaUnassignedResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取未分配门店列表
+      tags:
+      - 商家端.门店区域
+  /shop/company_area/update:
+    post:
+      consumes:
+      - application/json
+      description: 编辑区域名称、排序和关联门店。支持差量更新门店归属，移除的门店变为未分配
+      parameters:
+      - description: 编辑区域请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CompanyAreaUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 编辑区域
+      tags:
+      - 商家端.门店区域
   /shop/country/list:
     get:
       consumes:

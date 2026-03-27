@@ -8198,4 +8198,8 @@
   "點餐-掃碼": "Sipariş - QR okutma",
   "龘": "龘",
   "龙": "Ejderha"
+  ,"仅总部可操作区域管理": "Yalnızca merkez bölge yönetimi yapabilir",
+  "区域名称超过100字符": "Bölge adı 100 karakteri aşıyor",
+  "区域名称已存在": "Bölge adı zaten mevcut",
+  "部分门店已属于其他区域": "Bazı mağazalar zaten başka bölgelere ait"
 }
