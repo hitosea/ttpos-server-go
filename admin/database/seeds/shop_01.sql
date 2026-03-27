@@ -2624,11 +2624,25 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `erpnext_admin_email` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext 管理员邮箱',
     `parent_company_uuids` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '父级公司UUID路径，从根节点到父节点，逗号分隔',
     `has_children` INT(10) NOT NULL DEFAULT 0 COMMENT '是否含有子节点: 0-否 1-是',
+    `company_area_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '所属区域UUID: 0-未分配',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '集团设置表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_company_area` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
+    `name` VARCHAR(1000) NOT NULL DEFAULT '' COMMENT '区域名称（JSON多语言）',
+    `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称UUID',
+    `sort` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
+    `create_time` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    KEY `idx_multi_language_name_uuid` (`multi_language_name_uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '门店区域表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_business_status_period` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

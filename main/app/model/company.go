@@ -115,6 +115,7 @@ type CompanySetting struct {
 	IsOpenMemberInstant       int    `gorm:"column:is_open_member_instant;type:int(10);default:0;comment:是否开启会员端即时点餐功能（扫码点餐到店自取）: 0不开启, 1开启;NOT NULL" json:"is_open_member_instant"`
 	ErpInvoiceMode            int    `gorm:"column:erp_invoice_mode;type:int(11);default:1;comment:ERP发票模式: 0=POS Invoice 1=Sales Invoice;NOT NULL" json:"erp_invoice_mode"`
 	BrandPurchaseAutoApprove  int    `gorm:"column:brand_purchase_auto_approve;type:int(11);default:0;comment:品牌采购自动审批: 0-关闭 1-开启;NOT NULL" json:"brand_purchase_auto_approve"`
+	CompanyAreaUuid          uint64 `gorm:"column:company_area_uuid;type:bigint(20) unsigned;default:0;comment:所属区域UUID: 0-未分配;NOT NULL" json:"company_area_uuid"`
 }
 
 // IsErpSalesInvoiceMode 是否使用 Sales Invoice 模式（替代 POS Invoice）

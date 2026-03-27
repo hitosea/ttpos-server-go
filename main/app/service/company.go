@@ -91,6 +91,40 @@ func (s *companySrv) GetCompanyList(ctx context.Context) (resp.SaasCompanyListRe
 		}
 	}
 
+	// 查询门店的区域归属
+	companySettingRepo := repository.NewCompanySettingRepo(saasDB)
+	companySettings, err := companySettingRepo.GetCompanySettingsByCompanyUuids(companyUuids)
+	if err != nil {
+		return saasCompanyListResp, errors.WithMessage(err)
+	}
+	areaUuidMap := make(map[uint64]uint64, len(companySettings))
+	for _, cs := range companySettings {
+		areaUuidMap[cs.CompanyUuid] = cs.CompanyAreaUuid
+	}
+
+	// 查询区域名称（从总部商户库）
+	areaNameMap := make(map[uint64]string)
+	companySetting := ctx.GetCompanySetting()
+	headquarterUuid := companySetting.HeadquarterUuid
+	if companySetting.IsHeadquarter() {
+		headquarterUuid = currentCompanyUuid
+	}
+	if headquarterUuid > 0 {
+		hqDB := s.dbm.GetDB(headquarterUuid)
+		areaRepo := repository.NewCompanyAreaRepo(hqDB)
+		areas, err := areaRepo.GetList(
+			repository.CommonRepo.Preload(repository.WithPreload{Query: "MultiLanguageName"}),
+		)
+		if err == nil {
+			lang := companySetting.GetDefaultLanguage()
+			for _, area := range areas {
+				if area.MultiLanguageName != nil {
+					areaNameMap[area.Uuid] = area.MultiLanguageName.GetNameByLangWithFallback(lang)
+				}
+			}
+		}
+	}
+
 	// 构建响应
 	companyList := make([]resp.CompanyInfoResp, 0, len(companies))
 	for _, company := range companies {
@@ -107,11 +141,14 @@ func (s *companySrv) GetCompanyList(ctx context.Context) (resp.SaasCompanyListRe
 			})
 		}
 
+		areaUuid := areaUuidMap[company.Uuid]
 		companyInfo := resp.CompanyInfoResp{
-			Uuid:   company.Uuid,
-			Name:   company.Name,
-			Roles:  roleItems,
-			Status: company.Status,
+			Uuid:     company.Uuid,
+			Name:     company.Name,
+			Roles:    roleItems,
+			Status:   company.Status,
+			AreaUuid: areaUuid,
+			AreaName: areaNameMap[areaUuid],
 		}
 
 		// 获取该门店的超管信息

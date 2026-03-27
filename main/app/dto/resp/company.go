@@ -10,7 +10,9 @@ type CompanyInfoResp struct {
 	SuperPhone    string `json:"super_phone"`     // 超管手机号
 	Status        int    `json:"status"`          // 状态 1-启用 0-禁用
 
-	Roles []RoleItem `json:"roles"` // 角色列表
+	Roles    []RoleItem `json:"roles"`     // 角色列表
+	AreaUuid uint64     `json:"area_uuid"` // 所属区域UUID: 0-未分配
+	AreaName string     `json:"area_name"` // 所属区域名称
 }
 
 type SaasCompanyListResp struct {

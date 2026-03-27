@@ -22238,6 +22238,14 @@ const docTemplate = `{
                     "会员端.产品列表"
                 ],
                 "summary": "获取会员端商家推荐商品列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "订单类型：0-外送（默认），1-堂食（到店自取）",
+                        "name": "order_type",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "成功",
@@ -23935,6 +23943,293 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.UpdateCompanySettingReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/company_area/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建门店区域，支持多语言名称，可同时关联门店。区域名称不可重复，每个门店只能属于一个区域",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店区域"
+                ],
+                "summary": "创建区域",
+                "parameters": [
+                    {
+                        "description": "创建区域请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CompanyAreaCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/company_area/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除区域，该区域下所有门店自动变为未分配状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店区域"
+                ],
+                "summary": "删除区域",
+                "parameters": [
+                    {
+                        "description": "删除区域请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CompanyAreaDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/company_area/info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取区域详情，包含区域关联的门店列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店区域"
+                ],
+                "summary": "获取区域详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "区域UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyAreaInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/company_area/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取当前总部下所有区域列表，包含每个区域关联的门店数量、总门店数和未分配门店数",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店区域"
+                ],
+                "summary": "获取区域列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyAreaListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/company_area/shop_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取总部下所有门店（含总部自身），返回门店UUID、名称和区域归属信息，用于区域管理选择门店",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店区域"
+                ],
+                "summary": "获取区域管理用门店列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyAreaShopListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/company_area/unassigned": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取总部下所有未分配区域的门店列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店区域"
+                ],
+                "summary": "获取未分配门店列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyAreaUnassignedResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/company_area/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑区域名称、排序和关联门店。支持差量更新门店归属，移除的门店变为未分配",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店区域"
+                ],
+                "summary": "编辑区域",
+                "parameters": [
+                    {
+                        "description": "编辑区域请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CompanyAreaUpdateReq"
                         }
                     }
                 ],
@@ -47800,6 +48095,77 @@ const docTemplate = `{
                 }
             }
         },
+        "req.CompanyAreaCreateReq": {
+            "type": "object",
+            "required": [
+                "locale_name"
+            ],
+            "properties": {
+                "company_uuids": {
+                    "description": "关联的门店UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "locale_name": {
+                    "description": "区域多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.CompanyAreaDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.CompanyAreaUpdateReq": {
+            "type": "object",
+            "required": [
+                "locale_name",
+                "uuid"
+            ],
+            "properties": {
+                "company_uuids": {
+                    "description": "关联的门店UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "locale_name": {
+                    "description": "区域多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.CompanyRoleItem": {
             "type": "object",
             "required": [
@@ -52016,6 +52382,13 @@ const docTemplate = `{
                     "description": "加价金额",
                     "type": "number"
                 },
+                "attribute_uuid": {
+                    "description": "属性信息,ProductPackageAttributeUuidList的别名,只有会员端堂食订单创建使用",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "batch_tag_uuid": {
                     "description": "分批类型UUID, 可选（前置模式时使用）",
                     "type": "integer"
@@ -52087,6 +52460,13 @@ const docTemplate = `{
                 },
                 "sauce_product_bom_uuid_list": {
                     "description": "加料信息",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "sauce_uuid": {
+                    "description": "加料信息,SauceProductBomUuidList的别名,只有会员端堂食订单创建使用",
                     "type": "array",
                     "items": {
                         "type": "integer"
@@ -58144,7 +58524,7 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "scan": {
+                "store_scan": {
                     "description": "点餐-扫码",
                     "allOf": [
                         {
@@ -58320,6 +58700,138 @@ const docTemplate = `{
                 "uuid": {
                     "description": "商家UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.CompanyAreaInfoResp": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "shop_list": {
+                    "description": "关联门店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyAreaShop"
+                    }
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.CompanyAreaItem": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "shop_count": {
+                    "description": "关联门店数量",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.CompanyAreaListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyAreaItem"
+                    }
+                },
+                "total_shop_count": {
+                    "description": "总门店数",
+                    "type": "integer"
+                },
+                "unassigned_shop_count": {
+                    "description": "未分配区域的门店数",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.CompanyAreaShop": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.CompanyAreaShopItem": {
+            "type": "object",
+            "properties": {
+                "area_name": {
+                    "description": "所属区域名称",
+                    "type": "string"
+                },
+                "area_uuid": {
+                    "description": "所属区域UUID: 0-未分配",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.CompanyAreaShopListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyAreaShopItem"
+                    }
+                }
+            }
+        },
+        "resp.CompanyAreaUnassignedResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyAreaShop"
+                    }
                 }
             }
         },
@@ -58532,6 +59044,14 @@ const docTemplate = `{
         "resp.CompanyInfoResp": {
             "type": "object",
             "properties": {
+                "area_name": {
+                    "description": "所属区域名称",
+                    "type": "string"
+                },
+                "area_uuid": {
+                    "description": "所属区域UUID: 0-未分配",
+                    "type": "integer"
+                },
                 "name": {
                     "description": "门店名称",
                     "type": "string"
@@ -73965,7 +74485,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "8080--main--blue-iguana-12--dingri101.coder.gezi.vip",
+	Host:             "8181--main--cyan-felidae-20--zzhheverywhere.coder.hitosea.com",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "ttpos-server-go API",
