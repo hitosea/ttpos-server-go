@@ -268,7 +268,7 @@ if [ $# -gt 0 ]; then
         # 轮询等待 MySQL 就绪（最长 120s），替代不可靠的 sleep
         db_container=$(docker_name db)
         for i in $(seq 1 60); do
-            if docker exec "$db_container" mysqladmin ping -h 127.0.0.1 -uroot -p"$(env_get DB_ROOT_PASSWORD)" --silent >/dev/null 2>&1; then
+            if docker exec "$db_container" mysql --protocol=tcp -h 127.0.0.1 -P 3306 -uroot -p"$(env_get DB_ROOT_PASSWORD)" -e "SELECT 1" >/dev/null 2>&1; then
                 echo -e "${OK} ${GreenBG} 数据库已就绪 (耗时 $((i*2))s) ${Font}"
                 break
             fi
@@ -294,7 +294,7 @@ if [ $# -gt 0 ]; then
         # 等待 restart 后 db 再次就绪
         db_container=$(docker_name db)
         for i in $(seq 1 60); do
-            docker exec "$db_container" mysqladmin ping -h 127.0.0.1 -uroot -p"$(env_get DB_ROOT_PASSWORD)" --silent >/dev/null 2>&1 && break
+            docker exec "$db_container" mysql --protocol=tcp -h 127.0.0.1 -P 3306 -uroot -p"$(env_get DB_ROOT_PASSWORD)" -e "SELECT 1" >/dev/null 2>&1 && break
             sleep 2
         done
         #
