@@ -291,6 +291,12 @@ if [ $# -gt 0 ]; then
         run_exec php "chmod +x ./bin/license_arm.so"
         # 
         $COMPOSE restart
+        # 等待 restart 后 db 再次就绪
+        db_container=$(docker_name db)
+        for i in $(seq 1 60); do
+            docker exec "$db_container" mysqladmin ping -h 127.0.0.1 -uroot -p"$(env_get DB_ROOT_PASSWORD)" --silent >/dev/null 2>&1 && break
+            sleep 2
+        done
         #
         echo -e "${OK} ${GreenBG} 安装完成 ${Font}"
         echo -e "地址: ${GreenBG}http://127.0.0.1:$(env_get NGINX_PORT)${Font}"
