@@ -101,11 +101,16 @@ run: cli.install
 
 .PHONY: db_up.docker
 db_up.docker:
-	@# 使用 sed 从 config.yaml 中提取 link 配置的值
-	@DB_DSN=$$(sed -n 's/migrate-db-link-open:[[:space:]]*\(.*\)/\1/p' $(ROOT_DIR)/hack/config.yaml | sed 's/"//g') && \
-	echo $$DB_DSN ;\
-	if [ -z "$$DB_DSN" ]; then \
-		echo "未在 config.yaml 中找到有效的 link 配置" >&2; \
-		exit 1; \
-	fi && \
-	docker run --rm --network ttpos-server-go_saas-network -v $(ROOT_DIR)/manifest/sql:/migrations migrate/migrate  -path /migrations -database "$$DB_DSN" up
+	@# 兼容两种部署：DB_DOCKER_NETWORK 非空则加入 docker 网络用内部端口 DB_PORT；否则用宿主端口 DB_PORT_OPEN
+	@ENV_FILE=$(ROOT_DIR)/../../.env ; [ -f "$$ENV_FILE" ] || ENV_FILE=$(ROOT_DIR)/../../../.env ; \
+	set -a ; . "$$ENV_FILE" ; set +a ; \
+	DB_DSN=$$(sed -n 's/migrate-db-link-open:[[:space:]]*\(.*\)/\1/p' $(ROOT_DIR)/hack/config.yaml | sed 's/"//g') ; \
+	if [ -z "$$DB_DSN" ]; then echo "未在 config.yaml 中找到有效的 link 配置" >&2; exit 1; fi ; \
+	if [ -n "$$DB_DOCKER_NETWORK" ]; then \
+		NETWORK_OPT="--network $$DB_DOCKER_NETWORK" ; \
+		DB_DSN=$$(echo "$$DB_DSN" | sed "s/:$$DB_PORT_OPEN)/:$$DB_PORT)/g") ; \
+	else \
+		NETWORK_OPT="" ; \
+	fi ; \
+	echo "DSN: $$DB_DSN" ; \
+	docker run --rm $$NETWORK_OPT -v $(ROOT_DIR)/manifest/sql:/migrations migrate/migrate -path /migrations -database "$$DB_DSN" up
