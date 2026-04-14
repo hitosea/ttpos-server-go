@@ -35,6 +35,8 @@ docker run --rm $NETWORK_OPT mysql:8.0 $EXEC -e "CREATE DATABASE IF NOT EXISTS e
 docker run --rm $NETWORK_OPT mysql:8.0 $EXEC -e "CREATE DATABASE IF NOT EXISTS takeout DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 docker run --rm $NETWORK_OPT mysql:8.0 $EXEC -e "CREATE DATABASE IF NOT EXISTS message DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 docker run --rm $NETWORK_OPT mysql:8.0 $EXEC -e "CREATE DATABASE IF NOT EXISTS websocket DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# MySQL 8 不再允许 GRANT 隐式建用户，先 CREATE USER IF NOT EXISTS（不覆盖已存在用户的密码）
+docker run --rm $NETWORK_OPT mysql:8.0 $EXEC -e "CREATE USER IF NOT EXISTS '$DB_USERNAME'@'%' IDENTIFIED BY '$DB_PASSWORD';"
 docker run --rm $NETWORK_OPT mysql:8.0 $EXEC -e "GRANT ALL PRIVILEGES ON erp.* TO '$DB_USERNAME'@'%'  WITH GRANT OPTION;"
 docker run --rm $NETWORK_OPT mysql:8.0 $EXEC -e "GRANT ALL PRIVILEGES ON takeout.* TO '$DB_USERNAME'@'%'  WITH GRANT OPTION;"
 docker run --rm $NETWORK_OPT mysql:8.0 $EXEC -e "GRANT ALL PRIVILEGES ON message.* TO '$DB_USERNAME'@'%'  WITH GRANT OPTION;"
