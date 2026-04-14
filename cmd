@@ -55,6 +55,7 @@ env_init(){
             sed -i 's/^DB_HOST=.*/DB_HOST=db/' .env 
             sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env 
             sed -i 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env 
+            sed -i 's/^REDIS_PORT=.*/REDIS_PORT=6379/' .env
             sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD='$(openssl rand -hex 8)'/' .env 
             sed -i 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$(openssl rand -hex 8)'/' .env 
         elif [ "$input" = "n" ]; then
