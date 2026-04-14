@@ -265,8 +265,16 @@ if [ $# -gt 0 ]; then
         $COMPOSE up -d --wait || $COMPOSE up -d
         run_exec php "composer install --ignore-platform-reqs"
         echo -e "${OK} ${GreenBG} 初始化数据库 ${Font}"
-        # 
-        sleep 10
+        # 轮询等待 MySQL 就绪（最长 120s），替代不可靠的 sleep
+        db_container=$(docker_name db)
+        for i in $(seq 1 60); do
+            if docker exec "$db_container" mysqladmin ping -h 127.0.0.1 -uroot -p"$(env_get DB_ROOT_PASSWORD)" --silent >/dev/null 2>&1; then
+                echo -e "${OK} ${GreenBG} 数据库已就绪 (耗时 $((i*2))s) ${Font}"
+                break
+            fi
+            [ $i -eq 60 ] && { echo -e "${Error} ${RedBG} 等待数据库就绪超时 ${Font}"; exit 1; }
+            sleep 2
+        done
         create=`run_exec db "sh /etc/mysql/create_saas.sh"`
         echo -e "$create"
         run_exec php "php think migrate:run"
