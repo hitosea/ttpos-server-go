@@ -93,7 +93,7 @@ services:
 # WebSocket服务模块
   bmp-websocket:
     container_name: "ttpos-bmp-websocket-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:${IMAGE_VERSION}
+    image:  1300775666/ttpos-server-websocket:${IMAGE_VERSION}
     environment:
       GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14052"  #生产环境调成服务IP
     volumes:
