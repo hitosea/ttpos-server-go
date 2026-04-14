@@ -51,13 +51,13 @@ env_init(){
         read -p "是否使用项目中的数据库，请输入 y 或 n: " input
         # Check the input and echo the result
         if [ "$input" = "y" ]; then
-            sed -i 's/^DB_REDIS_TYPE=.*/DB_REDIS_TYPE=local/' .env 
-            sed -i 's/^DB_HOST=.*/DB_HOST=db/' .env 
-            sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env 
-            sed -i 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env 
+            sed -i 's/^DB_REDIS_TYPE=.*/DB_REDIS_TYPE=local/' .env
+            sed -i 's/^DB_HOST=.*/DB_HOST=db/' .env
+            sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env
+            sed -i 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env
             sed -i 's/^REDIS_PORT=.*/REDIS_PORT=6379/' .env
-            sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD='$(openssl rand -hex 8)'/' .env 
-            sed -i 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$(openssl rand -hex 8)'/' .env 
+            [ -z "$(env_get DB_PASSWORD)" ] && sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD='$(openssl rand -hex 8)'/' .env
+            [ -z "$(env_get DB_ROOT_PASSWORD)" ] && sed -i 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$(openssl rand -hex 8)'/' .env
         elif [ "$input" = "n" ]; then
             sed -i 's/^DB_REDIS_TYPE=.*/DB_REDIS_TYPE=remote/' .env 
             success "请自行修改.env文件中的数据库、reids连接信息和修改docker/mysql-proxy/conf.d/stream.conf文件，然后重新运行: bash cmd install"
@@ -67,11 +67,11 @@ env_init(){
             exit 1
         fi
     elif [ $(env_get DB_REDIS_TYPE) = "local" ]; then
-        sed -i 's/^DB_HOST=.*/DB_HOST=db/' .env 
-        sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env 
-        sed -i 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env 
-        sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD='$(openssl rand -hex 8)'/' .env 
-        sed -i 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$(openssl rand -hex 8)'/' .env 
+        sed -i 's/^DB_HOST=.*/DB_HOST=db/' .env
+        sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env
+        sed -i 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env
+        [ -z "$(env_get DB_PASSWORD)" ] && sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD='$(openssl rand -hex 8)'/' .env
+        [ -z "$(env_get DB_ROOT_PASSWORD)" ] && sed -i 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$(openssl rand -hex 8)'/' .env
     elif [ $(env_get DB_REDIS_TYPE) = "remote" ]; then
         read -p "请确认是否已修改.env文件中的数据库、reids连接信息和修改docker/mysql-proxy/conf.d/stream.conf文件，是请输入 y; 否请输入 n: " input
         if [ "$input" = "y" ]; then
@@ -256,7 +256,13 @@ if [ $# -gt 0 ]; then
         shift 1
         #
         env_init
-        $COMPOSE up -d 
+        # 拉取镜像带重试，避免网络中断导致后续步骤找不到容器
+        for i in 1 2 3; do
+            $COMPOSE pull && break
+            echo "镜像拉取失败，重试 $i/3..."
+            sleep 3
+        done
+        $COMPOSE up -d --wait || $COMPOSE up -d
         run_exec php "composer install --ignore-platform-reqs"
         echo -e "${OK} ${GreenBG} 初始化数据库 ${Font}"
         # 
