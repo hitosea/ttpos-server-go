@@ -135,45 +135,45 @@ services:
       saas-network:
         ipv4_address: 10.0.0.17
 
-  reconciliation_templates:
-    container_name: "saas-reconciliation-templates-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-reconciliation-templates:1.2.0
-    environment:
-      - PORT=3000
-      - GCS_BUCKET=ttpos-stock-reconciliation
-      - GCS_ENV=${GCS_ENV:-dev}
-      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-/app/credentials/gcs-key.json}
-      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - CACHE_TTL_SEC=${CACHE_TTL_SEC:-60}
-    volumes:
-      - ./docker/certificate/${GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME}:/app/credentials/gcs-key.json:ro
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "3"
-    networks:
-      saas-network:
-        ipv4_address: 10.0.0.19
+  # reconciliation_templates:
+  #   container_name: "saas-reconciliation-templates-${APP_ID}"
+  #   image: hub.hitosea.com/ttpos-server/ttpos-server-reconciliation-templates:1.2.0
+  #   environment:
+  #     - PORT=3000
+  #     - GCS_BUCKET=ttpos-stock-reconciliation
+  #     - GCS_ENV=${GCS_ENV:-dev}
+  #     - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-/app/credentials/gcs-key.json}
+  #     - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+  #     - LOG_LEVEL=${LOG_LEVEL:-info}
+  #     - CACHE_TTL_SEC=${CACHE_TTL_SEC:-60}
+  #   volumes:
+  #     - ./docker/certificate/${GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME}:/app/credentials/gcs-key.json:ro
+  #   restart: unless-stopped
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "5m"
+  #       max-file: "3"
+  #   networks:
+  #     saas-network:
+  #       ipv4_address: 10.0.0.19
  
   # Envoy 流量镜像服务
   # 用于将 /api/v1/lmwn 请求镜像到多个开发环境
-  envoy-mirror:
-    container_name: "saas-envoy-mirror-${APP_ID}"
-    image: envoyproxy/envoy:v1.31-latest
-    volumes:
-      - ./docker/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "3"
-    networks:
-      saas-network:
-        ipv4_address: 10.0.0.20     
+  # envoy-mirror:
+  #   container_name: "saas-envoy-mirror-${APP_ID}"
+  #   image: envoyproxy/envoy:v1.31-latest
+  #   volumes:
+  #     - ./docker/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+  #   restart: unless-stopped
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "5m"
+  #       max-file: "3"
+  #   networks:
+  #     saas-network:
+  #       ipv4_address: 10.0.0.20     
 networks:
   saas-network:
     driver: bridge

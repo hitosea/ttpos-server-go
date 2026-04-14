@@ -1,20 +1,20 @@
 services:
   #中台服务模块
-  bmp-takeout:
-    container_name: "ttpos-bmp-takeout-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-takeout:${IMAGE_VERSION}
-    environment:
-      GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14032"  #生产环境调成服务IP
-    volumes:
-      - ./app/ttpos-takeout/manifest/config:/app/config  #生产环境根据需要调整
-      - ../docker/bmp-takeout/logs:/app/log  #生产环境根据需要调整
-    restart: always
-    ports:
-      - "14031:14031"
-      - "14032:14032"
-    networks:
-      bmp-network:
-        ipv4_address: 10.0.10.40
+  # bmp-takeout:
+  #   container_name: "ttpos-bmp-takeout-${APP_ID}"
+  #   image: hub.hitosea.com/ttpos-server/ttpos-server-takeout:${IMAGE_VERSION}
+  #   environment:
+  #     GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14032"  #生产环境调成服务IP
+  #   volumes:
+  #     - ./app/ttpos-takeout/manifest/config:/app/config  #生产环境根据需要调整
+  #     - ../docker/bmp-takeout/logs:/app/log  #生产环境根据需要调整
+  #   restart: always
+  #   ports:
+  #     - "14031:14031"
+  #     - "14032:14032"
+  #   networks:
+  #     bmp-network:
+  #       ipv4_address: 10.0.10.40
 
   # 门店管理服务 (预留)
 #  bmp-shop:
@@ -37,21 +37,21 @@ services:
 #        ipv4_address: 10.0.10.41
 
   #erp管理模块
-  bmp-erp:
-    container_name: "ttpos-bmp-erp-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-erp:${IMAGE_VERSION}
-    environment:
-      GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14022"  #生产环境调成服务IP
-    volumes:
-      - ./app/ttpos-erp/manifest/config:/app/config  #生产环境根据需要调整
-      - ../docker/bmp-erp/logs:/app/log  #生产环境根据需要调整
-    restart: always
-    ports:
-      - "14021:14021"
-      - "14022:14022"
-    networks:
-      bmp-network:
-        ipv4_address: 10.0.10.42
+  # bmp-erp:
+  #   container_name: "ttpos-bmp-erp-${APP_ID}"
+  #   image: hub.hitosea.com/ttpos-server/ttpos-server-erp:${IMAGE_VERSION}
+  #   environment:
+  #     GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14022"  #生产环境调成服务IP
+  #   volumes:
+  #     - ./app/ttpos-erp/manifest/config:/app/config  #生产环境根据需要调整
+  #     - ../docker/bmp-erp/logs:/app/log  #生产环境根据需要调整
+  #   restart: always
+  #   ports:
+  #     - "14021:14021"
+  #     - "14022:14022"
+  #   networks:
+  #     bmp-network:
+  #       ipv4_address: 10.0.10.42
 
   #云平台管理模块
 #  bmp-manager:
@@ -74,21 +74,21 @@ services:
 #        ipv4_address: 10.0.10.43
 
   # 消息中心模块
-  bmp-message:
-    container_name: "ttpos-bmp-message-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-message:${IMAGE_VERSION}
-    environment:
-      GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14042"  #生产环境调成服务IP
-    volumes:
-      - ./app/ttpos-message/manifest/config:/app/config  #生产环境根据需要调整
-      - ../docker/bmp-message/logs:/app/log  #生产环境根据需要调整
-    restart: always
-    ports:
-      - "14041:14041"
-      - "14042:14042"
-    networks:
-      bmp-network:
-        ipv4_address: 10.0.10.44
+  # bmp-message:
+  #   container_name: "ttpos-bmp-message-${APP_ID}"
+  #   image: hub.hitosea.com/ttpos-server/ttpos-server-message:${IMAGE_VERSION}
+  #   environment:
+  #     GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14042"  #生产环境调成服务IP
+  #   volumes:
+  #     - ./app/ttpos-message/manifest/config:/app/config  #生产环境根据需要调整
+  #     - ../docker/bmp-message/logs:/app/log  #生产环境根据需要调整
+  #   restart: always
+  #   ports:
+  #     - "14041:14041"
+  #     - "14042:14042"
+  #   networks:
+  #     bmp-network:
+  #       ipv4_address: 10.0.10.44
 
 # WebSocket服务模块
   bmp-websocket:
