@@ -88,7 +88,7 @@ services:
     
   golang:
     container_name: "saas-golang-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-go:${IMAGE_VERSION}
+    image: 1300775666/ttpos-server:latest:${IMAGE_VERSION}
     volumes:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
